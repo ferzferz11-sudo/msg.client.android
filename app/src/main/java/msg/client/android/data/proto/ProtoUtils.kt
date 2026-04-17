@@ -1,0 +1,42 @@
+package msg.client.android.data.proto
+
+import com.google.protobuf.Timestamp
+import msg.client.android.data.models.Message
+
+object ProtoUtils {
+    fun createMessageProto(message: Message): MessageProto {
+        val timestamp = com.google.protobuf.Timestamp.newBuilder()
+            .setSeconds(message.timestamp / 1000)
+            .setNanos(((message.timestamp % 1000) * 1000000).toInt())
+            .build()
+        
+        return MessageProto.newBuilder()
+            .setUser(message.user)
+            .setText(message.text)
+            .setCreatedAt(timestamp)
+            .build()
+    }
+    
+    fun createMessageFromProto(proto: MessageProto): Message {
+        val timestamp = proto.createdAt?.let { 
+            it.seconds * 1000 + (it.nanos / 1000000)
+        } ?: System.currentTimeMillis()
+        
+        return Message(
+            user = proto.user,
+            text = proto.text,
+            timestamp = timestamp
+        )
+    }
+    
+    fun getCurrentTimestamp(): Timestamp {
+        val currentTime = System.currentTimeMillis()
+        val seconds = currentTime / 1000
+        val nanos = ((currentTime % 1000) * 1000000).toInt()
+        
+        return com.google.protobuf.Timestamp.newBuilder()
+            .setSeconds(seconds)
+            .setNanos(nanos)
+            .build()
+    }
+}

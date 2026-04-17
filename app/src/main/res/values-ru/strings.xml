@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">Lavanda</string>
+    
+    <!-- Settings Menu -->
+    <string name="action_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="language">Language</string>
+    <string name="color_scheme">Color Scheme</string>
+    <string name="expert_mode">Expert Mode</string>
+    <string name="cancel">Cancel</string>
+    
+    <!-- Buttons -->
+    <string name="test_connection">Test Connection</string>
+    <string name="show_network_info">Show Network Info</string>
+    <string name="ping_laptop">Ping Server (192.168.1.135)</string>
+    <string name="send_message">Send Message</string>
+    
+    <!-- Messages -->
+    <string name="lavanda_messenger">Lavanda Messenger</string>
+    <string name="connection_logs">Connection logs:</string>
+    <string name="connected_as">Connected as: %s (saved)</string>
+    <string name="type_message_here">Type message here</string>
+    <string name="lavanda_ready">Lavanda Messenger ready!</string>
+    
+    <!-- Toast Messages -->
+    <string name="expert_mode_enabled">Expert mode enabled</string>
+    <string name="expert_mode_disabled">Expert mode disabled</string>
+    <string name="language_selected">Language: %s</string>
+    <string name="color_scheme_selected">Color Scheme: %s</string>
+    <string name="testing_connection">Testing connection...</string>
+    <string name="connection_success">SUCCESS: Server connected!</string>
+    <string name="connection_failed">Connection failed</string>
+    <string name="ping_success">SUCCESS: Server reachable!</string>
+    <string name="ping_failed">Ping failed</string>
+    <string name="ping_timeout">Ping timeout</string>
+    
+    <!-- Color Schemes -->
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="blue">Blue</string>
+    
+    <!-- Languages -->
+    <string name="russian">Russian</string>
+    <string name="english">English</string>
+    <string name="chinese">Chinese</string>
+    
+    <!-- Log Messages -->
+    <string name="lavanda_loaded">Lavanda Messenger loaded successfully</string>
+    <string name="testing_server">Testing connection to 192.168.1.135:50051...</string>
+    <string name="attempting_tcp">Attempting TCP connection...</string>
+    <string name="server_reachable">SUCCESS: Server reachable at 192.168.1.135:50051!</string>
+    <string name="server_failed">FAILED: %s</string>
+    <string name="network_info_start">=== Network Information ===</string>
+    <string name="phone_ip">Phone IP: %s</string>
+    <string name="network_ssid">SSID: %s</string>
+    <string name="network_id">Network ID: %s</string>
+    <string name="wifi_error">Error getting WiFi info: %s</string>
+    <string name="testing_laptop">Testing connectivity to laptop...</string>
+    <string name="laptop_reachable">SUCCESS: Can reach laptop at 192.168.1.135:50051</string>
+    <string name="laptop_failed">FAILED: Cannot reach laptop - %s</string>
+    <string name="network_info_end">=== End Network Info ===</string>
+    <string name="ping_start">=== Ping Test ===</string>
+    <string name="ping_laptop_start">Pinging 192.168.1.135...</string>
+    <string name="testing_http">Testing HTTP (port 80)...</string>
+    <string name="http_success">SUCCESS: HTTP reachable</string>
+    <string name="testing_grpc">Testing gRPC (port 50051)...</string>
+    <string name="grpc_success">SUCCESS: gRPC reachable</string>
+    <string name="laptop_fully_reachable">Laptop is fully reachable!</string>
+    <string name="laptop_not_responding">TIMEOUT: Laptop not responding</string>
+    <string name="ping_laptop_failed">FAILED: Cannot ping laptop - %s</string>
+    <string name="ping_end">=== End Ping Test ===</string>
+    
+    <!-- Join Dialog -->
+    <string name="join">Join</string>
+    <string name="welcome">Welcome</string>
+    <string name="enter_username">Enter your name</string>
+    <string name="cancel_dialog">Cancel</string>
+    <string name="connected_status">connected</string>
+    <string name="username_empty">Username cannot be empty</string>
+    <string name="logged_out">Logged out successfully</string>
+    <string name="exiting_app">Exiting application</string>
+    <string name="change_username">Change Username</string>
+    <string name="enter_new_username">Enter new username</string>
+    <string name="change">Change</string>
+    
+    </resources>
