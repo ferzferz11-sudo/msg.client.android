@@ -4,6 +4,7 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.animation.AnimationSet
 import android.view.animation.ScaleAnimation
+import android.widget.LinearLayout
 import androidx.appcompat.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
@@ -84,6 +85,7 @@ class ChatActivity : AppCompatActivity() {
         }
         
         animateToolbarTitle()
+        setupEmojiPanel()
         
         toolbar.setNavigationOnClickListener {
             logout()
@@ -234,6 +236,26 @@ class ChatActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    private fun setupEmojiPanel() {
+        val emojiContainer = findViewById<LinearLayout>(R.id.emojiContainer)
+        val emojis = listOf("😀", "😂", "🥰", "😎", "🤔", "👍", "🔥", "✨", "🙌", "🎉", "🚀", "❤️")
+        
+        for (emoji in emojis) {
+            val textView = TextView(this).apply {
+                text = emoji
+                textSize = 24f
+                setPadding(12, 8, 12, 8)
+                isClickable = true
+                isFocusable = true
+                setBackgroundResource(android.R.drawable.list_selector_background)
+                setOnClickListener {
+                    messageInput.append(emoji)
+                }
+            }
+            emojiContainer.addView(textView)
+        }
     }
 
     private fun animateToolbarTitle() {
