@@ -22,7 +22,7 @@ class MainActivityMinimal : AppCompatActivity() {
         val savedUsername = getSavedUsername()
         if (savedUsername != null && savedUsername.isNotEmpty()) {
             // Auto-login with saved username
-            val intent = Intent(this, ChatActivitySafe::class.java)
+            val intent = Intent(this, ChatActivity::class.java)
             intent.putExtra("USERNAME", savedUsername)
             startActivity(intent)
             finish() // Close main activity so user can't go back
@@ -75,7 +75,7 @@ class MainActivityMinimal : AppCompatActivity() {
             val username = editText.text.toString().trim()
             if (username.isNotEmpty()) {
                 saveUsername(username)
-                val intent = Intent(this, ChatActivitySafe::class.java)
+                val intent = Intent(this, ChatActivity::class.java)
                 intent.putExtra("USERNAME", username)
                 startActivity(intent)
                 dialog.dismiss()

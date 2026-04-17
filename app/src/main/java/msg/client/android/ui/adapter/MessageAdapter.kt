@@ -21,7 +21,14 @@ class MessageAdapter : ListAdapter<Message, MessageAdapter.MessageViewHolder>(Me
     }
     
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        val currentMessage = getItem(position)
+        val previousMessage = if (position > 0) getItem(position - 1) else null
+        
+        // Check if this is a continuation of the same user's message
+        val isConsecutive = previousMessage != null &&
+            previousMessage.user == currentMessage.user
+        
+        holder.bind(currentMessage, isConsecutive)
     }
     
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -29,12 +36,25 @@ class MessageAdapter : ListAdapter<Message, MessageAdapter.MessageViewHolder>(Me
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
         
-        fun bind(message: Message) {
+        fun bind(message: Message, isConsecutive: Boolean) {
             userText.text = message.user
             messageText.text = message.text
             
             val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
             timeText.text = timeFormat.format(Date(message.timestamp))
+            
+            // Hide user and time for consecutive messages
+            if (isConsecutive) {
+                userText.visibility = View.GONE
+                timeText.visibility = View.GONE
+                // Reduce top margin for consecutive messages
+                (itemView.layoutParams as ViewGroup.MarginLayoutParams).topMargin = 2
+            } else {
+                userText.visibility = View.VISIBLE
+                timeText.visibility = View.VISIBLE
+                // Normal margin for first message in group
+                (itemView.layoutParams as ViewGroup.MarginLayoutParams).topMargin = 16
+            }
         }
     }
 }

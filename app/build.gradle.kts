@@ -9,9 +9,9 @@ android {
     defaultConfig {
         applicationId = "msg.client.android"
         minSdk = 29
-        targetSdk = 36
-        versionCode = 9
-        versionName = "0.9.0"
+        targetSdk = 37
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

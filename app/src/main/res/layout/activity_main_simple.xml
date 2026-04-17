@@ -12,14 +12,15 @@
         android:text="Lavanda Messenger"
         android:textSize="32sp"
         android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="8dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="v0.9.0"
+        android:text="v0.9.1"
         android:textSize="12sp"
-        android:textColor="#999"
+        android:textColor="?android:attr/textColorSecondary"
         android:layout_marginBottom="16dp" />
 
     <TextView
@@ -27,7 +28,7 @@
         android:layout_height="wrap_content"
         android:text="Real-time chat application"
         android:textSize="16sp"
-        android:textColor="#666"
+        android:textColor="?android:attr/textColorSecondary"
         android:layout_marginBottom="48dp" />
 
     <Button

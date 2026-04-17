@@ -8,26 +8,33 @@ MSG Android Client - это нативное Android приложение, пр�
 
 ## Основные функции
 
-- 📱 Отправка и получение сообщений в реальном времени
-- 🔐 Безопасная аутентификация пользователей
+- 📱 Отправка и получение сообщений в реальном времени через gRPC
+- 🔌 Bidirectional streaming с Go сервером
+- 👤 Система имен пользователей для чата
 - 💾 Локальное хранение истории сообщений
-- 🎨 Современный пользовательский интерфейс
-- 🔄 Синхронизация данных между устройствами
+- 🎨 Современный пользовательский интерфейс (Material Design)
+- 🔄 Дубликат-фильтрация сообщений для предотвращения эха
+- 📊 Отслеживание состояния подключения в реальном времени
 
 ## Технический стек
 
 - **Язык программирования**: Kotlin
 - **Min SDK**: 29 (Android 10.0)
-- **Target SDK**: 36 (Android 15)
+- **Target SDK**: 37 (Android 14)
+- **Compile SDK**: 37
 - **Архитектура**: MVVM
 - **UI Framework**: Android Jetpack (ViewBinding)
-- **Навигация**: Android Navigation Component
+- **Асинхронность**: Kotlin Coroutines + StateFlow
+- **Сетевой протокол**: gRPC (bidirectional streaming)
+- **Протокол**: Protobuf (protobuf-lite)
+- **Сервер**: Go gRPC сервер (localhost:50051)
 
 ## Требования
 
 - Android 10.0 (API level 29) и выше
 - Минимум 2 ГБ оперативной памяти
-- Интернет-соединение для работы с сервером MSG
+- Запущенный Go gRPC сервер на localhost:50051 (или 10.0.2.2:50051 для эмулятора)
+- Интернет-соединение для работы с сервером
 
 ## Установка
 
@@ -55,11 +62,22 @@ cd msg/client/android
 app/
 ├── src/main/
 │   ├── java/msg/client/android/
-│   │   ├── MainActivity.kt          # Главная активность
-│   │   ├── ui/                      # UI компоненты
-│   │   ├── data/                    # Слой данных
-│   │   ├── viewmodel/               # ViewModel
-│   │   └── network/                 # Сетевой слой
+│   │   ├── MainActivityMinimal.kt   # Точка входа с диалогом имени
+│   │   ├── ChatActivity.kt          # Главный чат UI с RecyclerView
+│   │   ├── ChatViewModel.kt         # Управление состоянием с gRPC
+│   │   ├── ui/
+│   │   │   ├── MessageAdapter.kt    # RecyclerView адаптер для сообщений
+│   │   │   └── MessageViewHolder.kt # ViewHolder для сообщений
+│   │   ├── data/
+│   │   │   ├── models/
+│   │   │   │   └── Message.kt       # Модель сообщения
+│   │   │   ├── proto/
+│   │   │   │   ├── MessageProto.kt  # Protobuf сообщение
+│   │   │   │   └── ProtoUtils.kt    # Утилиты для protobuf
+│   │   │   └── grpc/
+│   │   │       ├── GrpcClient.kt    # Обертка для gRPC клиента
+│   │   │       └── RealGrpcClient.kt # Реализация gRPC с custom marshaller
+│   │   └── viewmodel/
 │   ├── res/                         # Ресурсы
 │   └── AndroidManifest.xml          # Манифест приложения
 └── build.gradle.kts                 # Конфигурация сборки
@@ -67,13 +85,16 @@ app/
 
 ## Конфигурация
 
-Приложение требует настройки серверных endpoints для подключения к MSG системе. Конфигурационные параметры находятся в файле `local.properties`:
+### Сервер
+Приложение подключается к Go gRPC серверу по адресу:
+- **Устройство**: localhost:50051
+- **Эмулятор Android**: 10.0.2.2:50051
 
-```properties
-# MSG Server Configuration
-msg.server.url=https://your-msg-server.com
-msg.server.api_key=your-api-key
-```
+### gRPC Настройки
+- **Протокол**: Bidirectional streaming
+- **Keep-alive**: 30 секунд интервал, 5 секунд таймаут
+- **Marshaller**: Custom MessageProtoMarshaller
+- **Метод**: messenger.ChatService/Chat
 
 ## Сборка и тестирование
 
@@ -101,7 +122,14 @@ msg.server.api_key=your-api-key
 Проект следует семантическому версионированию (SemVer):
 - **MAJOR.MINOR.PATCH** (например, 1.0.0)
 
-Текущая версия: **1.0** (versionCode: 1)
+Текущая версия: **2.0** (versionCode: 2)
+
+### Версия 2.0 - Working Bidirectional Streaming
+- ✅ Работающий bidirectional gRPC streaming
+- ✅ Сервер получает сообщения и транслирует обратно
+- ✅ Custom protobuf marshaller
+- ✅ Дубликат-фильтрация сообщений
+- ✅ Корректная обработка ошибок подключения
 
 ## Лицензия
 

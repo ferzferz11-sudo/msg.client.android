@@ -32,6 +32,11 @@
             android:name=".ChatActivitySafe"
             android:exported="true"
             android:theme="@style/Theme.AppCompat.Light.DarkActionBar" />
+        
+        <activity
+            android:name=".ChatActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

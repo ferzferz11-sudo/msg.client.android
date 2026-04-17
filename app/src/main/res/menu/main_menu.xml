@@ -4,14 +4,48 @@
     
     <item
         android:id="@+id/action_settings"
-        android:icon="@android:drawable/ic_menu_more"
-        android:title="Settings"
-        app:showAsAction="ifRoom" />
-        
-    <item
-        android:id="@+id/action_logout"
-        android:icon="@android:drawable/ic_menu_revert"
-        android:title="Logout"
-        app:showAsAction="ifRoom" />
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="@string/action_settings"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/action_language"
+                android:title="@string/language">
+                <menu>
+                    <item
+                        android:id="@+id/lang_en"
+                        android:title="@string/english" />
+                    <item
+                        android:id="@+id/lang_ru"
+                        android:title="@string/russian" />
+                    <item
+                        android:id="@+id/lang_zh"
+                        android:title="@string/chinese" />
+                </menu>
+            </item>
+            <item
+                android:id="@+id/action_color_scheme"
+                android:title="@string/color_scheme">
+                <menu>
+                    <item
+                        android:id="@+id/color_light"
+                        android:title="@string/light" />
+                    <item
+                        android:id="@+id/color_dark"
+                        android:title="@string/dark" />
+                    <item
+                        android:id="@+id/color_blue"
+                        android:title="@string/blue" />
+                </menu>
+            </item>
+            <item
+                android:id="@+id/action_expert_mode"
+                android:title="@string/expert_mode"
+                android:checkable="true" />
+            <item
+                android:id="@+id/action_test_connection"
+                android:title="@string/test_connection" />
+        </menu>
+    </item>
         
 </menu>

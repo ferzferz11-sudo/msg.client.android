@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:text="Welcome"
         android:textSize="18sp"
-        android:textColor="#333333"
+        android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="24dp"
         android:gravity="center" />
 
@@ -23,9 +23,10 @@
         android:hint="Enter your name"
         android:textSize="16sp"
         android:padding="16dp"
-        android:background="@android:drawable/edit_text"
         android:layout_marginBottom="32dp"
-        android:gravity="center" />
+        android:gravity="center"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textColorHint="#999999" />
 
     <LinearLayout
         android:layout_width="match_parent"
