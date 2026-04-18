@@ -26,8 +26,8 @@ class ChatViewModel : ViewModel() {
         }
     }
     
-    fun startChat(username: String, onMessageReceived: (Message) -> Unit) {
-        grpcClient.startChat(username, onMessageReceived)
+    fun startChat(username: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
+        grpcClient.startChat(username, joinMessage, onMessageReceived)
     }
     
     fun sendMessage(message: Message) {

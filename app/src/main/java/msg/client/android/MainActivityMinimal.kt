@@ -303,7 +303,7 @@ class MainActivityMinimal : AppCompatActivity() {
         
         // Set checking state
         serverStatusText.text = getString(R.string.checking_server)
-        serverStatusIndicator.setBackgroundColor(getColor(android.R.color.darker_gray))
+        serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.darker_gray))
         btnJoin.isEnabled = false
         
         // Subscribe to test results
@@ -312,12 +312,12 @@ class MainActivityMinimal : AppCompatActivity() {
                 when {
                     result?.contains("SUCCESS") == true -> {
                         serverStatusText.text = getString(R.string.server_available)
-                        serverStatusIndicator.setBackgroundColor(getColor(android.R.color.holo_green_dark))
+                        serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.holo_green_dark))
                         btnJoin.isEnabled = true
                     }
                     result?.contains("FAILED") == true || result?.contains("PARTIAL") == true -> {
                         serverStatusText.text = getString(R.string.server_unavailable)
-                        serverStatusIndicator.setBackgroundColor(getColor(android.R.color.holo_red_dark))
+                        serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.holo_red_dark))
                         btnJoin.isEnabled = false
                     }
                     else -> {

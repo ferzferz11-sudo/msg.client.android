@@ -32,13 +32,6 @@
                         android:title="@string/dark" />
                 </menu>
             </item>
-            <item
-                android:id="@+id/action_expert_mode"
-                android:title="@string/expert_mode"
-                android:checkable="true" />
-            <item
-                android:id="@+id/action_test_connection"
-                android:title="@string/test_connection" />
         </menu>
     </item>
         

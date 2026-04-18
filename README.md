@@ -138,6 +138,14 @@ Current version: **0.9.2** (versionCode: 10)
 - 🟢 Server status indicator below server address spinner
 - 🔘 Join button disabled when server is unavailable
 - 🔄 Refresh button to manually recheck server availability
+- 🎨 Improved UI: theme button shows current value (Theme: Light/Dark)
+- 🎨 Replaced divider with decorative dots between main action and settings
+- 🎨 App title color uses lavender_mist in both themes
+- 🎨 Fixed server status indicator - now circular shape
+- 📝 Shortened button and hint texts for better visibility
+- 📝 Localized join message
+- 🗑️ Removed unused expert mode feature
+- 🗑️ Removed test connection from menu (functionality remains in dialog)
 
 ### Version 0.9.1 - Working Bidirectional Streaming
 - ✅ Working bidirectional gRPC streaming

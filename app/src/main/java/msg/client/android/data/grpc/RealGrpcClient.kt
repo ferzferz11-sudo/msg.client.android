@@ -123,7 +123,7 @@ class RealGrpcClient {
         }
     }
     
-    fun startChat(username: String, onMessageReceived: (Message) -> Unit) {
+    fun startChat(username: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
         if (!_connectionState.value || channel == null) {
             _error.value = "Not connected"
             return
@@ -197,7 +197,7 @@ class RealGrpcClient {
             
             requestObserver?.onNext(MessageProto.newBuilder()
                 .setUser(username)
-                .setText("$username joined the chat")
+                .setText(joinMessage)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .build())
             

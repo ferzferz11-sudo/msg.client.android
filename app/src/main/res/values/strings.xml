@@ -6,26 +6,23 @@
     <string name="settings_title">Settings</string>
     <string name="language">Language</string>
     <string name="color_scheme">Color Scheme</string>
-    <string name="expert_mode">Expert Mode</string>
     <string name="cancel">Cancel</string>
     
             
     <!-- Buttons -->
-    <string name="test_connection">Test Connection</string>
     <string name="show_network_info">Show Network Info</string>
     <string name="ping_laptop">Ping Server (192.168.1.135)</string>
-    <string name="send_message">Send Message</string>
+    <string name="send_message">Send</string>
     
     <!-- Messages -->
-    <string name="lavanda_messenger">Lavender Messenger</string>
+    <string name="lavender_messenger">Lavender Messenger</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
-    <string name="type_message_here">Type message here</string>
-    <string name="lavanda_ready">Lavender Messenger ready!</string>
+    <string name="type_message_here">Type here</string>
+    <string name="lavender_ready">Lavender Messenger ready!</string>
+    <string name="joined">%s joined</string>
     
     <!-- Toast Messages -->
-    <string name="expert_mode_enabled">Expert mode enabled</string>
-    <string name="expert_mode_disabled">Expert mode disabled</string>
     <string name="language_selected">Language: %s</string>
     <string name="color_scheme_selected">Color Scheme: %s</string>
     <string name="testing_connection">Testing connection...</string>
@@ -44,7 +41,7 @@
     <string name="english">English</string>
     
     <!-- Log Messages -->
-    <string name="lavanda_loaded">Lavender Messenger loaded successfully</string>
+    <string name="lavender_loaded">Lavender Messenger loaded successfully</string>
     <string name="testing_server">Testing connection to 192.168.1.135:50051...</string>
     <string name="attempting_tcp">Attempting TCP connection...</string>
     <string name="server_reachable">SUCCESS: Server reachable at 192.168.1.135:50051!</string>

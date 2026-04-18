@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 Replaced simple divider with decorative dots between main action and settings
 - 🎨 App title now uses lavender_mist color in both themes
 - 📝 Updated Russian app description from "Приложение для безопасного обмена сообщениями" to "Безопасный обмен сообщениями"
+- 🎨 Fixed server status indicator to use backgroundTintList instead of setBackgroundColor for proper circle shape
+- 📝 Shortened button and hint texts: "Send Message" → "Send", "Type message here" → "Type here"
+- 📝 Renamed string resources from lavanda_* to lavender_* for consistency
+- 🗑️ Removed unused expert mode feature from menu and code
+- 🗑️ Removed test connection from menu (functionality remains in dialog)
+- 📝 Localized join message: "username joined the chat" → "username joined" (EN) / "username присоединился" (RU)
 
 ## [0.9.1] - 2026-04-17
 

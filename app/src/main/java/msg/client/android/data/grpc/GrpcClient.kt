@@ -18,8 +18,8 @@ class GrpcClient {
         realGrpcClient.disconnect()
     }
     
-    fun startChat(username: String, onMessageReceived: (Message) -> Unit) {
-        realGrpcClient.startChat(username, onMessageReceived)
+    fun startChat(username: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
+        realGrpcClient.startChat(username, joinMessage, onMessageReceived)
     }
     
     fun sendMessage(message: Message) {

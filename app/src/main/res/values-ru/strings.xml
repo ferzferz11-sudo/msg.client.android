@@ -6,25 +6,22 @@
     <string name="settings_title">Настройки</string>
     <string name="language">Язык</string>
     <string name="color_scheme">Цветовая схема</string>
-    <string name="expert_mode">Экспертный режим</string>
     <string name="cancel">Отмена</string>
     
     <!-- Buttons -->
-    <string name="test_connection">Проверить соединение</string>
     <string name="show_network_info">Показать информацию сети</string>
     <string name="ping_laptop">Пинг сервера (192.168.1.135)</string>
-    <string name="send_message">Отправить сообщение</string>
+    <string name="send_message">Отправить</string>
     
     <!-- Messages -->
-    <string name="lavanda_messenger">Лаванда</string>
+    <string name="lavender_messenger">Лаванда</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_as">Подключен как: %s (сохранено)</string>
-    <string name="type_message_here">Введите сообщение здесь</string>
-    <string name="lavanda_ready">Лаванда готова!</string>
+    <string name="type_message_here">Сообщение</string>
+    <string name="lavender_ready">Лаванда готова!</string>
+    <string name="joined">%s присоединился</string>
     
     <!-- Toast Messages -->
-    <string name="expert_mode_enabled">Экспертный режим включен</string>
-    <string name="expert_mode_disabled">Экспертный режим отключен</string>
     <string name="language_selected">Язык: %s</string>
     <string name="color_scheme_selected">Цветовая схема: %s</string>
     <string name="testing_connection">Проверка соединения...</string>
@@ -43,7 +40,7 @@
     <string name="english">English</string>
     
     <!-- Log Messages -->
-    <string name="lavanda_loaded">Лаванда успешно загружена</string>
+    <string name="lavender_loaded">Лаванда успешно загружена</string>
     <string name="testing_server">Проверка соединения с 192.168.1.135:50051...</string>
     <string name="attempting_tcp">Попытка TCP соединения...</string>
     <string name="server_reachable">УСПЕХ: Сервер доступен по адресу 192.168.1.135:50051!</string>

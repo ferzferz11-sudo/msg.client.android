@@ -80,7 +80,8 @@ class ChatActivity : AppCompatActivity() {
             viewModel.connect(host, false, port)
             
             // Start chat session (callback is empty because we use StateFlow for messages)
-            viewModel.startChat(username) { }
+            val joinMessage = getString(R.string.joined, username)
+            viewModel.startChat(username, joinMessage) { }
             
             Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -193,23 +194,6 @@ class ChatActivity : AppCompatActivity() {
             }
             R.id.color_dark -> {
                 applyTheme("dark")
-                true
-            }
-            R.id.action_expert_mode -> {
-                item.isChecked = !item.isChecked
-                val message = if (item.isChecked) {
-                    getString(R.string.expert_mode_enabled)
-                } else {
-                    getString(R.string.expert_mode_disabled)
-                }
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                true
-            }
-            R.id.action_test_connection -> {
-                val parts = serverAddress.split(":")
-                val host = if (parts.size >= 1) parts[0] else "localhost"
-                val port = if (parts.size >= 2) parts[1].toIntOrNull() ?: 50051 else 50051
-                connectivityTest?.testServerReachability(host, port)
                 true
             }
             R.id.action_settings -> {
