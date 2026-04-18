@@ -15,6 +15,7 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
+    <string name="app_version">v0.9.3</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_as">Подключен как: %s (сохранено)</string>
     <string name="type_message_here">Сообщение</string>

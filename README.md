@@ -128,7 +128,20 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH** (e.g., 1.0.0)
 
-Current version: **0.9.2** (versionCode: 10)
+Current version: **0.9.3** (versionCode: 11)
+
+### Version 0.9.3 - Theme System Refactor
+- 🎨 Migrated to Material 3 semantic theme attributes (colorPrimary, colorOnPrimary, colorSecondary, etc.)
+- 🎨 Theme-aware message backgrounds with left/right alignment (incoming/outgoing)
+- 🎨 Outgoing messages hide username for cleaner interface
+- 🎨 All UI elements now use theme attributes for proper theme switching
+- 🎨 Improved join dialog with better spacing and theme-aware colors
+- 🔧 Renamed MainActivityMinimal.kt → MainActivity.kt for consistency
+- 🔧 Renamed activity_main_simple.xml → activity_main.xml for consistency
+- 🗑️ Removed unused ChatActivitySafe activity
+- 🗑️ Removed hardcoded message colors, now using theme attributes
+- 🎨 Message time format changed to HH:mm for cleaner display
+- 🏗️ Improved theming structure for better maintainability
 
 ### Version 0.9.2 - Lavender Color Palette
 - 🎨 New Lavender Messenger color palette (Deep Purple, Lavender Mist, Soft Lilac, Silver Fog, Dark Slate)

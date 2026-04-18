@@ -16,7 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MsgClientAndroid">
         <activity
-            android:name=".MainActivityMinimal"
+            android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.MsgClientAndroid">
             <intent-filter>
@@ -25,12 +25,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <activity
-            android:name=".ChatActivitySafe"
-            android:exported="true"
-            android:theme="@style/Theme.AppCompat.Light.DarkActionBar" />
-        
+
         <activity
             android:name=".ChatActivity"
             android:exported="true"

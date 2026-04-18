@@ -10,8 +10,8 @@ android {
         applicationId = "msg.client.android"
         minSdk = 29
         targetSdk = 37
-        versionCode = 10
-        versionName = "0.9.2"
+        versionCode = 11
+        versionName = "0.9.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -55,16 +55,16 @@ dependencies {
     
     // Add gRPC dependencies gradually
     // gRPC dependencies
-    implementation("io.grpc:grpc-okhttp:1.64.0")
-    implementation("io.grpc:grpc-protobuf-lite:1.64.0")
-    implementation("io.grpc:grpc-stub:1.64.0")
-    implementation("com.google.protobuf:protobuf-javalite:4.27.2")
+    implementation(libs.grpc.okhttp)
+    implementation(libs.grpc.protobuf.lite)
+    implementation(libs.grpc.stub)
+    implementation(libs.protobuf.javalite)
     
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation(libs.kotlinx.coroutines.android)
     
     // OkHttp for HTTP client
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.okhttp)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -41,6 +41,7 @@ class MessageAdapter(private var currentUsername: String) : ListAdapter<Message,
     }
     
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val messageContainer: View = itemView.findViewById(R.id.messageContainer)
         private val userText: TextView = itemView.findViewById(R.id.userText)
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
@@ -49,40 +50,48 @@ class MessageAdapter(private var currentUsername: String) : ListAdapter<Message,
             userText.text = message.user
             messageText.text = message.text
             
-            val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             timeText.text = timeFormat.format(Date(message.timestamp))
             
-            // Set background based on message type
-            val backgroundColor = if (isOutgoing) {
-                ContextCompat.getColor(itemView.context, R.color.outgoing_message_background)
-            } else {
-                ContextCompat.getColor(itemView.context, R.color.incoming_message_background)
-            }
+            // Set background and alignment based on message type
+            val params = messageContainer.layoutParams as android.widget.LinearLayout.LayoutParams
+            val context = itemView.context
             
-            // Create drawable with rounded corners and color using GradientDrawable
-            val drawable = android.graphics.drawable.GradientDrawable()
-            drawable.cornerRadius = 8f
-            drawable.setColor(backgroundColor)
-            itemView.background = drawable
-            
-            // Set text color for outgoing messages
+            val typedValue = android.util.TypedValue()
             if (isOutgoing) {
-                messageText.setTextColor(ContextCompat.getColor(itemView.context, R.color.outgoing_message_text))
-                userText.setTextColor(ContextCompat.getColor(itemView.context, R.color.outgoing_message_text))
+                messageContainer.setBackgroundResource(R.drawable.bg_message_outgoing)
+                params.gravity = android.view.Gravity.END
+                
+                context.theme.resolveAttribute(android.R.attr.textColorPrimaryInverse, typedValue, true)
+                val colorOnPrimary = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                
+                messageText.setTextColor(colorOnPrimary)
+                userText.setTextColor(colorOnPrimary)
+                timeText.setTextColor(colorOnPrimary)
+            } else {
+                messageContainer.setBackgroundResource(R.drawable.bg_message_incoming)
+                params.gravity = android.view.Gravity.START
+                
+                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                val colorOnSecondary = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                
+                messageText.setTextColor(colorOnSecondary)
+                userText.setTextColor(colorOnSecondary)
+                timeText.setTextColor(colorOnSecondary)
             }
+            messageContainer.layoutParams = params
             
-            // Hide user and time for consecutive messages
-            if (isConsecutive) {
+            // Hide user for consecutive messages or outgoing messages (user knows they sent it)
+            if (isConsecutive || isOutgoing) {
                 userText.visibility = View.GONE
-                timeText.visibility = View.GONE
-                // Reduce top margin for consecutive messages
-                (itemView.layoutParams as ViewGroup.MarginLayoutParams).topMargin = 2
             } else {
                 userText.visibility = View.VISIBLE
-                timeText.visibility = View.VISIBLE
-                // Normal margin for first message in group
-                (itemView.layoutParams as ViewGroup.MarginLayoutParams).topMargin = 16
             }
+            
+            // Adjust margins for consecutive messages
+            val outerParams = itemView.layoutParams as ViewGroup.MarginLayoutParams
+            outerParams.topMargin = if (isConsecutive) 4 else 16
+            itemView.layoutParams = outerParams
         }
     }
 }

@@ -24,7 +24,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
-import msg.client.android.R
 import msg.client.android.data.models.Message
 import msg.client.android.ui.adapter.MessageAdapter
 import msg.client.android.ui.chat.ChatViewModel
@@ -303,7 +302,7 @@ class ChatActivity : AppCompatActivity() {
     private fun logout() {
         viewModel.disconnect()
         // Don't remove username - keep it for next login
-        val intent = Intent(this, MainActivityMinimal::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()

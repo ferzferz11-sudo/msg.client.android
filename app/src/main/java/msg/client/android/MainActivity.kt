@@ -22,7 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import msg.client.android.data.grpc.ServerConnectivityTest
 
-class MainActivityMinimal : AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
     
     private lateinit var joinChatButton: Button
     
@@ -36,7 +36,7 @@ class MainActivityMinimal : AppCompatActivity() {
         applySavedColorScheme()
         applySavedLanguage()
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main_simple)
+        setContentView(R.layout.activity_main)
         updateLanguageButtonText()
         updateColorSchemeButtonText()
         

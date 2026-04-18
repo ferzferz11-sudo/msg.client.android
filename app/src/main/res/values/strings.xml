@@ -16,6 +16,7 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
+    <string name="app_version">v0.9.3</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
     <string name="type_message_here">Type here</string>

@@ -5,7 +5,44 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.2] - Unreleased
+## [0.9.3] - 2026-04-18
+
+### Added
+- 🎨 Semantic theme attributes (colorPrimary, colorOnPrimary, colorSecondary, colorOnSecondary, colorSurface, colorOnSurface)
+- 🎨 Theme-aware message backgrounds (bg_message_incoming, bg_message_outgoing)
+- 🎨 Message bubbles now align left (incoming) or right (outgoing) for better UX
+- 🎨 Outgoing messages hide username for cleaner interface
+- 🎨 Improved join dialog with better spacing and typography
+- 🎨 Join dialog now uses theme-aware colors for all elements
+
+### Changed
+- 🔧 Renamed MainActivityMinimal.kt → MainActivity.kt for consistency
+- 🔧 Renamed activity_main_simple.xml → activity_main.xml for consistency
+- 🎨 Migrated from hardcoded colors to semantic theme attributes throughout the app
+- 🎨 Toolbar background now uses colorPrimary instead of deep_purple
+- 🎨 Toolbar icons and text now use colorOnPrimary for theme adaptation
+- 🎨 Chat backgrounds now use ?android:attr/windowBackground for proper theme support
+- 🎨 Dialog elements now use theme attributes (colorSurface, colorPrimary, etc.)
+- 🗑️ Removed ChatActivitySafe activity (unused)
+- 🗑️ Removed hardcoded message colors from colors.xml
+- 🗑️ Removed message_background_rounded.xml (replaced with theme-aware drawables)
+- 🗑️ Removed toolbar_background.xml from drawable-night (now uses single theme-aware drawable)
+- 🎨 Message time format changed from HH:mm:ss to HH:mm for cleaner display
+- 🎨 Message layout restructured with messageContainer for better styling
+- 🎨 MessageAdapter now uses theme attributes for text colors (textColorPrimary, textColorPrimaryInverse)
+- 🎨 All icons now use ?attr/colorOnPrimary for theme adaptation
+- 🎨 Join dialog buttons now use theme-aware colors (colorPrimary, colorSecondary)
+- 🎨 Server status refresh button now uses colorPrimary
+- 🔧 Removed unused R import from ChatActivity.kt
+- 🔧 Updated ChatActivity logout intent to use MainActivity
+
+### Technical Improvements
+- 🏗️ Improved theming structure using Material 3 semantic attributes
+- 🎨 Better theme switching support through attribute-based coloring
+- 🎨 Cleaner code structure with standardized naming
+- 🎨 More maintainable theming system
+
+## [0.9.2] - 2026-04-18
 
 ### Added
 - 🎨 New Lavender Messenger color palette (Deep Purple, Lavender Mist, Soft Lilac, Silver Fog, Dark Slate)
