@@ -42,6 +42,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗑️ Removed unused expert mode feature from menu and code
 - 🗑️ Removed test connection from menu (functionality remains in dialog)
 - 📝 Localized join message: "username joined the chat" → "username joined" (EN) / "username присоединился" (RU)
+- 🎨 Added language and color scheme toggle icons to chat toolbar
+- 🎨 Updated toolbar icons: custom sun/moon icons for theme toggle, dynamic EN/RU text for language toggle
+- 🎨 Language indicator now clickable directly (EN/RU text)
+- 🎨 Theme icon changes from sun to moon when switching to dark theme
+- 🎨 Adapted chat screen to Lavender color scheme for light and dark themes
+- 🎨 Chat toolbar uses deep_purple background with lavender_mist title
+- 🎨 Chat background uses silver_fog (light) / dark_slate (dark)
+- 🎨 Message colors adapted to Lavender palette
+- 🎨 Send button uses lavender_mist with white text
+- 🎨 Added theme-aware backgrounds to RecyclerView, input layout, and EditText
+- 🎨 Messages now use different colors for incoming (soft_lilac/deep_purple) and outgoing (lavender_mist) messages
+- 🎨 Messages adapt to theme automatically with rounded corners
+- 🐛 Fixed message theme preservation - now correctly restores username on theme change
+- 🎨 Added rounded corners to toolbar (all four corners)
+- 🎨 Messages use GradientDrawable with ContextCompat.getColor for theme support
+- ⚠️ Message theme colors update on app restart, not on theme toggle
+- 🐛 Fixed reconnection issue on theme change - now only connects on first creation, not on recreate()
 
 ## [0.9.1] - 2026-04-17
 

@@ -4,8 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="8dp"
-    android:layout_marginVertical="4dp"
-    android:background="@drawable/message_background">
+    android:layout_marginVertical="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"

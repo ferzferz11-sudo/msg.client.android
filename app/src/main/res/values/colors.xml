@@ -12,11 +12,11 @@
     <color name="white">#FFFFFFFF</color>
     
     <!-- Message colors (light theme) -->
-    <color name="message_background">#F5F5F7</color>
-    <color name="message_border">#E0E0E0</color>
-    <color name="incoming_message_background">#E6E6FA</color>
-    <color name="outgoing_message_background">#967BB6</color>
-    <color name="outgoing_message_text">#FFFFFF</color>
+    <color name="message_background">@color/silver_fog</color>
+    <color name="message_border">@color/deep_purple</color>
+    <color name="incoming_message_background">@color/soft_lilac</color>
+    <color name="outgoing_message_background">@color/lavender_mist</color>
+    <color name="outgoing_message_text">@color/white</color>
     
     <!-- UI element colors -->
     <color name="primary">#312051</color>

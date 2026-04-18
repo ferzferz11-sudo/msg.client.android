@@ -146,6 +146,19 @@ Current version: **0.9.2** (versionCode: 10)
 - 📝 Localized join message
 - 🗑️ Removed unused expert mode feature
 - 🗑️ Removed test connection from menu (functionality remains in dialog)
+- 🎨 Added language and color scheme toggle icons to chat toolbar
+- 🎨 Updated toolbar icons: custom sun/moon icons for theme toggle, dynamic EN/RU text for language toggle
+- 🎨 Language indicator now clickable directly (EN/RU text)
+- 🎨 Theme icon changes from sun to moon when switching to dark theme
+- 🎨 Adapted chat screen to Lavender color scheme for light and dark themes
+- 🎨 Added theme-aware backgrounds to RecyclerView, input layout, and EditText
+- 🎨 Messages now use different colors for incoming and outgoing messages
+- 🎨 Messages adapt to theme automatically with rounded corners
+- 🐛 Fixed message theme preservation - now correctly restores username on theme change
+- 🎨 Added rounded corners to toolbar (all four corners)
+- 🎨 Messages use GradientDrawable with ContextCompat.getColor for theme support
+- ⚠️ Message theme colors update on app restart, not on theme toggle
+- 🐛 Fixed reconnection issue on theme change - no longer reconnects when switching themes
 
 ### Version 0.9.1 - Working Bidirectional Streaming
 - ✅ Working bidirectional gRPC streaming

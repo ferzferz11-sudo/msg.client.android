@@ -46,8 +46,9 @@ class ChatActivity : AppCompatActivity() {
     private var connectivityTest: ServerConnectivityTest? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        applySavedColorScheme()
         applySavedLanguage()
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
         
         // 1. Initialize views first
@@ -60,33 +61,40 @@ class ChatActivity : AppCompatActivity() {
         // 3. Setup observers (now connectivityTest is not null)
         setupObservers()
         
-        // Get username and server address from intent
-        username = intent.getStringExtra("USERNAME") ?: "User"
-        serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: "localhost:50051"
-        android.util.Log.d("ChatActivity", "Using server address: $serverAddress")
+        // Restore username from savedInstanceState or get from intent
+        username = savedInstanceState?.getString("USERNAME") ?: intent.getStringExtra("USERNAME") ?: "User"
+        serverAddress = savedInstanceState?.getString("SERVER_ADDRESS") ?: intent.getStringExtra("SERVER_ADDRESS") ?: "localhost:50051"
         
-        // Parse server address (format: host:port)
-        val parts = serverAddress.split(":")
-        val host = if (parts.size >= 1) parts[0] else "localhost"
-        val port = if (parts.size >= 2) parts[1].toIntOrNull() ?: 50051 else 50051
+        // Update adapter with username
+        messageAdapter.updateUsername(username)
         
-        android.util.Log.d("ChatActivity", "Parsed host: $host, port: $port")
-        
-        try {
-            // Test server connectivity
-            connectivityTest?.testServerReachability(host, port)
+        // Only connect to server on first creation, not on theme change (recreate)
+        if (savedInstanceState == null) {
+            android.util.Log.d("ChatActivity", "Using server address: $serverAddress")
             
-            // Connect to server with correct port
-            viewModel.connect(host, false, port)
+            // Parse server address (format: host:port)
+            val parts = serverAddress.split(":")
+            val host = if (parts.size >= 1) parts[0] else "localhost"
+            val port = if (parts.size >= 2) parts[1].toIntOrNull() ?: 50051 else 50051
             
-            // Start chat session (callback is empty because we use StateFlow for messages)
-            val joinMessage = getString(R.string.joined, username)
-            viewModel.startChat(username, joinMessage) { }
+            android.util.Log.d("ChatActivity", "Parsed host: $host, port: $port")
             
-            Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            addMessage("System", "Error: ${e.message}")
+            try {
+                // Test server connectivity
+                connectivityTest?.testServerReachability(host, port)
+                
+                // Connect to server with correct port
+                viewModel.connect(host, false, port)
+                
+                // Start chat session (callback is empty because we use StateFlow for messages)
+                val joinMessage = getString(R.string.joined, username)
+                viewModel.startChat(username, joinMessage) { }
+                
+                Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                addMessage("System", "Error: ${e.message}")
+            }
         }
     }
     
@@ -97,7 +105,7 @@ class ChatActivity : AppCompatActivity() {
         supportActionBar?.apply {
             title = "" // Clear default title
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(android.R.drawable.ic_menu_revert)
+            setHomeAsUpIndicator(R.drawable.ic_back_arrow)
         }
         
         animateToolbarTitle()
@@ -161,7 +169,7 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun setupRecyclerView() {
-        messageAdapter = MessageAdapter()
+        messageAdapter = MessageAdapter(username)
         messagesRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ChatActivity)
             adapter = messageAdapter
@@ -173,31 +181,52 @@ class ChatActivity : AppCompatActivity() {
         viewModel.sendMessage(message)
     }
     
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("USERNAME", username)
+        outState.putString("SERVER_ADDRESS", serverAddress)
+    }
+    
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        
+        // Update language indicator text and add click handler
+        val languageItem = menu?.findItem(R.id.action_language)
+        val languageView = languageItem?.actionView
+        val languageText = languageView?.findViewById<TextView>(R.id.languageText)
+        val currentLang = getSavedLanguage() ?: "en"
+        languageText?.text = if (currentLang == "en") "EN" else "RU"
+        
+        // Add click handler for language indicator
+        languageView?.setOnClickListener {
+            val newLang = if (currentLang == "en") "ru" else "en"
+            updateLocale(newLang)
+        }
+        
+        // Update theme icon based on current theme
+        updateThemeIcon(menu)
+        
         return true
+    }
+    
+    private fun updateThemeIcon(menu: Menu?) {
+        val themeItem = menu?.findItem(R.id.action_color_scheme)
+        val currentScheme = getSavedColorScheme() ?: "light"
+        val iconRes = if (currentScheme == "dark") {
+            R.drawable.ic_theme_dark
+        } else {
+            R.drawable.ic_theme_toggle
+        }
+        themeItem?.setIcon(iconRes)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.lang_en -> {
-                updateLocale("en")
-                true
-            }
-            R.id.lang_ru -> {
-                updateLocale("ru")
-                true
-            }
-            R.id.color_light -> {
-                applyTheme("light")
-                true
-            }
-            R.id.color_dark -> {
-                applyTheme("dark")
-                true
-            }
-            R.id.action_settings -> {
-                // Settings action if needed
+            R.id.action_color_scheme -> {
+                // Toggle color scheme
+                val currentScheme = getSavedColorScheme() ?: "light"
+                val newScheme = if (currentScheme == "light") "dark" else "light"
+                applyTheme(newScheme)
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -217,6 +246,17 @@ class ChatActivity : AppCompatActivity() {
         }
     }
     
+    private fun applySavedColorScheme() {
+        val savedScheme = getSavedColorScheme()
+        if (savedScheme != null) {
+            val theme = when (savedScheme) {
+                "dark" -> R.style.Theme_MsgClientAndroid_Dark
+                else -> R.style.Theme_MsgClientAndroid
+            }
+            setTheme(theme)
+        }
+    }
+    
     private fun getSavedLanguage(): String? {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         return prefs.getString("language", null)
@@ -225,6 +265,11 @@ class ChatActivity : AppCompatActivity() {
     private fun saveLanguage(languageCode: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         prefs.edit().putString("language", languageCode).apply()
+    }
+    
+    private fun getSavedColorScheme(): String? {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("color_scheme", null)
     }
     
     private fun setLocale(languageCode: String) {
@@ -246,10 +291,13 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun applyTheme(themeName: String) {
-        Toast.makeText(this, "Theme applied: $themeName", Toast.LENGTH_SHORT).show()
-        // Here you would normally change the theme in SharedPreferences and recreate
-        // Since I don't see a custom theme engine, I'll just show the toast for now
-        // If you have specific Theme resource IDs, we can use setTheme()
+        saveColorScheme(themeName)
+        recreate()
+    }
+    
+    private fun saveColorScheme(scheme: String) {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        prefs.edit().putString("color_scheme", scheme).apply()
     }
 
     private fun logout() {
