@@ -5,6 +5,18 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-04-18
+
+### Added
+- 👥 Ability to view online users in real-time
+- 💾 Message history with server-side storage
+- 🔄 Server integration for online users tracking
+- 🔄 Server integration for message history retrieval
+- 📊 Improved message persistence across sessions
+
+### Changed
+- 🔧 Updated server integration to support new features
+
 ## [0.9.3] - 2026-04-18
 
 ### Added

@@ -161,7 +161,10 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveUsername(username: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("username", username).apply()
+        with(prefs.edit()) {
+            putString("username", username)
+            apply()
+        }
     }
     
     private fun getSavedServerAddress(): String? {
@@ -171,7 +174,10 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveServerAddress(address: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("server_address", address).apply()
+        with(prefs.edit()) {
+            putString("server_address", address)
+            apply()
+        }
     }
     
     private fun logout() {
@@ -207,7 +213,10 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveLanguage(languageCode: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("language", languageCode).apply()
+        with(prefs.edit()) {
+            putString("language", languageCode)
+            apply()
+        }
     }
     
     private fun toggleLanguage() {
@@ -228,13 +237,8 @@ class MainActivity : AppCompatActivity() {
         val resources: Resources = resources
         val config: Configuration = resources.configuration
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            config.setLocale(locale)
-            createConfigurationContext(config)
-        } else {
-            config.locale = locale
-            resources.updateConfiguration(config, resources.displayMetrics)
-        }
+        config.setLocale(locale)
+        createConfigurationContext(config)
         
         resources.updateConfiguration(config, resources.displayMetrics)
     }
@@ -246,7 +250,10 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveColorScheme(scheme: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("color_scheme", scheme).apply()
+        with(prefs.edit()) {
+            putString("color_scheme", scheme)
+            apply()
+        }
     }
     
     private fun toggleColorScheme() {

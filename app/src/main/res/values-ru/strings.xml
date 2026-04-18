@@ -90,5 +90,5 @@
     <string name="disconnected">Отключено</string>
     <string name="connecting">Подключение...</string>
     <string name="connected">Подключено</string>
-    
-    </resources>
+    <string name="online_count">пользователей онлайн: %d</string>
+</resources>

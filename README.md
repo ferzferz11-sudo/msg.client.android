@@ -17,6 +17,8 @@ Lavender Messenger (Android client) is a native Android application designed for
 - 📱 Send and receive messages in real-time via gRPC
 - 🔌 Bidirectional streaming with Go server
 - 👤 Username system for chat
+- 👥 View online users in real-time
+- 💾 Message history with server-side storage
 - 💾 Local message history storage
 - 🎨 Modern user interface (Material Design)
 - 🔄 Duplicate message filtering to prevent echo
@@ -171,7 +173,14 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH** (e.g., 1.0.0)
 
-Current version: **0.9.3** (versionCode: 11)
+Current version: **0.9.4** (versionCode: 12)
+
+### Version 0.9.4 - Online Users and Message History
+- 👥 Added ability to view online users in real-time
+- 💾 Added message history with server-side storage
+- 🔄 Server integration for online users tracking
+- 🔄 Server integration for message history retrieval
+- 📊 Improved message persistence across sessions
 
 ### Version 0.9.3 - Theme System Refactor
 - 🎨 Migrated to Material 3 semantic theme attributes (colorPrimary, colorOnPrimary, colorSecondary, etc.)

@@ -1,7 +1,7 @@
 package msg.client.android.data.grpc
 
 import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
+import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +27,9 @@ class RealGrpcClient {
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages
 
+    private val _users = MutableStateFlow<List<String>>(emptyList())
+    val users: StateFlow<List<String>> = _users
+
     private var isChatStarted = false
     private val sentMessageHashes = mutableSetOf<String>() // Track sent messages to prevent echo
     
@@ -40,19 +43,18 @@ class RealGrpcClient {
             println("DEBUG: RealGrpcClient - Connecting to Go server at $serverAddress:$port")
             disconnect()
             
-            val builder = ManagedChannelBuilder.forAddress(serverAddress, port)
+            val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
             if (useTls) builder.useTransportSecurity() else builder.usePlaintext()
             
-            builder.keepAliveTime(30, TimeUnit.SECONDS)
-                .keepAliveTimeout(5, TimeUnit.SECONDS)
+            builder.keepAliveTime(60, TimeUnit.SECONDS)
+                .keepAliveTimeout(20, TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
+                .idleTimeout(24, TimeUnit.HOURS)
             
             channel = builder.build()
             currentServerAddress = serverAddress
             _connectionState.value = true
             _error.value = null
-            
-            loadHistory()
             
         } catch (e: Exception) {
             println("DEBUG: RealGrpcClient - Connection failed: ${e.message}")
@@ -97,12 +99,46 @@ class RealGrpcClient {
             
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
-                    println("DEBUG: RealGrpcClient - History error: ${status.description}")
+                    println("DEBUG: RealGrpcClient - History error: ${status.code} - ${status.description}")
+                    _error.value = "History load failed: ${status.code}"
                 }
             }
         }, io.grpc.Metadata())
         
         call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+    
+    fun loadUsers() {
+        val currentChannel = channel ?: return
+        
+        println("DEBUG: RealGrpcClient - Loading users...")
+        
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<Unit, List<String>>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetClients")
+            .setRequestMarshaller(EmptyMarshaller())
+            .setResponseMarshaller(ClientListResponseMarshaller())
+            .build()
+            
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        
+        call.start(object : io.grpc.ClientCall.Listener<List<String>>() {
+            override fun onMessage(message: List<String>) {
+                println("DEBUG: RealGrpcClient - Received users: ${message.size}")
+                _users.value = message
+            }
+            
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    println("DEBUG: RealGrpcClient - Load users error: ${status.code} - ${status.description}")
+                    _error.value = "Users load failed: ${status.code}"
+                }
+            }
+        }, io.grpc.Metadata())
+        
+        call.sendMessage(Unit)
         call.halfClose()
         call.request(1)
     }
@@ -123,7 +159,15 @@ class RealGrpcClient {
         }
     }
     
+    private var lastUsername: String? = null
+    private var lastJoinMessage: String? = null
+    private var lastOnMessageReceived: ((Message) -> Unit)? = null
+
     fun startChat(username: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
+        lastUsername = username
+        lastJoinMessage = joinMessage
+        lastOnMessageReceived = onMessageReceived
+        
         if (!_connectionState.value || channel == null) {
             _error.value = "Not connected"
             return
@@ -159,8 +203,16 @@ class RealGrpcClient {
                 }
                 
                 override fun onError(t: Throwable) {
+                    println("DEBUG: RealGrpcClient - Chat stream error: ${t.message}. Attempting reconnect in 5s...")
                     isChatStarted = false
-                    _connectionState.value = false
+                    // Не ставим _connectionState.value = false сразу, попробуем переподключиться
+                    
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (lastUsername != null && lastJoinMessage != null && lastOnMessageReceived != null) {
+                            println("DEBUG: RealGrpcClient - Retrying startChat...")
+                            startChat(lastUsername!!, lastJoinMessage!!, lastOnMessageReceived!!)
+                        }
+                    }, 5000)
                 }
                 
                 override fun onCompleted() {
@@ -181,7 +233,8 @@ class RealGrpcClient {
                 override fun onHeaders(headers: io.grpc.Metadata) { call.request(100) }
                 override fun onMessage(message: MessageProto) { responseObserver.onNext(message) }
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    if (!status.isOk) responseObserver.onError(RuntimeException(status.description))
+                    println("DEBUG: RealGrpcClient - Chat stream closed. Status: ${status.code}, Description: ${status.description}, Cause: ${status.cause}")
+                    if (!status.isOk) responseObserver.onError(status.asRuntimeException())
                     else responseObserver.onCompleted()
                 }
             }, io.grpc.Metadata())
@@ -200,6 +253,10 @@ class RealGrpcClient {
                 .setText(joinMessage)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .build())
+            
+            // Загружаем историю и пользователей после успешного старта чата
+            loadHistory()
+            loadUsers()
             
         } catch (e: Exception) {
             isChatStarted = false
@@ -320,5 +377,38 @@ class GetHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHist
             }
         }
         return GetHistoryResponseProto(messages)
+    }
+}
+
+class EmptyMarshaller : io.grpc.MethodDescriptor.Marshaller<Unit> {
+    override fun stream(value: Unit): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+    override fun parse(stream: java.io.InputStream) = Unit
+}
+
+class ClientListResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<List<String>> {
+    override fun stream(value: List<String>): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        for (client in value) {
+            cos.writeString(1, client)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+
+    override fun parse(stream: java.io.InputStream): List<String> {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val clients = mutableListOf<String>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            // В ClientListResponse поле clients имеет номер 1
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                clients.add(cis.readString())
+            } else {
+                cis.skipField(tag)
+            }
+        }
+        return clients
     }
 }

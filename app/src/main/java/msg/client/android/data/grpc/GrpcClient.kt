@@ -8,6 +8,7 @@ class GrpcClient {
     
     val connectionState: StateFlow<Boolean> = realGrpcClient.connectionState
     val messages: StateFlow<List<Message>> = realGrpcClient.messages
+    val users: StateFlow<List<String>> = realGrpcClient.users
     val error: StateFlow<String?> = realGrpcClient.error
     
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051) {

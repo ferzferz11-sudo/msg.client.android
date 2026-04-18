@@ -133,14 +133,34 @@ class ChatActivity : AppCompatActivity() {
     
     private fun setupObservers() {
         lifecycleScope.launch {
-            viewModel.connectionState.collect { isConnected ->
-                connectionStatus.text = if (isConnected) getString(R.string.connected) else getString(R.string.disconnected)
+            // Объединяем состояние подключения и список пользователей
+            kotlinx.coroutines.flow.combine(
+                viewModel.connectionState,
+                viewModel.users
+            ) { isConnected, users ->
+                isConnected to users.size
+            }.collect { (isConnected, usersCount) ->
+                val statusText = if (isConnected) {
+                    val connectedStr = getString(R.string.connected)
+                    if (usersCount > 0) {
+                        "$connectedStr (${getString(R.string.online_count, usersCount)})"
+                    } else {
+                        connectedStr
+                    }
+                } else {
+                    getString(R.string.disconnected)
+                }
+                
+                connectionStatus.text = statusText
                 connectionStatus.setTextColor(
                     getColor(if (isConnected) android.R.color.holo_green_dark else android.R.color.holo_red_dark)
                 )
+                
+                // Очищаем subtitle тулбара, если он был установлен ранее
+                supportActionBar?.subtitle = null
             }
         }
-        
+
         lifecycleScope.launch {
             viewModel.error.collect { error ->
                 error?.let {
@@ -263,7 +283,10 @@ class ChatActivity : AppCompatActivity() {
     
     private fun saveLanguage(languageCode: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("language", languageCode).apply()
+        with(prefs.edit()) {
+            putString("language", languageCode)
+            apply()
+        }
     }
     
     private fun getSavedColorScheme(): String? {
@@ -278,13 +301,8 @@ class ChatActivity : AppCompatActivity() {
         val resources: Resources = resources
         val config: Configuration = resources.configuration
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            config.setLocale(locale)
-            createConfigurationContext(config)
-        } else {
-            config.locale = locale
-            resources.updateConfiguration(config, resources.displayMetrics)
-        }
+        config.setLocale(locale)
+        createConfigurationContext(config)
         
         resources.updateConfiguration(config, resources.displayMetrics)
     }
@@ -296,7 +314,10 @@ class ChatActivity : AppCompatActivity() {
     
     private fun saveColorScheme(scheme: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("color_scheme", scheme).apply()
+        with(prefs.edit()) {
+            putString("color_scheme", scheme)
+            apply()
+        }
     }
 
     private fun logout() {

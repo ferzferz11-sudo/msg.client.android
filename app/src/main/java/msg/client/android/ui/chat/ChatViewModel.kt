@@ -13,6 +13,7 @@ class ChatViewModel : ViewModel() {
     val connectionState: StateFlow<Boolean> = grpcClient.connectionState
     val error: StateFlow<String?> = grpcClient.error
     val messages: StateFlow<List<Message>> = grpcClient.messages
+    val users: StateFlow<List<String>> = grpcClient.users
     
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051) {
         viewModelScope.launch {
