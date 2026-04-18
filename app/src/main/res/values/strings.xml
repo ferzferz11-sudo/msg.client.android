@@ -88,7 +88,7 @@
     <string name="checking_server">Checking server...</string>
     <string name="server_available">Server available</string>
     <string name="server_unavailable">Server unavailable</string>
-    <string name="app_description">Real-time chat application</string>
+    <string name="app_description">A secure messaging application</string>
     <string name="exit">Exit</string>
     <string name="disconnected">Disconnected</string>
     <string name="connecting">Connecting...</string>

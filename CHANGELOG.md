@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔗 ChatActivity now uses server address from intent instead of hardcoded value
 - 🔧 Fixed server address parsing to separate host and port for gRPC connection
 - 🔧 Added port parameter to gRPC client functions for flexible port configuration
+- 🎨 Improved button text contrast for better visibility in light and dark themes
+- 🎨 Updated soft_lilac color to be more contrasting in both themes
+- 📝 Simplified Russian app name from "Лаванда Messenger" to "Лаванда"
+- 🎨 Theme button now shows current theme (Theme: Light/Dark) like language button
+- 🎨 Improved dark theme contrast: buttons now use lighter colors for better visibility
+- 🎨 Button text colors now use theme-aware textColorPrimary for automatic adaptation
+- 🎨 Replaced simple divider with decorative dots between main action and settings
+- 🎨 App title now uses lavender_mist color in both themes
+- 📝 Updated Russian app description from "Приложение для безопасного обмена сообщениями" to "Безопасный обмен сообщениями"
 
 ## [0.9.1] - 2026-04-17
 

@@ -38,6 +38,7 @@ class MainActivityMinimal : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_simple)
         updateLanguageButtonText()
+        updateColorSchemeButtonText()
         
         // Show join chat button
         joinChatButton = findViewById(R.id.joinChatButton)
@@ -256,20 +257,8 @@ class MainActivityMinimal : AppCompatActivity() {
         val newScheme = schemes[nextIndex]
         
         saveColorScheme(newScheme)
+        updateColorSchemeButtonText()
         recreate()
-    }
-    
-    private fun setColorScheme(scheme: String) {
-        // Update button text to reflect current scheme
-        val colorSchemeButton: Button? = findViewById(R.id.colorSchemeButton)
-        if (colorSchemeButton != null) {
-            val schemeName = when (scheme) {
-                "light" -> getString(R.string.light)
-                "dark" -> getString(R.string.dark)
-                else -> getString(R.string.light)
-            }
-            colorSchemeButton.text = "${getString(R.string.color_scheme)}: $schemeName"
-        }
     }
     
     private fun updateLanguageButtonText() {
@@ -282,6 +271,19 @@ class MainActivityMinimal : AppCompatActivity() {
                 getString(R.string.russian)
             }
             languageButton.text = "${getString(R.string.language)}: $languageName"
+        }
+    }
+    
+    private fun updateColorSchemeButtonText() {
+        val colorSchemeButton: Button? = findViewById(R.id.colorSchemeButton)
+        if (colorSchemeButton != null) {
+            val currentScheme = getSavedColorScheme() ?: "light"
+            val schemeName = if (currentScheme == "dark") {
+                getString(R.string.dark)
+            } else {
+                getString(R.string.light)
+            }
+            colorSchemeButton.text = "${getString(R.string.toggle_color_scheme)}: $schemeName"
         }
     }
     
