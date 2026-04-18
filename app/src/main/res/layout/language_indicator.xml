@@ -13,6 +13,6 @@
         android:text="EN"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="@color/lavender_mist" />
+        android:textColor="?attr/colorOnPrimary" />
 
 </FrameLayout>

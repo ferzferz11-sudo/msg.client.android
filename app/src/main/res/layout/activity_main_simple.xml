@@ -4,6 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
+    android:background="?android:attr/windowBackground"
     android:padding="24dp">
 
     <TextView
@@ -12,7 +13,7 @@
         android:text="@string/lavender_messenger"
         android:textSize="32sp"
         android:textStyle="bold"
-        android:textColor="@color/lavender_mist"
+        android:textColor="?attr/colorPrimary"
         android:layout_marginBottom="24dp" />
 
     <TextView
@@ -38,36 +39,36 @@
         android:layout_height="56dp"
         android:text="@string/join"
         android:textSize="18sp"
-        android:textColor="@color/white"
-        android:backgroundTint="@color/lavender_mist"
-        android:layout_marginBottom="48dp" />
+        android:textColor="?attr/colorOnPrimary"
+        android:backgroundTint="?attr/colorPrimary"
+        android:layout_marginBottom="32dp" />
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_marginBottom="24dp">
+        android:layout_marginBottom="32dp">
 
         <View
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:background="@drawable/circle_indicator"
-            android:backgroundTint="@color/lavender_mist"
+            android:backgroundTint="?attr/colorSecondary"
             android:layout_marginEnd="8dp" />
 
         <View
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:background="@drawable/circle_indicator"
-            android:backgroundTint="@color/lavender_mist"
+            android:backgroundTint="?attr/colorSecondary"
             android:layout_marginEnd="8dp" />
 
         <View
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:background="@drawable/circle_indicator"
-            android:backgroundTint="@color/lavender_mist" />
+            android:backgroundTint="?attr/colorSecondary" />
 
     </LinearLayout>
 
@@ -77,8 +78,8 @@
         android:layout_height="56dp"
         android:text="@string/toggle_language"
         android:textSize="14sp"
-        android:textColor="@color/white"
-        android:backgroundTint="@color/deep_purple"
+        android:textColor="?attr/colorOnSecondary"
+        android:backgroundTint="?attr/colorSecondary"
         android:layout_marginBottom="12dp" />
 
     <Button
@@ -87,8 +88,8 @@
         android:layout_height="56dp"
         android:text="@string/toggle_color_scheme"
         android:textSize="14sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:backgroundTint="@color/soft_lilac"
+        android:textColor="?attr/colorOnSecondary"
+        android:backgroundTint="?attr/colorSecondary"
         android:layout_marginBottom="12dp" />
 
     <Button
@@ -97,8 +98,8 @@
         android:layout_height="56dp"
         android:text="@string/exit"
         android:textSize="16sp"
-        android:textColor="@color/white"
-        android:backgroundTint="@color/dark_slate"
+        android:textColor="?attr/colorOnPrimary"
+        android:backgroundTint="?attr/colorPrimary"
         android:layout_marginBottom="12dp" />
 
 </LinearLayout>

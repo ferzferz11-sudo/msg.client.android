@@ -1,15 +1,29 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/deep_purple</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/lavender_mist</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:windowBackground">@color/silver_fog</item>
+        <item name="colorSurface">@color/silver_fog</item>
+        <item name="colorOnSurface">@color/deep_purple</item>
+        <item name="android:textColorPrimary">@color/deep_purple</item>
+        <item name="android:textColorHint">@color/lavender_mist</item>
     </style>
 
     <style name="Theme.MsgClientAndroid" parent="Base.Theme.MsgClientAndroid" />
-    
+
     <!-- Dark theme for manual switching -->
     <style name="Theme_MsgClientAndroid_Dark" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/lavender_mist</item>
+        <item name="colorOnPrimary">@color/deep_purple</item>
+        <item name="colorSecondary">@color/deep_purple</item>
+        <item name="colorOnSecondary">@color/soft_lilac</item>
         <item name="android:windowBackground">@color/dark_slate</item>
+        <item name="colorSurface">@color/dark_slate</item>
+        <item name="colorOnSurface">@color/soft_lilac</item>
+        <item name="android:textColorPrimary">@color/soft_lilac</item>
+        <item name="android:textColorHint">@color/lavender_mist</item>
     </style>
 </resources>

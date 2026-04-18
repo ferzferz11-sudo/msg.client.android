@@ -4,14 +4,16 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="32dp"
-    android:gravity="center">
+    android:gravity="center"
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Welcome"
-        android:textSize="18sp"
+        android:textSize="20sp"
+        android:textStyle="bold"
         android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="24dp"
         android:gravity="center" />
@@ -26,7 +28,8 @@
         android:layout_marginBottom="16dp"
         android:gravity="center"
         android:textColor="?android:attr/textColorPrimary"
-        android:textColorHint="#999999" />
+        android:textColorHint="?android:attr/textColorHint"
+        android:background="?android:attr/windowBackground" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -40,7 +43,7 @@
         android:id="@+id/serverAddressSpinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="16dp" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -54,14 +57,14 @@
             android:layout_width="10dp"
             android:layout_height="10dp"
             android:background="@drawable/circle_indicator"
-            android:layout_marginEnd="6dp" />
+            android:layout_marginEnd="8dp" />
 
         <TextView
             android:id="@+id/serverStatusText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/checking_server"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textColor="?android:attr/textColorSecondary" />
 
         <TextView
@@ -70,9 +73,9 @@
             android:layout_height="wrap_content"
             android:text="↻"
             android:textSize="24sp"
-            android:textColor="@color/deep_purple"
-            android:layout_marginStart="6dp"
-            android:translationY="-4dp"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginStart="8dp"
+            android:translationY="-2dp"
             android:clickable="true"
             android:focusable="true" />
 
@@ -87,24 +90,24 @@
         <Button
             android:id="@+id/btnCancel"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:text="Cancel"
             android:textSize="16sp"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/dark_slate" />
+            android:textColor="?attr/colorOnSecondary"
+            android:backgroundTint="?attr/colorSecondary" />
 
         <Button
             android:id="@+id/btnJoin"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="Join"
             android:textSize="16sp"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/lavender_mist" />
+            android:textColor="?attr/colorOnPrimary"
+            android:backgroundTint="?attr/colorPrimary" />
 
     </LinearLayout>
 
