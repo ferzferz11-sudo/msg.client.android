@@ -23,7 +23,7 @@ class MessageAdapter(
     
     fun updateUsername(newUsername: String) {
         currentUsername = newUsername
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
     }
     
     fun clearSelection() {
@@ -43,31 +43,34 @@ class MessageAdapter(
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val currentMessage = getItem(position)
         val previousMessage = if (position > 0) getItem(position - 1) else null
-        
+
         // Check if this is a continuation of the same user's message
         val isConsecutive = previousMessage != null &&
             previousMessage.user == currentMessage.user
-        
+
         // Check if this is an outgoing message (from current user)
         val isOutgoing = currentMessage.user == currentUsername
-        
+
         // Check if this message is selected
         val isSelected = selectedPosition == position
-        
+
         holder.bind(currentMessage, isConsecutive, isOutgoing, isSelected, onDeleteMessage) {
-            // Handle message click
-            if (selectedPosition == position) {
+            // Handle message click - use holder.bindingAdapterPosition to get current position
+            val currentPosition = holder.bindingAdapterPosition
+            if (currentPosition == RecyclerView.NO_POSITION) return@bind
+
+            if (selectedPosition == currentPosition) {
                 // Deselect if already selected
                 selectedPosition = -1
-                notifyItemChanged(position)
+                notifyItemChanged(currentPosition)
             } else {
                 // Select this message
                 val previousPosition = selectedPosition
-                selectedPosition = position
+                selectedPosition = currentPosition
                 if (previousPosition != -1) {
                     notifyItemChanged(previousPosition)
                 }
-                notifyItemChanged(position)
+                notifyItemChanged(currentPosition)
             }
         }
     }
