@@ -30,17 +30,17 @@ class RealGrpcClient {
     private var isChatStarted = false
     private val sentMessageHashes = mutableSetOf<String>() // Track sent messages to prevent echo
     
-    fun connect(serverAddress: String, useTls: Boolean = false) {
+    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051) {
         if (_connectionState.value && currentServerAddress == serverAddress) {
-            println("DEBUG: RealGrpcClient - Already connected to $serverAddress")
+            println("DEBUG: RealGrpcClient - Already connected to $serverAddress:$port")
             return
         }
 
         try {
-            println("DEBUG: RealGrpcClient - Connecting to Go server at $serverAddress:50051")
+            println("DEBUG: RealGrpcClient - Connecting to Go server at $serverAddress:$port")
             disconnect()
             
-            val builder = ManagedChannelBuilder.forAddress(serverAddress, 50051)
+            val builder = ManagedChannelBuilder.forAddress(serverAddress, port)
             if (useTls) builder.useTransportSecurity() else builder.usePlaintext()
             
             builder.keepAliveTime(30, TimeUnit.SECONDS)

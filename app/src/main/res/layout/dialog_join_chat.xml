@@ -23,10 +23,60 @@
         android:hint="Enter your name"
         android:textSize="16sp"
         android:padding="16dp"
-        android:layout_marginBottom="32dp"
+        android:layout_marginBottom="16dp"
         android:gravity="center"
         android:textColor="?android:attr/textColorPrimary"
         android:textColorHint="#999999" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/server_address_label"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/serverAddressSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="24dp">
+
+        <View
+            android:id="@+id/serverStatusIndicator"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:background="@drawable/circle_indicator"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/serverStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/checking_server"
+            android:textSize="11sp"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <TextView
+            android:id="@+id/refreshServerButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↻"
+            android:textSize="24sp"
+            android:textColor="@color/deep_purple"
+            android:layout_marginStart="6dp"
+            android:translationY="-4dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -42,7 +92,7 @@
             android:layout_marginEnd="8dp"
             android:text="Cancel"
             android:textSize="16sp"
-            android:backgroundTint="#757575" />
+            android:backgroundTint="@color/dark_slate" />
 
         <Button
             android:id="@+id/btnJoin"
@@ -52,7 +102,7 @@
             android:layout_marginStart="8dp"
             android:text="Join"
             android:textSize="16sp"
-            android:backgroundTint="#2196F3" />
+            android:backgroundTint="@color/lavender_mist" />
 
     </LinearLayout>
 

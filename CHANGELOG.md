@@ -1,22 +1,34 @@
 # Changelog
 
-All notable changes to MSG Android Client will be documented in this file.
+All notable changes to Lavender Messenger (Android client) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.2] - Unreleased
 
-### Planned
-- Push notifications support
-- Dark theme implementation
-- Message encryption
-- File sharing functionality
-- Voice messages
-- Multiple chat rooms
-- User presence indicators
+### Added
+- 🎨 New Lavender Messenger color palette (Deep Purple, Lavender Mist, Soft Lilac, Silver Fog, Dark Slate)
+- 🎨 Updated light theme with Silver Fog background and Lavender accents
+- 🎨 Updated dark theme with Dark Slate background and Lavender Mist accents
+- 🎨 Applied new colors to main screen buttons
+- 📝 Server address now displayed in welcome dialog
+- 👤 Username is pre-filled in welcome dialog if previously entered
+- 📝 Server address selection from predefined list (192.168.1.135:50051, 10.0.2.2:50051, localhost:50051)
+- 💾 Server address is saved and restored between sessions
+- 🟢 Server status indicator below server address spinner (green = available, red = unavailable)
+- 🔘 Join button disabled when server is unavailable
+- 🔄 Refresh button to manually recheck server availability
 
-## [2.0.0] - 2026-04-17
+### Changed
+- 🎨 Updated dialog buttons to use Lavender Messenger color palette
+- 👤 Username now persists after logout (previously was cleared on logout)
+- 🚫 Removed auto-login to always show main screen with join dialog
+- 🔗 ChatActivity now uses server address from intent instead of hardcoded value
+- 🔧 Fixed server address parsing to separate host and port for gRPC connection
+- 🔧 Added port parameter to gRPC client functions for flexible port configuration
+
+## [0.9.1] - 2026-04-17
 
 ### Added
 - ✅ Working bidirectional gRPC streaming
@@ -37,6 +49,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced simulation with real gRPC bidirectional streaming
 - Improved error handling for connection failures
 - Enhanced message processing with duplicate filtering
+- 🎨 Renamed app from "Lavanda" to "Lavender Messenger"
+- 📝 Updated documentation with new app name and description
+- 🌐 Russian translation: "Лаванда"
+- 🗑️ Removed Chinese language support (now only English and Russian)
+- 🔄 Added language toggle button on main screen
+- 💾 Language preference is now saved and restored on app launch
+- 🌐 Language is applied consistently across all activities
+- 🌐 Complete Russian translation of all UI strings
+- 📝 All hardcoded text replaced with string resources for proper localization
+- 📝 Project name changed from "MSG Android Client" to "Lavender Messenger (Android client)"
+- 📄 Separated README into English (README.md) and Russian (README.ru.md) versions
+- 🎨 Reorganized main screen UI - separated Join button from settings buttons
+- 🎨 Added color scheme toggle button (Light/Dark only)
+- 💾 Color scheme preference is now saved and restored on app launch
+- 📱 Removed unnecessary "Ready" toast message that appeared on every activity recreation
+- 🔧 Version now stored in single place (build.gradle.kts) and used everywhere via BuildConfig and string resources
 
 ### Technical Details
 - **gRPC**: Custom marshaller using CodedOutputStream/CodedInputStream
@@ -57,10 +85,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed connection cleanup with proper shutdown
 - Fixed stream recreation on repeated startChat calls
 
-## [1.0.0] - 2024-04-17
+## [0.9.0] - 2024-04-17
 
 ### Added
-- 🎉 Initial release of MSG Android Client
+- 🎉 Initial release of Lavender Messenger (Android client)
 - 📱 Basic messaging functionality
 - 🔐 User authentication system
 - 💾 Local message storage
@@ -87,8 +115,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Configuration
 - Gradle build system with Kotlin DSL
-- Version code: 2
-- Version name: 2.0
+- Version code: 10
+- Version name: 0.9.2
 - Package name: msg.client.android
 
 ---

@@ -1,7 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Lavender Messenger Palette -->
+    <color name="deep_purple">#312051</color>
+    <color name="lavender_mist">#967BB6</color>
+    <color name="soft_lilac">#E6E6FA</color>
+    <color name="silver_fog">#F5F5F7</color>
+    <color name="dark_slate">#1A1A1A</color>
+    
+    <!-- Standard colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="message_background">#F5F5F5</color>
+    
+    <!-- Message colors (light theme) -->
+    <color name="message_background">#F5F5F7</color>
     <color name="message_border">#E0E0E0</color>
+    <color name="incoming_message_background">#E6E6FA</color>
+    <color name="outgoing_message_background">#967BB6</color>
+    <color name="outgoing_message_text">#FFFFFF</color>
+    
+    <!-- UI element colors -->
+    <color name="primary">#312051</color>
+    <color name="primary_dark">#24163D</color>
+    <color name="accent">#967BB6</color>
 </resources>

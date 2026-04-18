@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Lavanda</string>
+    <string name="app_name">Lavender</string>
     
     <!-- Settings Menu -->
     <string name="action_settings">Settings</string>
@@ -17,11 +17,11 @@
     <string name="send_message">Send Message</string>
     
     <!-- Messages -->
-    <string name="lavanda_messenger">Lavanda Messenger</string>
+    <string name="lavanda_messenger">Lavender Messenger</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
     <string name="type_message_here">Type message here</string>
-    <string name="lavanda_ready">Lavanda Messenger ready!</string>
+    <string name="lavanda_ready">Lavender Messenger ready!</string>
     
     <!-- Toast Messages -->
     <string name="expert_mode_enabled">Expert mode enabled</string>
@@ -38,15 +38,13 @@
     <!-- Color Schemes -->
     <string name="light">Light</string>
     <string name="dark">Dark</string>
-    <string name="blue">Blue</string>
     
     <!-- Languages -->
-    <string name="russian">Russian</string>
+    <string name="russian">Русский</string>
     <string name="english">English</string>
-    <string name="chinese">Chinese</string>
     
     <!-- Log Messages -->
-    <string name="lavanda_loaded">Lavanda Messenger loaded successfully</string>
+    <string name="lavanda_loaded">Lavender Messenger loaded successfully</string>
     <string name="testing_server">Testing connection to 192.168.1.135:50051...</string>
     <string name="attempting_tcp">Attempting TCP connection...</string>
     <string name="server_reachable">SUCCESS: Server reachable at 192.168.1.135:50051!</string>
@@ -83,4 +81,16 @@
     <string name="change_username">Change Username</string>
     <string name="enter_new_username">Enter new username</string>
     <string name="change">Change</string>
+    <string name="toggle_language">Language</string>
+    <string name="toggle_color_scheme">Theme</string>
+    <string name="server_address_label">Server</string>
+    <string name="server_address">localhost:50051</string>
+    <string name="checking_server">Checking server...</string>
+    <string name="server_available">Server available</string>
+    <string name="server_unavailable">Server unavailable</string>
+    <string name="app_description">Real-time chat application</string>
+    <string name="exit">Exit</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="connecting">Connecting...</string>
+    <string name="connected">Connected</string>
 </resources>

@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.MsgClientAndroid" parent="Base.Theme.MsgClientAndroid" />
+    
+    <!-- Dark theme for manual switching -->
+    <style name="Theme_MsgClientAndroid_Dark" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/lavender_mist</item>
+        <item name="android:windowBackground">@color/dark_slate</item>
+    </style>
 </resources>

@@ -1,150 +1,171 @@
-# MSG Android Client
+# Lavender Messenger (Android client)
 
-Android клиент для системы MSG (Message System).
+A secure messaging application
 
-## Описание проекта
+**Author:** Pavel Davydov (ferz)
 
-MSG Android Client - это нативное Android приложение, предназначенное для обмена сообщениями через систему MSG. Приложение разработано на Kotlin с использованием современных Android практик и архитектурных подходов.
+A real-time secure messaging application with gRPC server and multiple client implementations.
 
-## Основные функции
+---
 
-- 📱 Отправка и получение сообщений в реальном времени через gRPC
-- 🔌 Bidirectional streaming с Go сервером
-- 👤 Система имен пользователей для чата
-- 💾 Локальное хранение истории сообщений
-- 🎨 Современный пользовательский интерфейс (Material Design)
-- 🔄 Дубликат-фильтрация сообщений для предотвращения эха
-- 📊 Отслеживание состояния подключения в реальном времени
+## Project Description
 
-## Технический стек
+Lavender Messenger (Android client) is a native Android application designed for messaging through the Lavender Messenger system. The application is developed in Kotlin using modern Android practices and architectural approaches.
 
-- **Язык программирования**: Kotlin
+## Key Features
+
+- 📱 Send and receive messages in real-time via gRPC
+- 🔌 Bidirectional streaming with Go server
+- 👤 Username system for chat
+- 💾 Local message history storage
+- 🎨 Modern user interface (Material Design)
+- 🔄 Duplicate message filtering to prevent echo
+- 📊 Real-time connection status tracking
+
+## Tech Stack
+
+- **Programming Language**: Kotlin
 - **Min SDK**: 29 (Android 10.0)
 - **Target SDK**: 37 (Android 14)
 - **Compile SDK**: 37
-- **Архитектура**: MVVM
+- **Architecture**: MVVM
 - **UI Framework**: Android Jetpack (ViewBinding)
-- **Асинхронность**: Kotlin Coroutines + StateFlow
-- **Сетевой протокол**: gRPC (bidirectional streaming)
-- **Протокол**: Protobuf (protobuf-lite)
-- **Сервер**: Go gRPC сервер (localhost:50051)
+- **Asynchronous**: Kotlin Coroutines + StateFlow
+- **Network Protocol**: gRPC (bidirectional streaming)
+- **Protocol**: Protobuf (protobuf-lite)
+- **Server**: Go gRPC server (localhost:50051)
 
-## Требования
+## Requirements
 
-- Android 10.0 (API level 29) и выше
-- Минимум 2 ГБ оперативной памяти
-- Запущенный Go gRPC сервер на localhost:50051 (или 10.0.2.2:50051 для эмулятора)
-- Интернет-соединение для работы с сервером
+- Android 10.0 (API level 29) or higher
+- Minimum 2 GB RAM
+- Running Go gRPC server on localhost:50051 (or 10.0.2.2:50051 for emulator)
+- Internet connection for server communication
 
-## Установка
+## Installation
 
-### Из исходного кода
+### From Source Code
 
-1. Клонируйте репозиторий:
+1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd msg/client/android
 ```
 
-2. Откройте проект в Android Studio или используйте командную строку:
+2. Open the project in Android Studio or use command line:
 
 ```bash
-# Сборка проекта
+# Build project
 ./gradlew build
 
-# Установка на устройство
+# Install on device
 ./gradlew installDebug
 ```
 
-## Структура проекта
+## Project Structure
 
 ```
 app/
 ├── src/main/
 │   ├── java/msg/client/android/
-│   │   ├── MainActivityMinimal.kt   # Точка входа с диалогом имени
-│   │   ├── ChatActivity.kt          # Главный чат UI с RecyclerView
-│   │   ├── ChatViewModel.kt         # Управление состоянием с gRPC
+│   │   ├── MainActivityMinimal.kt   # Entry point with username dialog
+│   │   ├── ChatActivity.kt          # Main chat UI with RecyclerView
+│   │   ├── ChatViewModel.kt         # State management with gRPC
 │   │   ├── ui/
-│   │   │   ├── MessageAdapter.kt    # RecyclerView адаптер для сообщений
-│   │   │   └── MessageViewHolder.kt # ViewHolder для сообщений
+│   │   │   ├── MessageAdapter.kt    # RecyclerView adapter for messages
+│   │   │   └── MessageViewHolder.kt # ViewHolder for messages
 │   │   ├── data/
 │   │   │   ├── models/
-│   │   │   │   └── Message.kt       # Модель сообщения
+│   │   │   │   └── Message.kt       # Message model
 │   │   │   ├── proto/
-│   │   │   │   ├── MessageProto.kt  # Protobuf сообщение
-│   │   │   │   └── ProtoUtils.kt    # Утилиты для protobuf
+│   │   │   │   ├── MessageProto.kt  # Protobuf message
+│   │   │   │   └── ProtoUtils.kt    # Protobuf utilities
 │   │   │   └── grpc/
-│   │   │       ├── GrpcClient.kt    # Обертка для gRPC клиента
-│   │   │       └── RealGrpcClient.kt # Реализация gRPC с custom marshaller
+│   │   │       ├── GrpcClient.kt    # Wrapper for gRPC client
+│   │   │       └── RealGrpcClient.kt # gRPC implementation with custom marshaller
 │   │   └── viewmodel/
-│   ├── res/                         # Ресурсы
-│   └── AndroidManifest.xml          # Манифест приложения
-└── build.gradle.kts                 # Конфигурация сборки
+│   ├── res/                         # Resources
+│   └── AndroidManifest.xml          # App manifest
+└── build.gradle.kts                 # Build configuration
 ```
 
-## Конфигурация
+## Configuration
 
-### Сервер
-Приложение подключается к Go gRPC серверу по адресу:
-- **Устройство**: localhost:50051
-- **Эмулятор Android**: 10.0.2.2:50051
+### Server
+The application connects to Go gRPC server at:
+- **Device**: localhost:50051
+- **Android Emulator**: 10.0.2.2:50051
 
-### gRPC Настройки
-- **Протокол**: Bidirectional streaming
-- **Keep-alive**: 30 секунд интервал, 5 секунд таймаут
+### gRPC Settings
+- **Protocol**: Bidirectional streaming
+- **Keep-alive**: 30 seconds interval, 5 seconds timeout
 - **Marshaller**: Custom MessageProtoMarshaller
-- **Метод**: messenger.ChatService/Chat
+- **Method**: messenger.ChatService/Chat
 
-## Сборка и тестирование
+## Build and Testing
 
-### Сборка Debug версии
+### Build Debug Version
 ```bash
 ./gradlew assembleDebug
 ```
 
-### Сборка Release версии
+### Build Release Version
 ```bash
 ./gradlew assembleRelease
 ```
 
-### Запуск тестов
+### Run Tests
 ```bash
-# Юнит-тесты
+# Unit tests
 ./gradlew test
 
-# Инструментальные тесты
+# Instrumented tests
 ./gradlew connectedAndroidTest
 ```
 
-## Версионирование
+## Versioning
 
-Проект следует семантическому версионированию (SemVer):
-- **MAJOR.MINOR.PATCH** (например, 1.0.0)
+The project follows semantic versioning (SemVer):
+- **MAJOR.MINOR.PATCH** (e.g., 1.0.0)
 
-Текущая версия: **2.0** (versionCode: 2)
+Current version: **0.9.2** (versionCode: 10)
 
-### Версия 2.0 - Working Bidirectional Streaming
-- ✅ Работающий bidirectional gRPC streaming
-- ✅ Сервер получает сообщения и транслирует обратно
+### Version 0.9.2 - Lavender Color Palette
+- 🎨 New Lavender Messenger color palette (Deep Purple, Lavender Mist, Soft Lilac, Silver Fog, Dark Slate)
+- 🎨 Updated light and dark themes with new colors
+- 📝 Server address selection from predefined list (192.168.1.135:50051, 10.0.2.2:50051, localhost:50051)
+- 👤 Username pre-filled in welcome dialog if previously entered
+- 🟢 Server status indicator below server address spinner
+- 🔘 Join button disabled when server is unavailable
+- 🔄 Refresh button to manually recheck server availability
+
+### Version 0.9.1 - Working Bidirectional Streaming
+- ✅ Working bidirectional gRPC streaming
+- ✅ Server receives messages and broadcasts back
 - ✅ Custom protobuf marshaller
-- ✅ Дубликат-фильтрация сообщений
-- ✅ Корректная обработка ошибок подключения
+- ✅ Duplicate message filtering
+- ✅ Proper connection error handling
 
-## Лицензия
+## License
 
-[Добавьте информацию о лицензии]
+[Add license information]
 
-## Контакты
+## Contacts
 
-- Разработчик: [Ваше имя]
-- Email: [ваш-email@example.com]
-- GitHub: [ваш-github-username]
+- Developer: Pavel Davydov (ferz)
+- Email: [your-email@example.com]
+- GitHub: [your-github-username]
 
-## Вклад в проект
+## Contributing
 
-1. Fork проекта
-2. Создайте feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit изменения (`git commit -m 'Add some AmazingFeature'`)
-4. Push в branch (`git push origin feature/AmazingFeature`)
-5. Откройте Pull Request
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## Russian Documentation
+
+For Russian documentation, see [README.ru.md](README.ru.md)

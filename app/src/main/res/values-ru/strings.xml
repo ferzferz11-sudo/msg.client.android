@@ -1,86 +1,96 @@
 <resources>
-    <string name="app_name">Lavanda</string>
+    <string name="app_name">Лаванда</string>
     
     <!-- Settings Menu -->
-    <string name="action_settings">Settings</string>
-    <string name="settings_title">Settings</string>
-    <string name="language">Language</string>
-    <string name="color_scheme">Color Scheme</string>
-    <string name="expert_mode">Expert Mode</string>
-    <string name="cancel">Cancel</string>
+    <string name="action_settings">Настройки</string>
+    <string name="settings_title">Настройки</string>
+    <string name="language">Язык</string>
+    <string name="color_scheme">Цветовая схема</string>
+    <string name="expert_mode">Экспертный режим</string>
+    <string name="cancel">Отмена</string>
     
     <!-- Buttons -->
-    <string name="test_connection">Test Connection</string>
-    <string name="show_network_info">Show Network Info</string>
-    <string name="ping_laptop">Ping Server (192.168.1.135)</string>
-    <string name="send_message">Send Message</string>
+    <string name="test_connection">Проверить соединение</string>
+    <string name="show_network_info">Показать информацию сети</string>
+    <string name="ping_laptop">Пинг сервера (192.168.1.135)</string>
+    <string name="send_message">Отправить сообщение</string>
     
     <!-- Messages -->
-    <string name="lavanda_messenger">Lavanda Messenger</string>
-    <string name="connection_logs">Connection logs:</string>
-    <string name="connected_as">Connected as: %s (saved)</string>
-    <string name="type_message_here">Type message here</string>
-    <string name="lavanda_ready">Lavanda Messenger ready!</string>
+    <string name="lavanda_messenger">Лаванда Messenger</string>
+    <string name="connection_logs">Логи соединения:</string>
+    <string name="connected_as">Подключен как: %s (сохранено)</string>
+    <string name="type_message_here">Введите сообщение здесь</string>
+    <string name="lavanda_ready">Лаванда Messenger готов!</string>
     
     <!-- Toast Messages -->
-    <string name="expert_mode_enabled">Expert mode enabled</string>
-    <string name="expert_mode_disabled">Expert mode disabled</string>
-    <string name="language_selected">Language: %s</string>
-    <string name="color_scheme_selected">Color Scheme: %s</string>
-    <string name="testing_connection">Testing connection...</string>
-    <string name="connection_success">SUCCESS: Server connected!</string>
-    <string name="connection_failed">Connection failed</string>
-    <string name="ping_success">SUCCESS: Server reachable!</string>
-    <string name="ping_failed">Ping failed</string>
-    <string name="ping_timeout">Ping timeout</string>
+    <string name="expert_mode_enabled">Экспертный режим включен</string>
+    <string name="expert_mode_disabled">Экспертный режим отключен</string>
+    <string name="language_selected">Язык: %s</string>
+    <string name="color_scheme_selected">Цветовая схема: %s</string>
+    <string name="testing_connection">Проверка соединения...</string>
+    <string name="connection_success">УСПЕХ: Сервер подключен!</string>
+    <string name="connection_failed">Соединение не удалось</string>
+    <string name="ping_success">УСПЕХ: Сервер доступен!</string>
+    <string name="ping_failed">Пинг не удался</string>
+    <string name="ping_timeout">Таймаут пинга</string>
     
     <!-- Color Schemes -->
-    <string name="light">Light</string>
-    <string name="dark">Dark</string>
-    <string name="blue">Blue</string>
+    <string name="light">Светлая</string>
+    <string name="dark">Темная</string>
     
     <!-- Languages -->
-    <string name="russian">Russian</string>
+    <string name="russian">Русский</string>
     <string name="english">English</string>
-    <string name="chinese">Chinese</string>
     
     <!-- Log Messages -->
-    <string name="lavanda_loaded">Lavanda Messenger loaded successfully</string>
-    <string name="testing_server">Testing connection to 192.168.1.135:50051...</string>
-    <string name="attempting_tcp">Attempting TCP connection...</string>
-    <string name="server_reachable">SUCCESS: Server reachable at 192.168.1.135:50051!</string>
-    <string name="server_failed">FAILED: %s</string>
-    <string name="network_info_start">=== Network Information ===</string>
-    <string name="phone_ip">Phone IP: %s</string>
+    <string name="lavanda_loaded">Лаванда Messenger успешно загружен</string>
+    <string name="testing_server">Проверка соединения с 192.168.1.135:50051...</string>
+    <string name="attempting_tcp">Попытка TCP соединения...</string>
+    <string name="server_reachable">УСПЕХ: Сервер доступен по адресу 192.168.1.135:50051!</string>
+    <string name="server_failed">ОШИБКА: %s</string>
+    <string name="network_info_start">=== Информация о сети ===</string>
+    <string name="phone_ip">IP телефона: %s</string>
     <string name="network_ssid">SSID: %s</string>
-    <string name="network_id">Network ID: %s</string>
-    <string name="wifi_error">Error getting WiFi info: %s</string>
-    <string name="testing_laptop">Testing connectivity to laptop...</string>
-    <string name="laptop_reachable">SUCCESS: Can reach laptop at 192.168.1.135:50051</string>
-    <string name="laptop_failed">FAILED: Cannot reach laptop - %s</string>
-    <string name="network_info_end">=== End Network Info ===</string>
-    <string name="ping_start">=== Ping Test ===</string>
-    <string name="ping_laptop_start">Pinging 192.168.1.135...</string>
-    <string name="testing_http">Testing HTTP (port 80)...</string>
-    <string name="http_success">SUCCESS: HTTP reachable</string>
-    <string name="testing_grpc">Testing gRPC (port 50051)...</string>
-    <string name="grpc_success">SUCCESS: gRPC reachable</string>
-    <string name="laptop_fully_reachable">Laptop is fully reachable!</string>
-    <string name="laptop_not_responding">TIMEOUT: Laptop not responding</string>
-    <string name="ping_laptop_failed">FAILED: Cannot ping laptop - %s</string>
-    <string name="ping_end">=== End Ping Test ===</string>
+    <string name="network_id">ID сети: %s</string>
+    <string name="wifi_error">Ошибка получения информации WiFi: %s</string>
+    <string name="testing_laptop">Проверка подключения к ноутбуку...</string>
+    <string name="laptop_reachable">УСПЕХ: Можно подключиться к ноутбуку по адресу 192.168.1.135:50051</string>
+    <string name="laptop_failed">ОШИБКА: Не удается подключиться к ноутбуку - %s</string>
+    <string name="network_info_end">=== Конец информации о сети ===</string>
+    <string name="ping_start">=== Тест пинга ===</string>
+    <string name="ping_laptop_start">Пинг 192.168.1.135...</string>
+    <string name="testing_http">Проверка HTTP (порт 80)...</string>
+    <string name="http_success">УСПЕХ: HTTP доступен</string>
+    <string name="testing_grpc">Проверка gRPC (порт 50051)...</string>
+    <string name="grpc_success">УСПЕХ: gRPC доступен</string>
+    <string name="laptop_fully_reachable">Ноутбук полностью доступен!</string>
+    <string name="laptop_not_responding">ТАЙМАУТ: Ноутбук не отвечает</string>
+    <string name="ping_laptop_failed">ОШИБКА: Не удается пропинговать ноутбук - %s</string>
+    <string name="ping_end">=== Конец теста пинга ===</string>
     
     <!-- Join Dialog -->
-    <string name="join">Join</string>
-    <string name="welcome">Welcome</string>
-    <string name="enter_username">Enter your name</string>
-    <string name="cancel_dialog">Cancel</string>
-    <string name="connected_status">connected</string>
-    <string name="username_empty">Username cannot be empty</string>
-    <string name="logged_out">Logged out successfully</string>
-    <string name="exiting_app">Exiting application</string>
-    <string name="change_username">Change Username</string>
-    <string name="enter_new_username">Enter new username</string>
-    <string name="change">Change</string>
+    <string name="join">Войти</string>
+    <string name="welcome">Добро пожаловать</string>
+    <string name="enter_username">Введите ваше имя</string>
+    <string name="cancel_dialog">Отмена</string>
+    <string name="connected_status">подключен</string>
+    <string name="username_empty">Имя пользователя не может быть пустым</string>
+    <string name="logged_out">Вы успешно вышли из системы</string>
+    <string name="exiting_app">Выход из приложения</string>
+    <string name="change_username">Изменить имя пользователя</string>
+    <string name="enter_new_username">Введите новое имя пользователя</string>
+    <string name="change">Изменить</string>
+    <string name="toggle_language">Язык</string>
+    <string name="toggle_color_scheme">Тема</string>
+    <string name="server_address_label">Сервер</string>
+    <string name="server_address">localhost:50051</string>
+    <string name="checking_server">Проверка сервера...</string>
+    <string name="server_available">Сервер доступен</string>
+    <string name="server_unavailable">Сервер недоступен</string>
+    <string name="app_description">Приложение для чата в реальном времени</string>
+    <string name="exit">Выход</string>
+    <string name="disconnected">Отключено</string>
+    <string name="connecting">Подключение...</string>
+    <string name="connected">Подключено</string>
     
     </resources>

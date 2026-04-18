@@ -1,5 +1,9 @@
 package msg.client.android
 
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.os.Build
+import java.util.Locale
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.animation.AnimationSet
@@ -38,10 +42,12 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var toolbarTitle: TextView
     
     private var username: String = ""
+    private var serverAddress: String = ""
     private var connectivityTest: ServerConnectivityTest? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applySavedLanguage()
         setContentView(R.layout.activity_chat)
         
         // 1. Initialize views first
@@ -54,20 +60,29 @@ class ChatActivity : AppCompatActivity() {
         // 3. Setup observers (now connectivityTest is not null)
         setupObservers()
         
-        // Get username from intent
+        // Get username and server address from intent
         username = intent.getStringExtra("USERNAME") ?: "User"
+        serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: "localhost:50051"
+        android.util.Log.d("ChatActivity", "Using server address: $serverAddress")
+        
+        // Parse server address (format: host:port)
+        val parts = serverAddress.split(":")
+        val host = if (parts.size >= 1) parts[0] else "localhost"
+        val port = if (parts.size >= 2) parts[1].toIntOrNull() ?: 50051 else 50051
+        
+        android.util.Log.d("ChatActivity", "Parsed host: $host, port: $port")
         
         try {
             // Test server connectivity
-            connectivityTest?.testServerReachability("192.168.1.135")
+            connectivityTest?.testServerReachability(host, port)
             
-            // Connect to server
-            viewModel.connect("192.168.1.135", false)
+            // Connect to server with correct port
+            viewModel.connect(host, false, port)
             
             // Start chat session (callback is empty because we use StateFlow for messages)
             viewModel.startChat(username) { }
             
-            Toast.makeText(this, "Connecting as $username...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
             addMessage("System", "Error: ${e.message}")
@@ -96,7 +111,7 @@ class ChatActivity : AppCompatActivity() {
         sendButton = findViewById(R.id.sendButton)
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
         
-        connectionStatus.text = "Connecting..."
+        connectionStatus.text = getString(R.string.connecting)
         connectionStatus.setTextColor(getColor(android.R.color.holo_orange_dark))
         
         sendButton.setOnClickListener {
@@ -111,7 +126,7 @@ class ChatActivity : AppCompatActivity() {
     private fun setupObservers() {
         lifecycleScope.launch {
             viewModel.connectionState.collect { isConnected ->
-                connectionStatus.text = if (isConnected) "Connected" else "Disconnected"
+                connectionStatus.text = if (isConnected) getString(R.string.connected) else getString(R.string.disconnected)
                 connectionStatus.setTextColor(
                     getColor(if (isConnected) android.R.color.holo_green_dark else android.R.color.holo_red_dark)
                 )
@@ -172,20 +187,12 @@ class ChatActivity : AppCompatActivity() {
                 updateLocale("ru")
                 true
             }
-            R.id.lang_zh -> {
-                updateLocale("zh")
-                true
-            }
             R.id.color_light -> {
                 applyTheme("light")
                 true
             }
             R.id.color_dark -> {
                 applyTheme("dark")
-                true
-            }
-            R.id.color_blue -> {
-                applyTheme("blue")
                 true
             }
             R.id.action_expert_mode -> {
@@ -199,7 +206,10 @@ class ChatActivity : AppCompatActivity() {
                 true
             }
             R.id.action_test_connection -> {
-                connectivityTest?.testServerReachability("192.168.1.135")
+                val parts = serverAddress.split(":")
+                val host = if (parts.size >= 1) parts[0] else "localhost"
+                val port = if (parts.size >= 2) parts[1].toIntOrNull() ?: 50051 else 50051
+                connectivityTest?.testServerReachability(host, port)
                 true
             }
             R.id.action_settings -> {
@@ -211,12 +221,44 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun updateLocale(langCode: String) {
-        val locale = java.util.Locale(langCode)
-        java.util.Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        resources.updateConfiguration(config, resources.displayMetrics)
+        saveLanguage(langCode)
+        setLocale(langCode)
         recreate()
+    }
+    
+    private fun applySavedLanguage() {
+        val savedLanguage = getSavedLanguage()
+        if (savedLanguage != null) {
+            setLocale(savedLanguage)
+        }
+    }
+    
+    private fun getSavedLanguage(): String? {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("language", null)
+    }
+    
+    private fun saveLanguage(languageCode: String) {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        prefs.edit().putString("language", languageCode).apply()
+    }
+    
+    private fun setLocale(languageCode: String) {
+        val locale = Locale(languageCode)
+        Locale.setDefault(locale)
+        
+        val resources: Resources = resources
+        val config: Configuration = resources.configuration
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            config.setLocale(locale)
+            createConfigurationContext(config)
+        } else {
+            config.locale = locale
+            resources.updateConfiguration(config, resources.displayMetrics)
+        }
+        
+        resources.updateConfiguration(config, resources.displayMetrics)
     }
 
     private fun applyTheme(themeName: String) {
@@ -228,10 +270,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun logout() {
         viewModel.disconnect()
-        // Очищаем сохраненное имя, чтобы MainActivityMinimal не перекидывал обратно в чат
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().remove("username").apply()
-
+        // Don't remove username - keep it for next login
         val intent = Intent(this, MainActivityMinimal::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
