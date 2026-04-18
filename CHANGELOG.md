@@ -5,6 +5,31 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-04-18
+
+### Added
+- 🗑️ Ability to delete own messages by tapping on them
+- 👆 Message selection with visual feedback (alpha change)
+- 🎯 Delete button appears on selected outgoing messages
+- 🎨 Delete icon (ic_delete.xml) with theme-aware coloring
+- 🌐 Localized delete button text (EN: "Delete message", RU: "Удалить сообщение")
+- 🔧 MessageAdapter callback system for deletion handling
+
+### Changed
+- 🔄 Updated default server address to 159.195.38.145:50051
+- 🔧 Message layout updated to horizontal orientation to accommodate delete button
+- 🔧 MessageAdapter now accepts delete callback parameter
+- 🔧 ChatActivity passes delete handler to MessageAdapter
+- 🔧 GrpcClient and RealGrpcClient extended with deleteMessage method
+- 🔧 Local message deletion implemented (server-side deletion TODO for future)
+
+### Technical Details
+- Message selection tracked in MessageAdapter with selectedPosition
+- Delete button visibility controlled by isSelected && isOutgoing
+- Message container alpha changes to 0.7f when selected
+- Click to select, click again to deselect
+- Delete only works for own messages (isOutgoing check)
+
 ## [0.9.4] - 2026-04-18
 
 ### Added

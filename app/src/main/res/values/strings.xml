@@ -11,12 +11,12 @@
             
     <!-- Buttons -->
     <string name="show_network_info">Show Network Info</string>
-    <string name="ping_laptop">Ping Server (192.168.1.135)</string>
+    <string name="ping_laptop">Ping Server (159.195.38.145)</string>
     <string name="send_message">Send</string>
     
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">v0.9.3</string>
+    <string name="app_version">v0.9.5</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
     <string name="type_message_here">Type here</string>
@@ -43,9 +43,9 @@
     
     <!-- Log Messages -->
     <string name="lavender_loaded">Lavender Messenger loaded successfully</string>
-    <string name="testing_server">Testing connection to 192.168.1.135:50051…</string>
+    <string name="testing_server">Testing connection to 159.195.38.145:50051…</string>
     <string name="attempting_tcp">Attempting TCP connection…</string>
-    <string name="server_reachable">SUCCESS: Server reachable at 192.168.1.135:50051!</string>
+    <string name="server_reachable">SUCCESS: Server reachable at 159.195.38.145:50051!</string>
     <string name="server_failed">FAILED: %s</string>
     <string name="network_info_start">=== Network Information ===</string>
     <string name="phone_ip">Phone IP: %s</string>
@@ -53,11 +53,11 @@
     <string name="network_id">Network ID: %s</string>
     <string name="wifi_error">Error getting WiFi info: %s</string>
     <string name="testing_laptop">Testing connectivity to laptop…</string>
-    <string name="laptop_reachable">SUCCESS: Can reach laptop at 192.168.1.135:50051</string>
+    <string name="laptop_reachable">SUCCESS: Can reach server at 159.195.38.145:50051</string>
     <string name="laptop_failed">FAILED: Cannot reach laptop - %s</string>
     <string name="network_info_end">=== End Network Info ===</string>
     <string name="ping_start">=== Ping Test ===</string>
-    <string name="ping_laptop_start">Pinging 192.168.1.135…</string>
+    <string name="ping_laptop_start">Pinging 159.195.38.145…</string>
     <string name="testing_http">Testing HTTP (port 80)…</string>
     <string name="http_success">SUCCESS: HTTP reachable</string>
     <string name="testing_grpc">Testing gRPC (port 50051)…</string>
@@ -82,7 +82,7 @@
     <string name="toggle_language">Language</string>
     <string name="toggle_color_scheme">Theme</string>
     <string name="server_address_label">Server</string>
-    <string name="server_address">localhost:50051</string>
+    <string name="server_address">159.195.38.145:50051</string>
     <string name="checking_server">Checking server…</string>
     <string name="server_available">Server available</string>
     <string name="server_unavailable">Server unavailable</string>
@@ -96,4 +96,5 @@
         <item quantity="other">%d users online</item>
     </plurals>
     <string name="refresh_symbol">↻</string>
+    <string name="delete_message">Delete message</string>
 </resources>

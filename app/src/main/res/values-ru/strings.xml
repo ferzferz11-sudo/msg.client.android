@@ -10,12 +10,12 @@
     
     <!-- Buttons -->
     <string name="show_network_info">Показать информацию сети</string>
-    <string name="ping_laptop">Пинг сервера (192.168.1.135)</string>
+    <string name="ping_laptop">Пинг сервера (159.195.38.145)</string>
     <string name="send_message">Отправить</string>
     
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">v0.9.3</string>
+    <string name="app_version">v0.9.5</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_as">Подключен как: %s (сохранено)</string>
     <string name="type_message_here">Сообщение</string>
@@ -42,9 +42,9 @@
     
     <!-- Log Messages -->
     <string name="lavender_loaded">Лаванда успешно загружена</string>
-    <string name="testing_server">Проверка соединения с 192.168.1.135:50051…</string>
+    <string name="testing_server">Проверка соединения с 159.195.38.145:50051…</string>
     <string name="attempting_tcp">Попытка TCP соединения…</string>
-    <string name="server_reachable">УСПЕХ: Сервер доступен по адресу 192.168.1.135:50051!</string>
+    <string name="server_reachable">УСПЕХ: Сервер доступен по адресу 159.195.38.145:50051!</string>
     <string name="server_failed">ОШИБКА: %s</string>
     <string name="network_info_start">=== Информация о сети ===</string>
     <string name="phone_ip">IP телефона: %s</string>
@@ -52,11 +52,11 @@
     <string name="network_id">ID сети: %s</string>
     <string name="wifi_error">Ошибка получения информации WiFi: %s</string>
     <string name="testing_laptop">Проверка подключения к ноутбуку…</string>
-    <string name="laptop_reachable">УСПЕХ: Можно подключиться к ноутбуку по адресу 192.168.1.135:50051</string>
+    <string name="laptop_reachable">УСПЕХ: Можно подключиться к серверу по адресу 159.195.38.145:50051</string>
     <string name="laptop_failed">ОШИБКА: Не удается подключиться к ноутбуку - %s</string>
     <string name="network_info_end">=== Конец информации о сети ===</string>
     <string name="ping_start">=== Тест пинга ===</string>
-    <string name="ping_laptop_start">Пинг 192.168.1.135…</string>
+    <string name="ping_laptop_start">Пинг 159.195.38.145…</string>
     <string name="testing_http">Проверка HTTP (порт 80)…</string>
     <string name="http_success">УСПЕХ: HTTP доступен</string>
     <string name="testing_grpc">Проверка gRPC (порт 50051)…</string>
@@ -81,7 +81,7 @@
     <string name="toggle_language">Язык</string>
     <string name="toggle_color_scheme">Тема</string>
     <string name="server_address_label">Сервер</string>
-    <string name="server_address">localhost:50051</string>
+    <string name="server_address">159.195.38.145:50051</string>
     <string name="checking_server">Проверка сервера…</string>
     <string name="server_available">Сервер доступен</string>
     <string name="server_unavailable">Сервер недоступен</string>
@@ -97,4 +97,5 @@
         <item quantity="other">%d пользователей онлайн</item>
     </plurals>
     <string name="refresh_symbol">↻</string>
+    <string name="delete_message">Удалить сообщение</string>
 </resources>

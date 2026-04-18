@@ -62,7 +62,7 @@ class ChatActivity : AppCompatActivity() {
         
         // Restore username from savedInstanceState or get from intent
         username = savedInstanceState?.getString("USERNAME") ?: intent.getStringExtra("USERNAME") ?: "User"
-        serverAddress = savedInstanceState?.getString("SERVER_ADDRESS") ?: intent.getStringExtra("SERVER_ADDRESS") ?: "localhost:50051"
+        serverAddress = savedInstanceState?.getString("SERVER_ADDRESS") ?: intent.getStringExtra("SERVER_ADDRESS") ?: "159.195.38.145:50051"
         
         // Update adapter with username
         messageAdapter.updateUsername(username)
@@ -189,11 +189,21 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun setupRecyclerView() {
-        messageAdapter = MessageAdapter(username)
+        messageAdapter = MessageAdapter(username) { message ->
+            // Handle message deletion
+            if (message.user == username) {
+                deleteMessage(message)
+            }
+        }
         messagesRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ChatActivity)
             adapter = messageAdapter
         }
+    }
+    
+    private fun deleteMessage(message: Message) {
+        viewModel.deleteMessage(message)
+        messageAdapter.clearSelection()
     }
     
     private fun sendMessage(text: String) {

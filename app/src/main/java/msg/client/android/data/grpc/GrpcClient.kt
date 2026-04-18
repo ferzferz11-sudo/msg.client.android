@@ -27,6 +27,10 @@ class GrpcClient {
         realGrpcClient.sendMessage(message)
     }
     
+    fun deleteMessage(message: Message) {
+        realGrpcClient.deleteMessage(message)
+    }
+    
     fun testConnection(): Boolean {
         return realGrpcClient.testConnection()
     }

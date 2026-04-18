@@ -3,6 +3,7 @@ package msg.client.android.ui.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -13,11 +14,24 @@ import msg.client.android.data.models.Message
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MessageAdapter(private var currentUsername: String) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
+class MessageAdapter(
+    private var currentUsername: String,
+    private val onDeleteMessage: (Message) -> Unit
+) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
+    
+    private var selectedPosition = -1
     
     fun updateUsername(newUsername: String) {
         currentUsername = newUsername
         notifyDataSetChanged()
+    }
+    
+    fun clearSelection() {
+        val previousPosition = selectedPosition
+        selectedPosition = -1
+        if (previousPosition != -1) {
+            notifyItemChanged(previousPosition)
+        }
     }
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
@@ -37,7 +51,25 @@ class MessageAdapter(private var currentUsername: String) : ListAdapter<Message,
         // Check if this is an outgoing message (from current user)
         val isOutgoing = currentMessage.user == currentUsername
         
-        holder.bind(currentMessage, isConsecutive, isOutgoing)
+        // Check if this message is selected
+        val isSelected = selectedPosition == position
+        
+        holder.bind(currentMessage, isConsecutive, isOutgoing, isSelected, onDeleteMessage) {
+            // Handle message click
+            if (selectedPosition == position) {
+                // Deselect if already selected
+                selectedPosition = -1
+                notifyItemChanged(position)
+            } else {
+                // Select this message
+                val previousPosition = selectedPosition
+                selectedPosition = position
+                if (previousPosition != -1) {
+                    notifyItemChanged(previousPosition)
+                }
+                notifyItemChanged(position)
+            }
+        }
     }
     
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -45,8 +77,9 @@ class MessageAdapter(private var currentUsername: String) : ListAdapter<Message,
         private val userText: TextView = itemView.findViewById(R.id.userText)
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
+        private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
         
-        fun bind(message: Message, isConsecutive: Boolean, isOutgoing: Boolean) {
+        fun bind(message: Message, isConsecutive: Boolean, isOutgoing: Boolean, isSelected: Boolean, onDeleteMessage: (Message) -> Unit, onClick: () -> Unit) {
             userText.text = message.user
             messageText.text = message.text
             
@@ -81,6 +114,16 @@ class MessageAdapter(private var currentUsername: String) : ListAdapter<Message,
             }
             messageContainer.layoutParams = params
             
+            // Handle selection state
+            if (isSelected && isOutgoing) {
+                // Show delete button for selected outgoing messages
+                deleteButton.visibility = View.VISIBLE
+                messageContainer.alpha = 0.7f
+            } else {
+                deleteButton.visibility = View.GONE
+                messageContainer.alpha = 1.0f
+            }
+            
             // Hide user for consecutive messages or outgoing messages (user knows they sent it)
             if (isConsecutive || isOutgoing) {
                 userText.visibility = View.GONE
@@ -92,6 +135,16 @@ class MessageAdapter(private var currentUsername: String) : ListAdapter<Message,
             val outerParams = itemView.layoutParams as ViewGroup.MarginLayoutParams
             outerParams.topMargin = if (isConsecutive) 4 else 16
             itemView.layoutParams = outerParams
+            
+            // Handle click on message container
+            messageContainer.setOnClickListener {
+                onClick()
+            }
+            
+            // Handle delete button click
+            deleteButton.setOnClickListener {
+                onDeleteMessage(message)
+            }
         }
     }
 }

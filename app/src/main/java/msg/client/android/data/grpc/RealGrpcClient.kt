@@ -281,6 +281,16 @@ class RealGrpcClient {
         }
     }
     
+    fun deleteMessage(message: Message) {
+        // Remove message from local list
+        _messages.update { currentList ->
+            currentList.filterNot { it.timestamp == message.timestamp && it.user == message.user && it.text == message.text }
+        }
+        
+        // TODO: Send delete request to server when server supports it
+        println("DEBUG: RealGrpcClient - Deleted message locally: ${message.user}: ${message.text}")
+    }
+    
     fun testConnection(): Boolean = _connectionState.value
 }
 

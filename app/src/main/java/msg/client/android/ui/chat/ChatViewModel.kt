@@ -35,6 +35,10 @@ class ChatViewModel : ViewModel() {
         grpcClient.sendMessage(message)
     }
     
+    fun deleteMessage(message: Message) {
+        grpcClient.deleteMessage(message)
+    }
+    
     fun testConnection(): Boolean {
         return grpcClient.testConnection()
     }

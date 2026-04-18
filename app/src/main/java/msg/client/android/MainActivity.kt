@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var joinChatButton: Button
     
     private val serverList = listOf(
-        "192.168.1.135:50051",
+        "159.195.38.145:50051",
         "10.0.2.2:50051",
         "localhost:50051"
     )

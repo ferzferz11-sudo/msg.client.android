@@ -35,13 +35,13 @@ Lavender Messenger (Android client) is a native Android application designed for
 - **Asynchronous**: Kotlin Coroutines + StateFlow
 - **Network Protocol**: gRPC (bidirectional streaming)
 - **Protocol**: Protobuf (protobuf-lite)
-- **Server**: Go gRPC server (localhost:50051)
+- **Server**: Go gRPC server (159.195.38.145:50051)
 
 ## Requirements
 
 - Android 10.0 (API level 29) or higher
 - Minimum 2 GB RAM
-- Running Go gRPC server on localhost:50051 (or 10.0.2.2:50051 for emulator)
+- Running Go gRPC server on 159.195.38.145:50051 (or 10.0.2.2:50051 for emulator)
 - Internet connection for server communication
 
 ## Installation
@@ -138,7 +138,7 @@ settings.gradle.kts                 # Gradle settings
 
 ### Server
 The application connects to Go gRPC server at:
-- **Device**: localhost:50051
+- **Device**: 159.195.38.145:50051
 - **Android Emulator**: 10.0.2.2:50051
 
 ### gRPC Settings
@@ -198,7 +198,7 @@ Current version: **0.9.4** (versionCode: 12)
 ### Version 0.9.2 - Lavender Color Palette
 - 🎨 New Lavender Messenger color palette (Deep Purple, Lavender Mist, Soft Lilac, Silver Fog, Dark Slate)
 - 🎨 Updated light and dark themes with new colors
-- 📝 Server address selection from predefined list (192.168.1.135:50051, 10.0.2.2:50051, localhost:50051)
+- 📝 Server address selection from predefined list (159.195.38.145:50051, 10.0.2.2:50051, localhost:50051)
 - 👤 Username pre-filled in welcome dialog if previously entered
 - 🟢 Server status indicator below server address spinner
 - 🔘 Join button disabled when server is unavailable
