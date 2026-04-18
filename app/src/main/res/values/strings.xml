@@ -26,7 +26,7 @@
     <!-- Toast Messages -->
     <string name="language_selected">Language: %s</string>
     <string name="color_scheme_selected">Color Scheme: %s</string>
-    <string name="testing_connection">Testing connection...</string>
+    <string name="testing_connection">Testing connection…</string>
     <string name="connection_success">SUCCESS: Server connected!</string>
     <string name="connection_failed">Connection failed</string>
     <string name="ping_success">SUCCESS: Server reachable!</string>
@@ -43,8 +43,8 @@
     
     <!-- Log Messages -->
     <string name="lavender_loaded">Lavender Messenger loaded successfully</string>
-    <string name="testing_server">Testing connection to 192.168.1.135:50051...</string>
-    <string name="attempting_tcp">Attempting TCP connection...</string>
+    <string name="testing_server">Testing connection to 192.168.1.135:50051…</string>
+    <string name="attempting_tcp">Attempting TCP connection…</string>
     <string name="server_reachable">SUCCESS: Server reachable at 192.168.1.135:50051!</string>
     <string name="server_failed">FAILED: %s</string>
     <string name="network_info_start">=== Network Information ===</string>
@@ -52,15 +52,15 @@
     <string name="network_ssid">SSID: %s</string>
     <string name="network_id">Network ID: %s</string>
     <string name="wifi_error">Error getting WiFi info: %s</string>
-    <string name="testing_laptop">Testing connectivity to laptop...</string>
+    <string name="testing_laptop">Testing connectivity to laptop…</string>
     <string name="laptop_reachable">SUCCESS: Can reach laptop at 192.168.1.135:50051</string>
     <string name="laptop_failed">FAILED: Cannot reach laptop - %s</string>
     <string name="network_info_end">=== End Network Info ===</string>
     <string name="ping_start">=== Ping Test ===</string>
-    <string name="ping_laptop_start">Pinging 192.168.1.135...</string>
-    <string name="testing_http">Testing HTTP (port 80)...</string>
+    <string name="ping_laptop_start">Pinging 192.168.1.135…</string>
+    <string name="testing_http">Testing HTTP (port 80)…</string>
     <string name="http_success">SUCCESS: HTTP reachable</string>
-    <string name="testing_grpc">Testing gRPC (port 50051)...</string>
+    <string name="testing_grpc">Testing gRPC (port 50051)…</string>
     <string name="grpc_success">SUCCESS: gRPC reachable</string>
     <string name="laptop_fully_reachable">Laptop is fully reachable!</string>
     <string name="laptop_not_responding">TIMEOUT: Laptop not responding</string>
@@ -83,13 +83,17 @@
     <string name="toggle_color_scheme">Theme</string>
     <string name="server_address_label">Server</string>
     <string name="server_address">localhost:50051</string>
-    <string name="checking_server">Checking server...</string>
+    <string name="checking_server">Checking server…</string>
     <string name="server_available">Server available</string>
     <string name="server_unavailable">Server unavailable</string>
     <string name="app_description">A secure messaging application</string>
     <string name="exit">Exit</string>
     <string name="disconnected">Disconnected</string>
-    <string name="connecting">Connecting...</string>
+    <string name="connecting">Connecting…</string>
     <string name="connected">Connected</string>
-    <string name="online_count">%d users online</string>
+    <plurals name="online_count">
+        <item quantity="one">%d user online</item>
+        <item quantity="other">%d users online</item>
+    </plurals>
+    <string name="refresh_symbol">↻</string>
 </resources>

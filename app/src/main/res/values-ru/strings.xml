@@ -25,7 +25,7 @@
     <!-- Toast Messages -->
     <string name="language_selected">Язык: %s</string>
     <string name="color_scheme_selected">Цветовая схема: %s</string>
-    <string name="testing_connection">Проверка соединения...</string>
+    <string name="testing_connection">Проверка соединения…</string>
     <string name="connection_success">УСПЕХ: Сервер подключен!</string>
     <string name="connection_failed">Соединение не удалось</string>
     <string name="ping_success">УСПЕХ: Сервер доступен!</string>
@@ -42,8 +42,8 @@
     
     <!-- Log Messages -->
     <string name="lavender_loaded">Лаванда успешно загружена</string>
-    <string name="testing_server">Проверка соединения с 192.168.1.135:50051...</string>
-    <string name="attempting_tcp">Попытка TCP соединения...</string>
+    <string name="testing_server">Проверка соединения с 192.168.1.135:50051…</string>
+    <string name="attempting_tcp">Попытка TCP соединения…</string>
     <string name="server_reachable">УСПЕХ: Сервер доступен по адресу 192.168.1.135:50051!</string>
     <string name="server_failed">ОШИБКА: %s</string>
     <string name="network_info_start">=== Информация о сети ===</string>
@@ -51,15 +51,15 @@
     <string name="network_ssid">SSID: %s</string>
     <string name="network_id">ID сети: %s</string>
     <string name="wifi_error">Ошибка получения информации WiFi: %s</string>
-    <string name="testing_laptop">Проверка подключения к ноутбуку...</string>
+    <string name="testing_laptop">Проверка подключения к ноутбуку…</string>
     <string name="laptop_reachable">УСПЕХ: Можно подключиться к ноутбуку по адресу 192.168.1.135:50051</string>
     <string name="laptop_failed">ОШИБКА: Не удается подключиться к ноутбуку - %s</string>
     <string name="network_info_end">=== Конец информации о сети ===</string>
     <string name="ping_start">=== Тест пинга ===</string>
-    <string name="ping_laptop_start">Пинг 192.168.1.135...</string>
-    <string name="testing_http">Проверка HTTP (порт 80)...</string>
+    <string name="ping_laptop_start">Пинг 192.168.1.135…</string>
+    <string name="testing_http">Проверка HTTP (порт 80)…</string>
     <string name="http_success">УСПЕХ: HTTP доступен</string>
-    <string name="testing_grpc">Проверка gRPC (порт 50051)...</string>
+    <string name="testing_grpc">Проверка gRPC (порт 50051)…</string>
     <string name="grpc_success">УСПЕХ: gRPC доступен</string>
     <string name="laptop_fully_reachable">Ноутбук полностью доступен!</string>
     <string name="laptop_not_responding">ТАЙМАУТ: Ноутбук не отвечает</string>
@@ -82,13 +82,19 @@
     <string name="toggle_color_scheme">Тема</string>
     <string name="server_address_label">Сервер</string>
     <string name="server_address">localhost:50051</string>
-    <string name="checking_server">Проверка сервера...</string>
+    <string name="checking_server">Проверка сервера…</string>
     <string name="server_available">Сервер доступен</string>
     <string name="server_unavailable">Сервер недоступен</string>
     <string name="app_description">Безопасный обмен сообщениями</string>
     <string name="exit">Выход</string>
     <string name="disconnected">Отключено</string>
-    <string name="connecting">Подключение...</string>
+    <string name="connecting">Подключение…</string>
     <string name="connected">Подключено</string>
-    <string name="online_count">пользователей онлайн: %d</string>
+    <plurals name="online_count">
+        <item quantity="one">%d пользователь онлайн</item>
+        <item quantity="few">%d пользователя онлайн</item>
+        <item quantity="many">%d пользователей онлайн</item>
+        <item quantity="other">%d пользователей онлайн</item>
+    </plurals>
+    <string name="refresh_symbol">↻</string>
 </resources>

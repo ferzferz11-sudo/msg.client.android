@@ -2,7 +2,6 @@ package msg.client.android
 
 import android.content.res.Configuration
 import android.content.res.Resources
-import android.os.Build
 import java.util.Locale
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
@@ -12,6 +11,7 @@ import android.widget.LinearLayout
 import androidx.appcompat.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
+import androidx.core.content.edit
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -92,7 +92,7 @@ class ChatActivity : AppCompatActivity() {
                 Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 e.printStackTrace()
-                addMessage("System", "Error: ${e.message}")
+                addMessage("Error: ${e.message}")
             }
         }
     }
@@ -143,7 +143,8 @@ class ChatActivity : AppCompatActivity() {
                 val statusText = if (isConnected) {
                     val connectedStr = getString(R.string.connected)
                     if (usersCount > 0) {
-                        "$connectedStr (${getString(R.string.online_count, usersCount)})"
+                        val onlineCountStr = resources.getQuantityString(R.plurals.online_count, usersCount, usersCount)
+                        "$connectedStr ($onlineCountStr)"
                     } else {
                         connectedStr
                     }
@@ -182,7 +183,7 @@ class ChatActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             connectivityTest?.testResult?.collect { result ->
-                result?.let { addMessage("System", it) }
+                result?.let { addMessage(it) }
             }
         }
     }
@@ -283,9 +284,8 @@ class ChatActivity : AppCompatActivity() {
     
     private fun saveLanguage(languageCode: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        with(prefs.edit()) {
+        prefs.edit {
             putString("language", languageCode)
-            apply()
         }
     }
     
@@ -295,7 +295,7 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun setLocale(languageCode: String) {
-        val locale = Locale(languageCode)
+        val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         
         val resources: Resources = resources
@@ -304,6 +304,7 @@ class ChatActivity : AppCompatActivity() {
         config.setLocale(locale)
         createConfigurationContext(config)
         
+        @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
     }
 
@@ -314,9 +315,8 @@ class ChatActivity : AppCompatActivity() {
     
     private fun saveColorScheme(scheme: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        with(prefs.edit()) {
+        prefs.edit {
             putString("color_scheme", scheme)
-            apply()
         }
     }
 
@@ -374,9 +374,9 @@ class ChatActivity : AppCompatActivity() {
         toolbarTitle.startAnimation(animSet)
     }
 
-    private fun addMessage(user: String, text: String) {
+    private fun addMessage(text: String) {
         // This is only for system messages that are NOT in the gRPC stream
-        println("DEBUG: System Message: $user: $text")
+        println("DEBUG: System Message: System: $text")
     }
     
     override fun onDestroy() {
