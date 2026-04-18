@@ -10,4 +10,16 @@
     <!-- Standard colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Message colors (default for light theme) -->
+    <color name="message_background">@color/silver_fog</color>
+    <color name="message_border">@color/lavender_mist</color>
+    <color name="incoming_message_background">@color/soft_lilac</color>
+    <color name="outgoing_message_background">@color/lavender_mist</color>
+    <color name="outgoing_message_text">@color/white</color>
+
+    <!-- UI element colors -->
+    <color name="primary">@color/lavender_mist</color>
+    <color name="primary_dark">@color/deep_purple</color>
+    <color name="accent">@color/soft_lilac</color>
 </resources>
