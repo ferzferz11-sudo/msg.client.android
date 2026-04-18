@@ -68,25 +68,68 @@ cd msg/client/android
 app/
 ├── src/main/
 │   ├── java/msg/client/android/
-│   │   ├── MainActivityMinimal.kt   # Entry point with username dialog
+│   │   ├── MainActivity.kt           # Entry point with username dialog
 │   │   ├── ChatActivity.kt          # Main chat UI with RecyclerView
-│   │   ├── ChatViewModel.kt         # State management with gRPC
 │   │   ├── ui/
-│   │   │   ├── MessageAdapter.kt    # RecyclerView adapter for messages
-│   │   │   └── MessageViewHolder.kt # ViewHolder for messages
-│   │   ├── data/
-│   │   │   ├── models/
-│   │   │   │   └── Message.kt       # Message model
-│   │   │   ├── proto/
-│   │   │   │   ├── MessageProto.kt  # Protobuf message
-│   │   │   │   └── ProtoUtils.kt    # Protobuf utilities
-│   │   │   └── grpc/
-│   │   │       ├── GrpcClient.kt    # Wrapper for gRPC client
-│   │   │       └── RealGrpcClient.kt # gRPC implementation with custom marshaller
-│   │   └── viewmodel/
-│   ├── res/                         # Resources
+│   │   │   ├── adapter/
+│   │   │   │   └── MessageAdapter.kt    # RecyclerView adapter for messages
+│   │   │   └── chat/
+│   │   │       └── ChatViewModel.kt     # State management with gRPC
+│   │   └── data/
+│   │       ├── models/
+│   │       │   ├── Message.kt          # Message model
+│   │       │   └── GetHistoryResponse.kt # History response model
+│   │       ├── proto/
+│   │       │   ├── ChatMessage.kt      # Protobuf message wrapper
+│   │       │   ├── MessengerProto.kt   # Protobuf definitions
+│   │       │   └── ProtoUtils.kt        # Protobuf utilities
+│   │       └── grpc/
+│   │           ├── GrpcClient.kt        # Wrapper for gRPC client
+│   │           ├── RealGrpcClient.kt    # gRPC implementation with custom marshaller
+│   │           └── ServerConnectivityTest.kt # Server connectivity checker
+│   ├── proto/
+│   │   └── messenger.proto           # Protobuf schema definition
+│   ├── res/
+│   │   ├── drawable/
+│   │   │   ├── bg_message_incoming.xml    # Incoming message background
+│   │   │   ├── bg_message_outgoing.xml    # Outgoing message background
+│   │   │   ├── circle_button.xml          # Circular button shape
+│   │   │   ├── circle_indicator.xml       # Circular status indicator
+│   │   │   ├── ic_back_arrow.xml          # Back navigation icon
+│   │   │   ├── ic_theme_dark.xml          # Moon icon for dark theme
+│   │   │   ├── ic_theme_toggle.xml        # Sun icon for light theme
+│   │   │   ├── toolbar_background.xml     # Toolbar background with rounded corners
+│   │   │   ├── ic_launcher_background.xml # Launcher icon background
+│   │   │   └── ic_launcher_foreground.xml # Launcher icon foreground
+│   │   ├── layout/
+│   │   │   ├── activity_main.xml          # Main screen layout
+│   │   │   ├── activity_chat.xml          # Chat screen layout
+│   │   │   ├── dialog_join_chat.xml       # Join dialog layout
+│   │   │   ├── item_message.xml           # Message item layout
+│   │   │   └── language_indicator.xml     # Language toggle indicator
+│   │   ├── menu/
+│   │   │   ├── main_menu.xml              # Chat toolbar menu
+│   │   │   └── menu_main.xml              # Main screen menu
+│   │   ├── values/
+│   │   │   ├── colors.xml                # Color definitions (light theme)
+│   │   │   ├── strings.xml                # String resources (English)
+│   │   │   ├── themes.xml                 # Theme definitions
+│   │   │   └── dimens.xml                # Dimension values
+│   │   ├── values-night/
+│   │   │   └── colors.xml                # Color definitions (dark theme)
+│   │   ├── values-ru/
+│   │   │   └── strings.xml                # String resources (Russian)
+│   │   └── xml/
+│   │       ├── network_security_config.xml # Network security configuration
+│   │       └── file_paths.xml               # File provider paths
 │   └── AndroidManifest.xml          # App manifest
-└── build.gradle.kts                 # Build configuration
+├── build.gradle.kts                 # App build configuration
+└── proguard-rules.pro               # ProGuard rules
+build.gradle.kts                     # Project build configuration
+gradle/
+├── libs.versions.toml               # Dependency versions (Version Catalog)
+└── wrapper/
+settings.gradle.kts                 # Gradle settings
 ```
 
 ## Configuration

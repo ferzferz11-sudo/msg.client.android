@@ -68,25 +68,68 @@ cd msg/client/android
 app/
 ├── src/main/
 │   ├── java/msg/client/android/
-│   │   ├── MainActivityMinimal.kt   # Точка входа с диалогом имени
+│   │   ├── MainActivity.kt           # Точка входа с диалогом имени
 │   │   ├── ChatActivity.kt          # Главный чат UI с RecyclerView
-│   │   ├── ChatViewModel.kt         # Управление состоянием с gRPC
 │   │   ├── ui/
-│   │   │   ├── MessageAdapter.kt    # RecyclerView адаптер для сообщений
-│   │   │   └── MessageViewHolder.kt # ViewHolder для сообщений
-│   │   ├── data/
-│   │   │   ├── models/
-│   │   │   │   └── Message.kt       # Модель сообщения
-│   │   │   ├── proto/
-│   │   │   │   ├── MessageProto.kt  # Protobuf сообщение
-│   │   │   │   └── ProtoUtils.kt    # Утилиты для protobuf
-│   │   │   └── grpc/
-│   │   │       ├── GrpcClient.kt    # Обертка для gRPC клиента
-│   │   │       └── RealGrpcClient.kt # Реализация gRPC с custom marshaller
-│   │   └── viewmodel/
-│   ├── res/                         # Ресурсы
+│   │   │   ├── adapter/
+│   │   │   │   └── MessageAdapter.kt    # RecyclerView адаптер для сообщений
+│   │   │   └── chat/
+│   │   │       └── ChatViewModel.kt     # Управление состоянием с gRPC
+│   │   └── data/
+│   │       ├── models/
+│   │       │   ├── Message.kt          # Модель сообщения
+│   │       │   └── GetHistoryResponse.kt # Модель ответа истории
+│   │       ├── proto/
+│   │       │   ├── ChatMessage.kt      # Обертка для Protobuf сообщения
+│   │       │   ├── MessengerProto.kt   # Определения Protobuf
+│   │       │   └── ProtoUtils.kt        # Утилиты для protobuf
+│   │       └── grpc/
+│   │           ├── GrpcClient.kt        # Обертка для gRPC клиента
+│   │           ├── RealGrpcClient.kt    # Реализация gRPC с custom marshaller
+│   │           └── ServerConnectivityTest.kt # Проверка доступности сервера
+│   ├── proto/
+│   │   └── messenger.proto           # Схема Protobuf
+│   ├── res/
+│   │   ├── drawable/
+│   │   │   ├── bg_message_incoming.xml    # Фон входящего сообщения
+│   │   │   ├── bg_message_outgoing.xml    # Фон исходящего сообщения
+│   │   │   ├── circle_button.xml          # Форма круглой кнопки
+│   │   │   ├── circle_indicator.xml       # Круглый индикатор статуса
+│   │   │   ├── ic_back_arrow.xml          # Иконка навигации назад
+│   │   │   ├── ic_theme_dark.xml          # Иконка луны для темной темы
+│   │   │   ├── ic_theme_toggle.xml        # Иконка солнца для светлой темы
+│   │   │   ├── toolbar_background.xml     # Фон тулбара с закругленными углами
+│   │   │   ├── ic_launcher_background.xml # Фон иконки запуска
+│   │   │   └── ic_launcher_foreground.xml # Передний план иконки запуска
+│   │   ├── layout/
+│   │   │   ├── activity_main.xml          # Макет главного экрана
+│   │   │   ├── activity_chat.xml          # Макет экрана чата
+│   │   │   ├── dialog_join_chat.xml       # Макет диалога подключения
+│   │   │   ├── item_message.xml           # Макет элемента сообщения
+│   │   │   └── language_indicator.xml     # Индикатор переключения языка
+│   │   ├── menu/
+│   │   │   ├── main_menu.xml              # Меню тулбара чата
+│   │   │   └── menu_main.xml              # Меню главного экрана
+│   │   ├── values/
+│   │   │   ├── colors.xml                # Определения цветов (светлая тема)
+│   │   │   ├── strings.xml                # Строковые ресурсы (английский)
+│   │   │   ├── themes.xml                 # Определения тем
+│   │   │   └── dimens.xml                # Значения размеров
+│   │   ├── values-night/
+│   │   │   └── colors.xml                # Определения цветов (темная тема)
+│   │   ├── values-ru/
+│   │   │   └── strings.xml                # Строковые ресурсы (русский)
+│   │   └── xml/
+│   │       ├── network_security_config.xml # Конфигурация сетевой безопасности
+│   │       └── file_paths.xml               # Пути провайдера файлов
 │   └── AndroidManifest.xml          # Манифест приложения
-└── build.gradle.kts                 # Конфигурация сборки
+├── build.gradle.kts                 # Конфигурация сборки приложения
+└── proguard-rules.pro               # Правила ProGuard
+build.gradle.kts                     # Конфигурация сборки проекта
+gradle/
+├── libs.versions.toml               # Версии зависимостей (Version Catalog)
+└── wrapper/
+settings.gradle.kts                 # Настройки Gradle
 ```
 
 ## Конфигурация
