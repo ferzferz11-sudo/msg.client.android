@@ -50,15 +50,16 @@
 
         <ImageButton
             android:id="@+id/deleteButton"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_gravity="center_vertical"
             android:layout_marginStart="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_delete"
             android:contentDescription="@string/delete_message"
             android:visibility="gone"
-            android:scaleType="centerInside" />
+            android:scaleType="centerInside"
+            android:padding="12dp" />
 
     </LinearLayout>
 
