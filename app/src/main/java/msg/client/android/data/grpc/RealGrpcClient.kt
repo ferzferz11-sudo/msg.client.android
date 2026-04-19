@@ -46,9 +46,17 @@ class RealGrpcClient {
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
             if (useTls) builder.useTransportSecurity() else builder.usePlaintext()
             
-            builder.keepAliveTime(60, TimeUnit.SECONDS)
-                .keepAliveTimeout(20, TimeUnit.SECONDS)
-                .keepAliveWithoutCalls(true)
+            // directExecutor() уменьшает накладные расходы на переключение контекста
+            // и часто исправляет ошибки "frame handler" на Android
+            builder.directExecutor()
+            
+            // Увеличиваем лимиты
+            builder.maxInboundMessageSize(16 * 1024 * 1024)
+            builder.maxInboundMetadataSize(1024 * 1024)
+            
+            builder.keepAliveTime(30, TimeUnit.SECONDS)
+                .keepAliveTimeout(10, TimeUnit.SECONDS)
+                .keepAliveWithoutCalls(false) // Отключаем для стабильности на мобильных сетях
                 .idleTimeout(24, TimeUnit.HOURS)
             
             channel = builder.build()
@@ -63,7 +71,7 @@ class RealGrpcClient {
         }
     }
 
-    private fun loadHistory() {
+    private fun loadHistory(onComplete: () -> Unit = {}) {
         val currentChannel = channel ?: return
         
         println("DEBUG: RealGrpcClient - Loading history...")
@@ -83,26 +91,47 @@ class RealGrpcClient {
         call.start(object : io.grpc.ClientCall.Listener<GetHistoryResponseProto>() {
             override fun onMessage(message: GetHistoryResponseProto) {
                 println("DEBUG: RealGrpcClient - Received history: ${message.messages.size} messages")
-                if (message.messages.isEmpty()) {
-                    println("DEBUG: RealGrpcClient - History is empty from server")
-                }
+                
                 val historyMessages = message.messages
                     .filterNot { it.text.endsWith(" joined") || it.text.endsWith(" присоединился") }
                     .map { ProtoUtils.createMessageFromProto(it) }
+
                 _messages.update { currentList ->
                     val combined = (historyMessages + currentList).distinctBy { 
-                        // Используем более надежный ключ для дедупликации (с точностью до секунды)
                         "${it.user}:${it.text}:${it.timestamp / 1000}" 
                     }.sortedBy { it.timestamp }
-                    println("DEBUG: RealGrpcClient - Total messages after merge: ${combined.size}")
-                    combined
+                    
+                    if (combined.isEmpty()) {
+                        println("DEBUG: RealGrpcClient - History is empty, adding welcome message")
+                        // Вставляем системное сообщение только если список совсем пуст
+                        listOf(Message(user = "System", text = "Welcome! This is a new chat. No messages here yet.", timestamp = System.currentTimeMillis()))
+                    } else {
+                        combined
+                    }
                 }
             }
             
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     println("DEBUG: RealGrpcClient - History error: ${status.code} - ${status.description}")
-                    _error.value = "History load failed: ${status.code}"
+                    
+                    val errorMsg = when (status.code) {
+                        io.grpc.Status.Code.UNAVAILABLE -> "Server unavailable. Retrying..."
+                        io.grpc.Status.Code.INTERNAL -> "Network frame error. Retrying..."
+                        else -> "History load failed: ${status.code}"
+                    }
+                    _error.value = errorMsg
+                    
+                    // Если это сетевая ошибка (UNAVAILABLE или INTERNAL), пробуем еще раз через 2 секунды
+                    if (status.code == io.grpc.Status.Code.UNAVAILABLE || status.code == io.grpc.Status.Code.INTERNAL) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            loadHistory(onComplete)
+                        }, 3000)
+                    } else {
+                        onComplete()
+                    }
+                } else {
+                    onComplete()
                 }
             }
         }, io.grpc.Metadata())
@@ -262,9 +291,12 @@ class RealGrpcClient {
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .build())
             
-            // Загружаем историю и пользователей после успешного старта чата
-            loadHistory()
-            loadUsers()
+            // Загружаем историю сначала, а потом пользователей
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                loadHistory {
+                    loadUsers()
+                }
+            }, 300)
             
         } catch (e: Exception) {
             isChatStarted = false
@@ -380,21 +412,28 @@ class GetHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHist
     }
 
     override fun parse(stream: java.io.InputStream): GetHistoryResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        val messages = mutableListOf<MessageProto>()
-        while (!cis.isAtEnd) {
-            val tag = cis.readTag()
-            if (tag == 0) break
-            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                1 -> {
-                    val length = cis.readRawVarint32()
-                    val msgBytes = cis.readRawBytes(length)
-                    messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(msgBytes)))
+        return try {
+            val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+            val messages = mutableListOf<MessageProto>()
+            while (!cis.isAtEnd) {
+                val tag = cis.readTag()
+                if (tag == 0) break
+                when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                    1 -> {
+                        // Используем безопасное чтение сообщения
+                        val length = cis.readRawVarint32()
+                        val oldLimit = cis.pushLimit(length)
+                        messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
+                        cis.popLimit(oldLimit)
+                    }
+                    else -> cis.skipField(tag)
                 }
-                else -> cis.skipField(tag)
             }
+            GetHistoryResponseProto(messages)
+        } catch (e: Exception) {
+            println("DEBUG: RealGrpcClient - Parse error: ${e.message}")
+            GetHistoryResponseProto(emptyList())
         }
-        return GetHistoryResponseProto(messages)
     }
 }
 

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - 🚀 **Multi-selection** for message deletion: Select multiple own messages to delete at once.
+- 🎨 **New App Icon**: Adaptive icon with white logo on lavender background.
+- 📡 **gRPC Stability**: 
+    - Fixed `INTERNAL (Error in frame handler)` and `UNAVAILABLE` errors on various Android devices.
+    - Added automatic retry logic for history loading and chat stream.
+    - Increased inbound message size limit to 16MB for large chat histories.
+    - Optimized KeepAlive settings for better mobile network compatibility.
+- 💬 **New User Welcome**: Added a friendly welcome message for new users when chat history is empty.
+- ⚠️ **Error Dialogs**: Detailed, copyable error dialogs replace short toasts for easier troubleshooting.
 - 🔘 **Floating Delete Button**: New trash icon FAB in the chat area for easier access.
 - 📦 **Download Progress**: Horizontal progress bar shows real-time APK download status on the main screen.
 - 🧼 **Modern Chat UI**: 
@@ -18,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔗 **Share & Copy**: Added buttons to copy the app link to clipboard and share it via external apps.
 - 🎨 **Redesigned Main Screen**: New layout with slogan "Secure messaging" and improved information hierarchy.
 - 📥 Download latest version button on main screen (now links to: `http://159.195.38.145:8081/lavender.apk`)
+
+### Changed
+- 📝 **Download Button Text**: Updated download button text to "update my app" (EN) and "обновить мое приложение" (RU) for better localization.
 
 ### Fixed
 - 🛠️ **APK History Loading**: Fixed a bug where history wouldn't load in release builds by enabling `android:usesCleartextTraffic`.

@@ -175,13 +175,7 @@ class ChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.error.collect { error ->
                 error?.let {
-                    val toast = Toast.makeText(this@ChatActivity, it, Toast.LENGTH_SHORT)
-                    toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
-                    toast.show()
-                    // Hide after 5 seconds
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        toast.cancel()
-                    }, 5000)
+                    showErrorDialog(it)
                 }
             }
         }
@@ -401,6 +395,26 @@ class ChatActivity : AppCompatActivity() {
         animSet.addAnimation(scaleAnim)
         animSet.addAnimation(alphaAnim)
         toolbarTitle.startAnimation(animSet)
+    }
+
+    private fun showErrorDialog(message: String) {
+        val dialogView = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
+        val textView = dialogView.findViewById<TextView>(android.R.id.text1)
+        textView.text = message
+        textView.setPadding(40, 40, 40, 40)
+        textView.setTextIsSelectable(true) // Позволяет выделять и копировать текст
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.error_title)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNeutralButton(R.string.copy) { _, _ ->
+                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("Error Message", message)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun addMessage(text: String) {
