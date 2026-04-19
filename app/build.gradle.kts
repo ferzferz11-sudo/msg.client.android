@@ -10,7 +10,7 @@ android {
         applicationId = "msg.client.android"
         minSdk = 29
         targetSdk = 37
-        versionCode = 13
+        versionCode = 16
         versionName = "0.9.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -33,6 +33,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

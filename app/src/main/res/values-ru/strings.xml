@@ -15,7 +15,8 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">v0.9.5</string>
+    <string name="app_version">0.9.5</string>
+    <string name="download_update">Скачать последнюю версию</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_as">Подключен как: %s (сохранено)</string>
     <string name="type_message_here">Сообщение</string>
@@ -86,6 +87,8 @@
     <string name="server_available">Сервер доступен</string>
     <string name="server_unavailable">Сервер недоступен</string>
     <string name="app_description">Безопасный обмен сообщениями</string>
+    <string name="copied_to_clipboard">Ссылка скопирована</string>
+    <string name="share_app">Поделиться Lavender Messenger</string>
     <string name="exit">Выход</string>
     <string name="disconnected">Отключено</string>
     <string name="connecting">Подключение…</string>

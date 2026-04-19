@@ -16,7 +16,8 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">v0.9.5</string>
+    <string name="app_version">0.9.5</string>
+    <string name="download_update">Download latest version</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
     <string name="type_message_here">Type here</string>
@@ -86,7 +87,9 @@
     <string name="checking_server">Checking server…</string>
     <string name="server_available">Server available</string>
     <string name="server_unavailable">Server unavailable</string>
-    <string name="app_description">A secure messaging application</string>
+    <string name="app_description">Secure messaging</string>
+    <string name="copied_to_clipboard">Link copied to clipboard</string>
+    <string name="share_app">Share Lavender Messenger</string>
     <string name="exit">Exit</string>
     <string name="disconnected">Disconnected</string>
     <string name="connecting">Connecting…</string>

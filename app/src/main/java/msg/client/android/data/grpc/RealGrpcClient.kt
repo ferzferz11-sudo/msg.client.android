@@ -86,7 +86,9 @@ class RealGrpcClient {
                 if (message.messages.isEmpty()) {
                     println("DEBUG: RealGrpcClient - History is empty from server")
                 }
-                val historyMessages = message.messages.map { ProtoUtils.createMessageFromProto(it) }
+                val historyMessages = message.messages
+                    .filterNot { it.text.endsWith(" joined") || it.text.endsWith(" присоединился") }
+                    .map { ProtoUtils.createMessageFromProto(it) }
                 _messages.update { currentList ->
                     val combined = (historyMessages + currentList).distinctBy { 
                         // Используем более надежный ключ для дедупликации (с точностью до секунды)
@@ -112,32 +114,32 @@ class RealGrpcClient {
     
     fun loadUsers() {
         val currentChannel = channel ?: return
-        
+
         println("DEBUG: RealGrpcClient - Loading users...")
-        
+
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<Unit, List<String>>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetClients")
             .setRequestMarshaller(EmptyMarshaller())
             .setResponseMarshaller(ClientListResponseMarshaller())
             .build()
-            
+
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        
+
         call.start(object : io.grpc.ClientCall.Listener<List<String>>() {
             override fun onMessage(message: List<String>) {
                 println("DEBUG: RealGrpcClient - Received users: ${message.size}")
                 _users.value = message
             }
-            
+
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     println("DEBUG: RealGrpcClient - Load users error: ${status.code} - ${status.description}")
-                    _error.value = "Users load failed: ${status.code}"
+                    // Don't set global error - users list is optional, server may not support GetClients
                 }
             }
         }, io.grpc.Metadata())
-        
+
         call.sendMessage(Unit)
         call.halfClose()
         call.request(1)
@@ -183,6 +185,12 @@ class RealGrpcClient {
             
             val responseObserver = object : StreamObserver<MessageProto> {
                 override fun onNext(value: MessageProto) {
+                    // Пропускаем системные сообщения о присоединении
+                    if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) {
+                        println("DEBUG: RealGrpcClient - Skipping system message: ${value.text}")
+                        return
+                    }
+
                     val incoming = ProtoUtils.createMessageFromProto(value)
                     val messageHash = "${value.user}:${value.text}:${value.createdAt?.seconds}:${value.createdAt?.nanos}"
                     

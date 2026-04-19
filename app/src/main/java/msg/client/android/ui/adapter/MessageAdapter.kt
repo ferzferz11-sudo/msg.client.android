@@ -16,10 +16,14 @@ import java.util.*
 
 class MessageAdapter(
     private var currentUsername: String,
-    private val onDeleteMessage: (Message) -> Unit
+    private val onSelectionChanged: (Int) -> Unit
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
     
-    private var selectedPosition = -1
+    private val selectedPositions = mutableSetOf<Int>()
+    
+    fun getSelectedMessages(): List<Message> {
+        return selectedPositions.map { getItem(it) }
+    }
     
     fun updateUsername(newUsername: String) {
         currentUsername = newUsername
@@ -27,11 +31,10 @@ class MessageAdapter(
     }
     
     fun clearSelection() {
-        val previousPosition = selectedPosition
-        selectedPosition = -1
-        if (previousPosition != -1) {
-            notifyItemChanged(previousPosition)
-        }
+        val previousSelected = selectedPositions.toSet()
+        selectedPositions.clear()
+        previousSelected.forEach { notifyItemChanged(it) }
+        onSelectionChanged(0)
     }
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
@@ -48,30 +51,36 @@ class MessageAdapter(
         val isConsecutive = previousMessage != null &&
             previousMessage.user == currentMessage.user
 
+        // Check if previous message was also at the same minute
+        val isSameMinute = previousMessage != null &&
+            (currentMessage.timestamp / 60000 == previousMessage.timestamp / 60000)
+
         // Check if this is an outgoing message (from current user)
         val isOutgoing = currentMessage.user == currentUsername
 
-        // Check if this message is selected
-        val isSelected = selectedPosition == position
+        // Hide user and time for consecutive messages in the same minute
+        val shouldHideUser = isConsecutive || isOutgoing
+        val shouldHideTime = isConsecutive && isSameMinute
 
-        holder.bind(currentMessage, isConsecutive, isOutgoing, isSelected, onDeleteMessage) {
+        // Check if this message is selected
+        val isSelected = selectedPositions.contains(position)
+
+        holder.bind(currentMessage, shouldHideUser, isOutgoing, isSelected, shouldHideTime) {
             // Handle message click - use holder.bindingAdapterPosition to get current position
             val currentPosition = holder.bindingAdapterPosition
             if (currentPosition == RecyclerView.NO_POSITION) return@bind
 
-            if (selectedPosition == currentPosition) {
-                // Deselect if already selected
-                selectedPosition = -1
-                notifyItemChanged(currentPosition)
+            // Only allow selecting own messages for deletion
+            if (!isOutgoing && selectedPositions.isEmpty()) return@bind
+            if (!isOutgoing && !selectedPositions.contains(currentPosition)) return@bind
+
+            if (selectedPositions.contains(currentPosition)) {
+                selectedPositions.remove(currentPosition)
             } else {
-                // Select this message
-                val previousPosition = selectedPosition
-                selectedPosition = currentPosition
-                if (previousPosition != -1) {
-                    notifyItemChanged(previousPosition)
-                }
-                notifyItemChanged(currentPosition)
+                selectedPositions.add(currentPosition)
             }
+            notifyItemChanged(currentPosition)
+            onSelectionChanged(selectedPositions.size)
         }
     }
     
@@ -82,12 +91,13 @@ class MessageAdapter(
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
         
-        fun bind(message: Message, isConsecutive: Boolean, isOutgoing: Boolean, isSelected: Boolean, onDeleteMessage: (Message) -> Unit, onClick: () -> Unit) {
+        fun bind(message: Message, shouldHideUser: Boolean, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, onClick: () -> Unit) {
             userText.text = message.user
             messageText.text = message.text
             
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             timeText.text = timeFormat.format(Date(message.timestamp))
+            timeText.visibility = if (shouldHideTime) View.GONE else View.VISIBLE
             
             // Set background and alignment based on message type
             val params = messageContainer.layoutParams as android.widget.LinearLayout.LayoutParams
@@ -117,18 +127,19 @@ class MessageAdapter(
             }
             messageContainer.layoutParams = params
             
-            // Handle selection state
-            if (isSelected && isOutgoing) {
-                // Show delete button for selected outgoing messages
-                deleteButton.visibility = View.VISIBLE
-                messageContainer.alpha = 0.7f
+            // Handle selection state - hide individual delete button, it's in toolbar now
+            deleteButton.visibility = View.GONE
+            
+            if (isSelected) {
+                messageContainer.alpha = 0.5f
+                itemView.setBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))
             } else {
-                deleteButton.visibility = View.GONE
                 messageContainer.alpha = 1.0f
+                itemView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
             
             // Hide user for consecutive messages or outgoing messages (user knows they sent it)
-            if (isConsecutive || isOutgoing) {
+            if (shouldHideUser) {
                 userText.visibility = View.GONE
             } else {
                 userText.visibility = View.VISIBLE
@@ -136,17 +147,12 @@ class MessageAdapter(
             
             // Adjust margins for consecutive messages
             val outerParams = itemView.layoutParams as ViewGroup.MarginLayoutParams
-            outerParams.topMargin = if (isConsecutive) 4 else 16
+            outerParams.topMargin = if (shouldHideUser) 4 else 16
             itemView.layoutParams = outerParams
             
             // Handle click on message container
             messageContainer.setOnClickListener {
                 onClick()
-            }
-            
-            // Handle delete button click
-            deleteButton.setOnClickListener {
-                onDeleteMessage(message)
             }
         }
     }

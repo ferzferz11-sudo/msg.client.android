@@ -39,6 +39,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var messagesRecyclerView: RecyclerView
     private lateinit var toolbar: Toolbar
     private lateinit var toolbarTitle: TextView
+    private lateinit var deleteSelectedButton: android.widget.ImageButton
     
     private var username: String = ""
     private var serverAddress: String = ""
@@ -100,6 +101,7 @@ class ChatActivity : AppCompatActivity() {
     private fun initViews() {
         toolbar = findViewById(R.id.toolbar)
         toolbarTitle = findViewById(R.id.toolbarTitle)
+        deleteSelectedButton = findViewById(R.id.deleteSelectedButton)
         setSupportActionBar(toolbar)
         supportActionBar?.apply {
             title = "" // Clear default title
@@ -108,6 +110,14 @@ class ChatActivity : AppCompatActivity() {
         }
         
         animateToolbarTitle()
+        deleteSelectedButton.setOnClickListener {
+            val selectedMessages = messageAdapter.getSelectedMessages()
+            selectedMessages.forEach { message ->
+                viewModel.deleteMessage(message)
+            }
+            messageAdapter.clearSelection()
+        }
+        
         setupEmojiPanel()
         
         toolbar.setNavigationOnClickListener {
@@ -165,7 +175,13 @@ class ChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.error.collect { error ->
                 error?.let {
-                    Toast.makeText(this@ChatActivity, it, Toast.LENGTH_LONG).show()
+                    val toast = Toast.makeText(this@ChatActivity, it, Toast.LENGTH_SHORT)
+                    toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
+                    toast.show()
+                    // Hide after 5 seconds
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        toast.cancel()
+                    }, 5000)
                 }
             }
         }
@@ -189,10 +205,13 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun setupRecyclerView() {
-        messageAdapter = MessageAdapter(username) { message ->
-            // Handle message deletion
-            if (message.user == username) {
-                deleteMessage(message)
+        messageAdapter = MessageAdapter(username) { selectedCount ->
+            if (selectedCount > 0) {
+                deleteSelectedButton.visibility = android.view.View.VISIBLE
+                toolbarTitle.visibility = android.view.View.GONE
+            } else {
+                deleteSelectedButton.visibility = android.view.View.GONE
+                toolbarTitle.visibility = android.view.View.VISIBLE
             }
         }
         messagesRecyclerView.apply {

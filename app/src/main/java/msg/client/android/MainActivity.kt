@@ -13,18 +13,29 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.ImageButton
+import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import msg.client.android.data.grpc.ServerConnectivityTest
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     
     private lateinit var joinChatButton: Button
+    private lateinit var downloadProgressBar: ProgressBar
     
     private val serverList = listOf(
         "159.195.38.145:50051",
@@ -63,6 +74,92 @@ class MainActivity : AppCompatActivity() {
         colorSchemeButton.setOnClickListener {
             toggleColorScheme()
         }
+
+        // Add download update button
+        val downloadUpdateButton: TextView = findViewById(R.id.downloadUpdateButton)
+        downloadProgressBar = findViewById(R.id.downloadProgressBar)
+        downloadUpdateButton.setOnClickListener {
+            downloadAndInstallApk("http://159.195.38.145:8081/lavender.apk")
+        }
+
+        val apkUrl = "http://159.195.38.145:8081/lavender.apk"
+        
+        findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = android.content.ClipData.newPlainText("Lavender APK URL", apkUrl)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<ImageButton>(R.id.shareLinkButton).setOnClickListener {
+            val shareIntent = Intent(Intent.ACTION_SEND)
+            shareIntent.type = "text/plain"
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
+            shareIntent.putExtra(Intent.EXTRA_TEXT, apkUrl)
+            startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
+        }
+    }
+
+    private fun downloadAndInstallApk(url: String) {
+        downloadProgressBar.visibility = View.VISIBLE
+        downloadProgressBar.progress = 0
+        
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val connection = URL(url).openConnection() as HttpURLConnection
+                connection.connect()
+                
+                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                    throw Exception("Server returned HTTP ${connection.responseCode}")
+                }
+                
+                val fileLength = connection.contentLength
+                val input = connection.inputStream
+                val file = File(getExternalFilesDir(null), "lavender_update.apk")
+                val output = FileOutputStream(file)
+                
+                val data = ByteArray(4096)
+                var total: Long = 0
+                var count: Int
+                while (input.read(data).also { count = it } != -1) {
+                    total += count.toLong()
+                    if (fileLength > 0) {
+                        val progress = (total * 100 / fileLength).toInt()
+                        withContext(Dispatchers.Main) {
+                            downloadProgressBar.progress = progress
+                        }
+                    }
+                    output.write(data, 0, count)
+                }
+                
+                output.flush()
+                output.close()
+                input.close()
+                
+                withContext(Dispatchers.Main) {
+                    downloadProgressBar.visibility = View.GONE
+                    installApk(file)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    downloadProgressBar.visibility = View.GONE
+                    Toast.makeText(this@MainActivity, "Download error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun installApk(file: File) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            this,
+            "$packageName.provider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_VIEW)
+        intent.setDataAndType(uri, "application/vnd.android.package-archive")
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
     }
     
     private fun showUsernameDialog() {

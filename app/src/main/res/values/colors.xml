@@ -22,4 +22,5 @@
     <color name="primary">@color/lavender_mist</color>
     <color name="primary_dark">@color/deep_purple</color>
     <color name="accent">@color/soft_lilac</color>
+    <color name="lavender_mist_alpha">#4D967BB6</color>
 </resources>
