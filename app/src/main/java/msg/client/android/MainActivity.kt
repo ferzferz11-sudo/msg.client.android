@@ -1,6 +1,5 @@
 package msg.client.android
 
-import msg.client.android.BuildConfig
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.res.Resources
