@@ -43,6 +43,7 @@ data class MessageProto(
             return this
         }
 
+        @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
             return this
@@ -69,10 +70,12 @@ data class ReactionResponseProto(
 )
 
 // Other message types
+@Suppress("unused")
 data class ClientListRequestProto(
     val dummy: Boolean = false // Empty message
 )
 
+@Suppress("unused")
 data class ClientListResponseProto(
     val clients: List<String> = emptyList()
 )

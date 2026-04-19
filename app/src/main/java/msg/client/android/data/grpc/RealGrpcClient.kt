@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import msg.client.android.data.models.Message
+import msg.client.android.data.models.Reaction
 import msg.client.android.data.proto.MessageProto
 import msg.client.android.data.proto.ReactionProto
 import msg.client.android.data.proto.ReactionRequestProto
@@ -171,7 +172,7 @@ class RealGrpcClient {
             currentServerAddress = null
             _connectionState.value = false
             sentMessageHashes.clear()
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
     
     private var lastUsername: String? = null
@@ -261,7 +262,7 @@ class RealGrpcClient {
                 loadHistory { loadUsers() }
             }, 300)
             
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             isChatStarted = false
         }
     }
@@ -273,7 +274,7 @@ class RealGrpcClient {
             val protoMessage = ProtoUtils.createMessageProto(message)
             sentMessageHashes.add(getMessageHash(message))
             requestObserver?.onNext(protoMessage)
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
     
     fun deleteMessage(message: Message) {
@@ -311,10 +312,10 @@ class RealGrpcClient {
     fun setReaction(messageId: String, username: String, emoji: String) {
         val currentChannel = channel ?: return
         
-        val reaction = msg.client.android.data.proto.ReactionProto(username, emoji)
-        val request = msg.client.android.data.proto.ReactionRequestProto(messageId, reaction)
+        val reaction = ReactionProto(username, emoji)
+        val request = ReactionRequestProto(messageId, reaction)
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<msg.client.android.data.proto.ReactionRequestProto, msg.client.android.data.proto.ReactionResponseProto>()
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ReactionRequestProto, ReactionResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SetReaction")
             .setRequestMarshaller(ReactionRequestMarshaller())
@@ -322,14 +323,14 @@ class RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<msg.client.android.data.proto.ReactionResponseProto>() {
-            override fun onMessage(message: msg.client.android.data.proto.ReactionResponseProto) {
+        call.start(object : io.grpc.ClientCall.Listener<ReactionResponseProto>() {
+            override fun onMessage(message: ReactionResponseProto) {
                 if (message.success) {
                     println("DEBUG: RealGrpcClient - Successfully set reaction")
                     _messages.update { currentList ->
                         currentList.map { m ->
                             if (m.id == messageId) {
-                                val newReactions = m.reactions.filterNot { it.user == username } + msg.client.android.data.models.Reaction(username, emoji)
+                                val newReactions = m.reactions.filterNot { it.user == username } + Reaction(username, emoji)
                                 m.copy(reactions = newReactions)
                             } else m
                         }
@@ -558,7 +559,7 @@ class GetHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHist
                 } else cis.skipField(tag)
             }
             GetHistoryResponseProto(messages)
-        } catch (e: Exception) { GetHistoryResponseProto(emptyList()) }
+        } catch (_: Exception) { GetHistoryResponseProto(emptyList()) }
     }
 }
 

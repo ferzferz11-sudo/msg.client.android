@@ -12,9 +12,11 @@ import androidx.appcompat.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import androidx.core.content.edit
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -203,7 +205,7 @@ class ChatActivity : AppCompatActivity() {
                 menu.findItem(R.id.action_color_scheme)?.isVisible = !hasSelection
             }
             if (hasSelection) {
-                toolbarTitle.text = "Selected: $selectedCount"
+                toolbarTitle.text = getString(R.string.selected_count, selectedCount)
                 connectionStatus.visibility = android.view.View.GONE
             } else {
                 toolbarTitle.text = getString(R.string.app_name)
@@ -225,8 +227,8 @@ class ChatActivity : AppCompatActivity() {
         }
 
         val emojis = listOf("👍", "❤️", "😂", "😮", "😢", "🔥")
-        val emojiView = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
+        val emojiView = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER
             setPadding(16, 16, 16, 16)
         }
@@ -253,10 +255,6 @@ class ChatActivity : AppCompatActivity() {
         dialog.show()
     }
     
-    private fun deleteMessage(message: Message) {
-        viewModel.deleteMessage(message)
-        messageAdapter.clearSelection()
-    }
     
     private fun sendMessage(text: String) {
         val message = Message(
@@ -461,8 +459,8 @@ class ChatActivity : AppCompatActivity() {
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok, null)
             .setNeutralButton(R.string.copy) { _, _ ->
-                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                val clip = android.content.ClipData.newPlainText("Error Message", message)
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Error Message", message)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
             }

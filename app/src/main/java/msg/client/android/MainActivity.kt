@@ -1,5 +1,6 @@
 package msg.client.android
 
+import msg.client.android.BuildConfig
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -11,6 +12,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.ImageButton
@@ -91,7 +93,7 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = android.content.ClipData.newPlainText("Lavender APK URL", APK_URL)
+            val clip = ClipData.newPlainText("Lavender APK URL", APK_URL)
             clipboard.setPrimaryClip(clip)
             Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
         }

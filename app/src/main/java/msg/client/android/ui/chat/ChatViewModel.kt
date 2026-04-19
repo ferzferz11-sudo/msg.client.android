@@ -46,8 +46,4 @@ class ChatViewModel : ViewModel() {
     fun registerToken(username: String, token: String) {
         grpcClient.registerToken(username, token)
     }
-    
-    fun testConnection(): Boolean {
-        return grpcClient.testConnection()
-    }
 }

@@ -108,4 +108,5 @@
     <string name="version_format">Версия %s</string>
     <string name="language_format">Язык: %s</string>
     <string name="color_scheme_format">Тема: %s</string>
+    <string name="selected_count">Выбрано: %d</string>
 </resources>
