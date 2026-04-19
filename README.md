@@ -173,7 +173,7 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH** (e.g., 1.0.0)
 
-Current version: **0.9.4** (versionCode: 12)
+Current version: **0.9.7** (versionCode: 18)
 
 ### Version 0.9.4 - Online Users and Message History
 - 👥 Added ability to view online users in real-time

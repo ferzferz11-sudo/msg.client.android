@@ -10,8 +10,8 @@ android {
         applicationId = "msg.client.android"
         minSdk = 29
         targetSdk = 37
-        versionCode = 16
-        versionName = "0.9.5"
+        versionCode = 18
+        versionName = "0.9.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -66,7 +66,10 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     
-    // Add gRPC dependencies gradually
+    // Firebase and FCM
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
     // gRPC dependencies
     implementation(libs.grpc.okhttp)
     implementation(libs.grpc.protobuf.lite)

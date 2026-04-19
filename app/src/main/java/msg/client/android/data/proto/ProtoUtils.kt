@@ -2,10 +2,11 @@ package msg.client.android.data.proto
 
 import com.google.protobuf.Timestamp
 import msg.client.android.data.models.Message
+import msg.client.android.data.models.Reaction
 
 object ProtoUtils {
     fun createMessageProto(message: Message): MessageProto {
-        val timestamp = com.google.protobuf.Timestamp.newBuilder()
+        val timestamp = Timestamp.newBuilder()
             .setSeconds(message.timestamp / 1000)
             .setNanos(((message.timestamp % 1000) * 1000000).toInt())
             .build()
@@ -14,6 +15,7 @@ object ProtoUtils {
             .setUser(message.user)
             .setText(message.text)
             .setCreatedAt(timestamp)
+            .setId(message.id)
             .build()
     }
     
@@ -23,9 +25,11 @@ object ProtoUtils {
         } ?: System.currentTimeMillis()
         
         return Message(
+            id = proto.id,
             user = proto.user,
             text = proto.text,
-            timestamp = timestamp
+            timestamp = timestamp,
+            reactions = proto.reactions.map { Reaction(it.user, it.emoji) }
         )
     }
     
@@ -34,7 +38,7 @@ object ProtoUtils {
         val seconds = currentTime / 1000
         val nanos = ((currentTime % 1000) * 1000000).toInt()
         
-        return com.google.protobuf.Timestamp.newBuilder()
+        return Timestamp.newBuilder()
             .setSeconds(seconds)
             .setNanos(nanos)
             .build()

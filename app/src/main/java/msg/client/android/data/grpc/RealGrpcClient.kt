@@ -8,9 +8,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import msg.client.android.data.models.Message
 import msg.client.android.data.proto.MessageProto
+import msg.client.android.data.proto.ReactionProto
+import msg.client.android.data.proto.ReactionRequestProto
+import msg.client.android.data.proto.ReactionResponseProto
 import msg.client.android.data.proto.ProtoUtils
 import msg.client.android.data.proto.GetHistoryRequestProto
 import msg.client.android.data.proto.GetHistoryResponseProto
+import msg.client.android.data.proto.DeleteMessagesRequestProto
+import msg.client.android.data.proto.DeleteMessagesResponseProto
+import msg.client.android.data.proto.TokenRequestProto
+import msg.client.android.data.proto.TokenResponseProto
 import java.util.concurrent.TimeUnit
 
 class RealGrpcClient {
@@ -32,8 +39,15 @@ class RealGrpcClient {
 
     private var isChatStarted = false
     private val sentMessageHashes = mutableSetOf<String>() // Track sent messages to prevent echo
+    private val deletedMessageHashes = mutableSetOf<String>()
+    private var appContext: android.content.Context? = null
     
-    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051) {
+    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
+        if (context != null) {
+            this.appContext = context
+            loadDeletedMessages()
+        }
+        
         if (_connectionState.value && currentServerAddress == serverAddress) {
             println("DEBUG: RealGrpcClient - Already connected to $serverAddress:$port")
             return
@@ -46,17 +60,13 @@ class RealGrpcClient {
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
             if (useTls) builder.useTransportSecurity() else builder.usePlaintext()
             
-            // directExecutor() уменьшает накладные расходы на переключение контекста
-            // и часто исправляет ошибки "frame handler" на Android
             builder.directExecutor()
-            
-            // Увеличиваем лимиты
             builder.maxInboundMessageSize(16 * 1024 * 1024)
             builder.maxInboundMetadataSize(1024 * 1024)
             
             builder.keepAliveTime(30, TimeUnit.SECONDS)
                 .keepAliveTimeout(10, TimeUnit.SECONDS)
-                .keepAliveWithoutCalls(false) // Отключаем для стабильности на мобильных сетях
+                .keepAliveWithoutCalls(false)
                 .idleTimeout(24, TimeUnit.HOURS)
             
             channel = builder.build()
@@ -71,10 +81,27 @@ class RealGrpcClient {
         }
     }
 
+    private fun loadDeletedMessages() {
+        appContext?.getSharedPreferences("deleted_messages", android.content.Context.MODE_PRIVATE)?.let { prefs ->
+            val saved = prefs.getStringSet("hashes", emptySet()) ?: emptySet()
+            deletedMessageHashes.clear()
+            deletedMessageHashes.addAll(saved)
+        }
+    }
+
+    private fun saveDeletedMessages() {
+        appContext?.getSharedPreferences("deleted_messages", android.content.Context.MODE_PRIVATE)?.edit()?.let { editor ->
+            editor.putStringSet("hashes", deletedMessageHashes)
+            editor.apply()
+        }
+    }
+
+    private fun getMessageHash(message: Message): String {
+        return "${message.user}:${message.text}:${message.timestamp / 1000}"
+    }
+
     private fun loadHistory(onComplete: () -> Unit = {}) {
         val currentChannel = channel ?: return
-        
-        println("DEBUG: RealGrpcClient - Loading history...")
         
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetHistoryRequestProto, GetHistoryResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -84,52 +111,25 @@ class RealGrpcClient {
             .build()
             
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        
-        // Загружаем историю для общей комнаты (пустая строка или "general")
         val request = GetHistoryRequestProto(limit = 100, room = "")
         
         call.start(object : io.grpc.ClientCall.Listener<GetHistoryResponseProto>() {
             override fun onMessage(message: GetHistoryResponseProto) {
-                println("DEBUG: RealGrpcClient - Received history: ${message.messages.size} messages")
-                
                 val historyMessages = message.messages
                     .filterNot { it.text.endsWith(" joined") || it.text.endsWith(" присоединился") }
                     .map { ProtoUtils.createMessageFromProto(it) }
+                    .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
 
                 _messages.update { currentList ->
-                    val combined = (historyMessages + currentList).distinctBy { 
-                        "${it.user}:${it.text}:${it.timestamp / 1000}" 
-                    }.sortedBy { it.timestamp }
-                    
-                    if (combined.isEmpty()) {
-                        println("DEBUG: RealGrpcClient - History is empty, adding welcome message")
-                        // Вставляем системное сообщение только если список совсем пуст
-                        listOf(Message(user = "System", text = "Welcome! This is a new chat. No messages here yet.", timestamp = System.currentTimeMillis()))
-                    } else {
-                        combined
-                    }
+                    (historyMessages + currentList).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
                 }
             }
             
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    println("DEBUG: RealGrpcClient - History error: ${status.code} - ${status.description}")
-                    
-                    val errorMsg = when (status.code) {
-                        io.grpc.Status.Code.UNAVAILABLE -> "Server unavailable. Retrying..."
-                        io.grpc.Status.Code.INTERNAL -> "Network frame error. Retrying..."
-                        else -> "History load failed: ${status.code}"
-                    }
-                    _error.value = errorMsg
-                    
-                    // Если это сетевая ошибка (UNAVAILABLE или INTERNAL), пробуем еще раз через 2 секунды
-                    if (status.code == io.grpc.Status.Code.UNAVAILABLE || status.code == io.grpc.Status.Code.INTERNAL) {
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            loadHistory(onComplete)
-                        }, 3000)
-                    } else {
-                        onComplete()
-                    }
+                if (!status.isOk && (status.code == io.grpc.Status.Code.UNAVAILABLE || status.code == io.grpc.Status.Code.INTERNAL)) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        loadHistory(onComplete)
+                    }, 3000)
                 } else {
                     onComplete()
                 }
@@ -143,9 +143,6 @@ class RealGrpcClient {
     
     fun loadUsers() {
         val currentChannel = channel ?: return
-
-        println("DEBUG: RealGrpcClient - Loading users...")
-
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<Unit, List<String>>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetClients")
@@ -154,19 +151,9 @@ class RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-
         call.start(object : io.grpc.ClientCall.Listener<List<String>>() {
-            override fun onMessage(message: List<String>) {
-                println("DEBUG: RealGrpcClient - Received users: ${message.size}")
-                _users.value = message
-            }
-
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    println("DEBUG: RealGrpcClient - Load users error: ${status.code} - ${status.description}")
-                    // Don't set global error - users list is optional, server may not support GetClients
-                }
-            }
+            override fun onMessage(message: List<String>) { _users.value = message }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
 
         call.sendMessage(Unit)
@@ -184,10 +171,7 @@ class RealGrpcClient {
             currentServerAddress = null
             _connectionState.value = false
             sentMessageHashes.clear()
-            println("DEBUG: RealGrpcClient - Disconnected and cleaned up")
-        } catch (e: Exception) {
-            println("DEBUG: RealGrpcClient - Disconnect error: ${e.message}")
-        }
+        } catch (e: Exception) {}
     }
     
     private var lastUsername: String? = null
@@ -199,40 +183,30 @@ class RealGrpcClient {
         lastJoinMessage = joinMessage
         lastOnMessageReceived = onMessageReceived
         
-        if (!_connectionState.value || channel == null) {
-            _error.value = "Not connected"
-            return
-        }
-        
-        if (isChatStarted) {
-            println("DEBUG: RealGrpcClient - Chat stream already active, ignoring start request")
-            return
-        }
+        if (!_connectionState.value || channel == null || isChatStarted) return
         
         try {
             isChatStarted = true
-            
             val responseObserver = object : StreamObserver<MessageProto> {
                 override fun onNext(value: MessageProto) {
-                    // Пропускаем системные сообщения о присоединении
-                    if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) {
-                        println("DEBUG: RealGrpcClient - Skipping system message: ${value.text}")
-                        return
-                    }
+                    if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return
 
                     val incoming = ProtoUtils.createMessageFromProto(value)
-                    val messageHash = "${value.user}:${value.text}:${value.createdAt?.seconds}:${value.createdAt?.nanos}"
                     
                     _messages.update { currentList ->
-                        if (sentMessageHashes.contains(messageHash)) {
-                            sentMessageHashes.remove(messageHash)
-                            currentList
-                        } else if (currentList.takeLast(5).any {
-                            it.text == incoming.text && it.user == incoming.user &&
-                            Math.abs(it.timestamp - incoming.timestamp) < 2000
-                        }) {
-                            currentList
+                        // Ищем, нет ли уже такого сообщения в списке (по тексту и пользователю, если ID еще нет)
+                        val existingIndex = currentList.indexOfFirst { 
+                            (it.id == incoming.id && it.id.isNotEmpty()) || 
+                            (it.user == incoming.user && it.text == incoming.text && Math.abs(it.timestamp - incoming.timestamp) < 5000)
+                        }
+
+                        if (existingIndex != -1) {
+                            // Если нашли, обновляем его (теперь у него есть ID от сервера)
+                            val updatedList = currentList.toMutableList()
+                            updatedList[existingIndex] = incoming
+                            updatedList
                         } else {
+                            // Если не нашли (чужое сообщение), добавляем в конец
                             onMessageReceived(incoming)
                             currentList + incoming
                         }
@@ -240,21 +214,15 @@ class RealGrpcClient {
                 }
                 
                 override fun onError(t: Throwable) {
-                    println("DEBUG: RealGrpcClient - Chat stream error: ${t.message}. Attempting reconnect in 5s...")
                     isChatStarted = false
-                    // Не ставим _connectionState.value = false сразу, попробуем переподключиться
-                    
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         if (lastUsername != null && lastJoinMessage != null && lastOnMessageReceived != null) {
-                            println("DEBUG: RealGrpcClient - Retrying startChat...")
                             startChat(lastUsername!!, lastJoinMessage!!, lastOnMessageReceived!!)
                         }
                     }, 5000)
                 }
                 
-                override fun onCompleted() {
-                    isChatStarted = false
-                }
+                override fun onCompleted() { isChatStarted = false }
             }
             
             val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MessageProto, MessageProto>()
@@ -265,12 +233,10 @@ class RealGrpcClient {
                 .build()
             
             val call = channel!!.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-            
             call.start(object : io.grpc.ClientCall.Listener<MessageProto>() {
                 override fun onHeaders(headers: io.grpc.Metadata) { call.request(100) }
                 override fun onMessage(message: MessageProto) { responseObserver.onNext(message) }
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    println("DEBUG: RealGrpcClient - Chat stream closed. Status: ${status.code}, Description: ${status.description}, Cause: ${status.cause}")
                     if (!status.isOk) responseObserver.onError(status.asRuntimeException())
                     else responseObserver.onCompleted()
                 }
@@ -291,80 +257,251 @@ class RealGrpcClient {
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .build())
             
-            // Загружаем историю сначала, а потом пользователей
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                loadHistory {
-                    loadUsers()
-                }
+                loadHistory { loadUsers() }
             }, 300)
             
         } catch (e: Exception) {
             isChatStarted = false
-            _error.value = "StartChat failed: ${e.message}"
         }
     }
     
     fun sendMessage(message: Message) {
         if (requestObserver == null) return
         try {
-            _messages.update { currentList ->
-                currentList + message
-            }
-            
+            _messages.update { currentList -> currentList + message }
             val protoMessage = ProtoUtils.createMessageProto(message)
-            val messageHash = "${protoMessage.user}:${protoMessage.text}:${protoMessage.createdAt?.seconds}:${protoMessage.createdAt?.nanos}"
-            sentMessageHashes.add(messageHash)
-            
+            sentMessageHashes.add(getMessageHash(message))
             requestObserver?.onNext(protoMessage)
-        } catch (e: Exception) {
-            println("DEBUG: RealGrpcClient - Send error: ${e.message}")
-        }
+        } catch (e: Exception) {}
     }
     
     fun deleteMessage(message: Message) {
-        // Remove message from local list
-        _messages.update { currentList ->
-            currentList.filterNot { it.timestamp == message.timestamp && it.user == message.user && it.text == message.text }
-        }
+        val hash = getMessageHash(message)
+        deletedMessageHashes.add(hash)
+        saveDeletedMessages()
+        _messages.update { currentList -> currentList.filterNot { getMessageHash(it) == hash } }
+
+        // Send delete request to server
+        val proto = ProtoUtils.createMessageProto(message)
+        val request = DeleteMessagesRequestProto(listOf(proto))
         
-        // TODO: Send delete request to server when server supports it
-        println("DEBUG: RealGrpcClient - Deleted message locally: ${message.user}: ${message.text}")
+        val method = io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteMessages")
+            .setRequestMarshaller(DeleteMessagesRequestMarshaller())
+            .setResponseMarshaller(DeleteMessagesResponseMarshaller())
+            .build()
+
+        channel?.let { ch ->
+            val call = ch.newCall(method, io.grpc.CallOptions.DEFAULT)
+            call.start(object : io.grpc.ClientCall.Listener<DeleteMessagesResponseProto>() {
+                override fun onMessage(message: DeleteMessagesResponseProto) {
+                    if (message.success) {
+                        android.util.Log.d("GrpcClient", "Successfully deleted message on server")
+                    }
+                }
+            }, io.grpc.Metadata())
+            call.request(1)
+            call.sendMessage(request)
+            call.halfClose()
+        }
+    }
+
+    fun setReaction(messageId: String, username: String, emoji: String) {
+        val currentChannel = channel ?: return
+        
+        val reaction = msg.client.android.data.proto.ReactionProto(username, emoji)
+        val request = msg.client.android.data.proto.ReactionRequestProto(messageId, reaction)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<msg.client.android.data.proto.ReactionRequestProto, msg.client.android.data.proto.ReactionResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SetReaction")
+            .setRequestMarshaller(ReactionRequestMarshaller())
+            .setResponseMarshaller(ReactionResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<msg.client.android.data.proto.ReactionResponseProto>() {
+            override fun onMessage(message: msg.client.android.data.proto.ReactionResponseProto) {
+                if (message.success) {
+                    println("DEBUG: RealGrpcClient - Successfully set reaction")
+                    _messages.update { currentList ->
+                        currentList.map { m ->
+                            if (m.id == messageId) {
+                                val newReactions = m.reactions.filterNot { it.user == username } + msg.client.android.data.models.Reaction(username, emoji)
+                                m.copy(reactions = newReactions)
+                            } else m
+                        }
+                    }
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun registerToken(user: String, token: String) {
+        val currentChannel = channel ?: return
+        
+        val request = TokenRequestProto(user, token)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TokenRequestProto, TokenResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RegisterToken")
+            .setRequestMarshaller(TokenRequestMarshaller())
+            .setResponseMarshaller(TokenResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<TokenResponseProto>() {
+            override fun onMessage(message: TokenResponseProto) {
+                if (message.success) {
+                    android.util.Log.d("FCM", "Token registered successfully for $user")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
     }
     
     fun testConnection(): Boolean = _connectionState.value
 }
 
-class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto> {
-    override fun stream(value: MessageProto): java.io.InputStream {
+class ReactionProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionProto> {
+    override fun stream(value: ReactionProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.user.isNotEmpty()) cos.writeString(1, value.user)
-        if (value.text.isNotEmpty()) cos.writeString(2, value.text)
-        if (value.createdAt != null) cos.writeMessage(3, value.createdAt)
+        if (value.emoji.isNotEmpty()) cos.writeString(2, value.emoji)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-
-    override fun parse(stream: java.io.InputStream): MessageProto {
+    override fun parse(stream: java.io.InputStream): ReactionProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var user = ""
-        var text = ""
-        var createdAt: com.google.protobuf.Timestamp? = null
+        var emoji = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> user = cis.readString()
-                2 -> text = cis.readString()
-                3 -> {
-                    val builder = com.google.protobuf.Timestamp.newBuilder()
-                    cis.readMessage(builder, com.google.protobuf.ExtensionRegistryLite.getEmptyRegistry())
-                    createdAt = builder.build()
+                2 -> emoji = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return ReactionProto(user, emoji)
+    }
+}
+
+class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto> {
+    private val reactionMarshaller = ReactionProtoMarshaller()
+    override fun stream(value: MessageProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.id.isNotEmpty()) cos.writeString(1, value.id)
+        if (value.user.isNotEmpty()) cos.writeString(2, value.user)
+        if (value.text.isNotEmpty()) cos.writeString(3, value.text)
+        if (value.createdAt != null) {
+            cos.writeTag(4, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            cos.writeUInt32NoTag(value.createdAt.serializedSize)
+            value.createdAt.writeTo(cos)
+        }
+        for (reaction in value.reactions) {
+            val msgBytes = reactionMarshaller.stream(reaction).readBytes()
+            cos.writeTag(5, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            cos.writeUInt32NoTag(msgBytes.size)
+            cos.writeRawBytes(msgBytes)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): MessageProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var id = ""
+        var user = ""
+        var text = ""
+        var createdAt: com.google.protobuf.Timestamp? = null
+        val reactions = mutableListOf<ReactionProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> id = cis.readString()
+                2 -> user = cis.readString()
+                3 -> text = cis.readString()
+                4 -> {
+                    val length = cis.readUInt32()
+                    val oldLimit = cis.pushLimit(length)
+                    createdAt = com.google.protobuf.Timestamp.parseFrom(cis)
+                    cis.popLimit(oldLimit)
+                }
+                5 -> {
+                    val length = cis.readUInt32()
+                    reactions.add(reactionMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
                 }
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(user, text, createdAt)
+        return MessageProto(id, user, text, createdAt, reactions)
+    }
+}
+
+class ReactionRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionRequestProto> {
+    private val reactionMarshaller = ReactionProtoMarshaller()
+    override fun stream(value: ReactionRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.messageId.isNotEmpty()) cos.writeString(1, value.messageId)
+        val reactionBytes = reactionMarshaller.stream(value.reaction).readBytes()
+        cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(reactionBytes.size)
+        cos.writeRawBytes(reactionBytes)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): ReactionRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var messageId = ""
+        var reaction = ReactionProto("", "")
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> messageId = cis.readString()
+                2 -> {
+                    val length = cis.readUInt32()
+                    reaction = reactionMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length)))
+                }
+                else -> cis.skipField(tag)
+            }
+        }
+        return ReactionRequestProto(messageId, reaction)
+    }
+}
+
+class ReactionResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionResponseProto> {
+    override fun stream(value: ReactionResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): ReactionResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return ReactionResponseProto(success)
     }
 }
 
@@ -377,7 +514,6 @@ class GetHistoryRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHisto
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-
     override fun parse(stream: java.io.InputStream): GetHistoryRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var limit = 0
@@ -397,20 +533,18 @@ class GetHistoryRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHisto
 
 class GetHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHistoryResponseProto> {
     private val messageMarshaller = MessageProtoMarshaller()
-    
     override fun stream(value: GetHistoryResponseProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         for (msg in value.messages) {
             val msgBytes = messageMarshaller.stream(msg).readBytes()
             cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
-            cos.writeRawVarint32(msgBytes.size)
+            cos.writeUInt32NoTag(msgBytes.size)
             cos.writeRawBytes(msgBytes)
         }
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-
     override fun parse(stream: java.io.InputStream): GetHistoryResponseProto {
         return try {
             val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
@@ -418,22 +552,13 @@ class GetHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHist
             while (!cis.isAtEnd) {
                 val tag = cis.readTag()
                 if (tag == 0) break
-                when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                    1 -> {
-                        // Используем безопасное чтение сообщения
-                        val length = cis.readRawVarint32()
-                        val oldLimit = cis.pushLimit(length)
-                        messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
-                        cis.popLimit(oldLimit)
-                    }
-                    else -> cis.skipField(tag)
-                }
+                if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                    val length = cis.readUInt32()
+                    messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
+                } else cis.skipField(tag)
             }
             GetHistoryResponseProto(messages)
-        } catch (e: Exception) {
-            println("DEBUG: RealGrpcClient - Parse error: ${e.message}")
-            GetHistoryResponseProto(emptyList())
-        }
+        } catch (e: Exception) { GetHistoryResponseProto(emptyList()) }
     }
 }
 
@@ -446,26 +571,116 @@ class ClientListResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<List<St
     override fun stream(value: List<String>): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        for (client in value) {
-            cos.writeString(1, client)
-        }
+        for (client in value) cos.writeString(1, client)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-
     override fun parse(stream: java.io.InputStream): List<String> {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         val clients = mutableListOf<String>()
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
-            // В ClientListResponse поле clients имеет номер 1
-            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
-                clients.add(cis.readString())
-            } else {
-                cis.skipField(tag)
-            }
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) clients.add(cis.readString())
+            else cis.skipField(tag)
         }
         return clients
+    }
+}
+
+class DeleteMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteMessagesRequestProto> {
+    private val messageMarshaller = MessageProtoMarshaller()
+    override fun stream(value: DeleteMessagesRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        for (msg in value.messages) {
+            val msgBytes = messageMarshaller.stream(msg).readBytes()
+            cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            cos.writeUInt32NoTag(msgBytes.size)
+            cos.writeRawBytes(msgBytes)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): DeleteMessagesRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val messages = mutableListOf<MessageProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val length = cis.readUInt32()
+                messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
+            } else cis.skipField(tag)
+        }
+        return DeleteMessagesRequestProto(messages)
+    }
+}
+
+class DeleteMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteMessagesResponseProto> {
+    override fun stream(value: DeleteMessagesResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): DeleteMessagesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return DeleteMessagesResponseProto(success)
+    }
+}
+
+class TokenRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TokenRequestProto> {
+    override fun stream(value: TokenRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeString(1, value.user)
+        cos.writeString(2, value.token)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): TokenRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var user = ""
+        var token = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> user = cis.readString()
+                2 -> token = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return TokenRequestProto(user, token)
+    }
+}
+
+class TokenResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<TokenResponseProto> {
+    override fun stream(value: TokenResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): TokenResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return TokenResponseProto(success)
     }
 }

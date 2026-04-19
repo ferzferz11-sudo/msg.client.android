@@ -16,7 +16,8 @@ import java.util.*
 
 class MessageAdapter(
     private var currentUsername: String,
-    private val onSelectionChanged: (Int) -> Unit
+    private val onSelectionChanged: (Int) -> Unit,
+    private val onMessageLongClick: (Message) -> Unit = {}
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
     
     private val selectedPositions = mutableSetOf<Int>()
@@ -58,14 +59,16 @@ class MessageAdapter(
         // Check if this is an outgoing message (from current user)
         val isOutgoing = currentMessage.user == currentUsername
 
-        // Hide user and time for consecutive messages in the same minute
-        val shouldHideUser = isConsecutive || isOutgoing
+        // Hide user name if it's our message OR if it's the same user as before
+        val shouldHideUser = isOutgoing || isConsecutive
+        
+        // Hide time only if it's the same minute AND same user (consecutive)
         val shouldHideTime = isConsecutive && isSameMinute
 
         // Check if this message is selected
         val isSelected = selectedPositions.contains(position)
 
-        holder.bind(currentMessage, shouldHideUser, isOutgoing, isSelected, shouldHideTime) {
+        holder.bind(currentMessage, shouldHideUser, isOutgoing, isSelected, shouldHideTime, isConsecutive, {
             // Handle message click - use holder.bindingAdapterPosition to get current position
             val currentPosition = holder.bindingAdapterPosition
             if (currentPosition == RecyclerView.NO_POSITION) return@bind
@@ -81,7 +84,9 @@ class MessageAdapter(
             }
             notifyItemChanged(currentPosition)
             onSelectionChanged(selectedPositions.size)
-        }
+        }, {
+            onMessageLongClick(currentMessage)
+        })
     }
     
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -89,15 +94,28 @@ class MessageAdapter(
         private val userText: TextView = itemView.findViewById(R.id.userText)
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
+        private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
         
-        fun bind(message: Message, shouldHideUser: Boolean, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, onClick: () -> Unit) {
+        fun bind(message: Message, shouldHideUser: Boolean, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
             userText.text = message.user
             messageText.text = message.text
             
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             timeText.text = timeFormat.format(Date(message.timestamp))
             timeText.visibility = if (shouldHideTime) View.GONE else View.VISIBLE
+
+            val reactions = message.reactions
+            if (reactions.isNotEmpty()) {
+                val reactionSummary = reactions
+                    .groupBy { it.emoji }
+                    .entries
+                    .joinToString(" ") { "${it.key} ${it.value.size}" }
+                reactionsText.text = reactionSummary
+                reactionsText.visibility = View.VISIBLE
+            } else {
+                reactionsText.visibility = View.GONE
+            }
             
             // Set background and alignment based on message type
             val params = messageContainer.layoutParams as android.widget.LinearLayout.LayoutParams
@@ -105,6 +123,8 @@ class MessageAdapter(
             
             val typedValue = android.util.TypedValue()
             if (isOutgoing) {
+                // Use a special "no-tail" background for consecutive messages if we had one, 
+                // but for now we'll just adjust margins.
                 messageContainer.setBackgroundResource(R.drawable.bg_message_outgoing)
                 params.gravity = android.view.Gravity.END
                 
@@ -145,14 +165,18 @@ class MessageAdapter(
                 userText.visibility = View.VISIBLE
             }
             
-            // Adjust margins for consecutive messages
+            // Adjust margins for consecutive messages - much smaller gap
             val outerParams = itemView.layoutParams as ViewGroup.MarginLayoutParams
-            outerParams.topMargin = if (shouldHideUser) 4 else 16
+            outerParams.topMargin = if (isConsecutive) 2 else 16
             itemView.layoutParams = outerParams
             
             // Handle click on message container
             messageContainer.setOnClickListener {
                 onClick()
+            }
+            messageContainer.setOnLongClickListener {
+                onLongClick()
+                true
             }
         }
     }
@@ -160,7 +184,8 @@ class MessageAdapter(
 
 class MessageDiffCallback : DiffUtil.ItemCallback<Message>() {
     override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean {
-        return oldItem.timestamp == newItem.timestamp && oldItem.user == newItem.user
+        return (oldItem.id.isNotEmpty() && newItem.id.isNotEmpty() && oldItem.id == newItem.id) || 
+               (oldItem.timestamp == newItem.timestamp && oldItem.user == newItem.user)
     }
     
     override fun areContentsTheSame(oldItem: Message, newItem: Message): Boolean {

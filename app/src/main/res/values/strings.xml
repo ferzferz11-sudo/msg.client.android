@@ -16,8 +16,8 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">0.9.5</string>
-    <string name="download_update">update my app</string>
+    <string name="app_version">0.9.7</string>
+    <string name="download_update">update</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
     <string name="type_message_here">Type here</string>
@@ -104,4 +104,7 @@
     </plurals>
     <string name="refresh_symbol">↻</string>
     <string name="delete_message">Delete message</string>
+    <string name="version_format">Version %s</string>
+    <string name="language_format">Language: %s</string>
+    <string name="color_scheme_format">Theme: %s</string>
 </resources>

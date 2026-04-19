@@ -17,6 +17,7 @@
     <color name="incoming_message_background">@color/deep_purple</color>
     <color name="outgoing_message_background">@color/lavender_mist</color>
     <color name="outgoing_message_text">#FFFFFF</color>
+    <color name="incoming_message_light">#3A2A5A</color>
     
     <!-- UI element colors -->
     <color name="primary">#967BB6</color>

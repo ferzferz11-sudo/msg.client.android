@@ -35,11 +35,11 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var connectionStatus: TextView
     private lateinit var messageInput: EditText
-    private lateinit var sendButton: Button
+    private lateinit var sendButton: com.google.android.material.floatingactionbutton.FloatingActionButton
     private lateinit var messagesRecyclerView: RecyclerView
     private lateinit var toolbar: Toolbar
     private lateinit var toolbarTitle: TextView
-    private lateinit var deleteSelectedButton: android.widget.ImageButton
+    private var mainMenu: Menu? = null
     
     private var username: String = ""
     private var serverAddress: String = ""
@@ -83,12 +83,21 @@ class ChatActivity : AppCompatActivity() {
                 // Test server connectivity
                 connectivityTest?.testServerReachability(host, port)
                 
-                // Connect to server with correct port
-                viewModel.connect(host, false, port)
+                // Connect to server with context for persistent deletion
+                viewModel.connect(host, false, port, this)
                 
                 // Start chat session (callback is empty because we use StateFlow for messages)
                 val joinMessage = getString(R.string.joined, username)
                 viewModel.startChat(username, joinMessage) { }
+                
+                // Register FCM Token for push notifications
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val token = task.result
+                            viewModel.registerToken(username, token)
+                        }
+                    }
                 
                 Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -101,7 +110,6 @@ class ChatActivity : AppCompatActivity() {
     private fun initViews() {
         toolbar = findViewById(R.id.toolbar)
         toolbarTitle = findViewById(R.id.toolbarTitle)
-        deleteSelectedButton = findViewById(R.id.deleteSelectedButton)
         setSupportActionBar(toolbar)
         supportActionBar?.apply {
             title = "" // Clear default title
@@ -110,13 +118,6 @@ class ChatActivity : AppCompatActivity() {
         }
         
         animateToolbarTitle()
-        deleteSelectedButton.setOnClickListener {
-            val selectedMessages = messageAdapter.getSelectedMessages()
-            selectedMessages.forEach { message ->
-                viewModel.deleteMessage(message)
-            }
-            messageAdapter.clearSelection()
-        }
         
         setupEmojiPanel()
         
@@ -130,7 +131,7 @@ class ChatActivity : AppCompatActivity() {
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
         
         connectionStatus.text = getString(R.string.connecting)
-        connectionStatus.setTextColor(getColor(android.R.color.holo_orange_dark))
+        // Цвет теперь управляется через alpha в XML, но можно и программно
         
         sendButton.setOnClickListener {
             val messageText = messageInput.text.toString().trim()
@@ -163,12 +164,7 @@ class ChatActivity : AppCompatActivity() {
                 }
                 
                 connectionStatus.text = statusText
-                connectionStatus.setTextColor(
-                    getColor(if (isConnected) android.R.color.holo_green_dark else android.R.color.holo_red_dark)
-                )
-                
-                // Очищаем subtitle тулбара, если он был установлен ранее
-                supportActionBar?.subtitle = null
+                // Убираем прямое изменение цвета, так как статус теперь в тулбаре белым текстом
             }
         }
 
@@ -199,19 +195,62 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun setupRecyclerView() {
-        messageAdapter = MessageAdapter(username) { selectedCount ->
-            if (selectedCount > 0) {
-                deleteSelectedButton.visibility = android.view.View.VISIBLE
-                toolbarTitle.visibility = android.view.View.GONE
-            } else {
-                deleteSelectedButton.visibility = android.view.View.GONE
-                toolbarTitle.visibility = android.view.View.VISIBLE
+        messageAdapter = MessageAdapter(username, { selectedCount ->
+            val hasSelection = selectedCount > 0
+            mainMenu?.let { menu ->
+                menu.findItem(R.id.action_delete)?.isVisible = hasSelection
+                menu.findItem(R.id.action_language)?.isVisible = !hasSelection
+                menu.findItem(R.id.action_color_scheme)?.isVisible = !hasSelection
             }
-        }
+            if (hasSelection) {
+                toolbarTitle.text = "Selected: $selectedCount"
+                connectionStatus.visibility = android.view.View.GONE
+            } else {
+                toolbarTitle.text = getString(R.string.app_name)
+                connectionStatus.visibility = android.view.View.VISIBLE
+            }
+        }, { message ->
+            showReactionPicker(message)
+        })
         messagesRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ChatActivity)
             adapter = messageAdapter
         }
+    }
+
+    private fun showReactionPicker(message: Message) {
+        if (message.id.isEmpty()) {
+            Toast.makeText(this, "Message ID is missing, cannot react", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val emojis = listOf("👍", "❤️", "😂", "😮", "😢", "🔥")
+        val emojiView = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER
+            setPadding(16, 16, 16, 16)
+        }
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(emojiView)
+            .create()
+
+        for (emoji in emojis) {
+            val textView = TextView(this).apply {
+                text = emoji
+                textSize = 32f
+                setPadding(16, 16, 16, 16)
+                isClickable = true
+                setBackgroundResource(android.R.drawable.list_selector_background)
+                setOnClickListener {
+                    viewModel.setReaction(message.id, username, emoji)
+                    dialog.dismiss()
+                }
+            }
+            emojiView.addView(textView)
+        }
+
+        dialog.show()
     }
     
     private fun deleteMessage(message: Message) {
@@ -220,7 +259,11 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun sendMessage(text: String) {
-        val message = Message(user = username, text = text)
+        val message = Message(
+            user = username,
+            text = text,
+            timestamp = System.currentTimeMillis()
+        )
         viewModel.sendMessage(message)
     }
     
@@ -231,6 +274,7 @@ class ChatActivity : AppCompatActivity() {
     }
     
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        mainMenu = menu
         menuInflater.inflate(R.menu.main_menu, menu)
         
         // Update language indicator text and add click handler
@@ -265,6 +309,14 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_delete -> {
+                val selected = messageAdapter.getSelectedMessages()
+                if (selected.isNotEmpty()) {
+                    selected.forEach { viewModel.deleteMessage(it) }
+                    messageAdapter.clearSelection()
+                }
+                true
+            }
             R.id.action_color_scheme -> {
                 // Toggle color scheme
                 val currentScheme = getSavedColorScheme() ?: "light"

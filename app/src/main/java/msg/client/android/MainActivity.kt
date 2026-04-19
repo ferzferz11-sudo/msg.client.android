@@ -3,10 +3,8 @@ package msg.client.android
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.res.Resources
-import android.os.Build
 import java.util.Locale
 import android.os.Bundle
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -22,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,6 +32,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class MainActivity : AppCompatActivity() {
+    
+    companion object {
+        private const val APK_URL = "http://159.195.38.145:8081/lavender.apk"
+    }
     
     private lateinit var joinChatButton: Button
     private lateinit var downloadProgressBar: ProgressBar
@@ -79,14 +82,16 @@ class MainActivity : AppCompatActivity() {
         val downloadUpdateButton: TextView = findViewById(R.id.downloadUpdateButton)
         downloadProgressBar = findViewById(R.id.downloadProgressBar)
         downloadUpdateButton.setOnClickListener {
-            downloadAndInstallApk("http://159.195.38.145:8081/lavender.apk")
+            downloadAndInstallApk()
         }
 
-        val apkUrl = "http://159.195.38.145:8081/lavender.apk"
-        
+        // Update version text from BuildConfig
+        val appVersionText: TextView = findViewById(R.id.appVersionText)
+        appVersionText.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
+
         findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = android.content.ClipData.newPlainText("Lavender APK URL", apkUrl)
+            val clip = android.content.ClipData.newPlainText("Lavender APK URL", APK_URL)
             clipboard.setPrimaryClip(clip)
             Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
         }
@@ -95,18 +100,18 @@ class MainActivity : AppCompatActivity() {
             val shareIntent = Intent(Intent.ACTION_SEND)
             shareIntent.type = "text/plain"
             shareIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
-            shareIntent.putExtra(Intent.EXTRA_TEXT, apkUrl)
+            shareIntent.putExtra(Intent.EXTRA_TEXT, APK_URL)
             startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
         }
     }
 
-    private fun downloadAndInstallApk(url: String) {
+    private fun downloadAndInstallApk() {
         downloadProgressBar.visibility = View.VISIBLE
         downloadProgressBar.progress = 0
         
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val connection = URL(url).openConnection() as HttpURLConnection
+                val connection = URL(APK_URL).openConnection() as HttpURLConnection
                 connection.connect()
                 
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) {
@@ -216,7 +221,7 @@ class MainActivity : AppCompatActivity() {
             checkServerAvailabilityInDialog(serverAddressSpinner, serverStatusIndicator, serverStatusText, btnJoin, connectivityTest)
         }
         
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
         
@@ -258,9 +263,8 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveUsername(username: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        with(prefs.edit()) {
+        prefs.edit {
             putString("username", username)
-            apply()
         }
     }
     
@@ -271,9 +275,8 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveServerAddress(address: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        with(prefs.edit()) {
+        prefs.edit {
             putString("server_address", address)
-            apply()
         }
     }
     
@@ -310,9 +313,8 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveLanguage(languageCode: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        with(prefs.edit()) {
+        prefs.edit {
             putString("language", languageCode)
-            apply()
         }
     }
     
@@ -328,15 +330,17 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun setLocale(languageCode: String) {
-        val locale = Locale(languageCode)
+        val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         
         val resources: Resources = resources
         val config: Configuration = resources.configuration
         
         config.setLocale(locale)
-        createConfigurationContext(config)
-        
+        // Для современной поддержки смены языка "на лету" без deprecated методов
+        // обычно используется attachBaseContext, но здесь мы просто подавим варнинг 
+        // или используем более современный API, если доступен.
+        @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
     }
     
@@ -347,9 +351,8 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveColorScheme(scheme: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        with(prefs.edit()) {
+        prefs.edit {
             putString("color_scheme", scheme)
-            apply()
         }
     }
     
@@ -374,7 +377,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 getString(R.string.russian)
             }
-            languageButton.text = "${getString(R.string.language)}: $languageName"
+            languageButton.text = getString(R.string.language_format, languageName)
         }
     }
     
@@ -387,7 +390,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 getString(R.string.light)
             }
-            colorSchemeButton.text = "${getString(R.string.toggle_color_scheme)}: $schemeName"
+            colorSchemeButton.text = getString(R.string.color_scheme_format, schemeName)
         }
     }
     

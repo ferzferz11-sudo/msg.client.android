@@ -5,6 +5,29 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2026-04-19
+
+### Changed
+- 📝 **Download Button Text**: Shortened download button text to "update" (EN) and "обновить" (RU) for cleaner UI.
+- 🎨 **New App Icon**: Updated launcher icon with new custom image from user.
+
+### Added
+- 😀 **Message Reactions**: Added ability to react to messages with emojis (long-press on a message).
+- 🆔 **Unique Message IDs**: Switched to UUIDs for reliable message tracking across sessions and reactions.
+- 🔔 **Push Notifications**: Integrated Firebase Cloud Messaging (FCM) to receive notifications about new messages even when the app is in the background.
+- 🔄 **Smart De-duplication**: Implemented intelligent message matching (ID/Text/User/Time) to prevent duplicate messages when they "echo" back from the server.
+- 🛡️ **gRPC Field Synchronization**: Strictly synchronized field indices between Android (manual marshaling) and Go (protoc) to prevent data corruption ("krakozyabry").
+- 🔄 **Server-side Message Deletion**: Messages are now deleted from the gRPC server and PostgreSQL database, not just locally.
+- 🗄️ **Robust DB Migrations**: Added `COALESCE` handling for legacy database records to ensure stability during version upgrades.
+- 🧹 **Persistent Local Deletion**: Deleted messages stay hidden even after app restart (stored in SharedPreferences).
+- 🎨 **Modern Chat Interface**: 
+    - Moved delete button from FAB to the Toolbar for a cleaner view.
+    - Added rounded input field with a modern "card" style.
+    - Updated app icon with new lavender branding from user image.
+    - Dynamic Toolbar: Theme and language icons hide when messages are selected to focus on deletion.
+    - Improved connection status indicator inside the Toolbar.
+- 🚀 **Performance**: Replaced deprecated Locale and gRPC methods with modern equivalents.
+
 ## [0.9.5] - 2026-04-19
 
 ### Added
@@ -26,9 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔗 **Share & Copy**: Added buttons to copy the app link to clipboard and share it via external apps.
 - 🎨 **Redesigned Main Screen**: New layout with slogan "Secure messaging" and improved information hierarchy.
 - 📥 Download latest version button on main screen (now links to: `http://159.195.38.145:8081/lavender.apk`)
-
-### Changed
-- 📝 **Download Button Text**: Updated download button text to "update my app" (EN) and "обновить мое приложение" (RU) for better localization.
 
 ### Fixed
 - 🛠️ **APK History Loading**: Fixed a bug where history wouldn't load in release builds by enabling `android:usesCleartextTraffic`.

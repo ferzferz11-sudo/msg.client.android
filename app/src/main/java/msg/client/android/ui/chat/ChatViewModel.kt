@@ -15,9 +15,9 @@ class ChatViewModel : ViewModel() {
     val messages: StateFlow<List<Message>> = grpcClient.messages
     val users: StateFlow<List<String>> = grpcClient.users
     
-    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051) {
+    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         viewModelScope.launch {
-            grpcClient.connect(serverAddress, useTls, port)
+            grpcClient.connect(serverAddress, useTls, port, context)
         }
     }
     
@@ -37,6 +37,14 @@ class ChatViewModel : ViewModel() {
     
     fun deleteMessage(message: Message) {
         grpcClient.deleteMessage(message)
+    }
+
+    fun setReaction(messageId: String, username: String, emoji: String) {
+        grpcClient.setReaction(messageId, username, emoji)
+    }
+
+    fun registerToken(username: String, token: String) {
+        grpcClient.registerToken(username, token)
     }
     
     fun testConnection(): Boolean {

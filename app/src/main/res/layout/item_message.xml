@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -22,7 +23,7 @@
                 android:id="@+id/userText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Username"
+                tools:text="Username"
                 android:textStyle="bold"
                 android:textSize="12sp"
                 android:layout_marginBottom="2dp"
@@ -32,7 +33,7 @@
                 android:id="@+id/messageText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Message content"
+                tools:text="Message content"
                 android:textSize="16sp"
                 android:textColor="?android:attr/textColorPrimary" />
 
@@ -41,9 +42,18 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
-                android:text="12:34"
-                android:textSize="10sp"
+                tools:text="12:34"
+                android:textSize="11sp"
                 android:layout_marginTop="2dp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:id="@+id/reactionsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="12sp"
+                android:visibility="gone"
                 android:textColor="?android:attr/textColorSecondary" />
 
         </LinearLayout>

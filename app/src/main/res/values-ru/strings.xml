@@ -15,8 +15,8 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">0.9.5</string>
-    <string name="download_update">обновить мое приложение</string>
+    <string name="app_version">0.9.7</string>
+    <string name="download_update">обновить</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_as">Подключен как: %s (сохранено)</string>
     <string name="type_message_here">Сообщение</string>
@@ -105,4 +105,7 @@
     </plurals>
     <string name="refresh_symbol">↻</string>
     <string name="delete_message">Удалить сообщение</string>
+    <string name="version_format">Версия %s</string>
+    <string name="language_format">Язык: %s</string>
+    <string name="color_scheme_format">Тема: %s</string>
 </resources>
