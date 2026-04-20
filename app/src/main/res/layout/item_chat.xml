@@ -14,12 +14,29 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <TextView
+            android:id="@+id/unreadCount"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/unread_count_background"
+            android:gravity="center"
+            android:text="1"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:layout_marginEnd="8dp" />
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_alignParentStart="true"
-            android:layout_toStartOf="@id/unreadCount">
+            android:layout_marginStart="32dp"
+            android:layout_toStartOf="@id/participantAvatars"
+            android:layout_centerVertical="true">
 
             <TextView
                 android:id="@+id/chatName"
@@ -41,19 +58,14 @@
 
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/unreadCount"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+        <LinearLayout
+            android:id="@+id/participantAvatars"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:background="@drawable/unread_count_background"
-            android:gravity="center"
-            android:text="1"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
+            android:gravity="center_vertical" />
 
     </RelativeLayout>
 

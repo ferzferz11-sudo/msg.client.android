@@ -15,7 +15,9 @@ data class Message(
     val repliedToUser: String = "",
     val repliedToText: String = "",
     val roomId: String = "",
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val avatarUrl: String = "",
+    val imageUrl: String = ""
 )
 
 data class ChatInfo(

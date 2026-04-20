@@ -15,14 +15,70 @@
         android:orientation="vertical"
         android:paddingEnd="12dp">
 
-        <TextView
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/profile"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:layout_centerVertical="true" />
+
+            <ImageButton
+                android:id="@+id/btnCloseDialog"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:contentDescription="@string/cancel_dialog"
+                android:tint="?android:attr/textColorSecondary" />
+
+        </RelativeLayout>
+
+        <!-- Avatar Section -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/profile"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            android:layout_marginBottom="16dp" />
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:layout_marginBottom="12dp">
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/avatarImageView"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/ic_default_avatar"
+                android:layout_gravity="center"
+                android:layout_marginBottom="6dp"
+                app:civ_border_width="2dp"
+                app:civ_border_color="?attr/colorPrimary" />
+
+            <Button
+                android:id="@+id/btnChangeAvatar"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="@string/change_avatar"
+                android:textSize="11sp"
+                android:textColor="?attr/colorOnSecondary"
+                android:backgroundTint="?attr/colorSecondary"
+                android:layout_gravity="center" />
+
+            <ProgressBar
+                android:id="@+id/avatarProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="6dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

@@ -21,6 +21,8 @@ object ProtoUtils {
             .setRepliedToText(message.repliedToText)
             .setRoomId(message.roomId)
             .setIsRead(message.isRead)
+            .setAvatarUrl(message.avatarUrl)
+            .setImageUrl(message.imageUrl)
             .build()
     }
     
@@ -39,7 +41,9 @@ object ProtoUtils {
             repliedToUser = proto.repliedToUser,
             repliedToText = proto.repliedToText,
             roomId = proto.roomId,
-            isRead = proto.isRead
+            isRead = proto.isRead,
+            avatarUrl = proto.avatarUrl,
+            imageUrl = proto.imageUrl
         )
     }
     

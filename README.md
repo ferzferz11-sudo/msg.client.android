@@ -173,7 +173,33 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.25**
+Current version: **1.0.1.27**
+
+### Version 1.0.1.27 - Image Attachments and Chat List UI
+- 🖼️ Added image attachments - users can now attach images to messages
+- 📸 Image picker with progress indicator
+- 🎬 Animated GIF support - GIFs can be attached without resizing
+- 📐 Automatic image resize to 1024x1024px before upload
+- 📐 Automatic avatar resize to 256x256px before upload
+- 🗑️ Image files physically deleted from server when message is deleted
+- 💬 Send button enabled when image is selected, even without text
+- 🎨 Chat list UI with participant avatars on the right side
+- 📍 Unread count moved to left side of chat name with fixed indentation
+- 📐 Larger avatars (96dp) for better visibility
+- ✨ Smooth fade-in animation (300ms) for avatar loading
+- 🔄 Auto avatar loading when chat list opens
+- 🎭 Default avatars for participants without custom avatars
+- 👥 All participant avatars shown in direct chats
+- 📱 Avatar cache integration for efficient loading
+- ⚡ Increased max upload size from 5MB to 10MB
+
+### Version 1.0.1.26 - Avatar Support
+- 👤 Added avatar support - users can now upload and display profile pictures
+- 🖼️ Avatar displayed in chat messages next to sender's name
+- 📸 Avatar selection in profile dialog with progress indicator
+- 🌐 Server-side avatar storage and serving via HTTP
+- 🎨 Default avatar icon for users without custom avatars
+- 🔄 Added Glide library for efficient image loading
 
 ### Version 1.0.1.25 - Landscape Layout Support
 - 📱 Added landscape layout support for main screen (activity_main.xml)

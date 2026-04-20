@@ -84,4 +84,16 @@ class GrpcClient {
     fun markRead(roomId: String, username: String) {
         realGrpcClient.markRead(roomId, username)
     }
+
+    fun updateAvatar(username: String, avatarUrl: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.updateAvatar(username, avatarUrl, callback)
+    }
+
+    fun getUserAvatar(username: String, callback: (String) -> Unit) {
+        realGrpcClient.getUserAvatar(username, callback)
+    }
+
+    fun getAvatarCache(): Map<String, String> {
+        return realGrpcClient.getAvatarCache()
+    }
 }

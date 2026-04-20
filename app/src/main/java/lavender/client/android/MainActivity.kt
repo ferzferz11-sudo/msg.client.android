@@ -38,6 +38,12 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        val toast = Toast.makeText(this, message, duration)
+        toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
+        toast.show()
+    }
+
     companion object {
         private const val APK_URL = "http://159.195.38.145:8081/lavender.apk"
         private const val VERSION_CHECK_URL = "http://159.195.38.145:8081/version.txt"
@@ -145,7 +151,7 @@ class MainActivity : AppCompatActivity() {
             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("Lavender APK URL", APK_URL)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+            showToast(getString(R.string.copied_to_clipboard))
         }
 
         findViewById<ImageButton>(R.id.shareLinkButton).setOnClickListener {
@@ -200,7 +206,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     downloadProgressBar.visibility = View.GONE
-                    Toast.makeText(this@MainActivity, "Download error: ${e.message}", Toast.LENGTH_LONG).show()
+                    showToast("Download error: ${e.message}", Toast.LENGTH_LONG)
                 }
             }
         }
@@ -303,9 +309,9 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
                 dialog.dismiss()
             } else if (username.isEmpty()) {
-                Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_LONG).show()
+                showToast(getString(R.string.username_empty), Toast.LENGTH_LONG)
             } else {
-                Toast.makeText(this, getString(R.string.password_empty), Toast.LENGTH_LONG).show()
+                showToast(getString(R.string.password_empty), Toast.LENGTH_LONG)
             }
         }
         
@@ -356,7 +362,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun logout() {
-        Toast.makeText(this, getString(R.string.exiting_app), Toast.LENGTH_SHORT).show()
+        showToast(getString(R.string.exiting_app))
         
         // Exit the application completely
         finishAffinity()

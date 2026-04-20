@@ -15,6 +15,16 @@
         android:orientation="horizontal"
         android:padding="8dp">
 
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/avatarImageView"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_default_avatar"
+            android:layout_gravity="top"
+            android:layout_marginEnd="8dp"
+            app:civ_border_width="1dp"
+            app:civ_border_color="?attr/colorSecondary" />
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -79,6 +89,15 @@
                 tools:text="Message content"
                 android:textSize="16sp"
                 android:textColor="?android:attr/textColorPrimary" />
+
+            <ImageView
+                android:id="@+id/messageImageView"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_marginTop="8dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:contentDescription="@string/attach_image" />
 
             <LinearLayout
                 android:layout_width="wrap_content"

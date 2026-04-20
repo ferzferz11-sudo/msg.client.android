@@ -2,13 +2,16 @@ package lavender.client.android
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.animation.AnimationSet
 import android.view.animation.ScaleAnimation
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -22,16 +25,21 @@ import android.view.View
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.ui.adapter.ChatAdapter
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 
 class ChatListActivity : AppCompatActivity() {
@@ -42,6 +50,18 @@ class ChatListActivity : AppCompatActivity() {
     private var username: String = ""
     private var password: String = ""
     private var colorSchemeMenuItem: MenuItem? = null
+    private var selectedAvatarUri: Uri? = null
+    private var currentAvatarImageView: CircleImageView? = null
+    private var currentAvatarProgressBar: android.widget.ProgressBar? = null
+    private companion object {
+        private const val PICK_IMAGE_REQUEST = 1001
+    }
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        val toast = Toast.makeText(this, message, duration)
+        toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
+        toast.show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedColorScheme()
@@ -77,9 +97,13 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         recyclerView = findViewById(R.id.chatsRecyclerView)
-        adapter = ChatAdapter { chat ->
-            openChat(chat.id)
-        }
+        adapter = ChatAdapter(
+            onChatClick = { chat ->
+                openChat(chat.id)
+            },
+            currentUsername = username,
+            initialAvatarCache = grpcClient.getAvatarCache()
+        )
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -90,7 +114,7 @@ class ChatListActivity : AppCompatActivity() {
                     when (it) {
                         "auth_failed" -> {
                             runOnUiThread {
-                                Toast.makeText(this@ChatListActivity, getString(R.string.auth_failed), Toast.LENGTH_LONG).show()
+                                showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
                                 grpcClient.disconnect()
                                 finish()
                             }
@@ -152,7 +176,7 @@ class ChatListActivity : AppCompatActivity() {
                     when (notification) {
                         "auth_failed" -> {
                             runOnUiThread {
-                                Toast.makeText(this@ChatListActivity, getString(R.string.auth_failed), Toast.LENGTH_LONG).show()
+                                showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
                                 grpcClient.disconnect()
                                 finish()
                             }
@@ -179,6 +203,15 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
             }
+
+            // Load current user avatar for chat list
+            grpcClient.getUserAvatar(username) { avatarUrl ->
+                runOnUiThread {
+                    if (avatarUrl.isNotEmpty()) {
+                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                    }
+                }
+            }
         }
     }
 
@@ -196,6 +229,127 @@ class ChatListActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         grpcClient.disconnect()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+            selectedAvatarUri = data.data
+            // Upload avatar to server
+            uploadAvatarToServer(selectedAvatarUri!!)
+        }
+    }
+
+    private fun uploadAvatarToServer(uri: Uri) {
+        // Show progress bar
+        currentAvatarProgressBar?.visibility = View.VISIBLE
+
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    // Check file type
+                    val mimeType = contentResolver.getType(uri)
+                    val isGif = mimeType == "image/gif"
+
+                    val bytes: ByteArray
+                    val mediaType: String
+
+                    if (isGif) {
+                        // Send GIF as-is to preserve animation
+                        val inputStream = contentResolver.openInputStream(uri)
+                        bytes = inputStream?.readBytes() ?: byteArrayOf()
+                        inputStream?.close()
+                        mediaType = "image/gif"
+                    } else {
+                        // Resize other images
+                        val resizedBytes = resizeImage(uri, 256, 256) // Max 256x256 for avatars
+
+                        if (resizedBytes == null) {
+                            runOnUiThread {
+                                currentAvatarProgressBar?.visibility = View.GONE
+                                showToast("Failed to resize image")
+                            }
+                            return@withContext
+                        }
+
+                        bytes = resizedBytes
+                        mediaType = "image/jpeg"
+                    }
+
+                    if (bytes.isEmpty()) {
+                        runOnUiThread {
+                            currentAvatarProgressBar?.visibility = View.GONE
+                            showToast("Failed to read image")
+                        }
+                        return@withContext
+                    }
+
+                    // Upload to HTTP server with multipart/form-data
+                    val requestBody = okhttp3.MultipartBody.Builder()
+                        .setType(okhttp3.MultipartBody.FORM)
+                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+                        .build()
+
+                    val request = okhttp3.Request.Builder()
+                        .url("http://159.195.38.145:8082/upload-avatar")
+                        .post(requestBody)
+                        .build()
+
+                    val client = okhttp3.OkHttpClient()
+                    val response = client.newCall(request).execute()
+
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val url = extractUrlFromResponse(responseBody ?: "")
+
+                        if (url.isNotEmpty()) {
+                            // Update avatar via gRPC
+                            grpcClient.updateAvatar(username, url) { success, message ->
+                                runOnUiThread {
+                                    currentAvatarProgressBar?.visibility = View.GONE
+                                    if (success) {
+                                        showToast("Avatar updated successfully")
+                                        // Update avatarImageView if dialog is still open
+                                        currentAvatarImageView?.let {
+                                            com.bumptech.glide.Glide.with(this@ChatListActivity)
+                                                .load(url)
+                                                .placeholder(R.drawable.ic_default_avatar)
+                                                .error(R.drawable.ic_default_avatar)
+                                                .into(it)
+                                        }
+                                        // Update adapter avatar cache
+                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                    } else {
+                                        showToast("Failed to update avatar: $message")
+                                    }
+                                }
+                            }
+                        } else {
+                            runOnUiThread {
+                                showToast("Failed to extract URL from response")
+                                currentAvatarProgressBar?.visibility = View.GONE
+                            }
+                        }
+                    } else {
+                        runOnUiThread {
+                            showToast("Failed to upload avatar (HTTP ${response.code})")
+                            currentAvatarProgressBar?.visibility = View.GONE
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    showToast("Error: ${e.message}")
+                    currentAvatarProgressBar?.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun extractUrlFromResponse(response: String): String {
+        val regex = """"url":\s*"([^"]+)"""".toRegex()
+        val match = regex.find(response)
+        return match?.groupValues?.get(1) ?: ""
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -251,7 +405,7 @@ class ChatListActivity : AppCompatActivity() {
 
             if (allUsers.isEmpty()) {
                 runOnUiThread {
-                    Toast.makeText(this@ChatListActivity, getString(R.string.no_users_available), Toast.LENGTH_SHORT).show()
+                    showToast(getString(R.string.no_users_available))
                 }
                 return@launch
             }
@@ -305,7 +459,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun createDirectChat(targetUser: String) {
         if (targetUser == username) {
-            Toast.makeText(this, getString(R.string.cannot_chat_with_yourself), Toast.LENGTH_SHORT).show()
+            showToast(getString(R.string.cannot_chat_with_yourself))
             return
         }
 
@@ -314,11 +468,11 @@ class ChatListActivity : AppCompatActivity() {
                 if (chatId != null) {
                     runOnUiThread {
                         openChat(chatId)
-                        Toast.makeText(this@ChatListActivity, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
+                        showToast(getString(R.string.chat_created_with, targetUser))
                     }
                 } else {
                     runOnUiThread {
-                        Toast.makeText(this@ChatListActivity, getString(R.string.failed_to_create_chat), Toast.LENGTH_SHORT).show()
+                        showToast(getString(R.string.failed_to_create_chat))
                     }
                 }
             }
@@ -334,9 +488,32 @@ class ChatListActivity : AppCompatActivity() {
         val btnChangeUsername = dialogView.findViewById<Button>(R.id.btnChangeUsername)
         val btnChangePassword = dialogView.findViewById<Button>(R.id.btnChangePassword)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val avatarImageView = dialogView.findViewById<CircleImageView>(R.id.avatarImageView)
+        val btnChangeAvatar = dialogView.findViewById<Button>(R.id.btnChangeAvatar)
+        val avatarProgressBar = dialogView.findViewById<android.widget.ProgressBar>(R.id.avatarProgressBar)
+        val btnCloseDialog = dialogView.findViewById<ImageButton>(R.id.btnCloseDialog)
+
+        // Store references
+        currentAvatarImageView = avatarImageView
+        currentAvatarProgressBar = avatarProgressBar
 
         // Pre-fill current username
         editTextUsername.setText(username)
+
+        // Load current avatar
+        grpcClient.getUserAvatar(username) { avatarUrl ->
+            runOnUiThread {
+                if (avatarUrl.isNotEmpty()) {
+                    com.bumptech.glide.Glide.with(this)
+                        .load(avatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .error(R.drawable.ic_default_avatar)
+                        .into(avatarImageView)
+                    // Update adapter avatar cache
+                    adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                }
+            }
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
@@ -346,22 +523,31 @@ class ChatListActivity : AppCompatActivity() {
             dialog.dismiss()
         }
 
+        btnCloseDialog.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnChangeAvatar.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            startActivityForResult(intent, PICK_IMAGE_REQUEST)
+        }
+
         btnChangeUsername.setOnClickListener {
             val newUsername = editTextUsername.text.toString().trim()
             if (newUsername.isNotEmpty() && newUsername != username) {
                 grpcClient.updateUsername(username, newUsername) { success, message ->
                     runOnUiThread {
                         if (success) {
-                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                            showToast(message)
                             username = newUsername
                             dialog.dismiss()
                         } else {
-                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                            showToast(message, Toast.LENGTH_LONG)
                         }
                     }
                 }
             } else {
-                Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_SHORT).show()
+                showToast(getString(R.string.username_empty))
             }
         }
 
@@ -372,17 +558,17 @@ class ChatListActivity : AppCompatActivity() {
                 grpcClient.updatePassword(username, oldPassword, newPassword) { success, message ->
                     runOnUiThread {
                         if (success) {
-                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                            showToast(message)
                             password = newPassword
                             editTextOldPassword.text.clear()
                             editTextNewPassword.text.clear()
                         } else {
-                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                            showToast(message, Toast.LENGTH_LONG)
                         }
                     }
                 }
             } else {
-                Toast.makeText(this, "Please enter both old and new password", Toast.LENGTH_SHORT).show()
+                showToast("Please enter both old and new password")
             }
         }
 
@@ -465,5 +651,65 @@ class ChatListActivity : AppCompatActivity() {
         config.setLocale(locale)
         @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
+    }
+
+    private fun resizeImage(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
+        return try {
+            val inputStream = contentResolver.openInputStream(uri) ?: return null
+            val options = android.graphics.BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream.close()
+
+            // Calculate inSampleSize
+            options.inSampleSize = calculateInSampleSize(options, maxWidth, maxHeight)
+            options.inJustDecodeBounds = false
+
+            val inputStream2 = contentResolver.openInputStream(uri) ?: return null
+            val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream2, null, options)
+            inputStream2.close()
+
+            if (bitmap == null) {
+                return null
+            }
+
+            // Resize to exact dimensions
+            val width = bitmap.width
+            val height = bitmap.height
+            val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+
+            val scaledWidth = (width * scale).toInt()
+            val scaledHeight = (height * scale).toInt()
+
+            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+            bitmap.recycle()
+
+            // Compress to JPEG with 85% quality
+            val outputStream = java.io.ByteArrayOutputStream()
+            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
+            scaledBitmap.recycle()
+
+            outputStream.toByteArray()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+
+        return inSampleSize
     }
 }

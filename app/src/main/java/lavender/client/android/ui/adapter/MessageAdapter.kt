@@ -97,6 +97,7 @@ class MessageAdapter(
     
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageContainer: View = itemView.findViewById(R.id.messageContainer)
+        private val avatarImageView: de.hdodenhof.circleimageview.CircleImageView = itemView.findViewById(R.id.avatarImageView)
         private val userText: TextView = itemView.findViewById(R.id.userText)
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
@@ -106,10 +107,36 @@ class MessageAdapter(
         private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
+        private val messageImageView: ImageView = itemView.findViewById(R.id.messageImageView)
         
         fun bind(message: Message, shouldHideUser: Boolean, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
             userText.text = message.user
             messageText.text = message.text
+
+            // Load avatar if URL is provided
+            if (message.avatarUrl.isNotEmpty()) {
+                com.bumptech.glide.Glide.with(itemView.context)
+                    .load(message.avatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .error(R.drawable.ic_default_avatar)
+                    .into(avatarImageView)
+                avatarImageView.visibility = View.VISIBLE
+            } else {
+                avatarImageView.setImageResource(R.drawable.ic_default_avatar)
+                avatarImageView.visibility = View.VISIBLE
+            }
+
+            // Load attached image if URL is provided
+            if (message.imageUrl.isNotEmpty()) {
+                com.bumptech.glide.Glide.with(itemView.context)
+                    .load(message.imageUrl)
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .error(android.R.drawable.ic_menu_gallery)
+                    .into(messageImageView)
+                messageImageView.visibility = View.VISIBLE
+            } else {
+                messageImageView.visibility = View.GONE
+            }
 
             // Show reply quote if present
             if (message.repliedToUser.isNotEmpty()) {

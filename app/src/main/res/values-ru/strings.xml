@@ -12,10 +12,11 @@
     <string name="show_network_info">Показать информацию сети</string>
     <string name="ping_laptop">Пинг сервера (159.195.38.145)</string>
     <string name="send_message">Отправить</string>
+    <string name="attach_image">Прикрепить изображение</string>
     
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">1.0.1.25</string>
+    <string name="app_version">1.0.1.26</string>
     <string name="app_build">0.1.9</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
@@ -89,6 +90,8 @@
     <string name="change_username">Изменить имя пользователя</string>
     <string name="enter_new_username">Введите новое имя пользователя</string>
     <string name="change_password">Изменить пароль</string>
+    <string name="change_avatar">Изменить аватар</string>
+    <string name="select_avatar">Выбрать аватар</string>
     <string name="change">Изменить</string>
     <string name="toggle_language">Язык</string>
     <string name="toggle_color_scheme">Тема</string>

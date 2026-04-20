@@ -11,7 +11,7 @@ android {
         applicationId = "lavender.client.android"
         minSdk = 29
         targetSdk = 35
-        versionName = "1.0.1.25"
+        versionName = "1.0.1.27"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -80,6 +80,12 @@ dependencies {
     
     // OkHttp for HTTP client
     implementation(libs.okhttp)
+    
+    // CircleImageView for avatars
+    implementation(libs.circleimageview)
+    
+    // Glide for image loading
+    implementation(libs.glide)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

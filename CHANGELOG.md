@@ -5,6 +5,38 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.27] - 2026-04-20
+
+### Added
+- 🖼️ **Image Attachments**: Users can now attach images to messages
+- 📸 **Image Picker**: Image selection from gallery with progress indicator
+- 🎬 **GIF Support**: Animated GIFs can be attached and displayed without resizing
+- 📐 **Image Resize**: Images automatically resized to 1024x1024px before upload
+- 📐 **Avatar Resize**: Avatars automatically resized to 256x256px before upload
+- 🗑️ **Image Deletion**: Image files physically deleted from server when message is deleted
+- 💬 **Send Without Text**: Send button enabled when image is selected, even without text
+
+### Changed
+- 🎨 **Chat List UI**: Participant avatars now displayed on the right side of chat items
+- 📍 **Unread Count Position**: Unread count badge moved to left side of chat name with fixed indentation
+- 📐 **Larger Avatars**: Avatar size increased from 48dp to 96dp (2x larger) for better visibility
+- ✨ **Avatar Animation**: Smooth fade-in animation (300ms) when avatars load
+- 🔄 **Auto Avatar Loading**: Current user avatar loads automatically when chat list opens
+- 🎭 **Default Avatars**: Participants without custom avatars show default avatar icon
+- 👥 **Direct Chat Avatars**: All participant avatars shown in direct chats (not just current user)
+- 📱 **Avatar Cache Integration**: Chat list uses avatar cache from gRPC client for efficient loading
+- ⚡ **Server Upload Size**: Increased max upload size from 5MB to 10MB
+
+## [1.0.1.26] - 2026-04-20
+
+### Added
+- 👤 **Avatar Support**: Users can now upload and display profile pictures
+- 🖼️ **Avatar Display**: Avatars shown in chat messages next to sender's name
+- 📸 **Avatar Selection**: Avatar picker in profile dialog with progress indicator
+- 🌐 **Server Storage**: Server-side avatar storage and serving via HTTP (port 8082)
+- 🎨 **Default Avatar**: Default avatar icon for users without custom avatars
+- 🔄 **Glide Integration**: Added Glide library for efficient image loading
+
 ## [1.0.1.25] - 2026-04-20
 
 ### Added

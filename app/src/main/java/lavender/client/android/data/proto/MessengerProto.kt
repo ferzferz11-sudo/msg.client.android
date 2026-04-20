@@ -20,7 +20,9 @@ data class MessageProto(
     val repliedToUser: String = "",
     val repliedToText: String = "",
     val roomId: String = "",
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val avatarUrl: String = "",
+    val imageUrl: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -33,6 +35,8 @@ data class MessageProto(
         private var repliedToText: String = ""
         private var roomId: String = ""
         private var isRead: Boolean = false
+        private var avatarUrl: String = ""
+        private var imageUrl: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -85,6 +89,16 @@ data class MessageProto(
             return this
         }
 
+        fun setAvatarUrl(avatarUrl: String): Builder {
+            this.avatarUrl = avatarUrl
+            return this
+        }
+
+        fun setImageUrl(imageUrl: String): Builder {
+            this.imageUrl = imageUrl
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -92,7 +106,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl)
         }
     }
     
@@ -209,4 +223,24 @@ data class TokenRequestProto(
 
 data class TokenResponseProto(
     val success: Boolean = false
+)
+
+// Update Avatar Request/Response
+data class UpdateAvatarRequestProto(
+    val username: String = "",
+    val avatarUrl: String = ""
+)
+
+data class UpdateAvatarResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// Get User Avatar Request/Response
+data class GetUserAvatarRequestProto(
+    val username: String = ""
+)
+
+data class GetUserAvatarResponseProto(
+    val avatarUrl: String = ""
 )

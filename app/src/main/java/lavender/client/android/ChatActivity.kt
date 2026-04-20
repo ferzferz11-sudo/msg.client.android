@@ -18,6 +18,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.net.Uri
+import android.provider.MediaStore
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -26,6 +28,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -33,6 +37,8 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.data.grpc.ServerConnectivityTest
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class ChatActivity : AppCompatActivity() {
     
@@ -54,6 +60,19 @@ class ChatActivity : AppCompatActivity() {
     private var replyingToMessageId: String = ""
     private var replyingToUser: String = ""
     private var replyingToText: String = ""
+
+    private var selectedImageUri: Uri? = null
+    private var imageUploadProgressBar: android.widget.ProgressBar? = null
+    private var attachImageButton: android.widget.ImageButton? = null
+    private companion object {
+        private const val PICK_IMAGE_REQUEST = 1002
+    }
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        val toast = Toast.makeText(this, message, duration)
+        toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
+        toast.show()
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedColorScheme()
@@ -131,7 +150,7 @@ class ChatActivity : AppCompatActivity() {
                         }
                     }
 
-                Toast.makeText(this, "Connecting to $serverAddress as $username...", Toast.LENGTH_SHORT).show()
+                showToast("Connecting to $serverAddress as $username...")
             } catch (e: Exception) {
                 e.printStackTrace()
                 addMessage("Error: ${e.message}")
@@ -174,6 +193,25 @@ class ChatActivity : AppCompatActivity() {
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
 
+        attachImageButton = findViewById(R.id.attachImageButton)
+        imageUploadProgressBar = findViewById(R.id.imageUploadProgressBar)
+
+        attachImageButton?.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            startActivityForResult(intent, PICK_IMAGE_REQUEST)
+        }
+
+        attachImageButton?.setOnLongClickListener {
+            if (selectedImageUri != null) {
+                selectedImageUri = null
+                showToast("Image removed")
+                updateSendButtonState()
+                true
+            } else {
+                false
+            }
+        }
+
         val closeReply = findViewById<android.widget.ImageButton>(R.id.closeReply)
 
         closeReply.setOnClickListener {
@@ -183,13 +221,32 @@ class ChatActivity : AppCompatActivity() {
 
         sendButton.setOnClickListener {
             val messageText = messageInput.text.toString().trim()
-            if (messageText.isNotEmpty()) {
-                sendMessage(messageText)
+            if (messageText.isNotEmpty() || selectedImageUri != null) {
+                // If text is empty but image is selected, add a space
+                val textToSend = if (messageText.isEmpty() && selectedImageUri != null) " " else messageText
+                sendMessage(textToSend)
                 messageInput.text.clear()
             }
         }
+
+        // Update send button state based on text and image selection
+        messageInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                updateSendButtonState()
+            }
+        })
+
+        // Initialize send button state
+        updateSendButtonState()
     }
-    
+
+    private fun updateSendButtonState() {
+        val messageText = messageInput.text.toString().trim()
+        sendButton.isEnabled = messageText.isNotEmpty() || selectedImageUri != null
+    }
+
     private fun setupObservers() {
         lifecycleScope.launch {
             // Объединяем состояние подключения и список пользователей
@@ -231,10 +288,10 @@ class ChatActivity : AppCompatActivity() {
                 notification?.let {
                     when (it) {
                         "registration_success" -> {
-                            Toast.makeText(this@ChatActivity, getString(R.string.registration_success), Toast.LENGTH_LONG).show()
+                            showToast(getString(R.string.registration_success), Toast.LENGTH_LONG)
                         }
                         "auth_failed" -> {
-                            Toast.makeText(this@ChatActivity, getString(R.string.auth_failed), Toast.LENGTH_LONG).show()
+                            showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
                             // Disconnect and return to login
                             viewModel.disconnect()
                             finish()
@@ -249,7 +306,6 @@ class ChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.messages.collect { messages ->
                 android.util.Log.d("ChatActivity", "UI received ${messages.size} messages")
-                println("DEBUG: ChatActivity - UI received ${messages.size} messages")
                 messageAdapter.submitList(messages) {
                     if (messages.isNotEmpty()) {
                         messagesRecyclerView.scrollToPosition(messages.size - 1)
@@ -311,7 +367,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun showReactionPicker(message: Message) {
         if (message.id.isEmpty()) {
-            Toast.makeText(this, "Message ID is missing, cannot react", Toast.LENGTH_SHORT).show()
+            showToast("Message ID is missing, cannot react")
             return
         }
 
@@ -346,21 +402,46 @@ class ChatActivity : AppCompatActivity() {
     
     
     private fun sendMessage(text: String) {
-        if (text.isBlank()) {
-            Toast.makeText(this, "Message cannot be empty", Toast.LENGTH_SHORT).show()
+        if (text.isBlank() && selectedImageUri == null) {
+            showToast("Message cannot be empty")
             return
         }
-        val message = Message(
-            user = username,
-            text = text,
-            timestamp = System.currentTimeMillis(),
-            repliedToMessageId = replyingToMessageId,
-            repliedToUser = replyingToUser,
-            repliedToText = replyingToText,
-            roomId = viewModel.currentRoomId
-        )
-        viewModel.sendMessage(message)
-        clearReply()
+
+        val imageUri = selectedImageUri
+        if (imageUri != null) {
+            uploadImageToServer(imageUri) { imageUrl ->
+                if (imageUrl.isNotEmpty()) {
+                    val message = Message(
+                        user = username,
+                        text = text,
+                        timestamp = System.currentTimeMillis(),
+                        repliedToMessageId = replyingToMessageId,
+                        repliedToUser = replyingToUser,
+                        repliedToText = replyingToText,
+                        roomId = viewModel.currentRoomId,
+                        imageUrl = imageUrl
+                    )
+                    viewModel.sendMessage(message)
+                    clearReply()
+                    selectedImageUri = null
+                    updateSendButtonState()
+                } else {
+                    showToast("Failed to upload image")
+                }
+            }
+        } else {
+            val message = Message(
+                user = username,
+                text = text,
+                timestamp = System.currentTimeMillis(),
+                repliedToMessageId = replyingToMessageId,
+                repliedToUser = replyingToUser,
+                repliedToText = replyingToText,
+                roomId = viewModel.currentRoomId
+            )
+            viewModel.sendMessage(message)
+            clearReply()
+        }
     }
 
     private fun setReply(messageId: String, user: String, text: String) {
@@ -589,7 +670,7 @@ class ChatActivity : AppCompatActivity() {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Error Message", message)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                showToast(getString(R.string.copied_to_clipboard))
             }
             .show()
     }
@@ -597,6 +678,175 @@ class ChatActivity : AppCompatActivity() {
     private fun addMessage(text: String) {
         // This is only for system messages that are NOT in the gRPC stream
         println("DEBUG: System Message: System: $text")
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+            selectedImageUri = data.data
+            showToast("Image selected")
+            updateSendButtonState()
+        } else if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_CANCELED) {
+            selectedImageUri = null
+            updateSendButtonState()
+        }
+    }
+
+    private fun uploadImageToServer(uri: Uri, callback: (String) -> Unit) {
+        runOnUiThread {
+            imageUploadProgressBar?.visibility = android.view.View.VISIBLE
+            attachImageButton?.visibility = android.view.View.GONE
+        }
+
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    // Check file type
+                    val mimeType = contentResolver.getType(uri)
+                    val isGif = mimeType == "image/gif"
+
+                    val bytes: ByteArray
+                    val mediaType: String
+
+                    if (isGif) {
+                        // Send GIF as-is to preserve animation
+                        val inputStream = contentResolver.openInputStream(uri)
+                        bytes = inputStream?.readBytes() ?: byteArrayOf()
+                        inputStream?.close()
+                        mediaType = "image/gif"
+                    } else {
+                        // Resize other images
+                        val resizedBytes = resizeImage(uri, 1024, 1024) // Max 1024x1024
+
+                        if (resizedBytes == null) {
+                            runOnUiThread {
+                                imageUploadProgressBar?.visibility = android.view.View.GONE
+                                attachImageButton?.visibility = android.view.View.VISIBLE
+                                showToast("Failed to resize image")
+                                callback("")
+                            }
+                            return@withContext
+                        }
+
+                        bytes = resizedBytes
+                        mediaType = "image/jpeg"
+                    }
+
+                    if (bytes.isEmpty()) {
+                        runOnUiThread {
+                            imageUploadProgressBar?.visibility = android.view.View.GONE
+                            attachImageButton?.visibility = android.view.View.VISIBLE
+                            showToast("Failed to read image")
+                            callback("")
+                        }
+                        return@withContext
+                    }
+
+                    val requestBody = okhttp3.MultipartBody.Builder()
+                        .setType(okhttp3.MultipartBody.FORM)
+                        .addFormDataPart("image", if (isGif) "image.gif" else "image.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+                        .build()
+
+                    val request = okhttp3.Request.Builder()
+                        .url("http://159.195.38.145:8082/upload-image")
+                        .post(requestBody)
+                        .build()
+
+                    val client = okhttp3.OkHttpClient()
+                    val response = client.newCall(request).execute()
+
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val url = extractUrlFromResponse(responseBody ?: "")
+                        runOnUiThread {
+                            imageUploadProgressBar?.visibility = android.view.View.GONE
+                            attachImageButton?.visibility = android.view.View.VISIBLE
+                        }
+                        callback(url)
+                    } else {
+                        runOnUiThread {
+                            imageUploadProgressBar?.visibility = android.view.View.GONE
+                            attachImageButton?.visibility = android.view.View.VISIBLE
+                            showToast("Failed to upload image (HTTP ${response.code})")
+                            callback("")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    imageUploadProgressBar?.visibility = android.view.View.GONE
+                    attachImageButton?.visibility = android.view.View.VISIBLE
+                    showToast("Error: ${e.message}")
+                    callback("")
+                }
+            }
+        }
+    }
+
+    private fun resizeImage(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
+        return try {
+            val inputStream = contentResolver.openInputStream(uri) ?: return null
+            val options = android.graphics.BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream.close()
+
+            // Calculate inSampleSize
+            options.inSampleSize = calculateInSampleSize(options, maxWidth, maxHeight)
+            options.inJustDecodeBounds = false
+
+            val inputStream2 = contentResolver.openInputStream(uri) ?: return null
+            val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream2, null, options)
+            inputStream2.close()
+
+            if (bitmap == null) {
+                return null
+            }
+
+            // Resize to exact dimensions
+            val width = bitmap.width
+            val height = bitmap.height
+            val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+
+            val scaledWidth = (width * scale).toInt()
+            val scaledHeight = (height * scale).toInt()
+
+            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+            bitmap.recycle()
+
+            // Compress to JPEG with 85% quality
+            val outputStream = java.io.ByteArrayOutputStream()
+            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
+            scaledBitmap.recycle()
+
+            outputStream.toByteArray()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+
+        return inSampleSize
+    }
+
+    private fun extractUrlFromResponse(response: String): String {
+        val regex = """"url":\s*"([^"]+)"""".toRegex()
+        val match = regex.find(response)
+        return match?.groupValues?.get(1) ?: ""
     }
     
     override fun onDestroy() {
@@ -635,7 +885,7 @@ class ChatActivity : AppCompatActivity() {
 
             if (allUsers.isEmpty()) {
                 runOnUiThread {
-                    Toast.makeText(this@ChatActivity, getString(R.string.no_users_available), Toast.LENGTH_SHORT).show()
+                    showToast(getString(R.string.no_users_available))
                 }
                 return@launch
             }
@@ -689,7 +939,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun createDirectChat(targetUser: String) {
         if (targetUser == username) {
-            Toast.makeText(this, getString(R.string.cannot_chat_with_yourself), Toast.LENGTH_SHORT).show()
+            showToast(getString(R.string.cannot_chat_with_yourself))
             return
         }
 
@@ -699,11 +949,11 @@ class ChatActivity : AppCompatActivity() {
                     runOnUiThread {
                         viewModel.switchRoom(chatId)
                         updateRoomName(chatId)
-                        Toast.makeText(this@ChatActivity, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
+                        showToast(getString(R.string.chat_created_with, targetUser))
                     }
                 } else {
                     runOnUiThread {
-                        Toast.makeText(this@ChatActivity, getString(R.string.failed_to_create_chat), Toast.LENGTH_SHORT).show()
+                        showToast(getString(R.string.failed_to_create_chat))
                     }
                 }
             }

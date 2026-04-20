@@ -13,10 +13,11 @@
     <string name="show_network_info">Show Network Info</string>
     <string name="ping_laptop">Ping Server (159.195.38.145)</string>
     <string name="send_message">Send</string>
+    <string name="attach_image">Attach image</string>
     
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">1.0.1.25</string>
+    <string name="app_version">1.0.1.26</string>
     <string name="app_build">0.1.9</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
@@ -90,6 +91,8 @@
     <string name="change_username">Change Username</string>
     <string name="enter_new_username">Enter new username</string>
     <string name="change_password">Change Password</string>
+    <string name="change_avatar">Change Avatar</string>
+    <string name="select_avatar">Select Avatar</string>
     <string name="change">Change</string>
     <string name="toggle_language">Language</string>
     <string name="toggle_color_scheme">Theme</string>

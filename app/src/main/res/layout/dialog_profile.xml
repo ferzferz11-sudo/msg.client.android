@@ -7,14 +7,70 @@
     android:padding="24dp"
     android:background="?attr/colorSurface">
 
-    <TextView
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/profile"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_centerVertical="true" />
+
+        <ImageButton
+            android:id="@+id/btnCloseDialog"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="@string/cancel_dialog"
+            android:tint="?android:attr/textColorSecondary" />
+
+    </RelativeLayout>
+
+    <!-- Avatar Section -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/profile"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginBottom="24dp" />
+        android:orientation="vertical"
+        android:layout_gravity="center"
+        android:layout_marginBottom="24dp">
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/avatarImageView"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:src="@drawable/ic_default_avatar"
+            android:layout_gravity="center"
+            android:layout_marginBottom="8dp"
+            app:civ_border_width="2dp"
+            app:civ_border_color="?attr/colorPrimary" />
+
+        <Button
+            android:id="@+id/btnChangeAvatar"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="@string/change_avatar"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSecondary"
+            android:backgroundTint="?attr/colorSecondary"
+            android:layout_gravity="center" />
+
+        <ProgressBar
+            android:id="@+id/avatarProgressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
