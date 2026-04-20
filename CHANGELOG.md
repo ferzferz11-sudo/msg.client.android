@@ -5,6 +5,34 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.25] - 2026-04-20
+
+### Added
+- 📱 **Landscape Layout Support**: Added landscape layouts for main screen, join chat dialog, and profile dialog
+- 🔄 **Orientation Adaptation**: Improved UI adaptation for different screen orientations
+
+## [1.0.1.24] - 2026-04-20
+
+### Fixed
+- 🔔 **Unread Count Calculation**: Fixed unread count to use `is_read` flag instead of `last_read_at` time comparison
+- 🐛 **Zero Unread Count Bug**: Fixed issue where unread count was always 0 due to incorrect time comparison logic
+
+### Changed
+- 🔄 **ChatAdapter**: Added DiffUtil for efficient UI updates when chat data changes
+- ⚡ **Polling Interval**: Reduced from 5 to 3 seconds for faster unread count updates
+- 🔄 **Chat List Refresh**: Added onResume() to refresh chat list when returning from chat activity
+
+## [1.0.1.23] - 2026-04-20
+
+### Added
+- 🎨 MaterialCardView for chat list items with improved styling
+- 🔔 Unread count badges for chats in chat list
+- 📨 Message read status indicators (sent/read icons)
+
+### Changed
+- 🛠️ Updated toolbar to MaterialToolbar from androidx.appcompat.widget.Toolbar
+- 🔧 Downgraded coreKtx dependency from 1.18.0 to 1.15.0 for stability
+
 ## [1.0.1.22] - 2026-04-20
 
 ### Changed

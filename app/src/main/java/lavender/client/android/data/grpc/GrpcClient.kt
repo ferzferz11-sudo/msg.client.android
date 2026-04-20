@@ -80,4 +80,8 @@ class GrpcClient {
     fun updatePassword(username: String, oldPassword: String, newPassword: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.updatePassword(username, oldPassword, newPassword, callback)
     }
+
+    fun markRead(roomId: String, username: String) {
+        realGrpcClient.markRead(roomId, username)
+    }
 }

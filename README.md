@@ -173,7 +173,27 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.22**
+Current version: **1.0.1.25**
+
+### Version 1.0.1.25 - Landscape Layout Support
+- 📱 Added landscape layout support for main screen (activity_main.xml)
+- 📱 Added landscape layout support for join chat dialog (dialog_join_chat.xml)
+- 📱 Added landscape layout support for profile dialog (dialog_profile.xml)
+- 🔄 Improved UI adaptation for different screen orientations
+
+### Version 1.0.1.24 - Unread Count Fix
+- 🔔 Fixed unread count calculation - now uses is_read flag instead of last_read_at comparison
+- 🔄 Added DiffUtil to ChatAdapter for efficient UI updates
+- ⚡ Reduced polling interval from 5 to 3 seconds for faster unread count updates
+- 🔄 Added onResume() to refresh chat list when returning from chat
+- 🐛 Fixed issue where unread count was always 0 due to incorrect time comparison
+
+### Version 1.0.1.23 - Chat List UI Improvements
+- 🎨 Updated chat list to use MaterialCardView with improved styling
+- 🔔 Added unread count badges for chats
+- 📨 Added message read status indicators (sent/read icons)
+- 🛠️ Modernized toolbar to MaterialToolbar
+- 🔧 Downgraded coreKtx dependency from 1.18.0 to 1.15.0 for stability
 
 ### Version 1.0.1.22 - Version Format and Theme Improvements
 - 📝 Updated version format to include build number as fourth digit (e.g., 1.0.1.22)

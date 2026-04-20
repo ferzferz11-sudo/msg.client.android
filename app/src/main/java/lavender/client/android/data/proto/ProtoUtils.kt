@@ -20,6 +20,7 @@ object ProtoUtils {
             .setRepliedToUser(message.repliedToUser)
             .setRepliedToText(message.repliedToText)
             .setRoomId(message.roomId)
+            .setIsRead(message.isRead)
             .build()
     }
     
@@ -37,7 +38,8 @@ object ProtoUtils {
             repliedToMessageId = proto.repliedToMessageId,
             repliedToUser = proto.repliedToUser,
             repliedToText = proto.repliedToText,
-            roomId = proto.roomId
+            roomId = proto.roomId,
+            isRead = proto.isRead
         )
     }
     

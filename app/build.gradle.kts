@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "lavender.client.android"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "lavender.client.android"
         minSdk = 29
-        targetSdk = 37
-        versionName = "1.0.1.23"
+        targetSdk = 35
+        versionName = "1.0.1.25"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="?attr/colorSurface">
+
+    <!-- Left side: Title and inputs -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/welcome"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginBottom="16dp"
+            android:gravity="center" />
+
+        <EditText
+            android:id="@+id/editTextUsername"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="@string/enter_username"
+            android:inputType="textPersonName"
+            android:autofillHints="username"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="center"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textColorHint="?android:attr/textColorHint"
+            android:background="?android:attr/windowBackground" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:passwordToggleEnabled="true"
+            app:passwordToggleTint="?android:attr/textColorSecondary"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextPassword"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="@string/enter_password"
+                android:inputType="textPassword"
+                android:autofillHints="password"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </LinearLayout>
+
+    <!-- Right side: Server selection and buttons -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/server_address_label"
+            android:textSize="11sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="6dp" />
+
+        <Spinner
+            android:id="@+id/serverAddressSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
+
+            <View
+                android:id="@+id/serverStatusIndicator"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/circle_indicator"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/serverStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/checking_server"
+                android:textSize="11sp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:id="@+id/refreshServerButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/refresh_symbol"
+                android:textSize="20sp"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginStart="6dp"
+                android:translationY="-2dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btnCancel"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="@string/cancel_dialog"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnSecondary"
+                android:backgroundTint="?attr/colorSecondary" />
+
+            <Button
+                android:id="@+id/btnJoin"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="@string/join"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnPrimary"
+                android:backgroundTint="?attr/colorPrimary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

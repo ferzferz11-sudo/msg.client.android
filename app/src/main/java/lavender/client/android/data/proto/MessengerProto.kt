@@ -19,7 +19,8 @@ data class MessageProto(
     val repliedToMessageId: String = "",
     val repliedToUser: String = "",
     val repliedToText: String = "",
-    val roomId: String = ""
+    val roomId: String = "",
+    val isRead: Boolean = false
 ) {
     class Builder {
         private var user: String = ""
@@ -31,6 +32,7 @@ data class MessageProto(
         private var repliedToUser: String = ""
         private var repliedToText: String = ""
         private var roomId: String = ""
+        private var isRead: Boolean = false
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -78,6 +80,11 @@ data class MessageProto(
             return this
         }
 
+        fun setIsRead(isRead: Boolean): Builder {
+            this.isRead = isRead
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -85,7 +92,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead)
         }
     }
     
@@ -100,7 +107,18 @@ data class ChatInfoProto(
     val name: String = "",
     val type: String = "",
     val participants: String = "",
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val unreadCount: Int = 0
+)
+
+// Mark Read Request/Response
+data class MarkReadRequestProto(
+    val roomId: String = "",
+    val username: String = ""
+)
+
+data class MarkReadResponseProto(
+    val success: Boolean = false
 )
 
 // Get Chats Request/Response

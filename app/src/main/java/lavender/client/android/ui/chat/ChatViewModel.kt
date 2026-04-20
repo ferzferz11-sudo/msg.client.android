@@ -66,4 +66,8 @@ class ChatViewModel : ViewModel() {
             grpcClient.loadHistory(currentRoomId)
         }
     }
+
+    fun markRead(username: String) {
+        grpcClient.markRead(currentRoomId, username)
+    }
 }

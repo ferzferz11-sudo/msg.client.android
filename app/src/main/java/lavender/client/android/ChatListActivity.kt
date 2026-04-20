@@ -23,8 +23,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
@@ -101,6 +103,34 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         loadChats()
+        startPollingChats()
+    }
+
+    private fun startPollingChats() {
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(3000) // Poll every 3 seconds for faster updates
+                grpcClient.getChats(username) { chats ->
+                    runOnUiThread {
+                        if (chats.isNotEmpty()) {
+                            adapter.setChats(chats)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh chats immediately when returning from chat
+        grpcClient.getChats(username) { chats ->
+            runOnUiThread {
+                if (chats.isNotEmpty()) {
+                    adapter.setChats(chats)
+                }
+            }
+        }
     }
 
     private fun loadChats() {

@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -101,6 +102,7 @@ class MessageAdapter(
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
+        private val readStatusIcon: ImageView = itemView.findViewById(R.id.readStatusIcon)
         private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
@@ -151,6 +153,15 @@ class MessageAdapter(
                 messageText.setTextColor(colorOnPrimary)
                 userText.setTextColor(colorOnPrimary)
                 timeText.setTextColor(colorOnPrimary)
+
+                readStatusIcon.visibility = View.VISIBLE
+                if (message.isRead) {
+                    readStatusIcon.setImageResource(R.drawable.ic_message_read)
+                    readStatusIcon.setColorFilter(colorOnPrimary)
+                } else {
+                    readStatusIcon.setImageResource(R.drawable.ic_message_sent)
+                    readStatusIcon.setColorFilter(colorOnPrimary)
+                }
             } else {
                 messageContainer.setBackgroundResource(R.drawable.bg_message_incoming)
                 params.gravity = android.view.Gravity.START
@@ -161,6 +172,8 @@ class MessageAdapter(
                 messageText.setTextColor(colorOnSecondary)
                 userText.setTextColor(colorOnSecondary)
                 timeText.setTextColor(colorOnSecondary)
+
+                readStatusIcon.visibility = View.GONE
             }
             messageContainer.layoutParams = params
             

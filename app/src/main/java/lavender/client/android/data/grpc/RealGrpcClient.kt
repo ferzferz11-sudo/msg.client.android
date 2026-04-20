@@ -28,6 +28,8 @@ import lavender.client.android.data.proto.UpdateUsernameRequestProto
 import lavender.client.android.data.proto.UpdateUsernameResponseProto
 import lavender.client.android.data.proto.UpdatePasswordRequestProto
 import lavender.client.android.data.proto.UpdatePasswordResponseProto
+import lavender.client.android.data.proto.MarkReadRequestProto
+import lavender.client.android.data.proto.MarkReadResponseProto
 import java.util.concurrent.TimeUnit
 
 class RealGrpcClient {
@@ -464,7 +466,8 @@ class RealGrpcClient {
                         name = proto.name,
                         type = proto.type,
                         participants = proto.participants,
-                        createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0
+                        createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
+                        unreadCount = proto.unreadCount
                     )
                 }
                 callback(chats)
@@ -495,6 +498,32 @@ class RealGrpcClient {
                     callback(message.chatId)
                 } else {
                     callback(null)
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun markRead(roomId: String, username: String) {
+        val currentChannel = channel ?: return
+
+        val request = MarkReadRequestProto(roomId, username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/MarkRead")
+            .setRequestMarshaller(MarkReadRequestMarshaller())
+            .setResponseMarshaller(MarkReadResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<MarkReadResponseProto>() {
+            override fun onMessage(message: MarkReadResponseProto) {
+                if (message.success) {
+                    android.util.Log.d("GrpcClient", "Successfully marked room $roomId as read for $username")
                 }
             }
         }, io.grpc.Metadata())
@@ -615,6 +644,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.repliedToUser.isNotEmpty()) cos.writeString(8, value.repliedToUser)
         if (value.repliedToText.isNotEmpty()) cos.writeString(9, value.repliedToText)
         if (value.roomId.isNotEmpty()) cos.writeString(10, value.roomId)
+        if (value.isRead) cos.writeBool(11, value.isRead)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -630,6 +660,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         var repliedToUser = ""
         var repliedToText = ""
         var roomId = ""
+        var isRead = false
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -652,10 +683,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 8 -> repliedToUser = cis.readString()
                 9 -> repliedToText = cis.readString()
                 10 -> roomId = cis.readString()
+                11 -> isRead = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId)
+        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead)
     }
 }
 
@@ -907,6 +939,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
             cos.writeUInt32NoTag(length)
             cos.writeRawBytes(it.toByteArray())
         }
+        if (value.unreadCount != 0) cos.writeInt32(6, value.unreadCount)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -917,6 +950,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
         var type = ""
         var participants = ""
         var createdAt: com.google.protobuf.Timestamp? = null
+        var unreadCount = 0
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -931,10 +965,11 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
                     createdAt = com.google.protobuf.Timestamp.parseFrom(cis)
                     cis.popLimit(oldLimit)
                 }
+                6 -> unreadCount = cis.readInt32()
                 else -> cis.skipField(tag)
             }
         }
-        return ChatInfoProto(id, name, type, participants, createdAt)
+        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount)
     }
 }
 
@@ -1144,6 +1179,53 @@ class UpdatePasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upd
             }
         }
         return UpdatePasswordResponseProto(success, message)
+    }
+}
+
+class MarkReadRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<MarkReadRequestProto> {
+    override fun stream(value: MarkReadRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.roomId.isNotEmpty()) cos.writeString(1, value.roomId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): MarkReadRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var roomId = ""
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> roomId = cis.readString()
+                2 -> username = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return MarkReadRequestProto(roomId, username)
+    }
+}
+
+class MarkReadResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<MarkReadResponseProto> {
+    override fun stream(value: MarkReadResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): MarkReadResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return MarkReadResponseProto(success)
     }
 }
 

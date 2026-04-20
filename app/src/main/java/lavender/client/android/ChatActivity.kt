@@ -120,6 +120,7 @@ class ChatActivity : AppCompatActivity() {
                 // Load message history for this room after connection
                 android.util.Log.d("ChatActivity", "Calling loadHistory for room: $roomId")
                 viewModel.loadHistory()
+                viewModel.markRead(username)
 
                 // Register FCM Token for push notifications
                 com.google.firebase.messaging.FirebaseMessaging.getInstance().token
@@ -252,6 +253,8 @@ class ChatActivity : AppCompatActivity() {
                 messageAdapter.submitList(messages) {
                     if (messages.isNotEmpty()) {
                         messagesRecyclerView.scrollToPosition(messages.size - 1)
+                        // If we received new messages while in the chat, mark as read
+                        viewModel.markRead(username)
                     }
                 }
             }
