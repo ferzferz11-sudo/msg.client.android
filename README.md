@@ -173,7 +173,18 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.27**
+Current version: **1.0.1.28**
+
+### Version 1.0.1.28 - Avatar Display Fix
+- 🐛 Fixed avatar caching issue - avatar URLs are now properly saved for users with avatars
+- 💾 All avatar URLs (including empty strings) are now correctly saved to cache
+- 🚫 Removed fade-in animation for avatars in chat list for better performance
+- ⏳ Chat list now displays only after all participant avatars are loaded
+- ⏱️ Added 5-second timeout for avatar loading
+- 🔄 Same fixes applied to startPollingChats and onResume for consistency
+- 📊 Avatars now correctly display in chat list (small icons next to chat names)
+- 👥 Avatars correctly display in user list dialog
+- ✨ No more flickering or missing avatars
 
 ### Version 1.0.1.27 - Image Attachments and Chat List UI
 - 🖼️ Added image attachments - users can now attach images to messages

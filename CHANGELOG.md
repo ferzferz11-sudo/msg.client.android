@@ -5,6 +5,21 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.28] - 2026-04-20
+
+### Fixed
+- 🐛 **Avatar Caching**: Fixed avatar caching issue where avatar URLs were not being saved for users with avatars
+- 💾 **Cache Persistence**: All avatar URLs (including empty strings) are now correctly saved to cache
+- 🚫 **Performance**: Removed fade-in animation for avatars in chat list for better performance
+- ⏳ **Loading Order**: Chat list now displays only after all participant avatars are loaded
+- ⏱️ **Timeout**: Added 5-second fallback timeout for avatar loading
+- 🔄 **Consistency**: Same fixes applied to startPollingChats and onResume for consistency
+
+### Result
+- 📊 Avatars now correctly display in chat list (small icons next to chat names)
+- 👥 Avatars correctly display in user list dialog
+- ✨ No more flickering or missing avatars
+
 ## [1.0.1.27] - 2026-04-20
 
 ### Added

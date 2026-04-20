@@ -134,7 +134,6 @@ class ChatAdapter(
                             }
                         }
                         scaleType = ImageView.ScaleType.CENTER_CROP
-                        alpha = 0f // Start invisible for fade-in animation
                     }
 
                     // Check if avatar is in cache
@@ -149,20 +148,11 @@ class ChatAdapter(
                             .circleCrop()
                             .into(avatar)
                     } else {
-                        Glide.with(itemView.context)
-                            .load("http://159.195.38.145:8082/avatars/${username}.jpg")
-                            .placeholder(R.drawable.ic_default_avatar)
-                            .error(R.drawable.ic_default_avatar)
-                            .circleCrop()
-                            .into(avatar)
+                        // Show default avatar if not in cache
+                        avatar.setImageResource(R.drawable.ic_default_avatar)
                     }
 
                     participantAvatars.addView(avatar)
-                    // Fade-in animation
-                    avatar.animate()
-                        .alpha(1f)
-                        .setDuration(300)
-                        .start()
                 }
 
                 // If there are more participants, show count indicator

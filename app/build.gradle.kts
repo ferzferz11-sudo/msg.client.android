@@ -11,7 +11,7 @@ android {
         applicationId = "lavender.client.android"
         minSdk = 29
         targetSdk = 35
-        versionName = "1.0.1.27"
+        versionName = "1.0.1.28"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

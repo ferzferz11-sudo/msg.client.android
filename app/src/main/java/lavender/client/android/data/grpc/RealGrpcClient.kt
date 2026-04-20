@@ -747,6 +747,10 @@ class RealGrpcClient {
         return avatarCache.toMap()
     }
 
+    fun updateAvatarCache(username: String, avatarUrl: String) {
+        avatarCache[username] = avatarUrl
+    }
+
     fun testConnection(): Boolean = _connectionState.value
 }
 

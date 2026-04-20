@@ -96,4 +96,8 @@ class GrpcClient {
     fun getAvatarCache(): Map<String, String> {
         return realGrpcClient.getAvatarCache()
     }
+
+    fun updateAvatarCache(username: String, avatarUrl: String) {
+        realGrpcClient.updateAvatarCache(username, avatarUrl)
+    }
 }

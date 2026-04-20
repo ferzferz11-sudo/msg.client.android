@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import org.json.JSONArray
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
@@ -38,9 +39,11 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.ui.adapter.ChatAdapter
+import com.bumptech.glide.Glide
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -135,9 +138,57 @@ class ChatListActivity : AppCompatActivity() {
             while (isActive) {
                 delay(3000) // Poll every 3 seconds for faster updates
                 grpcClient.getChats(username) { chats ->
-                    runOnUiThread {
-                        if (chats.isNotEmpty()) {
-                            adapter.setChats(chats)
+                    if (chats.isNotEmpty()) {
+                        // Load avatars for new participants first
+                        val allParticipants = mutableSetOf<String>()
+                        for (chat in chats) {
+                            if (chat.participants.isNotEmpty()) {
+                                try {
+                                    val participants = JSONArray(chat.participants)
+                                    for (i in 0 until participants.length()) {
+                                        allParticipants.add(participants.getString(i))
+                                    }
+                                } catch (e: Exception) {
+                                    // JSON parsing failed
+                                }
+                            }
+                        }
+
+                        // Load avatars for all participants
+                        val loadedCount = AtomicInteger(0)
+                        val totalParticipants = allParticipants.size
+
+                        for (participant in allParticipants) {
+                            grpcClient.getUserAvatar(participant) { avatarUrl ->
+                                if (avatarUrl.isEmpty()) {
+                                    grpcClient.updateAvatarCache(participant, "")
+                                }
+                                val loaded = loadedCount.incrementAndGet()
+                                if (loaded == totalParticipants) {
+                                    runOnUiThread {
+                                        adapter.setChats(chats)
+                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                    }
+                                }
+                            }
+                        }
+
+                        // Fallback: show chats after 2 seconds if not all avatars loaded
+                        lifecycleScope.launch {
+                            kotlinx.coroutines.delay(2000)
+                            runOnUiThread {
+                                if (loadedCount.get() < totalParticipants) {
+                                    adapter.setChats(chats)
+                                    adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                }
+                            }
+                        }
+
+                        // Fallback: show chats immediately if no participants
+                        if (allParticipants.isEmpty()) {
+                            runOnUiThread {
+                                adapter.setChats(chats)
+                            }
                         }
                     }
                 }
@@ -149,9 +200,57 @@ class ChatListActivity : AppCompatActivity() {
         super.onResume()
         // Refresh chats immediately when returning from chat
         grpcClient.getChats(username) { chats ->
-            runOnUiThread {
-                if (chats.isNotEmpty()) {
-                    adapter.setChats(chats)
+            if (chats.isNotEmpty()) {
+                // Load avatars for all participants first
+                val allParticipants = mutableSetOf<String>()
+                for (chat in chats) {
+                    if (chat.participants.isNotEmpty()) {
+                        try {
+                            val participants = JSONArray(chat.participants)
+                            for (i in 0 until participants.length()) {
+                                allParticipants.add(participants.getString(i))
+                            }
+                        } catch (e: Exception) {
+                            // JSON parsing failed
+                        }
+                    }
+                }
+
+                // Load avatars for all participants
+                val loadedCount = AtomicInteger(0)
+                val totalParticipants = allParticipants.size
+
+                for (participant in allParticipants) {
+                    grpcClient.getUserAvatar(participant) { avatarUrl ->
+                        if (avatarUrl.isEmpty()) {
+                            grpcClient.updateAvatarCache(participant, "")
+                        }
+                        val loaded = loadedCount.incrementAndGet()
+                        if (loaded == totalParticipants) {
+                            runOnUiThread {
+                                adapter.setChats(chats)
+                                adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: show chats after 2 seconds if not all avatars loaded
+                lifecycleScope.launch {
+                    kotlinx.coroutines.delay(2000)
+                    runOnUiThread {
+                        if (loadedCount.get() < totalParticipants) {
+                            adapter.setChats(chats)
+                            adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                        }
+                    }
+                }
+
+                // Fallback: show chats immediately if no participants
+                if (allParticipants.isEmpty()) {
+                    runOnUiThread {
+                        adapter.setChats(chats)
+                    }
                 }
             }
         }
@@ -193,13 +292,62 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             grpcClient.getChats(username) { chats ->
-                runOnUiThread {
-                    if (chats.isEmpty()) {
+                if (chats.isEmpty()) {
+                    runOnUiThread {
                         // Если нет чатов, открываем general чат
                         openChat("general")
-                    } else {
-                        // Если есть чаты, показываем список
-                        adapter.setChats(chats)
+                    }
+                } else {
+                    // Load avatars for all chat participants first
+                    val allParticipants = mutableSetOf<String>()
+                    for (chat in chats) {
+                        if (chat.participants.isNotEmpty()) {
+                            try {
+                                val participants = JSONArray(chat.participants)
+                                for (i in 0 until participants.length()) {
+                                    allParticipants.add(participants.getString(i))
+                                }
+                            } catch (e: Exception) {
+                                // JSON parsing failed
+                            }
+                        }
+                    }
+
+                    // Load avatars for all participants
+                    val loadedCount = AtomicInteger(0)
+                    val totalParticipants = allParticipants.size
+
+                    for (participant in allParticipants) {
+                        grpcClient.getUserAvatar(participant) { avatarUrl ->
+                            // Save in cache (including empty strings to avoid retrying)
+                            grpcClient.updateAvatarCache(participant, avatarUrl)
+                            val loaded = loadedCount.incrementAndGet()
+                            // Show chats after all avatars are loaded
+                            if (loaded == totalParticipants) {
+                                runOnUiThread {
+                                    adapter.setChats(chats)
+                                    adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                }
+                            }
+                        }
+                    }
+
+                    // Fallback: show chats after 5 seconds if not all avatars loaded
+                    lifecycleScope.launch {
+                        kotlinx.coroutines.delay(5000)
+                        runOnUiThread {
+                            if (loadedCount.get() < totalParticipants) {
+                                adapter.setChats(chats)
+                                adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                            }
+                        }
+                    }
+
+                    // Fallback: show chats immediately if no participants
+                    if (allParticipants.isEmpty()) {
+                        runOnUiThread {
+                            adapter.setChats(chats)
+                        }
                     }
                 }
             }
@@ -209,6 +357,33 @@ class ChatListActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (avatarUrl.isNotEmpty()) {
                         adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                    }
+                }
+            }
+
+            // Load avatars for all users (for users dialog)
+            grpcClient.loadAllUsers()
+            lifecycleScope.launch {
+                kotlinx.coroutines.delay(2000) // Wait for users to load
+                var allUsers = grpcClient.allUsers.value
+
+                // If users are still not loaded, wait more
+                var attempts = 0
+                while (allUsers.isEmpty() && attempts < 5) {
+                    kotlinx.coroutines.delay(500)
+                    allUsers = grpcClient.allUsers.value
+                    attempts++
+                }
+
+                for (user in allUsers) {
+                    grpcClient.getUserAvatar(user) { avatarUrl ->
+                        runOnUiThread {
+                            // Save in cache (including empty strings to avoid retrying)
+                            if (avatarUrl.isEmpty()) {
+                                grpcClient.updateAvatarCache(user, "")
+                            }
+                            adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                        }
                     }
                 }
             }
@@ -423,6 +598,7 @@ class ChatListActivity : AppCompatActivity() {
                     val userView = layoutInflater.inflate(R.layout.item_user, null)
                     val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
                     val usernameText = userView.findViewById<TextView>(R.id.usernameText)
+                    val userAvatar = userView.findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.userAvatar)
 
                     val isOnline = onlineUsers.contains(user)
                     statusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
@@ -432,6 +608,48 @@ class ChatListActivity : AppCompatActivity() {
 
                     usernameText.text = user
                     container.addView(userView)
+
+                    // Check cache first
+                    val avatarCache = grpcClient.getAvatarCache()
+                    val cachedAvatarUrl = avatarCache[user]
+
+                    when {
+                        !cachedAvatarUrl.isNullOrEmpty() -> {
+                            // Load from cache
+                            Glide.with(this@ChatListActivity)
+                                .load(cachedAvatarUrl)
+                                .placeholder(R.drawable.ic_default_avatar)
+                                .error(R.drawable.ic_default_avatar)
+                                .circleCrop()
+                                .into(userAvatar)
+                        }
+                        cachedAvatarUrl == "" -> {
+                            // Cache has empty string (already tried loading), set default avatar
+                            userAvatar.setImageResource(R.drawable.ic_default_avatar)
+                        }
+                        else -> {
+                            // Load from server
+                            grpcClient.getUserAvatar(user) { avatarUrl ->
+                                runOnUiThread {
+                                    if (avatarUrl.isNotEmpty()) {
+                                        Glide.with(this@ChatListActivity)
+                                            .load(avatarUrl)
+                                            .placeholder(R.drawable.ic_default_avatar)
+                                            .error(R.drawable.ic_default_avatar)
+                                            .circleCrop()
+                                            .into(userAvatar)
+                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                    } else {
+                                        // Set default avatar if server returns empty
+                                        userAvatar.setImageResource(R.drawable.ic_default_avatar)
+                                        // Save empty string in cache to avoid retrying
+                                        grpcClient.updateAvatarCache(user, "")
+                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 val dialog = android.app.AlertDialog.Builder(this@ChatListActivity)
