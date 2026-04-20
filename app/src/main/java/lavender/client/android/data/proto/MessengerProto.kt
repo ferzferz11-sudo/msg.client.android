@@ -1,4 +1,4 @@
-package msg.client.android.data.proto
+package lavender.client.android.data.proto
 
 import com.google.protobuf.Timestamp
 

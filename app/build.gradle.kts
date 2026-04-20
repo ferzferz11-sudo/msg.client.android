@@ -1,13 +1,14 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
 }
 
 android {
-    namespace = "msg.client.android"
+    namespace = "lavender.client.android"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "msg.client.android"
+        applicationId = "lavender.client.android"
         minSdk = 29
         targetSdk = 37
         versionName = "1.0.1.23"
@@ -65,8 +66,8 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     
     // Firebase and FCM
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     // gRPC dependencies
     implementation(libs.grpc.okhttp)

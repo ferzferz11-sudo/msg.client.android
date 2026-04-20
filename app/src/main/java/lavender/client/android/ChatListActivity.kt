@@ -1,4 +1,4 @@
-package msg.client.android
+package lavender.client.android
 
 import android.content.Intent
 import android.content.res.Configuration
@@ -26,10 +26,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
-import msg.client.android.R
-import msg.client.android.data.grpc.GrpcClient
-import msg.client.android.data.models.ChatInfo
-import msg.client.android.ui.adapter.ChatAdapter
+import lavender.client.android.R
+import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.ui.adapter.ChatAdapter
 import java.util.Locale
 
 class ChatListActivity : AppCompatActivity() {

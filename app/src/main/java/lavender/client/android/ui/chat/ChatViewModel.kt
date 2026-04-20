@@ -1,11 +1,11 @@
-package msg.client.android.ui.chat
+package lavender.client.android.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import msg.client.android.data.grpc.GrpcClient
-import msg.client.android.data.models.Message
+import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.models.Message
 
 class ChatViewModel : ViewModel() {
     val grpcClient = GrpcClient()

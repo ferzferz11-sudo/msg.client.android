@@ -1,4 +1,4 @@
-package msg.client.android
+package lavender.client.android
 
 import android.content.Intent
 import android.content.res.Configuration
@@ -30,7 +30,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import msg.client.android.data.grpc.ServerConnectivityTest
+import lavender.client.android.data.grpc.ServerConnectivityTest
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         appVersionText.text = BuildConfig.VERSION_NAME
 
         findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("Lavender APK URL", APK_URL)
             clipboard.setPrimaryClip(clip)
             Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
@@ -528,10 +528,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
-                    val currentVersion = BuildConfig.VERSION_NAME
 
                     withContext<Unit>(Dispatchers.Main) {
-                        if (isUpdateAvailable(currentVersion, latestVersion)) {
+                        if (isUpdateAvailable(latestVersion)) {
                             updateAvailableIndicator.visibility = View.VISIBLE
                         } else {
                             updateAvailableIndicator.visibility = View.GONE
@@ -546,9 +545,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isUpdateAvailable(current: String, latest: String): Boolean {
+    private fun isUpdateAvailable(latest: String): Boolean {
         // Compare versions in format MAJOR.MINOR.PATCH.BUILD (e.g., 1.0.1.22)
-        val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }
+        val currentVersion = BuildConfig.VERSION_NAME
+        val currentParts = currentVersion.split(".").mapNotNull { it.toIntOrNull() }
         val latestParts = latest.split(".").mapNotNull { it.toIntOrNull() }
 
         if (currentParts.isEmpty() || latestParts.isEmpty()) return false

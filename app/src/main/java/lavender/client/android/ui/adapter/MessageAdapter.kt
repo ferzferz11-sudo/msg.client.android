@@ -1,4 +1,4 @@
-package msg.client.android.ui.adapter
+package lavender.client.android.ui.adapter
 
 import android.view.LayoutInflater
 import android.view.View
@@ -9,8 +9,8 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import msg.client.android.R
-import msg.client.android.data.models.Message
+import lavender.client.android.R
+import lavender.client.android.data.models.Message
 import java.text.SimpleDateFormat
 import java.util.*
 

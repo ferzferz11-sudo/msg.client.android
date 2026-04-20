@@ -1,7 +1,7 @@
-package msg.client.android.data.grpc
+package lavender.client.android.data.grpc
 
 import kotlinx.coroutines.flow.StateFlow
-import msg.client.android.data.models.Message
+import lavender.client.android.data.models.Message
 
 class GrpcClient {
     private val realGrpcClient = RealGrpcClient()
@@ -57,7 +57,7 @@ class GrpcClient {
         realGrpcClient.setRoomId(roomId)
     }
 
-    fun getChats(username: String, callback: (List<msg.client.android.data.models.ChatInfo>) -> Unit) {
+    fun getChats(username: String, callback: (List<lavender.client.android.data.models.ChatInfo>) -> Unit) {
         realGrpcClient.getChats(username, callback)
     }
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1025814489039",
+    "project_id": "lavender-messenger",
+    "storage_bucket": "lavender-messenger.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1025814489039:android:96c90a8727d1dbe291d4ba",
+        "android_client_info": {
+          "package_name": "lavender.client.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2AcONJsCepNLQrBhZzcw5ChMd9RbX1Ac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,4 @@
-package msg.client.android.data.grpc
+package lavender.client.android.data.grpc
 
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
@@ -6,28 +6,28 @@ import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import msg.client.android.data.models.Message
-import msg.client.android.data.models.Reaction
-import msg.client.android.data.proto.MessageProto
-import msg.client.android.data.proto.ReactionProto
-import msg.client.android.data.proto.ReactionRequestProto
-import msg.client.android.data.proto.ReactionResponseProto
-import msg.client.android.data.proto.ProtoUtils
-import msg.client.android.data.proto.GetHistoryRequestProto
-import msg.client.android.data.proto.GetHistoryResponseProto
-import msg.client.android.data.proto.DeleteMessagesRequestProto
-import msg.client.android.data.proto.DeleteMessagesResponseProto
-import msg.client.android.data.proto.TokenRequestProto
-import msg.client.android.data.proto.TokenResponseProto
-import msg.client.android.data.proto.ChatInfoProto
-import msg.client.android.data.proto.GetChatsRequestProto
-import msg.client.android.data.proto.GetChatsResponseProto
-import msg.client.android.data.proto.CreateDirectChatRequestProto
-import msg.client.android.data.proto.CreateDirectChatResponseProto
-import msg.client.android.data.proto.UpdateUsernameRequestProto
-import msg.client.android.data.proto.UpdateUsernameResponseProto
-import msg.client.android.data.proto.UpdatePasswordRequestProto
-import msg.client.android.data.proto.UpdatePasswordResponseProto
+import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.Reaction
+import lavender.client.android.data.proto.MessageProto
+import lavender.client.android.data.proto.ReactionProto
+import lavender.client.android.data.proto.ReactionRequestProto
+import lavender.client.android.data.proto.ReactionResponseProto
+import lavender.client.android.data.proto.ProtoUtils
+import lavender.client.android.data.proto.GetHistoryRequestProto
+import lavender.client.android.data.proto.GetHistoryResponseProto
+import lavender.client.android.data.proto.DeleteMessagesRequestProto
+import lavender.client.android.data.proto.DeleteMessagesResponseProto
+import lavender.client.android.data.proto.TokenRequestProto
+import lavender.client.android.data.proto.TokenResponseProto
+import lavender.client.android.data.proto.ChatInfoProto
+import lavender.client.android.data.proto.GetChatsRequestProto
+import lavender.client.android.data.proto.GetChatsResponseProto
+import lavender.client.android.data.proto.CreateDirectChatRequestProto
+import lavender.client.android.data.proto.CreateDirectChatResponseProto
+import lavender.client.android.data.proto.UpdateUsernameRequestProto
+import lavender.client.android.data.proto.UpdateUsernameResponseProto
+import lavender.client.android.data.proto.UpdatePasswordRequestProto
+import lavender.client.android.data.proto.UpdatePasswordResponseProto
 import java.util.concurrent.TimeUnit
 
 class RealGrpcClient {
@@ -121,7 +121,7 @@ class RealGrpcClient {
     private fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
         val currentChannel = channel ?: return
 
-        android.util.Log.d("RealGrpcClient", "Loading history for room: $roomId, channel: ${currentChannel != null}")
+        android.util.Log.d("RealGrpcClient", "Loading history for room: $roomId")
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetHistoryRequestProto, GetHistoryResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -443,7 +443,7 @@ class RealGrpcClient {
         call.request(1)
     }
 
-    fun getChats(username: String, callback: (List<msg.client.android.data.models.ChatInfo>) -> Unit) {
+    fun getChats(username: String, callback: (List<lavender.client.android.data.models.ChatInfo>) -> Unit) {
         val currentChannel = channel ?: return
 
         val request = GetChatsRequestProto(username)
@@ -459,7 +459,7 @@ class RealGrpcClient {
         call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
             override fun onMessage(message: GetChatsResponseProto) {
                 val chats = message.chats.map { proto ->
-                    msg.client.android.data.models.ChatInfo(
+                    lavender.client.android.data.models.ChatInfo(
                         id = proto.id,
                         name = proto.name,
                         type = proto.type,

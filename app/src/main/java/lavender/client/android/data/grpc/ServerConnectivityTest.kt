@@ -1,4 +1,4 @@
-package msg.client.android.data.grpc
+package lavender.client.android.data.grpc
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

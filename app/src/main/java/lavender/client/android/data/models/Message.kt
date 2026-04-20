@@ -1,4 +1,4 @@
-package msg.client.android.data.models
+package lavender.client.android.data.models
 
 data class Reaction(
     val user: String,

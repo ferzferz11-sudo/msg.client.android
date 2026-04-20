@@ -1,4 +1,4 @@
-package msg.client.android
+package lavender.client.android
 
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -21,6 +21,7 @@ import android.content.ClipboardManager
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -28,10 +29,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import msg.client.android.data.models.Message
-import msg.client.android.ui.adapter.MessageAdapter
-import msg.client.android.ui.chat.ChatViewModel
-import msg.client.android.data.grpc.ServerConnectivityTest
+import lavender.client.android.data.models.Message
+import lavender.client.android.ui.adapter.MessageAdapter
+import lavender.client.android.ui.chat.ChatViewModel
+import lavender.client.android.data.grpc.ServerConnectivityTest
 
 class ChatActivity : AppCompatActivity() {
     
@@ -69,6 +70,13 @@ class ChatActivity : AppCompatActivity() {
         
         // 3. Setup observers (now connectivityTest is not null)
         setupObservers()
+        
+        // Setup back press dispatcher
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                navigateToChatList()
+            }
+        })
         
         // Restore username from savedInstanceState or get from intent
         username = savedInstanceState?.getString("username") ?: intent.getStringExtra("username") ?: "User"
@@ -165,9 +173,6 @@ class ChatActivity : AppCompatActivity() {
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
 
-        val replyQuoteView = findViewById<LinearLayout>(R.id.replyQuoteView)
-        val replyUser = findViewById<TextView>(R.id.replyUser)
-        val replyText = findViewById<TextView>(R.id.replyText)
         val closeReply = findViewById<android.widget.ImageButton>(R.id.closeReply)
 
         closeReply.setOnClickListener {
@@ -193,16 +198,11 @@ class ChatActivity : AppCompatActivity() {
             ) { isConnected, users ->
                 isConnected to users.size
             }.collect { (isConnected, usersCount) ->
-                val statusText = if (isConnected) {
-                    val connectedStr = getString(R.string.connected)
+                if (isConnected) {
                     if (usersCount > 0) {
-                        val onlineCountStr = resources.getQuantityString(R.plurals.online_count, usersCount, usersCount)
-                        "$connectedStr ($onlineCountStr)"
-                    } else {
-                        connectedStr
+                        resources.getQuantityString(R.plurals.online_count, usersCount, usersCount)
+                        // TODO: Use the status somewhere or remove the variable if not needed
                     }
-                } else {
-                    getString(R.string.disconnected)
                 }
             }
         }
@@ -210,7 +210,7 @@ class ChatActivity : AppCompatActivity() {
         // Periodically refresh users list
         lifecycleScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(10000) // Refresh every 10 seconds
+                delay(10000) // Refresh every 10 seconds
                 if (viewModel.connectionState.value) {
                     viewModel.grpcClient.loadUsers()
                 }
@@ -240,7 +240,7 @@ class ChatActivity : AppCompatActivity() {
                         }
                     }
                     // Clear notification after showing
-                    (viewModel as msg.client.android.ui.chat.ChatViewModel).clearSystemNotification()
+                    viewModel.clearSystemNotification()
                 }
             }
         }
@@ -273,11 +273,6 @@ class ChatActivity : AppCompatActivity() {
                 menu.findItem(R.id.action_language)?.isVisible = !hasSelection
                 menu.findItem(R.id.action_color_scheme)?.isVisible = !hasSelection
             }
-            if (hasSelection) {
-                // Selection mode active
-            } else {
-                // Normal mode
-            }
         }, { message ->
             showReactionPicker(message)
         }, { message ->
@@ -293,13 +288,13 @@ class ChatActivity : AppCompatActivity() {
 
         // Add swipe gesture for reply
         val itemTouchHelper = androidx.recyclerview.widget.ItemTouchHelper(object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
-            override fun onMove(recyclerView: androidx.recyclerview.widget.RecyclerView, viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder, target: androidx.recyclerview.widget.RecyclerView.ViewHolder): Boolean {
+            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 return false
             }
 
-            override fun onSwiped(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder, direction: Int) {
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.bindingAdapterPosition
-                if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                if (position != RecyclerView.NO_POSITION) {
                     val message = messageAdapter.currentList.getOrNull(position)
                     if (message != null && message.user.trim() != username.trim()) {
                         setReply(message.id, message.user, message.text)
@@ -456,11 +451,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    @Deprecated("Deprecated in API 33")
-    override fun onBackPressed() {
-        navigateToChatList()
-    }
-
     private fun navigateToChatList() {
         val intent = Intent(this, ChatListActivity::class.java)
         intent.putExtra("username", username)
@@ -534,15 +524,6 @@ class ChatActivity : AppCompatActivity() {
         prefs.edit {
             putString("color_scheme", scheme)
         }
-    }
-
-    private fun logout() {
-        viewModel.disconnect()
-        // Don't remove username - keep it for next login
-        val intent = Intent(this, MainActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
     }
 
     private fun setupEmojiPanel() {
@@ -666,7 +647,7 @@ class ChatActivity : AppCompatActivity() {
                 val sortedUsers = allUsers.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
 
                 for (user in sortedUsers) {
-                    val userView = layoutInflater.inflate(R.layout.item_user, null)
+                    val userView = layoutInflater.inflate(R.layout.item_user, container, false)
                     val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
                     val usernameText = userView.findViewById<TextView>(R.id.usernameText)
 

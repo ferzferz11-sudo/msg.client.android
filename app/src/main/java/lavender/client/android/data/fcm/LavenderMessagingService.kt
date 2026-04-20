@@ -1,4 +1,4 @@
-package msg.client.android.data.fcm
+package lavender.client.android.data.fcm
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,8 +8,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import msg.client.android.MainActivity
-import msg.client.android.R
+import lavender.client.android.MainActivity
+import lavender.client.android.R
 
 class LavenderMessagingService : FirebaseMessagingService() {
 

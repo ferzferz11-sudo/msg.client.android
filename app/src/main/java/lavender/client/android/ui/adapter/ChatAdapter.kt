@@ -1,4 +1,4 @@
-package msg.client.android.ui.adapter
+package lavender.client.android.ui.adapter
 
 import android.content.res.Configuration
 import android.view.LayoutInflater
@@ -6,8 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import msg.client.android.R
-import msg.client.android.data.models.ChatInfo
+import lavender.client.android.R
+import lavender.client.android.data.models.ChatInfo
 
 class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit

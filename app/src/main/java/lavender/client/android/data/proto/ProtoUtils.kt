@@ -1,8 +1,8 @@
-package msg.client.android.data.proto
+package lavender.client.android.data.proto
 
 import com.google.protobuf.Timestamp
-import msg.client.android.data.models.Message
-import msg.client.android.data.models.Reaction
+import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.Reaction
 
 object ProtoUtils {
     fun createMessageProto(message: Message): MessageProto {
