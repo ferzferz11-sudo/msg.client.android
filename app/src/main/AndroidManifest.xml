@@ -45,6 +45,10 @@
             android:exported="true"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".ChatListActivity"
+            android:exported="true" />
+
         <service
             android:name=".data.fcm.LavenderMessagingService"
             android:exported="false">

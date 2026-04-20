@@ -70,11 +70,8 @@ class ServerConnectivityTest {
             try {
                 // Test common local network configurations
                 val testAddresses = listOf(
-                    "159.195.38.145", // New server IP
-                    "10.0.2.2",      // Android emulator localhost
-                    "127.0.0.1",      // Localhost (won't work from device)
-                    "192.168.0.1",    // Common router IP
-                    "192.168.1.1"     // Common router IP
+                    "159.195.38.145", // Main server IP
+                    "192.168.1.135"   // Local server IP
                 )
                 
                 for (address in testAddresses) {

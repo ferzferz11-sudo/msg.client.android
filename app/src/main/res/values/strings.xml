@@ -16,13 +16,17 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">0.9.7</string>
+    <string name="app_version">1.0.1</string>
+    <string name="app_build">0.1.9</string>
+    <string name="server_address">159.195.38.145:50051</string>
+    <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">update</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_as">Connected as: %s</string>
     <string name="type_message_here">Type here</string>
     <string name="lavender_ready">Lavender Messenger ready!</string>
     <string name="joined">%s joined</string>
+    <string name="rooms">Rooms</string>
     
     <!-- Toast Messages -->
     <string name="language_selected">Language: %s</string>
@@ -72,6 +76,12 @@
     <string name="join">Join</string>
     <string name="welcome">Welcome</string>
     <string name="enter_username">Enter your name</string>
+    <string name="enter_password">Enter password</string>
+    <string name="password_empty">Password cannot be empty</string>
+    <string name="registration_success">User registered successfully</string>
+    <string name="auth_failed">Authentication failed</string>
+    <string name="chats">Chats</string>
+    <string name="profile">Profile</string>
     <string name="cancel_dialog">Cancel</string>
     <string name="connected_status">connected</string>
     <string name="username_empty">Username cannot be empty</string>
@@ -79,11 +89,11 @@
     <string name="exiting_app">Exiting application</string>
     <string name="change_username">Change Username</string>
     <string name="enter_new_username">Enter new username</string>
+    <string name="change_password">Change Password</string>
     <string name="change">Change</string>
     <string name="toggle_language">Language</string>
     <string name="toggle_color_scheme">Theme</string>
     <string name="server_address_label">Server</string>
-    <string name="server_address">159.195.38.145:50051</string>
     <string name="checking_server">Checking server…</string>
     <string name="server_available">Server available</string>
     <string name="server_unavailable">Server unavailable</string>
@@ -104,8 +114,17 @@
     </plurals>
     <string name="refresh_symbol">↻</string>
     <string name="delete_message">Delete message</string>
-    <string name="version_format">Version %s</string>
+    <string name="version_format">Version %1$s (Build %2$s)</string>
     <string name="language_format">Language: %s</string>
     <string name="color_scheme_format">Theme: %s</string>
     <string name="selected_count">Selected: %d</string>
+    <string name="general_chat">General</string>
+    <string name="private_chat_with">Chat with %s</string>
+    <string name="chat_created_with">Chat created with %s</string>
+    <string name="cannot_chat_with_yourself">Cannot chat with yourself</string>
+    <string name="failed_to_create_chat">Failed to create chat</string>
+    <string name="no_users_online">No users online</string>
+    <string name="no_users_available">No users available</string>
+    <string name="select_user">Select User</string>
+    <string name="online_users">Online Users</string>
 </resources>

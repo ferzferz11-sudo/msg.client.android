@@ -10,26 +10,34 @@ object ProtoUtils {
             .setSeconds(message.timestamp / 1000)
             .setNanos(((message.timestamp % 1000) * 1000000).toInt())
             .build()
-        
+
         return MessageProto.newBuilder()
             .setUser(message.user)
             .setText(message.text)
             .setCreatedAt(timestamp)
             .setId(message.id)
+            .setRepliedToMessageId(message.repliedToMessageId)
+            .setRepliedToUser(message.repliedToUser)
+            .setRepliedToText(message.repliedToText)
+            .setRoomId(message.roomId)
             .build()
     }
     
     fun createMessageFromProto(proto: MessageProto): Message {
-        val timestamp = proto.createdAt?.let { 
+        val timestamp = proto.createdAt?.let {
             it.seconds * 1000 + (it.nanos / 1000000)
         } ?: System.currentTimeMillis()
-        
+
         return Message(
             id = proto.id,
             user = proto.user,
             text = proto.text,
             timestamp = timestamp,
-            reactions = proto.reactions.map { Reaction(it.user, it.emoji) }
+            reactions = proto.reactions.map { Reaction(it.user, it.emoji) },
+            repliedToMessageId = proto.repliedToMessageId,
+            repliedToUser = proto.repliedToUser,
+            repliedToText = proto.repliedToText,
+            roomId = proto.roomId
         )
     }
     

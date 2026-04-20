@@ -33,18 +33,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class MainActivity : AppCompatActivity() {
-    
+
     companion object {
         private const val APK_URL = "http://159.195.38.145:8081/lavender.apk"
     }
-    
+
     private lateinit var joinChatButton: Button
     private lateinit var downloadProgressBar: ProgressBar
-    
+
     private val serverList = listOf(
         "159.195.38.145:50051",
-        "10.0.2.2:50051",
-        "localhost:50051"
+        "192.168.1.135:50051"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,7 +87,7 @@ class MainActivity : AppCompatActivity() {
 
         // Update version text from BuildConfig
         val appVersionText: TextView = findViewById(R.id.appVersionText)
-        appVersionText.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
+        appVersionText.text = getString(R.string.version_format, BuildConfig.VERSION_NAME, getString(R.string.app_build))
 
         findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -172,6 +171,7 @@ class MainActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_join_chat, null)
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val editText = dialogView.findViewById<EditText>(R.id.editTextUsername)
+        val editTextPassword = dialogView.findViewById<EditText>(R.id.editTextPassword)
         val serverAddressSpinner = dialogView.findViewById<Spinner>(R.id.serverAddressSpinner)
         val serverStatusIndicator = dialogView.findViewById<View>(R.id.serverStatusIndicator)
         val serverStatusText = dialogView.findViewById<TextView>(R.id.serverStatusText)
@@ -182,13 +182,18 @@ class MainActivity : AppCompatActivity() {
         // Set localized text
         titleText.text = getString(R.string.welcome)
         editText.hint = getString(R.string.enter_username)
+        editTextPassword.hint = getString(R.string.enter_password)
         btnCancel.text = getString(R.string.cancel_dialog)
         btnJoin.text = getString(R.string.join)
         
-        // Pre-fill with saved username
+        // Pre-fill with saved username and password
         val savedUsername = getSavedUsername()
         if (savedUsername != null) {
             editText.setText(savedUsername)
+        }
+        val savedPassword = getSavedPassword()
+        if (savedPassword != null) {
+            editTextPassword.setText(savedPassword)
         }
         
         // Setup server address spinner
@@ -232,18 +237,23 @@ class MainActivity : AppCompatActivity() {
         
         btnJoin.setOnClickListener {
             val username = editText.text.toString().trim()
+            val password = editTextPassword.text.toString().trim()
             val serverAddress = serverAddressSpinner.selectedItem.toString()
-            if (username.isNotEmpty()) {
+            if (username.isNotEmpty() && password.isNotEmpty()) {
                 saveUsername(username)
+                savePassword(password)
                 saveServerAddress(serverAddress)
                 android.util.Log.d("MainActivity", "Connecting to server: $serverAddress")
-                val intent = Intent(this, ChatActivity::class.java)
-                intent.putExtra("USERNAME", username)
-                intent.putExtra("SERVER_ADDRESS", serverAddress)
+                val intent = Intent(this, ChatListActivity::class.java)
+                intent.putExtra("username", username)
+                intent.putExtra("password", password)
+                intent.putExtra("serverAddress", serverAddress)
                 startActivity(intent)
                 dialog.dismiss()
-            } else {
+            } else if (username.isEmpty()) {
                 Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, getString(R.string.password_empty), Toast.LENGTH_LONG).show()
             }
         }
         
@@ -266,6 +276,18 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         prefs.edit {
             putString("username", username)
+        }
+    }
+    
+    private fun getSavedPassword(): String? {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("password", null)
+    }
+    
+    private fun savePassword(password: String) {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        prefs.edit {
+            putString("password", password)
         }
     }
     
@@ -298,13 +320,21 @@ class MainActivity : AppCompatActivity() {
     
     private fun applySavedColorScheme() {
         val savedScheme = getSavedColorScheme()
-        if (savedScheme != null) {
-            val theme = when (savedScheme) {
+        val theme = if (savedScheme != null) {
+            when (savedScheme) {
                 "dark" -> R.style.Theme_MsgClientAndroid_Dark
                 else -> R.style.Theme_MsgClientAndroid
             }
-            setTheme(theme)
+        } else {
+            // If no saved scheme, use system default
+            val isNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            if (isNightMode) {
+                R.style.Theme_MsgClientAndroid_Dark
+            } else {
+                R.style.Theme_MsgClientAndroid
+            }
         }
+        setTheme(theme)
     }
     
     private fun getSavedLanguage(): String? {

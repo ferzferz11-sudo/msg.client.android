@@ -23,4 +23,7 @@
     <color name="primary">#967BB6</color>
     <color name="primary_dark">#7A63A0</color>
     <color name="accent">#E6E6FA</color>
+    
+    <!-- Splash screen background -->
+    <color name="splash_background">#070531</color>
 </resources>

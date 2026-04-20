@@ -17,7 +17,8 @@ import java.util.*
 class MessageAdapter(
     private var currentUsername: String,
     private val onSelectionChanged: (Int) -> Unit,
-    private val onMessageLongClick: (Message) -> Unit = {}
+    private val onMessageLongClick: (Message) -> Unit = {},
+    private val onMessageSwipe: (Message) -> Unit = {}
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
     
     private val selectedPositions = mutableSetOf<Int>()
@@ -27,6 +28,7 @@ class MessageAdapter(
     }
     
     fun updateUsername(newUsername: String) {
+        android.util.Log.d("MessageAdapter", "updateUsername: old='$currentUsername', new='$newUsername'")
         currentUsername = newUsername
         notifyItemRangeChanged(0, itemCount)
     }
@@ -50,14 +52,17 @@ class MessageAdapter(
 
         // Check if this is a continuation of the same user's message
         val isConsecutive = previousMessage != null &&
-            previousMessage.user == currentMessage.user
+            previousMessage.user.trim() == currentMessage.user.trim()
 
         // Check if previous message was also at the same minute
         val isSameMinute = previousMessage != null &&
             (currentMessage.timestamp / 60000 == previousMessage.timestamp / 60000)
 
         // Check if this is an outgoing message (from current user)
-        val isOutgoing = currentMessage.user == currentUsername
+        val isOutgoing = currentMessage.user.trim() == currentUsername.trim()
+
+        // Debug logging
+        android.util.Log.d("MessageAdapter", "Position: $position, MessageUser: '${currentMessage.user.trim()}' (len=${currentMessage.user.trim().length}), CurrentUsername: '$currentUsername.trim()' (len=${currentUsername.trim().length}), isOutgoing: $isOutgoing")
 
         // Hide user name if it's our message OR if it's the same user as before
         val shouldHideUser = isOutgoing || isConsecutive
@@ -96,10 +101,22 @@ class MessageAdapter(
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
+        private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
+        private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
+        private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
         
         fun bind(message: Message, shouldHideUser: Boolean, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
             userText.text = message.user
             messageText.text = message.text
+
+            // Show reply quote if present
+            if (message.repliedToUser.isNotEmpty()) {
+                replyQuoteUser.text = message.repliedToUser
+                replyQuoteText.text = message.repliedToText
+                replyQuoteContainer.visibility = View.VISIBLE
+            } else {
+                replyQuoteContainer.visibility = View.GONE
+            }
             
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             timeText.text = timeFormat.format(Date(message.timestamp))

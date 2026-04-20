@@ -10,8 +10,8 @@ android {
         applicationId = "msg.client.android"
         minSdk = 29
         targetSdk = 37
-        versionCode = 18
-        versionName = "0.9.7"
+        versionCode = 22
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

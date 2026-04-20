@@ -15,13 +15,17 @@
     
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">0.9.7</string>
+    <string name="app_version">1.0.1</string>
+    <string name="app_build">0.1.9</string>
+    <string name="server_address">159.195.38.145:50051</string>
+    <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">обновить</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_as">Подключен как: %s (сохранено)</string>
     <string name="type_message_here">Сообщение</string>
     <string name="lavender_ready">Лаванда готова!</string>
     <string name="joined">%s присоединился</string>
+    <string name="rooms">Чаты</string>
     
     <!-- Toast Messages -->
     <string name="language_selected">Язык: %s</string>
@@ -71,6 +75,12 @@
     <string name="join">Войти</string>
     <string name="welcome">Добро пожаловать</string>
     <string name="enter_username">Введите ваше имя</string>
+    <string name="enter_password">Введите пароль</string>
+    <string name="password_empty">Пароль не может быть пустым</string>
+    <string name="registration_success">Пользователь успешно зарегистрирован</string>
+    <string name="auth_failed">Ошибка аутентификации</string>
+    <string name="chats">Чаты</string>
+    <string name="profile">Профиль</string>
     <string name="cancel_dialog">Отмена</string>
     <string name="connected_status">подключен</string>
     <string name="username_empty">Имя пользователя не может быть пустым</string>
@@ -78,11 +88,11 @@
     <string name="exiting_app">Выход из приложения</string>
     <string name="change_username">Изменить имя пользователя</string>
     <string name="enter_new_username">Введите новое имя пользователя</string>
+    <string name="change_password">Изменить пароль</string>
     <string name="change">Изменить</string>
     <string name="toggle_language">Язык</string>
     <string name="toggle_color_scheme">Тема</string>
     <string name="server_address_label">Сервер</string>
-    <string name="server_address">159.195.38.145:50051</string>
     <string name="checking_server">Проверка сервера…</string>
     <string name="server_available">Сервер доступен</string>
     <string name="server_unavailable">Сервер недоступен</string>
@@ -97,6 +107,7 @@
     <string name="disconnected">Отключено</string>
     <string name="connecting">Подключение…</string>
     <string name="connected">Подключено</string>
+    <string name="version_format">Версия %1$s (Сборка %2$s)</string>
     <plurals name="online_count">
         <item quantity="one">%d пользователь онлайн</item>
         <item quantity="few">%d пользователя онлайн</item>
@@ -105,8 +116,16 @@
     </plurals>
     <string name="refresh_symbol">↻</string>
     <string name="delete_message">Удалить сообщение</string>
-    <string name="version_format">Версия %s</string>
     <string name="language_format">Язык: %s</string>
     <string name="color_scheme_format">Тема: %s</string>
     <string name="selected_count">Выбрано: %d</string>
+    <string name="general_chat">Общий чат</string>
+    <string name="private_chat_with">Чат с %s</string>
+    <string name="chat_created_with">Чат создан с %s</string>
+    <string name="cannot_chat_with_yourself">Нельзя писать самому себе</string>
+    <string name="failed_to_create_chat">Не удалось создать чат</string>
+    <string name="no_users_online">Нет пользователей онлайн</string>
+    <string name="no_users_available">Нет доступных пользователей</string>
+    <string name="select_user">Выберите пользователя</string>
+    <string name="online_users">Пользователи онлайн</string>
 </resources>
