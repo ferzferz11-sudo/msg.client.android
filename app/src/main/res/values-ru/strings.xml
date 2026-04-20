@@ -128,4 +128,5 @@
     <string name="no_users_available">Нет доступных пользователей</string>
     <string name="select_user">Выберите пользователя</string>
     <string name="online_users">Пользователи онлайн</string>
+    <string name="update_available">Доступно обновление</string>
 </resources>

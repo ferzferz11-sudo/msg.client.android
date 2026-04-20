@@ -15,6 +15,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TextView
@@ -24,6 +25,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import msg.client.android.data.grpc.ServerConnectivityTest
@@ -36,10 +40,14 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val APK_URL = "http://159.195.38.145:8081/lavender.apk"
+        private const val VERSION_CHECK_URL = "http://159.195.38.145:8081/version.txt"
     }
 
     private lateinit var joinChatButton: Button
     private lateinit var downloadProgressBar: ProgressBar
+    private lateinit var updateAvailableIndicator: ImageView
+    private var currentLanguage: String? = null
+    private var updateCheckJob: Job? = null
 
     private val serverList = listOf(
         "159.195.38.145:50051",
@@ -51,34 +59,78 @@ class MainActivity : AppCompatActivity() {
         applySavedLanguage()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        currentLanguage = getSavedLanguage()
         updateLanguageButtonText()
         updateColorSchemeButtonText()
-        
-        // Show join chat button
+
+        updateAvailableIndicator = findViewById(R.id.updateAvailableIndicator)
+
+        setupJoinChatButton()
+        setupLogoutButton()
+        setupLanguageButton()
+        setupColorSchemeButton()
+        setupDownloadUpdateButton()
+
+        checkForUpdates()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Check if language changed and recreate activity if needed
+        val savedLanguage = getSavedLanguage()
+        if (savedLanguage != currentLanguage) {
+            currentLanguage = savedLanguage
+            applySavedLanguage()
+            recreate()
+        } else {
+            updateLanguageButtonText()
+            updateColorSchemeButtonText()
+        }
+
+        // Start periodic update check
+        startPeriodicUpdateCheck()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop periodic update check
+        stopPeriodicUpdateCheck()
+    }
+
+    // Show join chat button
+    private fun setupJoinChatButton() {
         joinChatButton = findViewById(R.id.joinChatButton)
         joinChatButton.setOnClickListener {
             showUsernameDialog()
         }
-        
-        // Add logout button
+    }
+
+    // Add logout button
+    private fun setupLogoutButton() {
         val logoutButton: Button = findViewById(R.id.logoutButton)
         logoutButton.setOnClickListener {
             logout()
         }
-        
-        // Add language toggle button
+    }
+
+    // Add language toggle button
+    private fun setupLanguageButton() {
         val languageButton: Button = findViewById(R.id.languageButton)
         languageButton.setOnClickListener {
             toggleLanguage()
         }
-        
-        // Add color scheme toggle button
+    }
+
+    // Add color scheme toggle button
+    private fun setupColorSchemeButton() {
         val colorSchemeButton: Button = findViewById(R.id.colorSchemeButton)
         colorSchemeButton.setOnClickListener {
             toggleColorScheme()
         }
+    }
 
-        // Add download update button
+    // Add download update button
+    private fun setupDownloadUpdateButton() {
         val downloadUpdateButton: TextView = findViewById(R.id.downloadUpdateButton)
         downloadProgressBar = findViewById(R.id.downloadProgressBar)
         downloadUpdateButton.setOnClickListener {
@@ -87,7 +139,7 @@ class MainActivity : AppCompatActivity() {
 
         // Update version text from BuildConfig
         val appVersionText: TextView = findViewById(R.id.appVersionText)
-        appVersionText.text = getString(R.string.version_format, BuildConfig.VERSION_NAME, getString(R.string.app_build))
+        appVersionText.text = BuildConfig.VERSION_NAME
 
         findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -326,13 +378,8 @@ class MainActivity : AppCompatActivity() {
                 else -> R.style.Theme_MsgClientAndroid
             }
         } else {
-            // If no saved scheme, use system default
-            val isNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-            if (isNightMode) {
-                R.style.Theme_MsgClientAndroid_Dark
-            } else {
-                R.style.Theme_MsgClientAndroid
-            }
+            // If no saved scheme (first launch), use dark theme
+            R.style.Theme_MsgClientAndroid_Dark
         }
         setTheme(theme)
     }
@@ -389,7 +436,7 @@ class MainActivity : AppCompatActivity() {
     
     private fun toggleColorScheme() {
         val schemes = listOf("light", "dark")
-        val currentScheme = getSavedColorScheme() ?: "light"
+        val currentScheme = getSavedColorScheme() ?: "dark"
         val currentIndex = schemes.indexOf(currentScheme)
         val nextIndex = (currentIndex + 1) % schemes.size
         val newScheme = schemes[nextIndex]
@@ -415,7 +462,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateColorSchemeButtonText() {
         val colorSchemeButton: Button? = findViewById(R.id.colorSchemeButton)
         if (colorSchemeButton != null) {
-            val currentScheme = getSavedColorScheme() ?: "light"
+            val currentScheme = getSavedColorScheme() ?: "dark"
             val schemeName = if (currentScheme == "dark") {
                 getString(R.string.dark)
             } else {
@@ -468,5 +515,68 @@ class MainActivity : AppCompatActivity() {
         
         // Start the test
         connectivityTest.testServerReachability(host, port)
+    }
+
+    private fun checkForUpdates() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL(VERSION_CHECK_URL)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    val currentVersion = BuildConfig.VERSION_NAME
+
+                    withContext<Unit>(Dispatchers.Main) {
+                        if (isUpdateAvailable(currentVersion, latestVersion)) {
+                            updateAvailableIndicator.visibility = View.VISIBLE
+                        } else {
+                            updateAvailableIndicator.visibility = View.GONE
+                        }
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                // Silent fail - don't show indicator if check fails
+                android.util.Log.e("MainActivity", "Version check failed: ${e.message}")
+            }
+        }
+    }
+
+    private fun isUpdateAvailable(current: String, latest: String): Boolean {
+        // Compare versions in format MAJOR.MINOR.PATCH.BUILD (e.g., 1.0.1.22)
+        val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }
+        val latestParts = latest.split(".").mapNotNull { it.toIntOrNull() }
+
+        if (currentParts.isEmpty() || latestParts.isEmpty()) return false
+
+        for (i in 0 until maxOf(currentParts.size, latestParts.size)) {
+            val currentPart = currentParts.getOrNull(i) ?: 0
+            val latestPart = latestParts.getOrNull(i) ?: 0
+
+            if (latestPart > currentPart) return true
+            if (latestPart < currentPart) return false
+        }
+
+        return false
+    }
+
+    private fun startPeriodicUpdateCheck() {
+        stopPeriodicUpdateCheck() // Cancel any existing job
+
+        updateCheckJob = lifecycleScope.launch {
+            while (isActive) {
+                checkForUpdates()
+                delay(30000) // Check every 30 seconds
+            }
+        }
+    }
+
+    private fun stopPeriodicUpdateCheck() {
+        updateCheckJob?.cancel()
+        updateCheckJob = null
     }
 }

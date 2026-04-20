@@ -171,9 +171,27 @@ The application connects to Go gRPC server at:
 ## Versioning
 
 The project follows semantic versioning (SemVer):
-- **MAJOR.MINOR.PATCH** (e.g., 1.0.0)
+- **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **0.9.7** (versionCode: 18)
+Current version: **1.0.1.22**
+
+### Version 1.0.1.22 - Version Format and Theme Improvements
+- 📝 Updated version format to include build number as fourth digit (e.g., 1.0.1.22)
+- 🎨 First launch now uses dark theme instead of system default
+- 🌐 Language changes in chat activities now sync when returning to main screen
+- 🔧 Removed separate versionCode, now using only versionName with build number included
+
+### Version 0.9.7 - Message Reactions and Push Notifications
+- 😀 Added ability to react to messages with emojis (long-press on a message)
+- 🆔 Switched to UUIDs for reliable message tracking across sessions and reactions
+- 🔔 Integrated Firebase Cloud Messaging (FCM) to receive notifications about new messages even when the app is in the background
+- 🔄 Implemented intelligent message matching (ID/Text/User/Time) to prevent duplicate messages when they "echo" back from the server
+- 🛡️ Strictly synchronized field indices between Android (manual marshaling) and Go (protoc) to prevent data corruption
+- 🔄 Server-side message deletion: messages are now deleted from the gRPC server and PostgreSQL database, not just locally
+- 🗄️ Added COALESCE handling for legacy database records to ensure stability during version upgrades
+- 🧹 Deleted messages stay hidden even after app restart (stored in SharedPreferences)
+- 🎨 Modern chat interface with dynamic toolbar, rounded input field, and improved connection status indicator
+- 🚀 Replaced deprecated Locale and gRPC methods with modern equivalents
 
 ### Version 0.9.4 - Online Users and Message History
 - 👥 Added ability to view online users in real-time

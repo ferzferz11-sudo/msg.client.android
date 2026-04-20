@@ -10,14 +10,12 @@ android {
         applicationId = "msg.client.android"
         minSdk = 29
         targetSdk = 37
-        versionCode = 22
-        versionName = "1.0.1"
+        versionName = "1.0.1.23"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Add version as BuildConfig fields
         buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
-        buildConfigField("int", "VERSION_CODE", "$versionCode")
 
         // Add version as string resource for XML
         resValue("string", "app_version", "$versionName")

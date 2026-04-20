@@ -326,6 +326,7 @@ class RealGrpcClient {
                 .setUser(username)
                 .setText(joinMessage)
                 .setPassword(password)
+                .setRoomId(currentRoomId)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .build())
             

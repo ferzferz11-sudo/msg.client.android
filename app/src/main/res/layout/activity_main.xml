@@ -50,6 +50,16 @@
         android:gravity="center_vertical"
         android:layout_marginBottom="8dp">
 
+        <ImageView
+            android:id="@+id/updateAvailableIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_update_available"
+            android:visibility="gone"
+            android:contentDescription="@string/update_available"
+            android:layout_marginEnd="4dp"
+            app:tint="?attr/colorPrimary" />
+
         <TextView
             android:id="@+id/downloadUpdateButton"
             android:layout_width="wrap_content"
