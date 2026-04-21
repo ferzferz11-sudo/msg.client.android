@@ -21,7 +21,7 @@
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">обновить</string>
     <string name="connection_logs">Логи соединения:</string>
-    <string name="connected_as">Подключен как: %s (сохранено)</string>
+    <string name="connected_to_room">Пользователь %1$s вошёл в чат %2$s</string>
     <string name="type_message_here">Сообщение</string>
     <string name="lavender_ready">Лаванда готова!</string>
     <string name="joined">%s присоединился</string>
@@ -45,6 +45,11 @@
     <string name="russian">Русский</string>
     <string name="english">English</string>
     
+    <string name="edit_profile">Редактировать данные профиля</string>
+    <string name="delete_profile">Удалить профиль</string>
+    <string name="delete_profile_confirm">Вы уверены, что хотите навсегда удалить свой профиль? Все ваши сообщения и изображения будут удалены. Это действие нельзя отменить.</string>
+    <string name="profile_deleted">Профиль успешно удален</string>
+    <string name="failed_to_delete_profile">Не удалось удалить профиль</string>
     <!-- Log Messages -->
     <string name="lavender_loaded">Лаванда успешно загружена</string>
     <string name="testing_server">Проверка соединения с 159.195.38.145:50051…</string>
@@ -131,4 +136,16 @@
     <string name="select_user">Выберите пользователя</string>
     <string name="online_users">Пользователи онлайн</string>
     <string name="update_available">Доступно обновление</string>
+    <string name="delete_chats">Удалить чаты</string>
+    <string name="delete_chats_confirmation">Вы уверены, что хотите удалить %d выбранных чатов? Все сообщения и изображения будут удалены навсегда.</string>
+    <string name="delete">Удалить</string>
+    <string name="deleted_count">Удалено чатов: %d</string>
+    <string name="failed_to_delete_chats">Не удалось удалить чаты</string>
+    <string name="add_chat">Добавить чат</string>
+    <string name="create_group">Создать группу</string>
+    <string name="enter_group_name">Название группы (необязательно)</string>
+    <string name="create">Создать</string>
+    <string name="select_at_least_one_user">Пожалуйста, выберите хотя бы одного пользователя</string>
+    <string name="group_created">Группа \"%s\" создана</string>
+    <string name="creating_chat">Создание чата…</string>
 </resources>

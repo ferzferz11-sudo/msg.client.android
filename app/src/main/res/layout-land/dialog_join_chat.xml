@@ -6,7 +6,7 @@
     android:orientation="horizontal"
     android:padding="24dp"
     android:gravity="center"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurfaceContainer">
 
     <!-- Left side: Title and inputs -->
     <LinearLayout
@@ -87,7 +87,8 @@
             android:id="@+id/serverAddressSpinner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="12dp"
+            android:textColor="?android:attr/textColorPrimary" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -145,15 +146,11 @@
 
             <Button
                 android:id="@+id/btnJoin"
-                style="?android:attr/buttonBarButtonStyle"
+                style="@style/PrimaryButtonCompact"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
                 android:layout_marginStart="6dp"
-                android:text="@string/join"
-                android:textSize="14sp"
-                android:textColor="?attr/colorOnPrimary"
-                android:backgroundTint="?attr/colorPrimary" />
+                android:layout_weight="1"
+                android:text="@string/join" />
 
         </LinearLayout>
 

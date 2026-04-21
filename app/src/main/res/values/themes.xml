@@ -1,29 +1,69 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Light theme -->
     <style name="Base.Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary colors -->
         <item name="colorPrimary">@color/deep_purple</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/lavender_mist</item>
-        <item name="colorOnSecondary">@color/white</item>
-        <item name="android:windowBackground">@color/silver_fog</item>
-        <item name="colorSurface">@color/silver_fog</item>
-        <item name="colorOnSurface">@color/deep_purple</item>
-        <item name="android:textColorPrimary">@color/deep_purple</item>
-        <item name="android:textColorHint">@color/lavender_mist</item>
-    </style>
+        <item name="colorPrimaryContainer">@color/lavender_mist</item>
+        <item name="colorOnPrimaryContainer">@color/deep_purple</item>
 
-    <style name="Theme.MsgClientAndroid" parent="Base.Theme.MsgClientAndroid" />
+        <!-- Secondary colors -->
+        <item name="colorSecondary">@color/lavender_mist</item>
+        <item name="colorOnSecondary">@color/deep_purple</item>
+        <item name="colorSecondaryContainer">@color/soft_lilac</item>
+        <item name="colorOnSecondaryContainer">@color/deep_purple</item>
+
+        <!-- Background colors -->
+        <item name="android:windowBackground">@color/pale_lilac</item>
+        <item name="colorSurface">@color/pale_lilac</item>
+        <item name="colorSurfaceVariant">@color/white</item>
+        <item name="colorOnSurface">@color/deep_purple</item>
+        <item name="colorOnSurfaceVariant">@color/deep_purple</item>
+
+        <!-- Dialog colors -->
+        <item name="colorSurfaceContainer">@color/white</item>
+        <item name="colorSurfaceContainerHigh">@color/white</item>
+
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">@color/deep_purple</item>
+        <item name="android:textColorSecondary">@color/deep_purple</item>
+        <item name="android:textColorHint">@color/lavender_mist</item>
+
+        <!-- Button colors -->
+        <item name="colorPrimaryInverse">@color/white</item>
+    </style>
 
     <!-- Dark theme for manual switching -->
     <style name="Theme_MsgClientAndroid_Dark" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary colors -->
         <item name="colorPrimary">@color/lavender_mist</item>
         <item name="colorOnPrimary">@color/deep_purple</item>
-        <item name="colorSecondary">@color/deep_purple</item>
-        <item name="colorOnSecondary">@color/soft_lilac</item>
-        <item name="android:windowBackground">@color/dark_slate</item>
-        <item name="colorSurface">@color/dark_slate</item>
-        <item name="colorOnSurface">@color/soft_lilac</item>
-        <item name="android:textColorPrimary">@color/soft_lilac</item>
+        <item name="colorPrimaryContainer">@color/deep_purple</item>
+        <item name="colorOnPrimaryContainer">@color/lavender_mist</item>
+
+        <!-- Secondary colors -->
+        <item name="colorSecondary">@color/white</item>
+        <item name="colorOnSecondary">@color/deep_purple</item>
+        <item name="colorSecondaryContainer">@color/lavender_mist</item>
+        <item name="colorOnSecondaryContainer">@color/deep_purple</item>
+
+        <!-- Background colors -->
+        <item name="android:windowBackground">@color/dark_background</item>
+        <item name="colorSurface">@color/dark_background</item>
+        <item name="colorSurfaceVariant">@color/lavender_mist</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorOnSurfaceVariant">@color/white</item>
+
+        <!-- Dialog colors -->
+        <item name="colorSurfaceContainer">@color/lavender_mist</item>
+        <item name="colorSurfaceContainerHigh">@color/lavender_mist</item>
+
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/lavender_mist</item>
         <item name="android:textColorHint">@color/lavender_mist</item>
+
+        <!-- Button colors -->
+        <item name="colorPrimaryInverse">@color/deep_purple</item>
     </style>
 </resources>

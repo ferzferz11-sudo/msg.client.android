@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurfaceContainer">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -54,13 +54,15 @@
 
         <Button
             android:id="@+id/btnChangeAvatar"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="44dp"
             android:text="@string/change_avatar"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textColor="?attr/colorOnSecondary"
             android:backgroundTint="?attr/colorSecondary"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"
+            app:cornerRadius="22dp" />
 
         <ProgressBar
             android:id="@+id/avatarProgressBar"
@@ -72,103 +74,143 @@
 
     </LinearLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/enter_new_username"
-        android:textSize="14sp"
-        android:textColor="?android:attr/textColorSecondary"
-        android:layout_marginBottom="8dp" />
-
-    <EditText
-        android:id="@+id/editTextUsername"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:hint="@string/enter_username"
-        android:inputType="textPersonName"
-        android:textSize="16sp"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textColorHint="?android:attr/textColorHint"
-        android:background="?android:attr/windowBackground" />
-
+    <!-- Edit Profile Toggle -->
     <Button
-        android:id="@+id/btnChangeUsername"
+        android:id="@+id/btnToggleEdit"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:text="@string/change_username"
-        android:textSize="16sp"
+        android:layout_height="48dp"
+        android:text="@string/edit_profile"
+        android:textSize="12sp"
         android:textColor="?attr/colorOnPrimary"
         android:backgroundTint="?attr/colorPrimary"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="8dp"
+        app:cornerRadius="24dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/enter_password"
-        android:textSize="14sp"
-        android:textColor="?android:attr/textColorSecondary"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.textfield.TextInputLayout
+    <LinearLayout
+        android:id="@+id/editFieldsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:passwordToggleEnabled="true"
-        app:passwordToggleTint="?android:attr/textColorSecondary"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        android:orientation="vertical"
+        android:visibility="gone">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/editTextOldPassword"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/enter_new_username"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/editTextUsername"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:hint="Old password"
-            android:inputType="textPassword"
+            android:hint="@string/enter_username"
+            android:inputType="textPersonName"
             android:textSize="16sp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
             android:textColor="?android:attr/textColorPrimary"
-            android:textColorHint="?android:attr/textColorHint" />
+            android:textColorHint="?android:attr/textColorHint"
+            android:background="?attr/colorSurface" />
 
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:passwordToggleEnabled="true"
-        app:passwordToggleTint="?android:attr/textColorSecondary"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/editTextNewPassword"
+        <Button
+            android:id="@+id/btnChangeUsername"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:hint="New password"
-            android:inputType="textPassword"
-            android:textSize="16sp"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textColorHint="?android:attr/textColorHint" />
+            android:layout_height="48dp"
+            android:text="@string/change_username"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnPrimary"
+            android:backgroundTint="?attr/colorPrimary"
+            android:layout_marginBottom="16dp"
+            app:cornerRadius="24dp" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/enter_password"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:passwordToggleEnabled="true"
+            app:passwordToggleTint="?android:attr/textColorSecondary"
+            app:boxBackgroundColor="?attr/colorSurface"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextOldPassword"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:hint="Old password"
+                android:inputType="textPassword"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:passwordToggleEnabled="true"
+            app:passwordToggleTint="?android:attr/textColorSecondary"
+            app:boxBackgroundColor="?attr/colorSurface"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextNewPassword"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:hint="New password"
+                android:inputType="textPassword"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="?android:attr/textColorHint" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/btnChangePassword"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/change_password"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnPrimary"
+            android:backgroundTint="?attr/colorPrimary"
+            android:layout_marginBottom="16dp"
+            app:cornerRadius="24dp" />
+    </LinearLayout>
 
     <Button
-        android:id="@+id/btnChangePassword"
+        android:id="@+id/btnDeleteProfile"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:text="@string/change_password"
-        android:textSize="16sp"
-        android:textColor="?attr/colorOnPrimary"
-        android:backgroundTint="?attr/colorPrimary"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="48dp"
+        android:text="@string/delete_profile"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#FF5252"
+        android:layout_marginBottom="8dp"
+        app:cornerRadius="24dp" />
 
     <Button
         android:id="@+id/btnCancel"
-        style="?android:attr/buttonBarButtonStyle"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="48dp"
         android:text="@string/cancel_dialog"
-        android:textSize="16sp"
+        android:textSize="12sp"
         android:textColor="?attr/colorOnSecondary"
-        android:backgroundTint="?attr/colorSecondary" />
+        android:backgroundTint="?attr/colorSecondary"
+        app:cornerRadius="24dp" />
 
 </LinearLayout>

@@ -10,8 +10,10 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#070531"
+        android:layout_margin="8dp"
+        android:background="@drawable/toolbar_background"
         android:elevation="4dp"
+        app:navigationIconTint="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -21,30 +23,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/chats"
-            android:textColor="@android:color/white"
+            android:textColor="?attr/colorOnPrimary"
             android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.05" />
 
         <ImageButton
-            android:id="@+id/usersButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_myplaces"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/select_user"
-            app:tint="@android:color/white"
-            android:layout_gravity="end"
-            android:layout_marginEnd="8dp" />
-
-        <ImageButton
             android:id="@+id/profileButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_edit"
+            android:src="@drawable/ic_person_edit"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/profile"
-            app:tint="@android:color/white"
+            app:tint="?attr/colorOnPrimary"
             android:layout_gravity="end"
             android:layout_marginEnd="8dp" />
 
@@ -62,5 +53,17 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/addChatFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_input_add"
+        app:tint="?attr/colorOnPrimary"
+        app:backgroundTint="?attr/colorPrimary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:contentDescription="@string/add_chat" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

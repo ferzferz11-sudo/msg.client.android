@@ -133,6 +133,15 @@ message MarkReadResponse {
   bool success = 1;
 }
 
+message DeleteChatRequest {
+  string chat_id = 1;
+}
+
+message DeleteChatResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 message UpdateAvatarRequest {
   string username = 1;
   string avatar_url = 2;
@@ -151,6 +160,15 @@ message GetUserAvatarResponse {
   string avatar_url = 1;
 }
 
+message DeleteProfileRequest {
+  string username = 1;
+}
+
+message DeleteProfileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 service ChatService {
   rpc Chat(stream Message) returns (stream Message);
   rpc GetClients(ClientListRequest) returns (ClientListResponse);
@@ -166,4 +184,6 @@ service ChatService {
   rpc MarkRead(MarkReadRequest) returns (MarkReadResponse);
   rpc UpdateAvatar(UpdateAvatarRequest) returns (UpdateAvatarResponse);
   rpc GetUserAvatar(GetUserAvatarRequest) returns (GetUserAvatarResponse);
+  rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
+  rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse);
 }

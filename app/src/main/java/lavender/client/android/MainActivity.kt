@@ -44,6 +44,11 @@ class MainActivity : AppCompatActivity() {
         toast.show()
     }
 
+    private fun isDarkTheme(): Boolean {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("color_scheme", "dark") != "light"
+    }
+
     companion object {
         private const val APK_URL = "http://159.195.38.145:8081/lavender.apk"
         private const val VERSION_CHECK_URL = "http://159.195.38.145:8081/version.txt"
@@ -51,8 +56,16 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var joinChatButton: Button
     private lateinit var downloadProgressBar: ProgressBar
+    private lateinit var downloadProgressText: TextView
     private lateinit var updateAvailableIndicator: ImageView
+    private lateinit var languageButton: Button
+    private lateinit var colorSchemeButton: Button
+    private lateinit var logoutButton: Button
+    private lateinit var copyLinkButton: ImageButton
+    private lateinit var shareLinkButton: ImageButton
+    private lateinit var downloadUpdateButton: Button
     private var currentLanguage: String? = null
+    private var currentColorScheme: String? = null
     private var updateCheckJob: Job? = null
 
     private val serverList = listOf(
@@ -66,10 +79,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         currentLanguage = getSavedLanguage()
+        currentColorScheme = getSavedColorScheme()
         updateLanguageButtonText()
         updateColorSchemeButtonText()
 
         updateAvailableIndicator = findViewById(R.id.updateAvailableIndicator)
+        downloadProgressBar = findViewById(R.id.downloadProgressBar)
+        downloadProgressText = findViewById(R.id.downloadProgressText)
+        languageButton = findViewById(R.id.languageButton)
+        colorSchemeButton = findViewById(R.id.colorSchemeButton)
+        logoutButton = findViewById(R.id.logoutButton)
+        copyLinkButton = findViewById(R.id.copyLinkButton)
+        shareLinkButton = findViewById(R.id.shareLinkButton)
+        downloadUpdateButton = findViewById(R.id.downloadUpdateButton)
 
         setupJoinChatButton()
         setupLogoutButton()
@@ -87,10 +109,46 @@ class MainActivity : AppCompatActivity() {
         if (savedLanguage != currentLanguage) {
             currentLanguage = savedLanguage
             applySavedLanguage()
-            recreate()
+            
+            // Safer way to recreate activity on some Android 14 devices (Xiaomi/MIUI)
+            // to avoid ClassCastException in ClientTransaction.
+            lifecycleScope.launch {
+                delay(10)
+                val intent = intent
+                finish()
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startActivity(intent)
+                } else {
+                    @Suppress("DEPRECATION")
+                    overridePendingTransition(0, 0)
+                    startActivity(intent)
+                    @Suppress("DEPRECATION")
+                    overridePendingTransition(0, 0)
+                }
+            }
         } else {
             updateLanguageButtonText()
             updateColorSchemeButtonText()
+        }
+
+        // Check if color scheme changed and recreate activity if needed
+        val savedColorScheme = getSavedColorScheme()
+        if (savedColorScheme != currentColorScheme) {
+            currentColorScheme = savedColorScheme
+            lifecycleScope.launch {
+                delay(10)
+                val intent = intent
+                finish()
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startActivity(intent)
+                } else {
+                    @Suppress("DEPRECATION")
+                    overridePendingTransition(0, 0)
+                    startActivity(intent)
+                    @Suppress("DEPRECATION")
+                    overridePendingTransition(0, 0)
+                }
+            }
         }
 
         // Start periodic update check
@@ -103,6 +161,12 @@ class MainActivity : AppCompatActivity() {
         stopPeriodicUpdateCheck()
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Activity will handle configuration changes without recreation
+        // Download will continue in the background
+    }
+
     // Show join chat button
     private fun setupJoinChatButton() {
         joinChatButton = findViewById(R.id.joinChatButton)
@@ -113,7 +177,6 @@ class MainActivity : AppCompatActivity() {
 
     // Add logout button
     private fun setupLogoutButton() {
-        val logoutButton: Button = findViewById(R.id.logoutButton)
         logoutButton.setOnClickListener {
             logout()
         }
@@ -121,7 +184,6 @@ class MainActivity : AppCompatActivity() {
 
     // Add language toggle button
     private fun setupLanguageButton() {
-        val languageButton: Button = findViewById(R.id.languageButton)
         languageButton.setOnClickListener {
             toggleLanguage()
         }
@@ -129,7 +191,6 @@ class MainActivity : AppCompatActivity() {
 
     // Add color scheme toggle button
     private fun setupColorSchemeButton() {
-        val colorSchemeButton: Button = findViewById(R.id.colorSchemeButton)
         colorSchemeButton.setOnClickListener {
             toggleColorScheme()
         }
@@ -137,24 +198,27 @@ class MainActivity : AppCompatActivity() {
 
     // Add download update button
     private fun setupDownloadUpdateButton() {
-        val downloadUpdateButton: TextView = findViewById(R.id.downloadUpdateButton)
-        downloadProgressBar = findViewById(R.id.downloadProgressBar)
         downloadUpdateButton.setOnClickListener {
-            downloadAndInstallApk()
+            try {
+                downloadAndInstallApk()
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Update button click error: ${e.message}", e)
+                showToast("Error starting download: ${e.message}", Toast.LENGTH_LONG)
+            }
         }
 
         // Update version text from BuildConfig
         val appVersionText: TextView = findViewById(R.id.appVersionText)
         appVersionText.text = BuildConfig.VERSION_NAME
 
-        findViewById<ImageButton>(R.id.copyLinkButton).setOnClickListener {
+        copyLinkButton.setOnClickListener {
             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("Lavender APK URL", APK_URL)
             clipboard.setPrimaryClip(clip)
             showToast(getString(R.string.copied_to_clipboard))
         }
 
-        findViewById<ImageButton>(R.id.shareLinkButton).setOnClickListener {
+        shareLinkButton.setOnClickListener {
             val shareIntent = Intent(Intent.ACTION_SEND)
             shareIntent.type = "text/plain"
             shareIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
@@ -164,23 +228,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadAndInstallApk() {
+        if (!::downloadProgressBar.isInitialized || !::downloadProgressText.isInitialized) {
+            android.util.Log.e("MainActivity", "Views not initialized")
+            showToast("Error: Views not initialized", Toast.LENGTH_LONG)
+            return
+        }
+
         downloadProgressBar.visibility = View.VISIBLE
+        downloadProgressText.visibility = View.VISIBLE
         downloadProgressBar.progress = 0
-        
+        setButtonsEnabled(false)
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val connection = URL(APK_URL).openConnection() as HttpURLConnection
                 connection.connect()
-                
+
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) {
                     throw Exception("Server returned HTTP ${connection.responseCode}")
                 }
-                
+
                 val fileLength = connection.contentLength
                 val input = connection.inputStream
                 val file = File(getExternalFilesDir(null), "lavender_update.apk")
                 val output = FileOutputStream(file)
-                
+
                 val data = ByteArray(4096)
                 var total: Long = 0
                 var count: Int
@@ -188,28 +260,45 @@ class MainActivity : AppCompatActivity() {
                     total += count.toLong()
                     if (fileLength > 0) {
                         val progress = (total * 100 / fileLength).toInt()
+                        val downloadedMb = total / (1024.0 * 1024.0)
+                        val totalMb = fileLength / (1024.0 * 1024.0)
                         withContext(Dispatchers.Main) {
                             downloadProgressBar.progress = progress
+                            downloadProgressText.text = String.format("%.2f / %.2f MB", downloadedMb, totalMb)
                         }
                     }
                     output.write(data, 0, count)
                 }
-                
+
                 output.flush()
                 output.close()
                 input.close()
-                
+
                 withContext(Dispatchers.Main) {
                     downloadProgressBar.visibility = View.GONE
+                    downloadProgressText.visibility = View.GONE
+                    setButtonsEnabled(true)
                     installApk(file)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     downloadProgressBar.visibility = View.GONE
+                    downloadProgressText.visibility = View.GONE
+                    setButtonsEnabled(true)
                     showToast("Download error: ${e.message}", Toast.LENGTH_LONG)
                 }
             }
         }
+    }
+
+    private fun setButtonsEnabled(enabled: Boolean) {
+        if (::joinChatButton.isInitialized) joinChatButton.isEnabled = enabled
+        if (::languageButton.isInitialized) languageButton.isEnabled = enabled
+        if (::colorSchemeButton.isInitialized) colorSchemeButton.isEnabled = enabled
+        if (::logoutButton.isInitialized) logoutButton.isEnabled = enabled
+        if (::copyLinkButton.isInitialized) copyLinkButton.isEnabled = enabled
+        if (::shareLinkButton.isInitialized) shareLinkButton.isEnabled = enabled
+        if (::downloadUpdateButton.isInitialized) downloadUpdateButton.isEnabled = enabled
     }
 
     private fun installApk(file: File) {
@@ -227,7 +316,17 @@ class MainActivity : AppCompatActivity() {
     
     private fun showUsernameDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_join_chat, null)
+
+        // Set dialog background using Material Design colors
+        val typedValue = android.util.TypedValue()
+        if (isDarkTheme()) {
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+            dialogView.setBackgroundColor(typedValue.data)
+        }
+
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val usernameInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val passwordInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
         val editText = dialogView.findViewById<EditText>(R.id.editTextUsername)
         val editTextPassword = dialogView.findViewById<EditText>(R.id.editTextPassword)
         val serverAddressSpinner = dialogView.findViewById<Spinner>(R.id.serverAddressSpinner)
@@ -235,7 +334,21 @@ class MainActivity : AppCompatActivity() {
         val serverStatusText = dialogView.findViewById<TextView>(R.id.serverStatusText)
         val refreshServerButton = dialogView.findViewById<TextView>(R.id.refreshServerButton)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
-        val btnJoin = dialogView.findViewById<Button>(R.id.btnJoin)
+        val btnJoin = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
+
+        // Set TextInputLayout background and button strokes in dark theme
+        if (isDarkTheme()) {
+            val surfaceValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+            usernameInputLayout.boxBackgroundColor = surfaceValue.data
+            passwordInputLayout.boxBackgroundColor = surfaceValue.data
+
+            // Add stroke to btnJoin using primary color
+            val primaryValue = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+            btnJoin.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+            btnJoin.strokeWidth = 2
+        }
         
         // Set localized text
         titleText.text = getString(R.string.welcome)
@@ -378,14 +491,14 @@ class MainActivity : AppCompatActivity() {
     
     private fun applySavedColorScheme() {
         val savedScheme = getSavedColorScheme()
-        val theme = if (savedScheme != null) {
-            when (savedScheme) {
-                "dark" -> R.style.Theme_MsgClientAndroid_Dark
-                else -> R.style.Theme_MsgClientAndroid
-            }
-        } else {
-            // If no saved scheme (first launch), use dark theme
-            R.style.Theme_MsgClientAndroid_Dark
+        if (savedScheme == null) {
+            // First launch: save "dark" as default and apply it
+            saveColorScheme("dark")
+        }
+        
+        val theme = when (getSavedColorScheme()) {
+            "light" -> R.style.Theme_MsgClientAndroid
+            else -> R.style.Theme_MsgClientAndroid_Dark
         }
         setTheme(theme)
     }

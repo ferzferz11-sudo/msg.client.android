@@ -19,6 +19,7 @@ import android.os.Bundle
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts
 import android.provider.MediaStore
 import android.widget.EditText
 import android.widget.TextView
@@ -51,6 +52,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var toolbarTitle: TextView
     private lateinit var roomNameTextView: TextView
     private var mainMenu: Menu? = null
+    private var colorSchemeMenuItem: MenuItem? = null
     
     private var username: String = ""
     private var serverAddress: String = ""
@@ -74,6 +76,19 @@ class ChatActivity : AppCompatActivity() {
         toast.show()
     }
     
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                selectedImageUri = uri
+                showToast("Image selected")
+                updateSendButtonState()
+            }
+        } else if (result.resultCode == RESULT_CANCELED) {
+            selectedImageUri = null
+            updateSendButtonState()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedColorScheme()
         applySavedLanguage()
@@ -90,22 +105,26 @@ class ChatActivity : AppCompatActivity() {
         // 3. Setup observers (now connectivityTest is not null)
         setupObservers()
         
+        toolbar.setNavigationOnClickListener {
+            handleBackNavigation()
+        }
+
         // Setup back press dispatcher
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                navigateToChatList()
+                handleBackNavigation()
             }
         })
         
         // Restore username from savedInstanceState or get from intent
         username = savedInstanceState?.getString("username") ?: intent.getStringExtra("username") ?: "User"
-        serverAddress = savedInstanceState?.getString("SERVER_ADDRESS") ?: intent.getStringExtra("SERVER_ADDRESS") ?: getString(R.string.server_address)
-        password = savedInstanceState?.getString("PASSWORD") ?: intent.getStringExtra("PASSWORD") ?: ""
+        serverAddress = savedInstanceState?.getString("serverAddress") ?: intent.getStringExtra("serverAddress") ?: "159.195.38.145:50051"
+        password = savedInstanceState?.getString("password") ?: intent.getStringExtra("password") ?: ""
         val roomId = savedInstanceState?.getString("roomId") ?: intent.getStringExtra("roomId") ?: "general"
 
-        // Set room in ViewModel
-        viewModel.grpcClient.setRoomId(roomId)
+        // Set room ID BEFORE connecting to ensure joinMessage uses correct room
         viewModel.currentRoomId = roomId
+        viewModel.grpcClient.setRoomId(roomId)
 
         // Update room name display
         updateRoomName(roomId)
@@ -137,8 +156,8 @@ class ChatActivity : AppCompatActivity() {
                 viewModel.startChat(username, password, joinMessage) { }
 
                 // Load message history for this room after connection
-                android.util.Log.d("ChatActivity", "Calling loadHistory for room: $roomId")
-                viewModel.loadHistory()
+                android.util.Log.d("ChatActivity", "Calling switchRoom for room: $roomId")
+                viewModel.switchRoom(roomId)
                 viewModel.markRead(username)
 
                 // Register FCM Token for push notifications
@@ -150,27 +169,52 @@ class ChatActivity : AppCompatActivity() {
                         }
                     }
 
-                showToast("Connecting to $serverAddress as $username...")
+                val roomDisplayName = intent.getStringExtra("roomName") ?: roomId
+                showToast(getString(R.string.connected_to_room, username, roomDisplayName), Toast.LENGTH_LONG)
             } catch (e: Exception) {
                 e.printStackTrace()
                 addMessage("Error: ${e.message}")
             }
         } else {
-            // If recreating (e.g., theme change), load history after a short delay
+            // If recreating (e.g., theme change), set room ID and load history after a short delay
+            viewModel.currentRoomId = roomId
+            viewModel.grpcClient.setRoomId(roomId)
             android.util.Log.d("ChatActivity", "Recreating Activity, will load history after delay")
             lifecycleScope.launch {
                 delay(500)
-                android.util.Log.d("ChatActivity", "Calling loadHistory after delay for room: $roomId")
-                viewModel.loadHistory()
+                android.util.Log.d("ChatActivity", "Calling switchRoom after delay for room: $roomId")
+                viewModel.switchRoom(roomId)
             }
         }
     }
-    
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        // Get new roomId from intent
+        val newRoomId = intent.getStringExtra("roomId") ?: "general"
+        val newRoomName = intent.getStringExtra("roomName")
+
+        android.util.Log.d("ChatActivity", "onNewIntent: switching to room $newRoomId")
+
+        // Clear messages and switch to new room
+        viewModel.switchRoom(newRoomId)
+        updateRoomName(newRoomId)
+
+        if (newRoomName != null) {
+            roomNameTextView.text = newRoomName
+        }
+
+        // Show toast about room change
+        val roomDisplayName = newRoomName ?: newRoomId
+        showToast(getString(R.string.connected_to_room, username, roomDisplayName))
+    }
+
     private fun initViews() {
         toolbar = findViewById(R.id.toolbar)
         toolbarTitle = findViewById(R.id.toolbarTitle)
         roomNameTextView = findViewById(R.id.roomNameTextView)
-        val usersButton = findViewById<android.widget.ImageButton>(R.id.usersButton)
         setSupportActionBar(toolbar)
         supportActionBar?.apply {
             title = "" // Clear default title
@@ -180,15 +224,9 @@ class ChatActivity : AppCompatActivity() {
 
         setupEmojiPanel()
 
-        animateToolbarTitle()
+        // animateToolbarTitle()
 
-        toolbar.setNavigationOnClickListener {
-            navigateToChatList()
-        }
-
-        usersButton.setOnClickListener {
-            showUsersDialog()
-        }
+        // Remove redundant setNavigationOnClickListener here, it's handled in onCreate
 
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
@@ -198,7 +236,7 @@ class ChatActivity : AppCompatActivity() {
 
         attachImageButton?.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            startActivityForResult(intent, PICK_IMAGE_REQUEST)
+            pickImageLauncher.launch(intent)
         }
 
         attachImageButton?.setOnLongClickListener {
@@ -331,6 +369,14 @@ class ChatActivity : AppCompatActivity() {
                 menu.findItem(R.id.action_delete)?.isVisible = hasSelection
                 menu.findItem(R.id.action_language)?.isVisible = !hasSelection
                 menu.findItem(R.id.action_color_scheme)?.isVisible = !hasSelection
+            }
+
+            if (hasSelection) {
+                toolbarTitle.text = getString(R.string.selected_count, selectedCount)
+                roomNameTextView.visibility = View.GONE
+            } else {
+                toolbarTitle.text = getString(R.string.app_name)
+                roomNameTextView.visibility = View.VISIBLE
             }
         }, { message ->
             showReactionPicker(message)
@@ -491,29 +537,28 @@ class ChatActivity : AppCompatActivity() {
             val newLang = if (currentLang == "en") "ru" else "en"
             updateLocale(newLang)
         }
-        
-        // Update theme icon based on current theme
-        updateThemeIcon(menu)
-        
+
+        // Save reference to color scheme menu item
+        colorSchemeMenuItem = menu?.findItem(R.id.action_color_scheme)
+        updateThemeIcon()
+
         return true
     }
     
-    private fun updateThemeIcon(menu: Menu?) {
-        val themeItem = menu?.findItem(R.id.action_color_scheme)
-        val currentScheme = getSavedColorScheme() ?: "light"
+    private fun updateThemeIcon() {
+        val currentScheme = getSavedColorScheme() ?: "dark"
         val iconRes = if (currentScheme == "dark") {
             R.drawable.ic_theme_dark
         } else {
             R.drawable.ic_theme_toggle
         }
-        themeItem?.setIcon(iconRes)
+        colorSchemeMenuItem?.setIcon(iconRes)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
-                // Navigate back to chat list instead of logout
-                navigateToChatList()
+                handleBackNavigation()
                 true
             }
             R.id.action_delete -> {
@@ -525,22 +570,19 @@ class ChatActivity : AppCompatActivity() {
                 true
             }
             R.id.action_color_scheme -> {
-                // Toggle color scheme
-                val currentScheme = getSavedColorScheme() ?: "light"
-                val newScheme = if (currentScheme == "light") "dark" else "light"
-                applyTheme(newScheme)
+                toggleColorScheme()
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    private fun navigateToChatList() {
-        val intent = Intent(this, ChatListActivity::class.java)
-        intent.putExtra("username", username)
-        intent.putExtra("password", password)
-        startActivity(intent)
-        finish()
+    private fun handleBackNavigation() {
+        if (messageAdapter.getSelectedMessages().isNotEmpty()) {
+            messageAdapter.clearSelection()
+        } else {
+            finish()
+        }
     }
 
     private fun updateLocale(langCode: String) {
@@ -557,14 +599,11 @@ class ChatActivity : AppCompatActivity() {
     }
     
     private fun applySavedColorScheme() {
-        val savedScheme = getSavedColorScheme()
-        if (savedScheme != null) {
-            val theme = when (savedScheme) {
-                "dark" -> R.style.Theme_MsgClientAndroid_Dark
-                else -> R.style.Theme_MsgClientAndroid
-            }
-            setTheme(theme)
+        val theme = when (getSavedColorScheme()) {
+            "light" -> R.style.Base_Theme_MsgClientAndroid
+            else -> R.style.Theme_MsgClientAndroid_Dark
         }
+        setTheme(theme)
     }
     
     private fun getSavedLanguage(): String? {
@@ -598,8 +637,14 @@ class ChatActivity : AppCompatActivity() {
         resources.updateConfiguration(config, resources.displayMetrics)
     }
 
-    private fun applyTheme(themeName: String) {
-        saveColorScheme(themeName)
+    private fun toggleColorScheme() {
+        val schemes = listOf("light", "dark")
+        val currentScheme = getSavedColorScheme() ?: "dark"
+        val currentIndex = schemes.indexOf(currentScheme)
+        val nextIndex = (currentIndex + 1) % schemes.size
+        val newScheme = schemes[nextIndex]
+
+        saveColorScheme(newScheme)
         recreate()
     }
     
@@ -678,18 +723,6 @@ class ChatActivity : AppCompatActivity() {
     private fun addMessage(text: String) {
         // This is only for system messages that are NOT in the gRPC stream
         println("DEBUG: System Message: System: $text")
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
-            selectedImageUri = data.data
-            showToast("Image selected")
-            updateSendButtonState()
-        } else if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_CANCELED) {
-            selectedImageUri = null
-            updateSendButtonState()
-        }
     }
 
     private fun uploadImageToServer(uri: Uri, callback: (String) -> Unit) {
@@ -855,108 +888,40 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun updateRoomName(roomId: String) {
-        val roomName = if (roomId == "general") {
-            getString(R.string.general_chat)
-        } else {
-            // For private chats, try to extract the other user's name
-            // Room ID format is typically "user1_user2" or similar
-            val parts = roomId.split("_")
-            if (parts.size >= 2) {
-                val otherUser = if (parts[0] == username) parts[1] else parts[0]
-                getString(R.string.private_chat_with, otherUser)
-            } else {
-                roomId
-            }
+        if (roomId == "general") {
+            roomNameTextView.text = getString(R.string.general_chat)
+            return
         }
-        roomNameTextView.text = roomName
-    }
-
-    private fun showUsersDialog() {
-        // Load all users and online users
-        viewModel.grpcClient.loadAllUsers()
-        viewModel.grpcClient.loadUsers()
-
-        lifecycleScope.launch {
-            // Wait a bit for users to load
-            kotlinx.coroutines.delay(500)
-
-            val allUsers = viewModel.allUsers.value
-            val onlineUsers = viewModel.users.value
-
-            if (allUsers.isEmpty()) {
-                runOnUiThread {
-                    showToast(getString(R.string.no_users_available))
-                }
-                return@launch
-            }
-
-            runOnUiThread {
-                val container = android.widget.LinearLayout(this@ChatActivity).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding(16, 16, 16, 16)
-                }
-
-                // Sort users: online first, then offline
-                val sortedUsers = allUsers.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
-
-                for (user in sortedUsers) {
-                    val userView = layoutInflater.inflate(R.layout.item_user, container, false)
-                    val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
-                    val usernameText = userView.findViewById<TextView>(R.id.usernameText)
-
-                    val isOnline = onlineUsers.contains(user)
-                    statusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        if (isOnline) getColor(android.R.color.holo_green_dark)
-                        else getColor(android.R.color.darker_gray)
-                    )
-
-                    usernameText.text = user
-                    container.addView(userView)
-                }
-
-                val dialog = android.app.AlertDialog.Builder(this@ChatActivity)
-                    .setTitle(getString(R.string.select_user))
-                    .setView(container)
-                    .setPositiveButton(android.R.string.cancel, null)
-                    .show()
-
-                // Set click listeners after dialog is created
-                for (i in 0 until container.childCount) {
-                    val userView = container.getChildAt(i)
-                    val usernameText = userView.findViewById<TextView>(R.id.usernameText)
-                    val user = usernameText.text.toString()
-
-                    userView.setOnClickListener {
-                        if (user != username) {
-                            createDirectChat(user)
-                        }
-                        dialog.dismiss()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun createDirectChat(targetUser: String) {
-        if (targetUser == username) {
-            showToast(getString(R.string.cannot_chat_with_yourself))
+        
+        // Try to get chat name from intent first (passed from ChatListActivity)
+        val intentName = intent.getStringExtra("roomName")
+        if (!intentName.isNullOrEmpty()) {
+            roomNameTextView.text = intentName
             return
         }
 
-        lifecycleScope.launch {
-            viewModel.grpcClient.createDirectChat(username, targetUser) { chatId ->
-                if (chatId != null) {
-                    runOnUiThread {
-                        viewModel.switchRoom(chatId)
-                        updateRoomName(chatId)
-                        showToast(getString(R.string.chat_created_with, targetUser))
-                    }
+        // For private chats, try to extract the other user's name
+        // Room ID format is typically "user1_user2_direct"
+        if (roomId.endsWith("_direct")) {
+            val parts = roomId.removeSuffix("_direct").split("_")
+            if (parts.size >= 2) {
+                val otherUser = if (parts[0] == username) parts[1] else parts[0]
+                roomNameTextView.text = getString(R.string.private_chat_with, otherUser)
+                return
+            }
+        }
+        
+        // Fallback: fetch chats to find the name for this roomId
+        viewModel.grpcClient.getChats(username) { chats ->
+            val chat = chats.find { it.id == roomId }
+            runOnUiThread {
+                if (chat != null) {
+                    roomNameTextView.text = chat.name
                 } else {
-                    runOnUiThread {
-                        showToast(getString(R.string.failed_to_create_chat))
-                    }
+                    roomNameTextView.text = roomId
                 }
             }
         }
     }
+
 }

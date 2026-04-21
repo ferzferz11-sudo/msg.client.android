@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import android.provider.MediaStore
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
@@ -49,7 +50,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: ChatAdapter
-    private val grpcClient = GrpcClient()
+    private val grpcClient = GrpcClient
     private var username: String = ""
     private var password: String = ""
     private var colorSchemeMenuItem: MenuItem? = null
@@ -64,6 +65,20 @@ class ChatListActivity : AppCompatActivity() {
         val toast = Toast.makeText(this, message, duration)
         toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
         toast.show()
+    }
+
+    private fun isDarkTheme(): Boolean {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("color_scheme", "dark") != "light"
+    }
+
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                selectedAvatarUri = uri
+                uploadAvatarToServer(uri)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,24 +100,48 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         toolbar.setNavigationOnClickListener {
-            // Возвращаемся на главную (выход)
-            finish()
+            if (adapter.getSelectedChats().isNotEmpty()) {
+                adapter.clearSelection()
+            } else {
+                // Возвращаемся на главную (выход)
+                finish()
+            }
         }
 
-        val usersButton = findViewById<android.widget.ImageButton>(R.id.usersButton)
-        usersButton.setOnClickListener {
-            showUsersDialog()
-        }
+        // Handle system back button
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (adapter.getSelectedChats().isNotEmpty()) {
+                    adapter.clearSelection()
+                } else {
+                    finish()
+                }
+            }
+        })
 
         val profileButton = findViewById<android.widget.ImageButton>(R.id.profileButton)
         profileButton.setOnClickListener {
             showProfileDialog()
         }
 
+        val addChatFab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.addChatFab)
+        addChatFab.setOnClickListener {
+            showCreateChatDialog()
+        }
+
         recyclerView = findViewById(R.id.chatsRecyclerView)
         adapter = ChatAdapter(
             onChatClick = { chat ->
-                openChat(chat.id)
+                openChat(chat.id, chat.name)
+            },
+            onSelectionChanged = { count ->
+                invalidateOptionsMenu()
+                val toolbarTitle = findViewById<TextView>(R.id.toolbarTitle)
+                if (count > 0) {
+                    toolbarTitle.text = getString(R.string.selected_count, count)
+                } else {
+                    toolbarTitle.text = getString(R.string.chats)
+                }
             },
             currentUsername = username,
             initialAvatarCache = grpcClient.getAvatarCache()
@@ -295,7 +334,7 @@ class ChatListActivity : AppCompatActivity() {
                 if (chats.isEmpty()) {
                     runOnUiThread {
                         // Если нет чатов, открываем general чат
-                        openChat("general")
+                        openChat("general", getString(R.string.general_chat))
                     }
                 } else {
                     // Load avatars for all chat participants first
@@ -390,29 +429,24 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun openChat(chatId: String) {
+    private fun openChat(chatId: String, roomName: String? = null) {
         lifecycleScope.launch {
             val intent = Intent(this@ChatListActivity, ChatActivity::class.java)
                 .putExtra("username", username)
                 .putExtra("password", password)
                 .putExtra("roomId", chatId)
+            
+            if (roomName != null) {
+                intent.putExtra("roomName", roomName)
+            }
+            
             startActivity(intent)
-            finish()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         grpcClient.disconnect()
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
-            selectedAvatarUri = data.data
-            // Upload avatar to server
-            uploadAvatarToServer(selectedAvatarUri!!)
-        }
     }
 
     private fun uploadAvatarToServer(uri: Uri) {
@@ -530,8 +564,91 @@ class ChatListActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
-                // Возвращаемся на главную (выход)
-                finish()
+                if (adapter.getSelectedChats().isNotEmpty()) {
+                    adapter.clearSelection()
+                } else {
+                    // Возвращаемся на главную (выход)
+                    finish()
+                }
+                true
+            }
+            R.id.action_delete -> {
+                val selected = adapter.getSelectedChats()
+                if (selected.isNotEmpty()) {
+                    val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+
+                    // Set dialog background using Material Design colors
+                    val typedValue = android.util.TypedValue()
+                    if (isDarkTheme()) {
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                        dialogView.setBackgroundColor(typedValue.data)
+                    }
+
+                    val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+                    val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+                    val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+                    val btnDelete = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete)
+
+                    titleText.text = getString(R.string.delete_chats)
+                    messageText.text = getString(R.string.delete_chats_confirmation, selected.size)
+
+                    // Set button strokes in dark theme
+                    if (isDarkTheme()) {
+                        val primaryValue = android.util.TypedValue()
+                        theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                        val strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                        btnCancel.strokeColor = strokeColor
+                        btnCancel.strokeWidth = 2
+                        btnDelete.strokeColor = strokeColor
+                        btnDelete.strokeWidth = 2
+                    }
+
+                    val dialog = AlertDialog.Builder(this)
+                        .setView(dialogView)
+                        .create()
+
+                    btnCancel.setOnClickListener {
+                        dialog.dismiss()
+                    }
+
+                    btnDelete.setOnClickListener {
+                        dialog.dismiss()
+                        val chatsToDelete = selected.toList()
+                        adapter.clearSelection()
+
+                        lifecycleScope.launch {
+                            var successCount = 0
+                            var lastErrorMessage = ""
+                            for (chat in chatsToDelete) {
+                                val result = withContext(Dispatchers.IO) {
+                                    val deferred = kotlinx.coroutines.CompletableDeferred<Pair<Boolean, String>>()
+                                    grpcClient.deleteChat(chat.id) { success, message ->
+                                        deferred.complete(success to message)
+                                    }
+                                    deferred.await()
+                                }
+                                if (result.first) {
+                                    successCount++
+                                } else {
+                                    lastErrorMessage = result.second
+                                }
+                            }
+
+                            runOnUiThread {
+                                if (successCount > 0) {
+                                    showToast(getString(R.string.deleted_count, successCount))
+                                    // Refresh the chat list
+                                    loadChats()
+                                } else {
+                                    val errorMsg = if (lastErrorMessage.isNotEmpty()) lastErrorMessage else getString(R.string.failed_to_delete_chats)
+                                    showToast(errorMsg)
+                                }
+                            }
+                        }
+                    }
+
+                    dialog.show()
+                }
                 true
             }
             R.id.action_color_scheme -> {
@@ -545,13 +662,20 @@ class ChatListActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.chat_list_menu, menu)
 
+        val hasSelection = adapter.getSelectedChats().isNotEmpty()
+        menu.findItem(R.id.action_delete)?.isVisible = hasSelection
+        menu.findItem(R.id.action_language)?.isVisible = !hasSelection
+        menu.findItem(R.id.action_color_scheme)?.isVisible = !hasSelection
+
+        findViewById<View>(R.id.profileButton)?.visibility = if (hasSelection) View.GONE else View.VISIBLE
+
         // Save reference to color scheme menu item
         colorSchemeMenuItem = menu.findItem(R.id.action_color_scheme)
         updateColorSchemeIcon()
 
         // Update language indicator text and add click handler
         val languageItem = menu.findItem(R.id.action_language)
-        val languageView = languageItem.actionView
+        val languageView = languageItem?.actionView
         val languageText = languageView?.findViewById<TextView>(R.id.languageText)
         val currentLang = getSavedLanguage() ?: "en"
         languageText?.text = if (currentLang == "en") "EN" else "RU"
@@ -566,7 +690,7 @@ class ChatListActivity : AppCompatActivity() {
         return true
     }
 
-    private fun showUsersDialog() {
+    private fun showCreateChatDialog() {
         // Load all users and online users
         grpcClient.loadAllUsers()
         grpcClient.loadUsers()
@@ -575,7 +699,7 @@ class ChatListActivity : AppCompatActivity() {
             // Wait a bit for users to load
             kotlinx.coroutines.delay(500)
 
-            val allUsers = grpcClient.allUsers.value
+            val allUsers = grpcClient.allUsers.value.filter { it != username }
             val onlineUsers = grpcClient.users.value
 
             if (allUsers.isEmpty()) {
@@ -586,19 +710,47 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                val container = android.widget.LinearLayout(this@ChatListActivity).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding(16, 16, 16, 16)
+                val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
+
+                // Set dialog background using Material Design colors
+                val typedValue = android.util.TypedValue()
+                if (isDarkTheme()) {
+                    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                    dialogView.setBackgroundColor(typedValue.data)
                 }
+
+                val groupNameInput = dialogView.findViewById<EditText>(R.id.groupNameInput)
+                val usersContainer = dialogView.findViewById<android.widget.LinearLayout>(R.id.usersContainer)
+                val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+                val btnCreate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCreate)
+                val groupInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.groupInputLayout)
+
+                // Set TextInputLayout background and button strokes in dark theme
+                if (isDarkTheme()) {
+                    val surfaceValue = android.util.TypedValue()
+                    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+                    groupInputLayout.boxBackgroundColor = surfaceValue.data
+
+                    val primaryValue = android.util.TypedValue()
+                    theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                    val strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                    btnCancel.strokeColor = strokeColor
+                    btnCancel.strokeWidth = 2
+                    btnCreate.strokeColor = strokeColor
+                    btnCreate.strokeWidth = 2
+                }
+                
+                val selectedUsers = mutableSetOf<String>()
 
                 // Sort users: online first, then offline
                 val sortedUsers = allUsers.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
 
                 for (user in sortedUsers) {
-                    val userView = layoutInflater.inflate(R.layout.item_user, null)
+                    val userView = layoutInflater.inflate(R.layout.item_user_selectable, null)
                     val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
                     val usernameText = userView.findViewById<TextView>(R.id.usernameText)
-                    val userAvatar = userView.findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.userAvatar)
+                    val userAvatar = userView.findViewById<CircleImageView>(R.id.userAvatar)
+                    val checkBox = userView.findViewById<android.widget.CheckBox>(R.id.userCheckBox)
 
                     val isOnline = onlineUsers.contains(user)
                     statusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
@@ -607,70 +759,64 @@ class ChatListActivity : AppCompatActivity() {
                     )
 
                     usernameText.text = user
-                    container.addView(userView)
-
-                    // Check cache first
+                    
+                    // Set avatar
                     val avatarCache = grpcClient.getAvatarCache()
                     val cachedAvatarUrl = avatarCache[user]
-
-                    when {
-                        !cachedAvatarUrl.isNullOrEmpty() -> {
-                            // Load from cache
-                            Glide.with(this@ChatListActivity)
-                                .load(cachedAvatarUrl)
-                                .placeholder(R.drawable.ic_default_avatar)
-                                .error(R.drawable.ic_default_avatar)
-                                .circleCrop()
-                                .into(userAvatar)
-                        }
-                        cachedAvatarUrl == "" -> {
-                            // Cache has empty string (already tried loading), set default avatar
-                            userAvatar.setImageResource(R.drawable.ic_default_avatar)
-                        }
-                        else -> {
-                            // Load from server
-                            grpcClient.getUserAvatar(user) { avatarUrl ->
-                                runOnUiThread {
-                                    if (avatarUrl.isNotEmpty()) {
-                                        Glide.with(this@ChatListActivity)
-                                            .load(avatarUrl)
-                                            .placeholder(R.drawable.ic_default_avatar)
-                                            .error(R.drawable.ic_default_avatar)
-                                            .circleCrop()
-                                            .into(userAvatar)
-                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                                    } else {
-                                        // Set default avatar if server returns empty
-                                        userAvatar.setImageResource(R.drawable.ic_default_avatar)
-                                        // Save empty string in cache to avoid retrying
-                                        grpcClient.updateAvatarCache(user, "")
-                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                                    }
-                                }
-                            }
-                        }
+                    if (!cachedAvatarUrl.isNullOrEmpty()) {
+                        Glide.with(this@ChatListActivity)
+                            .load(cachedAvatarUrl)
+                            .placeholder(R.drawable.ic_default_avatar)
+                            .circleCrop()
+                            .into(userAvatar)
+                    } else {
+                        userAvatar.setImageResource(R.drawable.ic_default_avatar)
                     }
-                }
-
-                val dialog = android.app.AlertDialog.Builder(this@ChatListActivity)
-                    .setTitle(getString(R.string.select_user))
-                    .setView(container)
-                    .setPositiveButton(android.R.string.cancel, null)
-                    .show()
-
-                // Set click listeners after dialog is created
-                for (i in 0 until container.childCount) {
-                    val userView = container.getChildAt(i)
-                    val usernameText = userView.findViewById<TextView>(R.id.usernameText)
-                    val user = usernameText.text.toString()
 
                     userView.setOnClickListener {
-                        if (user != username) {
-                            createDirectChat(user)
+                        checkBox.isChecked = !checkBox.isChecked
+                        if (checkBox.isChecked) selectedUsers.add(user) else selectedUsers.remove(user)
+                    }
+                    checkBox.setOnCheckedChangeListener { _, isChecked ->
+                        if (isChecked) selectedUsers.add(user) else selectedUsers.remove(user)
+                    }
+
+                    usersContainer.addView(userView)
+                }
+
+                val dialog = AlertDialog.Builder(this@ChatListActivity)
+                    .setView(dialogView)
+                    .create()
+
+                // Set up button listeners
+                btnCancel.setOnClickListener {
+                    dialog.dismiss()
+                }
+
+                btnCreate.setOnClickListener {
+                    val groupName = groupNameInput.text.toString().trim()
+                    if (selectedUsers.isEmpty()) {
+                        showToast(getString(R.string.select_at_least_one_user))
+                        return@setOnClickListener
+                    }
+
+                    if (selectedUsers.size == 1 && groupName.isEmpty()) {
+                        // Create direct chat
+                        dialog.dismiss()
+                        createDirectChat(selectedUsers.first())
+                    } else {
+                        // Create group chat
+                        val finalGroupName = if (groupName.isEmpty()) {
+                            (selectedUsers + username).joinToString(", ")
+                        } else {
+                            groupName
                         }
                         dialog.dismiss()
+                        createGroupChat(finalGroupName, (selectedUsers + username).toList())
                     }
                 }
+
+                dialog.show()
             }
         }
     }
@@ -681,12 +827,51 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
+        val progressView = layoutInflater.inflate(R.layout.dialog_loading, null)
+        val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(progressView)
+            .setCancelable(true)
+            .create()
+        progressDialog.show()
+
         lifecycleScope.launch {
             grpcClient.createDirectChat(username, targetUser) { chatId ->
+                runOnUiThread { progressDialog.dismiss() }
                 if (chatId != null) {
+                    lifecycleScope.launch {
+                        kotlinx.coroutines.delay(500)
+                        runOnUiThread {
+                            openChat(chatId, getString(R.string.private_chat_with, targetUser))
+                            showToast(getString(R.string.chat_created_with, targetUser))
+                        }
+                    }
+                } else {
                     runOnUiThread {
-                        openChat(chatId)
-                        showToast(getString(R.string.chat_created_with, targetUser))
+                        showToast(getString(R.string.failed_to_create_chat))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun createGroupChat(name: String, participants: List<String>) {
+        val progressView = layoutInflater.inflate(R.layout.dialog_loading, null)
+        val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(progressView)
+            .setCancelable(true)
+            .create()
+        progressDialog.show()
+
+        lifecycleScope.launch {
+            grpcClient.createGroupChat(name, participants) { chatId ->
+                runOnUiThread { progressDialog.dismiss() }
+                if (chatId != null) {
+                    lifecycleScope.launch {
+                        kotlinx.coroutines.delay(500)
+                        runOnUiThread {
+                            openChat(chatId, name)
+                            showToast(getString(R.string.group_created, name))
+                        }
                     }
                 } else {
                     runOnUiThread {
@@ -700,6 +885,13 @@ class ChatListActivity : AppCompatActivity() {
     private fun showProfileDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_profile, null)
 
+        // Set dialog background using Material Design colors
+        val typedValue = android.util.TypedValue()
+        if (isDarkTheme()) {
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+            dialogView.setBackgroundColor(typedValue.data)
+        }
+
         val editTextUsername = dialogView.findViewById<EditText>(R.id.editTextUsername)
         val editTextOldPassword = dialogView.findViewById<EditText>(R.id.editTextOldPassword)
         val editTextNewPassword = dialogView.findViewById<EditText>(R.id.editTextNewPassword)
@@ -710,6 +902,38 @@ class ChatListActivity : AppCompatActivity() {
         val btnChangeAvatar = dialogView.findViewById<Button>(R.id.btnChangeAvatar)
         val avatarProgressBar = dialogView.findViewById<android.widget.ProgressBar>(R.id.avatarProgressBar)
         val btnCloseDialog = dialogView.findViewById<ImageButton>(R.id.btnCloseDialog)
+        val btnToggleEdit = dialogView.findViewById<Button>(R.id.btnToggleEdit)
+        val editFieldsContainer = dialogView.findViewById<View>(R.id.editFieldsContainer)
+        val btnDeleteProfile = dialogView.findViewById<Button>(R.id.btnDeleteProfile)
+
+        btnToggleEdit.setOnClickListener {
+            if (editFieldsContainer.visibility == View.VISIBLE) {
+                editFieldsContainer.visibility = View.GONE
+            } else {
+                editFieldsContainer.visibility = View.VISIBLE
+            }
+        }
+
+        btnDeleteProfile.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.delete_profile)
+                .setMessage(R.string.delete_profile_confirm)
+                .setPositiveButton(R.string.delete_profile) { _, _ ->
+                    grpcClient.deleteProfile(username) { success, message ->
+                        runOnUiThread {
+                            if (success) {
+                                showToast(getString(R.string.profile_deleted))
+                                grpcClient.disconnect()
+                                finish()
+                            } else {
+                                showToast(getString(R.string.failed_to_delete_profile) + ": " + message, Toast.LENGTH_LONG)
+                            }
+                        }
+                    }
+                }
+                .setNegativeButton(R.string.cancel_dialog, null)
+                .show()
+        }
 
         // Store references
         currentAvatarImageView = avatarImageView
@@ -747,7 +971,7 @@ class ChatListActivity : AppCompatActivity() {
 
         btnChangeAvatar.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            startActivityForResult(intent, PICK_IMAGE_REQUEST)
+            pickImageLauncher.launch(intent)
         }
 
         btnChangeUsername.setOnClickListener {
@@ -794,11 +1018,11 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun applySavedColorScheme() {
-        val scheme = getSavedColorScheme() ?: "light"
-        when (scheme) {
-            "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+        val theme = when (getSavedColorScheme()) {
+            "light" -> R.style.Theme_MsgClientAndroid
+            else -> R.style.Theme_MsgClientAndroid_Dark
         }
+        setTheme(theme)
     }
 
     private fun applySavedLanguage() {
@@ -823,7 +1047,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun toggleColorScheme() {
         val schemes = listOf("light", "dark")
-        val currentScheme = getSavedColorScheme() ?: "light"
+        val currentScheme = getSavedColorScheme() ?: "dark"
         val currentIndex = schemes.indexOf(currentScheme)
         val nextIndex = (currentIndex + 1) % schemes.size
         val newScheme = schemes[nextIndex]
@@ -833,7 +1057,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun updateColorSchemeIcon() {
-        val currentScheme = getSavedColorScheme() ?: "light"
+        val currentScheme = getSavedColorScheme() ?: "dark"
         val iconRes = if (currentScheme == "dark") {
             R.drawable.ic_theme_dark
         } else {

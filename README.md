@@ -173,7 +173,53 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.28**
+Current version: **1.0.1.34**
+
+### Version 1.0.1.34 - Material Design 3 Color System
+- 🎨 Restructured color scheme following Material Design 3 guidelines
+- 🎨 Added colorPrimaryContainer, colorSecondaryContainer, colorSurfaceContainer, colorSurfaceVariant
+- 🎨 Light theme: pale_lilac background, white dialogs, deep_purple text
+- 🎨 Dark theme: deep_purple background, lavender_mist dialogs, lavender_mist/white text
+- 🔧 Changed default theme in AndroidManifest from dark to light for proper theme switching
+- 🐛 Removed conflicting windowBackground override in values-night/themes.xml
+- 📱 Fixed hardcoded background in landscape layout (layout-land/activity_main.xml)
+- 🗑️ Completely removed person icon from chat list toolbar
+- 👤 Changed profile icon to standard edit icon (pencil) with theme-aware tinting
+- 🎨 Fixed text visibility in welcome dialog for dark theme
+- 🔧 Replaced getColor() calls with theme.resolveAttribute() for Material Design colors
+- 💬 Updated message background colors in light theme to prevent blending with toolbar
+- 🎨 Fixed dialog text visibility in light theme by using white background and dark text
+- 💬 Unified message background colors in light theme to match chat cards
+- 🎨 Created PrimaryButton style for consistent button design across the app
+- 🎨 Changed PrimaryButton background to match main background in dark theme
+- 🎨 Created PrimaryButtonCompact style for landscape layouts
+- 🎨 Reverted button text to uppercase first letter (Join/Войти)
+- 🎨 Added dark_background color (#04052E) from logo edge for dark theme
+- 🎨 Disabled textAllCaps in all button styles to display text exactly as defined
+- 🎨 Fixed dialog text visibility in dark theme (white text on lavender_mist background)
+- 🎨 Fixed server address spinner visibility in dark theme (white text)
+- 🎨 Added explicit dark theme for ChatActivity and ChatListActivity in AndroidManifest
+- 🎨 Fixed message backgrounds in light theme (pale_lilac to match chat cards)
+- 🎨 Removed avatars from messages and disabled toolbar animation
+- 📥 Added download progress display in megabytes with button blocking during update
+- 🎨 Changed update button to PrimaryButton style to match Join button
+- 🐛 Fixed crash when clicking Update button with null checks and error handling
+- 🔄 Prevented download interruption on screen rotation
+- 📝 Unified font size across all buttons on main screen
+- 🎨 Fixed ChatActivity and ChatListActivity to properly apply user's theme preference
+- 🔄 Added theme synchronization across all activities (changes in chat sync with main screen)
+- 🐛 Fixed theme not saving when toggled in ChatActivity (changed default from light to dark)
+- 🎨 Unified theme toggle icon and functionality between ChatActivity and ChatListActivity
+- 🐛 Fixed light theme not applying correctly in ChatActivity
+
+### Version 1.0.1.33 - UI Theme Improvements
+- 🎨 Updated dark theme background to deep_purple for chat list and main screen
+- 🎨 Added lavender_mist background for dialogs in dark theme
+- 🎨 Updated button styles with rounded corners and strokes in dark theme
+- 🎨 Improved text contrast for better visibility on dark backgrounds
+- 🎨 Removed person icon from chat list and chat activities
+- 🎨 Updated dialog styling for consistency across the app
+- 🎨 Fixed button visibility issues in dark theme dialogs
 
 ### Version 1.0.1.28 - Avatar Display Fix
 - 🐛 Fixed avatar caching issue - avatar URLs are now properly saved for users with avatars

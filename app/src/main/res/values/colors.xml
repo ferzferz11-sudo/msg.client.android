@@ -4,20 +4,22 @@
     <color name="deep_purple">#312051</color>
     <color name="lavender_mist">#967BB6</color>
     <color name="soft_lilac">#E6E6FA</color>
+    <color name="pale_lilac">#F8F7FC</color>
     <color name="silver_fog">#F5F5F7</color>
     <color name="dark_slate">#1A1A1A</color>
+    <color name="dark_background">#04052E</color>
     
     <!-- Standard colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
     <!-- Message colors (default for light theme) -->
-    <color name="message_background">@color/silver_fog</color>
-    <color name="message_border">@color/lavender_mist</color>
-    <color name="incoming_message_background">@color/soft_lilac</color>
-    <color name="outgoing_message_background">@color/lavender_mist</color>
+    <color name="message_background">@color/white</color>
+    <color name="message_border">@color/pale_lilac</color>
+    <color name="incoming_message_background">@color/pale_lilac</color>
+    <color name="outgoing_message_background">@color/pale_lilac</color>
     <color name="outgoing_message_text">@color/white</color>
-    <color name="incoming_message_light">#F0EBF5</color>
+    <color name="incoming_message_light">@color/white</color>
 
     <!-- UI element colors -->
     <color name="primary">@color/lavender_mist</color>

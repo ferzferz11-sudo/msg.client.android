@@ -3,8 +3,8 @@ package lavender.client.android.data.grpc
 import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.data.models.Message
 
-class GrpcClient {
-    private val realGrpcClient = RealGrpcClient()
+object GrpcClient {
+    private val realGrpcClient = RealGrpcClient
     
     val connectionState: StateFlow<Boolean> = realGrpcClient.connectionState
     val messages: StateFlow<List<Message>> = realGrpcClient.messages
@@ -65,6 +65,10 @@ class GrpcClient {
         realGrpcClient.createDirectChat(user1, user2, callback)
     }
 
+    fun createGroupChat(name: String, participants: List<String>, callback: (String?) -> Unit) {
+        realGrpcClient.createGroupChat(name, participants, callback)
+    }
+
     fun loadUsers() {
         realGrpcClient.loadUsers()
     }
@@ -93,11 +97,23 @@ class GrpcClient {
         realGrpcClient.getUserAvatar(username, callback)
     }
 
+    fun deleteChat(chatId: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteChat(chatId, callback)
+    }
+
+    fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteProfile(username, callback)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return realGrpcClient.getAvatarCache()
     }
 
     fun updateAvatarCache(username: String, avatarUrl: String) {
         realGrpcClient.updateAvatarCache(username, avatarUrl)
+    }
+
+    fun clearMessages() {
+        realGrpcClient.clearMessages()
     }
 }

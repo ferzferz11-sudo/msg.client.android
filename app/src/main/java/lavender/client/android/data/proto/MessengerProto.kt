@@ -135,6 +135,16 @@ data class MarkReadResponseProto(
     val success: Boolean = false
 )
 
+// Delete Chat Request/Response
+data class DeleteChatRequestProto(
+    val chatId: String = ""
+)
+
+data class DeleteChatResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
 // Get Chats Request/Response
 data class GetChatsRequestProto(
     val username: String = ""
@@ -151,6 +161,17 @@ data class CreateDirectChatRequestProto(
 )
 
 data class CreateDirectChatResponseProto(
+    val chatId: String = "",
+    val success: Boolean = false
+)
+
+// Create Group Chat Request/Response
+data class CreateGroupChatRequestProto(
+    val name: String = "",
+    val participants: List<String> = emptyList()
+)
+
+data class CreateGroupChatResponseProto(
     val chatId: String = "",
     val success: Boolean = false
 )
@@ -243,4 +264,14 @@ data class GetUserAvatarRequestProto(
 
 data class GetUserAvatarResponseProto(
     val avatarUrl: String = ""
+)
+
+// Delete Profile Request/Response
+data class DeleteProfileRequestProto(
+    val username: String = ""
+)
+
+data class DeleteProfileResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
 )

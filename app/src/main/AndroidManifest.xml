@@ -32,6 +32,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/Theme.MsgClientAndroid">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -43,6 +44,7 @@
         <activity
             android:name=".ChatActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize" />
 
         <activity

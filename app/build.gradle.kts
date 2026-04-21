@@ -8,10 +8,13 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        val versionFile = rootProject.file("version.txt")
+        val versionFromFile = if (versionFile.exists()) versionFile.readText().trim() else "1.0.0"
+
         applicationId = "lavender.client.android"
         minSdk = 29
         targetSdk = 35
-        versionName = "1.0.1.28"
+        versionName = versionFromFile
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

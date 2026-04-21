@@ -5,6 +5,176 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.34] - 2026-04-21
+
+### Changed
+- 🎨 **Material Design 3 Color System**: Restructured color scheme following Material Design 3 guidelines
+  - Added colorPrimaryContainer, colorSecondaryContainer, colorSurfaceContainer, colorSurfaceVariant
+  - Separated colors into categories: Primary, Secondary, Background, Dialog, Text, Button
+  - Light theme: pale_lilac background, white dialogs, deep_purple text
+  - Dark theme: deep_purple background, lavender_mist dialogs, lavender_mist/white text
+- 🔧 **Default Theme**: Changed default theme in AndroidManifest from dark to light
+  - Light theme is now the base, dark theme is applied on first launch
+  - This ensures proper theme switching behavior
+- 🐛 **Theme Override Fix**: Removed conflicting windowBackground override in values-night/themes.xml
+  - This was preventing the correct pale_lilac background from showing in light theme
+- 📱 **Landscape Layout Fix**: Fixed hardcoded background in layout-land/activity_main.xml
+  - Changed from splash_background to windowBackground for theme consistency
+- 🗑️ **Person Icon Removal**: Completely removed person icon (usersButton) from chat list toolbar
+- 👤 **Profile Icon**: Changed profile icon from ic_menu_edit to standard edit icon (pencil)
+  - Using simple vector drawable with theme-aware tinting
+- 🎨 **Dialog Text Visibility**: Fixed text visibility in welcome dialog for dark theme
+  - Changed text colors from textColorPrimary/textColorSecondary to colorOnPrimary
+  - Improved contrast on lavender_mist background
+- 🔧 **Code Refactoring**: Replaced getColor() calls with theme.resolveAttribute() for Material Design colors
+- 💬 **Message Colors**: Updated message background colors in light theme
+  - Changed incoming messages to pale_lilac for better contrast with toolbar
+  - Changed outgoing messages to soft_lilac for distinction
+  - Prevents messages from blending with deep_purple toolbar
+- 🎨 **Dialog Text Colors**: Fixed dialog text visibility in light theme
+  - Changed dialog background from colorSurface to colorSurfaceContainer (white)
+  - Changed dialog text from colorOnPrimary to colorOnSurface for proper contrast
+  - Applied to both portrait and landscape dialog layouts
+- 💬 **Message Background Unification**: Unified message background colors in light theme
+  - Changed outgoing messages from soft_lilac to pale_lilac
+  - Now both incoming and outgoing messages use the same background as chat cards
+- 🎨 **Button Style System**: Created PrimaryButton style for consistent button design
+  - Based on Join button on main screen (240dp width, 56dp height, 18sp text)
+  - Applied to Join button in Welcome dialog (portrait)
+  - Applied to Join button on main screen (portrait)
+  - Changed button background to colorPrimaryContainer to match main background in dark theme
+- 🎨 **Landscape Button Style**: Created PrimaryButtonCompact style for landscape layouts
+  - Smaller dimensions (200dp width, 48dp height, 16sp text)
+  - Uses colorPrimary background to match other landscape buttons
+  - Applied to Join button in Welcome dialog (landscape)
+  - Applied to Join button on main screen (landscape)
+- 🎨 **Button Text Case**: Reverted to uppercase first letter for button text
+  - Changed "join" to "Join" in English localization
+  - Changed "войти" to "Войти" in Russian localization
+  - Removed textAllCaps="false" from button styles (using default Material behavior)
+- 🎨 **Dark Theme Background**: Added dark_background color (#04052E) from logo edge
+  - Changed dark theme windowBackground and colorSurface from deep_purple to dark_background
+  - Applied to all main screens in dark theme only
+- 🎨 **Button Text Case**: Disabled textAllCaps in all button styles
+  - Added android:textAllCaps="false" to PrimaryButton and PrimaryButtonCompact
+  - Button text now displays exactly as defined in string resources
+- 🎨 **Dialog Text Visibility**: Fixed dialog text visibility in dark theme
+  - Changed colorOnSurface from lavender_mist to white for better contrast on lavender_mist dialog background
+  - Changed textColorPrimary from lavender_mist to white for server address spinner visibility
+  - Applied to both portrait and landscape dialog layouts
+- 🎨 **Activity Theme Configuration**: Added explicit theme for ChatActivity and ChatListActivity in AndroidManifest
+  - Set Theme_MsgClientAndroid_Dark as default theme for ChatActivity
+  - Set Theme_MsgClientAndroid_Dark as default theme for ChatListActivity
+  - Prevents theme confusion and ensures dark theme is applied correctly
+- 🎨 **Message Background Colors**: Fixed message backgrounds in light theme
+  - Changed outgoing message background from colorPrimary (deep_purple) to pale_lilac
+  - Changed incoming message background from incoming_message_light (white) to pale_lilac
+  - Created drawable-night versions for dark theme (lavender_mist for outgoing, deep_purple for incoming)
+  - Messages now match chat cards background in light theme
+- 🎨 **Chat UI Improvements**: Removed avatars from messages and disabled toolbar animation
+  - Hidden avatarImageView in item_message.xml (avatars will be shown in toolbar instead)
+  - Disabled animateToolbarTitle() call in ChatActivity.kt
+  - Toolbar now shows only static text without animation
+- 📥 **Download Progress Enhancement**: Added download progress display in megabytes and button blocking
+  - Added downloadProgressText TextView to show downloaded/total size in MB
+  - Implemented setButtonsEnabled() to block all buttons during download
+  - Buttons become semi-transparent (alpha 0.5) when disabled
+  - Progress text updates in real-time during download (e.g., "5.23 / 10.45 MB")
+- 🎨 **Update Button Styling**: Changed download update button to match PrimaryButton style
+  - Replaced TextView with Button in activity_main.xml
+  - Applied PrimaryButton style for portrait layout
+  - Applied PrimaryButtonCompact style for landscape layout
+  - Button now matches Join button design across the app
+- 🐛 **Crash Fix**: Fixed crash when clicking Update button
+  - Added null checks for view initialization in downloadAndInstallApk()
+  - Added null checks for all buttons in setButtonsEnabled()
+  - Added try-catch block in setupDownloadUpdateButton() with error logging
+  - Added minWidth and minHeight to update button for proper sizing
+- 🔄 **Orientation Change Fix**: Prevented download interruption on screen rotation
+  - Added android:configChanges="orientation|screenSize|keyboardHidden" to MainActivity in AndroidManifest
+  - Added onConfigurationChanged() method to handle orientation changes without activity recreation
+  - Download continues in background when device is rotated
+- 📝 **Button Font Size Unification**: Unified font size across all buttons on main screen
+  - Changed PrimaryButton textSize from 18sp to 16sp (portrait)
+  - Changed PrimaryButtonCompact textSize from 16sp to 14sp (landscape)
+  - Changed languageButton textSize from 14sp to 16sp (portrait), 12sp to 14sp (landscape)
+  - Changed colorSchemeButton textSize from 14sp to 16sp (portrait), 12sp to 14sp (landscape)
+  - All buttons now match logoutButton font size in their respective orientations
+- 🎨 **ChatActivity Theme Fix**: Removed explicit dark theme from ChatActivity in AndroidManifest
+  - ChatActivity now uses app's default theme (respects user's light/dark preference)
+  - Incoming messages now show correct pale_lilac background in light theme
+  - Previously ChatActivity was forced to dark theme regardless of user preference
+- 🎨 **ChatListActivity Theme Fix**: Removed explicit dark theme from ChatListActivity
+  - Re-added applySavedColorScheme() call to ChatActivity and ChatListActivity onCreate
+  - Removed default "dark" scheme saving from applySavedColorScheme() in both activities
+  - Both activities now read and apply user's theme preference without overriding it
+  - MainActivity remains the only place that sets default "dark" theme on first launch
+- 🔄 **Theme Sync Across Activities**: Added theme synchronization between all activities
+  - Added currentColorScheme tracking in MainActivity
+  - Added onResume check for theme changes in MainActivity
+  - Changed default theme from "light" to "dark" in ChatListActivity toggleColorScheme()
+  - Changed default theme from "light" to "dark" in ChatListActivity updateColorSchemeIcon()
+  - Changed default theme from "light" to "dark" in ChatActivity onOptionsItemSelected
+  - Changed default theme from "light" to "dark" in ChatActivity updateThemeIcon()
+  - Now theme changes in chat activities sync with MainActivity when returning
+- 🎨 **Unified Theme Toggle Icon**: Made ChatActivity theme toggle match ChatListActivity
+  - Added colorSchemeMenuItem variable to ChatActivity for menu item reference
+  - Changed updateThemeIcon() to use saved reference instead of menu parameter
+  - Replaced applyTheme() with toggleColorScheme() to match ChatListActivity implementation
+  - Both activities now use identical theme toggle logic and icons
+- 🐛 **ChatActivity Light Theme Fix**: Fixed light theme not applying correctly in ChatActivity
+  - Changed applySavedColorScheme() to use Base_Theme_MsgClientAndroid for light theme
+  - Previously used non-existent Theme_MsgClientAndroid style causing fallback to default theme
+  - Now light theme applies correctly with proper colors and styling
+
+## [1.0.1.33] - 2026-04-21
+
+### Changed
+- 🎨 **Dark Theme Background**: Updated dark theme background to deep_purple for chat list and main screen
+- 🎨 **Dialog Backgrounds**: Added lavender_mist background for all dialogs in dark theme
+- 🎨 **Button Styles**: Updated button styles with rounded corners (24dp) and strokes in dark theme
+- 🎨 **Text Contrast**: Improved text contrast for better visibility on dark backgrounds
+- 🎨 **Icon Removal**: Removed person icon from chat list and chat activities
+- 🎨 **Dialog Consistency**: Updated dialog styling for consistency across the app
+- 🎨 **Button Visibility**: Fixed button visibility issues in dark theme dialogs
+
+## [1.0.1.32] - 2026-04-21
+
+### Fixed
+- ⏱️ **Chat Creation Timeout**: Increased timeout from 100ms to 500ms for direct and group chat creation callbacks
+- 🔄 **Room Switching**: Fixed issue where opening a direct chat would show general chat messages instead
+- 🧹 **Message Clearing**: Added message clearing when switching between chats to prevent message leakage
+- 📱 **Activity Mode**: Added `singleTask` launch mode to ChatActivity for proper intent handling
+- 🔀 **onNewIntent**: Implemented proper handling of new intents when ChatActivity is already running
+- 🎨 **Dark Theme Dialogs**: Fixed white backgrounds in chat creation and profile dialogs in dark theme
+  - TextInputLayout now uses `?attr/colorSurface` for proper dark theme support
+  - EditText fields use `?attr/colorSurface` instead of window background
+- 👤 **Avatar Contrast**: Improved default avatar visibility in dark theme
+  - Added `android:tint="?attr/colorOnSecondary"` to use lighter color in dark theme
+  - Added `app:civ_circle_background_color="?attr/colorSurface"` for better contrast
+
+### Changed
+- 🔔 **Connection Notification**: Improved toast notification when connecting to a chat
+  - Friendly text instead of technical message
+  - Russian: «Пользователь [Имя] вошёл в чат [Название чата]»
+  - English: «User [Name] joined the chat [Chat Name]»
+  - Duration increased to Toast.LENGTH_LONG (3.5 seconds)
+  - Proper localization for both languages
+  - Displays real chat name (e.g., "General" or group name) instead of technical ID
+
+- 🎨 **Profile Dialog Buttons**: Reduced button text size from 14sp to 12sp for better fit of long Russian text
+
+### Result
+- ✅ Direct chats now reliably create without timeout errors
+- 🎯 Opening a chat always shows the correct room messages
+- 🧹 Messages from previous chats don't leak into newly opened chats
+- 🔄 Smooth switching between different chats
+- 👋 Clear and friendly connection notifications in both languages
+- 📱 Long Russian text fits properly in profile dialog buttons
+- 🌙 Dialogs now properly follow dark theme color scheme
+- 👤 Default avatars are clearly visible on dark backgrounds
+- 🎨 Consistent appearance across light and dark themes
+
 ## [1.0.1.28] - 2026-04-20
 
 ### Fixed

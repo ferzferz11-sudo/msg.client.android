@@ -1,8 +1,3 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <item name="android:windowBackground">@color/splash_background</item>
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
-    </style>
+    <!-- Night theme overrides - now using Theme_MsgClientAndroid_Dark instead -->
 </resources>

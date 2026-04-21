@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="@color/splash_background"
+    android:background="?android:attr/windowBackground"
     android:padding="24dp">
 
     <ImageView
@@ -60,17 +60,14 @@
             android:layout_marginEnd="4dp"
             app:tint="?attr/colorPrimary" />
 
-        <TextView
+        <Button
             android:id="@+id/downloadUpdateButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/download_update"
-            android:textSize="12sp"
-            android:textColor="?attr/colorPrimary"
-            android:clickable="true"
-            android:focusable="true"
+            android:minWidth="120dp"
             android:minHeight="48dp"
-            android:gravity="center_vertical" />
+            android:text="@string/download_update"
+            style="@style/PrimaryButton" />
 
         <ImageButton
             android:id="@+id/copyLinkButton"
@@ -104,17 +101,22 @@
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:visibility="gone"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/downloadProgressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:visibility="gone"
         android:layout_marginBottom="16dp" />
 
     <Button
         android:id="@+id/joinChatButton"
-        android:layout_width="240dp"
-        android:layout_height="56dp"
-        android:text="@string/join"
-        android:textSize="18sp"
-        android:textColor="?attr/colorOnPrimary"
-        android:backgroundTint="?attr/colorPrimary"
-        android:layout_marginBottom="32dp" />
+        style="@style/PrimaryButton"
+        android:layout_marginBottom="32dp"
+        android:text="@string/join" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -150,7 +152,7 @@
         android:layout_width="240dp"
         android:layout_height="56dp"
         android:text="@string/toggle_language"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:textColor="?attr/colorOnSecondary"
         android:backgroundTint="?attr/colorSecondary"
         android:layout_marginBottom="12dp" />
@@ -160,7 +162,7 @@
         android:layout_width="240dp"
         android:layout_height="56dp"
         android:text="@string/toggle_color_scheme"
-        android:textSize="14sp"
+        android:textSize="16sp"
         android:textColor="?attr/colorOnSecondary"
         android:backgroundTint="?attr/colorSecondary"
         android:layout_marginBottom="12dp" />

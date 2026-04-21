@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:padding="32dp"
     android:gravity="center"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurfaceContainer">
 
     <TextView
         android:id="@+id/titleText"
@@ -15,26 +15,32 @@
         android:text="@string/welcome"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="?attr/colorOnSurface"
         android:layout_marginBottom="24dp"
         android:gravity="center" />
 
-    <EditText
-        android:id="@+id/editTextUsername"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/usernameInputLayout"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:hint="@string/enter_username"
-        android:inputType="textPersonName"
-        android:autofillHints="username"
-        android:textSize="16sp"
-        android:padding="16dp"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:gravity="center"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textColorHint="?android:attr/textColorHint"
-        android:background="?android:attr/windowBackground" />
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editTextUsername"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="@string/enter_username"
+            android:inputType="textPersonName"
+            android:autofillHints="username"
+            android:textSize="16sp"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?android:attr/textColorHint" />
+
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/passwordInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
@@ -50,7 +56,7 @@
             android:inputType="textPassword"
             android:autofillHints="password"
             android:textSize="16sp"
-            android:textColor="?android:attr/textColorPrimary"
+            android:textColor="?attr/colorOnSurface"
             android:textColorHint="?android:attr/textColorHint" />
 
     </com.google.android.material.textfield.TextInputLayout>
@@ -60,14 +66,15 @@
         android:layout_height="wrap_content"
         android:text="@string/server_address_label"
         android:textSize="12sp"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="?attr/colorOnSurface"
         android:layout_marginBottom="8dp" />
 
     <Spinner
         android:id="@+id/serverAddressSpinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:textColor="?android:attr/textColorPrimary" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -89,7 +96,7 @@
             android:layout_height="wrap_content"
             android:text="@string/checking_server"
             android:textSize="12sp"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:id="@+id/refreshServerButton"
@@ -123,17 +130,13 @@
             android:textColor="?attr/colorOnSecondary"
             android:backgroundTint="?attr/colorSecondary" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnJoin"
-            style="?android:attr/buttonBarButtonStyle"
+            style="@style/PrimaryButton"
             android:layout_width="0dp"
-            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:text="@string/join"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnPrimary"
-            android:backgroundTint="?attr/colorPrimary" />
+            android:text="@string/join" />
 
     </LinearLayout>
 

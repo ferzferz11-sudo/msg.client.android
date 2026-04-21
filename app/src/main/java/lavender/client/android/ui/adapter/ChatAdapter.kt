@@ -16,16 +16,28 @@ import org.json.JSONArray
 
 class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit,
+    private val onSelectionChanged: (Int) -> Unit = {},
     private val currentUsername: String = "",
     initialAvatarCache: Map<String, String> = emptyMap()
 ) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
 
     private var chats = listOf<ChatInfo>()
     var avatarCache: Map<String, String> = initialAvatarCache
+    private val selectedPositions = mutableSetOf<Int>()
+
+    fun getSelectedChats(): List<ChatInfo> {
+        return selectedPositions.map { chats[it] }
+    }
+
+    fun clearSelection() {
+        val previousSelected = selectedPositions.toSet()
+        selectedPositions.clear()
+        previousSelected.forEach { notifyItemChanged(it) }
+        onSelectionChanged(0)
+    }
 
     fun setChats(newChats: List<ChatInfo>) {
-        val diffCallback = ChatDiffCallback(chats, newChats)
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(chats, newChats))
         chats = newChats
         diffResult.dispatchUpdatesTo(this)
     }
@@ -63,7 +75,19 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-        holder.bind(chats[position], currentUsername, avatarCache)
+        val isSelected = selectedPositions.contains(position)
+        holder.bind(chats[position], currentUsername, avatarCache, isSelected) {
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos == RecyclerView.NO_POSITION) return@bind
+
+            if (selectedPositions.contains(currentPos)) {
+                selectedPositions.remove(currentPos)
+            } else {
+                selectedPositions.add(currentPos)
+            }
+            notifyItemChanged(currentPos)
+            onSelectionChanged(selectedPositions.size)
+        }
     }
 
     override fun getItemCount(): Int = chats.size
@@ -79,11 +103,32 @@ class ChatAdapter(
         private val chatType: TextView = itemView.findViewById(R.id.chatType)
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
         private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
+        private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, currentUsername: String, avatarCache: Map<String, String>) {
+        private fun isDarkTheme(): Boolean {
+            val prefs = itemView.context.getSharedPreferences("ChatPrefs", android.content.Context.MODE_PRIVATE)
+            return prefs.getString("color_scheme", "dark") != "light"
+        }
+
+        fun bind(chat: ChatInfo, currentUsername: String, avatarCache: Map<String, String>, isSelected: Boolean, onLongClick: () -> Unit) {
             chatName.text = chat.name
 
             val context = itemView.context
+
+            if (isSelected) {
+                cardView.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(context, R.color.lavender_mist_alpha))
+                itemView.alpha = 0.7f
+            } else {
+                // Set lavender_mist background for dark theme
+                if (isDarkTheme()) {
+                    cardView.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(context, R.color.lavender_mist))
+                } else {
+                    val typedValue = android.util.TypedValue()
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
+                    cardView.setCardBackgroundColor(typedValue.data)
+                }
+                itemView.alpha = 1.0f
+            }
             val config = context.resources.configuration
             val isRussian = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
                 config.locales[0].language == "ru"
@@ -94,6 +139,7 @@ class ChatAdapter(
             chatType.text = when (chat.type) {
                 "general" -> if (isRussian) "Общий чат" else "General Chat"
                 "direct" -> if (isRussian) "Личное сообщение" else "Direct Message"
+                "group" -> if (isRussian) "Группа" else "Group"
                 else -> chat.type
             }
 
@@ -109,6 +155,10 @@ class ChatAdapter(
 
             itemView.setOnClickListener {
                 onChatClick(chat)
+            }
+            itemView.setOnLongClickListener {
+                onLongClick()
+                true
             }
         }
 

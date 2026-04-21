@@ -8,7 +8,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 
 class ChatViewModel : ViewModel() {
-    val grpcClient = GrpcClient()
+    val grpcClient = GrpcClient
 
     var currentRoomId = "general"
 
@@ -58,6 +58,8 @@ class ChatViewModel : ViewModel() {
     fun switchRoom(roomId: String) {
         currentRoomId = roomId
         grpcClient.setRoomId(roomId)
+        // Clear messages before loading new room history
+        grpcClient.clearMessages()
         loadHistory()
     }
 
