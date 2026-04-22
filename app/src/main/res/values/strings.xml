@@ -88,6 +88,7 @@
     <string name="profile">Profile</string>
     <string name="cancel_dialog">Cancel</string>
     <string name="connected_status">connected</string>
+    <string name="disconnected_status">offline</string>
     <string name="username_empty">Username cannot be empty</string>
     <string name="logged_out">Logged out successfully</string>
     <string name="exiting_app">Exiting application</string>
@@ -106,6 +107,7 @@
     <string name="app_description">Secure messaging</string>
     <string name="error_title">Error Details</string>
     <string name="copy">Copy</string>
+    <string name="reply">Reply</string>
     <string name="history_empty">Welcome! This is a new chat. No messages here yet.</string>
     <string name="history_load_error">Failed to load history: %s</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
@@ -146,4 +148,8 @@
     <string name="select_at_least_one_user">Please select at least one user</string>
     <string name="group_created">Group \"%s\" created</string>
     <string name="creating_chat">Creating chat...</string>
+    <string name="delete_messages_title">Delete messages</string>
+    <string name="delete_messages_confirm">Are you sure you want to delete selected messages? This will also remove images from the server.</string>
+    <string name="is_typing">is typing...</string>
+    <string name="are_typing">are typing...</string>
 </resources>

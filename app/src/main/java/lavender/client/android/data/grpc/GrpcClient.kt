@@ -12,6 +12,7 @@ object GrpcClient {
     val allUsers: StateFlow<List<String>> = realGrpcClient.allUsers
     val error: StateFlow<String?> = realGrpcClient.error
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
+    val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         realGrpcClient.connect(serverAddress, useTls, port, context)
@@ -87,6 +88,10 @@ object GrpcClient {
 
     fun markRead(roomId: String, username: String) {
         realGrpcClient.markRead(roomId, username)
+    }
+
+    fun sendTypingSignal(username: String, isTyping: Boolean) {
+        realGrpcClient.sendTypingSignal(username, isTyping)
     }
 
     fun updateAvatar(username: String, avatarUrl: String, callback: (Boolean, String) -> Unit) {

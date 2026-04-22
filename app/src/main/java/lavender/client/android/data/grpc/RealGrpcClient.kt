@@ -40,11 +40,14 @@ import lavender.client.android.data.proto.GetUserAvatarRequestProto
 import lavender.client.android.data.proto.GetUserAvatarResponseProto
 import lavender.client.android.data.proto.DeleteProfileRequestProto
 import lavender.client.android.data.proto.DeleteProfileResponseProto
+import lavender.client.android.data.proto.TypingRequestProto
+import lavender.client.android.data.proto.TypingSignalProto
 import java.util.concurrent.TimeUnit
 
 object RealGrpcClient {
     private var channel: ManagedChannel? = null
     private var requestObserver: StreamObserver<MessageProto>? = null
+    private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
     private var currentServerAddress: String? = null
     var currentRoomId = "general"
         private set
@@ -66,6 +69,9 @@ object RealGrpcClient {
 
     private val _systemNotification = MutableStateFlow<String?>(null)
     val systemNotification: StateFlow<String?> = _systemNotification
+
+    private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap()) // roomId -> set of usernames
+    val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
 
     // Avatar cache
     private val avatarCache = mutableMapOf<String, String>()
@@ -247,6 +253,8 @@ object RealGrpcClient {
             isChatStarted = false
             requestObserver?.onCompleted()
             requestObserver = null
+            typingRequestObserver?.onCompleted()
+            typingRequestObserver = null
             channel?.shutdownNow()
             channel = null
             currentServerAddress = null
@@ -409,6 +417,8 @@ object RealGrpcClient {
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .build())
             
+            startTypingStream(username)
+
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 loadHistory(currentRoomId) { loadUsers() }
             }, 300)
@@ -829,6 +839,53 @@ object RealGrpcClient {
         call.sendMessage(request)
         call.halfClose()
         call.request(1)
+    }
+
+    fun startTypingStream(username: String) {
+        if (!_connectionState.value || channel == null || typingRequestObserver != null) return
+
+        try {
+            val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TypingRequestProto, TypingSignalProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+                .setFullMethodName("messenger.ChatService/Typing")
+                .setRequestMarshaller(TypingRequestMarshaller())
+                .setResponseMarshaller(TypingSignalMarshaller())
+                .build()
+
+            val call = channel!!.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+            call.start(object : io.grpc.ClientCall.Listener<TypingSignalProto>() {
+                override fun onHeaders(headers: io.grpc.Metadata) { call.request(100) }
+                override fun onMessage(message: TypingSignalProto) {
+                    _typingUsers.update { currentMap ->
+                        val roomTypists = currentMap[message.roomId]?.toMutableSet() ?: mutableSetOf()
+                        if (message.isTyping) {
+                            if (message.username != username) { // Don't show ourselves
+                                roomTypists.add(message.username)
+                            }
+                        } else {
+                            roomTypists.remove(message.username)
+                        }
+                        currentMap + (message.roomId to roomTypists)
+                    }
+                }
+                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                    typingRequestObserver = null
+                }
+            }, io.grpc.Metadata())
+
+            typingRequestObserver = object : StreamObserver<TypingRequestProto> {
+                override fun onNext(value: TypingRequestProto) {
+                    call.sendMessage(value)
+                    call.request(1)
+                }
+                override fun onError(t: Throwable) { call.cancel("Error", t) }
+                override fun onCompleted() { call.halfClose() }
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun sendTypingSignal(username: String, isTyping: Boolean) {
+        typingRequestObserver?.onNext(TypingRequestProto(currentRoomId, username, isTyping))
     }
 
     fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {
@@ -1757,6 +1814,64 @@ class DeleteProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Dele
             }
         }
         return DeleteProfileResponseProto(success, message)
+    }
+}
+
+class TypingRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingRequestProto> {
+    override fun stream(value: TypingRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.roomId.isNotEmpty()) cos.writeString(1, value.roomId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        if (value.isTyping) cos.writeBool(3, value.isTyping)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): TypingRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var roomId = ""
+        var username = ""
+        var isTyping = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> roomId = cis.readString()
+                2 -> username = cis.readString()
+                3 -> isTyping = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return TypingRequestProto(roomId, username, isTyping)
+    }
+}
+
+class TypingSignalMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingSignalProto> {
+    override fun stream(value: TypingSignalProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.roomId.isNotEmpty()) cos.writeString(1, value.roomId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        if (value.isTyping) cos.writeBool(3, value.isTyping)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): TypingSignalProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var roomId = ""
+        var username = ""
+        var isTyping = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> roomId = cis.readString()
+                2 -> username = cis.readString()
+                3 -> isTyping = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return TypingSignalProto(roomId, username, isTyping)
     }
 }
 

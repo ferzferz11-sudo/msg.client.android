@@ -21,6 +21,17 @@
     <color name="outgoing_message_text">@color/white</color>
     <color name="incoming_message_light">@color/white</color>
 
+    <!-- Telegram-like colors -->
+    <color name="tg_outgoing_bubble">#EFFDDE</color>
+    <color name="tg_incoming_bubble">#FFFFFF</color>
+    <color name="tg_outgoing_text">#1A1A1A</color>
+    <color name="tg_incoming_name">#4081BF</color>
+    <color name="tg_time_incoming">#A0A0A0</color>
+    <color name="tg_time_outgoing">#5EAD54</color>
+    <color name="tg_read_check">#4FC3F7</color>
+    <color name="tg_blue">#4081BF</color>
+    <color name="tg_input_hint">#9E9E9E</color>
+
     <!-- UI element colors -->
     <color name="primary">@color/lavender_mist</color>
     <color name="primary_dark">@color/deep_purple</color>

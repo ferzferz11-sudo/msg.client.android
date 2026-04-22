@@ -18,6 +18,7 @@ class ChatViewModel : ViewModel() {
     val users: StateFlow<List<String>> = grpcClient.users
     val allUsers: StateFlow<List<String>> = grpcClient.allUsers
     val systemNotification: StateFlow<String?> = grpcClient.systemNotification
+    val typingUsers: StateFlow<Map<String, Set<String>>> = grpcClient.typingUsers
     
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         viewModelScope.launch {
@@ -71,5 +72,9 @@ class ChatViewModel : ViewModel() {
 
     fun markRead(username: String) {
         grpcClient.markRead(currentRoomId, username)
+    }
+
+    fun sendTypingSignal(username: String, isTyping: Boolean) {
+        grpcClient.sendTypingSignal(username, isTyping)
     }
 }

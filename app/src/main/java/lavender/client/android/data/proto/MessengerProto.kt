@@ -275,3 +275,16 @@ data class DeleteProfileResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )
+
+// Typing Signal Request/Response
+data class TypingRequestProto(
+    val roomId: String = "",
+    val username: String = "",
+    val isTyping: Boolean = false
+)
+
+data class TypingSignalProto(
+    val roomId: String = "",
+    val username: String = "",
+    val isTyping: Boolean = false
+)

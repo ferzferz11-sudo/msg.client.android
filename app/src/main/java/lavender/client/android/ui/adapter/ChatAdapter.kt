@@ -36,9 +36,15 @@ class ChatAdapter(
         onSelectionChanged(0)
     }
 
+    fun getChats(): List<ChatInfo> {
+        return chats
+    }
+
     fun setChats(newChats: List<ChatInfo>) {
-        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(chats, newChats))
-        chats = newChats
+        // Filter out "general" chat as requested by the user
+        val filteredChats = newChats.filter { it.type != "general" && it.id != "general" }
+        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(chats, filteredChats))
+        chats = filteredChats
         diffResult.dispatchUpdatesTo(this)
     }
 

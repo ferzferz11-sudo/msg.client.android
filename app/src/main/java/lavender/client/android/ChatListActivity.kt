@@ -57,6 +57,7 @@ class ChatListActivity : AppCompatActivity() {
     private var selectedAvatarUri: Uri? = null
     private var currentAvatarImageView: CircleImageView? = null
     private var currentAvatarProgressBar: android.widget.ProgressBar? = null
+    private var currentTheme: String? = null
     private companion object {
         private const val PICK_IMAGE_REQUEST = 1001
     }
@@ -82,6 +83,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        currentTheme = getSavedColorScheme() ?: "dark"
         applySavedColorScheme()
         applySavedLanguage()
         super.onCreate(savedInstanceState)
@@ -237,6 +239,14 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        
+        // Check if theme has changed in another activity
+        val savedTheme = getSavedColorScheme() ?: "dark"
+        if (savedTheme != currentTheme) {
+            recreate()
+            return
+        }
+
         // Refresh chats immediately when returning from chat
         grpcClient.getChats(username) { chats ->
             if (chats.isNotEmpty()) {
@@ -431,13 +441,19 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun openChat(chatId: String, roomName: String? = null) {
         lifecycleScope.launch {
-            val intent = Intent(this@ChatListActivity, ChatActivity::class.java)
+            val intent = Intent(this@ChatListActivity, NewChatActivity::class.java)
                 .putExtra("username", username)
                 .putExtra("password", password)
                 .putExtra("roomId", chatId)
             
             if (roomName != null) {
                 intent.putExtra("roomName", roomName)
+            }
+            
+            // Находим чат в адаптере, чтобы получить список участников
+            val chat = adapter.getChats().find { it.id == chatId }
+            if (chat != null && chat.participants.isNotEmpty()) {
+                intent.putExtra("participants", chat.participants)
             }
             
             startActivity(intent)
@@ -1019,7 +1035,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun applySavedColorScheme() {
         val theme = when (getSavedColorScheme()) {
-            "light" -> R.style.Theme_MsgClientAndroid
+            "light" -> R.style.Base_Theme_MsgClientAndroid
             else -> R.style.Theme_MsgClientAndroid_Dark
         }
         setTheme(theme)

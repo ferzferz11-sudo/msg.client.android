@@ -106,6 +106,7 @@
     <string name="app_description">Безопасный обмен сообщениями</string>
     <string name="error_title">Детали ошибки</string>
     <string name="copy">Копировать</string>
+    <string name="reply">Ответить</string>
     <string name="history_empty">Добро пожаловать! Это новый чат. Здесь пока нет сообщений.</string>
     <string name="history_load_error">Не удалось загрузить историю: %s</string>
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
@@ -148,4 +149,8 @@
     <string name="select_at_least_one_user">Пожалуйста, выберите хотя бы одного пользователя</string>
     <string name="group_created">Группа \"%s\" создана</string>
     <string name="creating_chat">Создание чата…</string>
+    <string name="delete_messages_title">Удаление сообщений</string>
+    <string name="delete_messages_confirm">Вы уверены, что хотите удалить выбранные сообщения? Это также удалит изображения с сервера.</string>
+    <string name="is_typing">печатает...</string>
+    <string name="are_typing">печатают...</string>
 </resources>
