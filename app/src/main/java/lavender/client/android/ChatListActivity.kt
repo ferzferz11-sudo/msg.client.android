@@ -797,7 +797,7 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, findViewById(android.R.id.content))
+                val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
 
                 // Set dialog background using Material Design colors
                 val typedValue = android.util.TypedValue()
@@ -833,7 +833,7 @@ class ChatListActivity : AppCompatActivity() {
                 val sortedUsers = allUsers.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
 
                 for (user in sortedUsers) {
-                    val userView = layoutInflater.inflate(R.layout.item_user_selectable, dialogView.findViewById(R.id.usersContainer))
+                    val userView = layoutInflater.inflate(R.layout.item_user_selectable, usersContainer, false)
                     val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
                     val usernameText = userView.findViewById<TextView>(R.id.usernameText)
                     val userAvatar = userView.findViewById<CircleImageView>(R.id.userAvatar)
