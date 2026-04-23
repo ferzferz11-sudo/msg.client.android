@@ -204,11 +204,29 @@ class MessageAdapter(
                 val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
                 messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
             } else if (message.text.startsWith("File: ")) {
-                messageText.text = message.text
-                messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_file, 0, 0, 0)
+                val lines = message.text.split("\n")
+                val fileName = if (lines.size > 1) lines[0].removePrefix("File: ") else message.text.removePrefix("File: ")
+                val fileUrl = if (lines.size > 1) lines[1] else ""
+
+                val fileIcon = when {
+                    fileName.lowercase().endsWith(".pdf") -> R.drawable.ic_file_pdf
+                    fileName.lowercase().endsWith(".zip") || fileName.lowercase().endsWith(".rar") || fileName.lowercase().endsWith(".7z") -> R.drawable.ic_file_archive
+                    else -> R.drawable.ic_file
+                }
+
+                messageText.text = fileName
+                messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
                 messageText.compoundDrawablePadding = 8.dpToPx()
                 val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
                 messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
+
+                // Make text clickable to download file
+                messageText.setOnClickListener {
+                    if (fileUrl.isNotEmpty()) {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(fileUrl))
+                        context.startActivity(intent)
+                    }
+                }
             } else {
                 val text = message.text
                 val highlight = searchHighlight
@@ -227,6 +245,7 @@ class MessageAdapter(
                     messageText.text = message.text
                 }
                 messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                messageText.setOnClickListener(null)
             }
             
             messageImageView.visibility = if (message.imageUrl.isNotEmpty()) View.VISIBLE else View.GONE

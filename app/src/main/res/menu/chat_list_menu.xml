@@ -21,4 +21,9 @@
         android:title="@string/color_scheme"
         app:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/action_notification_history"
+        android:title="Notification History"
+        app:showAsAction="never" />
+
 </menu>

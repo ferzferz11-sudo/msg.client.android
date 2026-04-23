@@ -1,5 +1,7 @@
 package lavender.client.android
 
+import lavender.client.android.data.fcm.NotificationHistory
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -200,7 +202,65 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         loadChats()
+        loadAllUsers()
         startPollingChats()
+
+        // Get and log FCM token for testing
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                android.util.Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                return@addOnCompleteListener
+            }
+            val token = task.result
+            android.util.Log.d("FCM", "FCM Token: $token")
+
+            // Register token on server - always register to ensure token is up to date
+            // Delay slightly to ensure username is loaded
+            lifecycleScope.launch {
+                delay(1000)
+                if (username.isNotEmpty()) {
+                    grpcClient.registerToken(username, token)
+                    android.util.Log.d("FCM", "Token registered for user: $username")
+                } else {
+                    android.util.Log.w("FCM", "Username not available for token registration")
+                }
+            }
+        }
+
+        // Request POST_NOTIFICATIONS permission for Android 13+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        }
+    }
+
+    private fun loadAllUsers() {
+        grpcClient.loadAllUsers()
+        lifecycleScope.launch {
+            delay(2000) // Wait for users to load
+            var allUsers = grpcClient.allUsers.value
+
+            // If users are still not loaded, wait more
+            var attempts = 0
+            while (allUsers.isEmpty() && attempts < 5) {
+                delay(500)
+                allUsers = grpcClient.allUsers.value
+                attempts++
+            }
+
+            for (user in allUsers) {
+                grpcClient.getUserAvatar(user) { avatarUrl ->
+                    runOnUiThread {
+                        // Save in cache (including empty strings to avoid retrying)
+                        if (avatarUrl.isEmpty()) {
+                            grpcClient.updateAvatarCache(user, "")
+                        }
+                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                    }
+                }
+            }
+        }
     }
 
     private fun startPollingChats() {
@@ -483,33 +543,6 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
             }
-
-            // Load avatars for all users (for users dialog)
-            grpcClient.loadAllUsers()
-            lifecycleScope.launch {
-                delay(2000) // Wait for users to load
-                var allUsers = grpcClient.allUsers.value
-
-                // If users are still not loaded, wait more
-                var attempts = 0
-                while (allUsers.isEmpty() && attempts < 5) {
-                    delay(500)
-                    allUsers = grpcClient.allUsers.value
-                    attempts++
-                }
-
-                for (user in allUsers) {
-                    grpcClient.getUserAvatar(user) { avatarUrl ->
-                        runOnUiThread {
-                            // Save in cache (including empty strings to avoid retrying)
-                            if (avatarUrl.isEmpty()) {
-                                grpcClient.updateAvatarCache(user, "")
-                            }
-                            adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -662,7 +695,7 @@ class ChatListActivity : AppCompatActivity() {
             R.id.action_delete -> {
                 val selected = adapter.getSelectedChats()
                 if (selected.isNotEmpty()) {
-                    val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, findViewById(android.R.id.content))
+                    val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
 
                     // Set dialog background using Material Design colors
                     val typedValue = android.util.TypedValue()
@@ -740,6 +773,10 @@ class ChatListActivity : AppCompatActivity() {
             }
             R.id.action_color_scheme -> {
                 toggleColorScheme()
+                true
+            }
+            R.id.action_notification_history -> {
+                showNotificationHistory()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -914,7 +951,7 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
-        val progressView = layoutInflater.inflate(R.layout.dialog_loading, findViewById(android.R.id.content))
+        val progressView = layoutInflater.inflate(R.layout.dialog_loading, null)
         val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setView(progressView)
             .setCancelable(true)
@@ -942,7 +979,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun createGroupChat(name: String, participants: List<String>) {
-        val progressView = layoutInflater.inflate(R.layout.dialog_loading, findViewById(android.R.id.content))
+        val progressView = layoutInflater.inflate(R.layout.dialog_loading, null)
         val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setView(progressView)
             .setCancelable(true)
@@ -1240,5 +1277,105 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         return inSampleSize
+    }
+
+    private fun showNotificationHistory() {
+        val notifications = NotificationHistory.getAll()
+
+        // Create custom view for dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_notification_history, null)
+        val notificationsText = dialogView.findViewById<TextView>(R.id.notificationsText)
+        val fcmTokenText = dialogView.findViewById<TextView>(R.id.fcmTokenText)
+        val copyTokenButton = dialogView.findViewById<Button>(R.id.copyTokenButton)
+        val testNotificationButton = dialogView.findViewById<Button>(R.id.testNotificationButton)
+
+        // Display notifications
+        if (notifications.isEmpty()) {
+            notificationsText.text = "No notifications received yet"
+        } else {
+            val message = notifications.joinToString("\n\n") { notif ->
+                val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                    .format(java.util.Date(notif.timestamp))
+                "[$time] ${notif.title}\n${notif.body}${if (notif.from != null) "\nFrom: ${notif.from}" else ""}"
+            }
+            notificationsText.text = message
+        }
+
+        // Get and display FCM token
+        lifecycleScope.launch {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    fcmTokenText.text = token
+                    fcmTokenText.setOnClickListener {
+                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("FCM Token", token)
+                        clipboard.setPrimaryClip(clip)
+                        showToast("FCM Token copied to clipboard")
+                    }
+                } else {
+                    fcmTokenText.text = "Failed to get FCM token"
+                }
+            }
+        }
+
+        copyTokenButton.setOnClickListener {
+            val token = fcmTokenText.text.toString()
+            if (token.isNotEmpty() && token != "Failed to get FCM token") {
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("FCM Token", token)
+                clipboard.setPrimaryClip(clip)
+                showToast("FCM Token copied to clipboard")
+            }
+        }
+
+        testNotificationButton.setOnClickListener {
+            // Simulate receiving a notification
+            lavender.client.android.data.fcm.NotificationHistory.add("Test Notification", "This is a test notification from the app", "local")
+            notificationsText.text = lavender.client.android.data.fcm.NotificationHistory.getAll()
+                .joinToString("\n\n") { notif ->
+                    val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                        .format(java.util.Date(notif.timestamp))
+                    "[$time] ${notif.title}\n${notif.body}${if (notif.from != null) "\nFrom: ${notif.from}" else ""}"
+                }
+            showToast("Test notification added to history")
+
+            // Create notification channel if needed
+            val channelId = "lavender_messaging_channel"
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channelName = "Lavender Messages"
+                val channelDescription = "Notifications for new messages"
+                val importance = android.app.NotificationManager.IMPORTANCE_HIGH
+                val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
+                    description = channelDescription
+                }
+                val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+                notificationManager?.createNotificationChannel(channel)
+            }
+
+            // Also show a real system notification
+            val notificationId = 9999
+            val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
+                .setContentTitle("Test Notification")
+                .setContentText("This is a test notification from the app")
+                .setSmallIcon(R.drawable.ic_message_sent)
+                .setAutoCancel(true)
+                .build()
+
+            val notificationManagerCompat = androidx.core.app.NotificationManagerCompat.from(this)
+            notificationManagerCompat.notify(notificationId, notification)
+        }
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Notification History (${notifications.size})")
+            .setView(dialogView)
+            .setPositiveButton("Clear") { _, _ ->
+                NotificationHistory.clear()
+                showToast("Notification history cleared")
+            }
+            .setNegativeButton(android.R.string.ok, null)
+            .create()
+
+        dialog.show()
     }
 }
