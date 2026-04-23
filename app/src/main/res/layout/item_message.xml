@@ -132,6 +132,14 @@
                         android:layout_height="wrap_content"
                         android:textSize="10sp" />
 
+                    <TextView
+                        android:id="@+id/editedText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="10sp"
+                        android:layout_marginStart="4dp"
+                        android:visibility="gone" />
+
                     <ImageView
                         android:id="@+id/readStatusIcon"
                         android:layout_width="14dp"

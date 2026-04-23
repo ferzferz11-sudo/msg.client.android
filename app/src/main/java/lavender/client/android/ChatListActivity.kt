@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -42,6 +43,17 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class ChatListActivity : AppCompatActivity() {
 
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val languageCode = prefs.getString("language", "en") ?: "en"
+        val locale = Locale.forLanguageTag(languageCode)
+        Locale.setDefault(locale)
+        val config = newBase.resources.configuration
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
+    }
+
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: ChatAdapter
     private val grpcClient = GrpcClient
@@ -52,6 +64,7 @@ class ChatListActivity : AppCompatActivity() {
     private var currentAvatarImageView: CircleImageView? = null
     private var currentAvatarProgressBar: android.widget.ProgressBar? = null
     private var currentTheme: String? = null
+    private var currentChats: List<lavender.client.android.data.models.ChatInfo> = emptyList()
     private companion object
 
     private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
@@ -172,6 +185,21 @@ class ChatListActivity : AppCompatActivity() {
                 delay(3000) // Poll every 3 seconds for faster updates
                 grpcClient.getChats(username) { chats ->
                     if (chats.isNotEmpty()) {
+                        // Check if chats have actually changed
+                        val chatsChanged = currentChats.size != chats.size ||
+                                currentChats.zip(chats).any { (old, new) ->
+                                    old.id != new.id ||
+                                    old.name != new.name ||
+                                    old.type != new.type ||
+                                    old.unreadCount != new.unreadCount
+                                }
+
+                        if (!chatsChanged) {
+                            return@getChats
+                        }
+
+                        currentChats = chats
+
                         // Load avatars for new participants first
                         val allParticipants = mutableSetOf<String>()
                         for (chat in chats) {
@@ -211,7 +239,9 @@ class ChatListActivity : AppCompatActivity() {
                             delay(2000)
                             runOnUiThread {
                                 if (loadedCount.get() < totalParticipants) {
-                                    adapter.setChats(chats)
+                                    if (currentChats != chats) {
+                                        adapter.setChats(chats)
+                                    }
                                     adapter.updateAvatarCache(grpcClient.getAvatarCache())
                                 }
                             }
@@ -220,7 +250,9 @@ class ChatListActivity : AppCompatActivity() {
                         // Fallback: show chats immediately if no participants
                         if (allParticipants.isEmpty()) {
                             runOnUiThread {
-                                adapter.setChats(chats)
+                                if (currentChats != chats) {
+                                    adapter.setChats(chats)
+                                }
                             }
                         }
                     }
@@ -242,6 +274,20 @@ class ChatListActivity : AppCompatActivity() {
         // Refresh chats immediately when returning from chat
         grpcClient.getChats(username) { chats ->
             if (chats.isNotEmpty()) {
+                // Check if chats have actually changed
+                val chatsChanged = currentChats.size != chats.size ||
+                        currentChats.zip(chats).any { (old, new) ->
+                            old.id != new.id ||
+                            old.name != new.name ||
+                            old.type != new.type ||
+                            old.unreadCount != new.unreadCount
+                        }
+
+                if (!chatsChanged) {
+                    return@getChats
+                }
+
+                currentChats = chats
                 // Load avatars for all participants first
                 val allParticipants = mutableSetOf<String>()
                 for (chat in chats) {
@@ -281,7 +327,9 @@ class ChatListActivity : AppCompatActivity() {
                     delay(2000)
                     runOnUiThread {
                         if (loadedCount.get() < totalParticipants) {
-                            adapter.setChats(chats)
+                            if (currentChats != chats) {
+                                adapter.setChats(chats)
+                            }
                             adapter.updateAvatarCache(grpcClient.getAvatarCache())
                         }
                     }
@@ -290,7 +338,9 @@ class ChatListActivity : AppCompatActivity() {
                 // Fallback: show chats immediately if no participants
                 if (allParticipants.isEmpty()) {
                     runOnUiThread {
-                        adapter.setChats(chats)
+                        if (currentChats != chats) {
+                            adapter.setChats(chats)
+                        }
                     }
                 }
             }
@@ -339,6 +389,7 @@ class ChatListActivity : AppCompatActivity() {
                         openChat("general", getString(R.string.general_chat))
                     }
                 } else {
+                    currentChats = chats
                     // Load avatars for all chat participants first
                     val allParticipants = mutableSetOf<String>()
                     for (chat in chats) {
@@ -366,7 +417,10 @@ class ChatListActivity : AppCompatActivity() {
                             // Show chats after all avatars are loaded
                             if (loaded == totalParticipants) {
                                 runOnUiThread {
-                                    adapter.setChats(chats)
+                                    // Only update if chats changed
+                                    if (currentChats != chats) {
+                                        adapter.setChats(chats)
+                                    }
                                     adapter.updateAvatarCache(grpcClient.getAvatarCache())
                                 }
                             }
@@ -378,7 +432,9 @@ class ChatListActivity : AppCompatActivity() {
                         delay(5000)
                         runOnUiThread {
                             if (loadedCount.get() < totalParticipants) {
-                                adapter.setChats(chats)
+                                if (currentChats != chats) {
+                                    adapter.setChats(chats)
+                                }
                                 adapter.updateAvatarCache(grpcClient.getAvatarCache())
                             }
                         }
@@ -387,7 +443,9 @@ class ChatListActivity : AppCompatActivity() {
                     // Fallback: show chats immediately if no participants
                     if (allParticipants.isEmpty()) {
                         runOnUiThread {
-                            adapter.setChats(chats)
+                            if (currentChats != chats) {
+                                adapter.setChats(chats)
+                            }
                         }
                     }
                 }

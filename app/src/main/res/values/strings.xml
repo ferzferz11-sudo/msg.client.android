@@ -173,6 +173,7 @@
     <string name="forward">Forward</string>
     <string name="forward_to">Forward to…</string>
     <string name="message_edited">Message edited</string>
+    <string name="edited_label">edited</string>
     <string name="group_info">Group Info</string>
     <string name="delete_group">Delete Group</string>
     <string name="delete_group_confirm">Are you sure you want to delete this group?</string>

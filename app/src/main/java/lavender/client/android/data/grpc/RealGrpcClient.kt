@@ -50,6 +50,8 @@ import lavender.client.android.data.proto.AddParticipantRequestProto
 import lavender.client.android.data.proto.AddParticipantResponseProto
 import lavender.client.android.data.proto.RemoveParticipantRequestProto
 import lavender.client.android.data.proto.RemoveParticipantResponseProto
+import lavender.client.android.data.proto.EditMessageRequestProto
+import lavender.client.android.data.proto.EditMessageResponseProto
 import java.util.concurrent.TimeUnit
 
 object RealGrpcClient {
@@ -68,6 +70,12 @@ object RealGrpcClient {
     
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages
+
+    fun updateMessage(message: Message) {
+        _messages.update { currentList ->
+            currentList.map { if (it.id == message.id) message else it }
+        }
+    }
 
     private val _users = MutableStateFlow<List<String>>(emptyList())
     val users: StateFlow<List<String>> = _users
@@ -449,7 +457,8 @@ object RealGrpcClient {
     fun sendMessage(message: Message) {
         if (requestObserver == null) return
         try {
-            val messageWithRoom = message.copy(roomId = currentRoomId)
+            // Use the message's roomId if it's set, otherwise use currentRoomId
+            val messageWithRoom = if (message.roomId.isNotEmpty()) message else message.copy(roomId = currentRoomId)
 
             // Get avatar URL for current user if not cached
             if (!avatarCache.containsKey(message.user) && message.avatarUrl.isEmpty()) {
@@ -489,7 +498,7 @@ object RealGrpcClient {
         // Send delete request to server
         val proto = ProtoUtils.createMessageProto(message)
         val request = DeleteMessagesRequestProto(listOf(proto))
-        
+
         val method = io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteMessages")
@@ -503,6 +512,34 @@ object RealGrpcClient {
                 override fun onMessage(message: DeleteMessagesResponseProto) {
                     if (message.success) {
                         android.util.Log.d("GrpcClient", "Successfully deleted message on server")
+                    }
+                }
+            }, io.grpc.Metadata())
+            call.request(1)
+            call.sendMessage(request)
+            call.halfClose()
+        }
+    }
+
+    fun editMessage(messageId: String, text: String, callback: (Boolean, String) -> Unit = { _, _ -> }) {
+        val request = EditMessageRequestProto(messageId, text)
+
+        val method = io.grpc.MethodDescriptor.newBuilder<EditMessageRequestProto, EditMessageResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/EditMessage")
+            .setRequestMarshaller(EditMessageRequestMarshaller())
+            .setResponseMarshaller(EditMessageResponseMarshaller())
+            .build()
+
+        channel?.let { ch ->
+            val call = ch.newCall(method, io.grpc.CallOptions.DEFAULT)
+            call.start(object : io.grpc.ClientCall.Listener<EditMessageResponseProto>() {
+                override fun onMessage(message: EditMessageResponseProto) {
+                    callback(message.success, message.message)
+                }
+                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                    if (!status.isOk) {
+                        callback(false, status.description ?: "Unknown error")
                     }
                 }
             }, io.grpc.Metadata())
@@ -1123,6 +1160,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.isRead) cos.writeBool(11, value.isRead)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(12, value.avatarUrl)
         if (value.imageUrl.isNotEmpty()) cos.writeString(13, value.imageUrl)
+        if (value.edited) cos.writeBool(14, value.edited)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1141,6 +1179,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         var isRead = false
         var avatarUrl = ""
         var imageUrl = ""
+        var edited = false
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -1166,10 +1205,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 11 -> isRead = cis.readBool()
                 12 -> avatarUrl = cis.readString()
                 13 -> imageUrl = cis.readString()
+                14 -> edited = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl)
+        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited)
     }
 }
 
@@ -1357,6 +1397,58 @@ class DeleteMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Del
             else cis.skipField(tag)
         }
         return DeleteMessagesResponseProto(success)
+    }
+}
+
+class EditMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<EditMessageRequestProto> {
+    override fun stream(value: EditMessageRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.messageId.isNotEmpty()) cos.writeString(1, value.messageId)
+        if (value.text.isNotEmpty()) cos.writeString(2, value.text)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): EditMessageRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var messageId = ""
+        var text = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> messageId = cis.readString()
+                2 -> text = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return EditMessageRequestProto(messageId, text)
+    }
+}
+
+class EditMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<EditMessageResponseProto> {
+    override fun stream(value: EditMessageResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): EditMessageResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return EditMessageResponseProto(success, message)
     }
 }
 

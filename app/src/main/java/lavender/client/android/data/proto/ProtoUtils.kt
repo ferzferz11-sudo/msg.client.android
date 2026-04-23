@@ -23,9 +23,10 @@ object ProtoUtils {
             .setIsRead(message.isRead)
             .setAvatarUrl(message.avatarUrl)
             .setImageUrl(message.imageUrl)
+            .setEdited(message.edited)
             .build()
     }
-    
+
     fun createMessageFromProto(proto: MessageProto): Message {
         val timestamp = proto.createdAt?.let {
             it.seconds * 1000 + (it.nanos / 1000000)
@@ -43,7 +44,8 @@ object ProtoUtils {
             roomId = proto.roomId,
             isRead = proto.isRead,
             avatarUrl = proto.avatarUrl,
-            imageUrl = proto.imageUrl
+            imageUrl = proto.imageUrl,
+            edited = proto.edited
         )
     }
     

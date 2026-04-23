@@ -22,7 +22,8 @@ data class MessageProto(
     val roomId: String = "",
     val isRead: Boolean = false,
     val avatarUrl: String = "",
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val edited: Boolean = false
 ) {
     class Builder {
         private var user: String = ""
@@ -30,6 +31,7 @@ data class MessageProto(
         private var createdAt: Timestamp? = null
         private var id: String = ""
         private var password: String = ""
+        private var edited: Boolean = false
         private var repliedToMessageId: String = ""
         private var repliedToUser: String = ""
         private var repliedToText: String = ""
@@ -94,6 +96,11 @@ data class MessageProto(
             return this
         }
 
+        fun setEdited(edited: Boolean): Builder {
+            this.edited = edited
+            return this
+        }
+
         fun setImageUrl(imageUrl: String): Builder {
             this.imageUrl = imageUrl
             return this
@@ -106,7 +113,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited)
         }
     }
     
@@ -297,6 +304,16 @@ data class RemoveParticipantRequestProto(
 )
 
 data class RemoveParticipantResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class EditMessageRequestProto(
+    val messageId: String = "",
+    val text: String = ""
+)
+
+data class EditMessageResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )

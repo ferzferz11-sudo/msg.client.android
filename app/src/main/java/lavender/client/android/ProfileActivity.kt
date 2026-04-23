@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -20,8 +21,20 @@ import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.proto.GetUserProfileResponseProto
 import org.json.JSONArray
+import java.util.Locale
 
 class ProfileActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val languageCode = prefs.getString("language", "en") ?: "en"
+        val locale = Locale.forLanguageTag(languageCode)
+        Locale.setDefault(locale)
+        val config = newBase.resources.configuration
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
+    }
     private val grpcClient = RealGrpcClient
 
     override fun onCreate(savedInstanceState: Bundle?) {

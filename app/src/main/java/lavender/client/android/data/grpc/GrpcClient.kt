@@ -34,6 +34,14 @@ object GrpcClient {
         realGrpcClient.deleteMessage(message)
     }
 
+    fun editMessage(messageId: String, text: String, callback: (Boolean, String) -> Unit = { _, _ -> }) {
+        realGrpcClient.editMessage(messageId, text, callback)
+    }
+
+    fun updateMessage(message: Message) {
+        realGrpcClient.updateMessage(message)
+    }
+
     fun setReaction(messageId: String, username: String, emoji: String) {
         realGrpcClient.setReaction(messageId, username, emoji)
     }

@@ -107,6 +107,7 @@ class MessageAdapter(
         private val userText: TextView = itemView.findViewById(R.id.userText)
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
+        private val editedText: TextView = itemView.findViewById(R.id.editedText)
         private val readStatusIcon: ImageView = itemView.findViewById(R.id.readStatusIcon)
         private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
@@ -189,16 +190,15 @@ class MessageAdapter(
             // 5. Content
             timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
             timeText.visibility = if (shouldHideTime) View.GONE else View.VISIBLE
-            
+
             val isLocation = message.text.startsWith("geo:")
-            val isEdited = message.text.endsWith(" (edited)")
-            val displayText = if (isEdited) message.text.removeSuffix(" (edited)") else message.text
+
+            // Show edited label based on edited field
+            editedText.text = context.getString(R.string.edited_label)
+            editedText.visibility = if (message.edited) View.VISIBLE else View.GONE
 
             if (isLocation) {
                 messageText.text = context.getString(R.string.location)
-                if (isEdited) {
-                    messageText.append(" (edited)")
-                }
                 messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0)
                 messageText.compoundDrawablePadding = 8.dpToPx()
                 val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
@@ -210,7 +210,7 @@ class MessageAdapter(
                 val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
                 messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
             } else {
-                val text = displayText
+                val text = message.text
                 val highlight = searchHighlight
                 if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
                     val spannable = android.text.SpannableString(message.text)

@@ -39,7 +39,11 @@ class ChatViewModel : ViewModel() {
     fun sendMessage(message: Message) {
         grpcClient.sendMessage(message)
     }
-    
+
+    fun updateMessage(message: Message) {
+        grpcClient.updateMessage(message)
+    }
+
     fun deleteMessage(message: Message) {
         grpcClient.deleteMessage(message)
     }

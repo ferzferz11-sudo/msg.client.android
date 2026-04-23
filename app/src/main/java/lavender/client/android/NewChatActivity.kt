@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.ClipData
+import android.content.Context
 import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
@@ -50,6 +51,17 @@ import org.json.JSONObject
 import java.util.Locale
 
 class NewChatActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val languageCode = prefs.getString("language", "en") ?: "en"
+        val locale = Locale.forLanguageTag(languageCode)
+        Locale.setDefault(locale)
+        val config = newBase.resources.configuration
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
+    }
     private val okHttpClient = OkHttpClient()
     private lateinit var toolbar: Toolbar
     private lateinit var toolbarTitle: TextView
@@ -62,7 +74,6 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var copyMessages: ImageButton
     private lateinit var replyMessage: ImageButton
     private lateinit var deleteMessages: ImageButton
-    private lateinit var editMessage: ImageButton
     private lateinit var forwardMessages: ImageButton
     private lateinit var toolbarContent: View
     private lateinit var messagesRecyclerView: RecyclerView
@@ -156,7 +167,6 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applySavedLanguage()
         applySavedColorScheme()
         setContentView(R.layout.activity_new_chat)
 
@@ -170,6 +180,7 @@ class NewChatActivity : AppCompatActivity() {
         // Start chat and load history for the current room
         viewModel.switchRoom(roomId)
         viewModel.startChat(username, password, "") { _ -> }
+        viewModel.markRead(username)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -192,7 +203,6 @@ class NewChatActivity : AppCompatActivity() {
         copyMessages = findViewById(R.id.copyMessages)
         replyMessage = findViewById(R.id.replyMessage)
         deleteMessages = findViewById(R.id.deleteMessages)
-        editMessage = findViewById(R.id.editMessage)
         forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent)
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
@@ -318,17 +328,6 @@ class NewChatActivity : AppCompatActivity() {
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun getSavedColorScheme(): String? = getSharedPreferences("settings", MODE_PRIVATE).getString("color_scheme", "lavender")
-    private fun getSavedLanguage(): String? = getSharedPreferences("settings", MODE_PRIVATE).getString("language", "en")
-
-    private fun setLocale(languageCode: String) {
-        val locale = Locale(languageCode)
-        Locale.setDefault(locale)
-        val config = resources.configuration
-        val localeList = android.os.LocaleList(locale)
-        config.setLocales(localeList)
-        createConfigurationContext(config)
-        resources.updateConfiguration(config, resources.displayMetrics)
-    }
 
     private fun setupRecyclerView() {
         adapter = MessageAdapter(
@@ -353,6 +352,19 @@ class NewChatActivity : AppCompatActivity() {
             adapter.notifyItemChanged(position)
         }
         androidx.recyclerview.widget.ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
+
+        // Mark as read when scrolling to bottom
+        messagesRecyclerView.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: androidx.recyclerview.widget.RecyclerView, dx: Int, dy: Int) {
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
+                val totalItemCount = layoutManager.itemCount
+
+                if (lastVisiblePosition == totalItemCount - 1) {
+                    viewModel.markRead(username)
+                }
+            }
+        })
     }
 
     private fun setupObservers() {
@@ -391,6 +403,12 @@ class NewChatActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
         menuInflater.inflate(R.menu.chat_menu, menu)
         return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
+        val searchItem = menu.findItem(R.id.action_search)
+        searchItem?.isVisible = !selectionMode
+        return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
@@ -479,11 +497,18 @@ class NewChatActivity : AppCompatActivity() {
             if (text.isNotEmpty() || replyingTo != null) {
                 if (editingMessage != null) {
                     val originalMessage = editingMessage!!
-                    if (text != originalMessage.text.removeSuffix(" (edited)")) {
-                        val editedMessage = originalMessage.copy(
-                            text = if (text.startsWith("geo:") || text.startsWith("File: ")) text else "$text (edited)"
-                        )
-                        viewModel.sendMessage(editedMessage)
+                    if (text != originalMessage.text) {
+                        android.util.Log.d("NewChatActivity", "Editing message ${originalMessage.id} to: $text")
+                        grpcClient.editMessage(originalMessage.id, text) { success, errorMsg ->
+                            android.util.Log.d("NewChatActivity", "Edit result: success=$success, error=$errorMsg")
+                            if (success) {
+                                // Update local message immediately with edited flag
+                                val updatedMessage = originalMessage.copy(text = text, timestamp = System.currentTimeMillis(), edited = true)
+                                viewModel.updateMessage(updatedMessage)
+                            } else {
+                                android.util.Log.e("NewChatActivity", "Failed to edit message: $errorMsg")
+                            }
+                        }
                     }
                     editingMessage = null
                     messageInput.setText("")
@@ -528,20 +553,6 @@ class NewChatActivity : AppCompatActivity() {
                     hideSelectionToolbar()
                 }
                 .setNegativeButton("Cancel", null).show()
-        }
-
-        editMessage.setOnClickListener {
-            val selected = adapter.getSelectedMessages()
-            if (selected.size == 1) {
-                val msg = selected[0]
-                editingMessage = msg
-                val cleanText = msg.text.removeSuffix(" (edited)")
-                messageInput.setText(cleanText)
-                messageInput.setSelection(cleanText.length)
-                messageInput.requestFocus()
-                sendButton.setImageResource(R.drawable.ic_checked)
-                hideSelectionToolbar()
-            }
         }
 
         forwardMessages.setOnClickListener {
@@ -655,10 +666,6 @@ class NewChatActivity : AppCompatActivity() {
         selectionCountText.text = count.toString()
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
         replyMessage.visibility = if (count == 1) View.VISIBLE else View.GONE
-        editMessage.visibility = if (count == 1) {
-            val selectedMessage = adapter.getSelectedMessages().firstOrNull()
-            if (selectedMessage != null && selectedMessage.user == username) View.VISIBLE else View.GONE
-        } else View.GONE
         forwardMessages.visibility = if (count > 0) View.VISIBLE else View.GONE
     }
 
@@ -703,10 +710,17 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showReactionsDialog(message: Message) {
-        val emojis = listOf("❤️", "👍", "🔥", "😂", "😮", "😢", "🙏")
         val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, null)
         val container = dialogView.findViewById<LinearLayout>(R.id.reactionsContainer)
+        val menuReply = dialogView.findViewById<LinearLayout>(R.id.menuReply)
+        val menuCopy = dialogView.findViewById<LinearLayout>(R.id.menuCopy)
+        val menuEdit = dialogView.findViewById<LinearLayout>(R.id.menuEdit)
+        val menuDelete = dialogView.findViewById<LinearLayout>(R.id.menuDelete)
+
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+        // Add emoji reactions (top)
+        val emojis = listOf("❤️", "👍", "🔥", "😂", "😮", "😢", "🙏")
         emojis.forEach { emoji ->
             container.addView(TextView(this).apply {
                 text = emoji
@@ -718,6 +732,40 @@ class NewChatActivity : AppCompatActivity() {
                 }
             })
         }
+
+        // Setup menu items
+        menuReply.setOnClickListener {
+            replyingTo = message
+            showReplyPreview(message)
+            dialog.dismiss()
+        }
+
+        menuCopy.setOnClickListener {
+            val text = "[${message.user}]: ${message.text}"
+            (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", text))
+            Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        // Show edit only for own messages
+        menuEdit.visibility = if (message.user == username) View.VISIBLE else View.GONE
+        menuEdit.setOnClickListener {
+            editingMessage = message
+            val cleanText = message.text.removeSuffix(" (edited)")
+            messageInput.setText(cleanText)
+            messageInput.setSelection(cleanText.length)
+            messageInput.requestFocus()
+            sendButton.setImageResource(R.drawable.ic_checked)
+            dialog.dismiss()
+        }
+
+        // Show delete only for own messages
+        menuDelete.visibility = if (message.user == username) View.VISIBLE else View.GONE
+        menuDelete.setOnClickListener {
+            grpcClient.deleteMessage(message)
+            dialog.dismiss()
+        }
+
         dialog.show()
     }
 
@@ -832,7 +880,7 @@ class NewChatActivity : AppCompatActivity() {
                         val targetChat = chats[which]
                         messagesToForward.forEach { msg ->
                             val forwardedMsg = msg.copy(
-                                id = "", 
+                                id = "",
                                 roomId = targetChat.id,
                                 timestamp = System.currentTimeMillis(),
                                 user = username,
@@ -842,6 +890,18 @@ class NewChatActivity : AppCompatActivity() {
                             grpcClient.sendMessage(forwardedMsg)
                         }
                         Toast.makeText(this@NewChatActivity, "Forwarded to ${targetChat.name}", Toast.LENGTH_SHORT).show()
+
+                        // Update current activity with new chat data
+                        roomId = targetChat.id
+                        chatName = targetChat.name
+                        isDirect = targetChat.type == "direct"
+                        toolbarTitle.text = chatName
+                        toolbarSubtitle.text = if (isDirect) "" else getString(R.string.general_chat)
+
+                        // Switch to the new room
+                        viewModel.switchRoom(roomId)
+                        viewModel.startChat(username, password, "") { _ -> }
+                        viewModel.markRead(username)
                     }
                     .setNegativeButton(R.string.cancel, null)
                     .show()
@@ -856,9 +916,5 @@ class NewChatActivity : AppCompatActivity() {
             else -> R.style.Theme_Lavender_NoActionBar
         }
         setTheme(themeId)
-    }
-
-    private fun applySavedLanguage() {
-        getSavedLanguage()?.let { setLocale(it) }
     }
 }

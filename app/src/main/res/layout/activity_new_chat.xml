@@ -123,14 +123,6 @@
                     app:tint="?attr/colorOnPrimary" />
 
                 <ImageButton
-                    android:id="@+id/editMessage"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_edit"
-                    app:tint="?attr/colorOnPrimary" />
-
-                <ImageButton
                     android:id="@+id/forwardMessages"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -315,15 +307,6 @@
                 android:textSize="16sp"
                 android:inputType="textCapSentences|textMultiLine" />
 
-            <ImageButton
-                android:id="@+id/sendButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_send"
-                app:tint="?attr/colorPrimary"
-                android:contentDescription="@string/send_message" />
-
             <FrameLayout
                 android:layout_width="48dp"
                 android:layout_height="48dp">
@@ -344,6 +327,15 @@
                     android:layout_gravity="center"
                     android:visibility="gone" />
             </FrameLayout>
+
+            <ImageButton
+                android:id="@+id/sendButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_send"
+                app:tint="?attr/colorPrimary"
+                android:contentDescription="@string/send_message" />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
