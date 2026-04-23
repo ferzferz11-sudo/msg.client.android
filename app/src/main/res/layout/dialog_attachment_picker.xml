@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?attr/colorSurface">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/attach_file"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginBottom="16dp" />
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="4"
+        android:rowCount="1">
+
+        <LinearLayout
+            android:id="@+id/attachCamera"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:padding="8dp">
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_camera"
+                android:padding="8dp"
+                android:background="@drawable/circle_button"
+                android:backgroundTint="#FF9800"
+                android:contentDescription="@string/attach_camera"
+                app:tint="@android:color/white"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/attach_camera"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/attachGallery"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:padding="8dp">
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_gallery"
+                android:padding="8dp"
+                android:background="@drawable/circle_button"
+                android:backgroundTint="#2196F3"
+                android:contentDescription="@string/attach_gallery"
+                app:tint="@android:color/white"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/attach_gallery"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/attachFile"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:padding="8dp">
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_file"
+                android:padding="8dp"
+                android:background="@drawable/circle_button"
+                android:backgroundTint="#4CAF50"
+                android:contentDescription="@string/attach_file_label"
+                app:tint="@android:color/white"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/attach_file_label"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/attachLocation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:padding="8dp">
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_location"
+                android:padding="8dp"
+                android:background="@drawable/circle_button"
+                android:backgroundTint="#F44336"
+                android:contentDescription="@string/attach_location"
+                app:tint="@android:color/white"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/attach_location"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+    </GridLayout>
+</LinearLayout>

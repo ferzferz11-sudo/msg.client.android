@@ -61,6 +61,7 @@ message GetHistoryResponse {
 
 message DeleteMessagesRequest {
   repeated Message messages = 1;
+  bool delete_for_everyone = 2;
 }
 
 message DeleteMessagesResponse {
@@ -181,6 +182,26 @@ message TypingSignal {
   bool is_typing = 3;
 }
 
+message AddParticipantRequest {
+  string chat_id = 1;
+  string username = 2;
+}
+
+message AddParticipantResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RemoveParticipantRequest {
+  string chat_id = 1;
+  string username = 2;
+}
+
+message RemoveParticipantResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 service ChatService {
   rpc Chat(stream Message) returns (stream Message);
   rpc Typing(stream TypingRequest) returns (stream TypingSignal);
@@ -199,4 +220,6 @@ service ChatService {
   rpc GetUserAvatar(GetUserAvatarRequest) returns (GetUserAvatarResponse);
   rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
   rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse);
+  rpc AddParticipant(AddParticipantRequest) returns (AddParticipantResponse);
+  rpc RemoveParticipant(RemoveParticipantRequest) returns (RemoveParticipantResponse);
 }

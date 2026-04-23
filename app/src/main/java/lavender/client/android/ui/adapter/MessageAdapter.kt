@@ -1,12 +1,11 @@
 package lavender.client.android.ui.adapter
 
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -26,6 +25,12 @@ class MessageAdapter(
 
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
+    private var searchHighlight: String? = null
+
+    fun setSearchHighlight(query: String?) {
+        searchHighlight = query
+        notifyItemRangeChanged(0, itemCount)
+    }
 
     fun getSelectedMessages(): List<Message> {
         return selectedPositions.map { getItem(it) }
@@ -40,12 +45,12 @@ class MessageAdapter(
     }
 
     fun toggleSelectionMode(enabled: Boolean) {
+        selectionMode = enabled
         if (!enabled) {
-            clearSelection()
-        } else {
-            selectionMode = true
-            notifyItemRangeChanged(0, itemCount)
+            selectedPositions.clear()
         }
+        notifyItemRangeChanged(0, itemCount)
+        if (!enabled) onSelectionChanged(0)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
@@ -108,6 +113,8 @@ class MessageAdapter(
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
         private val messageImageView: ImageView = itemView.findViewById(R.id.messageImageView)
         
+        private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
+        
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
@@ -130,24 +137,26 @@ class MessageAdapter(
             }
 
             // 2. Alignment
-            val containerParams = messageContainer.layoutParams as LinearLayout.LayoutParams
-            containerParams.width = LinearLayout.LayoutParams.WRAP_CONTENT
-            containerParams.gravity = if (isOutgoing) Gravity.END else Gravity.START
-            
-            val topMargin = if (isConsecutive) 2.dpToPx() else 8.dpToPx()
-            val sideMargin = 40.dpToPx()
-            containerParams.setMargins(if (isOutgoing) sideMargin else 0, topMargin, if (isOutgoing) 0 else sideMargin, 0)
-            messageContainer.layoutParams = containerParams
+            val lp = messageContainer.layoutParams
+            if (lp is RelativeLayout.LayoutParams) {
+                if (isOutgoing) {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_END)
+                    lp.removeRule(RelativeLayout.ALIGN_PARENT_START)
+                } else {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_START)
+                    lp.removeRule(RelativeLayout.ALIGN_PARENT_END)
+                }
+                
+                val topMargin = if (isConsecutive) 2.dpToPx() else 8.dpToPx()
+                val sideMargin = 40.dpToPx()
+                lp.setMargins(if (isOutgoing) sideMargin else 0, topMargin, if (isOutgoing) 0 else sideMargin, 0)
+                messageContainer.layoutParams = lp
+            }
 
             // 3. Child Ordering & Background
             if (isOutgoing) {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
-                if (messageContainer.getChildAt(messageContainer.childCount - 1) != avatarImageView) {
-                    messageContainer.removeAllViews()
-                    messageContainer.addView(selectionIndicator)
-                    messageContainer.addView(messageBubble)
-                    messageContainer.addView(avatarImageView)
-                }
+                avatarImageView.visibility = View.GONE
                 
                 val typedValue = android.util.TypedValue()
                 context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
@@ -155,11 +164,10 @@ class MessageAdapter(
                 timeText.setTextColor(ContextCompat.getColor(context, R.color.tg_time_outgoing))
             } else {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
-                if (messageContainer.getChildAt(messageContainer.childCount - 1) != messageBubble) {
-                    messageContainer.removeAllViews()
-                    messageContainer.addView(selectionIndicator)
-                    messageContainer.addView(avatarImageView)
-                    messageContainer.addView(messageBubble)
+                if (canShowSenderInfo) {
+                    avatarImageView.visibility = View.VISIBLE
+                } else {
+                    avatarImageView.visibility = View.INVISIBLE
                 }
                 
                 val typedValue = android.util.TypedValue()
@@ -182,9 +190,63 @@ class MessageAdapter(
             timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
             timeText.visibility = if (shouldHideTime) View.GONE else View.VISIBLE
             
+            val isLocation = message.text.startsWith("geo:")
+            val isEdited = message.text.endsWith(" (edited)")
+            val displayText = if (isEdited) message.text.removeSuffix(" (edited)") else message.text
+
+            if (isLocation) {
+                messageText.text = context.getString(R.string.location)
+                if (isEdited) {
+                    messageText.append(" (edited)")
+                }
+                messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0)
+                messageText.compoundDrawablePadding = 8.dpToPx()
+                val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
+                messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
+            } else if (message.text.startsWith("File: ")) {
+                messageText.text = message.text
+                messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_file, 0, 0, 0)
+                messageText.compoundDrawablePadding = 8.dpToPx()
+                val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
+                messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
+            } else {
+                val text = displayText
+                val highlight = searchHighlight
+                if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
+                    val spannable = android.text.SpannableString(message.text)
+                    val start = text.lowercase().indexOf(highlight.lowercase())
+                    if (start != -1) {
+                        val end = start + highlight.length
+                        spannable.setSpan(
+                            android.text.style.BackgroundColorSpan(ContextCompat.getColor(context, R.color.lavender_mist_alpha)),
+                            start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
+                    messageText.text = spannable
+                } else {
+                    messageText.text = message.text
+                }
+                messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            }
+            
             messageImageView.visibility = if (message.imageUrl.isNotEmpty()) View.VISIBLE else View.GONE
             if (message.imageUrl.isNotEmpty()) {
-                com.bumptech.glide.Glide.with(context).load(message.imageUrl).into(messageImageView)
+                com.bumptech.glide.Glide.with(context)
+                    .load(message.imageUrl)
+                    .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
+                    .into(messageImageView)
+            }
+
+            // 5.1 Reactions
+            if (message.reactions.isNotEmpty()) {
+                reactionsText.visibility = View.VISIBLE
+                val groupedReactions = message.reactions.groupBy { it.emoji }
+                val reactionSummary = groupedReactions.entries.joinToString(" ") { 
+                    "${it.key}${if (it.value.size > 1) " ${it.value.size}" else ""}" 
+                }
+                reactionsText.text = reactionSummary
+            } else {
+                reactionsText.visibility = View.GONE
             }
 
             replyQuoteContainer.visibility = if (message.repliedToUser.isNotEmpty()) View.VISIBLE else View.GONE

@@ -24,6 +24,8 @@
     <!-- Telegram-like colors -->
     <color name="tg_outgoing_bubble">#EFFDDE</color>
     <color name="tg_incoming_bubble">#FFFFFF</color>
+    <color name="tg_outgoing_bubble_dark">#4A3B6D</color>
+    <color name="tg_incoming_bubble_dark">#312051</color>
     <color name="tg_outgoing_text">#1A1A1A</color>
     <color name="tg_incoming_name">#4081BF</color>
     <color name="tg_time_incoming">#A0A0A0</color>

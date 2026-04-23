@@ -1,6 +1,9 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
+    <attr name="isLightTheme" format="boolean" />
+
     <!-- Light theme -->
-    <style name="Base.Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="isLightTheme">true</item>
         <!-- Primary colors -->
         <item name="colorPrimary">@color/deep_purple</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -33,8 +36,11 @@
         <item name="colorPrimaryInverse">@color/white</item>
     </style>
 
+    <style name="Theme_Lavender_NoActionBar" parent="Theme.MsgClientAndroid" />
+
     <!-- Dark theme for manual switching -->
-    <style name="Theme_MsgClientAndroid_Dark" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme_Lavender_Dark_NoActionBar" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="isLightTheme">false</item>
         <!-- Primary colors -->
         <item name="colorPrimary">@color/lavender_mist</item>
         <item name="colorOnPrimary">@color/deep_purple</item>

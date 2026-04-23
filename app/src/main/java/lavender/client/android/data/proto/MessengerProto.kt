@@ -257,6 +257,50 @@ data class UpdateAvatarResponseProto(
     val message: String = ""
 )
 
+// Profile updates
+data class UpdateProfileRequestProto(
+    val username: String = "",
+    val bio: String = "",
+    val status: String = ""
+)
+
+data class UpdateProfileResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetUserProfileRequestProto(
+    val username: String = ""
+)
+
+data class GetUserProfileResponseProto(
+    val username: String = "",
+    val bio: String = "",
+    val status: String = "",
+    val avatarUrl: String = ""
+)
+
+// Participants management
+data class AddParticipantRequestProto(
+    val chatId: String = "",
+    val username: String = ""
+)
+
+data class AddParticipantResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class RemoveParticipantRequestProto(
+    val chatId: String = "",
+    val username: String = ""
+)
+
+data class RemoveParticipantResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
 // Get User Avatar Request/Response
 data class GetUserAvatarRequestProto(
     val username: String = ""

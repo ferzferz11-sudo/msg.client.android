@@ -1,6 +1,5 @@
 package lavender.client.android.ui.adapter
 
-import android.content.res.Configuration
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,16 +40,14 @@ class ChatAdapter(
     }
 
     fun setChats(newChats: List<ChatInfo>) {
-        // Filter out "general" chat as requested by the user
-        val filteredChats = newChats.filter { it.type != "general" && it.id != "general" }
-        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(chats, filteredChats))
-        chats = filteredChats
+        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(chats, newChats))
+        chats = newChats
         diffResult.dispatchUpdatesTo(this)
     }
 
     fun updateAvatarCache(newCache: Map<String, String>) {
         avatarCache = newCache
-        notifyDataSetChanged()
+        chats.indices.forEach { notifyItemChanged(it) }
     }
 
     private class ChatDiffCallback(
@@ -135,13 +132,7 @@ class ChatAdapter(
                 }
                 itemView.alpha = 1.0f
             }
-            val config = context.resources.configuration
-            val isRussian = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                config.locales[0].language == "ru"
-            } else {
-                @Suppress("DEPRECATION")
-                config.locale.language == "ru"
-            }
+            val isRussian = context.resources.configuration.locales[0].language == "ru"
             chatType.text = when (chat.type) {
                 "general" -> if (isRussian) "Общий чат" else "General Chat"
                 "direct" -> if (isRussian) "Личное сообщение" else "Direct Message"
@@ -168,7 +159,7 @@ class ChatAdapter(
             }
         }
 
-        private fun loadParticipantAvatars(participantsJson: String, currentUsername: String, avatarCache: Map<String, String>) {
+        private fun loadParticipantAvatars(participantsJson: String, @Suppress("UNUSED_PARAMETER") currentUsername: String, avatarCache: Map<String, String>) {
             participantAvatars.removeAllViews()
 
             if (participantsJson.isEmpty()) return
@@ -218,7 +209,7 @@ class ChatAdapter(
                         layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize).apply {
                             setMargins(-8, 0, 0, 0)
                         }
-                        text = "+$remainingCount"
+                        text = context.getString(R.string.selected_count, remainingCount)
                         textSize = 10f
                         gravity = android.view.Gravity.CENTER
                         setTextColor(android.graphics.Color.WHITE)
@@ -226,7 +217,7 @@ class ChatAdapter(
                     }
                     participantAvatars.addView(countView)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // If JSON parsing fails, just hide avatars
             }
         }

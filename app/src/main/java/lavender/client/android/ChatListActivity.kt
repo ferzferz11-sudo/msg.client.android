@@ -1,15 +1,10 @@
 package lavender.client.android
 
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import android.provider.MediaStore
-import android.view.animation.AlphaAnimation
-import android.view.animation.Animation
-import android.view.animation.AnimationSet
-import android.view.animation.ScaleAnimation
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -17,7 +12,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.appcompat.widget.Toolbar
 import android.view.MenuItem
@@ -27,8 +21,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import de.hdodenhof.circleimageview.CircleImageView
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONArray
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
@@ -38,7 +33,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.ui.adapter.ChatAdapter
 import com.bumptech.glide.Glide
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -58,9 +52,7 @@ class ChatListActivity : AppCompatActivity() {
     private var currentAvatarImageView: CircleImageView? = null
     private var currentAvatarProgressBar: android.widget.ProgressBar? = null
     private var currentTheme: String? = null
-    private companion object {
-        private const val PICK_IMAGE_REQUEST = 1001
-    }
+    private companion object
 
     private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
         val toast = Toast.makeText(this, message, duration)
@@ -189,7 +181,7 @@ class ChatListActivity : AppCompatActivity() {
                                     for (i in 0 until participants.length()) {
                                         allParticipants.add(participants.getString(i))
                                     }
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     // JSON parsing failed
                                 }
                             }
@@ -216,7 +208,7 @@ class ChatListActivity : AppCompatActivity() {
 
                         // Fallback: show chats after 2 seconds if not all avatars loaded
                         lifecycleScope.launch {
-                            kotlinx.coroutines.delay(2000)
+                            delay(2000)
                             runOnUiThread {
                                 if (loadedCount.get() < totalParticipants) {
                                     adapter.setChats(chats)
@@ -259,7 +251,7 @@ class ChatListActivity : AppCompatActivity() {
                             for (i in 0 until participants.length()) {
                                 allParticipants.add(participants.getString(i))
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // JSON parsing failed
                         }
                     }
@@ -286,7 +278,7 @@ class ChatListActivity : AppCompatActivity() {
 
                 // Fallback: show chats after 2 seconds if not all avatars loaded
                 lifecycleScope.launch {
-                    kotlinx.coroutines.delay(2000)
+                    delay(2000)
                     runOnUiThread {
                         if (loadedCount.get() < totalParticipants) {
                             adapter.setChats(chats)
@@ -315,11 +307,11 @@ class ChatListActivity : AppCompatActivity() {
             grpcClient.startChat(username, password, "") { _ -> }
 
             // Wait a bit for auth to complete
-            kotlinx.coroutines.delay(500)
+            delay(500)
 
             // Check auth result
             try {
-                kotlinx.coroutines.coroutineScope {
+                coroutineScope {
                     val notification = grpcClient.systemNotification.take(1).first()
                     when (notification) {
                         "auth_failed" -> {
@@ -336,7 +328,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
                     grpcClient.clearSystemNotification()
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // No auth notification received, might be already authenticated
             }
 
@@ -356,7 +348,7 @@ class ChatListActivity : AppCompatActivity() {
                                 for (i in 0 until participants.length()) {
                                     allParticipants.add(participants.getString(i))
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 // JSON parsing failed
                             }
                         }
@@ -383,7 +375,7 @@ class ChatListActivity : AppCompatActivity() {
 
                     // Fallback: show chats after 5 seconds if not all avatars loaded
                     lifecycleScope.launch {
-                        kotlinx.coroutines.delay(5000)
+                        delay(5000)
                         runOnUiThread {
                             if (loadedCount.get() < totalParticipants) {
                                 adapter.setChats(chats)
@@ -413,13 +405,13 @@ class ChatListActivity : AppCompatActivity() {
             // Load avatars for all users (for users dialog)
             grpcClient.loadAllUsers()
             lifecycleScope.launch {
-                kotlinx.coroutines.delay(2000) // Wait for users to load
+                delay(2000) // Wait for users to load
                 var allUsers = grpcClient.allUsers.value
 
                 // If users are still not loaded, wait more
                 var attempts = 0
                 while (allUsers.isEmpty() && attempts < 5) {
-                    kotlinx.coroutines.delay(500)
+                    delay(500)
                     allUsers = grpcClient.allUsers.value
                     attempts++
                 }
@@ -441,19 +433,16 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun openChat(chatId: String, roomName: String? = null) {
         lifecycleScope.launch {
-            val intent = Intent(this@ChatListActivity, NewChatActivity::class.java)
-                .putExtra("username", username)
-                .putExtra("password", password)
-                .putExtra("roomId", chatId)
-            
-            if (roomName != null) {
-                intent.putExtra("roomName", roomName)
-            }
-            
-            // Находим чат в адаптере, чтобы получить список участников
             val chat = adapter.getChats().find { it.id == chatId }
+            val intent = Intent(this@ChatListActivity, NewChatActivity::class.java)
+                .putExtra("USERNAME", username)
+                .putExtra("PASSWORD", password)
+                .putExtra("ROOM_ID", chatId)
+                .putExtra("CHAT_NAME", roomName ?: chat?.name ?: "Chat")
+                .putExtra("IS_DIRECT", chat?.type == "direct")
+            
             if (chat != null && chat.participants.isNotEmpty()) {
-                intent.putExtra("participants", chat.participants)
+                intent.putExtra("PARTICIPANTS", chat.participants)
             }
             
             startActivity(intent)
@@ -591,7 +580,7 @@ class ChatListActivity : AppCompatActivity() {
             R.id.action_delete -> {
                 val selected = adapter.getSelectedChats()
                 if (selected.isNotEmpty()) {
-                    val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+                    val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, findViewById(android.R.id.content))
 
                     // Set dialog background using Material Design colors
                     val typedValue = android.util.TypedValue()
@@ -636,8 +625,8 @@ class ChatListActivity : AppCompatActivity() {
                             var successCount = 0
                             var lastErrorMessage = ""
                             for (chat in chatsToDelete) {
-                                val result = withContext(Dispatchers.IO) {
-                                    val deferred = kotlinx.coroutines.CompletableDeferred<Pair<Boolean, String>>()
+                                val result: Pair<Boolean, String> = withContext(Dispatchers.IO) {
+                                    val deferred = CompletableDeferred<Pair<Boolean, String>>()
                                     grpcClient.deleteChat(chat.id) { success, message ->
                                         deferred.complete(success to message)
                                     }
@@ -679,9 +668,9 @@ class ChatListActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.chat_list_menu, menu)
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
-        menu.findItem(R.id.action_delete)?.isVisible = hasSelection
-        menu.findItem(R.id.action_language)?.isVisible = !hasSelection
-        menu.findItem(R.id.action_color_scheme)?.isVisible = !hasSelection
+        menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
+        menu.findItem(R.id.action_language)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_color_scheme)?.apply { isVisible = !hasSelection }
 
         findViewById<View>(R.id.profileButton)?.visibility = if (hasSelection) View.GONE else View.VISIBLE
 
@@ -713,7 +702,7 @@ class ChatListActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             // Wait a bit for users to load
-            kotlinx.coroutines.delay(500)
+            delay(500)
 
             val allUsers = grpcClient.allUsers.value.filter { it != username }
             val onlineUsers = grpcClient.users.value
@@ -726,7 +715,7 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
+                val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, findViewById(android.R.id.content))
 
                 // Set dialog background using Material Design colors
                 val typedValue = android.util.TypedValue()
@@ -762,7 +751,7 @@ class ChatListActivity : AppCompatActivity() {
                 val sortedUsers = allUsers.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
 
                 for (user in sortedUsers) {
-                    val userView = layoutInflater.inflate(R.layout.item_user_selectable, null)
+                    val userView = layoutInflater.inflate(R.layout.item_user_selectable, dialogView.findViewById(R.id.usersContainer))
                     val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
                     val usernameText = userView.findViewById<TextView>(R.id.usernameText)
                     val userAvatar = userView.findViewById<CircleImageView>(R.id.userAvatar)
@@ -843,7 +832,7 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
-        val progressView = layoutInflater.inflate(R.layout.dialog_loading, null)
+        val progressView = layoutInflater.inflate(R.layout.dialog_loading, findViewById(android.R.id.content))
         val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setView(progressView)
             .setCancelable(true)
@@ -855,7 +844,7 @@ class ChatListActivity : AppCompatActivity() {
                 runOnUiThread { progressDialog.dismiss() }
                 if (chatId != null) {
                     lifecycleScope.launch {
-                        kotlinx.coroutines.delay(500)
+                        delay(500)
                         runOnUiThread {
                             openChat(chatId, getString(R.string.private_chat_with, targetUser))
                             showToast(getString(R.string.chat_created_with, targetUser))
@@ -871,7 +860,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun createGroupChat(name: String, participants: List<String>) {
-        val progressView = layoutInflater.inflate(R.layout.dialog_loading, null)
+        val progressView = layoutInflater.inflate(R.layout.dialog_loading, findViewById(android.R.id.content))
         val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setView(progressView)
             .setCancelable(true)
@@ -883,7 +872,7 @@ class ChatListActivity : AppCompatActivity() {
                 runOnUiThread { progressDialog.dismiss() }
                 if (chatId != null) {
                     lifecycleScope.launch {
-                        kotlinx.coroutines.delay(500)
+                        delay(500)
                         runOnUiThread {
                             openChat(chatId, name)
                             showToast(getString(R.string.group_created, name))
@@ -899,7 +888,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showProfileDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_profile, null)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_profile, findViewById(android.R.id.content))
 
         // Set dialog background using Material Design colors
         val typedValue = android.util.TypedValue()
@@ -1035,8 +1024,8 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun applySavedColorScheme() {
         val theme = when (getSavedColorScheme()) {
-            "light" -> R.style.Base_Theme_MsgClientAndroid
-            else -> R.style.Theme_MsgClientAndroid_Dark
+            "light" -> R.style.Theme_MsgClientAndroid
+            else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(theme)
     }
@@ -1120,7 +1109,7 @@ class ChatListActivity : AppCompatActivity() {
             inputStream.close()
 
             // Calculate inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, maxWidth, maxHeight)
+            options.inSampleSize = calculateInSampleSize(options, 256, 256)
             options.inJustDecodeBounds = false
 
             val inputStream2 = contentResolver.openInputStream(uri) ?: return null
@@ -1154,7 +1143,7 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, @Suppress("UNUSED_PARAMETER") reqWidth: Int, @Suppress("UNUSED_PARAMETER") reqHeight: Int): Int {
         val height = options.outHeight
         val width = options.outWidth
         var inSampleSize = 1

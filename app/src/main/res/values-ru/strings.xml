@@ -13,7 +13,11 @@
     <string name="ping_laptop">Пинг сервера (159.195.38.145)</string>
     <string name="send_message">Отправить</string>
     <string name="attach_image">Прикрепить изображение</string>
-    
+    <string name="attach_camera">Камера</string>
+    <string name="attach_gallery">Галерея</string>
+    <string name="attach_file_label">Файл</string>
+    <string name="attach_location">Локация</string>
+
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
     <string name="app_version">1.0.1.28</string>
@@ -86,8 +90,14 @@
     <string name="auth_failed">Ошибка аутентификации</string>
     <string name="chats">Чаты</string>
     <string name="profile">Профиль</string>
+    <string name="attach_file">Прикрепить файл</string>
+    <string name="take_photo">Сделать фото</string>
+    <string name="gallery">Галерея</string>
+    <string name="file">Файл</string>
+    <string name="location">Локация</string>
     <string name="cancel_dialog">Отмена</string>
     <string name="connected_status">подключен</string>
+    <string name="disconnected_status">офлайн</string>
     <string name="username_empty">Имя пользователя не может быть пустым</string>
     <string name="logged_out">Вы успешно вышли из системы</string>
     <string name="exiting_app">Выход из приложения</string>
@@ -150,7 +160,30 @@
     <string name="group_created">Группа \"%s\" создана</string>
     <string name="creating_chat">Создание чата…</string>
     <string name="delete_messages_title">Удаление сообщений</string>
+    <string name="delete_for_everyone">Удалить для всех</string>
+    <string name="delete_for_me">Удалить у меня</string>
     <string name="delete_messages_confirm">Вы уверены, что хотите удалить выбранные сообщения? Это также удалит изображения с сервера.</string>
+    <string name="participants_count">%d участников</string>
+    <string name="user_is_typing">%s печатает…</string>
+    <string name="users_are_typing">%d пользователей печатают…</string>
     <string name="is_typing">печатает...</string>
     <string name="are_typing">печатают...</string>
+    <string name="search">Поиск</string>
+    <string name="no_results">Нет результатов</string>
+    <string name="search_results_format">%1$d/%2$d</string>
+    <string name="edit_message">Редактировать сообщение</string>
+    <string name="forward">Переслать</string>
+    <string name="forward_to">Переслать…</string>
+    <string name="message_edited">Сообщение отредактировано</string>
+    <string name="group_info">Информация о группе</string>
+    <string name="delete_group">Удалить группу</string>
+    <string name="delete_group_confirm">Вы уверены, что хотите удалить эту группу?</string>
+    <string name="no_bio">О себе не заполнено</string>
+    <string name="offline">Офлайн</string>
+    <string name="group_chat">Групповой чат</string>
+    <string name="chat_id_format">ID чата: %s</string>
+    <string name="participants">Участники</string>
+    <string name="add">Добавить</string>
+    <string name="remove">Удалить</string>
+    <string name="remove_participant_confirm">Вы уверены, что хотите удалить %s из группы?</string>
 </resources>

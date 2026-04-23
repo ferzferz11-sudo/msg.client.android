@@ -36,12 +36,20 @@ import lavender.client.android.data.proto.DeleteChatRequestProto
 import lavender.client.android.data.proto.DeleteChatResponseProto
 import lavender.client.android.data.proto.UpdateAvatarRequestProto
 import lavender.client.android.data.proto.UpdateAvatarResponseProto
+import lavender.client.android.data.proto.UpdateProfileRequestProto
+import lavender.client.android.data.proto.UpdateProfileResponseProto
 import lavender.client.android.data.proto.GetUserAvatarRequestProto
 import lavender.client.android.data.proto.GetUserAvatarResponseProto
+import lavender.client.android.data.proto.GetUserProfileRequestProto
+import lavender.client.android.data.proto.GetUserProfileResponseProto
 import lavender.client.android.data.proto.DeleteProfileRequestProto
 import lavender.client.android.data.proto.DeleteProfileResponseProto
 import lavender.client.android.data.proto.TypingRequestProto
 import lavender.client.android.data.proto.TypingSignalProto
+import lavender.client.android.data.proto.AddParticipantRequestProto
+import lavender.client.android.data.proto.AddParticipantResponseProto
+import lavender.client.android.data.proto.RemoveParticipantRequestProto
+import lavender.client.android.data.proto.RemoveParticipantResponseProto
 import java.util.concurrent.TimeUnit
 
 object RealGrpcClient {
@@ -136,7 +144,7 @@ object RealGrpcClient {
     }
 
     private fun getMessageHash(message: Message): String {
-        return "${message.user}:${message.text}:${message.timestamp / 1000}"
+        return "${message.user}:${message.text}:${message.imageUrl}:${message.timestamp / 1000}"
     }
 
     private fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
@@ -164,7 +172,7 @@ object RealGrpcClient {
                 android.util.Log.d("RealGrpcClient", "Received ${historyMessages.size} history messages for room: $roomId")
 
                 _messages.update { currentList ->
-                    (historyMessages + currentList).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
+                    (currentList + historyMessages).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
                 }
 
                 // Load avatars for history messages after they are added
@@ -228,7 +236,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun loadAllUsers() {
+    fun loadAllUsers(callback: (List<String>) -> Unit = {}) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<Unit, List<String>>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -239,7 +247,10 @@ object RealGrpcClient {
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<List<String>>() {
-            override fun onMessage(message: List<String>) { _allUsers.value = message }
+            override fun onMessage(message: List<String>) { 
+                _allUsers.value = message 
+                callback(message)
+            }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
 
@@ -285,6 +296,9 @@ object RealGrpcClient {
         lastPassword = password
         lastJoinMessage = joinMessage
         lastOnMessageReceived = onMessageReceived
+
+        // Load history for the current room
+        loadHistory(currentRoomId)
 
         // Load current user avatar
         getUserAvatar(username) { avatarUrl ->
@@ -335,12 +349,16 @@ object RealGrpcClient {
                             _messages.update { currentList ->
                                 val existingIndex = currentList.indexOfFirst {
                                     (it.id == incomingWithAvatar.id && it.id.isNotEmpty()) ||
-                                    (it.user == incomingWithAvatar.user && it.text == incomingWithAvatar.text && Math.abs(it.timestamp - incomingWithAvatar.timestamp) < 5000)
+                                    (it.user == incomingWithAvatar.user && it.text == incomingWithAvatar.text && it.imageUrl == incomingWithAvatar.imageUrl && Math.abs(it.timestamp - incomingWithAvatar.timestamp) < 5000)
                                 }
 
                                 if (existingIndex != -1) {
                                     val updatedList = currentList.toMutableList()
-                                    updatedList[existingIndex] = incomingWithAvatar
+                                    // Handle message updates (like edited text)
+                                    val existingMessage = updatedList[existingIndex]
+                                    if (existingMessage.id == incomingWithAvatar.id && incomingWithAvatar.id.isNotEmpty()) {
+                                        updatedList[existingIndex] = incomingWithAvatar
+                                    }
                                     updatedList
                                 } else {
                                     onMessageReceived(incomingWithAvatar)
@@ -355,7 +373,7 @@ object RealGrpcClient {
                         // Ищем, нет ли уже такого сообщения в списке (по тексту и пользователю, если ID еще нет)
                         val existingIndex = currentList.indexOfFirst { 
                             (it.id == incoming.id && it.id.isNotEmpty()) || 
-                            (it.user == incoming.user && it.text == incoming.text && Math.abs(it.timestamp - incoming.timestamp) < 5000)
+                            (it.user == incoming.user && it.text == incoming.text && it.imageUrl == incoming.imageUrl && Math.abs(it.timestamp - incoming.timestamp) < 5000)
                         }
 
                         if (existingIndex != -1) {
@@ -771,6 +789,126 @@ object RealGrpcClient {
             override fun onMessage(message: UpdateAvatarResponseProto) {
                 callback(message.success, message.message)
             }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun updateProfile(username: String, bio: String, status: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = UpdateProfileRequestProto(username, bio, status)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateProfileRequestProto, UpdateProfileResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/UpdateProfile")
+            .setRequestMarshaller(UpdateProfileRequestMarshaller())
+            .setResponseMarshaller(UpdateProfileResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<UpdateProfileResponseProto>() {
+            override fun onMessage(message: UpdateProfileResponseProto) {
+                callback(message.success, message.message)
+            }
+
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getUserProfile(username: String, callback: (GetUserProfileResponseProto?) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = GetUserProfileRequestProto(username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserProfileRequestProto, GetUserProfileResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetUserProfile")
+            .setRequestMarshaller(GetUserProfileRequestMarshaller())
+            .setResponseMarshaller(GetUserProfileResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetUserProfileResponseProto>() {
+            override fun onMessage(message: GetUserProfileResponseProto) {
+                callback(message)
+            }
+
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(null)
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun addParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = AddParticipantRequestProto(chatId, username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddParticipantRequestProto, AddParticipantResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/AddParticipant")
+            .setRequestMarshaller(AddParticipantRequestMarshaller())
+            .setResponseMarshaller(AddParticipantResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<AddParticipantResponseProto>() {
+            override fun onMessage(message: AddParticipantResponseProto) {
+                callback(message.success, message.message)
+            }
+
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun removeParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = RemoveParticipantRequestProto(chatId, username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveParticipantRequestProto, RemoveParticipantResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RemoveParticipant")
+            .setRequestMarshaller(RemoveParticipantRequestMarshaller())
+            .setResponseMarshaller(RemoveParticipantResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RemoveParticipantResponseProto>() {
+            override fun onMessage(message: RemoveParticipantResponseProto) {
+                callback(message.success, message.message)
+            }
+
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     callback(false, status.description ?: "Unknown error")
@@ -1676,6 +1814,220 @@ class UpdateAvatarResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Updat
             }
         }
         return UpdateAvatarResponseProto(success, message)
+    }
+}
+
+class UpdateProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateProfileRequestProto> {
+    override fun stream(value: UpdateProfileRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.bio.isNotEmpty()) cos.writeString(2, value.bio)
+        if (value.status.isNotEmpty()) cos.writeString(3, value.status)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): UpdateProfileRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var bio = ""
+        var status = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> bio = cis.readString()
+                3 -> status = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateProfileRequestProto(username, bio, status)
+    }
+}
+
+class UpdateProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateProfileResponseProto> {
+    override fun stream(value: UpdateProfileResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): UpdateProfileResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateProfileResponseProto(success, message)
+    }
+}
+
+class GetUserProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserProfileRequestProto> {
+    override fun stream(value: GetUserProfileRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetUserProfileRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetUserProfileRequestProto(username)
+    }
+}
+
+class GetUserProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserProfileResponseProto> {
+    override fun stream(value: GetUserProfileResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.bio.isNotEmpty()) cos.writeString(2, value.bio)
+        if (value.status.isNotEmpty()) cos.writeString(3, value.status)
+        if (value.avatarUrl.isNotEmpty()) cos.writeString(4, value.avatarUrl)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetUserProfileResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var bio = ""
+        var status = ""
+        var avatarUrl = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> bio = cis.readString()
+                3 -> status = cis.readString()
+                4 -> avatarUrl = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetUserProfileResponseProto(username, bio, status, avatarUrl)
+    }
+}
+
+class AddParticipantRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddParticipantRequestProto> {
+    override fun stream(value: AddParticipantRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.chatId.isNotEmpty()) cos.writeString(1, value.chatId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): AddParticipantRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var chatId = ""
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> chatId = cis.readString()
+                2 -> username = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return AddParticipantRequestProto(chatId, username)
+    }
+}
+
+class AddParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddParticipantResponseProto> {
+    override fun stream(value: AddParticipantResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): AddParticipantResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return AddParticipantResponseProto(success, message)
+    }
+}
+
+class RemoveParticipantRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveParticipantRequestProto> {
+    override fun stream(value: RemoveParticipantRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.chatId.isNotEmpty()) cos.writeString(1, value.chatId)
+        if (value.username.isNotEmpty()) cos.writeString(2, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): RemoveParticipantRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var chatId = ""
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> chatId = cis.readString()
+                2 -> username = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RemoveParticipantRequestProto(chatId, username)
+    }
+}
+
+class RemoveParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveParticipantResponseProto> {
+    override fun stream(value: RemoveParticipantResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): RemoveParticipantResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RemoveParticipantResponseProto(success, message)
     }
 }
 

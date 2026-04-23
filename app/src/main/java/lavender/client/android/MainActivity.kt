@@ -498,7 +498,7 @@ class MainActivity : AppCompatActivity() {
         
         val theme = when (getSavedColorScheme()) {
             "light" -> R.style.Theme_MsgClientAndroid
-            else -> R.style.Theme_MsgClientAndroid_Dark
+            else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(theme)
     }
