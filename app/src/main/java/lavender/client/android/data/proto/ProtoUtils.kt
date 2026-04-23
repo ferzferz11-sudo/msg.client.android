@@ -11,7 +11,7 @@ object ProtoUtils {
             .setNanos(((message.timestamp % 1000) * 1000000).toInt())
             .build()
 
-        return MessageProto.newBuilder()
+        val builder = MessageProto.newBuilder()
             .setUser(message.user)
             .setText(message.text)
             .setCreatedAt(timestamp)
@@ -24,7 +24,13 @@ object ProtoUtils {
             .setAvatarUrl(message.avatarUrl)
             .setImageUrl(message.imageUrl)
             .setEdited(message.edited)
-            .build()
+
+        // Add reactions
+        message.reactions.forEach { reaction ->
+            builder.addReaction(ReactionProto(user = reaction.user, emoji = reaction.emoji))
+        }
+
+        return builder.build()
     }
 
     fun createMessageFromProto(proto: MessageProto): Message {

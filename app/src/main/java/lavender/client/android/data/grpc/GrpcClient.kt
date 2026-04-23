@@ -2,6 +2,7 @@ package lavender.client.android.data.grpc
 
 import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.proto.GetUserProfileResponseProto
 
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
@@ -116,6 +117,14 @@ object GrpcClient {
 
     fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.deleteProfile(username, callback)
+    }
+
+    fun getUserProfile(username: String, callback: (GetUserProfileResponseProto?) -> Unit) {
+        realGrpcClient.getUserProfile(username, callback)
+    }
+
+    fun updateProfile(username: String, bio: String, status: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.updateProfile(username, bio, status, callback)
     }
 
     fun getAvatarCache(): Map<String, String> {

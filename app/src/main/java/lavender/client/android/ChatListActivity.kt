@@ -78,6 +78,27 @@ class ChatListActivity : AppCompatActivity() {
         return prefs.getString("color_scheme", "dark") != "light"
     }
 
+    private val editProfileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            // Refresh avatar when profile is updated
+            grpcClient.getUserAvatar(username) { avatarUrl ->
+                runOnUiThread {
+                    if (avatarUrl.isNotEmpty()) {
+                        currentAvatarImageView?.let {
+                            Glide.with(this@ChatListActivity)
+                                .load(avatarUrl)
+                                .placeholder(R.drawable.ic_default_avatar)
+                                .error(R.drawable.ic_default_avatar)
+                                .into(it)
+                        }
+                        // Update adapter avatar cache
+                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                    }
+                }
+            }
+        }
+    }
+
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             result.data?.data?.let { uri ->
@@ -128,7 +149,10 @@ class ChatListActivity : AppCompatActivity() {
 
         val profileButton = findViewById<android.widget.ImageButton>(R.id.profileButton)
         profileButton.setOnClickListener {
-            showProfileDialog()
+            val intent = Intent(this, EditProfileActivity::class.java)
+                .putExtra("username", username)
+                .putExtra("password", password)
+            editProfileLauncher.launch(intent)
         }
 
         val addChatFab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.addChatFab)
@@ -946,7 +970,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showProfileDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_profile, findViewById(android.R.id.content))
+        val dialogView = layoutInflater.inflate(R.layout.dialog_profile, null)
 
         // Set dialog background using Material Design colors
         val typedValue = android.util.TypedValue()

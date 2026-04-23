@@ -36,6 +36,9 @@ class ProfileActivity : AppCompatActivity() {
         super.attachBaseContext(context)
     }
     private val grpcClient = RealGrpcClient
+    private var username: String = ""
+    private var avatarUrl: String = ""
+    private var isGroup: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,9 +50,9 @@ class ProfileActivity : AppCompatActivity() {
         val profileStatus = findViewById<TextView>(R.id.profileStatus)
         val profileBio = findViewById<TextView>(R.id.profileBio)
 
-        val username = intent.getStringExtra("USERNAME") ?: ""
-        var avatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
-        val isGroup = intent.getBooleanExtra("IS_GROUP", false)
+        username = intent.getStringExtra("USERNAME") ?: ""
+        avatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
+        isGroup = intent.getBooleanExtra("IS_GROUP", false)
         val roomId = intent.getStringExtra("ROOM_ID") ?: ""
         val participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"
 
@@ -63,6 +66,21 @@ class ProfileActivity : AppCompatActivity() {
 
         profileName.text = username
 
+        loadProfileData(profileAvatar, profileBio, profileStatus, roomId, participantsJson)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reload profile data when returning from EditProfileActivity
+        val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar)
+        val profileBio = findViewById<TextView>(R.id.profileBio)
+        val profileStatus = findViewById<TextView>(R.id.profileStatus)
+        val roomId = intent.getStringExtra("ROOM_ID") ?: ""
+        val participantsJson = intent.getStringExtra("PARTICIPANTS") ?: ""
+        loadProfileData(profileAvatar, profileBio, profileStatus, roomId, participantsJson)
+    }
+
+    private fun loadProfileData(profileAvatar: CircleImageView, profileBio: TextView, profileStatus: TextView, roomId: String, participantsJson: String) {
         if (isGroup) {
             profileStatus.text = getString(R.string.group_chat)
             profileBio.text = getString(R.string.chat_id_format, roomId)
@@ -168,7 +186,9 @@ class ProfileActivity : AppCompatActivity() {
                 }
             }
         } else {
+            android.util.Log.d("ProfileActivity", "Loading profile for user: $username")
             grpcClient.getUserProfile(username) { profile ->
+                android.util.Log.d("ProfileActivity", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
                 runOnUiThread {
                     if (profile != null) {
                         profileBio.text = if (profile.bio.isNotEmpty()) profile.bio else getString(R.string.no_bio)

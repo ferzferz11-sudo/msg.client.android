@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurfaceContainer">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorSurfaceContainer"
+        app:title="Редактировать профиль"
+        app:titleTextColor="?android:attr/textColorPrimary"
+        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
+        app:navigationIconTint="?android:attr/textColorSecondary" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- Avatar Section -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_gravity="center"
+                android:layout_marginBottom="24dp">
+
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/avatarImageView"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/ic_default_avatar"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp"
+                    app:civ_border_width="2dp"
+                    app:civ_border_color="?attr/colorPrimary" />
+
+                <Button
+                    android:id="@+id/btnChangeAvatar"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:text="Изменить аватар"
+                    android:textSize="13sp"
+                    android:textAllCaps="false"
+                    android:textColor="?attr/colorOnSecondary"
+                    android:backgroundTint="?attr/colorSecondary"
+                    android:layout_gravity="center"
+                    app:cornerRadius="22dp" />
+
+                <ProgressBar
+                    android:id="@+id/avatarProgressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <!-- Edit Profile Toggle -->
+            <Button
+                android:id="@+id/btnToggleEdit"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="@string/edit_profile"
+                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorOnPrimary"
+                android:backgroundTint="?attr/colorPrimary"
+                android:layout_marginBottom="8dp"
+                app:cornerRadius="24dp" />
+
+            <LinearLayout
+                android:id="@+id/editFieldsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Кратко о себе"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/editTextBio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Расскажите о себе"
+                    android:inputType="textMultiLine"
+                    android:minHeight="80dp"
+                    android:maxLines="4"
+                    android:textSize="16sp"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textColorHint="?android:attr/textColorHint"
+                    android:background="?attr/colorSurface"
+                    android:gravity="top|start" />
+
+                <Button
+                    android:id="@+id/btnChangeBio"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Сохранить"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:layout_marginBottom="16dp"
+                    app:cornerRadius="24dp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnChangeUsername"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Изменить имя"
+                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorOnPrimary"
+                android:backgroundTint="?attr/colorPrimary"
+                android:layout_marginBottom="8dp"
+                app:cornerRadius="24dp" />
+
+            <Button
+                android:id="@+id/btnChangePassword"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Изменить пароль"
+                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorOnPrimary"
+                android:backgroundTint="?attr/colorPrimary"
+                android:layout_marginBottom="8dp"
+                app:cornerRadius="24dp" />
+
+            <Button
+                android:id="@+id/btnDeleteProfile"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Удалить профиль"
+                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#FF5252"
+                android:layout_marginBottom="8dp"
+                app:cornerRadius="24dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
