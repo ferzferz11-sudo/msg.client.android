@@ -15,6 +15,10 @@ object GrpcClient {
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     
+    var hasCheckedForUpdates: Boolean
+        get() = realGrpcClient.hasCheckedForUpdates
+        set(value) { realGrpcClient.hasCheckedForUpdates = value }
+
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         realGrpcClient.connect(serverAddress, useTls, port, context)
     }
@@ -49,10 +53,6 @@ object GrpcClient {
 
     fun registerToken(user: String, token: String) {
         realGrpcClient.registerToken(user, token)
-    }
-    
-    fun testConnection(): Boolean {
-        return realGrpcClient.testConnection()
     }
 
     fun clearSystemNotification() {

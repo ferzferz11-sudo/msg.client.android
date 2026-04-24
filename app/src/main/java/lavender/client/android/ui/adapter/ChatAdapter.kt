@@ -76,7 +76,7 @@ class ChatAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_chat, parent, false)
-        return ChatViewHolder(view, onChatClick, currentUsername, avatarCache)
+        return ChatViewHolder(view, onChatClick)
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
@@ -99,9 +99,7 @@ class ChatAdapter(
 
     class ChatViewHolder(
         itemView: View,
-        private val onChatClick: (ChatInfo) -> Unit,
-        private val currentUsername: String = "",
-        private val avatarCache: Map<String, String> = emptyMap()
+        private val onChatClick: (ChatInfo) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val chatName: TextView = itemView.findViewById(R.id.chatName)
@@ -109,11 +107,6 @@ class ChatAdapter(
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
         private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
-
-        private fun isDarkTheme(): Boolean {
-            val prefs = itemView.context.getSharedPreferences("ChatPrefs", android.content.Context.MODE_PRIVATE)
-            return prefs.getString("color_scheme", "dark") != "light"
-        }
 
         fun bind(chat: ChatInfo, currentUsername: String, avatarCache: Map<String, String>, isSelected: Boolean, onLongClick: () -> Unit) {
             chatName.text = chat.name
@@ -124,14 +117,9 @@ class ChatAdapter(
                 cardView.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(context, R.color.lavender_mist_alpha))
                 itemView.alpha = 0.7f
             } else {
-                // Set lavender_mist background for dark theme
-                if (isDarkTheme()) {
-                    cardView.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(context, R.color.lavender_mist))
-                } else {
-                    val typedValue = android.util.TypedValue()
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
-                    cardView.setCardBackgroundColor(typedValue.data)
-                }
+                val typedValue = android.util.TypedValue()
+                context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                cardView.setCardBackgroundColor(typedValue.data)
                 itemView.alpha = 1.0f
             }
             val isRussian = context.resources.configuration.locales[0].language == "ru"

@@ -96,6 +96,8 @@ object RealGrpcClient {
     private val sentMessageHashes = mutableSetOf<String>() // Track sent messages to prevent echo
     private val deletedMessageHashes = mutableSetOf<String>()
     private var appContext: android.content.Context? = null
+
+    var hasCheckedForUpdates = false
     
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         if (context != null) {
@@ -743,10 +745,24 @@ object RealGrpcClient {
             override fun onMessage(message: MarkReadResponseProto) {
                 if (message.success) {
                     android.util.Log.d("GrpcClient", "Successfully marked room $roomId as read for $username")
-                    // Reload history to get updated read status
-                    loadHistory(roomId) {
-                        onCompletion?.invoke()
+                    // Instead of reloading history, we can locally update all unread messages
+                    // belonging to others (incoming messages) to read
+                    _messages.update { currentList ->
+                        var hasChanges = false
+                        val updatedList = currentList.map { msg ->
+                            // Update read status for incoming messages in this room that aren't marked read yet
+                            // Note: we can't tell which exact messages are marked read without changing proto,
+                            // but markRead endpoint marks ALL unread messages as read for this room
+                            if (msg.roomId == roomId && msg.user != username && !msg.isRead) {
+                                hasChanges = true
+                                msg.copy(isRead = true)
+                            } else {
+                                msg
+                            }
+                        }
+                        if (hasChanges) updatedList else currentList
                     }
+                    onCompletion?.invoke()
                 }
             }
         }, io.grpc.Metadata())
@@ -829,6 +845,9 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<UpdateAvatarResponseProto>() {
             override fun onMessage(message: UpdateAvatarResponseProto) {
+                if (message.success) {
+                    updateAvatarCache(username, avatarUrl)
+                }
                 callback(message.success, message.message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -1102,14 +1121,13 @@ object RealGrpcClient {
     }
 
     fun updateAvatarCache(username: String, avatarUrl: String) {
+        android.util.Log.d("GrpcClient", "Updating avatar cache for $username: $avatarUrl")
         avatarCache[username] = avatarUrl
     }
 
     fun clearMessages() {
         _messages.update { emptyList() }
     }
-
-    fun testConnection(): Boolean = _connectionState.value
 
     fun getCurrentUsername(): String? = lastUsername
 }
@@ -2338,4 +2356,3 @@ class TypingSignalMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingSignalP
         return TypingSignalProto(roomId, username, isTyping)
     }
 }
-

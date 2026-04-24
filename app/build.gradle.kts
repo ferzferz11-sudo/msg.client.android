@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "lavender.client.android"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         val versionFile = rootProject.file("version.txt")

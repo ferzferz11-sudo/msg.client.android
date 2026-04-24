@@ -9,8 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -28,8 +26,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.edit
-import androidx.core.graphics.scale
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -45,13 +43,7 @@ import lavender.client.android.data.fcm.NotificationHistory
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.ui.adapter.ChatAdapter
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -72,7 +64,7 @@ class ChatListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityChatListBinding
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -88,9 +80,6 @@ class ChatListActivity : AppCompatActivity() {
     private var password: String = ""
     private var downloadJob: Job? = null
     private var colorSchemeMenuItem: MenuItem? = null
-    private var selectedAvatarUri: Uri? = null
-    private var currentAvatarImageView: CircleImageView? = null
-    private var currentAvatarProgressBar: ProgressBar? = null
     private var currentTheme: String? = null
     private var currentChats: List<ChatInfo> = emptyList()
 
@@ -111,13 +100,10 @@ class ChatListActivity : AppCompatActivity() {
             grpcClient.getUserAvatar(username) { avatarUrl ->
                 runOnUiThread {
                     if (avatarUrl.isNotEmpty()) {
-                        currentAvatarImageView?.let {
-                            Glide.with(this@ChatListActivity)
-                                .load(avatarUrl)
-                                .placeholder(R.drawable.ic_default_avatar)
-                                .error(R.drawable.ic_default_avatar)
-                                .into(it)
-                        }
+                        Log.d("ChatList", "Updating avatar for $username to $avatarUrl")
+                        // Update cache first
+                        grpcClient.updateAvatarCache(username, avatarUrl)
+                        
                         // Update adapter avatar cache
                         adapter.updateAvatarCache(grpcClient.getAvatarCache())
                     }
@@ -142,14 +128,18 @@ class ChatListActivity : AppCompatActivity() {
         supportActionBar?.apply {
             title = ""
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_back_arrow)
+            setHomeAsUpIndicator(R.drawable.exit_to_app_24)
         }
 
         binding.toolbar.setNavigationOnClickListener {
             if (adapter.getSelectedChats().isNotEmpty()) {
                 adapter.clearSelection()
             } else {
-                // Возвращаемся на главную (выход)
+                // Возвращаемся на главную страницу приложения
+                val intent = Intent(this@ChatListActivity, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                intent.putExtra("extra_skip_autologin", true)
+                startActivity(intent)
                 finish()
             }
         }
@@ -160,6 +150,11 @@ class ChatListActivity : AppCompatActivity() {
                 if (adapter.getSelectedChats().isNotEmpty()) {
                     adapter.clearSelection()
                 } else {
+                    // Возвращаемся на главную страницу приложения
+                    val intent = Intent(this@ChatListActivity, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    intent.putExtra("extra_skip_autologin", true)
+                    startActivity(intent)
                     finish()
                 }
             }
@@ -188,10 +183,12 @@ class ChatListActivity : AppCompatActivity() {
             },
             onSelectionChanged = { count ->
                 invalidateOptionsMenu()
-                binding.toolbarTitle.text = if (count > 0) {
-                    getString(R.string.selected_count, count)
+                if (count > 0) {
+                    supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+                    binding.toolbarTitle.text = getString(R.string.selected_count, count)
                 } else {
-                    getString(R.string.chats)
+                    supportActionBar?.setHomeAsUpIndicator(R.drawable.exit_to_app_24)
+                    binding.toolbarTitle.text = getString(R.string.chats)
                 }
             },
             currentUsername = username,
@@ -199,6 +196,12 @@ class ChatListActivity : AppCompatActivity() {
         )
         binding.chatsRecyclerView.adapter = adapter
         binding.chatsRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        // Check for updates automatically only once per session
+        if (!grpcClient.hasCheckedForUpdates) {
+            checkForUpdates()
+            grpcClient.hasCheckedForUpdates = true
+        }
 
         // Observe system notifications for auth failures
         lifecycleScope.launch {
@@ -452,6 +455,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun loadChats() {
+        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         binding.progressOverlay.isVisible = true
         lifecycleScope.launch {
             val serverAddress = getString(R.string.server_address)
@@ -607,130 +611,23 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.disconnect()
     }
 
-    private fun uploadAvatarToServer(uri: Uri) {
-        // Show progress bar
-        currentAvatarProgressBar?.isVisible = true
-
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    // Check file type
-                    val mimeType = contentResolver.getType(uri)
-                    val isGif = mimeType == "image/gif"
-
-                    val bytes: ByteArray
-                    val mediaType: String
-
-                    if (isGif) {
-                        // Send GIF as-is to preserve animation
-                        val inputStream = contentResolver.openInputStream(uri)
-                        bytes = inputStream?.readBytes() ?: byteArrayOf()
-                        inputStream?.close()
-                        mediaType = "image/gif"
-                    } else {
-                        // Resize other images
-                        val resizedBytes = resizeImage(uri, 256, 256) // Max 256x256 for avatars
-
-                        if (resizedBytes == null) {
-                            runOnUiThread {
-                                currentAvatarProgressBar?.isVisible = false
-                                showToast("Failed to resize image")
-                            }
-                            return@withContext
-                        }
-
-                        bytes = resizedBytes
-                        mediaType = "image/jpeg"
-                    }
-
-                    if (bytes.isEmpty()) {
-                        runOnUiThread {
-                            currentAvatarProgressBar?.isVisible = false
-                            showToast("Failed to read image")
-                        }
-                        return@withContext
-                    }
-
-                    // Upload to HTTP server with multipart/form-data
-                    val requestBody = MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
-                        .build()
-
-                    val request = Request.Builder()
-                        .url("http://159.195.38.145:8082/upload-avatar")
-                        .post(requestBody)
-                        .build()
-
-                    val client = OkHttpClient()
-                    val response = client.newCall(request).execute()
-
-                    if (response.isSuccessful) {
-                        val responseBody = response.body?.string()
-                        val url = extractUrlFromResponse(responseBody ?: "")
-
-                        if (url.isNotEmpty()) {
-                            // Update avatar via gRPC
-                            grpcClient.updateAvatar(username, url) { success, message ->
-                                runOnUiThread {
-                                    currentAvatarProgressBar?.isVisible = false
-                                    if (success) {
-                                        showToast("Avatar updated successfully")
-                                        // Update avatarImageView if dialog is still open
-                                        currentAvatarImageView?.let {
-                                            Glide.with(this@ChatListActivity)
-                                                .load(url)
-                                                .placeholder(R.drawable.ic_default_avatar)
-                                                .error(R.drawable.ic_default_avatar)
-                                                .into(it)
-                                        }
-                                        // Update adapter avatar cache
-                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                                    } else {
-                                        showToast("Failed to update avatar: $message")
-                                    }
-                                }
-                            }
-                        } else {
-                            runOnUiThread {
-                                showToast("Failed to extract URL from response")
-                                currentAvatarProgressBar?.isVisible = false
-                            }
-                        }
-                    } else {
-                        runOnUiThread {
-                            showToast("Failed to upload avatar (HTTP ${response.code})")
-                            currentAvatarProgressBar?.isVisible = false
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    showToast("Error: ${e.message}")
-                    currentAvatarProgressBar?.isVisible = false
-                }
-            }
-        }
-    }
-
-    private fun extractUrlFromResponse(response: String): String {
-        val regex = """"url":\s*"([^"]+)"""".toRegex()
-        val match = regex.find(response)
-        return match?.groupValues?.get(1) ?: ""
-    }
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            android.R.id.home -> {
+            androidR.id.home -> {
                 if (adapter.getSelectedChats().isNotEmpty()) {
                     adapter.clearSelection()
                 } else {
                     // Возвращаемся на главную страницу приложения
-                    val intent = Intent(this, MainActivity::class.java)
+                    val intent = Intent(this@ChatListActivity, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    intent.putExtra("extra_skip_autologin", true)
                     startActivity(intent)
                     finish()
                 }
+                true
+            }
+            R.id.action_add_chat -> {
+                showCreateChatDialog()
                 true
             }
             R.id.action_delete -> {
@@ -776,6 +673,7 @@ class ChatListActivity : AppCompatActivity() {
                         dialog.dismiss()
                         val chatsToDelete = selected.toList()
                         adapter.clearSelection()
+                        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
                         binding.progressOverlay.isVisible = true
 
                         lifecycleScope.launch {
@@ -858,6 +756,7 @@ class ChatListActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.chat_list_menu, menu)
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
+        menu.findItem(R.id.action_add_chat)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_color_scheme)?.apply { isVisible = !hasSelection }
@@ -904,7 +803,9 @@ class ChatListActivity : AppCompatActivity() {
         val downloadProgressText = binding.root.findViewById<TextView>(R.id.downloadProgressText)
         val cancelDownloadButton = binding.root.findViewById<Button>(R.id.cancelDownloadButton)
         val progressOverlay = binding.root.findViewById<FrameLayout>(R.id.progressOverlay)
+        val progressTitle = binding.root.findViewById<TextView>(R.id.progressTitle)
 
+        progressTitle?.text = getString(R.string.download_update)
         progressOverlay.isVisible = true
         downloadProgressBar.progress = 0
         downloadProgressText.text = ""
@@ -950,7 +851,7 @@ class ChatListActivity : AppCompatActivity() {
                         val totalMb = fileLength / (1024.0 * 1024.0)
                         withContext(Dispatchers.Main) {
                             downloadProgressBar.progress = progress
-                            downloadProgressText.text = String.format("%.2f / %.2f MB", downloadedMb, totalMb)
+                            downloadProgressText.text = String.format(Locale.US, "%.2f / %.2f MB", downloadedMb, totalMb)
                         }
                     }
                     output.write(data, 0, count)
@@ -974,7 +875,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun installApk(file: File) {
-        val uri = androidx.core.content.FileProvider.getUriForFile(
+        val uri = FileProvider.getUriForFile(
             this,
             "$packageName.provider",
             file
@@ -987,6 +888,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showCreateChatDialog() {
+        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         binding.progressOverlay.isVisible = true
         // Load all users and online users
         grpcClient.loadAllUsers()
@@ -1129,6 +1031,7 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
+        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         lifecycleScope.launch {
             grpcClient.createDirectChat(username, targetUser) { chatId ->
                 runOnUiThread { binding.progressOverlay.isVisible = false }
@@ -1150,6 +1053,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun createGroupChat(name: String, participants: List<String>) {
+        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         lifecycleScope.launch {
             grpcClient.createGroupChat(name, participants) { chatId ->
                 runOnUiThread { binding.progressOverlay.isVisible = false }
@@ -1195,7 +1099,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun saveColorScheme(scheme: String) {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("color_scheme", scheme).apply()
+        prefs.edit { putString("color_scheme", scheme) }
     }
 
     private fun toggleColorScheme() {
@@ -1248,64 +1152,54 @@ class ChatListActivity : AppCompatActivity() {
         resources.updateConfiguration(config, resources.displayMetrics)
     }
 
-    private fun resizeImage(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
-        return try {
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val options = BitmapFactory.Options()
-            options.inJustDecodeBounds = true
-            BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream.close()
+    private fun checkForUpdates() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL(VERSION_CHECK_URL)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
 
-            // Calculate inSampleSize
-            options.inSampleSize = calculateInSampleSize(options, 256, 256)
-            options.inJustDecodeBounds = false
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    val isAvailable = isUpdateAvailable(latestVersion)
 
-            val inputStream2 = contentResolver.openInputStream(uri) ?: return null
-            val bitmap = BitmapFactory.decodeStream(inputStream2, null, options)
-            inputStream2.close()
+                    // Save update availability to SharedPreferences
+                    getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
+                        putBoolean("update_available", isAvailable)
+                        putString("latest_version", latestVersion)
+                    }
 
-            if (bitmap == null) {
-                return null
+                    withContext(Dispatchers.Main) {
+                        val updateIcon = binding.root.findViewById<ImageView>(R.id.updateAvailableIcon)
+                        updateIcon?.isVisible = isAvailable
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                Log.e("ChatListActivity", "Version check failed: ${e.message}")
             }
-
-            // Resize to exact dimensions
-            val width = bitmap.width
-            val height = bitmap.height
-            val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
-
-            val scaledWidth = (width * scale).toInt()
-            val scaledHeight = (height * scale).toInt()
-
-            val scaledBitmap = bitmap.scale(scaledWidth, scaledHeight)
-            bitmap.recycle()
-
-            // Compress to JPEG with 85% quality
-            val outputStream = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-            scaledBitmap.recycle()
-
-            outputStream.toByteArray()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         }
     }
 
-    private fun calculateInSampleSize(options: BitmapFactory.Options, @Suppress("UNUSED_PARAMETER") reqWidth: Int, @Suppress("UNUSED_PARAMETER") reqHeight: Int): Int {
-        val height = options.outHeight
-        val width = options.outWidth
-        var inSampleSize = 1
+    private fun isUpdateAvailable(latest: String): Boolean {
+        // Compare versions in format MAJOR.MINOR.PATCH.BUILD (e.g., 1.0.1.22)
+        val currentVersion = BuildConfig.VERSION_NAME
+        val currentParts = currentVersion.split(".").mapNotNull { it.toIntOrNull() }
+        val latestParts = latest.split(".").mapNotNull { it.toIntOrNull() }
 
-        if (height > reqHeight || width > reqWidth) {
-            val halfHeight = height / 2
-            val halfWidth = width / 2
+        if (currentParts.isEmpty() || latestParts.isEmpty()) return false
 
-            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
-                inSampleSize *= 2
-            }
+        for (i in 0 until maxOf(currentParts.size, latestParts.size)) {
+            val currentPart = currentParts.getOrNull(i) ?: 0
+            val latestPart = latestParts.getOrNull(i) ?: 0
+
+            if (latestPart > currentPart) return true
+            if (latestPart < currentPart) return false
         }
 
-        return inSampleSize
+        return false
     }
 
     private fun showNotificationHistory() {
@@ -1371,16 +1265,14 @@ class ChatListActivity : AppCompatActivity() {
 
             // Create notification channel if needed
             val channelId = "lavender_messaging_channel"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channelName = "Lavender Messages"
-                val channelDescription = "Notifications for new messages"
-                val importance = NotificationManager.IMPORTANCE_HIGH
-                val channel = NotificationChannel(channelId, channelName, importance).apply {
-                    description = channelDescription
-                }
-                val notificationManager = getSystemService(NotificationManager::class.java)
-                notificationManager?.createNotificationChannel(channel)
+            val channelName = "Lavender Messages"
+            val channelDescription = "Notifications for new messages"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(channelId, channelName, importance).apply {
+                description = channelDescription
             }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
 
             // Also show a real system notification
             val notificationId = 9999
@@ -1407,7 +1299,7 @@ class ChatListActivity : AppCompatActivity() {
                 NotificationHistory.clear()
                 showToast(getString(R.string.history_cleared))
             }
-            .setNegativeButton(android.R.string.ok, null)
+            .setNegativeButton(androidR.string.ok, null)
             .create()
 
         dialog.show()

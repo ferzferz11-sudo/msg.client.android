@@ -1,173 +1,219 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="?attr/colorSurfaceContainer">
+    android:background="?android:attr/windowBackground">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorSurfaceContainer"
+        android:layout_margin="8dp"
+        android:background="@drawable/toolbar_background"
+        android:elevation="4dp"
+        app:navigationIcon="@drawable/ic_back_arrow"
+        app:navigationIconTint="?attr/colorOnPrimary"
         app:title="@string/edit_profile_title"
-        app:titleTextColor="?android:attr/textColorPrimary"
-        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
-        app:navigationIconTint="?android:attr/textColorSecondary" />
+        app:titleTextColor="?attr/colorOnPrimary"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="16dp">
 
             <!-- Avatar Section -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_gravity="center"
-                android:layout_marginBottom="24dp">
-
-                <de.hdodenhof.circleimageview.CircleImageView
-                    android:id="@+id/avatarImageView"
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
-                    android:src="@drawable/ic_default_avatar"
-                    android:layout_gravity="center"
-                    android:layout_marginBottom="8dp"
-                    android:contentDescription="@string/change_avatar"
-                    app:civ_border_width="2dp"
-                    app:civ_border_color="?attr/colorPrimary" />
-
-                <Button
-                    android:id="@+id/btnChangeAvatar"
-                    style="@style/Widget.MaterialComponents.Button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:text="@string/change_avatar"
-                    android:textSize="13sp"
-                    android:textAllCaps="false"
-                    android:textColor="?attr/colorOnSecondary"
-                    android:backgroundTint="?attr/colorSecondary"
-                    android:layout_gravity="center"
-                    app:cornerRadius="22dp" />
-
-                <ProgressBar
-                    android:id="@+id/avatarProgressBar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone" />
-
-            </LinearLayout>
-
-            <!-- Edit Profile Toggle -->
-            <Button
-                android:id="@+id/btnToggleEdit"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="@string/edit_profile"
-                android:textSize="12sp"
-                android:textAllCaps="false"
-                android:textColor="?attr/colorOnPrimary"
-                android:backgroundTint="?attr/colorPrimary"
-                android:layout_marginBottom="8dp"
-                app:cornerRadius="24dp" />
-
-            <LinearLayout
-                android:id="@+id/editFieldsContainer"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/bio_label"
-                    android:textSize="14sp"
-                    android:textColor="?android:attr/textColorSecondary"
-                    android:layout_marginBottom="8dp" />
-
-                <EditText
-                    android:id="@+id/editTextBio"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/tell_about_yourself"
-                    android:inputType="textMultiLine"
-                    android:minHeight="80dp"
-                    android:maxLines="4"
-                    android:textSize="16sp"
-                    android:padding="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textColorHint="?android:attr/textColorHint"
-                    android:background="?attr/colorSurface"
-                    android:gravity="top|start" />
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:gravity="center">
 
-                <Button
-                    android:id="@+id/btnChangeBio"
-                    style="@style/Widget.MaterialComponents.Button"
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                        <de.hdodenhof.circleimageview.CircleImageView
+                            android:id="@+id/avatarImageView"
+                            android:layout_width="120dp"
+                            android:layout_height="120dp"
+                            android:src="@drawable/ic_default_avatar"
+                            app:civ_border_width="3dp"
+                            app:civ_border_color="?attr/colorPrimary" />
+
+                        <ProgressBar
+                            android:id="@+id/avatarProgressBar"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_gravity="center"
+                            android:visibility="gone" />
+
+                    </FrameLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangeAvatar"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/change_avatar"
+                        android:textAllCaps="false"
+                        app:icon="@drawable/ic_camera" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Bio Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer">
+
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:text="@string/change_bio"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:textColor="?attr/colorOnPrimary"
-                    android:backgroundTint="?attr/colorPrimary"
-                    android:layout_marginBottom="16dp"
-                    app:cornerRadius="24dp" />
-            </LinearLayout>
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-            <Button
-                android:id="@+id/btnChangeUsername"
-                style="@style/Widget.MaterialComponents.Button"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/bio_label"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:boxBackgroundMode="none"
+                        app:hintEnabled="false">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editTextBio"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/tell_about_yourself"
+                            android:inputType="textMultiLine"
+                            android:minHeight="60dp"
+                            android:maxLines="5"
+                            android:padding="0dp"
+                            android:background="@android:color/transparent"
+                            android:textColor="?android:attr/textColorPrimary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangeBio"
+                        style="@style/Widget.MaterialComponents.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/change_bio"
+                        android:textAllCaps="false"
+                        app:cornerRadius="12dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Settings Section -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="@string/change_username"
-                android:textSize="12sp"
-                android:textAllCaps="false"
-                android:textColor="?attr/colorOnPrimary"
-                android:backgroundTint="?attr/colorPrimary"
-                android:layout_marginBottom="8dp"
-                app:cornerRadius="24dp" />
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer">
 
-            <Button
-                android:id="@+id/btnChangePassword"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="@string/change_password"
-                android:textSize="12sp"
-                android:textAllCaps="false"
-                android:textColor="?attr/colorOnPrimary"
-                android:backgroundTint="?attr/colorPrimary"
-                android:layout_marginBottom="8dp"
-                app:cornerRadius="24dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
-            <Button
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangeUsername"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:text="@string/change_username"
+                        android:textAllCaps="false"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        app:icon="@drawable/ic_person_edit"
+                        app:iconPadding="16dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/colorOnSurfaceVariant"
+                        android:alpha="0.2"
+                        android:layout_marginStart="64dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangePassword"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:text="@string/change_password"
+                        android:textAllCaps="false"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        app:icon="@drawable/ic_theme_toggle"
+                        app:iconPadding="16dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDeleteProfile"
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp"
                 android:text="@string/delete_profile"
-                android:textSize="12sp"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
-                android:backgroundTint="#FF5252"
-                android:layout_marginBottom="8dp"
-                app:cornerRadius="24dp" />
+                app:backgroundTint="#FF5252"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_delete"
+                app:iconTint="#FFFFFF" />
+
+            <!-- Hidden legacy toggle -->
+            <Button
+                android:id="@+id/btnToggleEdit"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+            <LinearLayout
+                android:id="@+id/editFieldsContainer"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
 
         </LinearLayout>
     </ScrollView>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

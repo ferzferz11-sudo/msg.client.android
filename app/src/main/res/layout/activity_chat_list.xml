@@ -82,7 +82,8 @@
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:src="@mipmap/ic_launcher_round"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"
+            android:contentDescription="@string/lavender_messenger" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -122,9 +123,10 @@
             android:padding="32dp"
             android:background="@drawable/rounded_background">
             <TextView
+                android:id="@+id/progressTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/download_update"
+                android:text="@string/loading"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
                 android:textStyle="bold"

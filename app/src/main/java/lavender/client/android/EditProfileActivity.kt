@@ -10,7 +10,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Toast
-import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +26,9 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.core.graphics.scale
 import androidx.core.view.isVisible
+import android.widget.TextView
+import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.button.MaterialButton
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -231,7 +233,7 @@ class EditProfileActivity : AppCompatActivity() {
 
                     if (response.isSuccessful) {
                         val responseBody = response.body.string()
-                        val url = extractUrlFromResponse(responseBody ?: "")
+                        val url = extractUrlFromResponse(responseBody)
 
                         if (url.isNotEmpty()) {
                             // Update avatar via gRPC
@@ -327,71 +329,93 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangeUsernameDialog() {
-        val container = LinearLayout(this)
-        container.orientation = LinearLayout.VERTICAL
-        container.setPadding(48, 24, 48, 24)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_join_chat, null)
+        
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val passwordInputLayout = dialogView.findViewById<TextInputLayout>(R.id.passwordInputLayout)
+        val editText = dialogView.findViewById<EditText>(R.id.editTextUsername)
+        val serverAddressLabel = dialogView.findViewById<View>(R.id.serverAddressSpinner)?.parent as? View
+        val serverStatusContainer = dialogView.findViewById<View>(R.id.serverStatusIndicator)?.parent as? View
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val btnJoin = dialogView.findViewById<MaterialButton>(R.id.btnJoin)
 
-        val editText = EditText(this)
-        editText.hint = "Новое имя"
+        // Hide elements we don't need
+        passwordInputLayout.visibility = View.GONE
+        serverAddressLabel?.visibility = View.GONE
+        serverStatusContainer?.visibility = View.GONE
+        dialogView.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
+        
+        titleText.text = getString(R.string.change_username)
+        editText.hint = getString(R.string.enter_new_username)
         editText.setText(username)
-        editText.setPadding(16, 16, 16, 16)
+        btnJoin.text = getString(R.string.change)
 
-        container.addView(editText)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
 
-        AlertDialog.Builder(this)
-            .setTitle("Изменить имя")
-            .setView(container)
-            .setPositiveButton("Сохранить") { _, _ ->
-                val newUsername = editText.text.toString().trim()
-                Log.d("EditProfile", "Updating username: $username -> $newUsername")
-                if (newUsername.isNotEmpty() && newUsername != username) {
-                    grpcClient.updateUsername(username, newUsername) { success, message ->
-                        Log.d("EditProfile", "Update username result: success=$success, message=$message")
-                        runOnUiThread {
-                            if (success) {
-                                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                                username = newUsername
-                                finish()
-                            } else {
-                                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                            }
+        btnCancel.setOnClickListener { dialog.dismiss() }
+
+        btnJoin.setOnClickListener {
+            val newUsername = editText.text.toString().trim()
+            if (newUsername.isNotEmpty() && newUsername != username) {
+                grpcClient.updateUsername(username, newUsername) { success, message ->
+                    runOnUiThread {
+                        if (success) {
+                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                            username = newUsername
+                            setResult(RESULT_OK)
+                            finish()
+                        } else {
+                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                         }
                     }
-                } else {
-                    Toast.makeText(this, "Имя не может быть пустым", Toast.LENGTH_SHORT).show()
                 }
+                dialog.dismiss()
+            } else if (newUsername.isEmpty()) {
+                Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_SHORT).show()
+            } else {
+                dialog.dismiss()
             }
-            .setNegativeButton("Отмена", null)
-            .show()
+        }
+
+        dialog.show()
     }
 
     private fun showChangePasswordDialog() {
-        val view = layoutInflater.inflate(R.layout.dialog_change_password, null)
-        val oldPassword = view.findViewById<EditText>(R.id.editTextOldPassword)
-        val newPassword = view.findViewById<EditText>(R.id.editTextNewPassword)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
+        
+        val oldPassword = dialogView.findViewById<EditText>(R.id.editTextOldPassword)
+        val newPassword = dialogView.findViewById<EditText>(R.id.editTextNewPassword)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSave)
 
-        AlertDialog.Builder(this)
-            .setTitle("Изменить пароль")
-            .setView(view)
-            .setPositiveButton("Сохранить") { _, _ ->
-                val oldPass = oldPassword.text.toString().trim()
-                val newPass = newPassword.text.toString().trim()
-                if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
-                    grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
-                        runOnUiThread {
-                            if (success) {
-                                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                                password = newPass
-                            } else {
-                                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                            }
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+
+        btnSave.setOnClickListener {
+            val oldPass = oldPassword.text.toString().trim()
+            val newPass = newPassword.text.toString().trim()
+            if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
+                grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
+                    runOnUiThread {
+                        if (success) {
+                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                            password = newPass
+                            dialog.dismiss()
+                        } else {
+                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                         }
                     }
-                } else {
-                    Toast.makeText(this, "Введите оба пароля", Toast.LENGTH_SHORT).show()
                 }
+            } else {
+                Toast.makeText(this, "Введите оба пароля", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
-            .show()
+        }
+
+        dialog.show()
     }
 }

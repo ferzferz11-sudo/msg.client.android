@@ -5,6 +5,7 @@
     <style name="Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="actionOverflowButtonStyle">@style/CustomOverflowStyle</item>
         <item name="isLightTheme">true</item>
+        <item name="android:windowLightStatusBar">true</item>
         <!-- Primary colors -->
         <item name="colorPrimary">@color/deep_purple</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -52,19 +53,19 @@
         <!-- Secondary colors -->
         <item name="colorSecondary">@color/white</item>
         <item name="colorOnSecondary">@color/deep_purple</item>
-        <item name="colorSecondaryContainer">@color/lavender_mist</item>
-        <item name="colorOnSecondaryContainer">@color/deep_purple</item>
+        <item name="colorSecondaryContainer">@color/deep_purple</item>
+        <item name="colorOnSecondaryContainer">@color/lavender_mist</item>
 
         <!-- Background colors -->
         <item name="android:windowBackground">@color/dark_background</item>
         <item name="colorSurface">@color/dark_background</item>
-        <item name="colorSurfaceVariant">@color/lavender_mist</item>
+        <item name="colorSurfaceVariant">@color/deep_purple</item>
         <item name="colorOnSurface">@color/white</item>
-        <item name="colorOnSurfaceVariant">@color/white</item>
+        <item name="colorOnSurfaceVariant">@color/lavender_mist</item>
 
-        <!-- Dialog colors -->
-        <item name="colorSurfaceContainer">@color/lavender_mist</item>
-        <item name="colorSurfaceContainerHigh">@color/lavender_mist</item>
+        <!-- Dialog and Card colors -->
+        <item name="colorSurfaceContainer">@color/deep_purple</item>
+        <item name="colorSurfaceContainerHigh">@color/deep_purple</item>
 
         <!-- Text colors -->
         <item name="android:textColorPrimary">@color/white</item>

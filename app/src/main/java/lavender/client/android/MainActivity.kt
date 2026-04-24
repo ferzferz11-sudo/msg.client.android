@@ -13,7 +13,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -107,9 +106,10 @@ class MainActivity : AppCompatActivity() {
 
         // Check if coming from notification
         val fromNotification = intent.getBooleanExtra("from_notification", false)
+        val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
         val notificationRoomId = intent.getStringExtra("room_id") ?: "general"
 
-        if (savedUsername != null && savedPassword != null && savedServerAddress != null) {
+        if (!skipAutoLogin && savedUsername != null && savedPassword != null && savedServerAddress != null) {
             // Credentials exist - navigate to appropriate screen
             if (fromNotification) {
                 // Open the specific chat from notification
@@ -152,17 +152,7 @@ class MainActivity : AppCompatActivity() {
             // to avoid ClassCastException in ClientTransaction.
             lifecycleScope.launch {
                 delay(10)
-                val intent = intent
-                finish()
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startActivity(intent)
-                } else {
-                    @Suppress("DEPRECATION")
-                    overridePendingTransition(0, 0)
-                    startActivity(intent)
-                    @Suppress("DEPRECATION")
-                    overridePendingTransition(0, 0)
-                }
+                recreate()
             }
         } else {
             updateLanguageButtonText()
@@ -175,25 +165,16 @@ class MainActivity : AppCompatActivity() {
             currentColorScheme = savedColorScheme
             lifecycleScope.launch {
                 delay(10)
-                val intent = intent
-                finish()
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startActivity(intent)
-                } else {
-                    @Suppress("DEPRECATION")
-                    overridePendingTransition(0, 0)
-                    startActivity(intent)
-                    @Suppress("DEPRECATION")
-                    overridePendingTransition(0, 0)
-                }
+                recreate()
             }
         }
 
         // Only start periodic update check if not navigating away immediately
         // Don't start if coming from notification (will navigate to chat)
         val fromNotification = intent.getBooleanExtra("from_notification", false)
-        if (!fromNotification) {
+        if (!fromNotification && !lavender.client.android.data.grpc.GrpcClient.hasCheckedForUpdates) {
             startPeriodicUpdateCheck()
+            lavender.client.android.data.grpc.GrpcClient.hasCheckedForUpdates = true
         }
     }
 
@@ -203,7 +184,7 @@ class MainActivity : AppCompatActivity() {
         stopPeriodicUpdateCheck()
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+    override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         // Activity will handle configuration changes without recreation
         // Download will continue in the background
@@ -306,7 +287,7 @@ class MainActivity : AppCompatActivity() {
                         val totalMb = fileLength / (1024.0 * 1024.0)
                         withContext(Dispatchers.Main) {
                             downloadProgressBar.progress = progress
-                            downloadProgressText.text = String.format("%.2f / %.2f MB", downloadedMb, totalMb)
+                            downloadProgressText.text = String.format(Locale.US, "%.2f / %.2f MB", downloadedMb, totalMb)
                         }
                     }
                     output.write(data, 0, count)
@@ -538,21 +519,32 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("MainActivity", "Auto-navigating to chat room: $roomId")
         // Need to get chat info first
         lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, false, 50051, this)
-        lavender.client.android.data.grpc.GrpcClient.getChats(username) { chats ->
-            val chat = chats.find { it.id == roomId }
-            if (chat != null) {
-                val intent = Intent(this, NewChatActivity::class.java)
-                intent.putExtra("USERNAME", username)
-                intent.putExtra("PASSWORD", password)
-                intent.putExtra("ROOM_ID", roomId)
-                intent.putExtra("CHAT_NAME", chat.name)
-                intent.putExtra("IS_DIRECT", chat.type == "direct")
-                intent.putExtra("PARTICIPANTS", chat.participants)
-                startActivity(intent)
-                finish()
-            } else {
-                // Chat not found, navigate to chat list
-                navigateToChatList(username, password, serverAddress)
+        
+        // Start chat session (auth)
+        lavender.client.android.data.grpc.GrpcClient.startChat(username, password, "") { _ -> }
+
+        // Use lifecycleScope to wait for auth and then get chats
+        lifecycleScope.launch {
+            delay(500) // Wait for auth to complete
+            
+            lavender.client.android.data.grpc.GrpcClient.getChats(username) { chats ->
+                runOnUiThread {
+                    val chat = chats.find { it.id == roomId }
+                    if (chat != null) {
+                        val intent = Intent(this@MainActivity, NewChatActivity::class.java)
+                        intent.putExtra("USERNAME", username)
+                        intent.putExtra("PASSWORD", password)
+                        intent.putExtra("ROOM_ID", roomId)
+                        intent.putExtra("CHAT_NAME", chat.name)
+                        intent.putExtra("IS_DIRECT", chat.type == "direct")
+                        intent.putExtra("PARTICIPANTS", chat.participants)
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        // Chat not found, navigate to chat list
+                        navigateToChatList(username, password, serverAddress)
+                    }
+                }
             }
         }
     }
@@ -725,10 +717,10 @@ class MainActivity : AppCompatActivity() {
                     val isAvailable = isUpdateAvailable(latestVersion)
 
                     // Save update availability to SharedPreferences
-                    getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit()
-                        .putBoolean("update_available", isAvailable)
-                        .putString("latest_version", latestVersion)
-                        .apply()
+                    getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
+                        putBoolean("update_available", isAvailable)
+                        putString("latest_version", latestVersion)
+                    }
 
                     withContext<Unit>(Dispatchers.Main) {
                         updateAvailableIndicator.isVisible = isAvailable
