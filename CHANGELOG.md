@@ -11,23 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚪 **Exit Navigation**: Replaced back arrow with "Exit to App" icon in ChatListActivity for clearer navigation to main screen.
 - ➕ **Add Chat Icon**: Added new "Add Chat" icon in the Toolbar for quicker access to chat creation.
 - 👤 **Improved Profile Editing**: Redesigned Edit Profile screen with Material cards and improved typography.
-- 🌓 **Enhanced Theming**:
+- 🌒 **Enhanced Theming**:
   - Full Light/Dark theme support for all profile and settings screens.
-  - Light theme now uses pure white background for better clarity.
+  - Light theme now uses pure white background with pale lilac cards for better clarity.
   - Dark theme cards updated to deep purple for better contrast.
+  - Added `windowLightStatusBar` support for Light theme.
 - 📱 **Android 15 Compatibility**:
   - Implemented full Edge-to-Edge support with WindowInsets handling.
-  - Fixed UI overlapping with status bar (clocks/icons) and navigation bars.
+  - Fixed UI overlapping with status bar (clocks/icons) and navigation bars on all main activities.
 - 🛠️ **Build System**: Updated to `compileSdk 37` and refined dependency versions (Glide 5.0.7, Google Services 4.4.4, etc.).
 
 ### Changed
-- ⚡ **Optimized Update Check**: Update check now runs only once per session to save resources and data.
+- ⚡ **Optimized Update Check**: Update check now runs only once per session (background task in ChatListActivity after initial load) to save resources.
 - 🔄 **Skip Auto-Login**: Added logic to skip automatic login when returning from ChatListActivity to allow server switching.
 
 ### Fixed
-- 🖼️ **Avatar Synchronization**: Fixed issue where profile avatar didn't update immediately in the chat list.
+- 🖼️ **Avatar Synchronization**: Fixed issue where profile avatar didn't update immediately in the chat list by force-refreshing the cache and adapter.
 - 🔔 **Notification Flow**: Fixed auto-navigation from notifications by ensuring proper gRPC authentication before loading chat data.
-- 🐛 **UI Cleanup**: Removed unused imports and variables, fixed various lint warnings and minor layout bugs.
+- 🐛 **UI Cleanup**: Removed unused imports, redundant qualifiers, and fixed various lint warnings across the project.
+- 🧹 **General Chat Removal**: Completely removed all legacy logic related to the "general" chat room from both client and server.
 
 ## [1.0.1.43] - 2026-04-24
 
