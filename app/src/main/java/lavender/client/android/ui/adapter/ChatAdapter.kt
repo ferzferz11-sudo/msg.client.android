@@ -119,7 +119,12 @@ class ChatAdapter(
             } else {
                 val typedValue = android.util.TypedValue()
                 context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                cardView.setCardBackgroundColor(typedValue.data)
+                val color = if (typedValue.resourceId != 0) {
+                    androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+                } else {
+                    typedValue.data
+                }
+                cardView.setCardBackgroundColor(color)
                 itemView.alpha = 1.0f
             }
             val isRussian = context.resources.configuration.locales[0].language == "ru"

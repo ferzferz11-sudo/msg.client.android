@@ -342,7 +342,7 @@ class EditProfileActivity : AppCompatActivity() {
 
     private fun applySavedColorScheme() {
         val theme = when (getSavedColorScheme()) {
-            "light" -> R.style.Theme_MsgClientAndroid
+            "light" -> R.style.Theme_Lavender_Light_NoActionBar
             else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(theme)

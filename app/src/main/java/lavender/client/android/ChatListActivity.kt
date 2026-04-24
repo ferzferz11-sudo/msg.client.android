@@ -177,11 +177,10 @@ class ChatListActivity : AppCompatActivity() {
         // Check for update availability from SharedPreferences
         val updatePrefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         val updateAvailable = updatePrefs.getBoolean("update_available", false)
-        val updateIcon = binding.root.findViewById<ImageView>(R.id.updateAvailableIcon)
-        updateIcon.isVisible = updateAvailable
+        binding.updateAvailableIcon.isVisible = updateAvailable
 
         // Handle update icon click - navigate to MainActivity for update
-        updateIcon.setOnClickListener {
+        binding.updateAvailableIcon.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
             startActivity(intent)
@@ -206,12 +205,6 @@ class ChatListActivity : AppCompatActivity() {
         )
         binding.chatsRecyclerView.adapter = adapter
         binding.chatsRecyclerView.layoutManager = LinearLayoutManager(this)
-
-        // Check for updates automatically only once per session
-        if (!grpcClient.hasCheckedForUpdates) {
-            checkForUpdates()
-            grpcClient.hasCheckedForUpdates = true
-        }
 
         // Observe system notifications for auth failures
         lifecycleScope.launch {
@@ -497,6 +490,13 @@ class ChatListActivity : AppCompatActivity() {
                             }
                         }
                     }
+                }
+
+                // Check for updates automatically only once per session
+                // Done here after initial chat list load
+                if (!grpcClient.hasCheckedForUpdates) {
+                    checkForUpdates()
+                    grpcClient.hasCheckedForUpdates = true
                 }
             }
 
@@ -1008,7 +1008,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun applySavedColorScheme() {
         val theme = when (getSavedColorScheme()) {
-            "light" -> R.style.Theme_MsgClientAndroid
+            "light" -> R.style.Theme_Lavender_Light_NoActionBar
             else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(theme)
@@ -1104,8 +1104,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
 
                     withContext(Dispatchers.Main) {
-                        val updateIcon = binding.root.findViewById<ImageView>(R.id.updateAvailableIcon)
-                        updateIcon?.isVisible = isAvailable
+                        binding.updateAvailableIcon.isVisible = isAvailable
                     }
                 }
                 connection.disconnect()
