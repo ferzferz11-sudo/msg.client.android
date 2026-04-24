@@ -9,8 +9,11 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.GridLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -25,6 +28,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -75,6 +82,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var replyMessage: ImageButton
     private lateinit var deleteMessages: ImageButton
     private lateinit var forwardMessages: ImageButton
+    private lateinit var emojiButton: ImageButton
     private lateinit var toolbarContent: View
     private lateinit var messagesRecyclerView: RecyclerView
     private lateinit var messageInput: EditText
@@ -176,6 +184,7 @@ class NewChatActivity : AppCompatActivity() {
         setupRecyclerView()
         setupObservers()
         setupListeners()
+        setupKeyboardHandling()
 
         // Start chat and load history for the current room
         viewModel.switchRoom(roomId)
@@ -189,6 +198,24 @@ class NewChatActivity : AppCompatActivity() {
                 else finish()
             }
         })
+    }
+
+    private fun setupKeyboardHandling() {
+        val bottomPanel = findViewById<View>(R.id.bottomPanel)
+        ViewCompat.setOnApplyWindowInsetsListener(bottomPanel) { view, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                // Поднимаем панель на высоту клавиатуры, учитывая системные отступы (navigation bar)
+                bottomMargin = if (imeInsets.bottom > 0) {
+                    imeInsets.bottom - systemBarsInsets.bottom
+                } else {
+                    0
+                }
+            }
+            insets
+        }
     }
 
     private fun initViews() {
@@ -214,6 +241,7 @@ class NewChatActivity : AppCompatActivity() {
         replyUser = findViewById(R.id.replyUser)
         replyText = findViewById(R.id.replyText)
         cancelReply = findViewById(R.id.cancelReply)
+        emojiButton = findViewById(R.id.emojiButton)
 
         searchBar = findViewById(R.id.searchBar)
         searchInput = findViewById(R.id.searchInput)
@@ -244,8 +272,8 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         if (isDirect) {
-            toolbarAvatar.visibility = View.VISIBLE
-            groupParticipantsContainer.visibility = View.GONE
+            toolbarAvatar.isVisible = true
+            groupParticipantsContainer.isVisible = false
             val arr = JSONArray(participantsJson)
             val otherUser = if (arr.length() > 0) {
                 var found = ""
@@ -281,8 +309,8 @@ class NewChatActivity : AppCompatActivity() {
 
         } else {
             toolbarTitle.text = chatName
-            toolbarAvatar.visibility = View.GONE
-            groupParticipantsContainer.visibility = View.VISIBLE
+            toolbarAvatar.isVisible = false
+            groupParticipantsContainer.isVisible = true
             setupGroupAvatars()
 
             val openGroupInfo = {
@@ -327,7 +355,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
-    private fun getSavedColorScheme(): String? = getSharedPreferences("settings", MODE_PRIVATE).getString("color_scheme", "lavender")
+    private fun getSavedColorScheme(): String? = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")
 
     private fun setupRecyclerView() {
         adapter = MessageAdapter(
@@ -385,11 +413,11 @@ class NewChatActivity : AppCompatActivity() {
                 val otherTyping = users.filter { it != username }
                 runOnUiThread {
                     if (otherTyping.isNotEmpty()) {
-                        toolbarSubtitle.visibility = View.VISIBLE
+                        toolbarSubtitle.isVisible = true
                         toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first())
                         else getString(R.string.users_are_typing, otherTyping.size)
                     } else {
-                        if (isDirect) toolbarSubtitle.visibility = View.GONE
+                        if (isDirect) toolbarSubtitle.isVisible = false
                         else {
                             val arr = JSONArray(participantsJson)
                             toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
@@ -422,8 +450,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showSearchBar() {
-        toolbarContent.visibility = View.GONE
-        searchBar.visibility = View.VISIBLE
+        toolbarContent.isVisible = false
+        searchBar.isVisible = true
         toolbar.navigationIcon = null
         searchInput.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
@@ -431,8 +459,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun hideSearchBar() {
-        searchBar.visibility = View.GONE
-        toolbarContent.visibility = View.VISIBLE
+        searchBar.isVisible = false
+        toolbarContent.isVisible = true
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         searchInput.setText("")
         searchResults = emptyList()
@@ -512,7 +540,7 @@ class NewChatActivity : AppCompatActivity() {
                     }
                     editingMessage = null
                     messageInput.setText("")
-                    sendButton.setImageResource(android.R.drawable.ic_menu_send)
+                    sendButton.setImageResource(R.drawable.send_24)
                 } else {
                     sendMessage(text, "")
                     messageInput.setText("")
@@ -526,6 +554,10 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         closeSelection.setOnClickListener { hideSelectionToolbar() }
+
+        emojiButton.setOnClickListener {
+            showEmojiDialog()
+        }
 
         copyMessages.setOnClickListener {
             val selected = adapter.getSelectedMessages()
@@ -645,11 +677,11 @@ class NewChatActivity : AppCompatActivity() {
             .load(imageUrl)
             .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
                 override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-                    progressBar.visibility = View.GONE
+                    progressBar.isVisible = false
                     return false
                 }
                 override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
-                    progressBar.visibility = View.GONE
+                    progressBar.isVisible = false
                     return false
                 }
             })
@@ -661,12 +693,12 @@ class NewChatActivity : AppCompatActivity() {
     private fun showSelectionToolbar(count: Int) {
         selectionMode = true
         invalidateOptionsMenu()
-        toolbarContent.visibility = View.GONE
-        selectionToolbar.visibility = View.VISIBLE
+        toolbarContent.isVisible = false
+        selectionToolbar.isVisible = true
         selectionCountText.text = count.toString()
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
-        replyMessage.visibility = if (count == 1) View.VISIBLE else View.GONE
-        forwardMessages.visibility = if (count > 0) View.VISIBLE else View.GONE
+        replyMessage.isVisible = count == 1
+        forwardMessages.isVisible = count > 0
     }
 
     private fun hideSelectionToolbar() {
@@ -674,8 +706,8 @@ class NewChatActivity : AppCompatActivity() {
         selectionMode = false
         adapter.toggleSelectionMode(false)
         invalidateOptionsMenu()
-        selectionToolbar.visibility = View.GONE
-        toolbarContent.visibility = View.VISIBLE
+        selectionToolbar.isVisible = false
+        toolbarContent.isVisible = true
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.navigationIcon?.let {
@@ -687,7 +719,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun showReplyPreview(message: Message) {
         replyingTo = message
-        replyPreview.visibility = View.VISIBLE
+        replyPreview.isVisible = true
         replyUser.text = message.user
         replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text
         messageInput.requestFocus()
@@ -695,7 +727,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun hideReplyPreview() {
         replyingTo = null
-        replyPreview.visibility = View.GONE
+        replyPreview.isVisible = false
     }
 
     private fun sendMessage(text: String, imageUrl: String) {
@@ -742,13 +774,14 @@ class NewChatActivity : AppCompatActivity() {
 
         menuCopy.setOnClickListener {
             val text = "[${message.user}]: ${message.text}"
-            (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", text))
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("message", text))
             Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
 
         // Show edit only for own messages
-        menuEdit.visibility = if (message.user == username) View.VISIBLE else View.GONE
+        menuEdit.isVisible = message.user == username
         menuEdit.setOnClickListener {
             editingMessage = message
             val cleanText = message.text.removeSuffix(" (edited)")
@@ -760,7 +793,7 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         // Show delete only for own messages
-        menuDelete.visibility = if (message.user == username) View.VISIBLE else View.GONE
+        menuDelete.isVisible = message.user == username
         menuDelete.setOnClickListener {
             grpcClient.deleteMessage(message)
             dialog.dismiss()
@@ -769,9 +802,55 @@ class NewChatActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    private fun showEmojiDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, null)
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        dialog.setContentView(dialogView)
+
+        val emojis = listOf("😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+            "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
+            "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
+            "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
+            "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬",
+            "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗",
+            "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯",
+            "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐",
+            "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈",
+            "👿", "👹", "👺", "🤡", "👻", "💀", "☠️", "👽", "👾", "🤖",
+            "🎃", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾")
+
+        val container = dialogView.findViewById<GridLayout>(R.id.emojiGrid)
+        container.columnCount = 7
+
+        emojis.forEach { emoji ->
+            val textView = TextView(this).apply {
+                text = emoji
+                textSize = 24f
+                gravity = Gravity.CENTER
+                setPadding(8, 8, 8, 8)
+                isClickable = true
+                isFocusable = true
+                val outValue = android.util.TypedValue()
+                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+                setBackgroundResource(outValue.resourceId)
+                setOnClickListener {
+                    val cursorPosition = messageInput.selectionStart
+                    val text = messageInput.text.toString()
+                    val newText = text.substring(0, cursorPosition) + emoji + text.substring(cursorPosition)
+                    messageInput.setText(newText)
+                    messageInput.setSelection(cursorPosition + emoji.length)
+                    dialog.dismiss()
+                }
+            }
+            container.addView(textView)
+        }
+
+        dialog.show()
+    }
+
     private fun uploadFiles(uris: List<Uri>) {
-        attachButton.visibility = View.INVISIBLE
-        uploadProgressBar.visibility = View.VISIBLE
+        attachButton.isVisible = false
+        uploadProgressBar.isVisible = true
         lifecycleScope.launch {
             try {
                 uris.forEach { uri ->
@@ -781,8 +860,8 @@ class NewChatActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) { Toast.makeText(this@NewChatActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
             } finally {
                 withContext(Dispatchers.Main) {
-                    attachButton.visibility = View.VISIBLE
-                    uploadProgressBar.visibility = View.GONE
+                    attachButton.isVisible = true
+                    uploadProgressBar.isVisible = false
                 }
             }
         }
@@ -911,9 +990,9 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun applySavedColorScheme() {
         val themeId = when (getSavedColorScheme()) {
-            "lavender" -> R.style.Theme_Lavender_NoActionBar
+            "light" -> R.style.Theme_MsgClientAndroid
             "dark" -> R.style.Theme_Lavender_Dark_NoActionBar
-            else -> R.style.Theme_Lavender_NoActionBar
+            else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(themeId)
     }

@@ -166,8 +166,8 @@
     <string name="participants_count">%d участников</string>
     <string name="user_is_typing">%s печатает…</string>
     <string name="users_are_typing">%d пользователей печатают…</string>
-    <string name="is_typing">печатает...</string>
-    <string name="are_typing">печатают...</string>
+    <string name="is_typing">печатает…</string>
+    <string name="are_typing">печатают…</string>
     <string name="search">Поиск</string>
     <string name="no_results">Нет результатов</string>
     <string name="search_results_format">%1$d/%2$d</string>
@@ -201,4 +201,17 @@
     <string name="notifications">Нотификации</string>
     <string name="clear">Очистить</string>
     <string name="history_cleared">История очищена</string>
+    <string name="loading">Загрузка…</string>
+    <string name="change_bio">Сохранить</string>
+    <string name="bio_label">Кратко о себе</string>
+    <string name="tell_about_yourself">Расскажите о себе</string>
+    <string name="edit_profile_title">Редактировать профиль</string>
+    <string name="fcm_token_label">Токен FCM:</string>
+    <string name="copy_token">Копировать токен</string>
+    <string name="test_notification">Тестовое уведомление</string>
+    <string name="notifications_label">Уведомления:</string>
+    <string name="no_notifications_received">Уведомлений пока нет</string>
+    <string name="old_password">Старый пароль</string>
+    <string name="new_password">Новый пароль</string>
+    <string name="add_emoji">Добавить эмодзи</string>
 </resources>

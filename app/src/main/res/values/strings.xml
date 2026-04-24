@@ -199,4 +199,17 @@
 
     <string name="welcome_new_user_title">Welcome to Lavender!</string>
     <string name="welcome_new_user_description">Welcome to our messaging system with end-to-end encryption support. Your privacy is our priority. Start by creating a new chat or joining existing groups to stay connected with your friends and colleagues securely.</string>
+    <string name="loading">Loading…</string>
+    <string name="change_bio">Save</string>
+    <string name="bio_label">Bio</string>
+    <string name="tell_about_yourself">Tell about yourself</string>
+    <string name="edit_profile_title">Edit Profile</string>
+    <string name="fcm_token_label">FCM Token:</string>
+    <string name="copy_token">Copy Token</string>
+    <string name="test_notification">Test Notification</string>
+    <string name="notifications_label">Notifications:</string>
+    <string name="no_notifications_received">No notifications received yet</string>
+    <string name="old_password">Old password</string>
+    <string name="new_password">New password</string>
+    <string name="add_emoji">Add emoji</string>
 </resources>

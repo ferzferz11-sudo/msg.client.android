@@ -35,7 +35,8 @@
                 android:layout_height="150dp"
                 android:src="@drawable/ic_default_avatar"
                 app:civ_border_width="2dp"
-                app:civ_border_color="?attr/colorPrimary" />
+                app:civ_border_color="?attr/colorPrimary"
+                android:contentDescription="@string/change_avatar" />
 
             <TextView
                 android:id="@+id/profileName"
@@ -74,7 +75,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Bio"
+                        android:text="@string/bio_label"
                         android:textSize="14sp"
                         android:textColor="?attr/colorPrimary"
                         android:textStyle="bold" />
@@ -117,7 +118,7 @@
                             android:id="@+id/participantsTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Participants"
+                            android:text="@string/participants"
                             android:textSize="14sp"
                             android:textColor="?attr/colorPrimary"
                             android:textStyle="bold" />
@@ -127,7 +128,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
-                            android:text="Add"
+                            android:text="@string/add"
                             android:textColor="?attr/colorPrimary"
                             android:textStyle="bold"
                             android:clickable="true"
@@ -150,7 +151,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Edit Profile"
+                android:text="@string/edit_profile_title"
                 android:visibility="gone" />
 
         </LinearLayout>

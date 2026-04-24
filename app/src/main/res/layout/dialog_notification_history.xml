@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="FCM Token:"
+        android:text="@string/fcm_token_label"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="4dp" />
@@ -17,7 +17,7 @@
         android:id="@+id/fcmTokenText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Loading..."
+        android:text="@string/loading"
         android:textSize="12sp"
         android:background="?attr/selectableItemBackground"
         android:padding="8dp"
@@ -37,20 +37,20 @@
             android:id="@+id/copyTokenButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Copy Token"
+            android:text="@string/copy_token"
             android:layout_marginEnd="8dp" />
 
         <Button
             android:id="@+id/testNotificationButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Test Notification" />
+            android:text="@string/test_notification" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Notifications:"
+        android:text="@string/notifications_label"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="4dp" />
@@ -64,7 +64,7 @@
             android:id="@+id/notificationsText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="No notifications received yet"
+            android:text="@string/no_notifications_received"
             android:textSize="12sp"
             android:padding="8dp" />
     </ScrollView>

@@ -93,7 +93,8 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
-                    app:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/cancel" />
 
                 <TextView
                     android:id="@+id/selectionCountText"
@@ -112,7 +113,8 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_copy"
-                    app:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/copy" />
 
                 <ImageButton
                     android:id="@+id/replyMessage"
@@ -120,7 +122,8 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_reply"
-                    app:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/reply" />
 
                 <ImageButton
                     android:id="@+id/forwardMessages"
@@ -128,7 +131,8 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_forward"
-                    app:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/forward" />
 
                 <ImageButton
                     android:id="@+id/deleteMessages"
@@ -136,7 +140,8 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_delete"
-                    app:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/delete" />
 
             </LinearLayout>
 
@@ -156,7 +161,8 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
-                    app:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/cancel" />
 
                 <EditText
                     android:id="@+id/searchInput"
@@ -295,6 +301,15 @@
             android:gravity="bottom"
             android:padding="4dp">
 
+            <ImageButton
+                android:id="@+id/emojiButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/add_reaction_24"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:contentDescription="@string/add_emoji" />
+
             <EditText
                 android:id="@+id/messageInput"
                 android:layout_width="0dp"
@@ -316,7 +331,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_attach"
+                    android:src="@drawable/attach_file_add_24"
                     app:tint="?attr/colorOnSurfaceVariant"
                     android:contentDescription="@string/attach_file" />
 
@@ -333,7 +348,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_send"
+                android:src="@drawable/send_24"
                 app:tint="?attr/colorPrimary"
                 android:contentDescription="@string/send_message" />
 

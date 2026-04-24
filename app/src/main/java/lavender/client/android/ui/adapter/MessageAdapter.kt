@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -125,10 +126,10 @@ class MessageAdapter(
 
             // 1. Visibility (Telegram Style)
             val canShowSenderInfo = isGroup && !isOutgoing && !isConsecutive
-            userText.visibility = if (canShowSenderInfo) View.VISIBLE else View.GONE
+            userText.isVisible = canShowSenderInfo
             
             if (canShowSenderInfo) {
-                avatarImageView.visibility = View.VISIBLE
+                avatarImageView.isVisible = true
                 if (message.avatarUrl.isNotEmpty()) {
                     com.bumptech.glide.Glide.with(context).load(message.avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar).into(avatarImageView)
@@ -179,7 +180,7 @@ class MessageAdapter(
             }
 
             // 4. Status
-            readStatusIcon.visibility = if (isOutgoing) View.VISIBLE else View.GONE
+            readStatusIcon.isVisible = isOutgoing
             if (isOutgoing) {
                 val icon = if (message.isRead) R.drawable.ic_message_read else R.drawable.ic_message_sent
                 val color = if (message.isRead) R.color.tg_read_check else R.color.tg_time_outgoing
@@ -189,13 +190,13 @@ class MessageAdapter(
 
             // 5. Content
             timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
-            timeText.visibility = if (shouldHideTime) View.GONE else View.VISIBLE
+            timeText.isVisible = !shouldHideTime
 
             val isLocation = message.text.startsWith("geo:")
 
             // Show edited label based on edited field
             editedText.text = context.getString(R.string.edited_label)
-            editedText.visibility = if (message.edited) View.VISIBLE else View.GONE
+            editedText.isVisible = message.edited
 
             if (isLocation) {
                 messageText.text = context.getString(R.string.location)
@@ -248,7 +249,7 @@ class MessageAdapter(
                 messageText.setOnClickListener(null)
             }
             
-            messageImageView.visibility = if (message.imageUrl.isNotEmpty()) View.VISIBLE else View.GONE
+            messageImageView.isVisible = message.imageUrl.isNotEmpty()
             if (message.imageUrl.isNotEmpty()) {
                 com.bumptech.glide.Glide.with(context)
                     .load(message.imageUrl)
@@ -257,25 +258,23 @@ class MessageAdapter(
             }
 
             // 5.1 Reactions
+            reactionsText.isVisible = message.reactions.isNotEmpty()
             if (message.reactions.isNotEmpty()) {
-                reactionsText.visibility = View.VISIBLE
                 val groupedReactions = message.reactions.groupBy { it.emoji }
                 val reactionSummary = groupedReactions.entries.joinToString(" ") { 
                     "${it.key}${if (it.value.size > 1) " ${it.value.size}" else ""}" 
                 }
                 reactionsText.text = reactionSummary
-            } else {
-                reactionsText.visibility = View.GONE
             }
 
-            replyQuoteContainer.visibility = if (message.repliedToUser.isNotEmpty()) View.VISIBLE else View.GONE
+            replyQuoteContainer.isVisible = message.repliedToUser.isNotEmpty()
             if (message.repliedToUser.isNotEmpty()) {
                 replyQuoteUser.text = message.repliedToUser
                 replyQuoteText.text = message.repliedToText
             }
 
             // 6. Interaction
-            selectionIndicator.visibility = if (isSelectionMode) View.VISIBLE else View.GONE
+            selectionIndicator.isVisible = isSelectionMode
             selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
             itemView.setBackgroundColor(if (isSelected) ContextCompat.getColor(context, R.color.lavender_mist_alpha) else android.graphics.Color.TRANSPARENT)

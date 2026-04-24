@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -67,7 +68,8 @@ class ChatAdapter(
             val newChat = newList[newItemPosition]
             return oldChat.name == newChat.name &&
                     oldChat.type == newChat.type &&
-                    oldChat.unreadCount == newChat.unreadCount
+                    oldChat.unreadCount == newChat.unreadCount &&
+                    oldChat.createdAt == newChat.createdAt
         }
     }
 
@@ -140,11 +142,9 @@ class ChatAdapter(
                 else -> chat.type
             }
 
+            unreadCount.isVisible = chat.unreadCount > 0
             if (chat.unreadCount > 0) {
                 unreadCount.text = chat.unreadCount.toString()
-                unreadCount.visibility = View.VISIBLE
-            } else {
-                unreadCount.visibility = View.GONE
             }
 
             // Load participant avatars

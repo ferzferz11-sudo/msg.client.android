@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -234,8 +235,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        downloadProgressBar.visibility = View.VISIBLE
-        downloadProgressText.visibility = View.VISIBLE
+        downloadProgressBar.isVisible = true
+        downloadProgressText.isVisible = true
         downloadProgressBar.progress = 0
         setButtonsEnabled(false)
 
@@ -275,15 +276,15 @@ class MainActivity : AppCompatActivity() {
                 input.close()
 
                 withContext(Dispatchers.Main) {
-                    downloadProgressBar.visibility = View.GONE
-                    downloadProgressText.visibility = View.GONE
+                    downloadProgressBar.isVisible = false
+                    downloadProgressText.isVisible = false
                     setButtonsEnabled(true)
                     installApk(file)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    downloadProgressBar.visibility = View.GONE
-                    downloadProgressText.visibility = View.GONE
+                    downloadProgressBar.isVisible = false
+                    downloadProgressText.isVisible = false
                     setButtonsEnabled(true)
                     showToast("Download error: ${e.message}", Toast.LENGTH_LONG)
                 }
@@ -649,11 +650,7 @@ class MainActivity : AppCompatActivity() {
                     val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
 
                     withContext<Unit>(Dispatchers.Main) {
-                        if (isUpdateAvailable(latestVersion)) {
-                            updateAvailableIndicator.visibility = View.VISIBLE
-                        } else {
-                            updateAvailableIndicator.visibility = View.GONE
-                        }
+                        updateAvailableIndicator.isVisible = isUpdateAvailable(latestVersion)
                     }
                 }
                 connection.disconnect()

@@ -1,6 +1,8 @@
 package lavender.client.android
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -27,6 +29,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.graphics.scale
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -48,10 +51,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import de.hdodenhof.circleimageview.CircleImageView
+import android.R as androidR
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -257,24 +262,26 @@ class ChatListActivity : AppCompatActivity() {
                 delay(3000) // Poll every 3 seconds for faster updates
                 grpcClient.getChats(username) { chats ->
                     if (chats.isNotEmpty()) {
+                        val sortedChats = chats.sortedByDescending { it.createdAt }
                         // Check if chats have actually changed
-                        val chatsChanged = currentChats.size != chats.size ||
-                                currentChats.zip(chats).any { (old, new) ->
+                        val chatsChanged = currentChats.size != sortedChats.size ||
+                                currentChats.zip(sortedChats).any { (old, new) ->
                                     old.id != new.id ||
                                     old.name != new.name ||
                                     old.type != new.type ||
-                                    old.unreadCount != new.unreadCount
+                                    old.unreadCount != new.unreadCount ||
+                                    old.createdAt != new.createdAt
                                 }
 
                         if (!chatsChanged) {
                             return@getChats
                         }
 
-                        currentChats = chats
+                        currentChats = sortedChats
 
                         // Load avatars for new participants first
                         val allParticipants = mutableSetOf<String>()
-                        for (chat in chats) {
+                        for (chat in sortedChats) {
                             if (chat.participants.isNotEmpty()) {
                                 try {
                                     val participants = JSONArray(chat.participants)
@@ -299,7 +306,7 @@ class ChatListActivity : AppCompatActivity() {
                                 val loaded = loadedCount.incrementAndGet()
                                 if (loaded == totalParticipants) {
                                     runOnUiThread {
-                                        adapter.setChats(chats)
+                                        adapter.setChats(sortedChats)
                                         adapter.updateAvatarCache(grpcClient.getAvatarCache())
                                     }
                                 }
@@ -311,8 +318,8 @@ class ChatListActivity : AppCompatActivity() {
                             delay(2000)
                             runOnUiThread {
                                 if (loadedCount.get() < totalParticipants) {
-                                    if (currentChats != chats) {
-                                        adapter.setChats(chats)
+                                    if (currentChats != sortedChats) {
+                                        adapter.setChats(sortedChats)
                                     }
                                     adapter.updateAvatarCache(grpcClient.getAvatarCache())
                                 }
@@ -322,8 +329,8 @@ class ChatListActivity : AppCompatActivity() {
                         // Fallback: show chats immediately if no participants
                         if (allParticipants.isEmpty()) {
                             runOnUiThread {
-                                if (currentChats != chats) {
-                                    adapter.setChats(chats)
+                                if (currentChats != sortedChats) {
+                                    adapter.setChats(sortedChats)
                                 }
                             }
                         }
@@ -346,23 +353,25 @@ class ChatListActivity : AppCompatActivity() {
         // Refresh chats immediately when returning from chat
         grpcClient.getChats(username) { chats ->
             if (chats.isNotEmpty()) {
+                val sortedChats = chats.sortedByDescending { it.createdAt }
                 // Check if chats have actually changed
-                val chatsChanged = currentChats.size != chats.size ||
-                        currentChats.zip(chats).any { (old, new) ->
+                val chatsChanged = currentChats.size != sortedChats.size ||
+                        currentChats.zip(sortedChats).any { (old, new) ->
                             old.id != new.id ||
                             old.name != new.name ||
                             old.type != new.type ||
-                            old.unreadCount != new.unreadCount
+                            old.unreadCount != new.unreadCount ||
+                            old.createdAt != new.createdAt
                         }
 
                 if (!chatsChanged) {
                     return@getChats
                 }
 
-                currentChats = chats
+                currentChats = sortedChats
                 // Load avatars for all participants first
                 val allParticipants = mutableSetOf<String>()
-                for (chat in chats) {
+                for (chat in sortedChats) {
                     if (chat.participants.isNotEmpty()) {
                         try {
                             val participants = JSONArray(chat.participants)
@@ -387,7 +396,7 @@ class ChatListActivity : AppCompatActivity() {
                         val loaded = loadedCount.incrementAndGet()
                         if (loaded == totalParticipants) {
                             runOnUiThread {
-                                adapter.setChats(chats)
+                                adapter.setChats(sortedChats)
                                 adapter.updateAvatarCache(grpcClient.getAvatarCache())
                             }
                         }
@@ -399,8 +408,8 @@ class ChatListActivity : AppCompatActivity() {
                     delay(2000)
                     runOnUiThread {
                         if (loadedCount.get() < totalParticipants) {
-                            if (currentChats != chats) {
-                                adapter.setChats(chats)
+                            if (currentChats != sortedChats) {
+                                adapter.setChats(sortedChats)
                             }
                             adapter.updateAvatarCache(grpcClient.getAvatarCache())
                         }
@@ -410,8 +419,8 @@ class ChatListActivity : AppCompatActivity() {
                 // Fallback: show chats immediately if no participants
                 if (allParticipants.isEmpty()) {
                     runOnUiThread {
-                        if (currentChats != chats) {
-                            adapter.setChats(chats)
+                        if (currentChats != sortedChats) {
+                            adapter.setChats(sortedChats)
                         }
                     }
                 }
@@ -463,10 +472,11 @@ class ChatListActivity : AppCompatActivity() {
                         openChat("general", getString(R.string.general_chat))
                     }
                 } else {
-                    currentChats = chats
+                    val sortedChats = chats.sortedByDescending { it.createdAt }
+                    currentChats = sortedChats
                     // Load avatars for all chat participants first
                         val allParticipants = mutableSetOf<String>()
-                        for (chat in chats) {
+                        for (chat in sortedChats) {
                             if (chat.participants.isNotEmpty()) {
                                 try {
                                     val participants = JSONArray(chat.participants)
@@ -497,8 +507,8 @@ class ChatListActivity : AppCompatActivity() {
                                     binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
 
                                     // Only update if chats changed
-                                    if (currentChats != chats) {
-                                        adapter.setChats(chats)
+                                    if (currentChats != sortedChats) {
+                                        adapter.setChats(sortedChats)
                                     }
                                     adapter.updateAvatarCache(grpcClient.getAvatarCache())
                                 }
@@ -513,11 +523,11 @@ class ChatListActivity : AppCompatActivity() {
                             if (loadedCount.get() < totalParticipants) {
                                 binding.progressOverlay.isVisible = false
                                 // Show/hide welcome message
-                                binding.welcomeContainer.isVisible = chats.isEmpty()
-                                binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
+                                binding.welcomeContainer.isVisible = sortedChats.isEmpty()
+                                binding.chatsRecyclerView.isVisible = sortedChats.isNotEmpty()
 
-                                if (currentChats != chats) {
-                                    adapter.setChats(chats)
+                                if (currentChats != sortedChats) {
+                                    adapter.setChats(sortedChats)
                                 }
                                 adapter.updateAvatarCache(grpcClient.getAvatarCache())
                             }
@@ -529,11 +539,11 @@ class ChatListActivity : AppCompatActivity() {
                         runOnUiThread {
                             binding.progressOverlay.isVisible = false
                             // Show/hide welcome message
-                            binding.welcomeContainer.isVisible = chats.isEmpty()
-                            binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
+                            binding.welcomeContainer.isVisible = sortedChats.isEmpty()
+                            binding.chatsRecyclerView.isVisible = sortedChats.isNotEmpty()
 
-                            if (currentChats != chats) {
-                                adapter.setChats(chats)
+                            if (currentChats != sortedChats) {
+                                adapter.setChats(sortedChats)
                             }
                         }
                     }
@@ -720,7 +730,7 @@ class ChatListActivity : AppCompatActivity() {
                     // Set button strokes in dark theme
                     if (isDarkTheme()) {
                         val primaryValue = TypedValue()
-                        theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                        theme.resolveAttribute(androidR.attr.colorPrimary, primaryValue, true)
                         val strokeColor = ColorStateList.valueOf(primaryValue.data)
                         btnCancel.strokeColor = strokeColor
                         btnCancel.strokeWidth = 2
@@ -903,7 +913,7 @@ class ChatListActivity : AppCompatActivity() {
                     groupInputLayout.boxBackgroundColor = surfaceValue.data
 
                     val primaryValue = TypedValue()
-                    theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                    theme.resolveAttribute(androidR.attr.colorPrimary, primaryValue, true)
                     val strokeColor = ColorStateList.valueOf(primaryValue.data)
                     btnCancel.strokeColor = strokeColor
                     btnCancel.strokeWidth = 2
@@ -925,8 +935,8 @@ class ChatListActivity : AppCompatActivity() {
 
                     val isOnline = onlineUsers.contains(user)
                     statusIndicator.backgroundTintList = ColorStateList.valueOf(
-                        if (isOnline) getColor(android.R.color.holo_green_dark)
-                        else getColor(android.R.color.darker_gray)
+                        if (isOnline) getColor(androidR.color.holo_green_dark)
+                        else getColor(androidR.color.darker_gray)
                     )
 
                     usernameText.text = user
@@ -1148,11 +1158,11 @@ class ChatListActivity : AppCompatActivity() {
             val scaledWidth = (width * scale).toInt()
             val scaledHeight = (height * scale).toInt()
 
-            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+            val scaledBitmap = bitmap.scale(scaledWidth, scaledHeight)
             bitmap.recycle()
 
             // Compress to JPEG with 85% quality
-            val outputStream = java.io.ByteArrayOutputStream()
+            val outputStream = ByteArrayOutputStream()
             scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
             scaledBitmap.recycle()
 
@@ -1246,11 +1256,11 @@ class ChatListActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channelName = "Lavender Messages"
                 val channelDescription = "Notifications for new messages"
-                val importance = android.app.NotificationManager.IMPORTANCE_HIGH
-                val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
+                val importance = NotificationManager.IMPORTANCE_HIGH
+                val channel = NotificationChannel(channelId, channelName, importance).apply {
                     description = channelDescription
                 }
-                val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+                val notificationManager = getSystemService(NotificationManager::class.java)
                 notificationManager?.createNotificationChannel(channel)
             }
 

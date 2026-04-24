@@ -30,7 +30,7 @@
         android:id="@+id/deleteForEveryoneCheckbox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Delete for everyone"
+        android:text="@string/delete_for_everyone"
         android:textSize="16sp"
         android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="24dp"

@@ -15,13 +15,13 @@ class ServerConnectivityTest {
     
     fun testServerReachability(serverAddress: String, port: Int = 50051) {
         _isTesting.value = true
-        _testResult.value = "Testing connection to $serverAddress:$port..."
+        _testResult.value = "Testing connection to $serverAddress:$port…"
         
         Thread {
             try {
                 // Test basic TCP connectivity
                 val socket = Socket()
-                _testResult.value = "Attempting TCP connection..."
+                _testResult.value = "Attempting TCP connection…"
                 
                 // Set timeout
                 socket.soTimeout = 5000 // 5 seconds
@@ -64,7 +64,7 @@ class ServerConnectivityTest {
     
     fun testLocalNetwork() {
         _isTesting.value = true
-        _testResult.value = "Testing local network connectivity..."
+        _testResult.value = "Testing local network connectivity…"
         
         Thread {
             try {
@@ -75,7 +75,7 @@ class ServerConnectivityTest {
                 )
                 
                 for (address in testAddresses) {
-                    _testResult.value = "Testing $address:50051..."
+                    _testResult.value = "Testing $address:50051…"
                     
                     try {
                         val socket = Socket()
