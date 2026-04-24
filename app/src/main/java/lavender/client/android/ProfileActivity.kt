@@ -1,16 +1,19 @@
 package lavender.client.android
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -19,7 +22,6 @@ import com.bumptech.glide.request.target.Target
 import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.RealGrpcClient
-import lavender.client.android.data.proto.GetUserProfileResponseProto
 import org.json.JSONArray
 import java.util.Locale
 
@@ -50,11 +52,11 @@ class ProfileActivity : AppCompatActivity() {
         val profileStatus = findViewById<TextView>(R.id.profileStatus)
         val profileBio = findViewById<TextView>(R.id.profileBio)
 
-        username = intent.getStringExtra("USERNAME") ?: ""
-        avatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
-        isGroup = intent.getBooleanExtra("IS_GROUP", false)
-        val roomId = intent.getStringExtra("ROOM_ID") ?: ""
-        val participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"
+        username = intent.getStringExtra("username") ?: ""
+        avatarUrl = intent.getStringExtra("avatar_url") ?: ""
+        isGroup = intent.getBooleanExtra("is_group", false)
+        val roomId = intent.getStringExtra("room_id") ?: ""
+        val participantsJson = intent.getStringExtra("participants") ?: "[]"
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -75,8 +77,8 @@ class ProfileActivity : AppCompatActivity() {
         val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar)
         val profileBio = findViewById<TextView>(R.id.profileBio)
         val profileStatus = findViewById<TextView>(R.id.profileStatus)
-        val roomId = intent.getStringExtra("ROOM_ID") ?: ""
-        val participantsJson = intent.getStringExtra("PARTICIPANTS") ?: ""
+        val roomId = intent.getStringExtra("room_id") ?: ""
+        val participantsJson = intent.getStringExtra("participants") ?: ""
         loadProfileData(profileAvatar, profileBio, profileStatus, roomId, participantsJson)
     }
 
@@ -87,10 +89,10 @@ class ProfileActivity : AppCompatActivity() {
             
             // Participant Management
             val participantsCard = findViewById<View>(R.id.participantsCard)
-            val participantsContainer = findViewById<android.widget.LinearLayout>(R.id.participantsContainer)
+            val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)
             val addParticipantButton = findViewById<TextView>(R.id.addParticipantButton)
             
-            participantsCard.visibility = View.VISIBLE
+            participantsCard.isVisible = true
             val participants = JSONArray(participantsJson)
             for (i in 0 until participants.length()) {
                 val user = participants.getString(i)
@@ -169,7 +171,7 @@ class ProfileActivity : AppCompatActivity() {
 
             findViewById<Button>(R.id.editProfileButton).apply {
                 text = getString(R.string.delete_group)
-                visibility = View.VISIBLE
+                isVisible = true
                 setOnClickListener {
                     AlertDialog.Builder(this@ProfileActivity)
                         .setTitle(R.string.delete_group)
@@ -192,7 +194,14 @@ class ProfileActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (profile != null) {
                         profileBio.text = if (profile.bio.isNotEmpty()) profile.bio else getString(R.string.no_bio)
-                        profileStatus.text = if (profile.status.isNotEmpty()) profile.status else getString(R.string.offline)
+                        
+                        // Set status: if viewing self, always show "Connected"
+                        if (username == grpcClient.getCurrentUsername()) {
+                            profileStatus.text = getString(R.string.connected)
+                            profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
+                        } else {
+                            profileStatus.text = if (profile.status.isNotEmpty()) profile.status else getString(R.string.offline)
+                        }
                         if (profile.avatarUrl.isNotEmpty() && avatarUrl.isEmpty()) {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this@ProfileActivity)
@@ -237,13 +246,13 @@ class ProfileActivity : AppCompatActivity() {
         
         Glide.with(this)
             .load(imageUrl)
-            .listener(object : RequestListener<android.graphics.drawable.Drawable> {
-                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-                    progressBar.visibility = View.GONE
+            .listener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                    progressBar.isVisible = false
                     return false
                 }
-                override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: Target<android.graphics.drawable.Drawable>, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                    progressBar.visibility = View.GONE
+                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                    progressBar.isVisible = false
                     return false
                 }
             })

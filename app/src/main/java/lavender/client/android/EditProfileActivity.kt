@@ -22,7 +22,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Log
+import androidx.core.graphics.scale
+import androidx.core.view.isVisible
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 
@@ -45,7 +53,7 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -85,9 +93,9 @@ class EditProfileActivity : AppCompatActivity() {
         currentAvatarProgressBar = avatarProgressBar
 
         // Load current profile (bio)
-        android.util.Log.d("EditProfile", "Loading profile for user: $username")
+        Log.d("EditProfile", "Loading profile for user: $username")
         grpcClient.getUserProfile(username) { profile ->
-            android.util.Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
+            Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
             runOnUiThread {
                 if (profile != null) {
                     editTextBio.setText(profile.bio)
@@ -109,11 +117,7 @@ class EditProfileActivity : AppCompatActivity() {
         }
 
         btnToggleEdit.setOnClickListener {
-            if (editFieldsContainer.visibility == View.VISIBLE) {
-                editFieldsContainer.visibility = View.GONE
-            } else {
-                editFieldsContainer.visibility = View.VISIBLE
-            }
+            editFieldsContainer.isVisible = !editFieldsContainer.isVisible
         }
 
         btnDeleteProfile.setOnClickListener {
@@ -148,16 +152,16 @@ class EditProfileActivity : AppCompatActivity() {
 
         btnChangeBio.setOnClickListener {
             val newBio = editTextBio.text.toString().trim()
-            android.util.Log.d("EditProfile", "Updating bio: '$newBio' for user: $username")
-            android.util.Log.d("EditProfile", "Calling updateProfile with username=$username, bio='$newBio', status=''")
+            Log.d("EditProfile", "Updating bio: '$newBio' for user: $username")
+            Log.d("EditProfile", "Calling updateProfile with username=$username, bio='$newBio', status=''")
             grpcClient.updateProfile(username, newBio, "") { success, message ->
-                android.util.Log.d("EditProfile", "Update bio result: success=$success, message=$message")
+                Log.d("EditProfile", "Update bio result: success=$success, message=$message")
                 runOnUiThread {
                     if (success) {
                         Toast.makeText(this, "Био сохранено", Toast.LENGTH_SHORT).show()
                         // Reload profile to verify
                         grpcClient.getUserProfile(username) { profile ->
-                            android.util.Log.d("EditProfile", "Profile after update: bio='${profile?.bio}'")
+                            Log.d("EditProfile", "Profile after update: bio='${profile?.bio}'")
                         }
                     } else {
                         Toast.makeText(this, "Ошибка: $message", Toast.LENGTH_LONG).show()
@@ -172,7 +176,7 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun uploadAvatarToServer(uri: Uri) {
-        currentAvatarProgressBar?.visibility = View.VISIBLE
+        currentAvatarProgressBar?.isVisible = true
 
         lifecycleScope.launch {
             try {
@@ -189,11 +193,11 @@ class EditProfileActivity : AppCompatActivity() {
                         inputStream?.close()
                         mediaType = "image/gif"
                     } else {
-                        val resizedBytes = resizeImage(uri, 256, 256)
+                        val resizedBytes = resizeImage(uri)
 
                         if (resizedBytes == null) {
                             runOnUiThread {
-                                currentAvatarProgressBar?.visibility = View.GONE
+                                currentAvatarProgressBar?.isVisible = false
                                 Toast.makeText(this@EditProfileActivity, "Failed to resize image", Toast.LENGTH_SHORT).show()
                             }
                             return@withContext
@@ -205,35 +209,35 @@ class EditProfileActivity : AppCompatActivity() {
 
                     if (bytes.isEmpty()) {
                         runOnUiThread {
-                            currentAvatarProgressBar?.visibility = View.GONE
+                            currentAvatarProgressBar?.isVisible = false
                             Toast.makeText(this@EditProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show()
                         }
                         return@withContext
                     }
 
                     // Upload to HTTP server with multipart/form-data
-                    val requestBody = okhttp3.MultipartBody.Builder()
-                        .setType(okhttp3.MultipartBody.FORM)
+                    val requestBody = MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
                         .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
                         .build()
 
-                    val request = okhttp3.Request.Builder()
+                    val request = Request.Builder()
                         .url("http://159.195.38.145:8082/upload-avatar")
                         .post(requestBody)
                         .build()
 
-                    val client = okhttp3.OkHttpClient()
+                    val client = OkHttpClient()
                     val response = client.newCall(request).execute()
 
                     if (response.isSuccessful) {
-                        val responseBody = response.body?.string()
+                        val responseBody = response.body.string()
                         val url = extractUrlFromResponse(responseBody ?: "")
 
                         if (url.isNotEmpty()) {
                             // Update avatar via gRPC
                             grpcClient.updateAvatar(username, url) { success, message ->
                                 runOnUiThread {
-                                    currentAvatarProgressBar?.visibility = View.GONE
+                                    currentAvatarProgressBar?.isVisible = false
                                     if (success) {
                                         Toast.makeText(this@EditProfileActivity, "Аватар обновлен", Toast.LENGTH_SHORT).show()
                                         // Update avatarImageView
@@ -253,20 +257,20 @@ class EditProfileActivity : AppCompatActivity() {
                             }
                         } else {
                             runOnUiThread {
-                                currentAvatarProgressBar?.visibility = View.GONE
+                                currentAvatarProgressBar?.isVisible = false
                                 Toast.makeText(this@EditProfileActivity, "Failed to parse server response", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
                         runOnUiThread {
-                            currentAvatarProgressBar?.visibility = View.GONE
+                            currentAvatarProgressBar?.isVisible = false
                             Toast.makeText(this@EditProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    currentAvatarProgressBar?.visibility = View.GONE
+                    currentAvatarProgressBar?.isVisible = false
                     Toast.makeText(this@EditProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -287,16 +291,18 @@ class EditProfileActivity : AppCompatActivity() {
         return ""
     }
 
-    private fun resizeImage(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
+    private fun resizeImage(uri: Uri): ByteArray? {
+        val maxWidth = 256
+        val maxHeight = 256
         val inputStream = contentResolver.openInputStream(uri) ?: return null
-        val options = android.graphics.BitmapFactory.Options().apply {
+        val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+        BitmapFactory.decodeStream(inputStream, null, options)
         inputStream.close()
 
         val imageStream = contentResolver.openInputStream(uri) ?: return null
-        val bitmap = android.graphics.BitmapFactory.decodeStream(imageStream)
+        val bitmap = BitmapFactory.decodeStream(imageStream)
         imageStream.close()
 
         if (bitmap == null) return null
@@ -306,13 +312,13 @@ class EditProfileActivity : AppCompatActivity() {
         val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
 
         val scaledBitmap = if (scale < 1) {
-            android.graphics.Bitmap.createScaledBitmap(bitmap, (width * scale).toInt(), (height * scale).toInt(), true)
+            bitmap.scale((width * scale).toInt(), (height * scale).toInt())
         } else {
             bitmap
         }
 
         val outputStream = java.io.ByteArrayOutputStream()
-        scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
+        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
         val bytes = outputStream.toByteArray()
         scaledBitmap.recycle()
         bitmap.recycle()
@@ -337,10 +343,10 @@ class EditProfileActivity : AppCompatActivity() {
             .setView(container)
             .setPositiveButton("Сохранить") { _, _ ->
                 val newUsername = editText.text.toString().trim()
-                android.util.Log.d("EditProfile", "Updating username: $username -> $newUsername")
+                Log.d("EditProfile", "Updating username: $username -> $newUsername")
                 if (newUsername.isNotEmpty() && newUsername != username) {
                     grpcClient.updateUsername(username, newUsername) { success, message ->
-                        android.util.Log.d("EditProfile", "Update username result: success=$success, message=$message")
+                        Log.d("EditProfile", "Update username result: success=$success, message=$message")
                         runOnUiThread {
                             if (success) {
                                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()

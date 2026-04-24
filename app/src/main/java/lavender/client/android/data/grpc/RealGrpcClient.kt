@@ -657,8 +657,8 @@ object RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        var received = false
         call.start(object : io.grpc.ClientCall.Listener<CreateDirectChatResponseProto>() {
+            private var received = false
             override fun onMessage(message: CreateDirectChatResponseProto) {
                 received = true
                 if (message.success) {
@@ -698,8 +698,8 @@ object RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        var received = false
         call.start(object : io.grpc.ClientCall.Listener<CreateGroupChatResponseProto>() {
+            private var received = false
             override fun onMessage(message: CreateGroupChatResponseProto) {
                 received = true
                 if (message.success) {
@@ -1105,6 +1105,8 @@ object RealGrpcClient {
     }
 
     fun testConnection(): Boolean = _connectionState.value
+
+    fun getCurrentUsername(): String? = lastUsername
 }
 
 class ReactionProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionProto> {

@@ -3,6 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_toggle_language"
+        android:title="@string/toggle_language"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_delete"
         android:icon="@drawable/ic_delete"
         android:title="@string/delete_message"
@@ -10,20 +15,34 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_language"
-        android:title="@string/language"
-        app:showAsAction="ifRoom"
-        app:actionLayout="@layout/language_indicator" />
+        android:id="@+id/action_color_scheme"
+        android:icon="@drawable/ic_light_mode"
+        android:title="@string/color_scheme"
+        app:showAsAction="always" />
 
     <item
-        android:id="@+id/action_color_scheme"
-        android:icon="@drawable/ic_theme_toggle"
-        android:title="@string/color_scheme"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/action_profile"
+        android:icon="@drawable/ic_account_circle"
+        android:title="@string/profile"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/action_profile_view"
+                android:title="@string/preview" />
+            <item
+                android:id="@+id/action_profile_edit"
+                android:title="@string/edit" />
+        </menu>
+    </item>
 
     <item
         android:id="@+id/action_notification_history"
-        android:title="Notification History"
+        android:title="@string/notifications"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_logout"
+        android:title="@string/exit"
         app:showAsAction="never" />
 
 </menu>

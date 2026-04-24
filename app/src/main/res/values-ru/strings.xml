@@ -20,7 +20,7 @@
 
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">1.0.1.28</string>
+    <string name="app_version">1.0.1.40</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">обновить</string>
@@ -107,7 +107,7 @@
     <string name="change_avatar">Изменить аватар</string>
     <string name="select_avatar">Выбрать аватар</string>
     <string name="change">Изменить</string>
-    <string name="toggle_language">Язык</string>
+    <string name="toggle_language">Язык: Русский</string>
     <string name="toggle_color_scheme">Тема</string>
     <string name="server_address_label">Сервер</string>
     <string name="checking_server">Проверка сервера…</string>
@@ -187,4 +187,18 @@
     <string name="add">Добавить</string>
     <string name="remove">Удалить</string>
     <string name="remove_participant_confirm">Вы уверены, что хотите удалить %s из группы?</string>
+    <string name="preview">Просмотр</string>
+    <string name="edit">Изменить</string>
+
+    <string name="welcome_new_user_title">Добро пожаловать в Lavender!</string>
+    <string name="welcome_new_user_description">Добро пожаловать в нашу систему обмена сообщениями с поддержкой сквозного шифрования. Ваша конфиденциальность — наш приоритет. Начните с создания нового чата или присоединяйтесь к существующим группам, чтобы безопасно оставаться на связи со своими друзьями и коллегами.</string>
+
+    <!-- Notification History -->
+    <string name="no_notifications">Нет уведомлений</string>
+    <string name="token_copied">Токен скопирован в буфер обмена</string>
+    <string name="failed_to_get_token">Не удалось получить токен</string>
+    <string name="test_notification_added">Тестовое уведомление добавлено</string>
+    <string name="notifications">Нотификации</string>
+    <string name="clear">Очистить</string>
+    <string name="history_cleared">История очищена</string>
 </resources>

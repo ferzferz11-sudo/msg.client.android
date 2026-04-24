@@ -3,6 +3,7 @@
 
     <!-- Light theme -->
     <style name="Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="actionOverflowButtonStyle">@style/CustomOverflowStyle</item>
         <item name="isLightTheme">true</item>
         <!-- Primary colors -->
         <item name="colorPrimary">@color/deep_purple</item>
@@ -40,6 +41,7 @@
 
     <!-- Dark theme for manual switching -->
     <style name="Theme_Lavender_Dark_NoActionBar" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="actionOverflowButtonStyle">@style/CustomOverflowStyle</item>
         <item name="isLightTheme">false</item>
         <!-- Primary colors -->
         <item name="colorPrimary">@color/lavender_mist</item>
@@ -71,5 +73,10 @@
 
         <!-- Button colors -->
         <item name="colorPrimaryInverse">@color/deep_purple</item>
+    </style>
+
+    <style name="CustomOverflowStyle" parent="Widget.AppCompat.ActionButton.Overflow">
+        <item name="android:src">@drawable/ic_overflow_settings</item>
+        <item name="android:tint">?attr/colorOnPrimary</item>
     </style>
 </resources>

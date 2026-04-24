@@ -21,7 +21,7 @@
 
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">1.0.1.28</string>
+    <string name="app_version">1.0.1.40</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">update</string>
@@ -89,6 +89,8 @@
     <string name="registration_success">User registered successfully</string>
     <string name="auth_failed">Authentication failed</string>
     <string name="chats">Chats</string>
+    <string name="preview">Preview</string>
+    <string name="edit">Edit</string>
     <string name="profile">Profile</string>
     <string name="attach_file">Attach file</string>
     <string name="take_photo">Take photo</string>
@@ -107,7 +109,7 @@
     <string name="change_avatar">Change Avatar</string>
     <string name="select_avatar">Select Avatar</string>
     <string name="change">Change</string>
-    <string name="toggle_language">Language</string>
+    <string name="toggle_language">Language: English</string>
     <string name="toggle_color_scheme">Theme</string>
     <string name="server_address_label">Server</string>
     <string name="checking_server">Checking server…</string>
@@ -185,4 +187,16 @@
     <string name="add">Add</string>
     <string name="remove">Remove</string>
     <string name="remove_participant_confirm">Are you sure you want to remove %s from the group?</string>
+
+    <!-- Notification History -->
+    <string name="no_notifications">No notifications</string>
+    <string name="token_copied">Token copied to clipboard</string>
+    <string name="failed_to_get_token">Failed to get token</string>
+    <string name="test_notification_added">Test notification added</string>
+    <string name="notifications">Notifications</string>
+    <string name="clear">Clear</string>
+    <string name="history_cleared">History cleared</string>
+
+    <string name="welcome_new_user_title">Welcome to Lavender!</string>
+    <string name="welcome_new_user_description">Welcome to our messaging system with end-to-end encryption support. Your privacy is our priority. Start by creating a new chat or joining existing groups to stay connected with your friends and colleagues securely.</string>
 </resources>

@@ -270,8 +270,8 @@ class NewChatActivity : AppCompatActivity() {
 
             val openProfile = {
                 val intent = Intent(this, ProfileActivity::class.java)
-                    .putExtra("USERNAME", otherUser)
-                    .putExtra("AVATAR_URL", otherUserAvatarUrl)
+                    .putExtra("username", otherUser)
+                    .putExtra("avatar_url", otherUserAvatarUrl)
                 startActivity(intent)
             }
 
@@ -288,10 +288,10 @@ class NewChatActivity : AppCompatActivity() {
             val openGroupInfo = {
                 // For group chat, we can also show a profile-like activity or group info
                 val intent = Intent(this, ProfileActivity::class.java)
-                    .putExtra("USERNAME", chatName)
-                    .putExtra("IS_GROUP", true)
-                    .putExtra("ROOM_ID", roomId)
-                    .putExtra("PARTICIPANTS", participantsJson)
+                    .putExtra("username", chatName)
+                    .putExtra("is_group", true)
+                    .putExtra("room_id", roomId)
+                    .putExtra("participants", participantsJson)
                 startActivity(intent)
             }
             toolbarTitle.setOnClickListener { openGroupInfo() }
