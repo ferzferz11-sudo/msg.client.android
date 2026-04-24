@@ -5,6 +5,65 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.43] - 2026-04-24
+
+### Added
+- 🔄 **Back Button Navigation**: Back button in ChatListActivity now navigates to MainActivity instead of closing app
+  - Provides consistent navigation flow for users
+  - FLAG_ACTIVITY_CLEAR_TOP ensures proper back stack management
+
+### Added
+- 📥 **Update Menu Item in Chat List**: Added "Update" menu item to ChatListActivity
+  - Horizontal progress bar with download status (MB/MB)
+  - Cancel button to stop download process
+  - Rounded background card for better UI
+  - Download progress displayed in real-time
+
+### Added
+- 🔔 **Background Update Check**: Update check now runs in background on first app launch
+  - MainActivity saves update availability to SharedPreferences
+  - Update icon displayed on ChatListActivity toolbar when update available
+  - Clicking update icon navigates to MainActivity for download
+  - No automatic update check when launching chat list
+
+### Fixed
+- ✅ **Message Read Receipts**: Fixed messages not being marked as read in UI
+  - Added history reload after marking messages as read
+  - onCompletion callback for UI refresh after history reload
+  - Applied to all markRead calls in NewChatActivity
+
+### Fixed
+- 🔔 **Notification Navigation**: Added onNewIntent handler for notification clicks when app is running
+  - Handles notification clicks when MainActivity is already in back stack
+  - Properly navigates to specific chat room from notification
+  - setIntent() called to update current intent
+
+### Fixed
+- 🚫 **Update Dialog Interference**: Fixed update dialog showing when coming from notification
+  - Prevented periodic update check from starting when from_notification=true
+  - Ensures smooth navigation to chat without interruption
+
+## [1.0.1.42] - 2026-04-24
+
+### Added
+- 🔔 **Push Notification Room Navigation**: Notifications now include room_id for direct chat navigation
+  - Updated LavenderMessagingService to extract room_id from notification data
+  - Notification intent now includes room_id and from_notification flags
+  - Clicking notification opens the specific chat room where message was sent
+
+### Added
+- 🚀 **Auto-Navigation on App Launch**: App now auto-navigates to chat list if credentials are saved
+  - MainActivity checks for saved username, password, and server address
+  - If credentials exist, automatically navigates to ChatListActivity
+  - If coming from notification, navigates directly to the specific chat room
+  - Improved user experience by skipping login screen when already authenticated
+
+### Fixed
+- 💬 **Message Auto-Update in Chat**: Fixed messages not updating automatically while in chat
+  - Added room_id filtering in NewChatActivity message observer
+  - Messages now properly filtered by current room_id
+  - Real-time message updates now work correctly within chat rooms
+
 ## [1.0.1.41] - 2026-04-24
 
 ### Added

@@ -188,8 +188,13 @@ class NewChatActivity : AppCompatActivity() {
 
         // Start chat and load history for the current room
         viewModel.switchRoom(roomId)
-        viewModel.startChat(username, password, "") { _ -> }
-        viewModel.markRead(username)
+        viewModel.startChat(username, password, "") { _ ->
+            // Mark as read after chat starts and history loads
+            viewModel.markRead(username) {
+                // Refresh UI after history reload
+                adapter.notifyDataSetChanged()
+            }
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -389,7 +394,10 @@ class NewChatActivity : AppCompatActivity() {
                 val totalItemCount = layoutManager.itemCount
 
                 if (lastVisiblePosition == totalItemCount - 1) {
-                    viewModel.markRead(username)
+                    viewModel.markRead(username) {
+                        // Refresh UI after history reload
+                        adapter.notifyDataSetChanged()
+                    }
                 }
             }
         })
@@ -401,8 +409,10 @@ class NewChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.messages.collect { messages ->
-                adapter.submitList(messages) {
-                    if (messages.isNotEmpty()) messagesRecyclerView.scrollToPosition(messages.size - 1)
+                // Filter messages by current room_id
+                val roomMessages = messages.filter { it.roomId == roomId }
+                adapter.submitList(roomMessages) {
+                    if (roomMessages.isNotEmpty()) messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
                 }
             }
         }
@@ -979,8 +989,12 @@ class NewChatActivity : AppCompatActivity() {
 
                         // Switch to the new room
                         viewModel.switchRoom(roomId)
-                        viewModel.startChat(username, password, "") { _ -> }
-                        viewModel.markRead(username)
+                        viewModel.startChat(username, password, "") { _ ->
+                            viewModel.markRead(username) {
+                                // Refresh UI after history reload
+                                adapter.notifyDataSetChanged()
+                            }
+                        }
                     }
                     .setNegativeButton(R.string.cancel, null)
                     .show()

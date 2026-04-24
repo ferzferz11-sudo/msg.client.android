@@ -95,8 +95,8 @@ object GrpcClient {
         realGrpcClient.updatePassword(username, oldPassword, newPassword, callback)
     }
 
-    fun markRead(roomId: String, username: String) {
-        realGrpcClient.markRead(roomId, username)
+    fun markRead(roomId: String, username: String, onCompletion: (() -> Unit)? = null) {
+        realGrpcClient.markRead(roomId, username, onCompletion)
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {

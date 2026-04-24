@@ -27,11 +27,14 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "Новое сообщение"
         val body = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: ""
 
+        // Extract room_id from data payload
+        val roomId = remoteMessage.data["room_id"] ?: "general"
+
         // Save to history for testing
         NotificationHistory.add(title, body, remoteMessage.from)
 
-        // Show notification
-        showNotification(title, body)
+        // Show notification with room_id
+        showNotification(title, body, roomId)
     }
 
     override fun onNewToken(token: String) {
@@ -49,8 +52,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showNotification(title: String, body: String) {
-        Log.d("FCM", "showNotification called with title: $title, body: $body")
+    private fun showNotification(title: String, body: String, roomId: String) {
+        Log.d("FCM", "showNotification called with title: $title, body: $body, room_id: $roomId")
 
         val channelId = "lavender_messages"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -63,7 +66,9 @@ class LavenderMessagingService : FirebaseMessagingService() {
         notificationManager.createNotificationChannel(channel)
 
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra("room_id", roomId)
+            putExtra("from_notification", true)
         }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
@@ -76,6 +81,6 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
-        Log.d("FCM", "Notification shown")
+        Log.d("FCM", "Notification shown with room_id: $roomId")
     }
 }

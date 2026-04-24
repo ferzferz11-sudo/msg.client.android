@@ -24,6 +24,7 @@
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">обновить</string>
+    <string name="update">Обновить приложение</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_to_room">Пользователь %1$s вошёл в чат %2$s</string>
     <string name="type_message_here">Сообщение</string>

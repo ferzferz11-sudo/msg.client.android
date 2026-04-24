@@ -28,6 +28,16 @@
             android:textStyle="bold"
             android:letterSpacing="0.05" />
 
+        <ImageView
+            android:id="@+id/updateAvailableIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="end"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/deployed_code_update_24"
+            android:visibility="gone"
+            android:contentDescription="@string/update_available" />
+
     </com.google.android.material.appbar.MaterialToolbar>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -99,15 +109,49 @@
         android:id="@+id/progressOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#40000000"
+        android:background="#80000000"
         android:visibility="gone"
         android:clickable="true"
         android:focusable="true">
-        <ProgressBar
-            android:id="@+id/progressBar"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:background="@drawable/rounded_background">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/download_update"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+            <ProgressBar
+                android:id="@+id/downloadProgressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="0" />
+            <TextView
+                android:id="@+id/downloadProgressText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+            <Button
+                android:id="@+id/cancelDownloadButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/cancel_dialog"
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp" />
+        </LinearLayout>
     </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

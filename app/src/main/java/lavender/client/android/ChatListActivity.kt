@@ -52,6 +52,10 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -59,6 +63,11 @@ import de.hdodenhof.circleimageview.CircleImageView
 import android.R as androidR
 
 class ChatListActivity : AppCompatActivity() {
+
+    companion object {
+        private const val APK_URL = "http://159.195.38.145:8081/lavender.apk"
+        private const val VERSION_CHECK_URL = "http://159.195.38.145:8081/version.txt"
+    }
 
     private lateinit var binding: ActivityChatListBinding
 
@@ -77,6 +86,7 @@ class ChatListActivity : AppCompatActivity() {
     private val grpcClient = GrpcClient
     private var username: String = ""
     private var password: String = ""
+    private var downloadJob: Job? = null
     private var colorSchemeMenuItem: MenuItem? = null
     private var selectedAvatarUri: Uri? = null
     private var currentAvatarImageView: CircleImageView? = null
@@ -157,6 +167,19 @@ class ChatListActivity : AppCompatActivity() {
 
         binding.addChatFab.setOnClickListener {
             showCreateChatDialog()
+        }
+
+        // Check for update availability from SharedPreferences
+        val updatePrefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+        val updateAvailable = updatePrefs.getBoolean("update_available", false)
+        val updateIcon = binding.root.findViewById<ImageView>(R.id.updateAvailableIcon)
+        updateIcon.isVisible = updateAvailable
+
+        // Handle update icon click - navigate to MainActivity for update
+        updateIcon.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+            startActivity(intent)
         }
 
         adapter = ChatAdapter(
@@ -702,7 +725,10 @@ class ChatListActivity : AppCompatActivity() {
                 if (adapter.getSelectedChats().isNotEmpty()) {
                     adapter.clearSelection()
                 } else {
-                    // Возвращаемся на главную (выход)
+                    // Возвращаемся на главную страницу приложения
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    startActivity(intent)
                     finish()
                 }
                 true
@@ -812,6 +838,10 @@ class ChatListActivity : AppCompatActivity() {
                 showNotificationHistory()
                 true
             }
+            R.id.action_update -> {
+                downloadAndInstallApk()
+                true
+            }
             R.id.action_logout -> {
                 logout()
                 true
@@ -833,6 +863,7 @@ class ChatListActivity : AppCompatActivity() {
         menu.findItem(R.id.action_color_scheme)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_profile)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_logout)?.apply { isVisible = !hasSelection }
 
         // Save reference to color scheme menu item
@@ -857,15 +888,102 @@ class ChatListActivity : AppCompatActivity() {
             remove("username")
             remove("password")
         }
-        
+
         // Show exit toast
         showToast(getString(R.string.logged_out))
-        
+
         // Clear activity stack and go back to MainActivity
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    private fun downloadAndInstallApk() {
+        val downloadProgressBar = binding.root.findViewById<ProgressBar>(R.id.downloadProgressBar)
+        val downloadProgressText = binding.root.findViewById<TextView>(R.id.downloadProgressText)
+        val cancelDownloadButton = binding.root.findViewById<Button>(R.id.cancelDownloadButton)
+        val progressOverlay = binding.root.findViewById<FrameLayout>(R.id.progressOverlay)
+
+        progressOverlay.isVisible = true
+        downloadProgressBar.progress = 0
+        downloadProgressText.text = ""
+
+        // Cancel button listener
+        cancelDownloadButton.setOnClickListener {
+            downloadJob?.cancel()
+            progressOverlay.isVisible = false
+            showToast("Download cancelled")
+        }
+
+        downloadJob = lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val connection = URL(APK_URL).openConnection() as HttpURLConnection
+                connection.connect()
+
+                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                    throw Exception("Server returned HTTP ${connection.responseCode}")
+                }
+
+                val fileLength = connection.contentLength
+                val input = connection.inputStream
+                val file = File(getExternalFilesDir(null), "lavender_update.apk")
+                val output = FileOutputStream(file)
+
+                val data = ByteArray(4096)
+                var total: Long = 0
+                var count: Int
+                while (input.read(data).also { count = it } != -1) {
+                    // Check if job was cancelled
+                    if (!isActive) {
+                        output.close()
+                        input.close()
+                        connection.disconnect()
+                        file.delete()
+                        return@launch
+                    }
+
+                    total += count.toLong()
+                    if (fileLength > 0) {
+                        val progress = (total * 100 / fileLength).toInt()
+                        val downloadedMb = total / (1024.0 * 1024.0)
+                        val totalMb = fileLength / (1024.0 * 1024.0)
+                        withContext(Dispatchers.Main) {
+                            downloadProgressBar.progress = progress
+                            downloadProgressText.text = String.format("%.2f / %.2f MB", downloadedMb, totalMb)
+                        }
+                    }
+                    output.write(data, 0, count)
+                }
+
+                output.flush()
+                output.close()
+                input.close()
+
+                withContext(Dispatchers.Main) {
+                    progressOverlay.isVisible = false
+                    installApk(file)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressOverlay.isVisible = false
+                    showToast("Download error: ${e.message}", Toast.LENGTH_LONG)
+                }
+            }
+        }
+    }
+
+    private fun installApk(file: File) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            this,
+            "$packageName.provider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_VIEW)
+        intent.setDataAndType(uri, "application/vnd.android.package-archive")
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
     }
 
     private fun showCreateChatDialog() {

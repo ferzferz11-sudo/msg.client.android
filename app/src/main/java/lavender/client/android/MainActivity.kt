@@ -100,7 +100,44 @@ class MainActivity : AppCompatActivity() {
         setupColorSchemeButton()
         setupDownloadUpdateButton()
 
-        checkForUpdates()
+        // Auto-navigate if credentials are saved
+        val savedUsername = getSavedUsername()
+        val savedPassword = getSavedPassword()
+        val savedServerAddress = getSavedServerAddress()
+
+        // Check if coming from notification
+        val fromNotification = intent.getBooleanExtra("from_notification", false)
+        val notificationRoomId = intent.getStringExtra("room_id") ?: "general"
+
+        if (savedUsername != null && savedPassword != null && savedServerAddress != null) {
+            // Credentials exist - navigate to appropriate screen
+            if (fromNotification) {
+                // Open the specific chat from notification
+                navigateToChat(savedUsername, savedPassword, savedServerAddress, notificationRoomId)
+            } else {
+                // Navigate to chat list
+                navigateToChatList(savedUsername, savedPassword, savedServerAddress)
+            }
+        } else {
+            // No credentials - show version check
+            checkForUpdates()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        // Handle notification click when app is already running
+        val fromNotification = intent.getBooleanExtra("from_notification", false)
+        val notificationRoomId = intent.getStringExtra("room_id") ?: "general"
+        val savedUsername = getSavedUsername()
+        val savedPassword = getSavedPassword()
+        val savedServerAddress = getSavedServerAddress()
+
+        if (fromNotification && savedUsername != null && savedPassword != null && savedServerAddress != null) {
+            navigateToChat(savedUsername, savedPassword, savedServerAddress, notificationRoomId)
+        }
     }
 
     override fun onResume() {
@@ -152,8 +189,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Start periodic update check
-        startPeriodicUpdateCheck()
+        // Only start periodic update check if not navigating away immediately
+        // Don't start if coming from notification (will navigate to chat)
+        val fromNotification = intent.getBooleanExtra("from_notification", false)
+        if (!fromNotification) {
+            startPeriodicUpdateCheck()
+        }
     }
 
     override fun onPause() {
@@ -477,10 +518,43 @@ class MainActivity : AppCompatActivity() {
     
     private fun logout() {
         showToast(getString(R.string.exiting_app))
-        
+
         // Exit the application completely
         finishAffinity()
         System.exit(0)
+    }
+
+    private fun navigateToChatList(username: String, password: String, serverAddress: String) {
+        android.util.Log.d("MainActivity", "Auto-navigating to chat list")
+        val intent = Intent(this, ChatListActivity::class.java)
+        intent.putExtra("username", username)
+        intent.putExtra("password", password)
+        intent.putExtra("serverAddress", serverAddress)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun navigateToChat(username: String, password: String, serverAddress: String, roomId: String) {
+        android.util.Log.d("MainActivity", "Auto-navigating to chat room: $roomId")
+        // Need to get chat info first
+        lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, false, 50051, this)
+        lavender.client.android.data.grpc.GrpcClient.getChats(username) { chats ->
+            val chat = chats.find { it.id == roomId }
+            if (chat != null) {
+                val intent = Intent(this, NewChatActivity::class.java)
+                intent.putExtra("USERNAME", username)
+                intent.putExtra("PASSWORD", password)
+                intent.putExtra("ROOM_ID", roomId)
+                intent.putExtra("CHAT_NAME", chat.name)
+                intent.putExtra("IS_DIRECT", chat.type == "direct")
+                intent.putExtra("PARTICIPANTS", chat.participants)
+                startActivity(intent)
+                finish()
+            } else {
+                // Chat not found, navigate to chat list
+                navigateToChatList(username, password, serverAddress)
+            }
+        }
     }
     
     private fun applySavedLanguage() {
@@ -648,9 +722,16 @@ class MainActivity : AppCompatActivity() {
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    val isAvailable = isUpdateAvailable(latestVersion)
+
+                    // Save update availability to SharedPreferences
+                    getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit()
+                        .putBoolean("update_available", isAvailable)
+                        .putString("latest_version", latestVersion)
+                        .apply()
 
                     withContext<Unit>(Dispatchers.Main) {
-                        updateAvailableIndicator.isVisible = isUpdateAvailable(latestVersion)
+                        updateAvailableIndicator.isVisible = isAvailable
                     }
                 }
                 connection.disconnect()

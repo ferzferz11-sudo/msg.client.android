@@ -23,6 +23,8 @@ Lavender Messenger (Android client) is a native Android application designed for
 - 🎨 Modern user interface (Material Design)
 - 🔄 Duplicate message filtering to prevent echo
 - 📊 Real-time connection status tracking
+- 🔔 Push notifications with room navigation
+- 🚀 Auto-navigation on app launch (if credentials saved)
 
 ## Tech Stack
 
@@ -173,7 +175,20 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.41**
+Current version: **1.0.1.43**
+
+### Version 1.0.1.43 - Navigation and Update Improvements
+- 🔄 Back button in ChatListActivity now navigates to MainActivity instead of closing app
+- 📥 Added "Update" menu item to ChatListActivity with progress bar and cancel button
+- 🔔 Update check now runs in background on first app launch with toolbar icon indicator
+- ✅ Fixed messages not being marked as read in UI (history reload after markRead)
+- 🔔 Added onNewIntent handler for notification clicks when app is running
+- 🚫 Fixed update dialog showing when coming from notification
+
+### Version 1.0.1.42 - Push Notifications and Auto-Navigation
+- 🔔 Push notifications now include room_id for direct chat navigation
+- 🚀 Auto-navigation on app launch if credentials are saved
+- 💬 Fixed messages not updating automatically while in chat
 
 ### Version 1.0.1.41 - Chat Sorting and Theme Fixes
 - 📊 Chats now sorted by time of last message instead of creation time

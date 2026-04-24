@@ -74,8 +74,8 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun markRead(username: String) {
-        grpcClient.markRead(currentRoomId, username)
+    fun markRead(username: String, onCompletion: (() -> Unit)? = null) {
+        grpcClient.markRead(currentRoomId, username, onCompletion)
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {

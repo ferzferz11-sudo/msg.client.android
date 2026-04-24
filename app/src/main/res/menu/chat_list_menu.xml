@@ -41,6 +41,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_update"
+        android:title="@string/update"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_logout"
         android:title="@string/exit"
         app:showAsAction="never" />

@@ -726,7 +726,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun markRead(roomId: String, username: String) {
+    fun markRead(roomId: String, username: String, onCompletion: (() -> Unit)? = null) {
         val currentChannel = channel ?: return
 
         val request = MarkReadRequestProto(roomId, username)
@@ -743,6 +743,10 @@ object RealGrpcClient {
             override fun onMessage(message: MarkReadResponseProto) {
                 if (message.success) {
                     android.util.Log.d("GrpcClient", "Successfully marked room $roomId as read for $username")
+                    // Reload history to get updated read status
+                    loadHistory(roomId) {
+                        onCompletion?.invoke()
+                    }
                 }
             }
         }, io.grpc.Metadata())
