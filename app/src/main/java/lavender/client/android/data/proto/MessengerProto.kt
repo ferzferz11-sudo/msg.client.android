@@ -129,7 +129,8 @@ data class ChatInfoProto(
     val type: String = "",
     val participants: String = "",
     val createdAt: Timestamp? = null,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    val lastMessageTime: Timestamp? = null
 )
 
 // Mark Read Request/Response

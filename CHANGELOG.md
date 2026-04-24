@@ -5,6 +5,139 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.41] - 2026-04-24
+
+### Added
+- 📊 **Chat Sorting by Last Message**: Chats now sorted by time of last message instead of creation time
+  - Added last_message_time field to ChatInfo protobuf definition
+  - Server now computes MAX(m.created_at) for each chat
+  - Client-side ChatInfo model includes lastMessageTime field
+  - ChatListActivity sorts chats by lastMessageTime in descending order
+
+### Fixed
+- 🎨 **NewChatActivity Theme Application**: Fixed theme not applying correctly in chat activity
+  - Moved applySavedColorScheme() call before super.onCreate()
+  - Theme now applies correctly on activity launch
+- 🎨 **Message Bubble Colors**: Updated message bubble colors for better theme consistency
+  - Light theme: Incoming messages use pale_lilac (#F8F7FC) to match chat list cards
+  - Dark theme: Incoming messages use lavender_mist (#967BB6) to match toolbar
+  - Dark theme: Outgoing messages use dark purple (#4A3B6D)
+- 🎨 **Chat Background**: Removed hardcoded chat background image
+  - Chat background now uses theme-aware windowBackground
+  - Light theme: pale_lilac background
+  - Dark theme: dark_background (#04052E)
+
+## [1.0.1.40] - 2026-04-24
+
+### Added
+- 🎨 **New Icons**: Added custom icons for settings and account
+  - ic_account_circle for profile
+  - ic_light_mode for theme toggle
+  - ic_overflow_settings for menu overflow
+  - ic_settings_account for account settings
+- 🌐 **Language Display**: Language button now shows current language (e.g., "Language: English", "Язык: Русский")
+- 👋 **Welcome Message**: Added welcome message for new users
+  - Displayed when user has no chats
+  - Describes app features and end-to-end encryption
+- 📝 **Preview/Edit**: Added preview and edit buttons for profile
+
+### Changed
+- 🎨 **Chat List UI**: Redesigned chat list layout with improved spacing and visual hierarchy
+- 🎨 **Menu Styling**: Updated menu overflow icon with custom style
+- 🎨 **Theme Attributes**: Added CustomOverflowStyle for consistent menu icon styling
+- 🔧 **Activity Refactoring**: Refactored ChatListActivity, EditProfileActivity, ProfileActivity, and NewChatActivity
+
+## [1.0.1.39] - 2026-04-24
+
+### Added
+- 📁 **File Attachments**: Added support for file attachments in messages
+  - PDF files with custom icon
+  - Archive files (zip, rar, 7z) with custom icon
+  - Clickable file names to open/download files
+- 🔔 **Notification History**: Added notification history dialog
+  - View FCM token with copy functionality
+  - Test notification button for debugging
+  - View last 20 notifications with timestamps
+  - Clear notification history
+- 📊 **Notification Tracking**: Added NotificationHistory object to track received notifications
+  - Stores title, body, timestamp, and sender
+  - Automatically limits to 20 most recent notifications
+
+### Changed
+- 🎨 **File Display**: Improved file message display
+  - File names shown separately from URLs
+  - Different icons for different file types
+  - Clickable text to open files
+- 🔧 **MessageAdapter**: Updated to handle file attachments with better UX
+
+## [1.0.1.37] - 2026-04-23
+
+### Fixed
+- 🐛 **Dialog Inflation Fix**: Fixed dialog inflation issues in ChatListActivity
+  - Changed inflate parameter from findViewById to null for dialog root
+  - Added false parameter to user item inflation to prevent duplicate attachment
+
+## [1.0.1.36] - 2026-04-23
+
+### Added
+- 👤 **Edit Profile Activity**: Added dedicated activity for editing user profile
+  - Change username, bio, and password
+  - Upload and change avatar
+  - Delete profile option
+- 🔐 **Password Change Dialog**: Added dialog for changing user password
+- 🧪 **Unit Tests**: Added comprehensive unit tests for ProtoUtils
+  - Tests for MessageProto conversion
+  - Tests for timestamp handling
+  - Tests for reaction serialization
+  - Round-trip conversion tests
+
+### Changed
+- 🔧 **Profile Activity**: Refactored profile activity to use EditProfileActivity for editing
+- 🔧 **gRPC Client**: Added profile editing methods to gRPC client
+- 🔧 **ProtoUtils**: Enhanced proto conversion utilities
+
+## [1.0.1.35] - 2026-04-23
+
+### Added
+- 😀 **Message Reactions**: Added emoji reactions to messages
+  - Long-press on message to add reaction
+  - Reaction display with emoji and count
+  - Multiple users can react to same message
+- ↩️ **Reply to Messages**: Added reply functionality
+  - Swipe right on message to reply
+  - Reply preview shows original message
+  - Reply indicator in message bubble
+- 👤 **Profile Activity**: Added dedicated profile activity
+  - View user profile with avatar, bio, and status
+  - Edit own profile
+  - View group participant list
+- 📎 **Attachment Picker**: Added dialog for selecting attachment type
+  - Photo from camera
+  - Image from gallery
+  - File attachment
+  - Location sharing
+- 📍 **Location Sharing**: Added ability to share location in messages
+- 🗑️ **Delete Messages Dialog**: Added dialog for deleting selected messages
+- 👥 **Participant List**: Added item layout for displaying participants
+- 🎨 **New Icons**: Added multiple new icons
+  - ic_attach, ic_camera, ic_gallery, ic_file
+  - ic_location, ic_forward, ic_edit, ic_reply_swipe
+- 🎨 **Reaction Background**: Added drawable for reaction bubbles
+
+### Changed
+- 🎨 **Message Layout**: Redesigned message item layout
+  - Added reaction display
+  - Added reply preview
+  - Improved spacing and visual hierarchy
+- 🎨 **Chat Layout**: Updated chat activity layout
+  - Added attachment picker button
+  - Added reaction emoji button
+  - Improved bottom panel design
+- 🔧 **MessageAdapter**: Enhanced to handle reactions and replies
+- 🔧 **gRPC Client**: Added reaction and reply support
+- 🔧 **Proto Definition**: Updated protobuf with reaction and reply fields
+- 🎨 **Color Scheme**: Updated colors for better visual consistency
+
 ## [1.0.1.34] - 2026-04-21
 
 ### Changed
@@ -259,6 +392,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 🔧 **Version Display**: Removed separate versionCode, now using only versionName with build number included
+
+## [1.0.1] - 2026-04-20
+
+### Added
+- 📱 **Chat List Activity**: Added dedicated chat list activity
+  - View all user's chats in dedicated screen
+  - Chat creation via long press on user
+  - Smart navigation: auto-open general chat if no chats exist
+- 👤 **Profile Dialog**: Added profile dialog for viewing and editing user profile
+- 🎨 **New App Icon**: Updated launcher icon with custom image
+- 🎨 **App Logo**: Added custom app logo (app_logo.jpg)
+- 📋 **Chat Item Layout**: Added item layout for displaying chats in list
+- 👥 **User Item Layout**: Added item layout for displaying users
+- 🎨 **Chat List Menu**: Added menu for chat list with theme and language options
+
+### Changed
+- 🎨 **Chat Activity**: Refactored chat activity with improved UI
+- 🎨 **Main Activity**: Updated main activity with new navigation flow
+- 🔧 **gRPC Client**: Enhanced gRPC client with new methods
+- 🔧 **Proto Definition**: Updated protobuf with new fields
+- 🎨 **Launcher Icons**: Replaced PNG launcher icons with JPG versions
+- 🎨 **Chat Background**: Updated chat background image
+- 🎨 **Color Scheme**: Added new colors for dark theme
+- 🌐 **Localization**: Updated Russian translations
 
 ## [0.9.7] - 2026-04-19
 

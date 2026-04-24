@@ -27,5 +27,6 @@ data class ChatInfo(
     val type: String = "", // 'general' or 'direct'
     val participants: String = "", // JSON array of usernames
     val createdAt: Long = 0,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    val lastMessageTime: Long = 0
 )

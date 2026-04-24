@@ -262,7 +262,7 @@ class ChatListActivity : AppCompatActivity() {
                 delay(3000) // Poll every 3 seconds for faster updates
                 grpcClient.getChats(username) { chats ->
                     if (chats.isNotEmpty()) {
-                        val sortedChats = chats.sortedByDescending { it.createdAt }
+                        val sortedChats = chats.sortedByDescending { it.lastMessageTime }
                         // Check if chats have actually changed
                         val chatsChanged = currentChats.size != sortedChats.size ||
                                 currentChats.zip(sortedChats).any { (old, new) ->
@@ -270,7 +270,7 @@ class ChatListActivity : AppCompatActivity() {
                                     old.name != new.name ||
                                     old.type != new.type ||
                                     old.unreadCount != new.unreadCount ||
-                                    old.createdAt != new.createdAt
+                                    old.lastMessageTime != new.lastMessageTime
                                 }
 
                         if (!chatsChanged) {
@@ -353,7 +353,7 @@ class ChatListActivity : AppCompatActivity() {
         // Refresh chats immediately when returning from chat
         grpcClient.getChats(username) { chats ->
             if (chats.isNotEmpty()) {
-                val sortedChats = chats.sortedByDescending { it.createdAt }
+                val sortedChats = chats.sortedByDescending { it.lastMessageTime }
                 // Check if chats have actually changed
                 val chatsChanged = currentChats.size != sortedChats.size ||
                         currentChats.zip(sortedChats).any { (old, new) ->
@@ -472,7 +472,7 @@ class ChatListActivity : AppCompatActivity() {
                         openChat("general", getString(R.string.general_chat))
                     }
                 } else {
-                    val sortedChats = chats.sortedByDescending { it.createdAt }
+                    val sortedChats = chats.sortedByDescending { it.lastMessageTime }
                     currentChats = sortedChats
                     // Load avatars for all chat participants first
                         val allParticipants = mutableSetOf<String>()

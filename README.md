@@ -173,7 +173,43 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.34**
+Current version: **1.0.1.41**
+
+### Version 1.0.1.41 - Chat Sorting and Theme Fixes
+- 📊 Chats now sorted by time of last message instead of creation time
+- 🎨 Fixed theme application in NewChatActivity
+- 🎨 Updated message bubble colors for better theme consistency
+- 🎨 Removed hardcoded chat background image
+
+### Version 1.0.1.40 - UI Improvements and New Icons
+- 🎨 Added custom icons for settings and account
+- 🌐 Language button now shows current language
+- 👋 Added welcome message for new users
+- 📝 Added preview and edit buttons for profile
+- 🎨 Redesigned chat list layout
+
+### Version 1.0.1.39 - File Attachments and Notification History
+- 📁 Added support for file attachments (PDF, archives)
+- 🔔 Added notification history dialog with FCM token view
+- 📊 Added notification tracking system
+- 🎨 Improved file message display with custom icons
+
+### Version 1.0.1.37 - Dialog Fix
+- 🐛 Fixed dialog inflation issues in ChatListActivity
+
+### Version 1.0.1.36 - Edit Profile and Unit Tests
+- 👤 Added dedicated Edit Profile activity
+- 🔐 Added password change dialog
+- 🧪 Added comprehensive unit tests for ProtoUtils
+
+### Version 1.0.1.35 - Reactions, Replies, and Profile
+- 😀 Added emoji reactions to messages
+- ↩️ Added reply to messages with swipe gesture
+- 👤 Added dedicated Profile activity
+- 📎 Added attachment picker dialog
+- 📍 Added location sharing
+- 🗑️ Added delete messages dialog
+- 🎨 Redesigned message and chat layouts
 
 ### Version 1.0.1.34 - Material Design 3 Color System
 - 🎨 Restructured color scheme following Material Design 3 guidelines
@@ -278,11 +314,11 @@ Current version: **1.0.1.34**
 - 🛠️ Modernized toolbar to MaterialToolbar
 - 🔧 Downgraded coreKtx dependency from 1.18.0 to 1.15.0 for stability
 
-### Version 1.0.1.22 - Version Format and Theme Improvements
-- 📝 Updated version format to include build number as fourth digit (e.g., 1.0.1.22)
-- 🎨 First launch now uses dark theme instead of system default
-- 🌐 Language changes in chat activities now sync when returning to main screen
-- 🔧 Removed separate versionCode, now using only versionName with build number included
+### Version 1.0.1 - Chat List and Profile
+- 📱 Added dedicated chat list activity
+- 👤 Added profile dialog
+- 🎨 Updated app icon and logo
+- 🎨 Refactored chat and main activities
 
 ### Version 0.9.7 - Message Reactions and Push Notifications
 - 😀 Added ability to react to messages with emojis (long-press on a message)

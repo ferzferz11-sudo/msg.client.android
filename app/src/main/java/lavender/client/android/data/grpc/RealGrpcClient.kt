@@ -632,7 +632,8 @@ object RealGrpcClient {
                         type = proto.type,
                         participants = proto.participants,
                         createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
-                        unreadCount = proto.unreadCount
+                        unreadCount = proto.unreadCount,
+                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0
                     )
                 }
                 callback(chats)
@@ -1516,6 +1517,12 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
             cos.writeRawBytes(it.toByteArray())
         }
         if (value.unreadCount != 0) cos.writeInt32(6, value.unreadCount)
+        value.lastMessageTime?.let {
+            val length = it.serializedSize
+            cos.writeTag(7, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            cos.writeUInt32NoTag(length)
+            cos.writeRawBytes(it.toByteArray())
+        }
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1527,6 +1534,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
         var participants = ""
         var createdAt: com.google.protobuf.Timestamp? = null
         var unreadCount = 0
+        var lastMessageTime: com.google.protobuf.Timestamp? = null
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -1542,10 +1550,16 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
                     cis.popLimit(oldLimit)
                 }
                 6 -> unreadCount = cis.readInt32()
+                7 -> {
+                    val length = cis.readUInt32()
+                    val oldLimit = cis.pushLimit(length)
+                    lastMessageTime = com.google.protobuf.Timestamp.parseFrom(cis)
+                    cis.popLimit(oldLimit)
+                }
                 else -> cis.skipField(tag)
             }
         }
-        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount)
+        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime)
     }
 }
 
