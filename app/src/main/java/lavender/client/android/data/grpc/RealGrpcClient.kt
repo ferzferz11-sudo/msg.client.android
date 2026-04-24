@@ -59,7 +59,7 @@ object RealGrpcClient {
     private var requestObserver: StreamObserver<MessageProto>? = null
     private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
     private var currentServerAddress: String? = null
-    var currentRoomId = "general"
+    var currentRoomId = ""
         private set
     
     private val _connectionState = MutableStateFlow(false)
