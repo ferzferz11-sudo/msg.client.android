@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.45**
+Current version: **1.0.1.46**
+
+### Version 1.0.1.46 - Map Picker and Improved Message Bubbles
+- 📍 **Map Picker**: Integrated interactive map (OpenStreetMap) for location selection.
+- 💬 **Compact Bubbles**: Message bubbles now wrap text content and align correctly (Telegram style).
+- 🎨 **Themed Bubbles**: Outgoing messages match chat list cards for better design consistency.
+- 📐 **Smart Layout**: Improved message alignment and sizing logic.
 
 ### Version 1.0.1.45 - Android 15 Support and UI Overhaul
 - 📱 Added full Edge-to-Edge support with WindowInsets handling for Android 15 compatibility

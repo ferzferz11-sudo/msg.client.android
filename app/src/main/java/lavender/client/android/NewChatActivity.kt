@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -156,12 +155,13 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
-    private val locationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        if (permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
-            sendCurrentLocation()
-        } else {
-            Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
+    private val pickLocationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val lat = result.data?.getDoubleExtra("lat", 0.0) ?: 0.0
+            val lng = result.data?.getDoubleExtra("lng", 0.0) ?: 0.0
+            if (lat != 0.0 || lng != 0.0) {
+                sendMessage("geo:$lat,$lng", "")
+            }
         }
     }
 
@@ -665,10 +665,8 @@ class NewChatActivity : AppCompatActivity() {
             dialog.dismiss()
         }
         dialogView.findViewById<View>(R.id.attachLocation).setOnClickListener {
-            locationPermissionLauncher.launch(arrayOf(
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION
-            ))
+            val intent = Intent(this, MapPickerActivity::class.java)
+            pickLocationLauncher.launch(intent)
             dialog.dismiss()
         }
 
@@ -947,25 +945,25 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun openLocation(geoUri: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, geoUri.toUri())
-            startActivity(intent)
-        } catch (_: Exception) {
-            Toast.makeText(this, "No app to open maps", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun sendCurrentLocation() {
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        try {
-            val location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            if (location != null) {
-                sendMessage("geo:${location.latitude},${location.longitude}", "")
+            // Parse "geo:lat,lng"
+            val coords = geoUri.removePrefix("geo:").split(",")
+            if (coords.size == 2) {
+                val lat = coords[0].toDouble()
+                val lng = coords[1].toDouble()
+                
+                val intent = Intent(this, MapPickerActivity::class.java).apply {
+                    putExtra("view_mode", true)
+                    putExtra("lat", lat)
+                    putExtra("lng", lng)
+                }
+                startActivity(intent)
             } else {
-                Toast.makeText(this, "Unable to get current location", Toast.LENGTH_SHORT).show()
+                // Fallback to system intent if format is weird
+                val intent = Intent(Intent.ACTION_VIEW, geoUri.toUri())
+                startActivity(intent)
             }
-        } catch (_: SecurityException) {
-            Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Unable to open map", Toast.LENGTH_SHORT).show()
         }
     }
 

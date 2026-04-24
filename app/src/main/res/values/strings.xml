@@ -212,5 +212,8 @@
     <string name="no_notifications_received">No notifications received yet</string>
     <string name="old_password">Old password</string>
     <string name="new_password">New password</string>
+    <string name="select_location">Select Location</string>
+    <string name="tap_to_select">Tap on map to select location</string>
+    <string name="send_location">Send Location</string>
     <string name="add_emoji">Add emoji</string>
 </resources>

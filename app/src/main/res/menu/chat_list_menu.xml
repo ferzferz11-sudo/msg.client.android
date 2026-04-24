@@ -6,7 +6,7 @@
         android:id="@+id/action_add_chat"
         android:icon="@drawable/chat_add_on_24"
         android:title="@string/add_chat"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_toggle_language"

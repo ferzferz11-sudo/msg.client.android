@@ -141,12 +141,17 @@ class MessageAdapter(
             // 2. Alignment
             val lp = messageContainer.layoutParams
             if (lp is RelativeLayout.LayoutParams) {
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_START)
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_END)
+                lp.removeRule(RelativeLayout.END_OF)
+
                 if (isOutgoing) {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_END)
-                    lp.removeRule(RelativeLayout.ALIGN_PARENT_START)
                 } else {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_START)
-                    lp.removeRule(RelativeLayout.ALIGN_PARENT_END)
+                    if (isSelectionMode) {
+                        lp.addRule(RelativeLayout.END_OF, R.id.selectionIndicator)
+                    }
                 }
                 
                 val topMargin = if (isConsecutive) 2.dpToPx() else 8.dpToPx()

@@ -5,6 +5,25 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.46] - 2026-04-25
+
+### Added
+- 📍 **Interactive Location Sharing**:
+  - New Map Picker screen using OpenStreetMap and Leaflet.
+  - Ability to select a specific point on the map by tapping.
+  - Built-in map viewer for received location messages.
+- 💬 **Modern Message UI**:
+  - Compact message bubbles that wrap around text content (Telegram style).
+  - Proper alignment: Outgoing messages on the right, incoming on the left.
+  - Outgoing message backgrounds now match the chat list card colors in both themes.
+- 🎨 **Enhanced UI Consistency**:
+  - Unified background colors for outgoing messages with `colorSurfaceContainer`.
+  - Improved layout logic for messages during selection mode.
+
+### Fixed
+- 📏 **Bubble Sizing**: Fixed messages taking full width; they now shrink to fit the content.
+- 🌓 **Theme Synchronization**: Removed redundant night-mode drawable overrides to ensure theme-aware colors work correctly.
+
 ## [1.0.1.45] - 2026-04-24
 
 ### Added

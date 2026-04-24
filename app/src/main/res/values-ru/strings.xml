@@ -214,5 +214,8 @@
     <string name="no_notifications_received">Уведомлений пока нет</string>
     <string name="old_password">Старый пароль</string>
     <string name="new_password">Новый пароль</string>
+    <string name="select_location">Выбрать местоположение</string>
+    <string name="tap_to_select">Нажмите на карту, чтобы выбрать место</string>
+    <string name="send_location">Отправить местоположение</string>
     <string name="add_emoji">Добавить эмодзи</string>
 </resources>
