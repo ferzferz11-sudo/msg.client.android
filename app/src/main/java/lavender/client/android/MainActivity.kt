@@ -22,7 +22,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     private var currentLanguage: String? = null
     private var currentColorScheme: String? = null
     private var updateCheckJob: Job? = null
+    private var connectivityJob: Job? = null
 
     private val serverList = listOf(
         "159.195.38.145:50051",
@@ -78,6 +82,15 @@ class MainActivity : AppCompatActivity() {
         applySavedLanguage()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Handle window insets to avoid overlapping with status bar
+        val root = findViewById<View>(android.R.id.content)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            insets
+        }
+
         currentLanguage = getSavedLanguage()
         currentColorScheme = getSavedColorScheme()
         updateLanguageButtonText()
@@ -666,40 +679,37 @@ class MainActivity : AppCompatActivity() {
         connectivityTest: ServerConnectivityTest
     ) {
         val serverAddress = serverAddressSpinner.selectedItem.toString()
-        
-        // Parse server address (format: host:port)
         val parts = serverAddress.split(":")
-        val host = if (parts.size >= 1) parts[0] else "localhost"
-        val port = if (parts.size >= 2) parts[1].toIntOrNull() ?: 50051 else 50051
+        val host = if (parts.isNotEmpty()) parts[0] else "localhost"
+        val port = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
         
-        // Set checking state
         serverStatusText.text = getString(R.string.checking_server)
         serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.darker_gray))
         btnJoin.isEnabled = false
         
-        // Subscribe to test results
-        lifecycleScope.launch {
+        connectivityJob?.cancel()
+        connectivityJob = lifecycleScope.launch {
             connectivityTest.testResult.collect { result ->
+                if (result == null) return@collect
+                
                 when {
-                    result?.contains("SUCCESS") == true -> {
+                    result.contains("SUCCESS") -> {
                         serverStatusText.text = getString(R.string.server_available)
                         serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.holo_green_dark))
                         btnJoin.isEnabled = true
                     }
-                    result?.contains("FAILED") == true || result?.contains("PARTIAL") == true -> {
+                    result.contains("FAILED") -> {
                         serverStatusText.text = getString(R.string.server_unavailable)
                         serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.holo_red_dark))
                         btnJoin.isEnabled = false
                     }
                     else -> {
-                        // Still testing
-                        serverStatusText.text = result ?: getString(R.string.checking_server)
+                        serverStatusText.text = result
                     }
                 }
             }
         }
         
-        // Start the test
         connectivityTest.testServerReachability(host, port)
     }
 

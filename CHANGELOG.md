@@ -5,6 +5,30 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.45] - 2026-04-24
+
+### Added
+- 🚪 **Exit Navigation**: Replaced back arrow with "Exit to App" icon in ChatListActivity for clearer navigation to main screen.
+- ➕ **Add Chat Icon**: Added new "Add Chat" icon in the Toolbar for quicker access to chat creation.
+- 👤 **Improved Profile Editing**: Redesigned Edit Profile screen with Material cards and improved typography.
+- 🌓 **Enhanced Theming**:
+  - Full Light/Dark theme support for all profile and settings screens.
+  - Light theme now uses pure white background for better clarity.
+  - Dark theme cards updated to deep purple for better contrast.
+- 📱 **Android 15 Compatibility**:
+  - Implemented full Edge-to-Edge support with WindowInsets handling.
+  - Fixed UI overlapping with status bar (clocks/icons) and navigation bars.
+- 🛠️ **Build System**: Updated to `compileSdk 37` and refined dependency versions (Glide 5.0.7, Google Services 4.4.4, etc.).
+
+### Changed
+- ⚡ **Optimized Update Check**: Update check now runs only once per session to save resources and data.
+- 🔄 **Skip Auto-Login**: Added logic to skip automatic login when returning from ChatListActivity to allow server switching.
+
+### Fixed
+- 🖼️ **Avatar Synchronization**: Fixed issue where profile avatar didn't update immediately in the chat list.
+- 🔔 **Notification Flow**: Fixed auto-navigation from notifications by ensuring proper gRPC authentication before loading chat data.
+- 🐛 **UI Cleanup**: Removed unused imports and variables, fixed various lint warnings and minor layout bugs.
+
 ## [1.0.1.43] - 2026-04-24
 
 ### Added

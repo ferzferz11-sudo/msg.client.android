@@ -28,7 +28,7 @@ import java.util.Locale
 class ProfileActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -43,6 +43,7 @@ class ProfileActivity : AppCompatActivity() {
     private var isGroup: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        applySavedColorScheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
@@ -259,5 +260,18 @@ class ProfileActivity : AppCompatActivity() {
             .into(imageView)
             
         dialog.show()
+    }
+
+    private fun applySavedColorScheme() {
+        val theme = when (getSavedColorScheme()) {
+            "light" -> R.style.Theme_MsgClientAndroid
+            else -> R.style.Theme_Lavender_Dark_NoActionBar
+        }
+        setTheme(theme)
+    }
+
+    private fun getSavedColorScheme(): String? {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("color_scheme", null)
     }
 }

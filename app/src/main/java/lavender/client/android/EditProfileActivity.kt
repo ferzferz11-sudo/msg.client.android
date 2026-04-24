@@ -25,7 +25,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.core.graphics.scale
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import android.widget.TextView
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.button.MaterialButton
@@ -66,8 +69,17 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        applySavedColorScheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_profile)
+
+        // Handle window insets
+        val root = findViewById<View>(android.R.id.content)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            insets
+        }
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         val avatarImageView = findViewById<CircleImageView>(R.id.avatarImageView)
@@ -326,6 +338,19 @@ class EditProfileActivity : AppCompatActivity() {
         bitmap.recycle()
 
         return bytes
+    }
+
+    private fun applySavedColorScheme() {
+        val theme = when (getSavedColorScheme()) {
+            "light" -> R.style.Theme_MsgClientAndroid
+            else -> R.style.Theme_Lavender_Dark_NoActionBar
+        }
+        setTheme(theme)
+    }
+
+    private fun getSavedColorScheme(): String? {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("color_scheme", null)
     }
 
     private fun showChangeUsernameDialog() {

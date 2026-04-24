@@ -3,7 +3,6 @@ package lavender.client.android.ui.adapter
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -28,7 +27,7 @@ class MessageSwipeController(
     ): Boolean = false
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-        val position = viewHolder.adapterPosition
+        val position = viewHolder.bindingAdapterPosition
         onSwipe(position)
     }
 
@@ -46,7 +45,6 @@ class MessageSwipeController(
         if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
             val itemView = viewHolder.itemView
             val height = itemView.bottom.toFloat() - itemView.top.toFloat()
-            val width = height / 3
 
             if (dX > 0) {
                 val iconMargin = (height - 24f * recyclerView.resources.displayMetrics.density) / 2

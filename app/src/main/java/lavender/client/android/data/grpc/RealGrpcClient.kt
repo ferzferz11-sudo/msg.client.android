@@ -106,12 +106,12 @@ object RealGrpcClient {
         }
         
         if (_connectionState.value && currentServerAddress == serverAddress) {
-            println("DEBUG: RealGrpcClient - Already connected to $serverAddress:$port")
+            android.util.Log.d("GrpcClient", "Already connected to $serverAddress:$port")
             return
         }
 
         try {
-            println("DEBUG: RealGrpcClient - Connecting to Go server at $serverAddress:$port")
+            android.util.Log.d("GrpcClient", "Connecting to Go server at $serverAddress:$port")
             disconnect()
             
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
@@ -132,7 +132,7 @@ object RealGrpcClient {
             _error.value = null
             
         } catch (e: Exception) {
-            println("DEBUG: RealGrpcClient - Connection failed: ${e.message}")
+            android.util.Log.e("GrpcClient", "Connection failed: ${e.message}")
             _error.value = "Connection failed: ${e.message}"
             _connectionState.value = false
         }
@@ -568,7 +568,7 @@ object RealGrpcClient {
         call.start(object : io.grpc.ClientCall.Listener<ReactionResponseProto>() {
             override fun onMessage(message: ReactionResponseProto) {
                 if (message.success) {
-                    println("DEBUG: RealGrpcClient - Successfully set reaction")
+                    android.util.Log.d("GrpcClient", "Successfully set reaction")
                     _messages.update { currentList ->
                         currentList.map { m ->
                             if (m.id == messageId) {
@@ -639,6 +639,12 @@ object RealGrpcClient {
                     )
                 }
                 callback(chats)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("GrpcClient", "GetChats failed: ${status.code} - ${status.description}")
+                    callback(emptyList())
+                }
             }
         }, io.grpc.Metadata())
 

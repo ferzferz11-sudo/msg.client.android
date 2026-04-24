@@ -1,15 +1,20 @@
 package lavender.client.android
 
 import android.content.ClipData
-import android.content.Context
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
+import android.util.TypedValue
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -28,12 +33,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import de.hdodenhof.circleimageview.CircleImageView
@@ -60,7 +68,7 @@ import java.util.Locale
 class NewChatActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -190,33 +198,35 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.switchRoom(roomId)
         viewModel.startChat(username, password, "") { _ ->
             // Mark as read after chat starts and history loads
-            viewModel.markRead(username) {
-                // Refresh UI after history reload
-                adapter.notifyDataSetChanged()
-            }
+            viewModel.markRead(username)
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (selectionMode) hideSelectionToolbar()
-                else if (searchBar.visibility == View.VISIBLE) hideSearchBar()
+                else if (searchBar.isVisible) hideSearchBar()
                 else finish()
             }
         })
     }
 
     private fun setupKeyboardHandling() {
+        val root = findViewById<View>(android.R.id.content)
         val bottomPanel = findViewById<View>(R.id.bottomPanel)
-        ViewCompat.setOnApplyWindowInsetsListener(bottomPanel) { view, insets ->
+        
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-            val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
-            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                // Поднимаем панель на высоту клавиатуры, учитывая системные отступы (navigation bar)
+            // Apply top padding for status bar
+            view.updatePadding(top = systemBars.top)
+            
+            // Handle bottom panel and keyboard
+            bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = if (imeInsets.bottom > 0) {
-                    imeInsets.bottom - systemBarsInsets.bottom
+                    imeInsets.bottom - systemBars.bottom
                 } else {
-                    0
+                    systemBars.bottom
                 }
             }
             insets
@@ -384,20 +394,17 @@ class NewChatActivity : AppCompatActivity() {
             showReplyPreview(message)
             adapter.notifyItemChanged(position)
         }
-        androidx.recyclerview.widget.ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
+        ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
 
         // Mark as read when scrolling to bottom
-        messagesRecyclerView.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: androidx.recyclerview.widget.RecyclerView, dx: Int, dy: Int) {
+        messagesRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                 val lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
                 val totalItemCount = layoutManager.itemCount
 
                 if (lastVisiblePosition == totalItemCount - 1) {
-                    viewModel.markRead(username) {
-                        // Refresh UI after history reload
-                        adapter.notifyDataSetChanged()
-                    }
+                    viewModel.markRead(username)
                 }
             }
         })
@@ -438,18 +445,18 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.chat_menu, menu)
         return true
     }
 
-    override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         val searchItem = menu.findItem(R.id.action_search)
         searchItem?.isVisible = !selectionMode
         return super.onPrepareOptionsMenu(menu)
     }
 
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_search -> {
                 showSearchBar()
@@ -465,7 +472,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbar.navigationIcon = null
         searchInput.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.showSoftInput(searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        imm.showSoftInput(searchInput, 0)
     }
 
     private fun hideSearchBar() {
@@ -536,15 +543,15 @@ class NewChatActivity : AppCompatActivity() {
                 if (editingMessage != null) {
                     val originalMessage = editingMessage!!
                     if (text != originalMessage.text) {
-                        android.util.Log.d("NewChatActivity", "Editing message ${originalMessage.id} to: $text")
+                        Log.d("NewChatActivity", "Editing message ${originalMessage.id} to: $text")
                         grpcClient.editMessage(originalMessage.id, text) { success, errorMsg ->
-                            android.util.Log.d("NewChatActivity", "Edit result: success=$success, error=$errorMsg")
+                            Log.d("NewChatActivity", "Edit result: success=$success, error=$errorMsg")
                             if (success) {
                                 // Update local message immediately with edited flag
                                 val updatedMessage = originalMessage.copy(text = text, timestamp = System.currentTimeMillis(), edited = true)
                                 viewModel.updateMessage(updatedMessage)
                             } else {
-                                android.util.Log.e("NewChatActivity", "Failed to edit message: $errorMsg")
+                                Log.e("NewChatActivity", "Failed to edit message: $errorMsg")
                             }
                         }
                     }
@@ -631,7 +638,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showAttachmentDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_attachment_picker, null)
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_attachment_picker, root, false)
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         dialog.setContentView(dialogView)
 
@@ -752,7 +760,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showReactionsDialog(message: Message) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, null)
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false)
         val container = dialogView.findViewById<LinearLayout>(R.id.reactionsContainer)
         val menuReply = dialogView.findViewById<LinearLayout>(R.id.menuReply)
         val menuCopy = dialogView.findViewById<LinearLayout>(R.id.menuCopy)
@@ -784,8 +793,8 @@ class NewChatActivity : AppCompatActivity() {
 
         menuCopy.setOnClickListener {
             val text = "[${message.user}]: ${message.text}"
-            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("message", text))
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("message", text))
             Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
@@ -813,7 +822,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showEmojiDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, null)
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, root, false)
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         dialog.setContentView(dialogView)
 
@@ -840,7 +850,7 @@ class NewChatActivity : AppCompatActivity() {
                 setPadding(8, 8, 8, 8)
                 isClickable = true
                 isFocusable = true
-                val outValue = android.util.TypedValue()
+                val outValue = TypedValue()
                 context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
                 setBackgroundResource(outValue.resourceId)
                 setOnClickListener {
@@ -866,8 +876,8 @@ class NewChatActivity : AppCompatActivity() {
                 uris.forEach { uri ->
                     uploadFile(uri)
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@NewChatActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
+            } catch (_: Exception) {
+                withContext(Dispatchers.Main) { Toast.makeText(this@NewChatActivity, "Error", Toast.LENGTH_SHORT).show() }
             } finally {
                 withContext(Dispatchers.Main) {
                     attachButton.isVisible = true
@@ -937,24 +947,24 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun openLocation(geoUri: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
+            val intent = Intent(Intent.ACTION_VIEW, geoUri.toUri())
             startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, "No app to open maps", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun sendCurrentLocation() {
-        val lm = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
         try {
-            val location = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-                ?: lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+            val location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             if (location != null) {
                 sendMessage("geo:${location.latitude},${location.longitude}", "")
             } else {
                 Toast.makeText(this, "Unable to get current location", Toast.LENGTH_SHORT).show()
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
         }
     }
@@ -990,10 +1000,7 @@ class NewChatActivity : AppCompatActivity() {
                         // Switch to the new room
                         viewModel.switchRoom(roomId)
                         viewModel.startChat(username, password, "") { _ ->
-                            viewModel.markRead(username) {
-                                // Refresh UI after history reload
-                                adapter.notifyDataSetChanged()
-                            }
+                            viewModel.markRead(username)
                         }
                     }
                     .setNegativeButton(R.string.cancel, null)

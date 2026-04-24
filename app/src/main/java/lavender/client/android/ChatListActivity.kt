@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -28,7 +27,10 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -39,6 +41,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.ServerConnectivityTest
 import lavender.client.android.data.fcm.NotificationHistory
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
@@ -47,10 +50,10 @@ import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
+import java.net.Socket
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 import de.hdodenhof.circleimageview.CircleImageView
 import android.R as androidR
 
@@ -123,6 +126,13 @@ class ChatListActivity : AppCompatActivity() {
 
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Handle window insets to avoid overlapping with status bar (edge-to-edge mode)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            insets
+        }
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
@@ -299,13 +309,14 @@ class ChatListActivity : AppCompatActivity() {
                                     old.lastMessageTime != new.lastMessageTime
                                 }
 
-                        if (!chatsChanged) {
-                            return@getChats
+                        if (chatsChanged) {
+                            currentChats = sortedChats
+                            runOnUiThread {
+                                adapter.setChats(sortedChats)
+                            }
                         }
 
-                        currentChats = sortedChats
-
-                        // Load avatars for new participants first
+                        // Load avatars in background
                         val allParticipants = mutableSetOf<String>()
                         for (chat in sortedChats) {
                             if (chat.participants.isNotEmpty()) {
@@ -314,49 +325,17 @@ class ChatListActivity : AppCompatActivity() {
                                     for (i in 0 until participants.length()) {
                                         allParticipants.add(participants.optString(i))
                                     }
-                                } catch (_: Exception) {
-                                    // JSON parsing failed
-                                }
+                                } catch (_: Exception) {}
                             }
                         }
-
-                        // Load avatars for all participants
-                        val loadedCount = AtomicInteger(0)
-                        val totalParticipants = allParticipants.size
 
                         for (participant in allParticipants) {
                             grpcClient.getUserAvatar(participant) { avatarUrl ->
                                 if (avatarUrl.isEmpty()) {
                                     grpcClient.updateAvatarCache(participant, "")
                                 }
-                                val loaded = loadedCount.incrementAndGet()
-                                if (loaded == totalParticipants) {
-                                    runOnUiThread {
-                                        adapter.setChats(sortedChats)
-                                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                                    }
-                                }
-                            }
-                        }
-
-                        // Fallback: show chats after 2 seconds if not all avatars loaded
-                        lifecycleScope.launch {
-                            delay(2000)
-                            runOnUiThread {
-                                if (loadedCount.get() < totalParticipants) {
-                                    if (currentChats != sortedChats) {
-                                        adapter.setChats(sortedChats)
-                                    }
+                                runOnUiThread {
                                     adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                                }
-                            }
-                        }
-
-                        // Fallback: show chats immediately if no participants
-                        if (allParticipants.isEmpty()) {
-                            runOnUiThread {
-                                if (currentChats != sortedChats) {
-                                    adapter.setChats(sortedChats)
                                 }
                             }
                         }
@@ -390,12 +369,14 @@ class ChatListActivity : AppCompatActivity() {
                             old.createdAt != new.createdAt
                         }
 
-                if (!chatsChanged) {
-                    return@getChats
+                if (chatsChanged) {
+                    currentChats = sortedChats
+                    runOnUiThread {
+                        adapter.setChats(sortedChats)
+                    }
                 }
 
-                currentChats = sortedChats
-                // Load avatars for all participants first
+                // Load avatars in background
                 val allParticipants = mutableSetOf<String>()
                 for (chat in sortedChats) {
                     if (chat.participants.isNotEmpty()) {
@@ -404,49 +385,17 @@ class ChatListActivity : AppCompatActivity() {
                             for (i in 0 until participants.length()) {
                                 allParticipants.add(participants.optString(i))
                             }
-                        } catch (_: Exception) {
-                            // JSON parsing failed
-                        }
+                        } catch (_: Exception) {}
                     }
                 }
-
-                // Load avatars for all participants
-                val loadedCount = AtomicInteger(0)
-                val totalParticipants = allParticipants.size
 
                 for (participant in allParticipants) {
                     grpcClient.getUserAvatar(participant) { avatarUrl ->
                         if (avatarUrl.isEmpty()) {
                             grpcClient.updateAvatarCache(participant, "")
                         }
-                        val loaded = loadedCount.incrementAndGet()
-                        if (loaded == totalParticipants) {
-                            runOnUiThread {
-                                adapter.setChats(sortedChats)
-                                adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                            }
-                        }
-                    }
-                }
-
-                // Fallback: show chats after 2 seconds if not all avatars loaded
-                lifecycleScope.launch {
-                    delay(2000)
-                    runOnUiThread {
-                        if (loadedCount.get() < totalParticipants) {
-                            if (currentChats != sortedChats) {
-                                adapter.setChats(sortedChats)
-                            }
+                        runOnUiThread {
                             adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                        }
-                    }
-                }
-
-                // Fallback: show chats immediately if no participants
-                if (allParticipants.isEmpty()) {
-                    runOnUiThread {
-                        if (currentChats != sortedChats) {
-                            adapter.setChats(sortedChats)
                         }
                     }
                 }
@@ -458,50 +407,75 @@ class ChatListActivity : AppCompatActivity() {
         binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         binding.progressOverlay.isVisible = true
         lifecycleScope.launch {
-            val serverAddress = getString(R.string.server_address)
-            val (host, port) = serverAddress.split(":")
-            grpcClient.connect(host, false, port.toInt(), applicationContext)
+            val serverAddress = intent.getStringExtra("serverAddress") ?: getString(R.string.server_address)
+            val parts = serverAddress.split(":")
+            val host = parts[0]
+            val port = if (parts.size > 1) parts[1].toInt() else 50051
+            
+            Log.d("ChatList", "Loading chats from server: $host:$port")
+            
+            // First, test server connectivity
+            var serverAvailable = false
+            
+            withContext(Dispatchers.IO) {
+                val socket = Socket()
+                try {
+                    socket.connect(java.net.InetSocketAddress(host, port), 10000)
+                    serverAvailable = true
+                    socket.close()
+                    Log.d("ChatList", "TCP connection test successful")
+                } catch (e: Exception) {
+                    serverAvailable = false
+                    Log.e("ChatList", "TCP connection test failed: ${e.message}")
+                }
+            }
+            
+            if (!serverAvailable) {
+                runOnUiThread {
+                    binding.progressOverlay.isVisible = false
+                    showToast(getString(R.string.server_unavailable))
+                }
+                return@launch
+            }
+
+            grpcClient.connect(host, false, port, applicationContext)
 
             // Send auth message first
             grpcClient.startChat(username, password, "") { _ -> }
 
-            // Wait a bit for auth to complete
-            delay(500)
-
-            // Check auth result
-            try {
-                coroutineScope {
-                    val notification = grpcClient.systemNotification.take(1).first()
-                    when (notification) {
-                        "auth_failed" -> {
-                            runOnUiThread {
-                                binding.progressOverlay.isVisible = false
-                                showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
-                                grpcClient.disconnect()
-                                finish()
-                            }
-                            return@coroutineScope
-                        }
-                        "registration_success" -> {
-                            // Auth successful, continue loading chats
-                        }
+            // Wait for auth result with timeout
+            var authComplete = false
+            val startTime = System.currentTimeMillis()
+            while (!authComplete && System.currentTimeMillis() - startTime < 5000) {
+                val notification = grpcClient.systemNotification.value
+                if (notification == "auth_failed") {
+                    runOnUiThread {
+                        binding.progressOverlay.isVisible = false
+                        showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
+                        grpcClient.disconnect()
+                        finish()
                     }
+                    return@launch
+                } else if (notification == "registration_success") {
+                    authComplete = true
                     grpcClient.clearSystemNotification()
                 }
-            } catch (_: Exception) {
-                // No auth notification received, might be already authenticated
+                delay(200)
             }
 
             grpcClient.getChats(username) { chats ->
-                if (chats.isEmpty()) {
-                    runOnUiThread {
-                        // Если нет чатов, открываем general чат
-                        openChat("general", getString(R.string.general_chat))
-                    }
-                } else {
-                    val sortedChats = chats.sortedByDescending { it.lastMessageTime }
-                    currentChats = sortedChats
-                    // Load avatars for all chat participants first
+                runOnUiThread {
+                    binding.progressOverlay.isVisible = false
+                    // Show/hide welcome message
+                    binding.welcomeContainer.isVisible = chats.isEmpty()
+                    binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
+
+                    if (chats.isNotEmpty()) {
+                        val sortedChats = chats.sortedByDescending { it.lastMessageTime }
+                        currentChats = sortedChats
+                        adapter.setChats(sortedChats)
+                        
+                        // Load avatars in background
                         val allParticipants = mutableSetOf<String>()
                         for (chat in sortedChats) {
                             if (chat.participants.isNotEmpty()) {
@@ -510,70 +484,28 @@ class ChatListActivity : AppCompatActivity() {
                                     for (i in 0 until participants.length()) {
                                         allParticipants.add(participants.optString(i))
                                     }
-                                } catch (_: Exception) {
-                                    // JSON parsing failed
-                                }
+                                } catch (_: Exception) {}
                             }
                         }
 
-                    // Load avatars for all participants
-                    val loadedCount = AtomicInteger(0)
-                    val totalParticipants = allParticipants.size
-
-                    for (participant in allParticipants) {
-                        grpcClient.getUserAvatar(participant) { avatarUrl ->
-                            // Save in cache (including empty strings to avoid retrying)
-                            grpcClient.updateAvatarCache(participant, avatarUrl)
-                            val loaded = loadedCount.incrementAndGet()
-                            // Show chats after all avatars are loaded
-                            if (loaded == totalParticipants) {
+                        for (participant in allParticipants) {
+                            grpcClient.getUserAvatar(participant) { avatarUrl ->
+                                grpcClient.updateAvatarCache(participant, avatarUrl)
                                 runOnUiThread {
-                                    binding.progressOverlay.isVisible = false
-                                    // Show/hide welcome message
-                                    binding.welcomeContainer.isVisible = chats.isEmpty()
-                                    binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
-
-                                    // Only update if chats changed
-                                    if (currentChats != sortedChats) {
-                                        adapter.setChats(sortedChats)
-                                    }
                                     adapter.updateAvatarCache(grpcClient.getAvatarCache())
                                 }
                             }
                         }
                     }
+                }
+            }
 
-                    // Fallback: show chats after 5 seconds if not all avatars loaded
-                    lifecycleScope.launch {
-                        delay(5000)
-                        runOnUiThread {
-                            if (loadedCount.get() < totalParticipants) {
-                                binding.progressOverlay.isVisible = false
-                                // Show/hide welcome message
-                                binding.welcomeContainer.isVisible = sortedChats.isEmpty()
-                                binding.chatsRecyclerView.isVisible = sortedChats.isNotEmpty()
-
-                                if (currentChats != sortedChats) {
-                                    adapter.setChats(sortedChats)
-                                }
-                                adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                            }
-                        }
-                    }
-
-                    // Fallback: show chats immediately if no participants
-                    if (allParticipants.isEmpty()) {
-                        runOnUiThread {
-                            binding.progressOverlay.isVisible = false
-                            // Show/hide welcome message
-                            binding.welcomeContainer.isVisible = sortedChats.isEmpty()
-                            binding.chatsRecyclerView.isVisible = sortedChats.isNotEmpty()
-
-                            if (currentChats != sortedChats) {
-                                adapter.setChats(sortedChats)
-                            }
-                        }
-                    }
+            // Fallback: hide progress after 10 seconds total if still loading
+            delay(10000)
+            runOnUiThread {
+                if (binding.progressOverlay.isVisible) {
+                    binding.progressOverlay.isVisible = false
+                    showToast(getString(R.string.connection_failed))
                 }
             }
 

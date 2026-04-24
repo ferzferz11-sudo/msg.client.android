@@ -175,7 +175,18 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.43**
+Current version: **1.0.1.45**
+
+### Version 1.0.1.45 - Android 15 Support and UI Overhaul
+- 📱 Added full Edge-to-Edge support with WindowInsets handling for Android 15 compatibility
+- 🚪 Replaced back arrow with "Exit" icon in ChatListActivity for better navigation
+- ➕ Added new "Add Chat" icon in the Toolbar for easier chat creation
+- 👤 Redesigned Edit Profile screen with Material cards and full theme support
+- 🌓 Optimized Light theme with white background and Dark theme with improved contrast
+- 🛠️ Updated to compileSdk 37 and optimized dependencies (Glide 5.0.7, etc.)
+- ⚡ Optimized update check to run only once per session
+- 🖼️ Fixed immediate avatar synchronization in chat list
+- 🔔 Fixed notification auto-navigation flow with pre-authentication
 
 ### Version 1.0.1.43 - Navigation and Update Improvements
 - 🔄 Back button in ChatListActivity now navigates to MainActivity instead of closing app

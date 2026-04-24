@@ -19,15 +19,15 @@
         <item name="colorOnSecondaryContainer">@color/deep_purple</item>
 
         <!-- Background colors -->
-        <item name="android:windowBackground">@color/pale_lilac</item>
-        <item name="colorSurface">@color/pale_lilac</item>
+        <item name="android:windowBackground">@color/white</item>
+        <item name="colorSurface">@color/white</item>
         <item name="colorSurfaceVariant">@color/white</item>
         <item name="colorOnSurface">@color/deep_purple</item>
         <item name="colorOnSurfaceVariant">@color/deep_purple</item>
 
-        <!-- Dialog colors -->
-        <item name="colorSurfaceContainer">@color/white</item>
-        <item name="colorSurfaceContainerHigh">@color/white</item>
+        <!-- Dialog and Card colors -->
+        <item name="colorSurfaceContainer">@color/pale_lilac</item>
+        <item name="colorSurfaceContainerHigh">@color/pale_lilac</item>
 
         <!-- Text colors -->
         <item name="android:textColorPrimary">@color/deep_purple</item>
