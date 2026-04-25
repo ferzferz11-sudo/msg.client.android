@@ -22,10 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added a full-screen preloader when adding/removing participants to indicate background sync.
   - Auto-exit: The chat screen now automatically closes if the group is deleted from the settings menu.
 - 🛠️ **Diagnostics**: Added `client_version` to gRPC messages to help server-side debugging.
+- 📥 **Direct Updates**:
+  - Clicking the update icon in the chat list now starts the download immediately without leaving the screen.
+  - Redesigned download progress overlay with full theme support.
 
 ### Fixed
 - 🔄 **Menu UI**: Fixed the "infinite spinner" bug where the loading icon wouldn't stop rotating after a dialog was dismissed.
 - 📦 **Group Creation**: Correctly sending the `creator` field during group creation to ensure Admin roles are properly assigned.
+- 📏 **Toolbar Layout**: Fixed title overlap with the update icon on small screens using dynamic weighting and ellipsize.
 
 ## [1.0.1.58] - 2026-04-25
 

@@ -199,11 +199,9 @@ class ChatListActivity : AppCompatActivity() {
         val updateAvailable = updatePrefs.getBoolean("update_available", false)
         binding.updateAvailableIcon.isVisible = updateAvailable
 
-        // Handle update icon click - navigate to MainActivity for update
+        // Handle update icon click - directly start download process
         binding.updateAvailableIcon.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-            startActivity(intent)
+            downloadAndInstallApk()
         }
 
         adapter = ChatAdapter(
