@@ -3078,6 +3078,7 @@ private fun writeTheme(cos: com.google.protobuf.CodedOutputStream, theme: Custom
     if (theme.textPrimaryColor.isNotEmpty()) cos.writeString(8, theme.textPrimaryColor)
     if (theme.textSecondaryColor.isNotEmpty()) cos.writeString(9, theme.textSecondaryColor)
     if (theme.isDark) cos.writeBool(10, theme.isDark)
+    if (theme.backgroundImageUrl.isNotEmpty()) cos.writeString(11, theme.backgroundImageUrl)
 }
 
 private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
@@ -3092,6 +3093,7 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
     var textPrimaryColor = ""
     var textSecondaryColor = ""
     var isDark = false
+    var backgroundImageUrl = ""
     while (!cis.isAtEnd) {
         val tag = cis.readTag()
         if (tag == 0) break
@@ -3106,8 +3108,9 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
             8 -> textPrimaryColor = cis.readString()
             9 -> textSecondaryColor = cis.readString()
             10 -> isDark = cis.readBool()
+            11 -> backgroundImageUrl = cis.readString()
             else -> cis.skipField(tag)
         }
     }
-    return CustomThemeProto(id, name, primaryColor, onPrimaryColor, surfaceColor, onSurfaceColor, backgroundColor, textPrimaryColor, textSecondaryColor, isDark)
+    return CustomThemeProto(id, name, primaryColor, onPrimaryColor, surfaceColor, onSurfaceColor, backgroundColor, textPrimaryColor, textSecondaryColor, isDark, backgroundImageUrl)
 }

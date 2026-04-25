@@ -408,7 +408,8 @@ data class CustomThemeProto(
     val backgroundColor: String = "",
     val textPrimaryColor: String = "",
     val textSecondaryColor: String = "",
-    val isDark: Boolean = false
+    val isDark: Boolean = false,
+    val backgroundImageUrl: String = ""
 )
 
 data class GetThemesRequestProto(

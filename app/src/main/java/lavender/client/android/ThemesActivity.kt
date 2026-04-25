@@ -3,6 +3,7 @@ package lavender.client.android
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -10,17 +11,28 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.radiobutton.MaterialRadioButton
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.util.*
 
 class ThemesActivity : AppCompatActivity() {
@@ -30,9 +42,18 @@ class ThemesActivity : AppCompatActivity() {
     private lateinit var btnAddTheme: MaterialButton
     private var colorSchemeMenuItem: MenuItem? = null
     private val grpcClient = GrpcClient
+    private val okHttpClient = OkHttpClient()
     private var username: String = ""
     private var currentThemeId: String = "dark"
     private var customThemes = mutableListOf<CustomThemeProto>()
+
+    private var currentEditBackgroundImageUrl: TextInputEditText? = null
+    private var currentUploadProgress: ProgressBar? = null
+    private var currentBtnUploadBackground: ImageButton? = null
+
+    private val pickBackgroundImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { uploadBackgroundImage(it) }
+    }
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
@@ -51,6 +72,12 @@ class ThemesActivity : AppCompatActivity() {
         setContentView(R.layout.activity_themes)
 
         username = intent.getStringExtra("username") ?: ""
+
+        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+            }
+        }
         
         // Initialize currentThemeId from local prefs for immediate UI feedback
         currentThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", "dark") ?: "dark"
@@ -203,12 +230,73 @@ class ThemesActivity : AppCompatActivity() {
         val isDark: Boolean
     )
 
+    private fun uploadBackgroundImage(uri: Uri) {
+        val progress = currentUploadProgress
+        val button = currentBtnUploadBackground
+        val input = currentEditBackgroundImageUrl
+        
+        progress?.isVisible = true
+        button?.isVisible = false
+        
+        lifecycleScope.launch {
+            try {
+                val bytes = withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                } ?: return@launch
+
+                val fileName = "theme_bg_${System.currentTimeMillis()}.jpg"
+                val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
+                    .addFormDataPart("image", fileName, bytes.toRequestBody("image/*".toMediaTypeOrNull()))
+                    .build()
+
+                val request = Request.Builder()
+                    .url("http://159.195.38.145:8082/upload-image")
+                    .post(requestBody)
+                    .build()
+
+                val response = withContext(Dispatchers.IO) { okHttpClient.newCall(request).execute() }
+                if (response.isSuccessful) {
+                    val responseBody = response.body.string()
+                    val fileUrl = JSONObject(responseBody).getString("url")
+                    withContext(Dispatchers.Main) {
+                        input?.setText(fileUrl)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ThemesActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ThemesActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    progress?.isVisible = false
+                    button?.isVisible = true
+                }
+            }
+        }
+    }
+
     private fun showEditThemeDialog(theme: CustomThemeProto?) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_theme, null)
         val editName = dialogView.findViewById<TextInputEditText>(R.id.editThemeName)
         val editPrimary = dialogView.findViewById<TextInputEditText>(R.id.editPrimaryColor)
         val editBackground = dialogView.findViewById<TextInputEditText>(R.id.editBackgroundColor)
         val editTextPrimary = dialogView.findViewById<TextInputEditText>(R.id.editTextPrimaryColor)
+        val editBackgroundImageUrl = dialogView.findViewById<TextInputEditText>(R.id.editBackgroundImageUrl)
+        val btnUploadBackground = dialogView.findViewById<ImageButton>(R.id.btnUploadBackground)
+        val uploadProgress = dialogView.findViewById<ProgressBar>(R.id.uploadProgress)
+        
+        currentEditBackgroundImageUrl = editBackgroundImageUrl
+        currentUploadProgress = uploadProgress
+        currentBtnUploadBackground = btnUploadBackground
+        
+        btnUploadBackground.setOnClickListener {
+            pickBackgroundImageLauncher.launch("image/*")
+        }
+
         val checkIsDark = dialogView.findViewById<MaterialCheckBox>(R.id.checkIsDark)
         val previewPrimary = dialogView.findViewById<View>(R.id.previewPrimary)
         val previewBackground = dialogView.findViewById<View>(R.id.previewBackground)
@@ -273,6 +361,7 @@ class ThemesActivity : AppCompatActivity() {
             editPrimary.setText(theme.primaryColor)
             editBackground.setText(theme.backgroundColor)
             editTextPrimary.setText(theme.textPrimaryColor)
+            editBackgroundImageUrl.setText(theme.backgroundImageUrl)
             checkIsDark.isChecked = theme.isDark
             btnDelete.isVisible = true
         }
@@ -316,7 +405,8 @@ class ThemesActivity : AppCompatActivity() {
                 backgroundColor = editBackground.text.toString(),
                 textPrimaryColor = editTextPrimary.text.toString(),
                 textSecondaryColor = editTextPrimary.text.toString(),
-                isDark = checkIsDark.isChecked
+                isDark = checkIsDark.isChecked,
+                backgroundImageUrl = editBackgroundImageUrl.text.toString().trim()
             )
 
             grpcClient.saveTheme(username, newTheme) { success, message ->

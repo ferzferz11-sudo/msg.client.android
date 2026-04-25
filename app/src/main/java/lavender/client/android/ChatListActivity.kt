@@ -94,6 +94,14 @@ class ChatListActivity : AppCompatActivity() {
         toast.show()
     }
 
+    private fun clearMenuAnimations() {
+        val menu = binding.toolbar.menu
+        for (i in 0 until menu.size()) {
+            val item = menu.getItem(i)
+            findViewById<View>(item.itemId)?.clearAnimation()
+        }
+    }
+
     private fun isDarkTheme(): Boolean {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", "dark") != "light"
@@ -122,12 +130,18 @@ class ChatListActivity : AppCompatActivity() {
         applySavedColorScheme()
         applySavedLanguage()
         super.onCreate(savedInstanceState)
+        binding = ActivityChatListBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         username = intent.getStringExtra("username") ?: ""
         password = intent.getStringExtra("password") ?: ""
 
-        binding = ActivityChatListBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // Load and apply custom theme if needed
+        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+            }
+        }
 
         // Handle window insets to avoid overlapping with status bar (edge-to-edge mode)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
@@ -197,6 +211,7 @@ class ChatListActivity : AppCompatActivity() {
                 openChat(chat.id, chat.name)
             },
             onSelectionChanged = { count ->
+                clearMenuAnimations()
                 invalidateOptionsMenu()
                 if (count > 0) {
                     supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
@@ -336,6 +351,7 @@ class ChatListActivity : AppCompatActivity() {
         binding.addChatFab.isEnabled = true
         binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
         binding.addChatFab.clearAnimation()
+        clearMenuAnimations()
         invalidateOptionsMenu()
 
         // Check if theme has changed in another activity
@@ -655,7 +671,10 @@ class ChatListActivity : AppCompatActivity() {
 
                     val dialog = AlertDialog.Builder(this)
                         .setView(dialogView)
-                        .setOnDismissListener { invalidateOptionsMenu() }
+                        .setOnDismissListener { 
+                            clearMenuAnimations()
+                            invalidateOptionsMenu() 
+                        }
                         .create()
 
                     btnCancel.setOnClickListener {
@@ -757,6 +776,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        clearMenuAnimations()
         menuInflater.inflate(R.menu.chat_list_menu, menu)
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
@@ -816,6 +836,8 @@ class ChatListActivity : AppCompatActivity() {
         cancelDownloadButton.setOnClickListener {
             downloadJob?.cancel()
             progressOverlay.isVisible = false
+            clearMenuAnimations()
+            invalidateOptionsMenu()
             showToast("Download cancelled")
         }
 
@@ -865,11 +887,15 @@ class ChatListActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     progressOverlay.isVisible = false
+                    clearMenuAnimations()
+                    invalidateOptionsMenu()
                     installApk(file)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     progressOverlay.isVisible = false
+                    clearMenuAnimations()
+                    invalidateOptionsMenu()
                     showToast("Download error: ${e.message}", Toast.LENGTH_LONG)
                 }
             }
@@ -896,6 +922,7 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 binding.addChatFab.isEnabled = true
                 binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                clearMenuAnimations()
                 invalidateOptionsMenu()
             }
         }
@@ -920,6 +947,8 @@ class ChatListActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     binding.progressOverlay.isVisible = false
+                    clearMenuAnimations()
+                    invalidateOptionsMenu()
                     val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
 
                     // Set dialog background using Material Design colors
@@ -999,6 +1028,7 @@ class ChatListActivity : AppCompatActivity() {
                         .setOnDismissListener {
                             binding.addChatFab.isEnabled = true
                             binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                            clearMenuAnimations()
                             invalidateOptionsMenu()
                         }
                         .create()
@@ -1093,6 +1123,7 @@ class ChatListActivity : AppCompatActivity() {
             .setOnDismissListener {
                 binding.addChatFab.isEnabled = true
                 binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                clearMenuAnimations()
                 invalidateOptionsMenu()
             }
             .create()
@@ -1368,7 +1399,10 @@ class ChatListActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setTitle(getString(R.string.notifications))
             .setView(dialogView)
-            .setOnDismissListener { invalidateOptionsMenu() }
+            .setOnDismissListener { 
+                clearMenuAnimations()
+                invalidateOptionsMenu() 
+            }
             .setPositiveButton(getString(R.string.clear)) { _, _ ->
                 NotificationHistory.clear()
                 showToast(getString(R.string.history_cleared))

@@ -243,6 +243,7 @@
     <string name="text_primary_color">Основной цвет текста</string>
     <string name="text_secondary_color">Вторичный цвет текста</string>
     <string name="is_dark">Темная тема</string>
+    <string name="background_image_url">URL фонового изображения</string>
     <string name="save_theme">Сохранить тему</string>
     <string name="delete_theme">Удалить тему</string>
     <string name="delete_theme_confirm">Вы уверены, что хотите удалить эту тему?</string>

@@ -191,6 +191,14 @@ class NewChatActivity : AppCompatActivity() {
 
         loadDataFromIntent()
         initViews()
+        
+        // Load and apply theme
+        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+                applyChatBackground()
+            }
+        }
         setupToolbar()
         setupRecyclerView()
         setupObservers()
@@ -1093,5 +1101,22 @@ class NewChatActivity : AppCompatActivity() {
             else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(themeId)
+    }
+
+    private fun applyChatBackground() {
+        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
+        if (theme.backgroundImageUrl.isNotEmpty()) {
+            val backgroundView = findViewById<ImageView>(R.id.chatBackground)
+            if (backgroundView != null) {
+                com.bumptech.glide.Glide.with(this)
+                    .load(theme.backgroundImageUrl)
+                    .centerCrop()
+                    .into(backgroundView)
+                
+                // Make chat list transparent to show background
+                messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            }
+        }
     }
 }

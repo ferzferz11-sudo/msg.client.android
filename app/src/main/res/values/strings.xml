@@ -241,6 +241,7 @@
     <string name="text_primary_color">Text Primary Color</string>
     <string name="text_secondary_color">Text Secondary Color</string>
     <string name="is_dark">Is Dark Theme</string>
+    <string name="background_image_url">Background Image URL</string>
     <string name="save_theme">Save Theme</string>
     <string name="delete_theme">Delete Theme</string>
     <string name="delete_theme_confirm">Are you sure you want to delete this theme?</string>
