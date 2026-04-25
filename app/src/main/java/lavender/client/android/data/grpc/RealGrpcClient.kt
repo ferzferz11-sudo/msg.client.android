@@ -175,7 +175,11 @@ object RealGrpcClient {
     }
 
     fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            onComplete()
+            return
+        }
 
         android.util.Log.d("RealGrpcClient", "Loading history for room: $roomId")
 
@@ -244,7 +248,8 @@ object RealGrpcClient {
     }
     
     fun loadUsers() {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<Unit, List<String>>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetClients")
@@ -264,7 +269,11 @@ object RealGrpcClient {
     }
 
     fun loadAllUsers(callback: (List<String>) -> Unit = {}) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(emptyList())
+            return
+        }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<Unit, List<String>>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetAllUsers")
@@ -428,11 +437,13 @@ object RealGrpcClient {
                 
                 override fun onError(t: Throwable) {
                     isChatStarted = false
+                    _connectionState.value = false
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
+                            android.util.Log.d("GrpcClient", "Attempting automatic reconnection...")
                             startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
                         }
-                    }, 5000)
+                    }, 3000)
                 }
                 
                 override fun onCompleted() { isChatStarted = false }
@@ -450,8 +461,10 @@ object RealGrpcClient {
                 override fun onHeaders(headers: io.grpc.Metadata) { call.request(100) }
                 override fun onMessage(message: MessageProto) { responseObserver.onNext(message) }
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    if (!status.isOk) responseObserver.onError(status.asRuntimeException())
-                    else responseObserver.onCompleted()
+                    if (!status.isOk) {
+                        _connectionState.value = false
+                        responseObserver.onError(status.asRuntimeException())
+                    } else responseObserver.onCompleted()
                 }
             }, io.grpc.Metadata())
             
@@ -640,7 +653,11 @@ object RealGrpcClient {
     }
 
     fun getChats(username: String, callback: (List<lavender.client.android.data.models.ChatInfo>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(emptyList())
+            return
+        }
 
         val request = GetChatsRequestProto(username)
 
@@ -1031,7 +1048,11 @@ object RealGrpcClient {
     }
 
     fun getUserAvatar(username: String, callback: (String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback("")
+            return
+        }
 
         val request = GetUserAvatarRequestProto(username)
 
@@ -1252,7 +1273,11 @@ object RealGrpcClient {
     }
 
     fun getChatListVersion(username: String, callback: (Long) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(0L)
+            return
+        }
 
         val request = GetChatListVersionRequestProto(username)
 

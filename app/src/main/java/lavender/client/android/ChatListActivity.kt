@@ -173,6 +173,10 @@ class ChatListActivity : AppCompatActivity() {
         })
 
         binding.addChatFab.setOnClickListener {
+            binding.addChatFab.isEnabled = false
+            binding.addChatFab.setImageResource(R.drawable.ic_loading_renew)
+            val rotate = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
+            binding.addChatFab.startAnimation(rotate)
             showCreateChatDialog()
         }
 
@@ -328,6 +332,12 @@ class ChatListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         
+        // Reset FAB and Menu state
+        binding.addChatFab.isEnabled = true
+        binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+        binding.addChatFab.clearAnimation()
+        invalidateOptionsMenu()
+
         // Check if theme has changed in another activity
         val savedTheme = getSavedColorScheme() ?: "dark"
         if (savedTheme != currentTheme) {
@@ -343,8 +353,23 @@ class ChatListActivity : AppCompatActivity() {
     private fun refreshChats(isManual: Boolean = false) {
         if (isManual) {
             binding.swipeRefreshLayout.isRefreshing = true
+            
+            // Safety timeout to clear refreshing state
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (binding.swipeRefreshLayout.isRefreshing) {
+                    binding.swipeRefreshLayout.isRefreshing = false
+                    Log.w("ChatList", "Refresh timed out")
+                }
+            }, 5000)
         }
         
+        // If disconnected, try to reconnect first
+        if (!grpcClient.connectionState.value) {
+            Log.d("ChatList", "Disconnected, attempting to reconnect...")
+            loadChats()
+            return
+        }
+
         grpcClient.getChatListVersion(username) { version ->
             if (isManual || version > viewModel.lastChatListVersion) {
                 Log.d("ChatList", "Refreshing chats (Manual: $isManual, version: $version)")
@@ -551,6 +576,11 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId != androidR.id.home && item.itemId != R.id.action_search) {
+            item.isEnabled = false
+            item.setIcon(R.drawable.ic_loading_renew)
+        }
+
         return when (item.itemId) {
             androidR.id.home -> {
                 if (adapter.getSelectedChats().isNotEmpty()) {
@@ -614,6 +644,7 @@ class ChatListActivity : AppCompatActivity() {
 
                     val dialog = AlertDialog.Builder(this)
                         .setView(dialogView)
+                        .setOnDismissListener { invalidateOptionsMenu() }
                         .create()
 
                     btnCancel.setOnClickListener {
@@ -848,13 +879,21 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showCreateChatDialog() {
-        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         binding.progressOverlay.isVisible = true
-        
+        // Ensure buttons are restored if dialog fails to show or after it finishes
+        val resetButtons = {
+            runOnUiThread {
+                binding.addChatFab.isEnabled = true
+                binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                invalidateOptionsMenu()
+            }
+        }
+
         grpcClient.getContacts(username) { contacts ->
             if (contacts.isEmpty()) {
                 runOnUiThread {
                     binding.progressOverlay.isVisible = false
+                    resetButtons()
                     showAddContactDialog()
                 }
                 return@getContacts
@@ -946,6 +985,11 @@ class ChatListActivity : AppCompatActivity() {
 
                     val dialog = AlertDialog.Builder(this@ChatListActivity)
                         .setView(dialogView)
+                        .setOnDismissListener {
+                            binding.addChatFab.isEnabled = true
+                            binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                            invalidateOptionsMenu()
+                        }
                         .create()
 
                     // Set up button listeners
@@ -1035,6 +1079,11 @@ class ChatListActivity : AppCompatActivity() {
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
+            .setOnDismissListener {
+                binding.addChatFab.isEnabled = true
+                binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                invalidateOptionsMenu()
+            }
             .create()
 
         btnCancel.setOnClickListener { dialog.dismiss() }
@@ -1308,6 +1357,7 @@ class ChatListActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setTitle(getString(R.string.notifications))
             .setView(dialogView)
+            .setOnDismissListener { invalidateOptionsMenu() }
             .setPositiveButton(getString(R.string.clear)) { _, _ ->
                 NotificationHistory.clear()
                 showToast(getString(R.string.history_cleared))

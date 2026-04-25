@@ -81,6 +81,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var toolbarTitle: TextView
     private lateinit var toolbarSubtitle: TextView
     private lateinit var toolbarAvatar: CircleImageView
+    private lateinit var toolbarLoadingIcon: ImageView
     private lateinit var groupParticipantsContainer: LinearLayout
     private lateinit var selectionToolbar: LinearLayout
     private lateinit var selectionCountText: TextView
@@ -240,6 +241,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbarTitle = findViewById(R.id.toolbarTitle)
         toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
         toolbarAvatar = findViewById(R.id.toolbarAvatar)
+        toolbarLoadingIcon = findViewById(R.id.toolbarLoadingIcon)
         groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer)
         selectionToolbar = findViewById(R.id.selectionToolbar)
         selectionCountText = findViewById(R.id.selectionCountText)
@@ -281,6 +283,18 @@ class NewChatActivity : AppCompatActivity() {
 
     private var otherUserAvatarUrl: String = ""
 
+    private fun showToolbarLoading() {
+        if (toolbarAvatar.visibility == View.VISIBLE) {
+            toolbarAvatar.tag = "visible"
+            toolbarAvatar.visibility = View.GONE
+        } else {
+            toolbarAvatar.tag = "gone"
+        }
+        toolbarLoadingIcon.visibility = View.VISIBLE
+        val rotate = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
+        toolbarLoadingIcon.startAnimation(rotate)
+    }
+
     private fun setupToolbar() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -316,6 +330,7 @@ class NewChatActivity : AppCompatActivity() {
             }
 
             val openProfile = {
+                showToolbarLoading()
                 val intent = Intent(this, ProfileActivity::class.java)
                     .putExtra("username", otherUser)
                     .putExtra("avatar_url", otherUserAvatarUrl)
@@ -333,6 +348,7 @@ class NewChatActivity : AppCompatActivity() {
             setupGroupAvatars()
 
             val openGroupInfo = {
+                showToolbarLoading()
                 // For group chat, we can also show a profile-like activity or group info
                 val intent = Intent(this, ProfileActivity::class.java)
                     .putExtra("username", chatName)
@@ -374,6 +390,17 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+    override fun onResume() {
+        super.onResume()
+        
+        // Hide loading and stop animation
+        toolbarLoadingIcon.visibility = View.GONE
+        toolbarLoadingIcon.clearAnimation()
+        if (toolbarAvatar.tag == "visible") toolbarAvatar.visibility = View.VISIBLE
+        
+        applySavedColorScheme()
+    }
 
     private fun getSavedColorScheme(): String? = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")
 
@@ -782,6 +809,14 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun fullReloadHistory() {
         swipeRefreshLayout.isRefreshing = true
+        
+        // Safety timeout
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (swipeRefreshLayout.isRefreshing) {
+                swipeRefreshLayout.isRefreshing = false
+            }
+        }, 5000)
+
         grpcClient.clearMessages() 
         grpcClient.loadHistory(roomId) {
             runOnUiThread {
