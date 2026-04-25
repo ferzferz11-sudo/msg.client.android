@@ -175,7 +175,12 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.56**
+Current version: **1.0.1.58**
+
+### Version 1.0.1.58 - Protocol Optimization & Version Tracking
+- 🛠️ **Server Logs**: Client version is now visible in server logs for easier debugging.
+- 🔄 **Room Switch**: Faster room navigation without session resets.
+- 🛡️ **Auto-Reconnect**: Improved stability when switching between networks.
 
 ### Version 1.0.1.56 - Advanced Search and Batch Management
 - 🔍 **Search Everywhere**: New search toggle in the toolbar for Chats and Contacts.

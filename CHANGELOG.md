@@ -5,6 +5,19 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.58] - 2026-04-25
+
+### Added
+- 🛠️ **Version Tracking**: The client now sends its version string to the server upon authentication for better troubleshooting.
+- 🔄 **Room Switch Signal**: Optimized communication protocol to send room switch events without re-authenticating.
+
+## [1.0.1.57] - 2026-04-25
+
+### Fixed
+- 🛡️ **Grip Reconnection**: Robust automatic reconnection logic for gRPC streams.
+- ⏳ **Loading Timeouts**: Added 5s safety timeouts to all UI loading states.
+- ⌨️ **Warning Fixes**: Cleaned up deprecated `SHOW_IMPLICIT` flags and compiler warnings.
+
 ## [1.0.1.56] - 2026-04-25
 
 ### Added

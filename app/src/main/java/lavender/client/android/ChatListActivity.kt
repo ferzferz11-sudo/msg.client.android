@@ -572,13 +572,24 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        grpcClient.disconnect()
+        // Keep connection alive for other activities
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId != androidR.id.home && item.itemId != R.id.action_search) {
+        if (item.itemId != androidR.id.home && 
+            item.itemId != R.id.action_search && 
+            item.itemId != R.id.action_profile) {
+            
             item.isEnabled = false
             item.setIcon(R.drawable.ic_loading_renew)
+            
+            // To animate a MenuItem, we need its View.
+            // In MaterialToolbar, we can try to find it by ID.
+            val menuView = findViewById<View>(item.itemId)
+            if (menuView != null) {
+                val rotate = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
+                menuView.startAnimation(rotate)
+            }
         }
 
         return when (item.itemId) {

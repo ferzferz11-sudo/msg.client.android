@@ -315,7 +315,19 @@ object RealGrpcClient {
     }
 
     fun setRoomId(roomId: String) {
-        currentRoomId = roomId
+        if (this.currentRoomId != roomId) {
+            this.currentRoomId = roomId
+            // Send room switch signal if already connected
+            if (isChatStarted) {
+                requestObserver?.onNext(MessageProto.newBuilder()
+                    .setUser(lastUsername ?: "")
+                    .setRoomId(roomId)
+                    .setText("") // Empty text acts as a room switch signal
+                    .setCreatedAt(ProtoUtils.getCurrentTimestamp())
+                    .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
+                    .build())
+            }
+        }
     }
     
     private var lastUsername: String? = null
@@ -483,6 +495,7 @@ object RealGrpcClient {
                 .setPassword(password)
                 .setRoomId(currentRoomId)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
+                .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
                 .build())
             
             startTypingStream(username)
@@ -1471,6 +1484,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.avatarUrl.isNotEmpty()) cos.writeString(12, value.avatarUrl)
         if (value.imageUrl.isNotEmpty()) cos.writeString(13, value.imageUrl)
         if (value.edited) cos.writeBool(14, value.edited)
+        if (value.clientVersion.isNotEmpty()) cos.writeString(15, value.clientVersion)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1490,6 +1504,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         var avatarUrl = ""
         var imageUrl = ""
         var edited = false
+        var clientVersion = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -1516,10 +1531,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 12 -> avatarUrl = cis.readString()
                 13 -> imageUrl = cis.readString()
                 14 -> edited = cis.readBool()
+                15 -> clientVersion = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited)
+        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion)
     }
 }
 
