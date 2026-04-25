@@ -799,6 +799,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         menu.findItem(R.id.action_add_chat)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_contacts)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }

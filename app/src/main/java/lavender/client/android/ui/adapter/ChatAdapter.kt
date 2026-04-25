@@ -127,7 +127,7 @@ class ChatAdapter(
 
     override fun getItemCount(): Int = displayedChats.size
 
-    class ChatViewHolder(
+    inner class ChatViewHolder(
         itemView: View,
         private val onChatClick: (ChatInfo) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
@@ -135,6 +135,7 @@ class ChatAdapter(
         private val chatName: TextView = itemView.findViewById(R.id.chatName)
         private val chatType: TextView = itemView.findViewById(R.id.chatType)
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
+        private val adminIndicator: ImageView = itemView.findViewById(R.id.adminIndicator)
         private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
@@ -180,13 +181,38 @@ class ChatAdapter(
                 unreadCount.text = chat.unreadCount.toString()
             }
 
+            // Admin indicator
+            val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
+            adminIndicator.isVisible = !chat.type.equals("direct", true) && isMeAdmin
+
             // Load participant avatars
             loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers)
 
             itemView.setOnClickListener {
-                onChatClick(chat)
+                if (selectedPositions.isNotEmpty()) {
+                    // Selection mode logic
+                    if (chat.type == "group" || chat.type == "general") {
+                        val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
+                        if (!isMeAdmin) {
+                            val msg = if (isRussian) "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
+                            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                    }
+                    onLongClick() // reuse the same selection logic
+                } else {
+                    onChatClick(chat)
+                }
             }
             itemView.setOnLongClickListener {
+                if (chat.type == "group" || chat.type == "general") {
+                    val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
+                    if (!isMeAdmin) {
+                        val msg = if (isRussian) "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                        return@setOnLongClickListener true
+                    }
+                }
                 onLongClick()
                 true
             }

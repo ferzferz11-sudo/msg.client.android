@@ -5,6 +5,15 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.61] - 2026-04-26
+
+### Added
+- 👑 **Admin Status Visibility**: Added a new edit icon on the chat list for groups where the current user is the administrator.
+- 🛡️ **Selective Multi-Delete**:
+  - In selection mode, only the delete (trash) icon is shown in the toolbar.
+  - Users are now prohibited from selecting groups they don't own for deletion, with an immediate feedback toast.
+  - Seamlessly switch between regular click (open chat) and selection click (multi-select) when at least one item is selected.
+
 ## [1.0.1.60] - 2026-04-26
 
 ### Added
