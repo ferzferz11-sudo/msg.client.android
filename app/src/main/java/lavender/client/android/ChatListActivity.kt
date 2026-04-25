@@ -212,6 +212,14 @@ class ChatListActivity : AppCompatActivity() {
             refreshChats(true)
         }
 
+        binding.searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                adapter.filter(s.toString())
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
         // Observe system notifications for auth failures
         lifecycleScope.launch {
             grpcClient.systemNotification.collect { notification ->

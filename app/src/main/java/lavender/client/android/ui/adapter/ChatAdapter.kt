@@ -23,17 +23,14 @@ class ChatAdapter(
     private var onlineUsers: List<String> = emptyList()
 ) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
 
-    private var chats = listOf<ChatInfo>()
+    private var allChats = listOf<ChatInfo>()
+    private var displayedChats = listOf<ChatInfo>()
     var avatarCache: Map<String, String> = initialAvatarCache
     private val selectedPositions = mutableSetOf<Int>()
-
-    fun setOnlineUsers(users: List<String>) {
-        onlineUsers = users
-        notifyDataSetChanged()
-    }
+    private var currentFilter: String = ""
 
     fun getSelectedChats(): List<ChatInfo> {
-        return selectedPositions.map { chats[it] }
+        return selectedPositions.map { displayedChats[it] }
     }
 
     fun clearSelection() {
@@ -44,18 +41,42 @@ class ChatAdapter(
     }
 
     fun getChats(): List<ChatInfo> {
-        return chats
+        return displayedChats
     }
 
     fun setChats(newChats: List<ChatInfo>) {
-        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(chats, newChats))
-        chats = newChats
+        allChats = newChats
+        applyFilter()
+    }
+
+    fun filter(query: String) {
+        currentFilter = query.lowercase()
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val filtered = if (currentFilter.isEmpty()) {
+            allChats
+        } else {
+            allChats.filter { chat ->
+                chat.name.lowercase().contains(currentFilter) ||
+                chat.participants.lowercase().contains(currentFilter)
+            }
+        }
+        
+        val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(displayedChats, filtered))
+        displayedChats = filtered
         diffResult.dispatchUpdatesTo(this)
+    }
+
+    fun setOnlineUsers(users: List<String>) {
+        onlineUsers = users
+        notifyDataSetChanged()
     }
 
     fun updateAvatarCache(newCache: Map<String, String>) {
         avatarCache = newCache
-        chats.indices.forEach { notifyItemChanged(it) }
+        notifyDataSetChanged()
     }
 
     private class ChatDiffCallback(
@@ -76,7 +97,7 @@ class ChatAdapter(
             return oldChat.name == newChat.name &&
                     oldChat.type == newChat.type &&
                     oldChat.unreadCount == newChat.unreadCount &&
-                    oldChat.createdAt == newChat.createdAt
+                    oldChat.lastMessageTime == newChat.lastMessageTime
         }
     }
 
@@ -88,7 +109,7 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
         val isSelected = selectedPositions.contains(position)
-        holder.bind(chats[position], currentUsername, avatarCache, isSelected, onlineUsers) {
+        holder.bind(displayedChats[position], currentUsername, avatarCache, isSelected, onlineUsers) {
             val currentPos = holder.bindingAdapterPosition
             if (currentPos == RecyclerView.NO_POSITION) return@bind
 
@@ -102,7 +123,7 @@ class ChatAdapter(
         }
     }
 
-    override fun getItemCount(): Int = chats.size
+    override fun getItemCount(): Int = displayedChats.size
 
     class ChatViewHolder(
         itemView: View,

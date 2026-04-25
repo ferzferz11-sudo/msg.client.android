@@ -138,9 +138,9 @@ object RealGrpcClient {
             builder.maxInboundMessageSize(16 * 1024 * 1024)
             builder.maxInboundMetadataSize(1024 * 1024)
             
-            builder.keepAliveTime(30, TimeUnit.SECONDS)
-                .keepAliveTimeout(10, TimeUnit.SECONDS)
-                .keepAliveWithoutCalls(false)
+            builder.keepAliveTime(10, TimeUnit.SECONDS)
+                .keepAliveTimeout(5, TimeUnit.SECONDS)
+                .keepAliveWithoutCalls(true)
                 .idleTimeout(24, TimeUnit.HOURS)
             
             channel = builder.build()
