@@ -250,4 +250,5 @@
     <string name="theme_template_blue">Океанский синий</string>
     <string name="theme_template_purple">Королевский пурпур</string>
     <string name="theme_template_sunset">Закатный оранжевый</string>
+    <string name="admin_label">(Админ)</string>
 </resources>

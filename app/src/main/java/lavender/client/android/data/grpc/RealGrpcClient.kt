@@ -352,6 +352,20 @@ object RealGrpcClient {
                                 return
                             }
                         }
+                        if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
+                            try {
+                                val jsonStr = value.text.substring("ONLINE_USERS_UPDATE:".length)
+                                val jsonArray = org.json.JSONArray(jsonStr)
+                                val usersList = mutableListOf<String>()
+                                for (i in 0 until jsonArray.length()) {
+                                    usersList.add(jsonArray.getString(i))
+                                }
+                                _users.value = usersList
+                            } catch (e: Exception) {
+                                android.util.Log.e("GrpcClient", "Error parsing online users", e)
+                            }
+                            return
+                        }
                     }
 
                     if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return
@@ -516,7 +530,7 @@ object RealGrpcClient {
 
         // Send delete request to server
         val proto = ProtoUtils.createMessageProto(message)
-        val request = DeleteMessagesRequestProto(listOf(proto))
+        val request = DeleteMessagesRequestProto(listOf(proto), lastUsername ?: "")
 
         val method = io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -652,7 +666,8 @@ object RealGrpcClient {
                         participants = proto.participants,
                         createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
                         unreadCount = proto.unreadCount,
-                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0
+                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
+                        creator = proto.creator
                     )
                 }
                 callback(chats)
@@ -1621,21 +1636,27 @@ class DeleteMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Dele
             cos.writeUInt32NoTag(msgBytes.size)
             cos.writeRawBytes(msgBytes)
         }
+        if (value.requesterUsername.isNotEmpty()) cos.writeString(2, value.requesterUsername)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): DeleteMessagesRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         val messages = mutableListOf<MessageProto>()
+        var requesterUsername = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
-            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
-                val length = cis.readUInt32()
-                messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
-            } else cis.skipField(tag)
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val length = cis.readUInt32()
+                    messages.add(messageMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
+                }
+                2 -> requesterUsername = cis.readString()
+                else -> cis.skipField(tag)
+            }
         }
-        return DeleteMessagesRequestProto(messages)
+        return DeleteMessagesRequestProto(messages, requesterUsername)
     }
 }
 
@@ -1774,12 +1795,13 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
             cos.writeRawBytes(it.toByteArray())
         }
         if (value.unreadCount != 0) cos.writeInt32(6, value.unreadCount)
-        value.lastMessageTime?.let {
-            val length = it.serializedSize
+        if (value.lastMessageTime != null) {
+            val length = value.lastMessageTime.serializedSize
             cos.writeTag(7, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
             cos.writeUInt32NoTag(length)
-            cos.writeRawBytes(it.toByteArray())
+            cos.writeRawBytes(value.lastMessageTime.toByteArray())
         }
+        if (value.creator.isNotEmpty()) cos.writeString(8, value.creator)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1792,6 +1814,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
         var createdAt: com.google.protobuf.Timestamp? = null
         var unreadCount = 0
         var lastMessageTime: com.google.protobuf.Timestamp? = null
+        var creator = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -1813,10 +1836,11 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
                     lastMessageTime = com.google.protobuf.Timestamp.parseFrom(cis)
                     cis.popLimit(oldLimit)
                 }
+                8 -> creator = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime)
+        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime, creator)
     }
 }
 

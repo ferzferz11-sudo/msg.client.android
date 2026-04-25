@@ -51,6 +51,9 @@ class ThemesActivity : AppCompatActivity() {
         setContentView(R.layout.activity_themes)
 
         username = intent.getStringExtra("username") ?: ""
+        
+        // Initialize currentThemeId from local prefs for immediate UI feedback
+        currentThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", "dark") ?: "dark"
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -92,9 +95,7 @@ class ThemesActivity : AppCompatActivity() {
         val nextIndex = (currentIndex + 1) % schemes.size
         val newScheme = schemes[nextIndex]
 
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit().putString("color_scheme", newScheme).apply()
-        recreate()
+        selectTheme(newScheme)
     }
 
     private fun updateColorSchemeIcon() {
@@ -177,7 +178,10 @@ class ThemesActivity : AppCompatActivity() {
                     val theme = customThemes.find { it.id == themeId }
                     if (theme?.isDark == true) "dark" else "light"
                 }
-                prefs.edit().putString("color_scheme", scheme).apply()
+                prefs.edit {
+                    putString("color_scheme", scheme)
+                    putString("current_theme_id", themeId)
+                }
                 runOnUiThread { recreate() }
             }
         }
@@ -298,7 +302,7 @@ class ThemesActivity : AppCompatActivity() {
                 id = theme?.id ?: UUID.randomUUID().toString(),
                 name = name,
                 primaryColor = editPrimary.text.toString(),
-                onPrimaryColor = "#FFFFFF", // Default logic
+                onPrimaryColor = if (checkIsDark.isChecked) "#FFFFFF" else "#312051",
                 surfaceColor = editBackground.text.toString(),
                 onSurfaceColor = editTextPrimary.text.toString(),
                 backgroundColor = editBackground.text.toString(),
@@ -307,11 +311,14 @@ class ThemesActivity : AppCompatActivity() {
                 isDark = checkIsDark.isChecked
             )
 
-            grpcClient.saveTheme(username, newTheme) { success, _ ->
-                if (success) {
-                    runOnUiThread {
+            grpcClient.saveTheme(username, newTheme) { success, message ->
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this@ThemesActivity, R.string.message_edited, Toast.LENGTH_SHORT).show() // Generic success msg
                         dialog.dismiss()
                         loadThemes()
+                    } else {
+                        Toast.makeText(this@ThemesActivity, message, Toast.LENGTH_LONG).show()
                     }
                 }
             }

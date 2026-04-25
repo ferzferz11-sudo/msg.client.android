@@ -3,13 +3,17 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import java.util.Locale
@@ -22,6 +26,18 @@ class MapPickerActivity : AppCompatActivity() {
     private var selectedLat: Double = 0.0
     private var selectedLng: Double = 0.0
     private var viewMode: Boolean = false
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        ) {
+            centerOnCurrentLocation()
+        } else {
+            Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
@@ -65,7 +81,7 @@ class MapPickerActivity : AppCompatActivity() {
                 if (selectedLat != 0.0 || selectedLng != 0.0) {
                     webView.evaluateJavascript("centerOn($selectedLat, $selectedLng)", null)
                 } else {
-                    centerOnCurrentLocation()
+                    checkLocationPermissions()
                 }
             }
         }
@@ -125,6 +141,27 @@ class MapPickerActivity : AppCompatActivity() {
             resultIntent.putExtra("lng", selectedLng)
             setResult(RESULT_OK, resultIntent)
             finish()
+        }
+    }
+
+    private fun checkLocationPermissions() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            centerOnCurrentLocation()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 

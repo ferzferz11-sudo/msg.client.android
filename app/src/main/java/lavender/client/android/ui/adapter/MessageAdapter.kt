@@ -20,6 +20,7 @@ import java.util.*
 class MessageAdapter(
     private val currentUsername: String,
     private val isGroupChat: Boolean,
+    private val adminUsername: String = "",
     private val onMessageClick: (Message) -> Unit,
     private val onSelectionChanged: (Int) -> Unit
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
@@ -90,10 +91,13 @@ class MessageAdapter(
                 if (!selectionMode) {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition != RecyclerView.NO_POSITION) {
-                        selectionMode = true
-                        selectedPositions.add(currentPosition)
-                        notifyItemRangeChanged(0, itemCount)
-                        onSelectionChanged(selectedPositions.size)
+                        val isAdmin = currentUsername == adminUsername
+                        if (isAdmin || isOutgoing) {
+                            selectionMode = true
+                            selectedPositions.add(currentPosition)
+                            notifyItemRangeChanged(0, itemCount)
+                            onSelectionChanged(selectedPositions.size)
+                        }
                     }
                 }
             }

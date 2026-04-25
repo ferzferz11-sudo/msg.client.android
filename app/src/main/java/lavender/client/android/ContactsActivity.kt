@@ -69,6 +69,12 @@ class ContactsActivity : AppCompatActivity() {
         )
         binding.contactsRecyclerView.adapter = adapter
         binding.contactsRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        lifecycleScope.launch {
+            grpcClient.users.collect { onlineUsers ->
+                runOnUiThread { adapter.setOnlineUsers(onlineUsers) }
+            }
+        }
     }
 
     private fun loadContacts() {
@@ -130,6 +136,12 @@ class ContactsActivity : AppCompatActivity() {
             },
             avatarCache = grpcClient.getAvatarCache()
         )
+
+        lifecycleScope.launch {
+            grpcClient.users.collect { onlineUsers ->
+                runOnUiThread { userAdapter.setOnlineUsers(onlineUsers) }
+            }
+        }
 
         usersRecyclerView.adapter = userAdapter
         usersRecyclerView.layoutManager = LinearLayoutManager(this)

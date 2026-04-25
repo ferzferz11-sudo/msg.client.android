@@ -229,6 +229,15 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
+        // Observe online users
+        lifecycleScope.launch {
+            grpcClient.users.collect { onlineUsers ->
+                runOnUiThread {
+                    adapter.setOnlineUsers(onlineUsers)
+                }
+            }
+        }
+
         if (viewModel.isInitialLoadComplete) {
             binding.swipeRefreshLayout.isRefreshing = false
             adapter.setChats(viewModel.currentChats)
@@ -503,7 +512,7 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun openChat(chatId: String, roomName: String? = null, isDirect: Boolean? = null, participants: String? = null) {
+    private fun openChat(chatId: String, roomName: String? = null, isDirect: Boolean? = null, participants: String? = null, creator: String? = null) {
         lifecycleScope.launch {
             val chat = adapter.getChats().find { it.id == chatId }
             val intent = Intent(this@ChatListActivity, NewChatActivity::class.java)
@@ -516,6 +525,11 @@ class ChatListActivity : AppCompatActivity() {
             val finalParticipants = participants ?: chat?.participants
             if (!finalParticipants.isNullOrEmpty()) {
                 intent.putExtra("PARTICIPANTS", finalParticipants)
+            }
+
+            val finalCreator = creator ?: chat?.creator ?: ""
+            if (finalCreator.isNotEmpty()) {
+                intent.putExtra("CREATOR", finalCreator)
             }
             
             startActivity(intent)
@@ -1038,7 +1052,8 @@ class ChatListActivity : AppCompatActivity() {
                             chatId = chatId,
                             roomName = getString(R.string.private_chat_with, targetUser),
                             isDirect = true,
-                            participants = "[\"$username\", \"$targetUser\"]"
+                            participants = "[\"$username\", \"$targetUser\"]",
+                            creator = username
                         )
                         showToast(getString(R.string.chat_created_with, targetUser))
                     }
@@ -1062,7 +1077,8 @@ class ChatListActivity : AppCompatActivity() {
                             chatId = chatId,
                             roomName = name,
                             isDirect = false,
-                            participants = JSONArray(participants).toString()
+                            participants = JSONArray(participants).toString(),
+                            creator = username
                         )
                         showToast(getString(R.string.group_created, name))
                     }

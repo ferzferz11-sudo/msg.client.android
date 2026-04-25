@@ -3,6 +3,7 @@ package lavender.client.android.ui.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -18,12 +19,18 @@ class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit,
     private val onSelectionChanged: (Int) -> Unit = {},
     private val currentUsername: String = "",
-    initialAvatarCache: Map<String, String> = emptyMap()
+    initialAvatarCache: Map<String, String> = emptyMap(),
+    private var onlineUsers: List<String> = emptyList()
 ) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
 
     private var chats = listOf<ChatInfo>()
     var avatarCache: Map<String, String> = initialAvatarCache
     private val selectedPositions = mutableSetOf<Int>()
+
+    fun setOnlineUsers(users: List<String>) {
+        onlineUsers = users
+        notifyDataSetChanged()
+    }
 
     fun getSelectedChats(): List<ChatInfo> {
         return selectedPositions.map { chats[it] }
@@ -81,7 +88,7 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
         val isSelected = selectedPositions.contains(position)
-        holder.bind(chats[position], currentUsername, avatarCache, isSelected) {
+        holder.bind(chats[position], currentUsername, avatarCache, isSelected, onlineUsers) {
             val currentPos = holder.bindingAdapterPosition
             if (currentPos == RecyclerView.NO_POSITION) return@bind
 
@@ -108,7 +115,7 @@ class ChatAdapter(
         private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, currentUsername: String, avatarCache: Map<String, String>, isSelected: Boolean, onLongClick: () -> Unit) {
+        fun bind(chat: ChatInfo, currentUsername: String, avatarCache: Map<String, String>, isSelected: Boolean, onlineUsers: List<String>, onLongClick: () -> Unit) {
             chatName.text = chat.name
 
             val context = itemView.context
@@ -151,7 +158,7 @@ class ChatAdapter(
             }
 
             // Load participant avatars
-            loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache)
+            loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers)
 
             itemView.setOnClickListener {
                 onChatClick(chat)
@@ -162,7 +169,7 @@ class ChatAdapter(
             }
         }
 
-        private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>) {
+        private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>) {
             participantAvatars.removeAllViews()
 
             if (participantsJson.isEmpty()) return
@@ -179,10 +186,16 @@ class ChatAdapter(
                 if (chatType == "direct") {
                     // Larger avatar of the OTHER person
                     val otherPerson = participantsList.find { it != currentUsername } ?: currentUsername
+                    val isOnline = onlineUsers.contains(otherPerson)
+                    
                     val avatarSize = 52.dpToPx()
                     
-                    val avatar = ImageView(context).apply {
+                    val container = FrameLayout(context).apply {
                         layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
+                    }
+
+                    val avatar = ImageView(context).apply {
+                        layoutParams = FrameLayout.LayoutParams(avatarSize, avatarSize)
                         scaleType = ImageView.ScaleType.CENTER_CROP
                     }
 
@@ -197,18 +210,40 @@ class ChatAdapter(
                     } else {
                         avatar.setImageResource(R.drawable.ic_default_avatar)
                     }
-                    participantAvatars.addView(avatar)
+                    container.addView(avatar)
+
+                    // Online status dot
+                    if (isOnline) {
+                        val dotSize = 14.dpToPx()
+                        val dot = View(context).apply {
+                            layoutParams = FrameLayout.LayoutParams(dotSize, dotSize).apply {
+                                gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+                                setMargins(0, 0, 2.dpToPx(), 2.dpToPx())
+                            }
+                            background = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.status_online_dot)
+                        }
+                        container.addView(dot)
+                    }
+                    
+                    participantAvatars.addView(container)
                 } else {
                     // Group chat: small overlapping avatars on the left
                     val maxAvatars = 3
                     val avatarSize = 40.dpToPx()
+                    val dotSize = 10.dpToPx()
 
                     for (i in 0 until minOf(participantsList.size, maxAvatars)) {
                         val username = participantsList[i]
-                        val avatar = ImageView(context).apply {
+                        val isOnline = onlineUsers.contains(username)
+
+                        val container = FrameLayout(context).apply {
                             layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize).apply {
                                 if (i > 0) setMargins(-15.dpToPx(), 0, 0, 0)
                             }
+                        }
+
+                        val avatar = ImageView(context).apply {
+                            layoutParams = FrameLayout.LayoutParams(avatarSize, avatarSize)
                             scaleType = ImageView.ScaleType.CENTER_CROP
                         }
 
@@ -223,7 +258,21 @@ class ChatAdapter(
                         } else {
                             avatar.setImageResource(R.drawable.ic_default_avatar)
                         }
-                        participantAvatars.addView(avatar)
+                        container.addView(avatar)
+
+                        // Online status dot for group participants
+                        if (isOnline) {
+                            val dot = View(context).apply {
+                                layoutParams = FrameLayout.LayoutParams(dotSize, dotSize).apply {
+                                    gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+                                    setMargins(0, 0, 1.dpToPx(), 1.dpToPx())
+                                }
+                                background = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.status_online_dot)
+                            }
+                            container.addView(dot)
+                        }
+
+                        participantAvatars.addView(container)
                     }
 
                     if (participantsList.size > maxAvatars) {

@@ -130,7 +130,8 @@ data class ChatInfoProto(
     val participants: String = "",
     val createdAt: Timestamp? = null,
     val unreadCount: Int = 0,
-    val lastMessageTime: Timestamp? = null
+    val lastMessageTime: Timestamp? = null,
+    val creator: String = ""
 )
 
 // Mark Read Request/Response
@@ -238,7 +239,8 @@ data class GetHistoryResponseProto(
 )
 
 data class DeleteMessagesRequestProto(
-    val messages: List<MessageProto> = emptyList()
+    val messages: List<MessageProto> = emptyList(),
+    val requesterUsername: String = ""
 )
 
 data class DeleteMessagesResponseProto(

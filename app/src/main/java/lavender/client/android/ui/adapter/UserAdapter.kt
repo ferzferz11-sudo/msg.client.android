@@ -11,11 +11,17 @@ import lavender.client.android.R
 
 class UserAdapter(
     private val onUserClick: (String) -> Unit,
-    private val avatarCache: Map<String, String> = emptyMap()
+    private val avatarCache: Map<String, String> = emptyMap(),
+    private var onlineUsers: List<String> = emptyList()
 ) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
     private var users = listOf<String>()
     private var selectedUser: String? = null
+
+    fun setOnlineUsers(users: List<String>) {
+        onlineUsers = users
+        notifyDataSetChanged()
+    }
 
     fun setUsers(newUsers: List<String>) {
         users = newUsers
@@ -36,7 +42,8 @@ class UserAdapter(
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         val username = users[position]
-        holder.bind(username, username == selectedUser, avatarCache[username])
+        val isOnline = onlineUsers.contains(username)
+        holder.bind(username, username == selectedUser, avatarCache[username], isOnline)
         holder.itemView.setOnClickListener {
             selectedUser = username
             notifyDataSetChanged()
@@ -51,7 +58,7 @@ class UserAdapter(
         private val userAvatar: CircleImageView = itemView.findViewById(R.id.userAvatar)
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
 
-        fun bind(username: String, isSelected: Boolean, avatarUrl: String?) {
+        fun bind(username: String, isSelected: Boolean, avatarUrl: String?, isOnline: Boolean) {
             usernameText.text = username
             
             // Highlight if selected
@@ -69,8 +76,11 @@ class UserAdapter(
                 userAvatar.setImageResource(R.drawable.ic_default_avatar)
             }
             
-            // Hide status indicator for now as it's not always relevant in this adapter
-            statusIndicator.visibility = View.GONE
+            // Show status indicator
+            statusIndicator.visibility = View.VISIBLE
+            statusIndicator.setBackgroundResource(
+                if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot
+            )
         }
     }
 }

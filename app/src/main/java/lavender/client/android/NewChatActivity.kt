@@ -128,6 +128,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var chatName: String
     private var isDirect: Boolean = false
     private lateinit var participantsJson: String
+    private var creator: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -273,6 +274,7 @@ class NewChatActivity : AppCompatActivity() {
         chatName = intent.getStringExtra("CHAT_NAME") ?: "Chat"
         isDirect = intent.getBooleanExtra("IS_DIRECT", false)
         participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"
+        creator = intent.getStringExtra("CREATOR") ?: ""
     }
 
     private var otherUserAvatarUrl: String = ""
@@ -335,6 +337,7 @@ class NewChatActivity : AppCompatActivity() {
                     .putExtra("is_group", true)
                     .putExtra("room_id", roomId)
                     .putExtra("participants", participantsJson)
+                    .putExtra("creator", creator)
                 startActivity(intent)
             }
             toolbarTitle.setOnClickListener { openGroupInfo() }
@@ -376,6 +379,7 @@ class NewChatActivity : AppCompatActivity() {
         adapter = MessageAdapter(
             currentUsername = username,
             isGroupChat = !isDirect,
+            adminUsername = creator,
             onSelectionChanged = { count ->
                 if (count > 0) showSelectionToolbar(count) else hideSelectionToolbar()
             },
@@ -439,6 +443,30 @@ class NewChatActivity : AppCompatActivity() {
                             val arr = JSONArray(participantsJson)
                             toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
                         }
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            grpcClient.users.collect { onlineUsers ->
+                runOnUiThread {
+                    if (isDirect) {
+                        val otherUser = (0 until JSONArray(participantsJson).length())
+                            .map { JSONArray(participantsJson).getString(it) }
+                            .find { it != username } ?: return@runOnUiThread
+                        
+                        val isOnline = onlineUsers.contains(otherUser)
+                        toolbarSubtitle.isVisible = true
+                        toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
+                        toolbarSubtitle.setTextColor(
+                            if (isOnline) getColor(android.R.color.holo_green_dark) 
+                            else {
+                                val typedValue = android.util.TypedValue()
+                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                                typedValue.data
+                            }
+                        )
                     }
                 }
             }
