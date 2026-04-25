@@ -5,6 +5,21 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.51] - 2026-04-25
+
+### Added
+- 💬 **Telegram-style Swipe**: Changed message swipe direction to **left** for replying, matching industry standards.
+- 🎨 **Theme System Polish**:
+  - Moved theme toggle (light/dark) from the main chat list to the dedicated **Themes** screen for a cleaner UI.
+  - Added theme templates (Green, Blue, Purple, Sunset) for instant customization.
+  - Live color preview in the theme editor.
+- 🔗 **Guaranteed Chat Transition**: Optimized navigation to ensure users are always immediately redirected to a newly created chat.
+
+### Fixed
+- 🛑 **Photo Duplication**: Resolved issue where some gallery apps caused images to be uploaded and sent twice.
+- 🎨 **Theme Sync**: Fixed RadioButton synchronization in Theme settings when toggling modes via the toolbar.
+- 📏 **Compact Bubbles**: Perfected the sizing and alignment of message bubbles for better readability.
+
 ## [1.0.1.49] - 2026-04-25
 
 ### Added

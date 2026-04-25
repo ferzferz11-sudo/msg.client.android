@@ -86,7 +86,6 @@ class ChatListActivity : AppCompatActivity() {
     private var username: String = ""
     private var password: String = ""
     private var downloadJob: Job? = null
-    private var colorSchemeMenuItem: MenuItem? = null
     private var currentTheme: String? = null
 
     private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
@@ -504,7 +503,7 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun openChat(chatId: String, roomName: String? = null) {
+    private fun openChat(chatId: String, roomName: String? = null, isDirect: Boolean? = null, participants: String? = null) {
         lifecycleScope.launch {
             val chat = adapter.getChats().find { it.id == chatId }
             val intent = Intent(this@ChatListActivity, NewChatActivity::class.java)
@@ -512,10 +511,11 @@ class ChatListActivity : AppCompatActivity() {
                 .putExtra("PASSWORD", password)
                 .putExtra("ROOM_ID", chatId)
                 .putExtra("CHAT_NAME", roomName ?: chat?.name ?: "Chat")
-                .putExtra("IS_DIRECT", chat?.type == "direct")
+                .putExtra("IS_DIRECT", isDirect ?: (chat?.type == "direct"))
             
-            if (chat != null && chat.participants.isNotEmpty()) {
-                intent.putExtra("PARTICIPANTS", chat.participants)
+            val finalParticipants = participants ?: chat?.participants
+            if (!finalParticipants.isNullOrEmpty()) {
+                intent.putExtra("PARTICIPANTS", finalParticipants)
             }
             
             startActivity(intent)
@@ -659,10 +659,6 @@ class ChatListActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
-            R.id.action_color_scheme -> {
-                toggleColorScheme()
-                true
-            }
             R.id.action_notification_history -> {
                 showNotificationHistory()
                 true
@@ -691,15 +687,10 @@ class ChatListActivity : AppCompatActivity() {
         menu.findItem(R.id.action_contacts)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_color_scheme)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_profile)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_logout)?.apply { isVisible = !hasSelection }
-
-        // Save reference to color scheme menu item
-        colorSchemeMenuItem = menu.findItem(R.id.action_color_scheme)
-        updateColorSchemeIcon()
 
         // Force overflow icon and its tint
         val typedValue = TypedValue()
@@ -1042,12 +1033,14 @@ class ChatListActivity : AppCompatActivity() {
             grpcClient.createDirectChat(username, targetUser) { chatId ->
                 runOnUiThread { binding.progressOverlay.isVisible = false }
                 if (chatId != null) {
-                    lifecycleScope.launch {
-                        delay(500)
-                        runOnUiThread {
-                            openChat(chatId, getString(R.string.private_chat_with, targetUser))
-                            showToast(getString(R.string.chat_created_with, targetUser))
-                        }
+                    runOnUiThread {
+                        openChat(
+                            chatId = chatId,
+                            roomName = getString(R.string.private_chat_with, targetUser),
+                            isDirect = true,
+                            participants = "[\"$username\", \"$targetUser\"]"
+                        )
+                        showToast(getString(R.string.chat_created_with, targetUser))
                     }
                 } else {
                     runOnUiThread {
@@ -1064,12 +1057,14 @@ class ChatListActivity : AppCompatActivity() {
             grpcClient.createGroupChat(name, participants) { chatId ->
                 runOnUiThread { binding.progressOverlay.isVisible = false }
                 if (chatId != null) {
-                    lifecycleScope.launch {
-                        delay(500)
-                        runOnUiThread {
-                            openChat(chatId, name)
-                            showToast(getString(R.string.group_created, name))
-                        }
+                    runOnUiThread {
+                        openChat(
+                            chatId = chatId,
+                            roomName = name,
+                            isDirect = false,
+                            participants = JSONArray(participants).toString()
+                        )
+                        showToast(getString(R.string.group_created, name))
                     }
                 } else {
                     runOnUiThread {
@@ -1101,32 +1096,6 @@ class ChatListActivity : AppCompatActivity() {
     private fun getSavedColorScheme(): String? {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", null)
-    }
-
-    private fun saveColorScheme(scheme: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit { putString("color_scheme", scheme) }
-    }
-
-    private fun toggleColorScheme() {
-        val schemes = listOf("light", "dark")
-        val currentScheme = getSavedColorScheme() ?: "dark"
-        val currentIndex = schemes.indexOf(currentScheme)
-        val nextIndex = (currentIndex + 1) % schemes.size
-        val newScheme = schemes[nextIndex]
-
-        saveColorScheme(newScheme)
-        recreate()
-    }
-
-    private fun updateColorSchemeIcon() {
-        val currentScheme = getSavedColorScheme() ?: "dark"
-        val iconRes = if (currentScheme == "dark") {
-            R.drawable.ic_light_mode
-        } else {
-            R.drawable.ic_theme_dark
-        }
-        colorSchemeMenuItem?.setIcon(iconRes)
     }
 
     private fun getSavedLanguage(): String? {

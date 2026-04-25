@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_color_scheme"
+        android:icon="@drawable/ic_light_mode"
+        android:title="@string/color_scheme"
+        app:showAsAction="always" />
+</menu>

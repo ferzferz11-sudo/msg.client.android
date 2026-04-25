@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.49**
+Current version: **1.0.1.51**
+
+### Version 1.0.1.51 - Swipe to Reply and Stability Fixes
+- 💬 **Swipe to Reply**: Classic left-swipe gesture for message replies.
+- 🎨 **Cleaner UI**: Theme toggle moved to the Themes screen.
+- 🛑 **No More Dupes**: Fixed double photo sending issue.
+- 🚀 **Instant Navigation**: Faster and more reliable transition to new chats.
 
 ### Version 1.0.1.49 - Custom Themes and Performance Optimization
 - 🎨 **Custom Themes**: Create and manage your own color schemes with live preview.

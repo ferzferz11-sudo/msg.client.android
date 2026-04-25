@@ -6,11 +6,13 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import com.google.android.material.button.MaterialButton
@@ -26,6 +28,7 @@ class ThemesActivity : AppCompatActivity() {
     private lateinit var themeRadioGroup: RadioGroup
     private lateinit var customThemesContainer: LinearLayout
     private lateinit var btnAddTheme: MaterialButton
+    private var colorSchemeMenuItem: MenuItem? = null
     private val grpcClient = GrpcClient
     private var username: String = ""
     private var currentThemeId: String = "dark"
@@ -63,6 +66,45 @@ class ThemesActivity : AppCompatActivity() {
         btnAddTheme.setOnClickListener {
             showEditThemeDialog(null)
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.themes_menu, menu)
+        colorSchemeMenuItem = menu.findItem(R.id.action_color_scheme)
+        updateColorSchemeIcon()
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_color_scheme -> {
+                toggleColorScheme()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun toggleColorScheme() {
+        val schemes = listOf("light", "dark")
+        val currentScheme = getSavedColorScheme() ?: "dark"
+        val currentIndex = schemes.indexOf(currentScheme)
+        val nextIndex = (currentIndex + 1) % schemes.size
+        val newScheme = schemes[nextIndex]
+
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        prefs.edit().putString("color_scheme", newScheme).apply()
+        recreate()
+    }
+
+    private fun updateColorSchemeIcon() {
+        val currentScheme = getSavedColorScheme() ?: "dark"
+        val iconRes = if (currentScheme == "dark") {
+            R.drawable.ic_light_mode
+        } else {
+            R.drawable.ic_theme_dark
+        }
+        colorSchemeMenuItem?.setIcon(iconRes)
     }
 
     private fun loadThemes() {
@@ -119,6 +161,11 @@ class ThemesActivity : AppCompatActivity() {
         val typedValue = android.util.TypedValue()
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
         return typedValue.data
+    }
+
+    private fun getSavedColorScheme(): String? {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        return prefs.getString("color_scheme", null)
     }
 
     private fun selectTheme(themeId: String) {

@@ -131,27 +131,27 @@ class NewChatActivity : AppCompatActivity() {
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uris = mutableListOf<Uri>()
+            val uris = mutableSetOf<Uri>()
             result.data?.data?.let { uris.add(it) }
             result.data?.clipData?.let { clipData ->
                 for (i in 0 until clipData.itemCount) {
                     uris.add(clipData.getItemAt(i).uri)
                 }
             }
-            if (uris.isNotEmpty()) uploadFiles(uris)
+            if (uris.isNotEmpty()) uploadFiles(uris.toList())
         }
     }
 
     private val pickFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uris = mutableListOf<Uri>()
+            val uris = mutableSetOf<Uri>()
             result.data?.data?.let { uris.add(it) }
             result.data?.clipData?.let { clipData ->
                 for (i in 0 until clipData.itemCount) {
                     uris.add(clipData.getItemAt(i).uri)
                 }
             }
-            if (uris.isNotEmpty()) uploadFiles(uris)
+            if (uris.isNotEmpty()) uploadFiles(uris.toList())
         }
     }
 
