@@ -604,7 +604,7 @@ class ChatListActivity : AppCompatActivity() {
                 if (binding.searchLayout.isVisible) {
                     binding.searchEditText.requestFocus()
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                    imm.showSoftInput(binding.searchEditText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                    imm.showSoftInput(binding.searchEditText, 0)
                 } else {
                     binding.searchEditText.text?.clear()
                     adapter.filter("")

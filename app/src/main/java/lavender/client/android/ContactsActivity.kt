@@ -92,7 +92,7 @@ class ContactsActivity : AppCompatActivity() {
             if (binding.searchLayout.isVisible) {
                 binding.searchEditText.requestFocus()
                 val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(binding.searchEditText, InputMethodManager.SHOW_IMPLICIT)
+                imm.showSoftInput(binding.searchEditText, 0)
             } else {
                 binding.searchEditText.text?.clear()
                 adapter.setUsers(contacts)
