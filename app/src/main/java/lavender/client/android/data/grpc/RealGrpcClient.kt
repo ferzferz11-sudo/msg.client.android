@@ -69,6 +69,8 @@ import lavender.client.android.data.proto.RemoveParticipantRequestProto
 import lavender.client.android.data.proto.RemoveParticipantResponseProto
 import lavender.client.android.data.proto.EditMessageRequestProto
 import lavender.client.android.data.proto.EditMessageResponseProto
+import lavender.client.android.data.proto.UpdateChatNameRequestProto
+import lavender.client.android.data.proto.UpdateChatNameResponseProto
 import java.util.concurrent.TimeUnit
 
 object RealGrpcClient {
