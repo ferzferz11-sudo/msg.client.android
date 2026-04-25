@@ -329,6 +329,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Refresh chats immediately when returning from chat if version changed
         refreshChats(false)
+        grpcClient.loadUsers()
     }
 
     private fun refreshChats(isManual: Boolean = false) {
