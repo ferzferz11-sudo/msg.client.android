@@ -140,6 +140,7 @@
     <string name="selected_count">Выбрано: %d</string>
     <string name="general_chat">Общий чат</string>
     <string name="private_chat_with">Чат с %s</string>
+    <string name="create_private_chat">Создать личный чат</string>
     <string name="chat_created_with">Чат создан с %s</string>
     <string name="cannot_chat_with_yourself">Нельзя писать самому себе</string>
     <string name="failed_to_create_chat">Не удалось создать чат</string>
@@ -218,4 +219,13 @@
     <string name="tap_to_select">Нажмите на карту, чтобы выбрать место</string>
     <string name="send_location">Отправить местоположение</string>
     <string name="add_emoji">Добавить эмодзи</string>
+    <string name="contacts">Контакты</string>
+    <string name="add_contact">Добавить контакт</string>
+    <string name="search_users">Поиск пользователей…</string>
+    <string name="create_direct_chat_after">Сразу создать личный чат</string>
+    <string name="contact_added">Контакт успешно добавлен</string>
+    <string name="already_in_contacts">Пользователь уже в контактах</string>
+    <string name="no_contacts">Контактов пока нет. Добавьте кого-нибудь, чтобы начать общение!</string>
+    <string name="remove_contact">Удалить контакт</string>
+    <string name="remove_contact_confirm">Вы уверены, что хотите удалить %s из списка контактов?</string>
 </resources>

@@ -48,6 +48,12 @@ import lavender.client.android.data.proto.TypingRequestProto
 import lavender.client.android.data.proto.TypingSignalProto
 import lavender.client.android.data.proto.AddParticipantRequestProto
 import lavender.client.android.data.proto.AddParticipantResponseProto
+import lavender.client.android.data.proto.AddContactRequestProto
+import lavender.client.android.data.proto.AddContactResponseProto
+import lavender.client.android.data.proto.RemoveContactRequestProto
+import lavender.client.android.data.proto.RemoveContactResponseProto
+import lavender.client.android.data.proto.GetContactsRequestProto
+import lavender.client.android.data.proto.GetContactsResponseProto
 import lavender.client.android.data.proto.RemoveParticipantRequestProto
 import lavender.client.android.data.proto.RemoveParticipantResponseProto
 import lavender.client.android.data.proto.EditMessageRequestProto
@@ -1113,6 +1119,93 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun addContact(username: String, contactUsername: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = AddContactRequestProto(username, contactUsername)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddContactRequestProto, AddContactResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/AddContact")
+            .setRequestMarshaller(AddContactRequestMarshaller())
+            .setResponseMarshaller(AddContactResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<AddContactResponseProto>() {
+            override fun onMessage(message: AddContactResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun removeContact(username: String, contactUsername: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = RemoveContactRequestProto(username, contactUsername)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveContactRequestProto, RemoveContactResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RemoveContact")
+            .setRequestMarshaller(RemoveContactRequestMarshaller())
+            .setResponseMarshaller(RemoveContactResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RemoveContactResponseProto>() {
+            override fun onMessage(message: RemoveContactResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getContacts(username: String, callback: (List<String>) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = GetContactsRequestProto(username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetContactsRequestProto, GetContactsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetContacts")
+            .setRequestMarshaller(GetContactsRequestMarshaller())
+            .setResponseMarshaller(GetContactsResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetContactsResponseProto>() {
+            override fun onMessage(message: GetContactsResponseProto) {
+                callback(message.contacts)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(emptyList())
                 }
             }
         }, io.grpc.Metadata())
@@ -2360,5 +2453,154 @@ class TypingSignalMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingSignalP
             }
         }
         return TypingSignalProto(roomId, username, isTyping)
+    }
+}
+
+class AddContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddContactRequestProto> {
+    override fun stream(value: AddContactRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.contactUsername.isNotEmpty()) cos.writeString(2, value.contactUsername)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): AddContactRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var contactUsername = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> contactUsername = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return AddContactRequestProto(username, contactUsername)
+    }
+}
+
+class AddContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddContactResponseProto> {
+    override fun stream(value: AddContactResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): AddContactResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return AddContactResponseProto(success, message)
+    }
+}
+
+class RemoveContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveContactRequestProto> {
+    override fun stream(value: RemoveContactRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.contactUsername.isNotEmpty()) cos.writeString(2, value.contactUsername)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): RemoveContactRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var contactUsername = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> contactUsername = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RemoveContactRequestProto(username, contactUsername)
+    }
+}
+
+class RemoveContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveContactResponseProto> {
+    override fun stream(value: RemoveContactResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): RemoveContactResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RemoveContactResponseProto(success, message)
+    }
+}
+
+class GetContactsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetContactsRequestProto> {
+    override fun stream(value: GetContactsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetContactsRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
+            else cis.skipField(tag)
+        }
+        return GetContactsRequestProto(username)
+    }
+}
+
+class GetContactsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetContactsResponseProto> {
+    override fun stream(value: GetContactsResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        for (contact in value.contacts) {
+            cos.writeString(1, contact)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetContactsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val contacts = mutableListOf<String>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                contacts.add(cis.readString())
+            } else cis.skipField(tag)
+        }
+        return GetContactsResponseProto(contacts)
     }
 }

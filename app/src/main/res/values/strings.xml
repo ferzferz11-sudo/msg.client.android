@@ -140,6 +140,7 @@
     <string name="selected_count">Selected: %d</string>
     <string name="general_chat">General</string>
     <string name="private_chat_with">Chat with %s</string>
+    <string name="create_private_chat">Create private chat</string>
     <string name="chat_created_with">Chat created with %s</string>
     <string name="cannot_chat_with_yourself">Cannot chat with yourself</string>
     <string name="failed_to_create_chat">Failed to create chat</string>
@@ -216,4 +217,13 @@
     <string name="tap_to_select">Tap on map to select location</string>
     <string name="send_location">Send Location</string>
     <string name="add_emoji">Add emoji</string>
+    <string name="contacts">Contacts</string>
+    <string name="add_contact">Add Contact</string>
+    <string name="search_users">Search users…</string>
+    <string name="create_direct_chat_after">Create direct chat immediately</string>
+    <string name="contact_added">Contact added successfully</string>
+    <string name="already_in_contacts">User is already in contacts</string>
+    <string name="no_contacts">No contacts yet. Add some to start chatting!</string>
+    <string name="remove_contact">Remove Contact</string>
+    <string name="remove_contact_confirm">Are you sure you want to remove %s from your contacts?</string>
 </resources>

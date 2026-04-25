@@ -33,12 +33,12 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ServerConnectivityTest
@@ -46,6 +46,7 @@ import lavender.client.android.data.fcm.NotificationHistory
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.ui.adapter.ChatAdapter
+import lavender.client.android.ui.adapter.UserAdapter
 import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
@@ -660,6 +661,14 @@ class ChatListActivity : AppCompatActivity() {
                 editProfileLauncher.launch(intent)
                 true
             }
+            R.id.action_contacts -> {
+                val intent = Intent(this, ContactsActivity::class.java).apply {
+                    putExtra("username", username)
+                    putExtra("password", password)
+                }
+                startActivity(intent)
+                true
+            }
             R.id.action_color_scheme -> {
                 toggleColorScheme()
                 true
@@ -689,6 +698,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         menu.findItem(R.id.action_add_chat)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_contacts)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_color_scheme)?.apply { isVisible = !hasSelection }
@@ -822,138 +832,212 @@ class ChatListActivity : AppCompatActivity() {
     private fun showCreateChatDialog() {
         binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         binding.progressOverlay.isVisible = true
-        // Load all users and online users
-        grpcClient.loadAllUsers()
-        grpcClient.loadUsers()
-
-        lifecycleScope.launch {
-            // Wait a bit for users to load
-            delay(500)
-
-            val allUsers = grpcClient.allUsers.value.filter { it != username }
-            val onlineUsers = grpcClient.users.value
-
-            if (allUsers.isEmpty()) {
+        
+        grpcClient.getContacts(username) { contacts ->
+            if (contacts.isEmpty()) {
                 runOnUiThread {
                     binding.progressOverlay.isVisible = false
-                    showToast(getString(R.string.no_users_available))
+                    showAddContactDialog()
                 }
-                return@launch
+                return@getContacts
             }
 
-            runOnUiThread {
-                binding.progressOverlay.isVisible = false
-                val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
+            // Load all users and online users to show status in filtered contact list
+            grpcClient.loadUsers()
 
-                // Set dialog background using Material Design colors
-                val typedValue = TypedValue()
-                if (isDarkTheme()) {
-                    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                    dialogView.setBackgroundColor(typedValue.data)
-                }
+            lifecycleScope.launch {
+                // Wait a bit for online users to load
+                delay(300)
+                val onlineUsers = grpcClient.users.value
 
-                val groupNameInput = dialogView.findViewById<EditText>(R.id.groupNameInput)
-                val usersContainer = dialogView.findViewById<LinearLayout>(R.id.usersContainer)
-                val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
-                val btnCreate = dialogView.findViewById<MaterialButton>(R.id.btnCreate)
-                val groupInputLayout = dialogView.findViewById<TextInputLayout>(R.id.groupInputLayout)
+                runOnUiThread {
+                    binding.progressOverlay.isVisible = false
+                    val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
 
-                // Set TextInputLayout background and button strokes in dark theme
-                if (isDarkTheme()) {
-                    val surfaceValue = TypedValue()
-                    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
-                    groupInputLayout.boxBackgroundColor = surfaceValue.data
-
-                    val primaryValue = TypedValue()
-                    theme.resolveAttribute(androidR.attr.colorPrimary, primaryValue, true)
-                    val strokeColor = ColorStateList.valueOf(primaryValue.data)
-                    btnCancel.strokeColor = strokeColor
-                    btnCancel.strokeWidth = 2
-                    btnCreate.strokeColor = strokeColor
-                    btnCreate.strokeWidth = 2
-                }
-                
-                val selectedUsers = mutableSetOf<String>()
-
-                // Sort users: online first, then offline
-                val sortedUsers = allUsers.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
-
-                for (user in sortedUsers) {
-                    val userView = layoutInflater.inflate(R.layout.item_user_selectable, usersContainer, false)
-                    val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
-                    val usernameText = userView.findViewById<TextView>(R.id.usernameText)
-                    val userAvatar = userView.findViewById<CircleImageView>(R.id.userAvatar)
-                    val checkBox = userView.findViewById<CheckBox>(R.id.userCheckBox)
-
-                    val isOnline = onlineUsers.contains(user)
-                    statusIndicator.backgroundTintList = ColorStateList.valueOf(
-                        if (isOnline) getColor(androidR.color.holo_green_dark)
-                        else getColor(androidR.color.darker_gray)
-                    )
-
-                    usernameText.text = user
-                    
-                    // Set avatar
-                    val avatarCache = grpcClient.getAvatarCache()
-                    val cachedAvatarUrl = avatarCache[user]
-                    if (!cachedAvatarUrl.isNullOrEmpty()) {
-                        Glide.with(this@ChatListActivity)
-                            .load(cachedAvatarUrl)
-                            .placeholder(R.drawable.ic_default_avatar)
-                            .circleCrop()
-                            .into(userAvatar)
-                    } else {
-                        userAvatar.setImageResource(R.drawable.ic_default_avatar)
+                    // Set dialog background using Material Design colors
+                    val typedValue = TypedValue()
+                    if (isDarkTheme()) {
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                        dialogView.setBackgroundColor(typedValue.data)
                     }
 
-                    userView.setOnClickListener {
-                        checkBox.isChecked = !checkBox.isChecked
-                        if (checkBox.isChecked) selectedUsers.add(user) else selectedUsers.remove(user)
-                    }
-                    checkBox.setOnCheckedChangeListener { _, isChecked ->
-                        if (isChecked) selectedUsers.add(user) else selectedUsers.remove(user)
-                    }
+                    val groupNameInput = dialogView.findViewById<EditText>(R.id.groupNameInput)
+                    val usersContainer = dialogView.findViewById<LinearLayout>(R.id.usersContainer)
+                    val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+                    val btnCreate = dialogView.findViewById<MaterialButton>(R.id.btnCreate)
+                    val groupInputLayout = dialogView.findViewById<TextInputLayout>(R.id.groupInputLayout)
 
-                    usersContainer.addView(userView)
-                }
+                    // Set TextInputLayout background and button strokes in dark theme
+                    if (isDarkTheme()) {
+                        val surfaceValue = TypedValue()
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+                        groupInputLayout.boxBackgroundColor = surfaceValue.data
 
-                val dialog = AlertDialog.Builder(this@ChatListActivity)
-                    .setView(dialogView)
-                    .create()
-
-                // Set up button listeners
-                btnCancel.setOnClickListener {
-                    dialog.dismiss()
-                }
-
-                btnCreate.setOnClickListener {
-                    val groupName = groupNameInput.text.toString().trim()
-                    if (selectedUsers.isEmpty()) {
-                        showToast(getString(R.string.select_at_least_one_user))
-                        return@setOnClickListener
+                        val primaryValue = TypedValue()
+                        theme.resolveAttribute(androidR.attr.colorPrimary, primaryValue, true)
+                        val strokeColor = ColorStateList.valueOf(primaryValue.data)
+                        btnCancel.strokeColor = strokeColor
+                        btnCancel.strokeWidth = 2
+                        btnCreate.strokeColor = strokeColor
+                        btnCreate.strokeWidth = 2
                     }
                     
-                    binding.progressOverlay.isVisible = true
+                    val selectedUsers = mutableSetOf<String>()
 
-                    if (selectedUsers.size == 1 && groupName.isEmpty()) {
-                        // Create direct chat
-                        dialog.dismiss()
-                        createDirectChat(selectedUsers.first())
-                    } else {
-                        // Create group chat
-                        val finalGroupName = if (groupName.isEmpty()) {
-                            (selectedUsers + username).joinToString(", ")
+                    // Sort filtered users (contacts only): online first, then offline
+                    val sortedUsers = contacts.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
+
+                    for (user in sortedUsers) {
+                        val userView = layoutInflater.inflate(R.layout.item_user_selectable, usersContainer, false)
+                        val statusIndicator = userView.findViewById<View>(R.id.statusIndicator)
+                        val usernameText = userView.findViewById<TextView>(R.id.usernameText)
+                        val userAvatar = userView.findViewById<CircleImageView>(R.id.userAvatar)
+                        val checkBox = userView.findViewById<CheckBox>(R.id.userCheckBox)
+
+                        val isOnline = onlineUsers.contains(user)
+                        statusIndicator.backgroundTintList = ColorStateList.valueOf(
+                            if (isOnline) getColor(androidR.color.holo_green_dark)
+                            else getColor(androidR.color.darker_gray)
+                        )
+
+                        usernameText.text = user
+                        
+                        // Set avatar
+                        val avatarCache = grpcClient.getAvatarCache()
+                        val cachedAvatarUrl = avatarCache[user]
+                        if (!cachedAvatarUrl.isNullOrEmpty()) {
+                            Glide.with(this@ChatListActivity)
+                                .load(cachedAvatarUrl)
+                                .placeholder(R.drawable.ic_default_avatar)
+                                .circleCrop()
+                                .into(userAvatar)
                         } else {
-                            groupName
+                            userAvatar.setImageResource(R.drawable.ic_default_avatar)
                         }
-                        dialog.dismiss()
-                        createGroupChat(finalGroupName, (selectedUsers + username).toList())
-                    }
-                }
 
-                dialog.show()
+                        userView.setOnClickListener {
+                            checkBox.isChecked = !checkBox.isChecked
+                            if (checkBox.isChecked) selectedUsers.add(user) else selectedUsers.remove(user)
+                        }
+                        checkBox.setOnCheckedChangeListener { _, isChecked ->
+                            if (isChecked) selectedUsers.add(user) else selectedUsers.remove(user)
+                        }
+
+                        usersContainer.addView(userView)
+                    }
+
+                    val dialog = AlertDialog.Builder(this@ChatListActivity)
+                        .setView(dialogView)
+                        .create()
+
+                    // Set up button listeners
+                    btnCancel.setOnClickListener {
+                        dialog.dismiss()
+                    }
+
+                    btnCreate.setOnClickListener {
+                        val groupName = groupNameInput.text.toString().trim()
+                        if (selectedUsers.isEmpty()) {
+                            showToast(getString(R.string.select_at_least_one_user))
+                            return@setOnClickListener
+                        }
+                        
+                        binding.progressOverlay.isVisible = true
+
+                        if (selectedUsers.size == 1 && groupName.isEmpty()) {
+                            // Create direct chat
+                            dialog.dismiss()
+                            createDirectChat(selectedUsers.first())
+                        } else {
+                            // Create group chat
+                            val finalGroupName = if (groupName.isEmpty()) {
+                                (selectedUsers + username).joinToString(", ")
+                            } else {
+                                groupName
+                            }
+                            dialog.dismiss()
+                            createGroupChat(finalGroupName, (selectedUsers + username).toList())
+                        }
+                    }
+
+                    dialog.show()
+                }
             }
         }
+    }
+
+    private fun showAddContactDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
+        
+        // Set dialog background using Material Design colors
+        val typedValue = TypedValue()
+        if (isDarkTheme()) {
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+            dialogView.setBackgroundColor(typedValue.data)
+        }
+
+        val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
+        val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
+        val createChatCheckbox = dialogView.findViewById<CheckBox>(R.id.createChatCheckbox)
+        val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+
+        val allUsers = mutableListOf<String>()
+        val filteredUsers = mutableListOf<String>()
+        val userAdapter = UserAdapter(
+            onUserClick = { selected ->
+                btnAdd.isEnabled = selected != username
+            },
+            avatarCache = grpcClient.getAvatarCache()
+        )
+
+        usersRecyclerView.adapter = userAdapter
+        usersRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        grpcClient.loadAllUsers()
+        lifecycleScope.launch {
+            delay(500)
+            allUsers.clear()
+            allUsers.addAll(grpcClient.allUsers.value.filter { it != username })
+            filteredUsers.clear()
+            filteredUsers.addAll(allUsers)
+            runOnUiThread { userAdapter.setUsers(filteredUsers) }
+        }
+
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().lowercase()
+                filteredUsers.clear()
+                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) })
+                userAdapter.setUsers(filteredUsers)
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnAdd.setOnClickListener {
+            val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener
+            grpcClient.addContact(username, selected) { success, message ->
+                runOnUiThread {
+                    if (success) {
+                        showToast(getString(R.string.contact_added))
+                        if (createChatCheckbox.isChecked) {
+                            createDirectChat(selected)
+                        }
+                        dialog.dismiss()
+                    } else {
+                        showToast(message)
+                    }
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     private fun createDirectChat(targetUser: String) {

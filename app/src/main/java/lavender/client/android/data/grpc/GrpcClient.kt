@@ -127,6 +127,18 @@ object GrpcClient {
         realGrpcClient.updateProfile(username, bio, status, callback)
     }
 
+    fun addContact(username: String, contactUsername: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.addContact(username, contactUsername, callback)
+    }
+
+    fun removeContact(username: String, contactUsername: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.removeContact(username, contactUsername, callback)
+    }
+
+    fun getContacts(username: String, callback: (List<String>) -> Unit) {
+        realGrpcClient.getContacts(username, callback)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return realGrpcClient.getAvatarCache()
     }

@@ -350,3 +350,32 @@ data class TypingSignalProto(
     val username: String = "",
     val isTyping: Boolean = false
 )
+
+// Contacts management
+data class AddContactRequestProto(
+    val username: String = "",
+    val contactUsername: String = ""
+)
+
+data class AddContactResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class RemoveContactRequestProto(
+    val username: String = "",
+    val contactUsername: String = ""
+)
+
+data class RemoveContactResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetContactsRequestProto(
+    val username: String = ""
+)
+
+data class GetContactsResponseProto(
+    val contacts: List<String> = emptyList()
+)

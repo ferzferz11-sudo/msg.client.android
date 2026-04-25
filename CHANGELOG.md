@@ -5,6 +5,28 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.47] - 2026-04-25
+
+### Added
+- 👥 **Contact Management**:
+  - New Contacts screen with the ability to add and remove contacts.
+  - Search functionality to find existing users on the server.
+  - Option to create a direct chat immediately when adding a new contact.
+- 🔄 **Smart Chat Creation**:
+  - The "Add Chat" list now only displays users from your contacts for a more private experience.
+  - Automatic prompt to add your first contact if the list is empty.
+- 🆔 **User Identity**:
+  - Transitioned to a UUID-based architecture (`user_id`) to support safe username changes.
+- 🌍 **Localization**:
+  - Added "Create private chat" and other contact-related strings in both English and Russian.
+
+### Changed
+- 🛠️ **UI Refinement**: Replaced generic "Chat with %" text with "Create private chat" in the contact options menu.
+
+### Fixed
+- 🔗 **Data Integrity**: Improved synchronization between client usernames and server-side UUIDs.
+- 🧹 **Internal API**: Updated gRPC client to support new contact-related RPC methods.
+
 ## [1.0.1.46] - 2026-04-25
 
 ### Added

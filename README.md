@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.46**
+Current version: **1.0.1.47**
+
+### Version 1.0.1.47 - Contact Management and UUID Architecture
+- 👥 **Contacts**: Added a full-featured contact management system.
+- 🆔 **UUID Architecture**: Internal shift to unique IDs for users, enabling safe username changes.
+- 🔒 **Enhanced Privacy**: Restriced chat creation to users within your contact list.
+- 📝 **UI Improvements**: Better wording for contact actions and improved dialog flows.
 
 ### Version 1.0.1.46 - Map Picker and Improved Message Bubbles
 - 📍 **Map Picker**: Integrated interactive map (OpenStreetMap) for location selection.

@@ -9,6 +9,12 @@
         app:showAsAction="always" />
 
     <item
+        android:id="@+id/action_contacts"
+        android:icon="@drawable/ic_contacts"
+        android:title="@string/contacts"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/action_toggle_language"
         android:title="@string/toggle_language"
         app:showAsAction="never" />
