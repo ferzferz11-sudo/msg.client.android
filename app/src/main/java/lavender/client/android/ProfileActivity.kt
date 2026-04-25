@@ -234,25 +234,30 @@ class ProfileActivity : AppCompatActivity() {
                 addParticipantLayout.isVisible = false
             }
 
+            val currentMe = grpcClient.getCurrentUsername()
+            val isMeAdmin = currentMe == creator && creator.isNotEmpty()
+
             findViewById<Button>(R.id.editProfileButton).apply {
                 text = getString(R.string.delete_group)
-                isVisible = true
-                setOnClickListener {
-                    AlertDialog.Builder(this@ProfileActivity)
-                        .setTitle(R.string.delete_group)
-                        .setMessage(R.string.delete_group_confirm)
-                        .setPositiveButton(R.string.delete) { _, _ ->
-                            val progressOverlay = findViewById<View>(R.id.progressOverlay)
-                            progressOverlay.isVisible = true
-                            grpcClient.deleteChat(roomId) { success, msg ->
-                                runOnUiThread {
-                                    progressOverlay.isVisible = false
-                                    Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                                    if (success) finish()
+                isVisible = isMeAdmin
+                if (isMeAdmin) {
+                    setOnClickListener {
+                        AlertDialog.Builder(this@ProfileActivity)
+                            .setTitle(R.string.delete_group)
+                            .setMessage(R.string.delete_group_confirm)
+                            .setPositiveButton(R.string.delete) { _, _ ->
+                                val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                                progressOverlay.isVisible = true
+                                grpcClient.deleteChat(roomId) { success, msg ->
+                                    runOnUiThread {
+                                        progressOverlay.isVisible = false
+                                        Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
+                                        if (success) finish()
+                                    }
                                 }
                             }
-                        }
-                        .setNegativeButton(R.string.cancel, null).show()
+                            .setNegativeButton(R.string.cancel, null).show()
+                    }
                 }
             }
         } else {
