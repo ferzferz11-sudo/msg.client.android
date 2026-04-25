@@ -177,11 +177,13 @@ The project follows semantic versioning (SemVer):
 
 Current version: **1.0.1.49**
 
-### Version 1.0.1.49 - Optimized Chat List and Pull-to-Refresh
+### Version 1.0.1.49 - Custom Themes and Performance Optimization
+- 🎨 **Custom Themes**: Create and manage your own color schemes with live preview.
+- 🚀 **Automation**: New `deploy_android.sh` for one-click production releases.
 - 🔄 **Pull-to-Refresh**: Swipe down to manually update your chat list.
 - ⚡ **Versioning System**: Faster loading by only fetching data when changes occur.
 - 🖼️ **Left-aligned Avatars**: Improved chat list layout with avatars on the left.
-- 👤 **Clean Direct Chats**: Larger avatars for contacts and cleaner names (showing only the contact).
+- 👤 **Clean Direct Chats**: Larger avatars for contacts and cleaner names.
 
 ### Version 1.0.1.47 - Contact Management and UUID Architecture
 - 👥 **Contacts**: Added a full-featured contact management system.

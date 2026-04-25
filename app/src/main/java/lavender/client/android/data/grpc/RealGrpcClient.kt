@@ -52,6 +52,15 @@ import lavender.client.android.data.proto.AddContactRequestProto
 import lavender.client.android.data.proto.AddContactResponseProto
 import lavender.client.android.data.proto.GetChatListVersionRequestProto
 import lavender.client.android.data.proto.GetChatListVersionResponseProto
+import lavender.client.android.data.proto.GetThemesRequestProto
+import lavender.client.android.data.proto.GetThemesResponseProto
+import lavender.client.android.data.proto.SaveThemeRequestProto
+import lavender.client.android.data.proto.SaveThemeResponseProto
+import lavender.client.android.data.proto.SetCurrentThemeRequestProto
+import lavender.client.android.data.proto.SetCurrentThemeResponseProto
+import lavender.client.android.data.proto.DeleteThemeRequestProto
+import lavender.client.android.data.proto.DeleteThemeResponseProto
+import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.RemoveContactRequestProto
 import lavender.client.android.data.proto.RemoveContactResponseProto
 import lavender.client.android.data.proto.GetContactsRequestProto
@@ -1241,6 +1250,102 @@ object RealGrpcClient {
             }
         }, io.grpc.Metadata())
 
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getThemes(username: String, callback: (String, List<CustomThemeProto>) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = GetThemesRequestProto(username)
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetThemesRequestProto, GetThemesResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetThemes")
+            .setRequestMarshaller(GetThemesRequestMarshaller())
+            .setResponseMarshaller(GetThemesResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetThemesResponseProto>() {
+            override fun onMessage(message: GetThemesResponseProto) {
+                callback(message.currentThemeId, message.customThemes)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback("dark", emptyList())
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun saveTheme(username: String, theme: CustomThemeProto, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = SaveThemeRequestProto(username, theme)
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveThemeRequestProto, SaveThemeResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SaveTheme")
+            .setRequestMarshaller(SaveThemeRequestMarshaller())
+            .setResponseMarshaller(SaveThemeResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<SaveThemeResponseProto>() {
+            override fun onMessage(message: SaveThemeResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback(false, status.description ?: "Unknown error")
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun setCurrentTheme(username: String, themeId: String, callback: (Boolean) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = SetCurrentThemeRequestProto(username, themeId)
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SetCurrentThemeRequestProto, SetCurrentThemeResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SetCurrentTheme")
+            .setRequestMarshaller(SetCurrentThemeRequestMarshaller())
+            .setResponseMarshaller(SetCurrentThemeResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<SetCurrentThemeResponseProto>() {
+            override fun onMessage(message: SetCurrentThemeResponseProto) {
+                callback(message.success)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback(false)
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun deleteTheme(username: String, themeId: String, callback: (Boolean) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = DeleteThemeRequestProto(username, themeId)
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteThemeRequestProto, DeleteThemeResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteTheme")
+            .setRequestMarshaller(DeleteThemeRequestMarshaller())
+            .setResponseMarshaller(DeleteThemeResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<DeleteThemeResponseProto>() {
+            override fun onMessage(message: DeleteThemeResponseProto) {
+                callback(message.success)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback(false)
+            }
+        }, io.grpc.Metadata())
         call.sendMessage(request)
         call.halfClose()
         call.request(1)
@@ -2676,4 +2781,258 @@ class GetChatListVersionResponseMarshaller : io.grpc.MethodDescriptor.Marshaller
         }
         return GetChatListVersionResponseProto(version)
     }
+}
+
+class GetThemesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetThemesRequestProto> {
+    override fun stream(value: GetThemesRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetThemesRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
+            else cis.skipField(tag)
+        }
+        return GetThemesRequestProto(username)
+    }
+}
+
+class GetThemesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetThemesResponseProto> {
+    override fun stream(value: GetThemesResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.currentThemeId.isNotEmpty()) cos.writeString(1, value.currentThemeId)
+        for (theme in value.customThemes) {
+            cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            val tBaos = java.io.ByteArrayOutputStream()
+            val tCos = com.google.protobuf.CodedOutputStream.newInstance(tBaos)
+            writeTheme(tCos, theme)
+            tCos.flush()
+            val bytes = tBaos.toByteArray()
+            cos.writeUInt32NoTag(bytes.size)
+            cos.writeRawBytes(bytes)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetThemesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var currentId = ""
+        val themes = mutableListOf<CustomThemeProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> currentId = cis.readString()
+                2 -> themes.add(parseTheme(cis.readBytes().newInput()))
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetThemesResponseProto(currentId, themes)
+    }
+}
+
+class SaveThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveThemeRequestProto> {
+    override fun stream(value: SaveThemeRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        val tBaos = java.io.ByteArrayOutputStream()
+        val tCos = com.google.protobuf.CodedOutputStream.newInstance(tBaos)
+        writeTheme(tCos, value.theme)
+        tCos.flush()
+        val bytes = tBaos.toByteArray()
+        cos.writeUInt32NoTag(bytes.size)
+        cos.writeRawBytes(bytes)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): SaveThemeRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var theme = CustomThemeProto()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> theme = parseTheme(cis.readBytes().newInput())
+                else -> cis.skipField(tag)
+            }
+        }
+        return SaveThemeRequestProto(username, theme)
+    }
+}
+
+class SaveThemeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveThemeResponseProto> {
+    override fun stream(value: SaveThemeResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): SaveThemeResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return SaveThemeResponseProto(success, message)
+    }
+}
+
+class SetCurrentThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SetCurrentThemeRequestProto> {
+    override fun stream(value: SetCurrentThemeRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.themeId.isNotEmpty()) cos.writeString(2, value.themeId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): SetCurrentThemeRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var themeId = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> themeId = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return SetCurrentThemeRequestProto(username, themeId)
+    }
+}
+
+class SetCurrentThemeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SetCurrentThemeResponseProto> {
+    override fun stream(value: SetCurrentThemeResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): SetCurrentThemeResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return SetCurrentThemeResponseProto(success)
+    }
+}
+
+class DeleteThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteThemeRequestProto> {
+    override fun stream(value: DeleteThemeRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.themeId.isNotEmpty()) cos.writeString(2, value.themeId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): DeleteThemeRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var themeId = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> themeId = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return DeleteThemeRequestProto(username, themeId)
+    }
+}
+
+class DeleteThemeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteThemeResponseProto> {
+    override fun stream(value: DeleteThemeResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): DeleteThemeResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return DeleteThemeResponseProto(success)
+    }
+}
+
+private fun writeTheme(cos: com.google.protobuf.CodedOutputStream, theme: CustomThemeProto) {
+    if (theme.id.isNotEmpty()) cos.writeString(1, theme.id)
+    if (theme.name.isNotEmpty()) cos.writeString(2, theme.name)
+    if (theme.primaryColor.isNotEmpty()) cos.writeString(3, theme.primaryColor)
+    if (theme.onPrimaryColor.isNotEmpty()) cos.writeString(4, theme.onPrimaryColor)
+    if (theme.surfaceColor.isNotEmpty()) cos.writeString(5, theme.surfaceColor)
+    if (theme.onSurfaceColor.isNotEmpty()) cos.writeString(6, theme.onSurfaceColor)
+    if (theme.backgroundColor.isNotEmpty()) cos.writeString(7, theme.backgroundColor)
+    if (theme.textPrimaryColor.isNotEmpty()) cos.writeString(8, theme.textPrimaryColor)
+    if (theme.textSecondaryColor.isNotEmpty()) cos.writeString(9, theme.textSecondaryColor)
+    if (theme.isDark) cos.writeBool(10, theme.isDark)
+}
+
+private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
+    val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+    var id = ""
+    var name = ""
+    var primaryColor = ""
+    var onPrimaryColor = ""
+    var surfaceColor = ""
+    var onSurfaceColor = ""
+    var backgroundColor = ""
+    var textPrimaryColor = ""
+    var textSecondaryColor = ""
+    var isDark = false
+    while (!cis.isAtEnd) {
+        val tag = cis.readTag()
+        if (tag == 0) break
+        when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+            1 -> id = cis.readString()
+            2 -> name = cis.readString()
+            3 -> primaryColor = cis.readString()
+            4 -> onPrimaryColor = cis.readString()
+            5 -> surfaceColor = cis.readString()
+            6 -> onSurfaceColor = cis.readString()
+            7 -> backgroundColor = cis.readString()
+            8 -> textPrimaryColor = cis.readString()
+            9 -> textSecondaryColor = cis.readString()
+            10 -> isDark = cis.readBool()
+            else -> cis.skipField(tag)
+        }
+    }
+    return CustomThemeProto(id, name, primaryColor, onPrimaryColor, surfaceColor, onSurfaceColor, backgroundColor, textPrimaryColor, textSecondaryColor, isDark)
 }

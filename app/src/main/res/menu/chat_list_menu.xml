@@ -15,6 +15,11 @@
         app:showAsAction="always" />
 
     <item
+        android:id="@+id/action_themes"
+        android:title="@string/themes"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_toggle_language"
         android:title="@string/toggle_language"
         app:showAsAction="never" />

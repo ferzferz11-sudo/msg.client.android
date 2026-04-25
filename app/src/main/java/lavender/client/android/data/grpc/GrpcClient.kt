@@ -75,6 +75,22 @@ object GrpcClient {
         realGrpcClient.getChatListVersion(username, callback)
     }
 
+    fun getThemes(username: String, callback: (String, List<lavender.client.android.data.proto.CustomThemeProto>) -> Unit) {
+        realGrpcClient.getThemes(username, callback)
+    }
+
+    fun saveTheme(username: String, theme: lavender.client.android.data.proto.CustomThemeProto, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.saveTheme(username, theme, callback)
+    }
+
+    fun setCurrentTheme(username: String, themeId: String, callback: (Boolean) -> Unit) {
+        realGrpcClient.setCurrentTheme(username, themeId, callback)
+    }
+
+    fun deleteTheme(username: String, themeId: String, callback: (Boolean) -> Unit) {
+        realGrpcClient.deleteTheme(username, themeId, callback)
+    }
+
     fun createDirectChat(user1: String, user2: String, callback: (String?) -> Unit) {
         realGrpcClient.createDirectChat(user1, user2, callback)
     }

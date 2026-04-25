@@ -228,4 +228,26 @@
     <string name="no_contacts">Контактов пока нет. Добавьте кого-нибудь, чтобы начать общение!</string>
     <string name="remove_contact">Удалить контакт</string>
     <string name="remove_contact_confirm">Вы уверены, что хотите удалить %s из списка контактов?</string>
+    <string name="themes">Темы</string>
+    <string name="light_theme">Светлая тема</string>
+    <string name="dark_theme">Темная тема</string>
+    <string name="custom_themes">Пользовательские темы</string>
+    <string name="add_theme">Добавить тему</string>
+    <string name="edit_theme">Редактировать тему</string>
+    <string name="theme_name">Название темы</string>
+    <string name="primary_color">Основной цвет</string>
+    <string name="on_primary_color">Цвет на основном</string>
+    <string name="surface_color">Цвет поверхностей</string>
+    <string name="on_surface_color">Цвет на поверхностях</string>
+    <string name="background_color">Цвет фона</string>
+    <string name="text_primary_color">Основной цвет текста</string>
+    <string name="text_secondary_color">Вторичный цвет текста</string>
+    <string name="is_dark">Темная тема</string>
+    <string name="save_theme">Сохранить тему</string>
+    <string name="delete_theme">Удалить тему</string>
+    <string name="delete_theme_confirm">Вы уверены, что хотите удалить эту тему?</string>
+    <string name="theme_template_green">Зеленый лес</string>
+    <string name="theme_template_blue">Океанский синий</string>
+    <string name="theme_template_purple">Королевский пурпур</string>
+    <string name="theme_template_sunset">Закатный оранжевый</string>
 </resources>

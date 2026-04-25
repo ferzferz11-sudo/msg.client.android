@@ -652,6 +652,13 @@ class ChatListActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
+            R.id.action_themes -> {
+                val intent = Intent(this, ThemesActivity::class.java).apply {
+                    putExtra("username", username)
+                }
+                startActivity(intent)
+                true
+            }
             R.id.action_color_scheme -> {
                 toggleColorScheme()
                 true

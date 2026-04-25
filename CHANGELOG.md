@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1.49] - 2026-04-25
 
 ### Added
+- 🎨 **Dynamic Custom Themes**:
+  - Full support for creating, editing, and deleting custom color schemes.
+  - Live color preview in the theme editor.
+  - Theme templates (Green, Blue, Purple, Sunset) for quick customization.
+  - Automatic synchronization of chosen themes with the server.
+- 🚀 **Android Deployment Script**:
+  - Added `deploy_android.sh` to automate APK and version uploads to the production server.
 - 🔄 **Pull-to-Refresh**: Added ability to manually refresh the chat list by swiping down.
 - ⚡ **Optimized Synchronization**: Implemented chat list versioning to avoid unnecessary data fetching and improve performance.
 - 🖼️ **New Chat List Design**:

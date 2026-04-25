@@ -387,3 +387,54 @@ data class GetChatListVersionRequestProto(
 data class GetChatListVersionResponseProto(
     val version: Long = 0
 )
+
+// Themes management
+data class CustomThemeProto(
+    val id: String = "",
+    val name: String = "",
+    val primaryColor: String = "",
+    val onPrimaryColor: String = "",
+    val surfaceColor: String = "",
+    val onSurfaceColor: String = "",
+    val backgroundColor: String = "",
+    val textPrimaryColor: String = "",
+    val textSecondaryColor: String = "",
+    val isDark: Boolean = false
+)
+
+data class GetThemesRequestProto(
+    val username: String = ""
+)
+
+data class GetThemesResponseProto(
+    val currentThemeId: String = "",
+    val customThemes: List<CustomThemeProto> = emptyList()
+)
+
+data class SaveThemeRequestProto(
+    val username: String = "",
+    val theme: CustomThemeProto = CustomThemeProto()
+)
+
+data class SaveThemeResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class SetCurrentThemeRequestProto(
+    val username: String = "",
+    val themeId: String = ""
+)
+
+data class SetCurrentThemeResponseProto(
+    val success: Boolean = false
+)
+
+data class DeleteThemeRequestProto(
+    val username: String = "",
+    val themeId: String = ""
+)
+
+data class DeleteThemeResponseProto(
+    val success: Boolean = false
+)
