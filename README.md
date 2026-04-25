@@ -175,13 +175,12 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.53**
+Current version: **1.0.1.56**
 
-### Version 1.0.1.53 - Group Admin, Online Status, and UX Polishing
-- 👑 **Admin Powers**: Group creators can now moderate chats and manage members.
-- 🟢 **Live Status**: See who's online with real-time indicators everywhere.
-- 🗺️ **Smart Maps**: Automatic GPS location finding when sharing position.
-- ⚡ **Better UX**: Loading indicators and improved UI synchronization.
+### Version 1.0.1.56 - Advanced Search and Batch Management
+- 🔍 **Search Everywhere**: New search toggle in the toolbar for Chats and Contacts.
+- 👥 **Bulk Add**: Admins can now select multiple members to add to a group in one go.
+- 🟢 **Near-Instant Online**: Faster detection of user presence.
 
 ### Version 1.0.1.49 - Custom Themes and Performance Optimization
 - 🎨 **Custom Themes**: Create and manage your own color schemes with live preview.

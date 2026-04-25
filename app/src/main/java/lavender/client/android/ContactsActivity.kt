@@ -5,6 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Menu
+import android.view.MenuItem
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -58,6 +61,39 @@ class ContactsActivity : AppCompatActivity() {
         binding.addContactFab.setOnClickListener {
             showAddContactDialog()
         }
+
+        binding.searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().lowercase()
+                val filtered = if (query.isEmpty()) contacts else contacts.filter { it.lowercase().contains(query) }
+                adapter.setUsers(filtered)
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, 1, 0, R.string.search_users)
+            .setIcon(R.drawable.ic_search_custom)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1) {
+            binding.searchLayout.isVisible = !binding.searchLayout.isVisible
+            if (binding.searchLayout.isVisible) {
+                binding.searchEditText.requestFocus()
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(binding.searchEditText, InputMethodManager.SHOW_IMPLICIT)
+            } else {
+                binding.searchEditText.text?.clear()
+                adapter.setUsers(contacts)
+            }
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     private fun setupRecyclerView() {

@@ -5,6 +5,21 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.56] - 2026-04-25
+
+### Added
+- 🔍 **New Search UX**:
+  - Replaced all search icons with a modern custom search icon.
+  - Added a search toggle in the main chat list toolbar; the search bar is now hidden by default to save space.
+  - Implemented the same search behavior (toolbar toggle) for the Contacts screen.
+- 👥 **Batch Participant Management**:
+  - Admins can now select multiple contacts at once when adding them to a group.
+  - Integrated a new multi-select adapter with real-time online status indicators.
+
+### Fixed
+- 🟢 **Instant Status Updates**: Optimized the client-server handshake to ensure online status appears within 2-3 seconds of a user connecting.
+- ⏳ **Loading Feedback**: Buttons now show a progress spinner and disable correctly during participant addition.
+
 ## [1.0.1.53] - 2026-04-25
 
 ### Added

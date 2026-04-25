@@ -569,6 +569,18 @@ class ChatListActivity : AppCompatActivity() {
                 showCreateChatDialog()
                 true
             }
+            R.id.action_search -> {
+                binding.searchLayout.isVisible = !binding.searchLayout.isVisible
+                if (binding.searchLayout.isVisible) {
+                    binding.searchEditText.requestFocus()
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.showSoftInput(binding.searchEditText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                } else {
+                    binding.searchEditText.text?.clear()
+                    adapter.filter("")
+                }
+                true
+            }
             R.id.action_delete -> {
                 val selected = adapter.getSelectedChats()
                 if (selected.isNotEmpty()) {

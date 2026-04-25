@@ -962,32 +962,46 @@ object RealGrpcClient {
 
     fun addParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
-
         val request = AddParticipantRequestProto(chatId, username)
-
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddParticipantRequestProto, AddParticipantResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/AddParticipant")
             .setRequestMarshaller(AddParticipantRequestMarshaller())
             .setResponseMarshaller(AddParticipantResponseMarshaller())
             .build()
-
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<AddParticipantResponseProto>() {
-            override fun onMessage(message: AddParticipantResponseProto) {
-                callback(message.success, message.message)
-            }
-
+            override fun onMessage(message: AddParticipantResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(false, status.description ?: "Unknown error")
-                }
+                if (!status.isOk) callback(false, status.description ?: "Unknown error")
             }
         }, io.grpc.Metadata())
-
         call.sendMessage(request)
         call.halfClose()
-        call.request(1)
+    }
+
+    fun addParticipants(chatId: String, usernames: List<String>, callback: (Boolean, String) -> Unit) {
+        if (usernames.isEmpty()) {
+            callback(true, "No users to add")
+            return
+        }
+
+        var successCount = 0
+        var processedCount = 0
+        var lastError = ""
+
+        usernames.forEach { user ->
+            addParticipant(chatId, user) { success, msg ->
+                synchronized(this) {
+                    processedCount++
+                    if (success) successCount++ else lastError = msg
+                    
+                    if (processedCount == usernames.size) {
+                        callback(successCount > 0, if (successCount == usernames.size) "Added all users" else "Added $successCount users. Last error: $lastError")
+                    }
+                }
+            }
+        }
     }
 
     fun removeParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {

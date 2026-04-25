@@ -22,6 +22,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.RealGrpcClient
+import lavender.client.android.ui.adapter.SelectableUserAdapter
 import lavender.client.android.ui.adapter.UserAdapter
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -262,7 +263,6 @@ class ProfileActivity : AppCompatActivity() {
     private fun showAddParticipantDialog(contacts: List<String>) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
         
-        // Find title and update text
         val titleView = dialogView.findViewById<TextView>(R.id.dialogTitle)
         titleView?.text = getString(R.string.add)
 
@@ -275,22 +275,23 @@ class ProfileActivity : AppCompatActivity() {
         createChatCheckbox.isVisible = false
 
         val filteredUsers = mutableListOf<String>()
-        val userAdapter = UserAdapter(
-            onUserClick = { _ ->
-                btnAdd.isEnabled = true
-            },
-            avatarCache = grpcClient.getAvatarCache()
+        val selectableAdapter = SelectableUserAdapter(
+            avatarCache = grpcClient.getAvatarCache(),
+            onSelectionChanged = { count ->
+                btnAdd.isEnabled = count > 0
+                btnAdd.text = if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)
+            }
         )
 
-        usersRecyclerView.adapter = userAdapter
+        usersRecyclerView.adapter = selectableAdapter
         usersRecyclerView.layoutManager = LinearLayoutManager(this)
 
         filteredUsers.addAll(contacts)
-        userAdapter.setUsers(filteredUsers)
+        selectableAdapter.setUsers(filteredUsers)
 
         lifecycleScope.launch {
             grpcClient.users.collect { online ->
-                runOnUiThread { userAdapter.setOnlineUsers(online) }
+                runOnUiThread { selectableAdapter.setOnlineUsers(online) }
             }
         }
 
@@ -300,7 +301,7 @@ class ProfileActivity : AppCompatActivity() {
                 val query = s.toString().lowercase()
                 filteredUsers.clear()
                 filteredUsers.addAll(contacts.filter { it.lowercase().contains(query) })
-                userAdapter.setUsers(filteredUsers)
+                selectableAdapter.setUsers(filteredUsers)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -311,12 +312,14 @@ class ProfileActivity : AppCompatActivity() {
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
-            val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener
+            val selected = selectableAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@setOnClickListener
+            
             btnAdd.isEnabled = false
-            grpcClient.addParticipant(roomId, selected) { success, msg ->
+            grpcClient.addParticipants(roomId, selected) { success, msg ->
                 runOnUiThread {
                     if (success) {
-                        currentParticipants.add(selected)
+                        currentParticipants.addAll(selected)
                         loadProfileData()
                         dialog.dismiss()
                     } else {

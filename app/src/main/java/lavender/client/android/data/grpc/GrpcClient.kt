@@ -131,6 +131,14 @@ object GrpcClient {
         realGrpcClient.getUserAvatar(username, callback)
     }
 
+    fun addParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.addParticipant(chatId, username, callback)
+    }
+
+    fun addParticipants(chatId: String, usernames: List<String>, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.addParticipants(chatId, usernames, callback)
+    }
+
     fun deleteChat(chatId: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.deleteChat(chatId, callback)
     }

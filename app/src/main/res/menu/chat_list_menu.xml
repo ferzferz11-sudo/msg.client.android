@@ -9,6 +9,12 @@
         app:showAsAction="always" />
 
     <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search_custom"
+        android:title="@string/search_users"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/action_contacts"
         android:icon="@drawable/ic_contacts"
         android:title="@string/contacts"
