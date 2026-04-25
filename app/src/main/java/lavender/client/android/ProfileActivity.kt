@@ -3,26 +3,26 @@ package lavender.client.android
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.RelativeLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.RealGrpcClient
+import lavender.client.android.ui.adapter.UserAdapter
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.util.Locale
@@ -106,7 +106,8 @@ class ProfileActivity : AppCompatActivity() {
             // Participant Management
             val participantsCard = findViewById<View>(R.id.participantsCard)
             val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)
-            val addParticipantButton = findViewById<TextView>(R.id.addParticipantButton)
+            val addParticipantLayout = findViewById<LinearLayout>(R.id.addParticipantLayout)
+            val addParticipantProgress = findViewById<ProgressBar>(R.id.addParticipantProgress)
             
             participantsCard.isVisible = true
             
@@ -166,38 +167,31 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             if (grpcClient.getCurrentUsername() == creator) {
-                addParticipantButton.isVisible = true
-                addParticipantButton.setOnClickListener {
-                    grpcClient.loadAllUsers { allUsers ->
-                    val availableUsers = allUsers.filter { it !in currentParticipants }
+                addParticipantLayout.isVisible = true
+                addParticipantLayout.setOnClickListener {
+                    addParticipantLayout.isEnabled = false
+                    addParticipantProgress.isVisible = true
                     
-                    runOnUiThread {
-                        if (availableUsers.isEmpty()) {
-                            Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
-                            return@runOnUiThread
-                        }
+                    val currentMe = grpcClient.getCurrentUsername() ?: ""
+                    grpcClient.getContacts(currentMe) { allContacts ->
+                        val availableContacts = allContacts.filter { it !in currentParticipants }
                         
-                        AlertDialog.Builder(this)
-                            .setTitle(R.string.select_user)
-                            .setItems(availableUsers.toTypedArray()) { _, which ->
-                                val selectedUser = availableUsers[which]
-                                grpcClient.addParticipant(roomId, selectedUser) { success, msg ->
-                                    runOnUiThread {
-                                        if (success) {
-                                            currentParticipants.add(selectedUser)
-                                            loadProfileData() // Refresh UI
-                                        } else {
-                                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
+                        runOnUiThread {
+                            addParticipantLayout.isEnabled = true
+                            addParticipantProgress.isVisible = false
+                            
+                            if (availableContacts.isEmpty()) {
+                                Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
+                                return@runOnUiThread
                             }
-                            .setNegativeButton(R.string.cancel, null)
-                            .show()
+                            
+                            showAddParticipantDialog(availableContacts)
+                        }
                     }
                 }
+            } else {
+                addParticipantLayout.isVisible = false
             }
-        }
 
             findViewById<Button>(R.id.editProfileButton).apply {
                 text = getString(R.string.delete_group)
@@ -222,7 +216,7 @@ class ProfileActivity : AppCompatActivity() {
             grpcClient.getUserProfile(username) { profile ->
                 runOnUiThread {
                     if (profile != null) {
-                        profileBio.text = if (profile.bio.isNotEmpty()) profile.bio else getString(R.string.no_bio)
+                        profileBio.text = profile.bio.ifEmpty { getString(R.string.no_bio) }
                         
                         if (username == grpcClient.getCurrentUsername()) {
                             profileStatus.text = getString(R.string.connected)
@@ -263,6 +257,77 @@ class ProfileActivity : AppCompatActivity() {
         } else {
             profileAvatar.setImageResource(R.drawable.ic_default_avatar)
         }
+    }
+
+    private fun showAddParticipantDialog(contacts: List<String>) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
+        
+        // Find title and update text
+        val titleView = dialogView.findViewById<TextView>(R.id.dialogTitle)
+        titleView?.text = getString(R.string.add)
+
+        val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
+        val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
+        val createChatCheckbox = dialogView.findViewById<com.google.android.material.checkbox.MaterialCheckBox>(R.id.createChatCheckbox)
+        val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+
+        createChatCheckbox.isVisible = false
+
+        val filteredUsers = mutableListOf<String>()
+        val userAdapter = UserAdapter(
+            onUserClick = { _ ->
+                btnAdd.isEnabled = true
+            },
+            avatarCache = grpcClient.getAvatarCache()
+        )
+
+        usersRecyclerView.adapter = userAdapter
+        usersRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        filteredUsers.addAll(contacts)
+        userAdapter.setUsers(filteredUsers)
+
+        lifecycleScope.launch {
+            grpcClient.users.collect { online ->
+                runOnUiThread { userAdapter.setOnlineUsers(online) }
+            }
+        }
+
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().lowercase()
+                filteredUsers.clear()
+                filteredUsers.addAll(contacts.filter { it.lowercase().contains(query) })
+                userAdapter.setUsers(filteredUsers)
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnAdd.setOnClickListener {
+            val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener
+            btnAdd.isEnabled = false
+            grpcClient.addParticipant(roomId, selected) { success, msg ->
+                runOnUiThread {
+                    if (success) {
+                        currentParticipants.add(selected)
+                        loadProfileData()
+                        dialog.dismiss()
+                    } else {
+                        btnAdd.isEnabled = true
+                        Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     private fun showFullScreenImage(imageUrl: String) {

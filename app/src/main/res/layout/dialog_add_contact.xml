@@ -8,6 +8,7 @@
     android:background="?attr/colorSurfaceContainer">
 
     <TextView
+        android:id="@+id/dialogTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/add_contact"

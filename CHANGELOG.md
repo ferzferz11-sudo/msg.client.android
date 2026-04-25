@@ -5,6 +5,30 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.53] - 2026-04-25
+
+### Added
+- 👑 **Group Administration**:
+  - The group creator is now assigned the **Admin** role.
+  - Admins can now delete **any message** in the group chat for moderation.
+  - Added "(Admin)" label in the participant list for clarity.
+  - Participant management (add/remove) is now restricted to the Admin.
+- 🟢 **Real-time Online Status**:
+  - Implemented real-time online/offline indicators across all screens.
+  - Green/Gray dots on avatars in the chat list, contacts, and group info.
+  - Dynamic status text (Connected/Offline) in the chat toolbar.
+- 🗺️ **Enhanced Location Sharing**:
+  - Automated GPS permission requests when sharing location.
+  - The map now automatically centers on the user's current position.
+- ⏳ **Loading UX**:
+  - Added loading animations for the "Add Participant" button.
+  - Buttons now disable during background network operations to prevent multiple requests.
+
+### Fixed
+- 🔄 **UI Sync**: Improved synchronization between the theme toggle and the settings list.
+- 👥 **Participant List**: Fixed a bug where participants would duplicate in the group info screen.
+- 🎨 **Adaptive Colors**: Optimized contrast for custom themes to ensure text readability on all backgrounds.
+
 ## [1.0.1.51] - 2026-04-25
 
 ### Added
