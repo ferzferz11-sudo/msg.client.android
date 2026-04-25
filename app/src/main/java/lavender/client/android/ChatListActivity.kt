@@ -732,6 +732,8 @@ class ChatListActivity : AppCompatActivity() {
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
         val color = typedValue.data
         
+        menu.findItem(R.id.action_search)?.icon?.setTint(color)
+        
         binding.toolbar.overflowIcon = ContextCompat.getDrawable(this, R.drawable.ic_overflow_settings)?.apply {
             setTint(color)
         }

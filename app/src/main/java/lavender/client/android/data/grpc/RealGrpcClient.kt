@@ -174,7 +174,7 @@ object RealGrpcClient {
         return "${message.user}:${message.text}:${message.imageUrl}:${message.timestamp / 1000}"
     }
 
-    private fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
+    fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
         val currentChannel = channel ?: return
 
         android.util.Log.d("RealGrpcClient", "Loading history for room: $roomId")
@@ -303,10 +303,6 @@ object RealGrpcClient {
 
     fun clearSystemNotification() {
         _systemNotification.value = null
-    }
-
-    fun loadHistory(roomId: String) {
-        loadHistory(roomId) {}
     }
 
     fun setRoomId(roomId: String) {

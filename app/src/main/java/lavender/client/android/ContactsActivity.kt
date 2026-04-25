@@ -74,9 +74,15 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, R.string.search_users)
+        val searchItem = menu.add(0, 1, 0, R.string.search_users)
             .setIcon(R.drawable.ic_search_custom)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        
+        // Tint the search icon
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+        searchItem.icon?.setTint(typedValue.data)
+
         return true
     }
 

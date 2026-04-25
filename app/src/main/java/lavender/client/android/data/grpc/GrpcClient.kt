@@ -59,8 +59,8 @@ object GrpcClient {
         realGrpcClient.clearSystemNotification()
     }
 
-    fun loadHistory(roomId: String) {
-        realGrpcClient.loadHistory(roomId)
+    fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
+        realGrpcClient.loadHistory(roomId, onCompletion)
     }
 
     fun setRoomId(roomId: String) {

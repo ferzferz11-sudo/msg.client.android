@@ -101,6 +101,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var replyUser: TextView
     private lateinit var replyText: TextView
     private lateinit var cancelReply: ImageButton
+    private lateinit var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
     private lateinit var searchBar: LinearLayout
     private lateinit var searchInput: EditText
@@ -249,6 +250,7 @@ class NewChatActivity : AppCompatActivity() {
         forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent)
         messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
         attachButton = findViewById(R.id.attachButton)
@@ -391,6 +393,10 @@ class NewChatActivity : AppCompatActivity() {
             }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
+        
+        swipeRefreshLayout.setOnRefreshListener {
+            fullReloadHistory()
+        }
         messagesRecyclerView.adapter = adapter
 
         val swipeController = MessageSwipeController(this) { position ->
@@ -772,6 +778,16 @@ class NewChatActivity : AppCompatActivity() {
     private fun hideReplyPreview() {
         replyingTo = null
         replyPreview.isVisible = false
+    }
+
+    private fun fullReloadHistory() {
+        swipeRefreshLayout.isRefreshing = true
+        grpcClient.clearMessages() 
+        grpcClient.loadHistory(roomId) {
+            runOnUiThread {
+                swipeRefreshLayout.isRefreshing = false
+            }
+        }
     }
 
     private fun sendMessage(text: String, imageUrl: String) {

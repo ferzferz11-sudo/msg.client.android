@@ -119,12 +119,13 @@ class ProfileActivity : AppCompatActivity() {
                 val userView = layoutInflater.inflate(R.layout.item_participant, participantsContainer, false)
                 val nameText = userView.findViewById<TextView>(R.id.participantName)
                 
-                if (user == creator) {
-                    nameText.text = getString(R.string.selected_count, 1).replace("1", user) + " " + getString(R.string.admin_label)
-                    // The above was a hack, let's do it properly
-                    nameText.text = "$user ${getString(R.string.admin_label)}"
+                val trimmedUser = user.trim()
+                val trimmedCreator = creator.trim()
+
+                if (trimmedUser == trimmedCreator && trimmedCreator.isNotEmpty()) {
+                    nameText.text = "$trimmedUser ${getString(R.string.admin_label)}"
                 } else {
-                    nameText.text = user
+                    nameText.text = trimmedUser
                 }
                 
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)

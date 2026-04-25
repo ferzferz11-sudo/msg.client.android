@@ -16,6 +16,14 @@ METADATA_LOCAL="./app/build/outputs/apk/release/output-metadata.json"
 
 echo "🚀 Starting Android deployment to $REMOTE_HOST..."
 
+# 1. Build the release APK
+echo "🔨 Building Release APK..."
+./gradlew assembleRelease
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed! Please check Android Studio for errors."
+    exit 1
+fi
+
 if [ ! -f "$APK_LOCAL" ]; then
     echo "❌ Local build not found at $APK_LOCAL"
     echo "   Please build the release version in Android Studio first."

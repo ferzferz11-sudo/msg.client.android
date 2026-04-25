@@ -110,8 +110,16 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun loadThemes() {
         grpcClient.getThemes(username) { currentId, list ->
-            currentThemeId = currentId
             customThemes = list.toMutableList()
+            
+            // Only update currentThemeId if it's not already set locally from a recent change
+            val localThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", null)
+            if (localThemeId == null) {
+                currentThemeId = currentId
+            } else {
+                currentThemeId = localThemeId
+            }
+
             runOnUiThread {
                 updateUI()
             }

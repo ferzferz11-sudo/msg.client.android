@@ -49,6 +49,7 @@
         android:layout_marginBottom="8dp"
         android:visibility="gone"
         app:startIconDrawable="@drawable/ic_search_custom"
+        app:startIconTint="?attr/colorOnSurfaceVariant"
         app:hintEnabled="false"
         app:boxCornerRadiusTopStart="12dp"
         app:boxCornerRadiusTopEnd="12dp"
