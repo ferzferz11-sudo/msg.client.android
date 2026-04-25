@@ -24,7 +24,8 @@ data class MessageProto(
     val avatarUrl: String = "",
     val imageUrl: String = "",
     val edited: Boolean = false,
-    val clientVersion: String = ""
+    val clientVersion: String = "",
+    val isSuperAdmin: Boolean = false
 ) {
     class Builder {
         private var user: String = ""
@@ -41,6 +42,7 @@ data class MessageProto(
         private var avatarUrl: String = ""
         private var imageUrl: String = ""
         private var clientVersion: String = ""
+        private var isSuperAdmin: Boolean = false
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -113,6 +115,11 @@ data class MessageProto(
             return this
         }
 
+        fun setIsSuperAdmin(isSuperAdmin: Boolean): Builder {
+            this.isSuperAdmin = isSuperAdmin
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -120,7 +127,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin)
         }
     }
     
@@ -317,6 +324,14 @@ data class RemoveParticipantRequestProto(
 data class RemoveParticipantResponseProto(
     val success: Boolean = false,
     val message: String = ""
+)
+
+data class GetAllChatsRequestProto(
+    val dummy: Boolean = false
+)
+
+data class GetAllChatsResponseProto(
+    val chats: List<ChatInfoProto> = emptyList()
 )
 
 data class EditMessageRequestProto(

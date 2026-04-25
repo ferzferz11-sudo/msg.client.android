@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.Editable
@@ -21,6 +22,7 @@ import com.bumptech.glide.request.target.Target
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
+import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import lavender.client.android.ui.adapter.UserAdapter
@@ -40,7 +42,7 @@ class ProfileActivity : AppCompatActivity() {
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
     }
-    private val grpcClient = RealGrpcClient
+    private val grpcClient = GrpcClient
     private var username: String = ""
     private var avatarUrl: String = ""
     private var isGroup: Boolean = false
@@ -159,7 +161,14 @@ class ProfileActivity : AppCompatActivity() {
                     runOnUiThread { onComplete?.invoke() }
                 }
             } else {
-                runOnUiThread { onComplete?.invoke() }
+                // Room no longer exists (deleted)
+                runOnUiThread {
+                    if (isGroup && !isFinishing) {
+                        Toast.makeText(this@ProfileActivity, R.string.failed_to_delete_chats, Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                    onComplete?.invoke()
+                }
             }
         }
     }
@@ -167,70 +176,63 @@ class ProfileActivity : AppCompatActivity() {
     private fun loadProfileData() {
         if (isFinishing || isDestroyed) return
 
-        val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar)
-        val profileBio = findViewById<TextView>(R.id.profileBio)
-        val profileStatus = findViewById<TextView>(R.id.profileStatus)
+        val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar) ?: return
+        val profileBio = findViewById<TextView>(R.id.profileBio) ?: return
+        val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
 
         if (isGroup) {
             profileStatus.text = getString(R.string.group_chat)
             profileBio.text = getString(R.string.chat_id_format, roomId)
             
-            // Participant Management
             val participantsCard = findViewById<View>(R.id.participantsCard)
             val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)
             val addParticipantLayout = findViewById<LinearLayout>(R.id.addParticipantLayout)
             val addParticipantProgress = findViewById<ProgressBar>(R.id.addParticipantProgress)
             
-            participantsCard.isVisible = true
-            
-            // CRITICAL: Clear container to avoid duplication
-            participantsContainer.removeAllViews()
+            participantsCard?.isVisible = true
+            participantsContainer?.removeAllViews()
+
+            val currentMe = grpcClient.getCurrentUsername() ?: ""
+            val isMeAdmin = currentMe == creator && creator.isNotEmpty()
 
             for (user in currentParticipants) {
                 val userView = layoutInflater.inflate(R.layout.item_participant, participantsContainer, false)
                 val nameText = userView.findViewById<TextView>(R.id.participantName)
-                
-                val trimmedUser = user.trim()
-                val trimmedCreator = creator.trim()
-
-                if (trimmedUser == trimmedCreator && trimmedCreator.isNotEmpty()) {
-                    nameText.text = "$trimmedUser ${getString(R.string.admin_label)}"
-                } else {
-                    nameText.text = trimmedUser
-                }
-                
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
                 
+                val trimmedUser = user.trim()
+                val isAdminLabel = if (trimmedUser == creator.trim() && creator.isNotEmpty()) " ${getString(R.string.admin_label)}" else ""
+                nameText?.text = "$trimmedUser$isAdminLabel"
+                
                 val isOnline = grpcClient.users.value.contains(user)
-                statusDot.isVisible = true
-                statusDot.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
+                statusDot?.isVisible = true
+                statusDot?.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
 
                 grpcClient.getUserAvatar(user) { url ->
                     runOnUiThread {
-                        Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                        if (!isFinishing && avatarView != null) {
+                            Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                        }
                     }
                 }
 
-                val currentUsername = grpcClient.getCurrentUsername()
-                val isAdmin = currentUsername == creator
-
-                if (isAdmin && user != creator) {
+                if (isMeAdmin && user != creator) {
                     userView.setOnLongClickListener {
                         AlertDialog.Builder(this)
                             .setTitle(R.string.remove)
                             .setMessage(getString(R.string.remove_participant_confirm, user))
                             .setPositiveButton(R.string.remove) { _, _ ->
                                 val progressOverlay = findViewById<View>(R.id.progressOverlay)
-                                progressOverlay.isVisible = true
+                                progressOverlay?.isVisible = true
                                 grpcClient.removeParticipant(roomId, user) { success, msg ->
                                     if (success) {
                                         refreshParticipantsFromServer {
-                                            runOnUiThread { progressOverlay.isVisible = false }
+                                            runOnUiThread { progressOverlay?.isVisible = false }
                                         }
                                     } else {
                                         runOnUiThread {
-                                            progressOverlay.isVisible = false
+                                            progressOverlay?.isVisible = false
                                             Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
                                         }
                                     }
@@ -240,40 +242,33 @@ class ProfileActivity : AppCompatActivity() {
                         true
                     }
                 }
-                participantsContainer.addView(userView)
+                participantsContainer?.addView(userView)
             }
 
-            if (grpcClient.getCurrentUsername() == creator) {
-                addParticipantLayout.isVisible = true
-                addParticipantLayout.setOnClickListener {
+            if (isMeAdmin) {
+                addParticipantLayout?.isVisible = true
+                addParticipantLayout?.setOnClickListener {
                     addParticipantLayout.isEnabled = false
-                    addParticipantProgress.isVisible = true
+                    addParticipantProgress?.isVisible = true
                     
-                    val currentMe = grpcClient.getCurrentUsername() ?: ""
                     grpcClient.getContacts(currentMe) { allContacts ->
                         val availableContacts = allContacts.filter { it !in currentParticipants }
-                        
                         runOnUiThread {
                             addParticipantLayout.isEnabled = true
-                            addParticipantProgress.isVisible = false
-                            
+                            addParticipantProgress?.isVisible = false
                             if (availableContacts.isEmpty()) {
                                 Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
-                                return@runOnUiThread
+                            } else {
+                                showAddParticipantDialog(availableContacts)
                             }
-                            
-                            showAddParticipantDialog(availableContacts)
                         }
                     }
                 }
             } else {
-                addParticipantLayout.isVisible = false
+                addParticipantLayout?.isVisible = false
             }
 
-            val currentMe = grpcClient.getCurrentUsername()
-            val isMeAdmin = currentMe == creator && creator.isNotEmpty()
-
-            findViewById<Button>(R.id.editProfileButton).apply {
+            findViewById<Button>(R.id.editProfileButton)?.apply {
                 text = getString(R.string.delete_group)
                 isVisible = isMeAdmin
                 if (isMeAdmin) {
@@ -282,48 +277,37 @@ class ProfileActivity : AppCompatActivity() {
                             .setTitle(R.string.delete_group)
                             .setMessage(R.string.delete_group_confirm)
                             .setPositiveButton(R.string.delete) { _, _ ->
-                                val progressOverlay = findViewById<View>(R.id.progressOverlay)
-                                progressOverlay.isVisible = true
-                                grpcClient.deleteChat(roomId) { success, msg ->
-                                    runOnUiThread {
-                                        progressOverlay.isVisible = false
-                                        Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                                        if (success) finish()
-                                    }
+                                val intent = Intent(this@ProfileActivity, ChatListActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    putExtra("ACTION_DELETE_CHAT_ID", roomId)
+                                    putExtra("ACTION_DELETE_CHAT_NAME", username)
                                 }
+                                startActivity(intent)
+                                finish()
                             }
                             .setNegativeButton(R.string.cancel, null).show()
                     }
                 }
             }
         } else {
-            android.util.Log.d("ProfileActivity", "Loading profile for user: $username")
+            // User profile logic
             grpcClient.getUserProfile(username) { profile ->
                 runOnUiThread {
-                    if (profile != null) {
+                    if (!isFinishing && profile != null) {
                         profileBio.text = profile.bio.ifEmpty { getString(R.string.no_bio) }
-                        
-                        if (username == grpcClient.getCurrentUsername()) {
+                        val isOnline = username == grpcClient.getCurrentUsername() || grpcClient.users.value.contains(username)
+                        if (isOnline) {
                             profileStatus.text = getString(R.string.connected)
                             profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
                         } else {
-                            val isOnline = grpcClient.users.value.contains(username)
-                            if (isOnline) {
-                                profileStatus.text = getString(R.string.connected)
-                                profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
-                            } else {
-                                profileStatus.text = if (profile.status.isNotEmpty()) profile.status else getString(R.string.offline)
-                                val typedValue = android.util.TypedValue()
-                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-                                profileStatus.setTextColor(typedValue.data)
-                            }
+                            profileStatus.text = profile.status.ifEmpty { getString(R.string.offline) }
+                            val typedValue = android.util.TypedValue()
+                            theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                            profileStatus.setTextColor(typedValue.data)
                         }
                         if (profile.avatarUrl.isNotEmpty() && avatarUrl.isEmpty()) {
                             avatarUrl = profile.avatarUrl
-                            Glide.with(this@ProfileActivity)
-                                .load(avatarUrl)
-                                .placeholder(R.drawable.ic_default_avatar)
-                                .into(profileAvatar)
+                            Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
                         }
                     }
                 }
@@ -331,14 +315,8 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         if (avatarUrl.isNotEmpty()) {
-            Glide.with(this)
-                .load(avatarUrl)
-                .placeholder(R.drawable.ic_default_avatar)
-                .into(profileAvatar)
-            
-            profileAvatar.setOnClickListener {
-                showFullScreenImage(avatarUrl)
-            }
+            Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+            profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
         } else {
             profileAvatar.setImageResource(R.drawable.ic_default_avatar)
         }

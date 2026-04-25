@@ -312,6 +312,47 @@ class ChatListActivity : AppCompatActivity() {
                 requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
             }
         }
+
+        handleIncomingActions(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingActions(intent)
+    }
+
+    private fun handleIncomingActions(intent: Intent) {
+        val deleteChatId = intent.getStringExtra("ACTION_DELETE_CHAT_ID")
+        val deleteChatName = intent.getStringExtra("ACTION_DELETE_CHAT_NAME")
+        if (!deleteChatId.isNullOrEmpty()) {
+            performSingleChatDeletion(deleteChatId, deleteChatName ?: "")
+        }
+    }
+
+    private fun performSingleChatDeletion(chatId: String, chatName: String) {
+        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.delete)
+        binding.progressOverlay.isVisible = true
+        
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val deferred = kotlinx.coroutines.CompletableDeferred<Pair<Boolean, String>>()
+                grpcClient.deleteChat(chatId) { success, message ->
+                    deferred.complete(Pair(success, message))
+                }
+                deferred.await()
+            }
+            
+            runOnUiThread {
+                binding.progressOverlay.isVisible = false
+                if (result.first) {
+                    showToast(if (chatName.isNotEmpty()) getString(R.string.deleted_count, 1) + ": $chatName" else getString(R.string.deleted_count, 1))
+                    loadChats()
+                } else {
+                    showToast(result.second)
+                }
+            }
+        }
     }
 
     private fun loadAllUsers() {
@@ -822,7 +863,14 @@ class ChatListActivity : AppCompatActivity() {
         menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_logout)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_super_admin)?.apply { isVisible = !hasSelection && username == "ferz" }
+        
+        lifecycleScope.launch {
+            grpcClient.isSuperAdmin.collect { isAdmin ->
+                runOnUiThread {
+                    menu.findItem(R.id.action_super_admin)?.isVisible = !hasSelection && isAdmin
+                }
+            }
+        }
 
         // Force overflow icon and its tint
         val typedValue = TypedValue()

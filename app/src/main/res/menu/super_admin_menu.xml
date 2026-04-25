@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_show_users"
+        android:icon="@drawable/ic_group_search"
+        android:title="Users"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_show_groups"
+        android:icon="@drawable/ic_groups_2"
+        android:title="Groups"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search_custom"
+        android:title="Search"
+        app:showAsAction="always" />
+</menu>

@@ -18,7 +18,8 @@ data class Message(
     val isRead: Boolean = false,
     val avatarUrl: String = "",
     val imageUrl: String = "",
-    val edited: Boolean = false
+    val edited: Boolean = false,
+    val isSuperAdmin: Boolean = false
 )
 
 data class ChatInfo(

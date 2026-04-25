@@ -1,6 +1,7 @@
 package lavender.client.android.data.grpc
 
 import kotlinx.coroutines.flow.StateFlow
+import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.GetUserProfileResponseProto
 
@@ -13,6 +14,7 @@ object GrpcClient {
     val allUsers: StateFlow<List<String>> = realGrpcClient.allUsers
     val error: StateFlow<String?> = realGrpcClient.error
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
+    val isSuperAdmin: StateFlow<Boolean> = realGrpcClient.isSuperAdmin
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     
     var hasCheckedForUpdates: Boolean
@@ -67,7 +69,7 @@ object GrpcClient {
         realGrpcClient.setRoomId(roomId)
     }
 
-    fun getChats(username: String, callback: (List<lavender.client.android.data.models.ChatInfo>) -> Unit) {
+    fun getChats(username: String, callback: (List<ChatInfo>) -> Unit) {
         realGrpcClient.getChats(username, callback)
     }
 
@@ -95,6 +97,10 @@ object GrpcClient {
         realGrpcClient.updateChatName(chatId, newName, callback)
     }
 
+    fun removeParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.removeParticipant(chatId, username, callback)
+    }
+
     fun createDirectChat(user1: String, user2: String, callback: (String?) -> Unit) {
         realGrpcClient.createDirectChat(user1, user2, callback)
     }
@@ -109,6 +115,10 @@ object GrpcClient {
 
     fun loadAllUsers(callback: ((List<String>) -> Unit)? = null) {
         realGrpcClient.loadAllUsers(callback ?: {})
+    }
+
+    fun getAllChats(callback: (List<ChatInfo>) -> Unit) {
+        realGrpcClient.getAllChats(callback)
     }
 
     fun updateUsername(oldUsername: String, newUsername: String, callback: (Boolean, String) -> Unit) {
@@ -178,6 +188,8 @@ object GrpcClient {
     fun updateAvatarCache(username: String, avatarUrl: String) {
         realGrpcClient.updateAvatarCache(username, avatarUrl)
     }
+
+    fun getCurrentUsername(): String? = realGrpcClient.getCurrentUsername()
 
     fun clearMessages() {
         realGrpcClient.clearMessages()

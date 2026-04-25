@@ -25,6 +25,7 @@ object ProtoUtils {
             .setImageUrl(message.imageUrl)
             .setEdited(message.edited)
             .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
+            .setIsSuperAdmin(message.isSuperAdmin)
 
         // Add reactions
         message.reactions.forEach { reaction ->
@@ -52,7 +53,8 @@ object ProtoUtils {
             isRead = proto.isRead,
             avatarUrl = proto.avatarUrl,
             imageUrl = proto.imageUrl,
-            edited = proto.edited
+            edited = proto.edited,
+            isSuperAdmin = proto.isSuperAdmin
         )
     }
     

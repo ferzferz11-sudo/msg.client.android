@@ -71,6 +71,8 @@ import lavender.client.android.data.proto.EditMessageRequestProto
 import lavender.client.android.data.proto.EditMessageResponseProto
 import lavender.client.android.data.proto.UpdateChatNameRequestProto
 import lavender.client.android.data.proto.UpdateChatNameResponseProto
+import lavender.client.android.data.proto.GetAllChatsRequestProto
+import lavender.client.android.data.proto.GetAllChatsResponseProto
 import java.util.concurrent.TimeUnit
 
 object RealGrpcClient {
@@ -89,6 +91,9 @@ object RealGrpcClient {
     
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages
+
+    private val _isSuperAdmin = MutableStateFlow(false)
+    val isSuperAdmin: StateFlow<Boolean> = _isSuperAdmin
 
     fun updateMessage(message: Message) {
         _messages.update { currentList ->
@@ -177,6 +182,10 @@ object RealGrpcClient {
     }
 
     fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
+        if (roomId.isEmpty()) {
+            onComplete()
+            return
+        }
         val currentChannel = channel
         if (currentChannel == null) {
             onComplete()
@@ -317,6 +326,7 @@ object RealGrpcClient {
             channel = null
             currentServerAddress = null
             _connectionState.value = false
+            _isSuperAdmin.value = false
             sentMessageHashes.clear()
         } catch (_: Exception) {}
     }
@@ -352,8 +362,10 @@ object RealGrpcClient {
         lastJoinMessage = joinMessage
         lastOnMessageReceived = onMessageReceived
 
-        // Load history for the current room
-        loadHistory(currentRoomId)
+        // Load history for the current room if set
+        if (currentRoomId.isNotEmpty()) {
+            loadHistory(currentRoomId)
+        }
 
         // Load current user avatar
         getUserAvatar(username) { avatarUrl ->
@@ -377,6 +389,10 @@ object RealGrpcClient {
                             }
                             "AUTH_FAILED" -> {
                                 _systemNotification.value = "auth_failed"
+                                return
+                            }
+                            "SET_SUPER_ADMIN" -> {
+                                _isSuperAdmin.value = true
                                 return
                             }
                         }
@@ -1122,7 +1138,9 @@ object RealGrpcClient {
 
     fun deleteChat(chatId: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = channel
+        android.util.Log.d("RealGrpcClient", "deleteChat called for roomId: $chatId")
         if (currentChannel == null) {
+            android.util.Log.e("RealGrpcClient", "deleteChat failed: channel is null")
             callback(false, "Channel is null")
             return
         }
@@ -1139,10 +1157,12 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
             override fun onMessage(message: DeleteChatResponseProto) {
+                android.util.Log.d("RealGrpcClient", "deleteChat response: success=${message.success}")
                 callback(message.success, message.message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "deleteChat error: ${status.code} - ${status.description}")
                     callback(false, status.description ?: "Unknown error")
                 }
             }
@@ -1469,6 +1489,52 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun getAllChats(callback: (List<lavender.client.android.data.models.ChatInfo>) -> Unit) {
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(emptyList())
+            return
+        }
+
+        val request = GetAllChatsRequestProto()
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllChatsRequestProto, GetAllChatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetAllChats")
+            .setRequestMarshaller(GetAllChatsRequestMarshaller())
+            .setResponseMarshaller(GetAllChatsResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetAllChatsResponseProto>() {
+            override fun onMessage(message: GetAllChatsResponseProto) {
+                val chats = message.chats.map { proto ->
+                    lavender.client.android.data.models.ChatInfo(
+                        id = proto.id,
+                        name = proto.name,
+                        type = proto.type,
+                        participants = proto.participants,
+                        createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
+                        unreadCount = proto.unreadCount,
+                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
+                        creator = proto.creator
+                    )
+                }
+                callback(chats)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "GetAllChats failed: ${status.code} - ${status.description}")
+                    callback(emptyList())
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return avatarCache.toMap()
     }
@@ -1540,6 +1606,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.imageUrl.isNotEmpty()) cos.writeString(13, value.imageUrl)
         if (value.edited) cos.writeBool(14, value.edited)
         if (value.clientVersion.isNotEmpty()) cos.writeString(15, value.clientVersion)
+        if (value.isSuperAdmin) cos.writeBool(16, value.isSuperAdmin)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1560,6 +1627,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         var imageUrl = ""
         var edited = false
         var clientVersion = ""
+        var isSuperAdmin = false
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -1587,10 +1655,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 13 -> imageUrl = cis.readString()
                 14 -> edited = cis.readBool()
                 15 -> clientVersion = cis.readString()
+                16 -> isSuperAdmin = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion)
+        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin)
     }
 }
 
@@ -3174,6 +3243,41 @@ class UpdateChatNameResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upd
             }
         }
         return UpdateChatNameResponseProto(success, message)
+    }
+}
+
+class GetAllChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAllChatsRequestProto> {
+    override fun stream(value: GetAllChatsRequestProto): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+    override fun parse(stream: java.io.InputStream): GetAllChatsRequestProto = GetAllChatsRequestProto()
+}
+
+class GetAllChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAllChatsResponseProto> {
+    override fun stream(value: GetAllChatsResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        val chatMarshaller = ChatInfoMarshaller()
+        for (chat in value.chats) {
+            val chatBytes = chatMarshaller.stream(chat).readBytes()
+            cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            cos.writeUInt32NoTag(chatBytes.size)
+            cos.writeRawBytes(chatBytes)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetAllChatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val chats = mutableListOf<ChatInfoProto>()
+        val chatMarshaller = ChatInfoMarshaller()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val length = cis.readUInt32()
+                chats.add(chatMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
+            } else cis.skipField(tag)
+        }
+        return GetAllChatsResponseProto(chats)
     }
 }
 
