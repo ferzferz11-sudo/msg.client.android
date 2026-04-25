@@ -91,6 +91,10 @@ object GrpcClient {
         realGrpcClient.deleteTheme(username, themeId, callback)
     }
 
+    fun updateChatName(chatId: String, newName: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.updateChatName(chatId, newName, callback)
+    }
+
     fun createDirectChat(user1: String, user2: String, callback: (String?) -> Unit) {
         realGrpcClient.createDirectChat(user1, user2, callback)
     }

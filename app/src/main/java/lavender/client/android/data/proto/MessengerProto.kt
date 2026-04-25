@@ -329,6 +329,16 @@ data class EditMessageResponseProto(
     val message: String = ""
 )
 
+data class UpdateChatNameRequestProto(
+    val chatId: String = "",
+    val newName: String = ""
+)
+
+data class UpdateChatNameResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
 // Get User Avatar Request/Response
 data class GetUserAvatarRequestProto(
     val username: String = ""

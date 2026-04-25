@@ -156,6 +156,7 @@
     <string name="failed_to_delete_chats">Не удалось удалить чаты</string>
     <string name="add_chat">Добавить чат</string>
     <string name="create_group">Создать группу</string>
+    <string name="default_group_name">Группа</string>
     <string name="enter_group_name">Название группы (необязательно)</string>
     <string name="create">Создать</string>
     <string name="select_at_least_one_user">Пожалуйста, выберите хотя бы одного пользователя</string>

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1.60] - 2026-04-26
 
+### Added
+- 📝 **Group Name Management**:
+  - Group name now defaults to "Group" (or "Группа") if not specified during creation.
+  - Admins can now edit the group name directly by tapping on it in the Group Info screen.
+  - Real-time synchronization of group name updates across all participants via chat list versioning.
+
 ### Fixed
 - 🛡️ **Admin Safety**: Restricted the "Delete Group" button to group admins only to prevent crashes (NPE) and unauthorized deletion attempts.
 - 🔄 **FAB Animation Fix**: Resolved issue where the "Add Chat" floating button wouldn't stop spinning after the creation dialog was loaded.

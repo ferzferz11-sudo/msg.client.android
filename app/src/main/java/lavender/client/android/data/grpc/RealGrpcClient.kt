@@ -1436,6 +1436,30 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun updateChatName(chatId: String, newName: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = UpdateChatNameRequestProto(chatId, newName)
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatNameRequestProto, UpdateChatNameResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/UpdateChatName")
+            .setRequestMarshaller(UpdateChatNameRequestMarshaller())
+            .setResponseMarshaller(UpdateChatNameResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<UpdateChatNameResponseProto>() {
+            override fun onMessage(message: UpdateChatNameResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback(false, status.description ?: "Unknown error")
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return avatarCache.toMap()
     }
@@ -3089,6 +3113,58 @@ class DeleteThemeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Delete
             else cis.skipField(tag)
         }
         return DeleteThemeResponseProto(success)
+    }
+}
+
+class UpdateChatNameRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateChatNameRequestProto> {
+    override fun stream(value: UpdateChatNameRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.chatId.isNotEmpty()) cos.writeString(1, value.chatId)
+        if (value.newName.isNotEmpty()) cos.writeString(2, value.newName)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): UpdateChatNameRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var chatId = ""
+        var newName = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> chatId = cis.readString()
+                2 -> newName = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateChatNameRequestProto(chatId, newName)
+    }
+}
+
+class UpdateChatNameResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateChatNameResponseProto> {
+    override fun stream(value: UpdateChatNameResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): UpdateChatNameResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateChatNameResponseProto(success, message)
     }
 }
 

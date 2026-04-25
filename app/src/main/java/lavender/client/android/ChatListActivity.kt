@@ -1068,11 +1068,7 @@ class ChatListActivity : AppCompatActivity() {
                             createDirectChat(selectedUsers.first())
                         } else {
                             // Create group chat
-                            val finalGroupName = if (groupName.isEmpty()) {
-                                (selectedUsers + username).joinToString(", ")
-                            } else {
-                                groupName
-                            }
+                            val finalGroupName = groupName.ifEmpty { getString(R.string.default_group_name) }
                             dialog.dismiss()
                             createGroupChat(finalGroupName, (selectedUsers + username).toList())
                         }

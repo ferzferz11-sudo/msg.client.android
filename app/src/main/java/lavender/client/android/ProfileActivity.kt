@@ -82,6 +82,42 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         profileName.text = username
+        if (isGroup) {
+            val currentMe = grpcClient.getCurrentUsername()
+            val isMeAdmin = currentMe == creator && creator.isNotEmpty()
+            if (isMeAdmin) {
+                profileName.setOnClickListener {
+                    val editName = EditText(this).apply {
+                        setText(username)
+                        setSelection(username.length)
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.edit_message)
+                        .setView(editName)
+                        .setPositiveButton(R.string.change) { _, _ ->
+                            val newName = editName.text.toString().trim()
+                            if (newName.isNotEmpty() && newName != username) {
+                                val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                                progressOverlay.isVisible = true
+                                grpcClient.updateChatName(roomId, newName) { success, msg ->
+                                    runOnUiThread {
+                                        progressOverlay.isVisible = false
+                                        if (success) {
+                                            username = newName
+                                            profileName.text = newName
+                                            Toast.makeText(this@ProfileActivity, R.string.message_edited, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .setNegativeButton(R.string.cancel, null)
+                        .show()
+                }
+            }
+        }
 
         lifecycleScope.launch {
             grpcClient.users.collect {
