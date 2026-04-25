@@ -940,6 +940,7 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 binding.addChatFab.isEnabled = true
                 binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                binding.addChatFab.clearAnimation()
                 clearMenuAnimations()
                 invalidateOptionsMenu()
             }
@@ -965,8 +966,7 @@ class ChatListActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     binding.progressOverlay.isVisible = false
-                    clearMenuAnimations()
-                    invalidateOptionsMenu()
+                    resetButtons()
                     val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
 
                     // Set dialog background using Material Design colors
@@ -1044,10 +1044,7 @@ class ChatListActivity : AppCompatActivity() {
                     val dialog = AlertDialog.Builder(this@ChatListActivity)
                         .setView(dialogView)
                         .setOnDismissListener {
-                            binding.addChatFab.isEnabled = true
-                            binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
-                            clearMenuAnimations()
-                            invalidateOptionsMenu()
+                            resetButtons()
                         }
                         .create()
 
@@ -1141,6 +1138,7 @@ class ChatListActivity : AppCompatActivity() {
             .setOnDismissListener {
                 binding.addChatFab.isEnabled = true
                 binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
+                binding.addChatFab.clearAnimation()
                 clearMenuAnimations()
                 invalidateOptionsMenu()
             }

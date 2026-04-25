@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - 🛡️ **Admin Safety**: Restricted the "Delete Group" button to group admins only to prevent crashes (NPE) and unauthorized deletion attempts.
+- 🔄 **FAB Animation Fix**: Resolved issue where the "Add Chat" floating button wouldn't stop spinning after the creation dialog was loaded.
 
 ## [1.0.1.59] - 2026-04-26
 
