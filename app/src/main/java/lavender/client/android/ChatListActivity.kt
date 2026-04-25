@@ -20,6 +20,7 @@ import android.view.View
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
@@ -47,6 +48,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
+import lavender.client.android.ui.viewmodel.ChatListViewModel
 import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
@@ -80,12 +82,12 @@ class ChatListActivity : AppCompatActivity() {
 
     private lateinit var adapter: ChatAdapter
     private val grpcClient = GrpcClient
+    private val viewModel: ChatListViewModel by viewModels()
     private var username: String = ""
     private var password: String = ""
     private var downloadJob: Job? = null
     private var colorSchemeMenuItem: MenuItem? = null
     private var currentTheme: String? = null
-    private var currentChats: List<ChatInfo> = emptyList()
 
     private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
         val toast = Toast.makeText(this, message, duration)
@@ -202,10 +204,14 @@ class ChatListActivity : AppCompatActivity() {
                 }
             },
             currentUsername = username,
-            initialAvatarCache = grpcClient.getAvatarCache()
+            initialAvatarCache = viewModel.avatarCache.ifEmpty { grpcClient.getAvatarCache() }
         )
         binding.chatsRecyclerView.adapter = adapter
         binding.chatsRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            refreshChats(true)
+        }
 
         // Observe system notifications for auth failures
         lifecycleScope.launch {
@@ -224,7 +230,15 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        loadChats()
+        if (viewModel.isInitialLoadComplete) {
+            binding.swipeRefreshLayout.isRefreshing = false
+            adapter.setChats(viewModel.currentChats)
+            binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
+            binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
+        } else {
+            loadChats()
+        }
+
         loadAllUsers()
         startPollingChats()
 
@@ -290,51 +304,7 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             while (isActive) {
                 delay(3000) // Poll every 3 seconds for faster updates
-                grpcClient.getChats(username) { chats ->
-                    if (chats.isNotEmpty()) {
-                        val sortedChats = chats.sortedByDescending { it.lastMessageTime }
-                        // Check if chats have actually changed
-                        val chatsChanged = currentChats.size != sortedChats.size ||
-                                currentChats.zip(sortedChats).any { (old, new) ->
-                                    old.id != new.id ||
-                                    old.name != new.name ||
-                                    old.type != new.type ||
-                                    old.unreadCount != new.unreadCount ||
-                                    old.lastMessageTime != new.lastMessageTime
-                                }
-
-                        if (chatsChanged) {
-                            currentChats = sortedChats
-                            runOnUiThread {
-                                adapter.setChats(sortedChats)
-                            }
-                        }
-
-                        // Load avatars in background
-                        val allParticipants = mutableSetOf<String>()
-                        for (chat in sortedChats) {
-                            if (chat.participants.isNotEmpty()) {
-                                try {
-                                    val participants = JSONArray(chat.participants)
-                                    for (i in 0 until participants.length()) {
-                                        allParticipants.add(participants.optString(i))
-                                    }
-                                } catch (_: Exception) {}
-                            }
-                        }
-
-                        for (participant in allParticipants) {
-                            grpcClient.getUserAvatar(participant) { avatarUrl ->
-                                if (avatarUrl.isEmpty()) {
-                                    grpcClient.updateAvatarCache(participant, "")
-                                }
-                                runOnUiThread {
-                                    adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                                }
-                            }
-                        }
-                    }
-                }
+                refreshChats(false)
             }
         }
     }
@@ -349,49 +319,58 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
-        // Refresh chats immediately when returning from chat
-        grpcClient.getChats(username) { chats ->
-            if (chats.isNotEmpty()) {
-                val sortedChats = chats.sortedByDescending { it.lastMessageTime }
-                // Check if chats have actually changed
-                val chatsChanged = currentChats.size != sortedChats.size ||
-                        currentChats.zip(sortedChats).any { (old, new) ->
-                            old.id != new.id ||
-                            old.name != new.name ||
-                            old.type != new.type ||
-                            old.unreadCount != new.unreadCount ||
-                            old.createdAt != new.createdAt
-                        }
+        // Refresh chats immediately when returning from chat if version changed
+        refreshChats(false)
+    }
 
-                if (chatsChanged) {
-                    currentChats = sortedChats
+    private fun refreshChats(isManual: Boolean = false) {
+        if (isManual) {
+            binding.swipeRefreshLayout.isRefreshing = true
+        }
+        
+        grpcClient.getChatListVersion(username) { version ->
+            if (isManual || version > viewModel.lastChatListVersion) {
+                Log.d("ChatList", "Refreshing chats (Manual: $isManual, version: $version)")
+                grpcClient.getChats(username) { chats ->
+                    val sortedChats = chats.sortedByDescending { it.lastMessageTime }
+                    viewModel.currentChats = sortedChats
+                    viewModel.lastChatListVersion = version
+                    
                     runOnUiThread {
+                        binding.swipeRefreshLayout.isRefreshing = false
                         adapter.setChats(sortedChats)
+                        binding.welcomeContainer.isVisible = sortedChats.isEmpty()
+                        binding.chatsRecyclerView.isVisible = sortedChats.isNotEmpty()
                     }
-                }
 
-                // Load avatars in background
-                val allParticipants = mutableSetOf<String>()
-                for (chat in sortedChats) {
-                    if (chat.participants.isNotEmpty()) {
-                        try {
-                            val participants = JSONArray(chat.participants)
-                            for (i in 0 until participants.length()) {
-                                allParticipants.add(participants.optString(i))
+                    // Load avatars in background
+                    val allParticipants = mutableSetOf<String>()
+                    for (chat in sortedChats) {
+                        if (chat.participants.isNotEmpty()) {
+                            try {
+                                val participants = JSONArray(chat.participants)
+                                for (i in 0 until participants.length()) {
+                                    allParticipants.add(participants.optString(i))
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+
+                    for (participant in allParticipants) {
+                        grpcClient.getUserAvatar(participant) { avatarUrl ->
+                            if (avatarUrl.isEmpty()) {
+                                grpcClient.updateAvatarCache(participant, "")
                             }
-                        } catch (_: Exception) {}
+                            viewModel.avatarCache = grpcClient.getAvatarCache()
+                            runOnUiThread {
+                                adapter.updateAvatarCache(viewModel.avatarCache)
+                            }
+                        }
                     }
                 }
-
-                for (participant in allParticipants) {
-                    grpcClient.getUserAvatar(participant) { avatarUrl ->
-                        if (avatarUrl.isEmpty()) {
-                            grpcClient.updateAvatarCache(participant, "")
-                        }
-                        runOnUiThread {
-                            adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                        }
-                    }
+            } else {
+                runOnUiThread {
+                    binding.swipeRefreshLayout.isRefreshing = false
                 }
             }
         }
@@ -458,15 +437,18 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             grpcClient.getChats(username) { chats ->
-                runOnUiThread {
-                    binding.progressOverlay.isVisible = false
-                    // Show/hide welcome message
-                    binding.welcomeContainer.isVisible = chats.isEmpty()
-                    binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
+                grpcClient.getChatListVersion(username) { version ->
+                    viewModel.lastChatListVersion = version
+                    runOnUiThread {
+                        binding.swipeRefreshLayout.isRefreshing = false
+                        binding.progressOverlay.isVisible = false
+                        // Show/hide welcome message
+                        binding.welcomeContainer.isVisible = chats.isEmpty()
+                        binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
 
-                    if (chats.isNotEmpty()) {
                         val sortedChats = chats.sortedByDescending { it.lastMessageTime }
-                        currentChats = sortedChats
+                        viewModel.currentChats = sortedChats
+                        viewModel.isInitialLoadComplete = true
                         adapter.setChats(sortedChats)
                         
                         // Load avatars in background
@@ -485,8 +467,9 @@ class ChatListActivity : AppCompatActivity() {
                         for (participant in allParticipants) {
                             grpcClient.getUserAvatar(participant) { avatarUrl ->
                                 grpcClient.updateAvatarCache(participant, avatarUrl)
+                                viewModel.avatarCache = grpcClient.getAvatarCache()
                                 runOnUiThread {
-                                    adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                                    adapter.updateAvatarCache(viewModel.avatarCache)
                                 }
                             }
                         }

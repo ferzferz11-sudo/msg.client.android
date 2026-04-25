@@ -5,7 +5,18 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1.47] - 2026-04-25
+## [1.0.1.49] - 2026-04-25
+
+### Added
+- 🔄 **Pull-to-Refresh**: Added ability to manually refresh the chat list by swiping down.
+- ⚡ **Optimized Synchronization**: Implemented chat list versioning to avoid unnecessary data fetching and improve performance.
+- 🖼️ **New Chat List Design**:
+  - Avatars are now located on the left side of the list item.
+  - **Direct Chats**: Displays a larger avatar of the other person only. The chat name now shows only the contact's name.
+  - **Group Chats**: Displays small overlapping avatars of participants on the left.
+- 💾 **State Preservation**: Injected `ChatListViewModel` to maintain chat data and scroll position across orientation changes.
+
+## [1.0.1.48] - 2026-04-25
 
 ### Added
 - 👥 **Contact Management**:

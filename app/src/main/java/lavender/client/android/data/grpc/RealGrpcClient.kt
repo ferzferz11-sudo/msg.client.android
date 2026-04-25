@@ -50,6 +50,8 @@ import lavender.client.android.data.proto.AddParticipantRequestProto
 import lavender.client.android.data.proto.AddParticipantResponseProto
 import lavender.client.android.data.proto.AddContactRequestProto
 import lavender.client.android.data.proto.AddContactResponseProto
+import lavender.client.android.data.proto.GetChatListVersionRequestProto
+import lavender.client.android.data.proto.GetChatListVersionResponseProto
 import lavender.client.android.data.proto.RemoveContactRequestProto
 import lavender.client.android.data.proto.RemoveContactResponseProto
 import lavender.client.android.data.proto.GetContactsRequestProto
@@ -1206,6 +1208,35 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     callback(emptyList())
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getChatListVersion(username: String, callback: (Long) -> Unit) {
+        val currentChannel = channel ?: return
+
+        val request = GetChatListVersionRequestProto(username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatListVersionRequestProto, GetChatListVersionResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetChatListVersion")
+            .setRequestMarshaller(GetChatListVersionRequestMarshaller())
+            .setResponseMarshaller(GetChatListVersionResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetChatListVersionResponseProto>() {
+            override fun onMessage(message: GetChatListVersionResponseProto) {
+                callback(message.version)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(0L)
                 }
             }
         }, io.grpc.Metadata())
@@ -2602,5 +2633,47 @@ class GetContactsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetCon
             } else cis.skipField(tag)
         }
         return GetContactsResponseProto(contacts)
+    }
+}
+
+class GetChatListVersionRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatListVersionRequestProto> {
+    override fun stream(value: GetChatListVersionRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetChatListVersionRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
+            else cis.skipField(tag)
+        }
+        return GetChatListVersionRequestProto(username)
+    }
+}
+
+class GetChatListVersionResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatListVersionResponseProto> {
+    override fun stream(value: GetChatListVersionResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.version != 0L) cos.writeInt64(1, value.version)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): GetChatListVersionResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var version = 0L
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) version = cis.readInt64()
+            else cis.skipField(tag)
+        }
+        return GetChatListVersionResponseProto(version)
     }
 }

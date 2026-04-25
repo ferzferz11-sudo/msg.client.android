@@ -71,6 +71,10 @@ object GrpcClient {
         realGrpcClient.getChats(username, callback)
     }
 
+    fun getChatListVersion(username: String, callback: (Long) -> Unit) {
+        realGrpcClient.getChatListVersion(username, callback)
+    }
+
     fun createDirectChat(user1: String, user2: String, callback: (String?) -> Unit) {
         realGrpcClient.createDirectChat(user1, user2, callback)
     }

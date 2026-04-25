@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.47**
+Current version: **1.0.1.49**
+
+### Version 1.0.1.49 - Optimized Chat List and Pull-to-Refresh
+- 🔄 **Pull-to-Refresh**: Swipe down to manually update your chat list.
+- ⚡ **Versioning System**: Faster loading by only fetching data when changes occur.
+- 🖼️ **Left-aligned Avatars**: Improved chat list layout with avatars on the left.
+- 👤 **Clean Direct Chats**: Larger avatars for contacts and cleaner names (showing only the contact).
 
 ### Version 1.0.1.47 - Contact Management and UUID Architecture
 - 👥 **Contacts**: Added a full-featured contact management system.

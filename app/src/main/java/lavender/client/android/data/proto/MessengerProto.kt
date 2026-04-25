@@ -379,3 +379,11 @@ data class GetContactsRequestProto(
 data class GetContactsResponseProto(
     val contacts: List<String> = emptyList()
 )
+
+data class GetChatListVersionRequestProto(
+    val username: String = ""
+)
+
+data class GetChatListVersionResponseProto(
+    val version: Long = 0
+)

@@ -128,11 +128,21 @@ class ChatAdapter(
                 itemView.alpha = 1.0f
             }
             val isRussian = context.resources.configuration.locales[0].language == "ru"
-            chatType.text = when (chat.type) {
-                "general" -> if (isRussian) "Общий чат" else "General Chat"
-                "direct" -> if (isRussian) "Личное сообщение" else "Direct Message"
-                "group" -> if (isRussian) "Группа" else "Group"
-                else -> chat.type
+            
+            if (chat.type == "direct") {
+                val participantsArray = JSONArray(chat.participants)
+                val otherPerson = (0 until participantsArray.length())
+                    .map { participantsArray.getString(it) }
+                    .find { it != currentUsername } ?: chat.name
+                chatName.text = otherPerson
+                chatType.text = if (isRussian) "Личное сообщение" else "Direct Message"
+            } else {
+                chatName.text = chat.name
+                chatType.text = when (chat.type) {
+                    "general" -> if (isRussian) "Общий чат" else "General Chat"
+                    "group" -> if (isRussian) "Группа" else "Group"
+                    else -> chat.type
+                }
             }
 
             unreadCount.isVisible = chat.unreadCount > 0
@@ -141,7 +151,7 @@ class ChatAdapter(
             }
 
             // Load participant avatars
-            loadParticipantAvatars(chat.participants, currentUsername, avatarCache)
+            loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache)
 
             itemView.setOnClickListener {
                 onChatClick(chat)
@@ -152,67 +162,88 @@ class ChatAdapter(
             }
         }
 
-        private fun loadParticipantAvatars(participantsJson: String, @Suppress("UNUSED_PARAMETER") currentUsername: String, avatarCache: Map<String, String>) {
+        private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>) {
             participantAvatars.removeAllViews()
 
             if (participantsJson.isEmpty()) return
 
             try {
-                val participants = JSONArray(participantsJson)
-                val maxAvatars = 3 // Show max 3 avatars
-                val avatarSize = 96 // Avatar size in dp
+                val participantsArray = JSONArray(participantsJson)
+                val participantsList = mutableListOf<String>()
+                for (i in 0 until participantsArray.length()) {
+                    participantsList.add(participantsArray.getString(i))
+                }
 
-                // Show participant avatars for both direct and group chats
-                for (i in 0 until minOf(participants.length(), maxAvatars)) {
-                    val username = participants.getString(i)
-
-                    // Create avatar ImageView
-                    val avatar = ImageView(itemView.context).apply {
-                        layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize).apply {
-                            if (i > 0) {
-                                setMargins(-8, 0, 0, 0) // Overlap avatars
-                            }
-                        }
+                val context = itemView.context
+                
+                if (chatType == "direct") {
+                    // Larger avatar of the OTHER person
+                    val otherPerson = participantsList.find { it != currentUsername } ?: currentUsername
+                    val avatarSize = 52.dpToPx()
+                    
+                    val avatar = ImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
                         scaleType = ImageView.ScaleType.CENTER_CROP
                     }
 
-                    // Check if avatar is in cache
-                    val cachedAvatarUrl = avatarCache[username]
-
-                    // Load avatar with placeholder
+                    val cachedAvatarUrl = avatarCache[otherPerson]
                     if (!cachedAvatarUrl.isNullOrBlank()) {
-                        Glide.with(itemView.context)
+                        Glide.with(context)
                             .load(cachedAvatarUrl)
                             .placeholder(R.drawable.ic_default_avatar)
                             .error(R.drawable.ic_default_avatar)
                             .circleCrop()
                             .into(avatar)
                     } else {
-                        // Show default avatar if not in cache
                         avatar.setImageResource(R.drawable.ic_default_avatar)
                     }
-
                     participantAvatars.addView(avatar)
-                }
+                } else {
+                    // Group chat: small overlapping avatars on the left
+                    val maxAvatars = 3
+                    val avatarSize = 40.dpToPx()
 
-                // If there are more participants, show count indicator
-                if (participants.length() > maxAvatars) {
-                    val remainingCount = participants.length() - maxAvatars
-                    val countView = TextView(itemView.context).apply {
-                        layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize).apply {
-                            setMargins(-8, 0, 0, 0)
+                    for (i in 0 until minOf(participantsList.size, maxAvatars)) {
+                        val username = participantsList[i]
+                        val avatar = ImageView(context).apply {
+                            layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize).apply {
+                                if (i > 0) setMargins(-15.dpToPx(), 0, 0, 0)
+                            }
+                            scaleType = ImageView.ScaleType.CENTER_CROP
                         }
-                        text = context.getString(R.string.selected_count, remainingCount)
-                        textSize = 10f
-                        gravity = android.view.Gravity.CENTER
-                        setTextColor(android.graphics.Color.WHITE)
-                        setBackgroundResource(R.drawable.unread_count_background)
+
+                        val cachedAvatarUrl = avatarCache[username]
+                        if (!cachedAvatarUrl.isNullOrBlank()) {
+                            Glide.with(context)
+                                .load(cachedAvatarUrl)
+                                .placeholder(R.drawable.ic_default_avatar)
+                                .error(R.drawable.ic_default_avatar)
+                                .circleCrop()
+                                .into(avatar)
+                        } else {
+                            avatar.setImageResource(R.drawable.ic_default_avatar)
+                        }
+                        participantAvatars.addView(avatar)
                     }
-                    participantAvatars.addView(countView)
+
+                    if (participantsList.size > maxAvatars) {
+                        val remainingCount = participantsList.size - maxAvatars
+                        val countView = TextView(context).apply {
+                            layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize).apply {
+                                setMargins(-15.dpToPx(), 0, 0, 0)
+                            }
+                            text = "+$remainingCount"
+                            textSize = 11f
+                            gravity = android.view.Gravity.CENTER
+                            setTextColor(android.graphics.Color.WHITE)
+                            setBackgroundResource(R.drawable.unread_count_background)
+                        }
+                        participantAvatars.addView(countView)
+                    }
                 }
-            } catch (_: Exception) {
-                // If JSON parsing fails, just hide avatars
-            }
+            } catch (_: Exception) {}
         }
+
+        private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()
     }
 }
