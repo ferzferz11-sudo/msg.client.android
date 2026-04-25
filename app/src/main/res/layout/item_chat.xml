@@ -38,35 +38,16 @@
             android:orientation="vertical"
             android:layout_weight="1">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/chatName"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:id="@+id/chatName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="Chat Name"
-                    android:textSize="17sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-
-                <ImageView
-                    android:id="@+id/adminIndicator"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginStart="6dp"
-                    android:src="@drawable/ic_person_edit"
-                    app:tint="?attr/colorPrimary"
-                    android:visibility="gone"
-                    tools:visibility="visible"
-                    android:contentDescription="@string/admin_label" />
-
-            </LinearLayout>
+                tools:text="Chat Name"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/chatType"
@@ -78,6 +59,17 @@
                 android:layout_marginTop="2dp" />
 
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/adminIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_settings"
+            app:tint="?attr/colorOnSurfaceVariant"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:contentDescription="@string/admin_label" />
 
         <TextView
             android:id="@+id/unreadCount"

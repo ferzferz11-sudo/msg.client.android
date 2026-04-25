@@ -74,6 +74,10 @@
             android:exported="false"
             android:theme="@style/Theme_Lavender_NoActionBar" />
 
+        <activity
+            android:name=".SuperAdminActivity"
+            android:exported="false" />
+
         <service
             android:name=".data.fcm.LavenderMessagingService"
             android:exported="false">

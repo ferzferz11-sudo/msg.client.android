@@ -251,4 +251,5 @@
     <string name="theme_template_purple">Royal Purple</string>
     <string name="theme_template_sunset">Sunset Orange</string>
     <string name="admin_label">(Admin)</string>
+    <string name="super_admin">Super Admin</string>
 </resources>

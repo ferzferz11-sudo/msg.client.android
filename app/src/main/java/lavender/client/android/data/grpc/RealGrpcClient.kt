@@ -394,6 +394,13 @@ object RealGrpcClient {
                             }
                             return
                         }
+                        if (value.text.startsWith("FORCE_DISCONNECT:")) {
+                            val target = value.text.substring("FORCE_DISCONNECT:".length)
+                            if (target == lastUsername) {
+                                disconnect()
+                            }
+                            return
+                        }
                     }
 
                     if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return

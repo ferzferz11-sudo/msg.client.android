@@ -253,4 +253,5 @@
     <string name="theme_template_purple">Королевский пурпур</string>
     <string name="theme_template_sunset">Закатный оранжевый</string>
     <string name="admin_label">(Админ)</string>
+    <string name="super_admin">Суперадмин</string>
 </resources>

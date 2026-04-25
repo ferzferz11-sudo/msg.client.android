@@ -8,19 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1.60] - 2026-04-26
 
 ### Added
-- 👑 **Admin Status Visibility**: Added a new edit icon on the chat list for groups where the current user is the administrator.
+- 👑 **Admin Status Visibility**: Added a new settings (gear) icon on the right side of the chat card for groups where the current user is the administrator.
 - 🛡️ **Selective Multi-Delete**:
-  - In selection mode, only the delete (trash) icon is shown in the toolbar.
+  - In selection mode, all other toolbar icons (search, profile, themes, etc.) are hidden, leaving only the delete icon.
   - Users are now prohibited from selecting groups they don't own for deletion, with an immediate feedback toast.
-  - Seamlessly switch between regular click (open chat) and selection click (multi-select) when at least one item is selected.
 - 📝 **Group Name Management**:
   - Group name now defaults to "Group" (or "Группа") if not specified during creation.
-  - Admins can now edit the group name directly by tapping on it in the Group Info screen.
+  - Admins can now edit the group name directly by tapping on it in the Group Info screen or using the gear icon on the chat list.
   - Real-time synchronization of group name updates across all participants via chat list versioning.
 
 ### Fixed
 - 🛡️ **Admin Safety**: Restricted the "Delete Group" button to group admins only to prevent crashes (NPE) and unauthorized deletion attempts.
 - 🔄 **FAB Animation Fix**: Resolved issue where the "Add Chat" floating button wouldn't stop spinning after the creation dialog was loaded.
+- 📐 **Layout Improvements**: Chat name now correctly ellipsizes if it conflicts with the admin settings icon on small screens.
 
 ## [1.0.1.59] - 2026-04-26
 

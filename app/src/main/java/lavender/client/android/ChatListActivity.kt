@@ -208,6 +208,15 @@ class ChatListActivity : AppCompatActivity() {
             onChatClick = { chat ->
                 openChat(chat.id, chat.name, creator = chat.creator, participants = chat.participants)
             },
+            onSettingsClick = { chat ->
+                val intent = Intent(this, ProfileActivity::class.java)
+                    .putExtra("username", chat.name)
+                    .putExtra("is_group", !chat.type.equals("direct", true))
+                    .putExtra("room_id", chat.id)
+                    .putExtra("participants", chat.participants)
+                    .putExtra("creator", chat.creator)
+                startActivity(intent)
+            },
             onSelectionChanged = { count ->
                 clearMenuAnimations()
                 invalidateOptionsMenu()
@@ -785,6 +794,11 @@ class ChatListActivity : AppCompatActivity() {
                 logout()
                 true
             }
+            R.id.action_super_admin -> {
+                val intent = Intent(this, SuperAdminActivity::class.java)
+                startActivity(intent)
+                true
+            }
             R.id.action_toggle_language -> {
                 toggleLanguage()
                 true
@@ -802,11 +816,13 @@ class ChatListActivity : AppCompatActivity() {
         menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_contacts)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
+        menu.findItem(R.id.action_themes)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_profile)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_logout)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_super_admin)?.apply { isVisible = !hasSelection && username == "ferz" }
 
         // Force overflow icon and its tint
         val typedValue = TypedValue()

@@ -215,8 +215,23 @@ class MessageAdapter(
                 messageText.text = context.getString(R.string.location)
                 messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0)
                 messageText.compoundDrawablePadding = 8.dpToPx()
-                val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
-                messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
+                
+                // Theme-aware icon tint
+                val iconColorAttr = if (isOutgoing) {
+                    val typedValue = android.util.TypedValue()
+                    if (context.theme.resolveAttribute(R.attr.isLightTheme, typedValue, true) && typedValue.data != 0) {
+                        android.R.attr.textColorPrimary // Use dark text on light bubble in light theme
+                    } else {
+                        android.R.attr.textColorPrimary // Usually white on dark bubble in dark theme
+                    }
+                } else {
+                    android.R.attr.textColorPrimary
+                }
+                
+                val typedValue = android.util.TypedValue()
+                context.theme.resolveAttribute(iconColorAttr, typedValue, true)
+                val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                messageText.compoundDrawables[0]?.setTint(color)
             } else if (message.text.startsWith("File: ")) {
                 val lines = message.text.split("\n")
                 val fileName = if (lines.size > 1) lines[0].removePrefix("File: ") else message.text.removePrefix("File: ")
@@ -231,8 +246,12 @@ class MessageAdapter(
                 messageText.text = fileName
                 messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
                 messageText.compoundDrawablePadding = 8.dpToPx()
-                val iconColor = if (isOutgoing) R.color.white else R.color.tg_incoming_name
-                messageText.compoundDrawables[0]?.setTint(ContextCompat.getColor(context, iconColor))
+
+                // Theme-aware icon tint for files
+                val typedValue = android.util.TypedValue()
+                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                messageText.compoundDrawables[0]?.setTint(color)
 
                 // Make text clickable to download file
                 messageText.setOnClickListener {

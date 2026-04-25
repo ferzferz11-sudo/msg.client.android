@@ -17,6 +17,7 @@ import org.json.JSONArray
 
 class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit,
+    private val onSettingsClick: ((ChatInfo) -> Unit)? = null,
     private val onSelectionChanged: (Int) -> Unit = {},
     private val currentUsername: String = "",
     initialAvatarCache: Map<String, String> = emptyMap(),
@@ -184,6 +185,13 @@ class ChatAdapter(
             // Admin indicator
             val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
             adminIndicator.isVisible = !chat.type.equals("direct", true) && isMeAdmin
+            if (isMeAdmin) {
+                adminIndicator.setOnClickListener {
+                    onSettingsClick?.invoke(chat)
+                }
+            } else {
+                adminIndicator.setOnClickListener(null)
+            }
 
             // Load participant avatars
             loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers)

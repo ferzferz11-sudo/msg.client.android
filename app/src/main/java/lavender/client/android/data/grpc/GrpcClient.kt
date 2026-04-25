@@ -107,8 +107,8 @@ object GrpcClient {
         realGrpcClient.loadUsers()
     }
 
-    fun loadAllUsers() {
-        realGrpcClient.loadAllUsers()
+    fun loadAllUsers(callback: ((List<String>) -> Unit)? = null) {
+        realGrpcClient.loadAllUsers(callback ?: {})
     }
 
     fun updateUsername(oldUsername: String, newUsername: String, callback: (Boolean, String) -> Unit) {
