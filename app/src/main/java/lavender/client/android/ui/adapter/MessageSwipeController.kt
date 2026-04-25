@@ -11,8 +11,8 @@ import lavender.client.android.R
 
 class MessageSwipeController(
     context: Context,
-    private val onSwipe: (Int) -> Unit
-) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
+    private val onSwipe: (Int, Int) -> Unit
+) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
     private val replyIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_reply_swipe)
     private val paint = Paint().apply {
@@ -28,7 +28,7 @@ class MessageSwipeController(
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
         val position = viewHolder.bindingAdapterPosition
-        onSwipe(position)
+        onSwipe(position, direction)
     }
 
     override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float = 0.3f
@@ -46,12 +46,12 @@ class MessageSwipeController(
             val itemView = viewHolder.itemView
             val height = itemView.bottom.toFloat() - itemView.top.toFloat()
 
-            if (dX > 0) {
+            if (dX < 0) { // Swiping LEFT to reply
                 val iconMargin = (height - 24f * recyclerView.resources.displayMetrics.density) / 2
                 val iconTop = itemView.top + iconMargin
                 val iconBottom = itemView.bottom - iconMargin
-                val iconLeft = itemView.left + 16f * recyclerView.resources.displayMetrics.density
-                val iconRight = iconLeft + 24f * recyclerView.resources.displayMetrics.density
+                val iconRight = itemView.right - 16f * recyclerView.resources.displayMetrics.density
+                val iconLeft = iconRight - 24f * recyclerView.resources.displayMetrics.density
 
                 replyIcon?.setBounds(iconLeft.toInt(), iconTop.toInt(), iconRight.toInt(), iconBottom.toInt())
                 
@@ -60,7 +60,7 @@ class MessageSwipeController(
                 val circleX = (iconLeft + iconRight) / 2
                 val circleY = (iconTop + iconBottom) / 2
                 
-                val alpha = (dX / 100f).coerceIn(0f, 1f)
+                val alpha = (Math.abs(dX) / 100f).coerceIn(0f, 1f)
                 paint.alpha = (alpha * 255).toInt()
                 c.drawCircle(circleX, circleY, circleRadius, paint)
                 
@@ -70,7 +70,11 @@ class MessageSwipeController(
         }
         
         // Limit max swipe distance
-        val translationX = dX.coerceAtMost(150f * recyclerView.resources.displayMetrics.density)
+        val translationX = if (dX > 0) {
+            dX.coerceAtMost(100f * recyclerView.resources.displayMetrics.density)
+        } else {
+            dX.coerceAtLeast(-150f * recyclerView.resources.displayMetrics.density)
+        }
         super.onChildDraw(c, recyclerView, viewHolder, translationX, dY, actionState, isCurrentlyActive)
     }
 }

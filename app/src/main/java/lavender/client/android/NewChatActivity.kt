@@ -408,6 +408,30 @@ class NewChatActivity : AppCompatActivity() {
         if (toolbarAvatar.tag == "visible") toolbarAvatar.visibility = View.VISIBLE
         
         applySavedColorScheme()
+        refreshChatInfo()
+    }
+
+    private fun refreshChatInfo() {
+        if (roomId.isEmpty()) return
+        grpcClient.getChats(username) { chats ->
+            val chat = chats.find { it.id == roomId }
+            if (chat != null) {
+                runOnUiThread {
+                    participantsJson = chat.participants
+                    creator = chat.creator
+                    chatName = chat.name
+                    if (!isDirect) {
+                        toolbarTitle.text = chatName
+                        setupGroupAvatars()
+                    }
+                }
+            } else {
+                // Room no longer exists (deleted)
+                runOnUiThread {
+                    finish()
+                }
+            }
+        }
     }
 
     private fun getSavedColorScheme(): String? = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")
@@ -434,10 +458,14 @@ class NewChatActivity : AppCompatActivity() {
         }
         messagesRecyclerView.adapter = adapter
 
-        val swipeController = MessageSwipeController(this) { position ->
-            val message = adapter.currentList[position]
-            showReplyPreview(message)
-            adapter.notifyItemChanged(position)
+        val swipeController = MessageSwipeController(this) { position, direction ->
+            if (direction == androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+                val message = adapter.currentList[position]
+                showReplyPreview(message)
+                adapter.notifyItemChanged(position)
+            } else if (direction == androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
+                finish()
+            }
         }
         ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
 
@@ -1079,6 +1107,9 @@ class NewChatActivity : AppCompatActivity() {
                         roomId = targetChat.id
                         chatName = targetChat.name
                         isDirect = targetChat.type == "direct"
+                        participantsJson = targetChat.participants
+                        creator = targetChat.creator
+
                         toolbarTitle.text = chatName
                         toolbarSubtitle.text = if (isDirect) "" else getString(R.string.general_chat)
 

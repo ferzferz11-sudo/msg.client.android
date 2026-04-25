@@ -551,6 +551,7 @@ class MainActivity : AppCompatActivity() {
                         intent.putExtra("CHAT_NAME", chat.name)
                         intent.putExtra("IS_DIRECT", chat.type == "direct")
                         intent.putExtra("PARTICIPANTS", chat.participants)
+                        intent.putExtra("CREATOR", chat.creator)
                         startActivity(intent)
                         finish()
                     } else {

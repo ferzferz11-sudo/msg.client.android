@@ -184,7 +184,8 @@ data class CreateDirectChatResponseProto(
 // Create Group Chat Request/Response
 data class CreateGroupChatRequestProto(
     val name: String = "",
-    val participants: List<String> = emptyList()
+    val participants: List<String> = emptyList(),
+    val creator: String = ""
 )
 
 data class CreateGroupChatResponseProto(

@@ -24,6 +24,7 @@ object ProtoUtils {
             .setAvatarUrl(message.avatarUrl)
             .setImageUrl(message.imageUrl)
             .setEdited(message.edited)
+            .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
 
         // Add reactions
         message.reactions.forEach { reaction ->

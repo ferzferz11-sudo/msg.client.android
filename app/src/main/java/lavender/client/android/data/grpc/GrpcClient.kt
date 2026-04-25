@@ -95,8 +95,8 @@ object GrpcClient {
         realGrpcClient.createDirectChat(user1, user2, callback)
     }
 
-    fun createGroupChat(name: String, participants: List<String>, callback: (String?) -> Unit) {
-        realGrpcClient.createGroupChat(name, participants, callback)
+    fun createGroupChat(name: String, participants: List<String>, creator: String, callback: (String?) -> Unit) {
+        realGrpcClient.createGroupChat(name, participants, creator, callback)
     }
 
     fun loadUsers() {

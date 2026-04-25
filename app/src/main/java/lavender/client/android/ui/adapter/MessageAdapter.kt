@@ -167,6 +167,8 @@ class MessageAdapter(
             // 3. Child Ordering & Background
             if (isOutgoing) {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
+                messageBubble.gravity = android.view.Gravity.END
+                messageText.gravity = android.view.Gravity.START // Text still starts from left but inside the bubble
                 avatarImageView.visibility = View.GONE
                 
                 val typedValue = android.util.TypedValue()
@@ -175,6 +177,8 @@ class MessageAdapter(
                 timeText.setTextColor(ContextCompat.getColor(context, R.color.tg_time_outgoing))
             } else {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
+                messageBubble.gravity = android.view.Gravity.START
+                messageText.gravity = android.view.Gravity.START
                 if (canShowSenderInfo) {
                     avatarImageView.visibility = View.VISIBLE
                 } else {

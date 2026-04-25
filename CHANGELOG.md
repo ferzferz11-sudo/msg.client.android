@@ -5,6 +5,28 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1.59] - 2026-04-26
+
+### Added
+- 🎨 **Full Custom Themes & Chat Backgrounds**:
+  - Support for fully custom themes with independent colors (Primary, Background, Surface, Text).
+  - Integrated `ThemeManager` for real-time theme application across all activities.
+  - Ability to set and upload chat background images directly from the Theme Editor.
+  - Automatic message list transparency when a background image is active.
+- 💬 **Improved Chat Navigation & UX**:
+  - **Swipe Gestures**: Swipe **Left** to reply, Swipe **Right** to exit chat (go back to list).
+  - **Smart Alignment**: Outgoing messages are now right-aligned, incoming messages are left-aligned.
+  - **Chat List Sorting**: New chats (even empty ones) now automatically appear at the top of the list.
+- 🛡️ **Group Management Fixes**:
+  - Fixed a bug where Admin rights would "disappear" after navigating back to a group.
+  - Added a full-screen preloader when adding/removing participants to indicate background sync.
+  - Auto-exit: The chat screen now automatically closes if the group is deleted from the settings menu.
+- 🛠️ **Diagnostics**: Added `client_version` to gRPC messages to help server-side debugging.
+
+### Fixed
+- 🔄 **Menu UI**: Fixed the "infinite spinner" bug where the loading icon wouldn't stop rotating after a dialog was dismissed.
+- 📦 **Group Creation**: Correctly sending the `creator` field during group creation to ensure Admin roles are properly assigned.
+
 ## [1.0.1.58] - 2026-04-25
 
 ### Added

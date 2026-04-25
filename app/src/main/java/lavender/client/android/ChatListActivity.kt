@@ -208,7 +208,7 @@ class ChatListActivity : AppCompatActivity() {
 
         adapter = ChatAdapter(
             onChatClick = { chat ->
-                openChat(chat.id, chat.name)
+                openChat(chat.id, chat.name, creator = chat.creator, participants = chat.participants)
             },
             onSelectionChanged = { count ->
                 clearMenuAnimations()
@@ -361,7 +361,7 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
-        // Refresh chats immediately when returning from chat if version changed
+        // Always try to refresh version and list when returning to this screen
         refreshChats(false)
         grpcClient.loadUsers()
     }
@@ -390,18 +390,21 @@ class ChatListActivity : AppCompatActivity() {
             if (isManual || version > viewModel.lastChatListVersion) {
                 Log.d("ChatList", "Refreshing chats (Manual: $isManual, version: $version)")
                 grpcClient.getChats(username) { chats ->
-                    val sortedChats = chats.sortedByDescending { it.lastMessageTime }
+                    val sortedChats = chats.sortedByDescending { maxOf(it.lastMessageTime, it.createdAt) }
                     viewModel.currentChats = sortedChats
                     viewModel.lastChatListVersion = version
                     
                     runOnUiThread {
                         binding.swipeRefreshLayout.isRefreshing = false
                         adapter.setChats(sortedChats)
+                        binding.chatsRecyclerView.post {
+                            binding.chatsRecyclerView.scrollToPosition(0)
+                        }
                         binding.welcomeContainer.isVisible = sortedChats.isEmpty()
                         binding.chatsRecyclerView.isVisible = sortedChats.isNotEmpty()
                     }
 
-                    // Load avatars in background
+                    // Load avatars in background with batching
                     val allParticipants = mutableSetOf<String>()
                     for (chat in sortedChats) {
                         if (chat.participants.isNotEmpty()) {
@@ -414,14 +417,18 @@ class ChatListActivity : AppCompatActivity() {
                         }
                     }
 
-                    for (participant in allParticipants) {
-                        grpcClient.getUserAvatar(participant) { avatarUrl ->
-                            if (avatarUrl.isEmpty()) {
-                                grpcClient.updateAvatarCache(participant, "")
-                            }
-                            viewModel.avatarCache = grpcClient.getAvatarCache()
-                            runOnUiThread {
-                                adapter.updateAvatarCache(viewModel.avatarCache)
+                    lifecycleScope.launch {
+                        var updateCount = 0
+                        for (participant in allParticipants) {
+                            grpcClient.getUserAvatar(participant) { avatarUrl ->
+                                grpcClient.updateAvatarCache(participant, avatarUrl)
+                                updateCount++
+                                if (updateCount % 10 == 0 || updateCount == allParticipants.size) {
+                                    viewModel.avatarCache = grpcClient.getAvatarCache()
+                                    runOnUiThread {
+                                        adapter.updateAvatarCache(viewModel.avatarCache)
+                                    }
+                                }
                             }
                         }
                     }
@@ -504,12 +511,17 @@ class ChatListActivity : AppCompatActivity() {
                         binding.welcomeContainer.isVisible = chats.isEmpty()
                         binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
 
-                        val sortedChats = chats.sortedByDescending { it.lastMessageTime }
+                        val sortedChats = chats.sortedByDescending { maxOf(it.lastMessageTime, it.createdAt) }
                         viewModel.currentChats = sortedChats
                         viewModel.isInitialLoadComplete = true
                         adapter.setChats(sortedChats)
                         
-                        // Load avatars in background
+                        // Ensure we are at the top after initial load
+                        binding.chatsRecyclerView.post {
+                            binding.chatsRecyclerView.scrollToPosition(0)
+                        }
+                        
+                        // Load avatars in background with batching to avoid excessive UI updates
                         val allParticipants = mutableSetOf<String>()
                         for (chat in sortedChats) {
                             if (chat.participants.isNotEmpty()) {
@@ -522,12 +534,20 @@ class ChatListActivity : AppCompatActivity() {
                             }
                         }
 
-                        for (participant in allParticipants) {
-                            grpcClient.getUserAvatar(participant) { avatarUrl ->
-                                grpcClient.updateAvatarCache(participant, avatarUrl)
-                                viewModel.avatarCache = grpcClient.getAvatarCache()
-                                runOnUiThread {
-                                    adapter.updateAvatarCache(viewModel.avatarCache)
+                        lifecycleScope.launch {
+                            var updateCount = 0
+                            for (participant in allParticipants) {
+                                grpcClient.getUserAvatar(participant) { avatarUrl ->
+                                    grpcClient.updateAvatarCache(participant, avatarUrl)
+                                    updateCount++
+                                    
+                                    // Update UI every 10 avatars or at the end to keep it smooth
+                                    if (updateCount % 10 == 0 || updateCount == allParticipants.size) {
+                                        viewModel.avatarCache = grpcClient.getAvatarCache()
+                                        runOnUiThread {
+                                            adapter.updateAvatarCache(viewModel.avatarCache)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1183,7 +1203,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun createGroupChat(name: String, participants: List<String>) {
         binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
         lifecycleScope.launch {
-            grpcClient.createGroupChat(name, participants) { chatId ->
+            grpcClient.createGroupChat(name, participants, username) { chatId ->
                 runOnUiThread { binding.progressOverlay.isVisible = false }
                 if (chatId != null) {
                     runOnUiThread {

@@ -70,11 +70,13 @@ class ChatAdapter(
     }
 
     fun setOnlineUsers(users: List<String>) {
+        if (onlineUsers == users) return
         onlineUsers = users
         notifyDataSetChanged()
     }
 
     fun updateAvatarCache(newCache: Map<String, String>) {
+        if (avatarCache == newCache) return
         avatarCache = newCache
         notifyDataSetChanged()
     }

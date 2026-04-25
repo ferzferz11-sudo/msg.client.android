@@ -260,7 +260,11 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<List<String>>() {
             override fun onMessage(message: List<String>) { _users.value = message }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "GetClients failed: ${status.code} - ${status.description}")
+                }
+            }
         }, io.grpc.Metadata())
 
         call.sendMessage(Unit)
@@ -287,7 +291,12 @@ object RealGrpcClient {
                 _allUsers.value = message 
                 callback(message)
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "GetAllUsers failed: ${status.code} - ${status.description}")
+                    callback(emptyList())
+                }
+            }
         }, io.grpc.Metadata())
 
         call.sendMessage(Unit)
@@ -752,10 +761,10 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun createGroupChat(name: String, participants: List<String>, callback: (String?) -> Unit) {
+    fun createGroupChat(name: String, participants: List<String>, creator: String, callback: (String?) -> Unit) {
         val currentChannel = channel ?: return
 
-        val request = CreateGroupChatRequestProto(name, participants)
+        val request = CreateGroupChatRequestProto(name, participants, creator)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateGroupChatRequestProto, CreateGroupChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -987,7 +996,11 @@ object RealGrpcClient {
     }
 
     fun addParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(false, "Channel is null")
+            return
+        }
         val request = AddParticipantRequestProto(chatId, username)
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddParticipantRequestProto, AddParticipantResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1004,6 +1017,7 @@ object RealGrpcClient {
         }, io.grpc.Metadata())
         call.sendMessage(request)
         call.halfClose()
+        call.request(1)
     }
 
     fun addParticipants(chatId: String, usernames: List<String>, callback: (Boolean, String) -> Unit) {
@@ -1031,7 +1045,11 @@ object RealGrpcClient {
     }
 
     fun removeParticipant(chatId: String, username: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(false, "Channel is null")
+            return
+        }
 
         val request = RemoveParticipantRequestProto(chatId, username)
 
@@ -1094,7 +1112,11 @@ object RealGrpcClient {
     }
 
     fun deleteChat(chatId: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(false, "Channel is null")
+            return
+        }
 
         val request = DeleteChatRequestProto(chatId)
 
@@ -2005,6 +2027,7 @@ class CreateGroupChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Cre
         for (participant in value.participants) {
             cos.writeString(2, participant)
         }
+        if (value.creator.isNotEmpty()) cos.writeString(3, value.creator)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -2012,16 +2035,18 @@ class CreateGroupChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Cre
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var name = ""
         val participants = mutableListOf<String>()
+        var creator = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> name = cis.readString()
                 2 -> participants.add(cis.readString())
+                3 -> creator = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return CreateGroupChatRequestProto(name, participants)
+        return CreateGroupChatRequestProto(name, participants, creator)
     }
 }
 

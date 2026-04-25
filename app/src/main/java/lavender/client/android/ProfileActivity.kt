@@ -92,10 +92,45 @@ class ProfileActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadProfileData()
+        refreshParticipantsFromServer(null)
+    }
+
+    private fun refreshParticipantsFromServer(onComplete: (() -> Unit)? = null) {
+        if (!isGroup || roomId.isEmpty()) {
+            onComplete?.invoke()
+            return
+        }
+        
+        val currentMe = grpcClient.getCurrentUsername() ?: return
+        grpcClient.getChats(currentMe) { chats ->
+            val chat = chats.find { it.id == roomId }
+            if (chat != null) {
+                try {
+                    val jsonArray = JSONArray(chat.participants)
+                    val newList = mutableListOf<String>()
+                    for (i in 0 until jsonArray.length()) {
+                        newList.add(jsonArray.getString(i))
+                    }
+                    runOnUiThread {
+                        creator = chat.creator
+                        currentParticipants.clear()
+                        currentParticipants.addAll(newList)
+                        loadProfileData()
+                        onComplete?.invoke()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("ProfileActivity", "Error refreshing participants", e)
+                    runOnUiThread { onComplete?.invoke() }
+                }
+            } else {
+                runOnUiThread { onComplete?.invoke() }
+            }
+        }
     }
 
     private fun loadProfileData() {
+        if (isFinishing || isDestroyed) return
+
         val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar)
         val profileBio = findViewById<TextView>(R.id.profileBio)
         val profileStatus = findViewById<TextView>(R.id.profileStatus)
@@ -150,12 +185,16 @@ class ProfileActivity : AppCompatActivity() {
                             .setTitle(R.string.remove)
                             .setMessage(getString(R.string.remove_participant_confirm, user))
                             .setPositiveButton(R.string.remove) { _, _ ->
+                                val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                                progressOverlay.isVisible = true
                                 grpcClient.removeParticipant(roomId, user) { success, msg ->
-                                    runOnUiThread {
-                                        if (success) {
-                                            currentParticipants.remove(user)
-                                            loadProfileData() // Refresh UI
-                                        } else {
+                                    if (success) {
+                                        refreshParticipantsFromServer {
+                                            runOnUiThread { progressOverlay.isVisible = false }
+                                        }
+                                    } else {
+                                        runOnUiThread {
+                                            progressOverlay.isVisible = false
                                             Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
                                         }
                                     }
@@ -203,8 +242,11 @@ class ProfileActivity : AppCompatActivity() {
                         .setTitle(R.string.delete_group)
                         .setMessage(R.string.delete_group_confirm)
                         .setPositiveButton(R.string.delete) { _, _ ->
+                            val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                            progressOverlay.isVisible = true
                             grpcClient.deleteChat(roomId) { success, msg ->
                                 runOnUiThread {
+                                    progressOverlay.isVisible = false
                                     Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
                                     if (success) finish()
                                 }
@@ -316,15 +358,18 @@ class ProfileActivity : AppCompatActivity() {
             val selected = selectableAdapter.getSelectedUsers()
             if (selected.isEmpty()) return@setOnClickListener
             
-            btnAdd.isEnabled = false
+            val progressOverlay = findViewById<View>(R.id.progressOverlay)
+            dialog.dismiss()
+            progressOverlay.isVisible = true
+
             grpcClient.addParticipants(roomId, selected) { success, msg ->
-                runOnUiThread {
-                    if (success) {
-                        currentParticipants.addAll(selected)
-                        loadProfileData()
-                        dialog.dismiss()
-                    } else {
-                        btnAdd.isEnabled = true
+                if (success) {
+                    refreshParticipantsFromServer {
+                        runOnUiThread { progressOverlay.isVisible = false }
+                    }
+                } else {
+                    runOnUiThread {
+                        progressOverlay.isVisible = false
                         Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
                     }
                 }
