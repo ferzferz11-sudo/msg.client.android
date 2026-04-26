@@ -344,11 +344,11 @@ class EditThemeActivity : AppCompatActivity() {
 
                 val fileName = "theme_bg_${System.currentTimeMillis()}.jpg"
                 val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-                    .addFormDataPart("image", fileName, bytes.toRequestBody("image/*".toMediaTypeOrNull()))
+                    .addFormDataPart("background", fileName, bytes.toRequestBody("image/*".toMediaTypeOrNull()))
                     .build()
 
                 val request = Request.Builder()
-                    .url("http://159.195.38.145:8082/upload-image")
+                    .url("http://159.195.38.145:8082/upload-background")
                     .post(requestBody)
                     .build()
 

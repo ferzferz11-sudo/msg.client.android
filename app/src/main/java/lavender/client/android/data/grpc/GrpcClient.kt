@@ -15,6 +15,7 @@ object GrpcClient {
     val error: StateFlow<String?> = realGrpcClient.error
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
     val isSuperAdmin: StateFlow<Boolean> = realGrpcClient.isSuperAdmin
+    val serverVersion: StateFlow<String> = realGrpcClient.serverVersion
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     
     var hasCheckedForUpdates: Boolean

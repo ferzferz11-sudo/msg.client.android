@@ -256,4 +256,10 @@
     <string name="about_program">About Program</string>
     <string name="version_label">Version: %s</string>
     <string name="developer_label">Developer: ferz (Pavel Davydov)</string>
+    <string name="logout_profile">Log out of profile</string>
+    <string name="logout_confirm_title">Log out?</string>
+    <string name="logout_confirm_message">You will be disconnected from the server. Upon next entry, you will need to re-enter your username and password as they will not be saved. Make sure you remember them!</string>
+    <string name="server_version_format">Server Version: %s</string>
+    <string name="update_now">Update Now</string>
+    <string name="logout_yes">Log out</string>
 </resources>

@@ -95,6 +95,9 @@ object RealGrpcClient {
     private val _isSuperAdmin = MutableStateFlow(false)
     val isSuperAdmin: StateFlow<Boolean> = _isSuperAdmin
 
+    private val _serverVersion = MutableStateFlow("")
+    val serverVersion: StateFlow<String> = _serverVersion
+
     fun updateMessage(message: Message) {
         _messages.update { currentList ->
             currentList.map { if (it.id == message.id) message else it }
@@ -395,6 +398,10 @@ object RealGrpcClient {
                                 _isSuperAdmin.value = true
                                 return
                             }
+                        }
+                        if (value.text.startsWith("SERVER_INFO:")) {
+                            _serverVersion.value = value.text.substring("SERVER_INFO:".length)
+                            return
                         }
                         if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
                             try {

@@ -892,20 +892,23 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit {
-            remove("username")
-            remove("password")
-        }
-
-        // Show exit toast
-        showToast(getString(R.string.logged_out))
-
-        // Clear activity stack and go back to MainActivity
-        val intent = Intent(this, MainActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.logout_confirm_title)
+            .setMessage(R.string.logout_confirm_message)
+            .setPositiveButton(R.string.logout_yes) { _, _ ->
+                val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+                prefs.edit {
+                    remove("username")
+                    remove("password")
+                }
+                showToast(getString(R.string.logged_out))
+                val intent = Intent(this, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                finish()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun downloadAndInstallApk() {
@@ -1496,17 +1499,34 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAboutDialog() {
-        val version = try {
+        val clientVersion = try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName
         } catch (e: Exception) {
             "1.0.2.0"
         }
 
-        AlertDialog.Builder(this)
+        val serverVersion = grpcClient.serverVersion.value.ifEmpty { "..." }
+        val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "") ?: ""
+        val isUpdateAvailable = isUpdateAvailable(latestVersion)
+
+        val message = StringBuilder()
+            .append(getString(R.string.version_label, clientVersion)).append("\n")
+            .append(getString(R.string.server_version_format, serverVersion)).append("\n\n")
+            .append(getString(R.string.developer_label))
+            .toString()
+
+        val builder = AlertDialog.Builder(this)
             .setTitle(R.string.about_program)
-            .setMessage("${getString(R.string.version_label, version)}\n\n${getString(R.string.developer_label)}")
+            .setMessage(message)
             .setPositiveButton(android.R.string.ok, null)
-            .show()
+
+        if (isUpdateAvailable) {
+            builder.setNeutralButton(R.string.update_now) { _, _ ->
+                downloadAndInstallApk()
+            }
+        }
+
+        builder.show()
     }
 }

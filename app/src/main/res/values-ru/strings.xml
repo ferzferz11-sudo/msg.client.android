@@ -258,4 +258,10 @@
     <string name="about_program">О программе</string>
     <string name="version_label">Версия: %s</string>
     <string name="developer_label">Разработчик: ferz (Павел Давыдов)</string>
+    <string name="logout_profile">Выход из профиля</string>
+    <string name="logout_confirm_title">Выйти из профиля?</string>
+    <string name="logout_confirm_message">Вы будете отключены от сервера. При следующем входе вам потребуется заново ввести имя пользователя и пароль, так как они не будут сохранены. Убедитесь, что вы их помните!</string>
+    <string name="server_version_format">Версия сервера: %s</string>
+    <string name="update_now">Обновить сейчас</string>
+    <string name="logout_yes">Выйти</string>
 </resources>
