@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.1.58**
+Current version: **1.0.2.3**
+
+### Version 1.0.2.3 - Voice Messages & Performance Fixes
+- 🎤 **Voice Messages**: Full implementation of recording, server-side storage, and real-time playback.
+- 🛠️ **gRPC Stability**: Fixed critical marshalling bugs that prevented voice messages from appearing in history.
+- 📊 **Smart Sorting**: Chats and messages now follow a logical chronological and activity-based order.
+- 🧹 **DB Maintenance**: New remote cleanup system for orphan data and legacy record fixing.
 
 ### Version 1.0.1.58 - Protocol Optimization & Version Tracking
 - 🛠️ **Server Logs**: Client version is now visible in server logs for easier debugging.

@@ -23,7 +23,7 @@
 
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">1.0.1.40</string>
+    <string name="app_version">1.0.2.3</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">update</string>
