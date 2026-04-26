@@ -17,6 +17,8 @@
     <string name="attach_gallery">Галерея</string>
     <string name="attach_file_label">Файл</string>
     <string name="attach_location">Локация</string>
+    <string name="record_audio">Записать аудио</string>
+    <string name="attach_file">Прикрепить файл</string>
 
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
@@ -91,7 +93,6 @@
     <string name="auth_failed">Ошибка аутентификации</string>
     <string name="chats">Чаты</string>
     <string name="profile">Профиль</string>
-    <string name="attach_file">Прикрепить файл</string>
     <string name="take_photo">Сделать фото</string>
     <string name="gallery">Галерея</string>
     <string name="file">Файл</string>
@@ -285,4 +286,5 @@
     <string name="style_standard">Стандартный</string>
     <string name="style_messaging">Мессенджер (как в Telegram)</string>
     <string name="style_big_text">Расширенный текст</string>
+    <string name="voice_message">Голосовое сообщение</string>
 </resources>

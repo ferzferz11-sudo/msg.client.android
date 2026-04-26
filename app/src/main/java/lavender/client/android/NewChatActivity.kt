@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import java.io.File
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
@@ -49,10 +50,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
+import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -96,7 +99,9 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var messageInput: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var attachButton: ImageButton
+    private lateinit var audioButton: ImageButton
     private lateinit var uploadProgressBar: ProgressBar
+    private lateinit var audioRecordingView: AudioRecordingView
 
     private lateinit var replyPreview: View
     private lateinit var replyUser: TextView
@@ -264,7 +269,9 @@ class NewChatActivity : AppCompatActivity() {
         messageInput = findViewById(R.id.messageInput)
         sendButton = findViewById(R.id.sendButton)
         attachButton = findViewById(R.id.attachButton)
+        audioButton = findViewById(R.id.audioButton)
         uploadProgressBar = findViewById(R.id.uploadProgressBar)
+        audioRecordingView = findViewById(R.id.audioRecordingView)
         replyPreview = findViewById(R.id.replyPreview)
         replyUser = findViewById(R.id.replyUser)
         replyText = findViewById(R.id.replyText)
@@ -277,6 +284,9 @@ class NewChatActivity : AppCompatActivity() {
         searchNext = findViewById(R.id.searchNext)
         searchPrev = findViewById(R.id.searchPrev)
         searchResultsCount = findViewById(R.id.searchResultsCount)
+        
+        // Initialize audio button visibility
+        audioButton.visibility = View.VISIBLE
     }
 
     private fun loadDataFromIntent() {
@@ -489,8 +499,10 @@ class NewChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.messages.collect { messages ->
-                // Filter messages by current room_id
+                // Filter messages by current room_id and sort by timestamp
                 val roomMessages = messages.filter { it.roomId == roomId }
+                    .sortedBy { it.timestamp }
+
                 adapter.submitList(roomMessages) {
                     if (roomMessages.isNotEmpty()) messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
                 }
@@ -630,6 +642,10 @@ class NewChatActivity : AppCompatActivity() {
                     grpcClient.sendTypingSignal(username, false)
                     isTypingSignalSent = false
                 }
+                
+                // Show/hide audio button based on text input
+                val hasText = s.toString().trim().isNotEmpty()
+                audioButton.visibility = if (hasText && audioRecordingView.visibility == View.GONE) View.GONE else View.VISIBLE
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -665,6 +681,10 @@ class NewChatActivity : AppCompatActivity() {
 
         attachButton.setOnClickListener {
             showAttachmentDialog()
+        }
+
+        audioButton.setOnClickListener {
+            showAudioRecordingView()
         }
 
         closeSelection.setOnClickListener { hideSelectionToolbar() }
@@ -1159,6 +1179,127 @@ class NewChatActivity : AppCompatActivity() {
                 // Make chat list transparent to show background
                 messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            }
+        }
+    }
+
+    private fun showAudioRecordingView() {
+        // Check for audio permission
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+                return
+            }
+        }
+        
+        // Show audio recording view
+        audioRecordingView.visibility = View.VISIBLE
+        messageInput.visibility = View.GONE
+        sendButton.visibility = View.GONE
+        attachButton.visibility = View.GONE
+        audioButton.visibility = View.GONE
+        
+        setupAudioRecordingView()
+    }
+    
+    private fun hideAudioRecordingView() {
+        audioRecordingView.visibility = View.GONE
+        messageInput.visibility = View.VISIBLE
+        sendButton.visibility = View.VISIBLE
+        attachButton.visibility = View.VISIBLE
+        
+        // Show audio button only when input is empty
+        audioButton.visibility = if (messageInput.text.toString().trim().isEmpty()) View.VISIBLE else View.GONE
+    }
+    
+    private fun setupAudioRecordingView() {
+        audioRecordingView.setOnRecordingStarted {
+            // Handle recording started
+            Log.d("NewChatActivity", "Audio recording started")
+        }
+        
+        audioRecordingView.setOnRecordingFinished { audioFile, duration ->
+            // Handle recording finished
+            Log.d("NewChatActivity", "Audio recording finished: duration=$duration")
+            
+            if (audioFile != null) {
+                uploadAudioMessage(audioFile, duration)
+            }
+            
+            hideAudioRecordingView()
+        }
+        
+        audioRecordingView.setOnRecordingCancelled {
+            // Handle recording cancelled
+            Log.d("NewChatActivity", "Audio recording cancelled")
+            hideAudioRecordingView()
+        }
+    }
+    
+    private fun uploadAudioMessage(audioFile: File, duration: Int) {
+        lifecycleScope.launch {
+            try {
+                uploadProgressBar.visibility = View.VISIBLE
+                
+                val audioUploader = AudioUploader(this@NewChatActivity)
+                // Set server address from GrpcClient if available
+                lavender.client.android.data.grpc.RealGrpcClient.currentServerAddress?.let {
+                    audioUploader.setServerAddress(it)
+                }
+                val result = audioUploader.uploadAudio(audioFile, duration)
+                
+                withContext(Dispatchers.Main) {
+                    uploadProgressBar.visibility = View.GONE
+                    
+                    if (result.success) {
+                        // Send voice message
+                        sendVoiceMessage(result.url, result.duration)
+                    } else {
+                        Toast.makeText(this@NewChatActivity, "Upload failed: ${result.error}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    uploadProgressBar.visibility = View.GONE
+                    Toast.makeText(this@NewChatActivity, "Upload error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    
+    private fun sendVoiceMessage(voiceUrl: String, duration: Int) {
+        Log.d("NewChatActivity", "Sending voice message: url=$voiceUrl, duration=$duration")
+        
+        val message = Message(
+            id = "",
+            user = username,
+            text = "Voice Message", // Fill text with a neutral label to avoid decryption warnings
+            timestamp = System.currentTimeMillis(),
+            roomId = roomId,
+            voiceUrl = voiceUrl,
+            duration = duration,
+            repliedToMessageId = replyingTo?.id ?: "",
+            repliedToUser = replyingTo?.user ?: "",
+            repliedToText = replyingTo?.text ?: ""
+        )
+        
+        Log.d("NewChatActivity", "Created voice message: $message")
+        grpcClient.sendMessage(message)
+        Log.d("NewChatActivity", "Voice message sent to grpcClient")
+        hideReplyPreview()
+    }
+    
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        when (requestCode) {
+            1001 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, show audio recording view
+                    showAudioRecordingView()
+                } else {
+                    Toast.makeText(this, "Audio permission required for voice messages", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

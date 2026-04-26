@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/audio_message_background">
+
+    <ImageView
+        android:id="@+id/playButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_play_arrow"
+        android:background="@drawable/play_button_background"
+        android:padding="8dp"
+        android:contentDescription="Play audio" />
+
+    <ImageView
+        android:id="@+id/pauseButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_pause"
+        android:background="@drawable/play_button_background"
+        android:padding="8dp"
+        android:contentDescription="Pause audio"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/durationText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:text="0:00"
+        android:textSize="14sp"
+        android:textColor="?android:textColorPrimary"
+        android:fontFamily="monospace" />
+
+    <lavender.client.android.ui.audio.AudioWaveformView
+        android:id="@+id/waveformView"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp" />
+
+</LinearLayout>

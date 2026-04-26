@@ -79,7 +79,7 @@ object RealGrpcClient {
     private var channel: ManagedChannel? = null
     private var requestObserver: StreamObserver<MessageProto>? = null
     private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
-    private var currentServerAddress: String? = null
+    var currentServerAddress: String? = null
     var currentRoomId = ""
         private set
     
@@ -148,8 +148,8 @@ object RealGrpcClient {
             builder.maxInboundMessageSize(16 * 1024 * 1024)
             builder.maxInboundMetadataSize(1024 * 1024)
             
-            builder.keepAliveTime(30, TimeUnit.SECONDS)
-                .keepAliveTimeout(10, TimeUnit.SECONDS)
+            builder.keepAliveTime(15, TimeUnit.SECONDS)
+                .keepAliveTimeout(5, TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
                 .idleTimeout(24, TimeUnit.HOURS)
             
@@ -205,7 +205,7 @@ object RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        val request = GetHistoryRequestProto(limit = 100, room = roomId)
+        val request = GetHistoryRequestProto(limit = 200, room = roomId)
 
         call.start(object : io.grpc.ClientCall.Listener<GetHistoryResponseProto>() {
             override fun onMessage(message: GetHistoryResponseProto) {
@@ -247,9 +247,10 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 android.util.Log.d("RealGrpcClient", "History load completed with status: ${status.code}")
                 if (!status.isOk && (status.code == io.grpc.Status.Code.UNAVAILABLE || status.code == io.grpc.Status.Code.INTERNAL)) {
+                    android.util.Log.w("RealGrpcClient", "History load failed, retrying in 2 seconds...")
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         loadHistory(currentRoomId, onComplete)
-                    }, 3000)
+                    }, 2000)
                 } else {
                     onComplete()
                 }
@@ -496,8 +497,16 @@ object RealGrpcClient {
                         if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
                             android.util.Log.d("GrpcClient", "Attempting automatic reconnection...")
                             startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
+                            
+                            // Load history after reconnection with delay to ensure stability
+                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                if (currentRoomId.isNotEmpty()) {
+                                    android.util.Log.d("GrpcClient", "Loading history after reconnection for room: $currentRoomId")
+                                    loadHistory(currentRoomId)
+                                }
+                            }, 2000)
                         }
-                    }, 3000)
+                    }, 2000)
                 }
                 
                 override fun onCompleted() { isChatStarted = false }
@@ -552,14 +561,21 @@ object RealGrpcClient {
     }
     
     fun sendMessage(message: Message) {
-        if (requestObserver == null) return
+        android.util.Log.d("RealGrpcClient", "sendMessage called: text='${message.text}', voiceUrl='${message.voiceUrl}', roomId='${message.roomId}'")
+        if (requestObserver == null) {
+            android.util.Log.w("RealGrpcClient", "requestObserver is null, cannot send message")
+            return
+        }
         try {
             // Use the message's roomId if it's set, otherwise use currentRoomId
             val messageWithRoom = if (message.roomId.isNotEmpty()) message else message.copy(roomId = currentRoomId)
+            android.util.Log.d("RealGrpcClient", "messageWithRoom: $messageWithRoom")
 
             // Get avatar URL for current user if not cached
             if (!avatarCache.containsKey(message.user) && message.avatarUrl.isEmpty()) {
+                android.util.Log.d("RealGrpcClient", "No cached avatar for ${message.user}, loading...")
                 getUserAvatar(message.user) { avatarUrl ->
+                    android.util.Log.d("RealGrpcClient", "Avatar loaded for ${message.user}: $avatarUrl")
                     if (avatarUrl.isNotEmpty()) {
                         avatarCache[message.user] = avatarUrl
                         // Update message with avatar URL
@@ -567,20 +583,35 @@ object RealGrpcClient {
                         _messages.update { currentList ->
                             currentList.map { if (getMessageHash(it) == getMessageHash(messageWithRoom)) messageWithAvatar else it }
                         }
+                        val protoMessage = ProtoUtils.createMessageProto(messageWithAvatar)
+                        android.util.Log.d("RealGrpcClient", "Sending message with loaded avatar: $protoMessage")
+                        sentMessageHashes.add(getMessageHash(messageWithAvatar))
+                        requestObserver?.onNext(protoMessage)
+                    } else {
+                        android.util.Log.w("RealGrpcClient", "Failed to load avatar for ${message.user}, sending without avatar")
+                        _messages.update { currentList -> currentList + messageWithRoom }
+                        val protoMessage = ProtoUtils.createMessageProto(messageWithRoom)
+                        android.util.Log.d("RealGrpcClient", "Sending message without avatar (fallback): $protoMessage")
+                        sentMessageHashes.add(getMessageHash(messageWithRoom))
+                        requestObserver?.onNext(protoMessage)
                     }
                 }
             } else if (avatarCache.containsKey(message.user)) {
                 // Use cached avatar URL
+                android.util.Log.d("RealGrpcClient", "Using cached avatar for ${message.user}")
                 val messageWithAvatar = messageWithRoom.copy(avatarUrl = avatarCache[message.user] ?: "", imageUrl = messageWithRoom.imageUrl)
                 _messages.update { currentList -> currentList + messageWithAvatar }
                 val protoMessage = ProtoUtils.createMessageProto(messageWithAvatar)
+                android.util.Log.d("RealGrpcClient", "Sending message with cached avatar: $protoMessage")
                 sentMessageHashes.add(getMessageHash(messageWithAvatar))
                 requestObserver?.onNext(protoMessage)
                 return@sendMessage
             }
 
+            android.util.Log.d("RealGrpcClient", "No cached avatar, sending message immediately")
             _messages.update { currentList -> currentList + messageWithRoom }
             val protoMessage = ProtoUtils.createMessageProto(messageWithRoom)
+            android.util.Log.d("RealGrpcClient", "Sending message without avatar: $protoMessage")
             sentMessageHashes.add(getMessageHash(messageWithRoom))
             requestObserver?.onNext(protoMessage)
         } catch (_: Exception) {}
@@ -1636,6 +1667,8 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.edited) cos.writeBool(14, value.edited)
         if (value.clientVersion.isNotEmpty()) cos.writeString(15, value.clientVersion)
         if (value.isSuperAdmin) cos.writeBool(16, value.isSuperAdmin)
+        if (value.voiceUrl.isNotEmpty()) cos.writeString(17, value.voiceUrl)
+        if (value.duration != 0) cos.writeInt32(18, value.duration)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1657,6 +1690,8 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         var edited = false
         var clientVersion = ""
         var isSuperAdmin = false
+        var voiceUrl = ""
+        var duration = 0
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -1685,10 +1720,12 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 14 -> edited = cis.readBool()
                 15 -> clientVersion = cis.readString()
                 16 -> isSuperAdmin = cis.readBool()
+                17 -> voiceUrl = cis.readString()
+                18 -> duration = cis.readInt32()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin)
+        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin, voiceUrl, duration)
     }
 }
 

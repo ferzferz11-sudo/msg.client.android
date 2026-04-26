@@ -32,4 +32,11 @@
     
     <!-- Splash screen background -->
     <color name="splash_background">#070531</color>
+    
+    <!-- Audio waveform colors -->
+    <color name="audio_waveform_default">#666666</color>
+    <color name="audio_waveform_playing">#967BB6</color>
+    
+    <!-- Recording colors -->
+    <color name="red">#FF4444</color>
 </resources>

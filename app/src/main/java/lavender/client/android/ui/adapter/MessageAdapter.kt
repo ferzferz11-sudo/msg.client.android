@@ -119,6 +119,7 @@ class MessageAdapter(
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
         private val messageImageView: ImageView = itemView.findViewById(R.id.messageImageView)
+        private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         
@@ -237,88 +238,118 @@ class MessageAdapter(
             timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
             timeText.isVisible = !shouldHideTime
 
-            val isLocation = message.text.startsWith("geo:")
-
-            // Show edited label based on edited field
-            editedText.text = context.getString(R.string.edited_label)
-            editedText.isVisible = message.edited
-
-            if (isLocation) {
-                messageText.text = context.getString(R.string.location)
-                messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0)
-                messageText.compoundDrawablePadding = 8.dpToPx()
-                
-                // Theme-aware icon tint
-                val iconColorAttr = if (isOutgoing) {
-                    val typedValue = android.util.TypedValue()
-                    if (context.theme.resolveAttribute(R.attr.isLightTheme, typedValue, true) && typedValue.data != 0) {
-                        android.R.attr.textColorPrimary // Use dark text on light bubble in light theme
-                    } else {
-                        android.R.attr.textColorPrimary // Usually white on dark bubble in dark theme
-                    }
-                } else {
-                    android.R.attr.textColorPrimary
-                }
-                
-                val typedValue = android.util.TypedValue()
-                context.theme.resolveAttribute(iconColorAttr, typedValue, true)
-                val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                messageText.compoundDrawables[0]?.setTint(color)
-            } else if (message.text.startsWith("File: ")) {
-                val lines = message.text.split("\n")
-                val fileName = if (lines.size > 1) lines[0].removePrefix("File: ") else message.text.removePrefix("File: ")
-                val fileUrl = if (lines.size > 1) lines[1] else ""
-
-                val fileIcon = when {
-                    fileName.lowercase().endsWith(".pdf") -> R.drawable.ic_file_pdf
-                    fileName.lowercase().endsWith(".zip") || fileName.lowercase().endsWith(".rar") || fileName.lowercase().endsWith(".7z") -> R.drawable.ic_file_archive
-                    else -> R.drawable.ic_file
-                }
-
-                messageText.text = fileName
-                messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
-                messageText.compoundDrawablePadding = 8.dpToPx()
-
-                // Theme-aware icon tint for files
-                val typedValue = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                messageText.compoundDrawables[0]?.setTint(color)
-
-                // Make text clickable to download file
-                messageText.setOnClickListener {
-                    if (fileUrl.isNotEmpty()) {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(fileUrl))
-                        context.startActivity(intent)
-                    }
-                }
+            // Skip text display logic for voice messages, we'll handle label below
+            if (message.voiceUrl.isNotEmpty()) {
+                messageText.isVisible = false
             } else {
-                val text = message.text
-                val highlight = searchHighlight
-                if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
-                    val spannable = android.text.SpannableString(message.text)
-                    val start = text.lowercase().indexOf(highlight.lowercase())
-                    if (start != -1) {
-                        val end = start + highlight.length
-                        spannable.setSpan(
-                            android.text.style.BackgroundColorSpan(ContextCompat.getColor(context, R.color.lavender_mist_alpha)),
-                            start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
+                messageText.isVisible = message.text.isNotEmpty() || message.imageUrl.isNotEmpty()
+                val isLocation = message.text.startsWith("geo:")
+
+                // Show edited label based on edited field
+                editedText.text = context.getString(R.string.edited_label)
+                editedText.isVisible = message.edited
+
+                if (isLocation) {
+                    messageText.text = context.getString(R.string.location)
+                    messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0)
+                    messageText.compoundDrawablePadding = 8.dpToPx()
+                    
+                    // Theme-aware icon tint
+                    val iconColorAttr = if (isOutgoing) {
+                        val typedValue = android.util.TypedValue()
+                        if (context.theme.resolveAttribute(R.attr.isLightTheme, typedValue, true) && typedValue.data != 0) {
+                            android.R.attr.textColorPrimary // Use dark text on light bubble in light theme
+                        } else {
+                            android.R.attr.textColorPrimary // Usually white on dark bubble in dark theme
+                        }
+                    } else {
+                        android.R.attr.textColorPrimary
                     }
-                    messageText.text = spannable
+                    
+                    val typedValue = android.util.TypedValue()
+                    context.theme.resolveAttribute(iconColorAttr, typedValue, true)
+                    val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                    messageText.compoundDrawables[0]?.setTint(color)
+                } else if (message.text.startsWith("File: ")) {
+                    val lines = message.text.split("\n")
+                    val fileName = if (lines.size > 1) lines[0].removePrefix("File: ") else message.text.removePrefix("File: ")
+                    val fileUrl = if (lines.size > 1) lines[1] else ""
+
+                    val fileIcon = when {
+                        fileName.lowercase().endsWith(".pdf") -> R.drawable.ic_file_pdf
+                        fileName.lowercase().endsWith(".zip") || fileName.lowercase().endsWith(".rar") || fileName.lowercase().endsWith(".7z") -> R.drawable.ic_file_archive
+                        else -> R.drawable.ic_file
+                    }
+
+                    messageText.text = fileName
+                    messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
+                    messageText.compoundDrawablePadding = 8.dpToPx()
+
+                    // Theme-aware icon tint for files
+                    val typedValue = android.util.TypedValue()
+                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                    val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                    messageText.compoundDrawables[0]?.setTint(color)
+
+                    // Make text clickable to download file
+                    messageText.setOnClickListener {
+                        if (fileUrl.isNotEmpty()) {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(fileUrl))
+                            context.startActivity(intent)
+                        }
+                    }
                 } else {
-                    messageText.text = message.text
+                    val text = message.text
+                    val highlight = searchHighlight
+                    if (!highlight.isNullOrEmpty() && text.contains(highlight, ignoreCase = true)) {
+                        val spannable = android.text.SpannableString(message.text)
+                        val start = text.lowercase().indexOf(highlight.lowercase())
+                        if (start != -1) {
+                            val end = start + highlight.length
+                            spannable.setSpan(
+                                android.text.style.BackgroundColorSpan(ContextCompat.getColor(context, R.color.lavender_mist_alpha)),
+                                start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                        }
+                        messageText.text = spannable
+                    } else {
+                        messageText.text = message.text
+                    }
+                    messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                    messageText.setOnClickListener(null)
                 }
-                messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                messageText.setOnClickListener(null)
             }
             
-            messageImageView.isVisible = message.imageUrl.isNotEmpty()
-            if (message.imageUrl.isNotEmpty()) {
+            // Handle image visibility
+            messageImageView.isVisible = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()
+            if (message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()) {
                 com.bumptech.glide.Glide.with(context)
                     .load(message.imageUrl)
                     .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
                     .into(messageImageView)
+            }
+            
+            // Handle audio message visibility
+            audioMessageView.isVisible = message.voiceUrl.isNotEmpty()
+            if (message.voiceUrl.isNotEmpty()) {
+                audioMessageView.setAudioData(message.voiceUrl, message.duration)
+                
+                // Show localized "Voice Message" label
+                messageText.isVisible = true
+                messageText.text = context.getString(R.string.voice_message)
+                messageText.textSize = 12f // Smaller font
+                messageText.alpha = 0.7f // Slightly faded
+                
+                audioMessageView.setOnPlayClickListener { url ->
+                    android.util.Log.d("MessageAdapter", "Playing audio: $url")
+                }
+                audioMessageView.setOnPauseClickListener {
+                    android.util.Log.d("MessageAdapter", "Pausing audio")
+                }
+            } else {
+                // Restore default text size for non-voice messages
+                messageText.textSize = 16f
+                messageText.alpha = 1.0f
             }
 
             // 5.1 Reactions

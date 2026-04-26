@@ -42,4 +42,11 @@
     
     <!-- Splash screen background -->
     <color name="splash_background">@color/soft_lilac</color>
+    
+    <!-- Audio waveform colors -->
+    <color name="audio_waveform_default">#CCCCCC</color>
+    <color name="audio_waveform_playing">#967BB6</color>
+    
+    <!-- Recording colors -->
+    <color name="red">#FF4444</color>
 </resources>

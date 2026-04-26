@@ -438,10 +438,10 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.getChatListVersion(username) { version ->
             if (isManual || version > viewModel.lastChatListVersion) {
                 Log.d("ChatList", "Refreshing chats (Manual: $isManual, version: $version)")
-                grpcClient.getChats(username) { chats ->
-                    val sortedChats = chats.sortedByDescending { maxOf(it.lastMessageTime, it.createdAt) }
-                    viewModel.currentChats = sortedChats
-                    viewModel.lastChatListVersion = version
+                    grpcClient.getChats(username) { chats ->
+                        val sortedChats = chats.sortedWith(compareByDescending<ChatInfo> { it.lastMessageTime }.thenByDescending { it.createdAt })
+                        viewModel.currentChats = sortedChats
+                        viewModel.lastChatListVersion = version
                     
                     runOnUiThread {
                         binding.swipeRefreshLayout.isRefreshing = false
@@ -560,7 +560,7 @@ class ChatListActivity : AppCompatActivity() {
                         binding.welcomeContainer.isVisible = chats.isEmpty()
                         binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
 
-                        val sortedChats = chats.sortedByDescending { maxOf(it.lastMessageTime, it.createdAt) }
+                        val sortedChats = chats.sortedWith(compareByDescending<ChatInfo> { it.lastMessageTime }.thenByDescending { it.createdAt })
                         viewModel.currentChats = sortedChats
                         viewModel.isInitialLoadComplete = true
                         adapter.setChats(sortedChats)

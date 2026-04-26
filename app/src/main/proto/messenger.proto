@@ -18,6 +18,8 @@ message Message {
   bool is_read = 11;
   string avatar_url = 12; // URL of the user's avatar
   string image_url = 13; // URL of the attached image
+  string voice_url = 14; // URL of the voice message audio file
+  int32 duration = 15; // Duration of voice message in seconds
 }
 
 message Reaction {

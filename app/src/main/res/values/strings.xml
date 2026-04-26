@@ -18,6 +18,8 @@
     <string name="attach_gallery">Gallery</string>
     <string name="attach_file_label">File</string>
     <string name="attach_location">Location</string>
+    <string name="record_audio">Record audio</string>
+    <string name="attach_file">Attach file</string>
 
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
@@ -93,7 +95,6 @@
     <string name="preview">Preview</string>
     <string name="edit">Edit</string>
     <string name="profile">Profile</string>
-    <string name="attach_file">Attach file</string>
     <string name="take_photo">Take photo</string>
     <string name="gallery">Gallery</string>
     <string name="file">File</string>
@@ -237,6 +238,8 @@
     <string name="on_primary_color">Text on Primary (Toolbar Text, Outgoing Text)</string>
     <string name="surface_color">Surface Color (Chat Cards, Incoming Bubbles)</string>
     <string name="on_surface_color">Text on Surface (Chat Names, Incoming Text)</string>
+    <string name="bottom_panel_color">Bottom Panel Background</string>
+    <string name="on_bottom_panel_color">Bottom Panel Icons</string>
     <string name="background_color">Background Color (Main Screen, Chat List)</string>
     <string name="text_primary_color">Main Text Color (Chat List Text)</string>
     <string name="text_secondary_color">Secondary Text Color</string>
@@ -283,4 +286,5 @@
     <string name="style_standard">Standard</string>
     <string name="style_messaging">Messaging (Telegram style)</string>
     <string name="style_big_text">Expanded Text</string>
+    <string name="voice_message">Voice Message</string>
 </resources>

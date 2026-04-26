@@ -19,7 +19,9 @@ data class Message(
     val avatarUrl: String = "",
     val imageUrl: String = "",
     val edited: Boolean = false,
-    val isSuperAdmin: Boolean = false
+    val isSuperAdmin: Boolean = false,
+    val voiceUrl: String = "",
+    val duration: Int = 0
 )
 
 data class ChatInfo(
