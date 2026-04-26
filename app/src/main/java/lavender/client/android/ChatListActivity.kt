@@ -819,10 +819,6 @@ class ChatListActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
-            R.id.action_toggle_language -> {
-                toggleLanguage()
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -834,7 +830,6 @@ class ChatListActivity : AppCompatActivity() {
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
-        menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_about)?.apply { isVisible = !hasSelection }
         
@@ -1025,6 +1020,11 @@ class ChatListActivity : AppCompatActivity() {
             intent.putExtra("username", username)
             intent.putExtra("password", password)
             startActivity(intent)
+        }
+
+        sheetView.findViewById<View>(R.id.actionToggleLanguage).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            toggleLanguage()
         }
         
         sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {

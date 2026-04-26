@@ -447,7 +447,7 @@ class EditThemeActivity : AppCompatActivity() {
             val chatAvatar = root.findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.previewChatAvatar)
             if (chatAvatar != null) {
                 if (userAvatarUrl.isNotEmpty()) {
-                    Glide.with(this).load(userAvatarUrl).into(chatAvatar)
+                    Glide.with(this).load(userAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(chatAvatar)
                 } else {
                     chatAvatar.setImageResource(R.drawable.ic_default_avatar)
                 }
@@ -455,9 +455,13 @@ class EditThemeActivity : AppCompatActivity() {
 
             root.findViewById<ImageView>(R.id.previewChatBack)?.setColorFilter(onPrimary)
             
-            // Bottom panel
-            root.findViewById<View>(R.id.previewBottomPanel)?.setBackgroundColor(bpColor)
-            
+            // Bottom Panel Preview
+            root.findViewById<com.google.android.material.card.MaterialCardView>(R.id.previewBottomPanel)?.setCardBackgroundColor(bpColor)
+            root.findViewById<ImageView>(R.id.previewEmojiButton)?.setColorFilter(onBpColor)
+            root.findViewById<ImageView>(R.id.previewAttachButton)?.setColorFilter(onBpColor)
+            root.findViewById<ImageView>(R.id.previewAudioButton)?.setColorFilter(onBpColor)
+            root.findViewById<ImageView>(R.id.previewSendButton)?.setColorFilter(primary)
+            root.findViewById<TextView>(R.id.previewInputPlaceholder)?.setTextColor(onBpColor)
         } catch (_: Exception) {}
     }
 

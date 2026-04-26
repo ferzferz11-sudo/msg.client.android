@@ -9,11 +9,6 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_toggle_language"
-        android:title="@string/toggle_language"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/action_delete"
         android:icon="@drawable/ic_delete"
         android:title="@string/delete"
