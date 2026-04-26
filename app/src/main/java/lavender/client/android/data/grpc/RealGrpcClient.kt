@@ -778,7 +778,8 @@ object RealGrpcClient {
                         createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
                         unreadCount = proto.unreadCount,
                         lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
-                        creator = proto.creator
+                        creator = proto.creator,
+                        lastMessageText = proto.lastMessageText
                     )
                 }
                 callback(chats)
@@ -1568,7 +1569,8 @@ object RealGrpcClient {
                         createdAt = proto.createdAt?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
                         unreadCount = proto.unreadCount,
                         lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
-                        creator = proto.creator
+                        creator = proto.creator,
+                        lastMessageText = proto.lastMessageText
                     )
                 }
                 callback(chats)
@@ -2058,6 +2060,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
             cos.writeRawBytes(value.lastMessageTime.toByteArray())
         }
         if (value.creator.isNotEmpty()) cos.writeString(8, value.creator)
+        if (value.lastMessageText.isNotEmpty()) cos.writeString(9, value.lastMessageText)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -2071,6 +2074,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
         var unreadCount = 0
         var lastMessageTime: com.google.protobuf.Timestamp? = null
         var creator = ""
+        var lastMessageText = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -2093,10 +2097,11 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
                     cis.popLimit(oldLimit)
                 }
                 8 -> creator = cis.readString()
+                9 -> lastMessageText = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime, creator)
+        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime, creator, lastMessageText)
     }
 }
 

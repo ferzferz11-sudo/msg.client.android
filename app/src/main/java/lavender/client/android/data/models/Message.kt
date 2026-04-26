@@ -32,5 +32,6 @@ data class ChatInfo(
     val createdAt: Long = 0,
     val unreadCount: Int = 0,
     val lastMessageTime: Long = 0,
-    val creator: String = ""
+    val creator: String = "",
+    val lastMessageText: String = ""
 )

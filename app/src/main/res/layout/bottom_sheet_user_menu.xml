@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="?attr/colorSurfaceContainer">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="?attr/colorOnSurfaceVariant" />
+
+    <!-- Current User Info -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/menuUserAvatar"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_default_avatar" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/menuUsername"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/menuUserBio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                android:maxLines="2"
+                android:ellipsize="end" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/dividerVertical"
+        android:layout_marginBottom="16dp" />
+
+    <!-- View Profile -->
+    <LinearLayout
+        android:id="@+id/actionViewProfile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_account_circle"
+            app:tint="?attr/colorPrimary"
+            android:contentDescription="@string/preview" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/preview"
+            android:textSize="16sp"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <!-- Edit Profile -->
+    <LinearLayout
+        android:id="@+id/actionEditProfile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_edit"
+            app:tint="?attr/colorPrimary"
+            android:contentDescription="@string/edit" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/edit"
+            android:textSize="16sp"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <!-- Themes -->
+    <LinearLayout
+        android:id="@+id/actionThemes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_settings_brightness"
+            app:tint="?attr/colorPrimary"
+            android:contentDescription="@string/themes" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/themes"
+            android:textSize="16sp"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <!-- Notifications -->
+    <LinearLayout
+        android:id="@+id/actionNotifications"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_notification_history"
+            app:tint="?attr/colorPrimary"
+            android:contentDescription="@string/notifications" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/notifications"
+            android:textSize="16sp"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <!-- Contacts -->
+    <LinearLayout
+        android:id="@+id/actionContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_contacts"
+            app:tint="?attr/colorPrimary"
+            android:contentDescription="@string/contacts" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/contacts"
+            android:textSize="16sp"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/dividerVertical"
+        android:layout_marginVertical="8dp" />
+
+    <!-- Logout -->
+    <LinearLayout
+        android:id="@+id/actionLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/exit_to_app_24"
+            app:tint="#FF5252" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/logout_profile"
+            android:textSize="16sp"
+            android:textColor="#FF5252" />
+    </LinearLayout>
+
+</LinearLayout>

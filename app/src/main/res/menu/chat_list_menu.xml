@@ -6,13 +6,7 @@
         android:id="@+id/action_search"
         android:icon="@drawable/ic_search_custom"
         android:title="@string/search"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_contacts"
-        android:icon="@drawable/ic_contacts"
-        android:title="@string/contacts"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_themes"
@@ -32,21 +26,6 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_profile"
-        android:icon="@drawable/ic_settings_account"
-        android:title="@string/profile"
-        app:showAsAction="always">
-        <menu>
-            <item
-                android:id="@+id/action_profile_view"
-                android:title="@string/preview" />
-            <item
-                android:id="@+id/action_profile_edit"
-                android:title="@string/edit" />
-        </menu>
-    </item>
-
-    <item
         android:id="@+id/action_notification_history"
         android:title="@string/notifications"
         app:showAsAction="never" />
@@ -54,11 +33,6 @@
     <item
         android:id="@+id/action_update"
         android:title="@string/update"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_logout"
-        android:title="@string/logout_profile"
         app:showAsAction="never" />
 
     <item

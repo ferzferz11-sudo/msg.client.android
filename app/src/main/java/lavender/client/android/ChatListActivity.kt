@@ -154,17 +154,12 @@ class ChatListActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = ""
-            setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.exit_to_app_24)
+            setDisplayHomeAsUpEnabled(false)
         }
 
-        binding.toolbar.setNavigationOnClickListener {
-            if (adapter.getSelectedChats().isNotEmpty()) {
-                adapter.clearSelection()
-            } else {
-                // Minimize app to background instead of returning to login
-                moveTaskToBack(true)
-            }
+        // Setup user menu on avatar click
+        binding.root.findViewById<CircleImageView>(R.id.toolbarUserAvatar).setOnClickListener {
+            showUserMenuSheet()
         }
 
         // Handle system back button
@@ -340,8 +335,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun performSingleChatDeletion(chatId: String, chatName: String) {
-        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.delete)
-        binding.progressOverlay.isVisible = true
+        binding.toolbarTitle.text = getString(R.string.delete)
         
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -353,7 +347,7 @@ class ChatListActivity : AppCompatActivity() {
             }
             
             runOnUiThread {
-                binding.progressOverlay.isVisible = false
+                binding.toolbarTitle.text = getString(R.string.chats)
                 if (result.first) {
                     showToast(if (chatName.isNotEmpty()) getString(R.string.deleted_count, 1) + ": $chatName" else getString(R.string.deleted_count, 1))
                     loadChats()
@@ -386,6 +380,7 @@ class ChatListActivity : AppCompatActivity() {
                             grpcClient.updateAvatarCache(user, "")
                         }
                         adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                        updateToolbarAvatar()
                     }
                 }
             }
@@ -485,6 +480,7 @@ class ChatListActivity : AppCompatActivity() {
                                     viewModel.avatarCache = grpcClient.getAvatarCache()
                                     runOnUiThread {
                                         adapter.updateAvatarCache(viewModel.avatarCache)
+                                        updateToolbarAvatar()
                                     }
                                 }
                             }
@@ -499,9 +495,19 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateToolbarAvatar() {
+        val avatarView = binding.root.findViewById<CircleImageView>(R.id.toolbarUserAvatar) ?: return
+        val avatarCache = grpcClient.getAvatarCache()
+        val myAvatarUrl = avatarCache[username]
+        if (!myAvatarUrl.isNullOrEmpty()) {
+            Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)
+        } else {
+            avatarView.setImageResource(R.drawable.ic_default_avatar)
+        }
+    }
+
     private fun loadChats() {
-        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
-        binding.progressOverlay.isVisible = true
+        binding.toolbarTitle.text = getString(R.string.connecting)
         lifecycleScope.launch {
             val serverAddress = intent.getStringExtra("serverAddress") ?: getString(R.string.server_address)
             val parts = serverAddress.split(":")
@@ -528,7 +534,7 @@ class ChatListActivity : AppCompatActivity() {
             
             if (!serverAvailable) {
                 runOnUiThread {
-                    binding.progressOverlay.isVisible = false
+                    binding.toolbarTitle.text = getString(R.string.chats)
                     showToast(getString(R.string.server_unavailable))
                 }
                 return@launch
@@ -546,7 +552,7 @@ class ChatListActivity : AppCompatActivity() {
                 val notification = grpcClient.systemNotification.value
                 if (notification == "auth_failed") {
                     runOnUiThread {
-                        binding.progressOverlay.isVisible = false
+                        binding.toolbarTitle.text = getString(R.string.chats)
                         showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
                         grpcClient.disconnect()
                         finish()
@@ -564,7 +570,7 @@ class ChatListActivity : AppCompatActivity() {
                     viewModel.lastChatListVersion = version
                     runOnUiThread {
                         binding.swipeRefreshLayout.isRefreshing = false
-                        binding.progressOverlay.isVisible = false
+                        binding.toolbarTitle.text = getString(R.string.chats)
                         // Show/hide welcome message
                         binding.welcomeContainer.isVisible = chats.isEmpty()
                         binding.chatsRecyclerView.isVisible = chats.isNotEmpty()
@@ -604,6 +610,7 @@ class ChatListActivity : AppCompatActivity() {
                                         viewModel.avatarCache = grpcClient.getAvatarCache()
                                         runOnUiThread {
                                             adapter.updateAvatarCache(viewModel.avatarCache)
+                                            updateToolbarAvatar()
                                         }
                                     }
                                 }
@@ -623,8 +630,8 @@ class ChatListActivity : AppCompatActivity() {
             // Fallback: hide progress after 10 seconds total if still loading
             delay(10000)
             runOnUiThread {
-                if (binding.progressOverlay.isVisible) {
-                    binding.progressOverlay.isVisible = false
+                if (binding.toolbarTitle.text == getString(R.string.connecting)) {
+                    binding.toolbarTitle.text = getString(R.string.chats)
                     showToast(getString(R.string.connection_failed))
                 }
             }
@@ -634,6 +641,7 @@ class ChatListActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (avatarUrl.isNotEmpty()) {
                         adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                        updateToolbarAvatar()
                     }
                 }
             }
@@ -677,7 +685,6 @@ class ChatListActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId != androidR.id.home && 
             item.itemId != R.id.action_search && 
-            item.itemId != R.id.action_profile &&
             item.itemId != R.id.action_about) {
             
             item.isEnabled = false
@@ -761,8 +768,7 @@ class ChatListActivity : AppCompatActivity() {
                         dialog.dismiss()
                         val chatsToDelete = selected.toList()
                         adapter.clearSelection()
-                        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
-                        binding.progressOverlay.isVisible = true
+                        binding.toolbarTitle.text = getString(R.string.loading)
 
                         lifecycleScope.launch {
                             var successCount = 0
@@ -783,7 +789,7 @@ class ChatListActivity : AppCompatActivity() {
                             }
 
                             runOnUiThread {
-                                binding.progressOverlay.isVisible = false
+                                binding.toolbarTitle.text = getString(R.string.chats)
                                 if (successCount > 0) {
                                     showToast(getString(R.string.deleted_count, successCount))
                                     // Refresh the chat list
@@ -800,30 +806,6 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 true
             }
-            R.id.action_profile_view -> {
-                val intent = Intent(this, ProfileActivity::class.java).apply {
-                    putExtra("username", username)
-                    putExtra("is_group", false)
-                }
-                startActivity(intent)
-                true
-            }
-            R.id.action_profile_edit -> {
-                val intent = Intent(this, EditProfileActivity::class.java).apply {
-                    putExtra("username", username)
-                    putExtra("password", password)
-                }
-                editProfileLauncher.launch(intent)
-                true
-            }
-            R.id.action_contacts -> {
-                val intent = Intent(this, ContactsActivity::class.java).apply {
-                    putExtra("username", username)
-                    putExtra("password", password)
-                }
-                startActivity(intent)
-                true
-            }
             R.id.action_themes -> {
                 val intent = Intent(this, ThemesActivity::class.java).apply {
                     putExtra("username", username)
@@ -838,10 +820,6 @@ class ChatListActivity : AppCompatActivity() {
             }
             R.id.action_update -> {
                 downloadAndInstallApk()
-                true
-            }
-            R.id.action_logout -> {
-                logout()
                 true
             }
             R.id.action_about -> {
@@ -867,14 +845,11 @@ class ChatListActivity : AppCompatActivity() {
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_contacts)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
         menu.findItem(R.id.action_themes)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_profile)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_logout)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_about)?.apply { isVisible = !hasSelection }
         
         lifecycleScope.launch {
@@ -918,18 +893,17 @@ class ChatListActivity : AppCompatActivity() {
         val downloadProgressBar = binding.root.findViewById<ProgressBar>(R.id.downloadProgressBar)
         val downloadProgressText = binding.root.findViewById<TextView>(R.id.downloadProgressText)
         val cancelDownloadButton = binding.root.findViewById<Button>(R.id.cancelDownloadButton)
-        val progressOverlay = binding.root.findViewById<FrameLayout>(R.id.progressOverlay)
         val progressTitle = binding.root.findViewById<TextView>(R.id.progressTitle)
 
         progressTitle?.text = getString(R.string.download_update)
-        progressOverlay.isVisible = true
+        binding.progressOverlay.isVisible = true
         downloadProgressBar.progress = 0
         downloadProgressText.text = ""
 
         // Cancel button listener
         cancelDownloadButton.setOnClickListener {
             downloadJob?.cancel()
-            progressOverlay.isVisible = false
+            binding.progressOverlay.isVisible = false
             clearMenuAnimations()
             invalidateOptionsMenu()
             showToast("Download cancelled")
@@ -980,14 +954,14 @@ class ChatListActivity : AppCompatActivity() {
                 input.close()
 
                 withContext(Dispatchers.Main) {
-                    progressOverlay.isVisible = false
+                    binding.progressOverlay.isVisible = false
                     clearMenuAnimations()
                     invalidateOptionsMenu()
                     installApk(file)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    progressOverlay.isVisible = false
+                    binding.progressOverlay.isVisible = false
                     clearMenuAnimations()
                     invalidateOptionsMenu()
                     showToast("Download error: ${e.message}", Toast.LENGTH_LONG)
@@ -1007,6 +981,80 @@ class ChatListActivity : AppCompatActivity() {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
+    }
+
+    private fun showUserMenuSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_user_menu, binding.root, false)
+        
+        val menuUserAvatar = sheetView.findViewById<CircleImageView>(R.id.menuUserAvatar)
+        val menuUsername = sheetView.findViewById<TextView>(R.id.menuUsername)
+        val menuUserBio = sheetView.findViewById<TextView>(R.id.menuUserBio)
+        
+        menuUsername.text = username
+        
+        // Load bio from server
+        grpcClient.getUserProfile(username) { profile ->
+            runOnUiThread {
+                if (profile != null && profile.bio.isNotEmpty()) {
+                    menuUserBio.isVisible = true
+                    menuUserBio.text = profile.bio
+                } else {
+                    menuUserBio.isVisible = false
+                }
+            }
+        }
+
+        val avatarCache = grpcClient.getAvatarCache()
+        val myAvatarUrl = avatarCache[username]
+        if (!myAvatarUrl.isNullOrEmpty()) {
+            Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(menuUserAvatar)
+        }
+        
+        sheetView.findViewById<View>(R.id.actionViewProfile).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(this, ProfileActivity::class.java)
+            intent.putExtra("username", username)
+            startActivity(intent)
+        }
+        
+        sheetView.findViewById<View>(R.id.actionEditProfile).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(this, EditProfileActivity::class.java)
+            intent.putExtra("username", username)
+            intent.putExtra("password", password)
+            editProfileLauncher.launch(intent)
+        }
+
+        sheetView.findViewById<View>(R.id.actionThemes).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(this, ThemesActivity::class.java).apply {
+                putExtra("username", username)
+            }
+            startActivity(intent)
+        }
+
+        sheetView.findViewById<View>(R.id.actionNotifications).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(this, NotificationActivity::class.java)
+            startActivity(intent)
+        }
+        
+        sheetView.findViewById<View>(R.id.actionContacts).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(this, ContactsActivity::class.java)
+            intent.putExtra("username", username)
+            intent.putExtra("password", password)
+            startActivity(intent)
+        }
+        
+        sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            logout()
+        }
+        
+        bottomSheetDialog.setContentView(sheetView)
+        bottomSheetDialog.show()
     }
 
     private fun showChatActionSheet() {
@@ -1033,12 +1081,12 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showCreateDirectChatDialog() {
-        binding.progressOverlay.isVisible = true
+        binding.toolbarTitle.text = getString(R.string.loading)
         
         // Fetch contacts first to only show them in the direct chat dialog
         grpcClient.getContacts(username) { contacts ->
             runOnUiThread {
-                binding.progressOverlay.isVisible = false
+                binding.toolbarTitle.text = getString(R.string.chats)
                 val dialogView = layoutInflater.inflate(R.layout.dialog_create_direct_chat, null)
                 
                 val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
@@ -1095,10 +1143,11 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showCreateChatDialog() {
-        binding.progressOverlay.isVisible = true
+        binding.toolbarTitle.text = getString(R.string.loading)
         // Ensure buttons are restored if dialog fails to show or after it finishes
         val resetButtons = {
             runOnUiThread {
+                binding.toolbarTitle.text = getString(R.string.chats)
                 binding.addChatFab.isEnabled = true
                 binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
                 binding.addChatFab.clearAnimation()
@@ -1110,7 +1159,6 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.getContacts(username) { contacts ->
             if (contacts.isEmpty()) {
                 runOnUiThread {
-                    binding.progressOverlay.isVisible = false
                     resetButtons()
                     showAddContactDialog()
                 }
@@ -1222,7 +1270,7 @@ class ChatListActivity : AppCompatActivity() {
                         }
                         
                         Log.d("ChatList", "Group dialog create clicked. Name: $groupName, Users: $selectedUsers")
-                        binding.progressOverlay.isVisible = true
+                        binding.toolbarTitle.text = getString(R.string.loading)
 
                         if (selectedUsers.size == 1 && groupName.isEmpty()) {
                             // Create direct chat
@@ -1245,6 +1293,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAddContactDialog() {
+        binding.toolbarTitle.text = getString(R.string.loading)
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
         
         // Set dialog background using Material Design colors
@@ -1266,7 +1315,8 @@ class ChatListActivity : AppCompatActivity() {
             onUserClick = { selected ->
                 btnAdd.isEnabled = selected != username
             },
-            avatarCache = grpcClient.getAvatarCache()
+            avatarCache = grpcClient.getAvatarCache(),
+            onlineUsers = grpcClient.users.value
         )
 
         usersRecyclerView.adapter = userAdapter
@@ -1279,7 +1329,10 @@ class ChatListActivity : AppCompatActivity() {
             allUsers.addAll(grpcClient.allUsers.value.filter { it != username })
             filteredUsers.clear()
             filteredUsers.addAll(allUsers)
-            runOnUiThread { userAdapter.setUsers(filteredUsers) }
+            runOnUiThread { 
+                binding.toolbarTitle.text = getString(R.string.chats)
+                userAdapter.setUsers(filteredUsers) 
+            }
         }
 
         searchEditText.addTextChangedListener(object : android.text.TextWatcher {
@@ -1296,6 +1349,7 @@ class ChatListActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .setOnDismissListener {
+                binding.toolbarTitle.text = getString(R.string.chats)
                 binding.addChatFab.isEnabled = true
                 binding.addChatFab.setImageResource(android.R.drawable.ic_input_add)
                 binding.addChatFab.clearAnimation()
@@ -1307,8 +1361,10 @@ class ChatListActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
             val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener
+            binding.toolbarTitle.text = getString(R.string.loading)
             grpcClient.addContact(username, selected) { success, message ->
                 runOnUiThread {
+                    binding.toolbarTitle.text = getString(R.string.chats)
                     if (success) {
                         showToast(getString(R.string.contact_added))
                         if (createChatCheckbox.isChecked) {
@@ -1328,17 +1384,15 @@ class ChatListActivity : AppCompatActivity() {
     private fun createDirectChat(targetUser: String) {
         if (targetUser == username) {
             showToast(getString(R.string.cannot_chat_with_yourself))
-            binding.progressOverlay.isVisible = false
             return
         }
 
-        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
-        binding.progressOverlay.isVisible = true
+        binding.toolbarTitle.text = getString(R.string.loading)
         lifecycleScope.launch {
             Log.d("ChatList", "Creating direct chat with $targetUser")
             grpcClient.createDirectChat(username, targetUser) { chatId ->
                 Log.d("ChatList", "Create direct chat result: $chatId")
-                runOnUiThread { binding.progressOverlay.isVisible = false }
+                runOnUiThread { binding.toolbarTitle.text = getString(R.string.chats) }
                 if (chatId != null) {
                     runOnUiThread {
                         openChat(
@@ -1360,13 +1414,12 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun createGroupChat(name: String, participants: List<String>) {
-        binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
-        binding.progressOverlay.isVisible = true
+        binding.toolbarTitle.text = getString(R.string.loading)
         lifecycleScope.launch {
             Log.d("ChatList", "Creating group chat $name with ${participants.size} participants")
             grpcClient.createGroupChat(name, participants, username) { chatId ->
                 Log.d("ChatList", "Create group chat result: $chatId")
-                runOnUiThread { binding.progressOverlay.isVisible = false }
+                runOnUiThread { binding.toolbarTitle.text = getString(R.string.chats) }
                 if (chatId != null) {
                     runOnUiThread {
                         openChat(

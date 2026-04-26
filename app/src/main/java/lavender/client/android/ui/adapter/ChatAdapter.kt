@@ -167,14 +167,17 @@ class ChatAdapter(
                     .map { participantsArray.getString(it) }
                     .find { it != currentUsername } ?: chat.name
                 chatName.text = otherPerson
-                chatType.text = if (isRussian) "Личное сообщение" else "Direct Message"
             } else {
                 chatName.text = chat.name
-                chatType.text = when (chat.type) {
-                    "general" -> if (isRussian) "Общий чат" else "General Chat"
-                    "group" -> if (isRussian) "Группа" else "Group"
-                    else -> chat.type
-                }
+            }
+
+            // Show last message instead of chat type
+            if (chat.lastMessageText.isNotEmpty()) {
+                chatType.text = chat.lastMessageText
+                chatType.maxLines = 1
+                chatType.ellipsize = android.text.TextUtils.TruncateAt.END
+            } else {
+                chatType.text = if (isRussian) "Нет сообщений" else "No messages"
             }
 
             unreadCount.isVisible = chat.unreadCount > 0
