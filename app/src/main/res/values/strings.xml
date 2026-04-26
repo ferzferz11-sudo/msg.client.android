@@ -253,6 +253,8 @@
     <string name="theme_template_blue">Ocean Blue</string>
     <string name="theme_template_purple">Royal Purple</string>
     <string name="theme_template_sunset">Sunset Orange</string>
+    <string name="theme_template_custom_light">Default Light</string>
+    <string name="theme_template_custom_dark">Default Dark</string>
     <string name="admin_label">(Admin)</string>
     <string name="super_admin">Super Admin</string>
     <string name="about">About</string>

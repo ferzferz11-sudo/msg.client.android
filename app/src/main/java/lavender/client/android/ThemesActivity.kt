@@ -205,13 +205,13 @@ class ThemesActivity : AppCompatActivity() {
             }
 
             val btnDelete = ImageButton(this).apply {
-                val size = (64 * resources.displayMetrics.density).toInt()
+                val size = (44 * resources.displayMetrics.density).toInt()
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     marginEnd = (8 * resources.displayMetrics.density).toInt()
                 }
                 setImageResource(R.drawable.ic_delete)
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                setPadding(12, 12, 12, 12)
+                setPadding(10, 10, 10, 10)
                 
                 val typedValue = android.util.TypedValue()
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)

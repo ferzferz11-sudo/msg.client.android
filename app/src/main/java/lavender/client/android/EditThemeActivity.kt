@@ -629,6 +629,8 @@ class EditThemeActivity : AppCompatActivity() {
     )
 
     private val templates = listOf(
+        ThemeTemplate(R.string.theme_template_custom_light, "#312051", "#FFFFFF", "#F8F7FC", "#312051", "#FFFFFF", "#312051", "#FFFFFF", "#312051", false),
+        ThemeTemplate(R.string.theme_template_custom_dark, "#967BB6", "#04052E", "#1A1B46", "#FFFFFF", "#312051", "#FFFFFF", "#04052E", "#FFFFFF", true),
         ThemeTemplate(R.string.theme_template_green, "#2E7D32", "#F1F8E9", "#DCEDC8", "#1B5E20", "#FFFFFF", "#33691E", "#E8F5E9", "#2E7D32", false),
         ThemeTemplate(R.string.theme_template_blue, "#1565C0", "#E3F2FD", "#BBDEFB", "#0D47A1", "#FFFFFF", "#01579B", "#E3F2FD", "#1565C0", false),
         ThemeTemplate(R.string.theme_template_purple, "#6A1B9A", "#F3E5F5", "#E1BEE7", "#4A148C", "#FFFFFF", "#4A148C", "#F3E5F5", "#6A1B9A", false),

@@ -255,6 +255,8 @@
     <string name="theme_template_blue">Океанский синий</string>
     <string name="theme_template_purple">Королевский пурпур</string>
     <string name="theme_template_sunset">Закатный оранжевый</string>
+    <string name="theme_template_custom_light">Стандартная светлая</string>
+    <string name="theme_template_custom_dark">Стандартная темная</string>
     <string name="admin_label">(Админ)</string>
     <string name="super_admin">Суперадмин</string>
     <string name="about">О программе</string>
