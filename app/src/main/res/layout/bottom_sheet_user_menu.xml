@@ -61,34 +61,6 @@
         android:background="?android:attr/dividerVertical"
         android:layout_marginBottom="16dp" />
 
-    <!-- View Profile -->
-    <LinearLayout
-        android:id="@+id/actionViewProfile"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_account_circle"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/preview" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/preview"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
-    </LinearLayout>
-
     <!-- Edit Profile -->
     <LinearLayout
         android:id="@+id/actionEditProfile"

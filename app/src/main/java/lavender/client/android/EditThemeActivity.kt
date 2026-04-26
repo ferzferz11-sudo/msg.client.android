@@ -423,6 +423,7 @@ class EditThemeActivity : AppCompatActivity() {
             
             // Toolbar Text and Icons
             root.findViewById<TextView>(R.id.previewToolbarTitle)?.setTextColor(onPrimary)
+            root.findViewById<ImageView>(R.id.previewToolbarSearch)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarMore)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarAvatar)?.let { avatarView ->
                 if (userAvatarUrl.isNotEmpty()) {

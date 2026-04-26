@@ -61,7 +61,8 @@ class ChatAdapter(
         } else {
             allChats.filter { chat ->
                 chat.name.lowercase().contains(currentFilter) ||
-                chat.participants.lowercase().contains(currentFilter)
+                chat.participants.lowercase().contains(currentFilter) ||
+                chat.lastMessageText.lowercase().contains(currentFilter)
             }
         }
         

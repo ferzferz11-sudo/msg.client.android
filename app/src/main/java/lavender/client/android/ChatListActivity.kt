@@ -997,13 +997,6 @@ class ChatListActivity : AppCompatActivity() {
             Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(menuUserAvatar)
         }
         
-        sheetView.findViewById<View>(R.id.actionViewProfile).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            val intent = Intent(this, ProfileActivity::class.java)
-            intent.putExtra("username", username)
-            startActivity(intent)
-        }
-        
         sheetView.findViewById<View>(R.id.actionEditProfile).setOnClickListener {
             bottomSheetDialog.dismiss()
             val intent = Intent(this, EditProfileActivity::class.java)

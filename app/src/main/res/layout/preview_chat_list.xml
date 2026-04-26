@@ -41,6 +41,14 @@
             android:textStyle="bold" />
 
         <ImageView
+            android:id="@+id/previewToolbarSearch"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/ic_search_custom"
+            app:tint="?attr/colorOnPrimary" />
+
+        <ImageView
             android:id="@+id/previewToolbarMore"
             android:layout_width="24dp"
             android:layout_height="24dp"
