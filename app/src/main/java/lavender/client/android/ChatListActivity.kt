@@ -806,18 +806,6 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 true
             }
-            R.id.action_themes -> {
-                val intent = Intent(this, ThemesActivity::class.java).apply {
-                    putExtra("username", username)
-                }
-                startActivity(intent)
-                true
-            }
-            R.id.action_notification_history -> {
-                val intent = Intent(this, NotificationActivity::class.java)
-                startActivity(intent)
-                true
-            }
             R.id.action_update -> {
                 downloadAndInstallApk()
                 true
@@ -846,9 +834,7 @@ class ChatListActivity : AppCompatActivity() {
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
-        menu.findItem(R.id.action_themes)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_toggle_language)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_about)?.apply { isVisible = !hasSelection }
         

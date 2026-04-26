@@ -142,9 +142,12 @@ class NotificationActivity : AppCompatActivity() {
     }
 
     private fun updatePreview(style: String) {
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val username = prefs.getString("username", "") ?: ""
+        
         when (style) {
             "messaging" -> {
-                previewTitle.text = getString(R.string.notif_preview_sender)
+                previewTitle.text = username.ifEmpty { getString(R.string.notif_preview_sender) }
                 previewBody.text = getString(R.string.notif_preview_msg_messaging)
             }
             "big_text" -> {
