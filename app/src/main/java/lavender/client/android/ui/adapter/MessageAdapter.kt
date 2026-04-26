@@ -1,5 +1,6 @@
 package lavender.client.android.ui.adapter
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -172,25 +173,55 @@ class MessageAdapter(
             }
 
             // 3. Child Ordering & Background
+            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
             if (isOutgoing) {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
                 messageBubble.gravity = android.view.Gravity.END
                 
-                val onPrimary = android.util.TypedValue()
-                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimary, true)
-                messageText.setTextColor(onPrimary.data)
-                timeText.setTextColor(onPrimary.data)
-                editedText.setTextColor(onPrimary.data)
+                if (theme != null) {
+                    try {
+                        val primary = android.graphics.Color.parseColor(theme.primaryColor)
+                        val onPrimary = android.graphics.Color.parseColor(theme.onPrimaryColor)
+                        messageBubble.backgroundTintList = ColorStateList.valueOf(primary)
+                        messageText.setTextColor(onPrimary)
+                        timeText.setTextColor(onPrimary)
+                        editedText.setTextColor(onPrimary)
+                        readStatusIcon.imageTintList = ColorStateList.valueOf(onPrimary)
+                    } catch (_: Exception) {}
+                } else {
+                    val onPrimary = android.util.TypedValue()
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimary, true)
+                    val color = if (onPrimary.resourceId != 0) ContextCompat.getColor(context, onPrimary.resourceId) else onPrimary.data
+                    messageText.setTextColor(color)
+                    timeText.setTextColor(color)
+                    editedText.setTextColor(color)
+                    messageBubble.backgroundTintList = null
+                }
             } else {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
                 messageBubble.gravity = android.view.Gravity.START
                 
-                val onSurface = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.textColorPrimary, onSurface, true)
-                messageText.setTextColor(onSurface.data)
-                timeText.setTextColor(onSurface.data)
-                editedText.setTextColor(onSurface.data)
-                userText.setTextColor(ContextCompat.getColor(context, R.color.tg_incoming_name))
+                if (theme != null) {
+                    try {
+                        val surface = android.graphics.Color.parseColor(theme.surfaceColor)
+                        val onSurface = android.graphics.Color.parseColor(theme.onSurfaceColor)
+                        val textPrimary = android.graphics.Color.parseColor(theme.textPrimaryColor)
+                        messageBubble.backgroundTintList = ColorStateList.valueOf(surface)
+                        messageText.setTextColor(textPrimary)
+                        timeText.setTextColor(onSurface)
+                        editedText.setTextColor(onSurface)
+                        userText.setTextColor(onSurface)
+                    } catch (_: Exception) {}
+                } else {
+                    val onSurface = android.util.TypedValue()
+                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, onSurface, true)
+                    val color = if (onSurface.resourceId != 0) ContextCompat.getColor(context, onSurface.resourceId) else onSurface.data
+                    messageText.setTextColor(color)
+                    timeText.setTextColor(color)
+                    editedText.setTextColor(color)
+                    userText.setTextColor(ContextCompat.getColor(context, R.color.tg_incoming_name))
+                    messageBubble.backgroundTintList = null
+                }
             }
 
             // 4. Status
@@ -304,6 +335,44 @@ class MessageAdapter(
             if (message.repliedToUser.isNotEmpty()) {
                 replyQuoteUser.text = message.repliedToUser
                 replyQuoteText.text = message.repliedToText
+
+                // Apply theme to quote
+                if (theme != null) {
+                    try {
+                        val onPrimary = android.graphics.Color.parseColor(theme.onPrimaryColor)
+                        val onSurface = android.graphics.Color.parseColor(theme.onSurfaceColor)
+                        val textPrimary = android.graphics.Color.parseColor(theme.textPrimaryColor)
+                        
+                        if (isOutgoing) {
+                            replyQuoteUser.setTextColor(onPrimary)
+                            replyQuoteText.setTextColor(withAlpha(onPrimary, 200))
+                            replyQuoteContainer.setBackgroundColor(withAlpha(onPrimary, 30))
+                        } else {
+                            replyQuoteUser.setTextColor(onSurface)
+                            replyQuoteText.setTextColor(withAlpha(textPrimary, 200))
+                            replyQuoteContainer.setBackgroundColor(withAlpha(onSurface, 30))
+                        }
+                    } catch (_: Exception) {}
+                } else {
+                    // Standard themes
+                    val onPrimary = android.util.TypedValue()
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimary, true)
+                    val onPrimaryColor = if (onPrimary.resourceId != 0) ContextCompat.getColor(context, onPrimary.resourceId) else onPrimary.data
+
+                    val textPrimary = android.util.TypedValue()
+                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, textPrimary, true)
+                    val textPrimaryColor = if (textPrimary.resourceId != 0) ContextCompat.getColor(context, textPrimary.resourceId) else textPrimary.data
+
+                    if (isOutgoing) {
+                        replyQuoteUser.setTextColor(onPrimaryColor)
+                        replyQuoteText.setTextColor(onPrimaryColor)
+                        replyQuoteContainer.setBackgroundColor(withAlpha(onPrimaryColor, 30))
+                    } else {
+                        replyQuoteUser.setTextColor(ContextCompat.getColor(context, R.color.tg_blue))
+                        replyQuoteText.setTextColor(textPrimaryColor)
+                        replyQuoteContainer.setBackgroundColor(withAlpha(textPrimaryColor, 20))
+                    }
+                }
             }
 
             // 6. Interaction
@@ -314,6 +383,10 @@ class MessageAdapter(
 
             messageBubble.setOnClickListener { onClick() }
             messageBubble.setOnLongClickListener { onLongClick(); true }
+        }
+
+        private fun withAlpha(color: Int, alpha: Int): Int {
+            return (color and 0x00FFFFFF) or (alpha shl 24)
         }
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()

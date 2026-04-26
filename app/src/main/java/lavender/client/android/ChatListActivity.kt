@@ -880,22 +880,11 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Force overflow icon and its tint
-        val typedValue = TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-        val color = typedValue.data
-        
-        menu.findItem(R.id.action_search)?.icon?.setTint(color)
-        menu.findItem(R.id.action_contacts)?.icon?.setTint(color)
-        menu.findItem(R.id.action_profile)?.icon?.setTint(color)
-        
-        // Ensure overflow icon is tinted correctly
-        binding.toolbar.overflowIcon?.let {
-            val tintedIcon = androidx.core.graphics.drawable.DrawableCompat.wrap(it).mutate()
-            androidx.core.graphics.drawable.DrawableCompat.setTint(tintedIcon, color)
-            binding.toolbar.overflowIcon = tintedIcon
+        // Final force application via ThemeManager logic
+        lavender.client.android.ui.ThemeManager.getCurrentTheme()?.let { 
+            lavender.client.android.ui.ThemeManager.applyThemeToView(binding.toolbar, it)
         }
-        
+
         return true
     }
 

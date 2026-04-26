@@ -263,10 +263,24 @@
     <string name="send_push_hint">If disabled, your messages won\'t trigger push notifications for others.</string>
     <string name="incoming">Incoming</string>
     <string name="outgoing">Outgoing</string>
+    <string name="notification_history">Notification History</string>
+    <string name="notification_style_preview">Notification Style Preview</string>
+    <string name="chat_background">Chat Screen Background</string>
+    <string name="chat_list_background">Chat List Background</string>
+    <string name="notif_preview_sender">Pavel Davydov</string>
+    <string name="notif_preview_msg_standard">New message received</string>
+    <string name="notif_preview_msg_messaging">Check out the new MessagingStyle preview!</string>
+    <string name="notif_preview_msg_bigtext">This is an example of a very long message that would normally be truncated, but in BigTextStyle it can be expanded to show the full content of the message clearly.</string>
+    <string name="notif_preview_title_bigtext">Large Update</string>
+    <string name="notif_preview_title_standard">Lavender Messenger</string>
     <string name="logout_profile">Log out of profile</string>
     <string name="logout_confirm_title">Log out?</string>
     <string name="logout_confirm_message">You will be disconnected from the server. Upon next entry, you will need to re-enter your username and password as they will not be saved. Make sure you remember them!</string>
     <string name="server_version_format">Server Version: %s</string>
     <string name="update_now">Update Now</string>
     <string name="logout_yes">Log out</string>
+    <string name="notification_style">Notification Style</string>
+    <string name="style_standard">Standard</string>
+    <string name="style_messaging">Messaging (Telegram style)</string>
+    <string name="style_big_text">Expanded Text</string>
 </resources>

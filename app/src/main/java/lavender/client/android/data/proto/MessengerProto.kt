@@ -436,7 +436,10 @@ data class CustomThemeProto(
     val textPrimaryColor: String = "",
     val textSecondaryColor: String = "",
     val isDark: Boolean = false,
-    val backgroundImageUrl: String = ""
+    val backgroundImageUrl: String = "",
+    val chatListBackgroundImageUrl: String = "",
+    val bottomPanelColor: String = "",
+    val onBottomPanelColor: String = ""
 )
 
 data class GetThemesRequestProto(
@@ -474,4 +477,18 @@ data class DeleteThemeRequestProto(
 
 data class DeleteThemeResponseProto(
     val success: Boolean = false
+)
+
+data class FCMLogEntryProto(
+    val timestamp: String = "",
+    val level: String = "",
+    val message: String = ""
+)
+
+data class GetFCMLogsRequestProto(
+    val dummy: String = ""
+)
+
+data class GetFCMLogsResponseProto(
+    val logs: List<FCMLogEntryProto> = emptyList()
 )

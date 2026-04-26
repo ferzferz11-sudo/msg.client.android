@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/previewRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="?android:attr/windowBackground">
+
+    <ImageView
+        android:id="@+id/previewChatListBgImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/previewToolbar"
@@ -25,11 +31,48 @@
             android:textColor="?attr/colorOnPrimary"
             android:textSize="18sp"
             android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/previewToolbarAdd"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/chat_add_on_24"
+            app:tint="?attr/colorOnPrimary" />
+
+        <ImageView
+            android:id="@+id/previewToolbarContacts"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/ic_contacts"
+            app:tint="?attr/colorOnPrimary" />
+
+        <ImageView
+            android:id="@+id/previewToolbarProfile"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/ic_settings_account"
+            app:tint="?attr/colorOnPrimary" />
+
+        <ImageView
+            android:id="@+id/previewToolbarMore"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_more_vert"
+            app:tint="?attr/colorOnPrimary" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/previewToolbar"
         android:orientation="vertical"
         android:padding="8dp">
 
@@ -120,4 +163,4 @@
 
     </LinearLayout>
 
-</LinearLayout>
+</RelativeLayout>

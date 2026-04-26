@@ -5,43 +5,51 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2.0] - 2026-04-26
+## [1.0.2.1] - 2026-04-26
 
 ### Added
-- 🎨 **Professional Theme Editor**:
-  - New dedicated `EditThemeActivity` with tab-based navigation (Main, Colors, Background).
-  - **Live Preview**: Minimized real-time preview of Chat List and Chat screens at the top.
-  - **Visual Backgrounds**: Miniature image previews instead of URLs, with full-screen view and server-side deletion.
-  - **Color Picker**: Integrated palette for quick color selection by tapping color circles.
-  - **Descriptive Labels**: Color settings now explicitly state their usage (e.g., "Toolbar", "Outgoing Bubbles").
-  - **Edit Icons**: Added visible edit and delete icons to the theme list for better discoverability.
-- ℹ️ **Enhanced About Dialog**:
-  - Modern redesign with app logo and structured version information.
-  - Displays both **Client and Server versions** for better debugging.
-  - Integrated "Update Now" button and developer feedback action (email draft).
-- 🔔 **Advanced Notification Center**:
-  - New dedicated activity for managing notification settings and history.
-  - **Privacy Controls**: Options to disable incoming push notifications and "Notify others" (outgoing push control).
-  - **Notification Log**: Structured incoming/outgoing history tabs for tracking delivery.
-- 👑 **Server-Controlled Super Admin**:
-  - Permissions are now managed server-side via `is_super_admin` flag.
-  - Enlarged avatars (64dp) and click-to-view profile logic in the admin user list.
-- 🚪 **Secure Logout**:
-  - Renamed to "Log out of profile" with a mandatory confirmation dialog and permanent credential clearing warning.
+- 🔔 **Customizable Notification Styles**:
+  - Choice between multiple system notification styles in the Notification Center.
+  - **Standard**: Classic title and body preview.
+  - **Messaging (Telegram style)**: Uses Android `MessagingStyle` for better conversation grouping.
+  - **Expanded Text**: Uses `BigTextStyle` for full preview of long messages.
+  - **Real-time Preview**: Visual preview of styles directly in settings with localized (EN/RU) examples.
+- 📜 **Enhanced Notification Management**:
+  - Separated **Notification Settings** and **Notification Log** into dedicated screens.
+  - Fixed issues where incoming/outgoing events were missing from history.
+- 🛠️ **FCM Server Logs (Super Admin only)**:
+  - New dedicated screen for super admins to monitor real-time server push logs.
+  - Tracks token registrations, delivery success, and skip reasons (e.g., "User disabled push").
+- 🎨 **Powerful Theme Editor Updates**:
+  - **Multi-Backgrounds**: Support for separate background images for **Chat List** and **Chat** screens.
+  - **Bottom Panel Styling**: Full control over background and icon colors for the chat input panel.
+  - **Smart Saving**: The "Save" button now only appears when actual changes are detected.
+  - **Localized Templates**: Built-in themes (Forest Green, Ocean Blue, etc.) are now fully localized and optimized for bottom panel colors.
+- 🖼️ **Personalized Theme Preview**:
+  - Previews now display **your real username and avatar**, making theme setup truly personal.
 
 ### Fixed
-- 🔌 **Connection Stability**:
-  - Optimized gRPC keepalive parameters to be more tolerant of mobile network fluctuations.
-  - Improved server-side Hub logic to reduce redundant status broadcasts and channel noise.
-  - Fixed a deadlock issue where menu items could become permanently disabled.
-- 🛠️ **UI Refinement**:
-  - Restored classic overflow dots (three vertical dots) to the toolbar.
-  - Rearranged toolbar icons: Contacts back to panel, Search to overflow for better spacing.
-  - Fixed theme tinting issues where the overflow menu icon wouldn't follow theme colors.
-  - Improved contacts selection contrast in Light theme.
-  - Corrected `ic_settings_brightness` and updated `ic_contacts` design.
-- 🧹 **Storage Management**:
-  - Implemented automatic cleanup of theme background files from the server upon theme or profile deletion.
+- 🛠️ **UI Tinting & Consistency**:
+  - **Toolbar Perfected**: Titles and all icons (Search, Contacts, More) now strictly follow theme colors.
+  - **Avatar Visibility**: Fixed "white circle" bug where avatars were accidentally tinted over by theme colors.
+  - **Message Bubbles**: Bubbles and **quoted messages** now correctly apply custom theme colors with high contrast.
+  - **Quote Visibility**: Fixed invisible quote text in standard light themes.
+  - **FAB Tinting**: The "+" button in the chat list now follows the Primary theme color.
+- 🛡️ **Theming Stability**:
+  - Clean transitions when switching between custom and standard system themes (no "color leaking").
+  - Corrected "Message edited" toast to "Theme saved" when updating themes.
+- 🔌 **Server & Protocol**:
+  - Updated messenger.proto and database to persist new theme fields (bottom panel, chat list background).
+  - Improved FCM registration logs with detailed "Push for me" and "Push from me" statuses.
 
-## [1.0.1.60] - 2026-04-26
-... (keeping the rest)
+## [1.0.2.0] - 2026-04-26
+### Added
+- 🌈 **Personalized Theme Editor**: Creation and management of custom themes with Primary, Background, and Surface color controls.
+- 🖼️ **Chat Backgrounds**: Ability to upload custom background images for chat screens.
+- 📡 **Server-side Theme Storage**: Themes are now synced to your account and available on all devices.
+- 🌗 **Auto-Theming**: System bars automatically adapt their icon brightness based on your primary theme color.
+
+### Fixed
+- Optimized image loading for high-resolution background textures.
+- Improved gRPC reconnection logic during theme synchronization.
+- General UI cleanup for the account settings screen.

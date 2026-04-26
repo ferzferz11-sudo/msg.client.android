@@ -7,8 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
 import org.json.JSONObject
@@ -44,25 +46,56 @@ object ThemeManager {
         }
     }
 
-    fun applyTheme(activity: AppCompatActivity) {
-        val theme = currentCustomTheme ?: return
-        
-        val root = activity.findViewById<View>(android.R.id.content)
-        applyThemeToView(root, theme)
+    fun clearTheme() {
+        currentCustomTheme = null
+    }
 
-        // System UI bars adjustment based on isDark flag
+    fun applyTheme(activity: AppCompatActivity) {
+        val theme = currentCustomTheme
+        val root = activity.findViewById<View>(android.R.id.content)
+
+        if (theme == null) {
+            // Support standard themes (light/dark)
+            val typedValue = android.util.TypedValue()
+            activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            val onPrimary = if (typedValue.resourceId != 0) ContextCompat.getColor(activity, typedValue.resourceId) else typedValue.data
+            
+            // Force tinting for toolbar children (handles custom titles and icons in standard themes)
+            findAndTintToolbars(root, onPrimary)
+            return
+        }
+        
+        applyThemeToView(root, theme)
+        
+        // Handle bottom panel specifically if it exists
+        activity.findViewById<View>(R.id.bottomPanel)?.let { 
+            applyThemeToBottomPanel(it, theme)
+        }
+
+        // Automatic System UI bars adjustment based on brightness of Primary Color
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             val controller = activity.window.insetsController
             if (controller != null) {
-                if (theme.isDark) {
-                    // Dark theme -> Light icons on bars
-                    controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
-                    controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
-                } else {
-                    // Light theme -> Dark icons on bars
-                    controller.setSystemBarsAppearance(android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
-                    controller.setSystemBarsAppearance(android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS, android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
-                }
+                try {
+                    val primaryColor = Color.parseColor(theme.primaryColor)
+                    val isLight = isColorLight(primaryColor)
+                    
+                    if (isLight) {
+                        // Light background -> Dark icons on bars
+                        controller.setSystemBarsAppearance(
+                            android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                            android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        )
+                        controller.setSystemBarsAppearance(
+                            android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                            android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                        )
+                    } else {
+                        // Dark background -> Light icons on bars
+                        controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+                        controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+                    }
+                } catch (_: Exception) {}
             }
         }
         
@@ -74,12 +107,56 @@ object ThemeManager {
         try {
             val bgColor = Color.parseColor(theme.backgroundColor)
             activity.window.decorView.setBackgroundColor(bgColor)
+            root.setBackgroundColor(bgColor)
             
-            // Apply background color to the root content view if no image is present
-            if (theme.backgroundImageUrl.isEmpty()) {
-                root.setBackgroundColor(bgColor)
+            // Handle background images
+            val bgImageView = activity.findViewById<android.widget.ImageView>(
+                if (activity.javaClass.simpleName == "ChatListActivity") R.id.chatListBgImage
+                else R.id.chatBackground
+            )
+            
+            val imageUrl = if (activity.javaClass.simpleName == "ChatListActivity") 
+                theme.chatListBackgroundImageUrl 
+            else 
+                theme.backgroundImageUrl
+
+            if (bgImageView != null) {
+                if (imageUrl.isNotEmpty()) {
+                    bgImageView.visibility = View.VISIBLE
+                    com.bumptech.glide.Glide.with(activity).load(imageUrl).centerCrop().into(bgImageView)
+                    root.setBackgroundColor(Color.TRANSPARENT)
+                } else {
+                    bgImageView.visibility = View.GONE
+                }
             }
         } catch (_: Exception) {}
+    }
+
+    private fun findAndTintToolbars(view: View, color: Int) {
+        if (view is com.google.android.material.appbar.MaterialToolbar) {
+            view.setTitleTextColor(color)
+            view.setSubtitleTextColor(color)
+            view.setNavigationIconTint(color)
+            
+            val overflowIcon = view.overflowIcon
+            if (overflowIcon != null) {
+                val tintedIcon = androidx.core.graphics.drawable.DrawableCompat.wrap(overflowIcon).mutate()
+                androidx.core.graphics.drawable.DrawableCompat.setTint(tintedIcon, color)
+                view.overflowIcon = tintedIcon
+            }
+
+            for (i in 0 until view.menu.size()) {
+                view.menu.getItem(i).icon?.setTint(color)
+            }
+
+            for (i in 0 until view.childCount) {
+                applyColorToToolbarChild(view.getChildAt(i), color)
+            }
+        } else if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                findAndTintToolbars(view.getChildAt(i), color)
+            }
+        }
     }
 
     fun applyThemeToView(view: View, theme: CustomThemeProto) {
@@ -111,6 +188,12 @@ object ThemeManager {
                         val item = view.menu.getItem(i)
                         item.icon?.setTint(onPrimaryColor)
                     }
+
+                    // Deep search for all text and icons in toolbar
+                    for (i in 0 until view.childCount) {
+                        val child = view.getChildAt(i)
+                        applyColorToToolbarChild(child, onPrimaryColor)
+                    }
                 }
                 is MaterialButton -> {
                     if (view.id != android.R.id.home) {
@@ -128,7 +211,20 @@ object ThemeManager {
                     view.setHintTextColor(onSurfaceColor.withAlpha(150))
                 }
                 is MaterialCardView -> {
-                    view.setCardBackgroundColor(surfaceColor)
+                    if (view.id == R.id.bottomPanel) {
+                        try {
+                            val bpColor = Color.parseColor(theme.bottomPanelColor)
+                            view.setCardBackgroundColor(bpColor)
+                        } catch (_: Exception) {
+                            view.setCardBackgroundColor(surfaceColor)
+                        }
+                    } else {
+                        view.setCardBackgroundColor(surfaceColor)
+                    }
+                }
+                is com.google.android.material.floatingactionbutton.FloatingActionButton -> {
+                    view.backgroundTintList = ColorStateList.valueOf(primaryColor)
+                    view.imageTintList = ColorStateList.valueOf(onPrimaryColor)
                 }
             }
             
@@ -137,12 +233,76 @@ object ThemeManager {
                 view.setBackgroundColor(backgroundColor)
             }
 
+            // CRITICAL: Skip recursion for MaterialToolbar children to avoid overwriting tinted items
+            if (view is com.google.android.material.appbar.MaterialToolbar) {
+                return
+            }
+
             if (view is ViewGroup) {
                 for (i in 0 until view.childCount) {
                     applyThemeToView(view.getChildAt(i), theme)
                 }
             }
         } catch (_: Exception) {}
+    }
+
+    private fun applyColorToToolbarChild(view: View, color: Int) {
+        // Skip tinting for avatars - they should show the real photo
+        val idName = try { view.resources.getResourceEntryName(view.id) } catch (_: Exception) { "" }
+        if (idName.contains("avatar", ignoreCase = true)) {
+            return
+        }
+
+        when (view) {
+            is TextView -> view.setTextColor(color)
+            is android.widget.ImageView -> {
+                view.imageTintList = ColorStateList.valueOf(color)
+                view.setColorFilter(color)
+            }
+            is ViewGroup -> {
+                for (i in 0 until view.childCount) {
+                    applyColorToToolbarChild(view.getChildAt(i), color)
+                }
+            }
+        }
+    }
+
+    fun applyThemeToBottomPanel(view: View, theme: CustomThemeProto) {
+        try {
+            val bpColor = Color.parseColor(theme.bottomPanelColor)
+            val onBpColor = Color.parseColor(theme.onBottomPanelColor)
+            val textPrimary = Color.parseColor(theme.textPrimaryColor)
+
+            if (view is MaterialCardView) {
+                view.setCardBackgroundColor(bpColor)
+            }
+            
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    val child = view.getChildAt(i)
+                    when (child) {
+                        is android.widget.ImageButton -> {
+                            // Don't tint the send button if it's the primary color
+                            if (child.id == R.id.sendButton) {
+                                child.imageTintList = ColorStateList.valueOf(Color.parseColor(theme.primaryColor))
+                            } else {
+                                child.imageTintList = ColorStateList.valueOf(onBpColor)
+                            }
+                        }
+                        is android.widget.EditText -> {
+                            child.setTextColor(textPrimary)
+                            child.setHintTextColor(onBpColor.withAlpha(128))
+                        }
+                        is ViewGroup -> applyThemeToBottomPanel(child, theme)
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun isColorLight(color: Int): Boolean {
+        val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255
+        return darkness < 0.5
     }
 
     private fun Int.withAlpha(alpha: Int): Int {
@@ -164,7 +324,10 @@ object ThemeManager {
             textPrimaryColor = obj.getString("textPrimaryColor"),
             textSecondaryColor = obj.getString("textSecondaryColor"),
             isDark = obj.getBoolean("isDark"),
-            backgroundImageUrl = obj.optString("backgroundImageUrl", "")
+            backgroundImageUrl = obj.optString("backgroundImageUrl", ""),
+            chatListBackgroundImageUrl = obj.optString("chatListBackgroundImageUrl", ""),
+            bottomPanelColor = obj.optString("bottomPanelColor", ""),
+            onBottomPanelColor = obj.optString("onBottomPanelColor", "")
         )
     }
 
@@ -181,6 +344,9 @@ object ThemeManager {
             put("textSecondaryColor", theme.textSecondaryColor)
             put("isDark", theme.isDark)
             put("backgroundImageUrl", theme.backgroundImageUrl)
+            put("chatListBackgroundImageUrl", theme.chatListBackgroundImageUrl)
+            put("bottomPanelColor", theme.bottomPanelColor)
+            put("onBottomPanelColor", theme.onBottomPanelColor)
         }.toString()
     }
 }

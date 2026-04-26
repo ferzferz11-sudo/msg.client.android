@@ -182,6 +182,10 @@ object GrpcClient {
         realGrpcClient.getContacts(username, callback)
     }
 
+    fun getFCMLogs(callback: (List<lavender.client.android.data.proto.FCMLogEntryProto>) -> Unit) {
+        realGrpcClient.getFCMLogs(callback)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return realGrpcClient.getAvatarCache()
     }

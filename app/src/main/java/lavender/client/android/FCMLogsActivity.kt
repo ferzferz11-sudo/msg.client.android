@@ -1,0 +1,111 @@
+package lavender.client.android
+
+import android.content.Context
+import android.graphics.Color
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
+import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.proto.FCMLogEntryProto
+import java.util.*
+
+class FCMLogsActivity : AppCompatActivity() {
+
+    private val grpcClient = GrpcClient
+    private lateinit var adapter: FCMLogsAdapter
+    private lateinit var progressBar: View
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val languageCode = prefs.getString("language", "en") ?: "en"
+        val locale = Locale.forLanguageTag(languageCode)
+        Locale.setDefault(locale)
+        val config = newBase.resources.configuration
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        applySavedColorScheme()
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_fcm_logs)
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationOnClickListener { finish() }
+        
+        lavender.client.android.ui.ThemeManager.applyTheme(this)
+
+        progressBar = findViewById(R.id.progressBar)
+        val recycler = findViewById<RecyclerView>(R.id.recyclerLogs)
+        
+        adapter = FCMLogsAdapter()
+        recycler.layoutManager = LinearLayoutManager(this)
+        recycler.adapter = adapter
+
+        loadLogs()
+    }
+
+    private fun loadLogs() {
+        progressBar.visibility = View.VISIBLE
+        grpcClient.getFCMLogs { logs ->
+            runOnUiThread {
+                progressBar.visibility = View.GONE
+                adapter.setData(logs)
+            }
+        }
+    }
+
+    private fun applySavedColorScheme() {
+        val theme = when (getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")) {
+            "light" -> R.style.Theme_Lavender_Light_NoActionBar
+            else -> R.style.Theme_Lavender_Dark_NoActionBar
+        }
+        setTheme(theme)
+    }
+
+    class FCMLogsAdapter : RecyclerView.Adapter<FCMLogsAdapter.ViewHolder>() {
+        private var items = listOf<FCMLogEntryProto>()
+
+        fun setData(newItems: List<FCMLogEntryProto>) {
+            items = newItems.reversed() // Show newest first
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_fcm_log, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = items[position]
+            holder.timestamp.text = item.timestamp
+            holder.level.text = item.level
+            holder.message.text = item.message
+            
+            val color = when (item.level) {
+                "ERROR" -> Color.RED
+                "WARN" -> Color.parseColor("#FFA500")
+                "SUCCESS" -> Color.parseColor("#4CAF50")
+                else -> Color.parseColor("#2196F3")
+            }
+            holder.level.setTextColor(color)
+        }
+
+        override fun getItemCount(): Int = items.size
+
+        class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+            val timestamp: TextView = v.findViewById(R.id.logTimestamp)
+            val level: TextView = v.findViewById(R.id.logLevel)
+            val message: TextView = v.findViewById(R.id.logMessage)
+        }
+    }
+}

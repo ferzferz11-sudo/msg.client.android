@@ -9,6 +9,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
@@ -22,11 +24,9 @@ import java.util.*
 class NotificationActivity : AppCompatActivity() {
 
     private val grpcClient = GrpcClient
-    private lateinit var adapterIncoming: NotificationLogAdapter
-    private lateinit var adapterOutgoing: NotificationLogAdapter
-    private lateinit var emptyLogText: TextView
-    private lateinit var recyclerIncoming: RecyclerView
-    private lateinit var recyclerOutgoing: RecyclerView
+    private lateinit var previewTitle: TextView
+    private lateinit var previewBody: TextView
+    private lateinit var previewTime: TextView
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
@@ -49,6 +49,9 @@ class NotificationActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
 
+        // Apply theme colors to toolbar
+        lavender.client.android.ui.ThemeManager.applyTheme(this)
+
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         val switchReceive = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchReceivePush)
         val switchSend = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSendPush)
@@ -66,53 +69,93 @@ class NotificationActivity : AppCompatActivity() {
             updateTokenOnServer()
         }
 
-        emptyLogText = findViewById(R.id.emptyLogText)
-        recyclerIncoming = findViewById(R.id.recyclerIncoming)
-        recyclerOutgoing = findViewById(R.id.recyclerOutgoing)
-        
-        adapterIncoming = NotificationLogAdapter()
-        adapterOutgoing = NotificationLogAdapter()
-        
-        recyclerIncoming.layoutManager = LinearLayoutManager(this)
-        recyclerIncoming.adapter = adapterIncoming
-        
-        recyclerOutgoing.layoutManager = LinearLayoutManager(this)
-        recyclerOutgoing.adapter = adapterOutgoing
+        // Preview views
+        val previewLayout = findViewById<View>(R.id.notificationPreview)
+        previewTitle = previewLayout.findViewById(R.id.notifTitle)
+        previewBody = previewLayout.findViewById(R.id.notifBody)
+        previewTime = previewLayout.findViewById(R.id.notifTime)
+        previewTime.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 
-        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.incoming))
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.outgoing))
-
-        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                if (tab?.position == 0) {
-                    recyclerIncoming.isVisible = true
-                    recyclerOutgoing.isVisible = false
-                    updateList(NotificationHistory.getIncoming())
-                } else {
-                    recyclerIncoming.isVisible = false
-                    recyclerOutgoing.isVisible = true
-                    updateList(NotificationHistory.getOutgoing())
-                }
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
-
-        findViewById<View>(R.id.btnClearLog).setOnClickListener {
-            NotificationHistory.clear()
-            adapterIncoming.setData(emptyList())
-            adapterOutgoing.setData(emptyList())
-            emptyLogText.isVisible = true
+        // Notification Style
+        val radioGroupStyle = findViewById<android.widget.RadioGroup>(R.id.radioGroupStyle)
+        val currentStyle = prefs.getString("notification_style", "standard") ?: "standard"
+        
+        when (currentStyle) {
+            "standard" -> radioGroupStyle.check(R.id.styleStandard)
+            "messaging" -> radioGroupStyle.check(R.id.styleMessaging)
+            "big_text" -> radioGroupStyle.check(R.id.styleBigText)
         }
 
-        updateList(NotificationHistory.getIncoming())
+        updatePreview(currentStyle)
+
+        radioGroupStyle.setOnCheckedChangeListener { _, checkedId ->
+            val style = when (checkedId) {
+                R.id.styleStandard -> "standard"
+                R.id.styleMessaging -> "messaging"
+                R.id.styleBigText -> "big_text"
+                else -> "standard"
+            }
+            prefs.edit { putString("notification_style", style) }
+            updatePreview(style)
+        }
     }
 
-    private fun updateList(data: List<NotificationEntry>) {
-        if (recyclerIncoming.isVisible) adapterIncoming.setData(data)
-        else adapterOutgoing.setData(data)
-        emptyLogText.isVisible = data.isEmpty()
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menu.add(0, 1, 0, R.string.notification_history).apply {
+            setIcon(R.drawable.ic_notification_history)
+            setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+        }
+        
+        lifecycleScope.launch {
+            grpcClient.isSuperAdmin.collect { isAdmin ->
+                if (isAdmin) {
+                    runOnUiThread {
+                        if (menu.findItem(2) == null) {
+                            menu.add(0, 2, 1, "FCM Logs").apply {
+                                setIcon(R.drawable.ic_settings)
+                                setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                                // Standard tint will be applied below
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Force tint if current custom theme is applied
+        lavender.client.android.ui.ThemeManager.getCurrentTheme()?.let { theme ->
+            val color = android.graphics.Color.parseColor(theme.onPrimaryColor)
+            for (i in 0 until menu.size()) {
+                menu.getItem(i).icon?.setTint(color)
+            }
+        }
+        
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        when (item.itemId) {
+            1 -> startActivity(android.content.Intent(this, NotificationLogActivity::class.java))
+            2 -> startActivity(android.content.Intent(this, FCMLogsActivity::class.java))
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun updatePreview(style: String) {
+        when (style) {
+            "messaging" -> {
+                previewTitle.text = getString(R.string.notif_preview_sender)
+                previewBody.text = getString(R.string.notif_preview_msg_messaging)
+            }
+            "big_text" -> {
+                previewTitle.text = getString(R.string.notif_preview_title_bigtext)
+                previewBody.text = getString(R.string.notif_preview_msg_bigtext)
+            }
+            else -> {
+                previewTitle.text = getString(R.string.notif_preview_title_standard)
+                previewBody.text = getString(R.string.notif_preview_msg_standard)
+            }
+        }
     }
 
     private fun updateTokenOnServer() {
@@ -137,34 +180,5 @@ class NotificationActivity : AppCompatActivity() {
             else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(theme)
-    }
-
-    class NotificationLogAdapter : RecyclerView.Adapter<NotificationLogAdapter.ViewHolder>() {
-        private var items = listOf<NotificationEntry>()
-
-        fun setData(newItems: List<NotificationEntry>) {
-            items = newItems
-            notifyDataSetChanged()
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_log, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
-            holder.title.text = item.title
-            holder.body.text = item.body
-            holder.time.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(item.timestamp))
-        }
-
-        override fun getItemCount(): Int = items.size
-
-        class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-            val title: TextView = v.findViewById(R.id.notifTitle)
-            val body: TextView = v.findViewById(R.id.notifBody)
-            val time: TextView = v.findViewById(R.id.notifTime)
-        }
     }
 }

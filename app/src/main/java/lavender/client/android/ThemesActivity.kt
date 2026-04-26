@@ -177,27 +177,31 @@ class ThemesActivity : AppCompatActivity() {
 
             val btnEdit = ImageButton(this).apply {
                 layoutParams = LinearLayout.LayoutParams(
-                    (48 * resources.displayMetrics.density).toInt(),
-                    (48 * resources.displayMetrics.density).toInt()
+                    (56 * resources.displayMetrics.density).toInt(),
+                    (56 * resources.displayMetrics.density).toInt()
                 )
                 setImageResource(R.drawable.ic_settings_brightness)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
                 
                 val typedValue = android.util.TypedValue()
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
                 setBackgroundResource(typedValue.resourceId)
                 
-                imageTintList = ColorStateList.valueOf(textColor)
+                // Use primary color for the edit button to make it stand out and follow theme
+                val primaryColor = getPrimaryColor()
+                imageTintList = ColorStateList.valueOf(primaryColor)
                 setOnClickListener { openEditTheme(theme.id) }
             }
 
             val btnDelete = ImageButton(this).apply {
                 layoutParams = LinearLayout.LayoutParams(
-                    (48 * resources.displayMetrics.density).toInt(),
-                    (48 * resources.displayMetrics.density).toInt()
+                    (56 * resources.displayMetrics.density).toInt(),
+                    (56 * resources.displayMetrics.density).toInt()
                 ).apply {
-                    marginEnd = (16 * resources.displayMetrics.density).toInt()
+                    marginEnd = (8 * resources.displayMetrics.density).toInt()
                 }
                 setImageResource(R.drawable.ic_delete)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
                 
                 val typedValue = android.util.TypedValue()
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
@@ -246,6 +250,12 @@ class ThemesActivity : AppCompatActivity() {
         return typedValue.data
     }
 
+    private fun getPrimaryColor(): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+        return typedValue.data
+    }
+
     private fun getSavedColorScheme(): String? {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", null)
@@ -253,6 +263,9 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun selectTheme(themeId: String) {
         currentThemeId = themeId
+        if (themeId == "light" || themeId == "dark") {
+            lavender.client.android.ui.ThemeManager.clearTheme()
+        }
         grpcClient.setCurrentTheme(username, themeId) { success ->
             if (success) {
                 val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)

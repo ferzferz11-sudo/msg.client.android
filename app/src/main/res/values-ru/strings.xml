@@ -265,10 +265,24 @@
     <string name="send_push_hint">Если отключено, ваши сообщения не будут вызывать пуш-уведомления у других.</string>
     <string name="incoming">Входящие</string>
     <string name="outgoing">Исходящие</string>
+    <string name="notification_history">История уведомлений</string>
+    <string name="notification_style_preview">Предпросмотр стиля уведомления</string>
+    <string name="chat_background">Фон экрана чата</string>
+    <string name="chat_list_background">Фон списка чатов</string>
+    <string name="notif_preview_sender">Павел Давыдов</string>
+    <string name="notif_preview_msg_standard">Получено новое сообщение</string>
+    <string name="notif_preview_msg_messaging">Посмотрите, как выглядит стиль мессенджера!</string>
+    <string name="notif_preview_msg_bigtext">Это пример очень длинного сообщения, которое обычно обрезается, но в стиле расширенного текста его можно развернуть, чтобы увидеть все содержимое целиком.</string>
+    <string name="notif_preview_title_bigtext">Важное обновление</string>
+    <string name="notif_preview_title_standard">Lavender Messenger</string>
     <string name="logout_profile">Выход из профиля</string>
     <string name="logout_confirm_title">Выйти из профиля?</string>
     <string name="logout_confirm_message">Вы будете отключены от сервера. При следующем входе вам потребуется заново ввести имя пользователя и пароль, так как они не будут сохранены. Убедитесь, что вы их помните!</string>
     <string name="server_version_format">Версия сервера: %s</string>
     <string name="update_now">Обновить сейчас</string>
     <string name="logout_yes">Выйти</string>
+    <string name="notification_style">Стиль уведомлений</string>
+    <string name="style_standard">Стандартный</string>
+    <string name="style_messaging">Мессенджер (как в Telegram)</string>
+    <string name="style_big_text">Расширенный текст</string>
 </resources>

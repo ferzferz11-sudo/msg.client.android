@@ -28,11 +28,18 @@
             android:id="@+id/previewChatBack"
             app:tint="?attr/colorOnPrimary" />
 
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/previewChatAvatar"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="12dp"
+            android:src="@drawable/ic_default_avatar" />
+
         <TextView
             android:id="@+id/previewChatTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:text="Pavel Davydov"
             android:textColor="?attr/colorOnPrimary"
             android:textSize="18sp"

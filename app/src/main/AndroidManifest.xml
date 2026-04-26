@@ -82,6 +82,18 @@
             android:name=".SuperAdminActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".NotificationActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".NotificationLogActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".FCMLogsActivity"
+            android:exported="false" />
+
         <service
             android:name=".data.fcm.LavenderMessagingService"
             android:exported="false">

@@ -1543,6 +1543,27 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun getFCMLogs(callback: (List<lavender.client.android.data.proto.FCMLogEntryProto>) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = lavender.client.android.data.proto.GetFCMLogsRequestProto()
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetFCMLogsRequestProto, lavender.client.android.data.proto.GetFCMLogsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetFCMLogs")
+            .setRequestMarshaller(GetFCMLogsRequestMarshaller())
+            .setResponseMarshaller(GetFCMLogsResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.GetFCMLogsResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.GetFCMLogsResponseProto) {
+                callback(message.logs)
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return avatarCache.toMap()
     }
@@ -3304,6 +3325,9 @@ private fun writeTheme(cos: com.google.protobuf.CodedOutputStream, theme: Custom
     if (theme.textSecondaryColor.isNotEmpty()) cos.writeString(9, theme.textSecondaryColor)
     if (theme.isDark) cos.writeBool(10, theme.isDark)
     if (theme.backgroundImageUrl.isNotEmpty()) cos.writeString(11, theme.backgroundImageUrl)
+    if (theme.chatListBackgroundImageUrl.isNotEmpty()) cos.writeString(12, theme.chatListBackgroundImageUrl)
+    if (theme.bottomPanelColor.isNotEmpty()) cos.writeString(13, theme.bottomPanelColor)
+    if (theme.onBottomPanelColor.isNotEmpty()) cos.writeString(14, theme.onBottomPanelColor)
 }
 
 private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
@@ -3319,6 +3343,9 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
     var textSecondaryColor = ""
     var isDark = false
     var backgroundImageUrl = ""
+    var chatListBackgroundImageUrl = ""
+    var bottomPanelColor = ""
+    var onBottomPanelColor = ""
     while (!cis.isAtEnd) {
         val tag = cis.readTag()
         if (tag == 0) break
@@ -3334,8 +3361,61 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
             9 -> textSecondaryColor = cis.readString()
             10 -> isDark = cis.readBool()
             11 -> backgroundImageUrl = cis.readString()
+            12 -> chatListBackgroundImageUrl = cis.readString()
+            13 -> bottomPanelColor = cis.readString()
+            14 -> onBottomPanelColor = cis.readString()
             else -> cis.skipField(tag)
         }
     }
-    return CustomThemeProto(id, name, primaryColor, onPrimaryColor, surfaceColor, onSurfaceColor, backgroundColor, textPrimaryColor, textSecondaryColor, isDark, backgroundImageUrl)
+    return CustomThemeProto(id, name, primaryColor, onPrimaryColor, surfaceColor, onSurfaceColor, backgroundColor, textPrimaryColor, textSecondaryColor, isDark, backgroundImageUrl, chatListBackgroundImageUrl, bottomPanelColor, onBottomPanelColor)
+}
+
+class GetFCMLogsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetFCMLogsRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetFCMLogsRequestProto): java.io.InputStream {
+        return java.io.ByteArrayInputStream(ByteArray(0))
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetFCMLogsRequestProto = lavender.client.android.data.proto.GetFCMLogsRequestProto()
+}
+
+class GetFCMLogsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetFCMLogsResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetFCMLogsResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        for (l in value.logs) {
+            val innerBaos = java.io.ByteArrayOutputStream()
+            val innerCos = com.google.protobuf.CodedOutputStream.newInstance(innerBaos)
+            if (l.timestamp.isNotEmpty()) innerCos.writeString(1, l.timestamp)
+            if (l.level.isNotEmpty()) innerCos.writeString(2, l.level)
+            if (l.message.isNotEmpty()) innerCos.writeString(3, l.message)
+            innerCos.flush()
+            cos.writeBytes(1, com.google.protobuf.ByteString.copyFrom(innerBaos.toByteArray()))
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetFCMLogsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val logs = mutableListOf<lavender.client.android.data.proto.FCMLogEntryProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val bytes = cis.readBytes()
+                val innerCis = bytes.newCodedInput()
+                var ts = ""; var level = ""; var msg = ""
+                while (!innerCis.isAtEnd) {
+                    val innerTag = innerCis.readTag()
+                    if (innerTag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                        1 -> ts = innerCis.readString()
+                        2 -> level = innerCis.readString()
+                        3 -> msg = innerCis.readString()
+                        else -> innerCis.skipField(innerTag)
+                    }
+                }
+                logs.add(lavender.client.android.data.proto.FCMLogEntryProto(ts, level, msg))
+            } else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.GetFCMLogsResponseProto(logs)
+    }
 }

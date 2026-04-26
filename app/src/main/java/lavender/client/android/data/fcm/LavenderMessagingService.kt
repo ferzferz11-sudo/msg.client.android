@@ -80,12 +80,38 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val pendingIntent = PendingIntent.getActivity(this, 0, intent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
 
+        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val style = prefs.getString("notification_style", "standard") ?: "standard"
+
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+
+        when (style) {
+            "messaging" -> {
+                val user = androidx.core.app.Person.Builder()
+                    .setName(title)
+                    .build()
+                
+                val messagingStyle = NotificationCompat.MessagingStyle(user)
+                    .addMessage(body, System.currentTimeMillis(), user)
+                
+                if (roomId != "general" && roomId != "general_chat") {
+                    messagingStyle.setConversationTitle("Chat: $roomId")
+                    messagingStyle.setGroupConversation(true)
+                }
+
+                notificationBuilder.setStyle(messagingStyle)
+            }
+            "big_text" -> {
+                notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            }
+        }
+        
+        // Always set basic fields for compatibility and non-styled display
+        notificationBuilder.setContentTitle(title)
+        notificationBuilder.setContentText(body)
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
         Log.d("FCM", "Notification shown with room_id: $roomId")
