@@ -423,8 +423,14 @@ class EditThemeActivity : AppCompatActivity() {
             
             // Toolbar Text and Icons
             root.findViewById<TextView>(R.id.previewToolbarTitle)?.setTextColor(onPrimary)
-            root.findViewById<ImageView>(R.id.previewToolbarProfile)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarMore)?.setColorFilter(onPrimary)
+            root.findViewById<ImageView>(R.id.previewToolbarAvatar)?.let { avatarView ->
+                if (userAvatarUrl.isNotEmpty()) {
+                    Glide.with(this).load(userAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)
+                } else {
+                    avatarView.setImageResource(R.drawable.ic_default_avatar)
+                }
+            }
             
             // FAB
             val fab = root.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.previewFab)
