@@ -1,38 +1,18 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
-import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.radiobutton.MaterialRadioButton
-import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.util.*
 
 class ThemesActivity : AppCompatActivity() {
@@ -42,18 +22,9 @@ class ThemesActivity : AppCompatActivity() {
     private lateinit var btnAddTheme: MaterialButton
     private var colorSchemeMenuItem: MenuItem? = null
     private val grpcClient = GrpcClient
-    private val okHttpClient = OkHttpClient()
     private var username: String = ""
     private var currentThemeId: String = "dark"
     private var customThemes = mutableListOf<CustomThemeProto>()
-
-    private var currentEditBackgroundImageUrl: TextInputEditText? = null
-    private var currentUploadProgress: ProgressBar? = null
-    private var currentBtnUploadBackground: ImageButton? = null
-
-    private val pickBackgroundImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { uploadBackgroundImage(it) }
-    }
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
@@ -79,7 +50,6 @@ class ThemesActivity : AppCompatActivity() {
             }
         }
         
-        // Initialize currentThemeId from local prefs for immediate UI feedback
         currentThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", "dark") ?: "dark"
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -94,8 +64,16 @@ class ThemesActivity : AppCompatActivity() {
         loadThemes()
 
         btnAddTheme.setOnClickListener {
-            showEditThemeDialog(null)
+            val intent = Intent(this, EditThemeActivity::class.java).apply {
+                putExtra("username", username)
+            }
+            startActivity(intent)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadThemes()
     }
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
@@ -139,7 +117,6 @@ class ThemesActivity : AppCompatActivity() {
         grpcClient.getThemes(username) { currentId, list ->
             customThemes = list.toMutableList()
             
-            // Only update currentThemeId if it's not already set locally from a recent change
             val localThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", null)
             if (localThemeId == null) {
                 currentThemeId = currentId
@@ -156,11 +133,9 @@ class ThemesActivity : AppCompatActivity() {
     private fun updateUI() {
         themeRadioGroup.clearCheck()
         
-        // Handle built-in themes
         val radioLight = findViewById<MaterialRadioButton>(R.id.radioLight)
         val radioDark = findViewById<MaterialRadioButton>(R.id.radioDark)
         
-        // Ensure text is visible
         val textColor = getOnSurfaceColor()
         radioLight.setTextColor(textColor)
         radioDark.setTextColor(textColor)
@@ -171,7 +146,6 @@ class ThemesActivity : AppCompatActivity() {
         radioLight.setOnClickListener { selectTheme("light") }
         radioDark.setOnClickListener { selectTheme("dark") }
 
-        // Handle custom themes
         customThemesContainer.removeAllViews()
         for (theme in customThemes) {
             val rb = MaterialRadioButton(this).apply {
@@ -185,7 +159,11 @@ class ThemesActivity : AppCompatActivity() {
                 setOnClickListener { selectTheme(theme.id) }
                 
                 setOnLongClickListener {
-                    showEditThemeDialog(theme)
+                    val intent = Intent(this@ThemesActivity, EditThemeActivity::class.java).apply {
+                        putExtra("username", username)
+                        putExtra("theme_id", theme.id)
+                    }
+                    startActivity(intent)
                     true
                 }
             }
@@ -220,209 +198,6 @@ class ThemesActivity : AppCompatActivity() {
                 runOnUiThread { recreate() }
             }
         }
-    }
-
-    private data class ThemeTemplate(
-        val nameRes: Int,
-        val primary: String,
-        val background: String,
-        val text: String,
-        val isDark: Boolean
-    )
-
-    private fun uploadBackgroundImage(uri: Uri) {
-        val progress = currentUploadProgress
-        val button = currentBtnUploadBackground
-        val input = currentEditBackgroundImageUrl
-        
-        progress?.isVisible = true
-        button?.isVisible = false
-        
-        lifecycleScope.launch {
-            try {
-                val bytes = withContext(Dispatchers.IO) {
-                    contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                } ?: return@launch
-
-                val fileName = "theme_bg_${System.currentTimeMillis()}.jpg"
-                val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-                    .addFormDataPart("image", fileName, bytes.toRequestBody("image/*".toMediaTypeOrNull()))
-                    .build()
-
-                val request = Request.Builder()
-                    .url("http://159.195.38.145:8082/upload-image")
-                    .post(requestBody)
-                    .build()
-
-                val response = withContext(Dispatchers.IO) { okHttpClient.newCall(request).execute() }
-                if (response.isSuccessful) {
-                    val responseBody = response.body.string()
-                    val fileUrl = JSONObject(responseBody).getString("url")
-                    withContext(Dispatchers.Main) {
-                        input?.setText(fileUrl)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@ThemesActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ThemesActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
-                    progress?.isVisible = false
-                    button?.isVisible = true
-                }
-            }
-        }
-    }
-
-    private fun showEditThemeDialog(theme: CustomThemeProto?) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_theme, null)
-        val editName = dialogView.findViewById<TextInputEditText>(R.id.editThemeName)
-        val editPrimary = dialogView.findViewById<TextInputEditText>(R.id.editPrimaryColor)
-        val editBackground = dialogView.findViewById<TextInputEditText>(R.id.editBackgroundColor)
-        val editTextPrimary = dialogView.findViewById<TextInputEditText>(R.id.editTextPrimaryColor)
-        val editBackgroundImageUrl = dialogView.findViewById<TextInputEditText>(R.id.editBackgroundImageUrl)
-        val btnUploadBackground = dialogView.findViewById<ImageButton>(R.id.btnUploadBackground)
-        val uploadProgress = dialogView.findViewById<ProgressBar>(R.id.uploadProgress)
-        
-        currentEditBackgroundImageUrl = editBackgroundImageUrl
-        currentUploadProgress = uploadProgress
-        currentBtnUploadBackground = btnUploadBackground
-        
-        btnUploadBackground.setOnClickListener {
-            pickBackgroundImageLauncher.launch("image/*")
-        }
-
-        val checkIsDark = dialogView.findViewById<MaterialCheckBox>(R.id.checkIsDark)
-        val previewPrimary = dialogView.findViewById<View>(R.id.previewPrimary)
-        val previewBackground = dialogView.findViewById<View>(R.id.previewBackground)
-        val previewText = dialogView.findViewById<View>(R.id.previewText)
-        val templatesContainer = dialogView.findViewById<LinearLayout>(R.id.templatesContainer)
-        
-        val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSave)
-        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
-        val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
-        val title = dialogView.findViewById<TextView>(R.id.dialogTitle)
-
-        // Setup templates
-        val templates = listOf(
-            ThemeTemplate(R.string.theme_template_green, "#2E7D32", "#F1F8E9", "#1B5E20", false),
-            ThemeTemplate(R.string.theme_template_blue, "#1565C0", "#E3F2FD", "#0D47A1", false),
-            ThemeTemplate(R.string.theme_template_purple, "#6A1B9A", "#F3E5F5", "#4A148C", false),
-            ThemeTemplate(R.string.theme_template_sunset, "#D84315", "#FFF3E0", "#BF360C", false)
-        )
-
-        for (tmpl in templates) {
-            val chip = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, 0, 8, 0) }
-                text = getString(tmpl.nameRes)
-                textSize = 12f
-                cornerRadius = (20 * resources.displayMetrics.density).toInt()
-                setOnClickListener {
-                    editName.setText(getString(tmpl.nameRes))
-                    editPrimary.setText(tmpl.primary)
-                    editBackground.setText(tmpl.background)
-                    editTextPrimary.setText(tmpl.text)
-                    checkIsDark.isChecked = tmpl.isDark
-                }
-            }
-            templatesContainer.addView(chip)
-        }
-
-        // Live preview logic
-        fun updatePreviews() {
-            try {
-                previewPrimary.backgroundTintList = ColorStateList.valueOf(editPrimary.text.toString().toColorInt())
-                previewBackground.backgroundTintList = ColorStateList.valueOf(editBackground.text.toString().toColorInt())
-                previewText.backgroundTintList = ColorStateList.valueOf(editTextPrimary.text.toString().toColorInt())
-            } catch (_: Exception) {}
-        }
-
-        val watcher = object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updatePreviews() }
-            override fun afterTextChanged(s: Editable?) {}
-        }
-
-        editPrimary.addTextChangedListener(watcher)
-        editBackground.addTextChangedListener(watcher)
-        editTextPrimary.addTextChangedListener(watcher)
-
-        if (theme != null) {
-            title.text = getString(R.string.edit_theme)
-            editName.setText(theme.name)
-            editPrimary.setText(theme.primaryColor)
-            editBackground.setText(theme.backgroundColor)
-            editTextPrimary.setText(theme.textPrimaryColor)
-            editBackgroundImageUrl.setText(theme.backgroundImageUrl)
-            checkIsDark.isChecked = theme.isDark
-            btnDelete.isVisible = true
-        }
-        
-        updatePreviews()
-
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        
-        btnDelete.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setMessage(R.string.delete_theme_confirm)
-                .setPositiveButton(R.string.delete) { _, _ ->
-                    grpcClient.deleteTheme(username, theme!!.id) { success ->
-                        if (success) {
-                            runOnUiThread {
-                                dialog.dismiss()
-                                loadThemes()
-                            }
-                        }
-                    }
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-        }
-
-        btnSave.setOnClickListener {
-            val name = editName.text.toString().trim()
-            if (name.isEmpty()) return@setOnClickListener
-
-            val newTheme = CustomThemeProto(
-                id = theme?.id ?: UUID.randomUUID().toString(),
-                name = name,
-                primaryColor = editPrimary.text.toString(),
-                onPrimaryColor = if (checkIsDark.isChecked) "#FFFFFF" else "#312051",
-                surfaceColor = editBackground.text.toString(),
-                onSurfaceColor = editTextPrimary.text.toString(),
-                backgroundColor = editBackground.text.toString(),
-                textPrimaryColor = editTextPrimary.text.toString(),
-                textSecondaryColor = editTextPrimary.text.toString(),
-                isDark = checkIsDark.isChecked,
-                backgroundImageUrl = editBackgroundImageUrl.text.toString().trim()
-            )
-
-            grpcClient.saveTheme(username, newTheme) { success, message ->
-                runOnUiThread {
-                    if (success) {
-                        Toast.makeText(this@ThemesActivity, R.string.message_edited, Toast.LENGTH_SHORT).show() // Generic success msg
-                        dialog.dismiss()
-                        loadThemes()
-                    } else {
-                        Toast.makeText(this@ThemesActivity, message, Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        }
-
-        dialog.show()
     }
 
     private fun applySavedColorScheme() {

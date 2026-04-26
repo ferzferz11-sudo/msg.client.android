@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/previewChatRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/windowBackground">
+
+    <ImageView
+        android:id="@+id/previewChatBgImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
+
+    <View
+        android:id="@+id/previewChatToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="?attr/colorPrimary" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/previewBottomPanel"
+        android:layout_below="@id/previewChatToolbar"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Incoming -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/previewIncomingBubble"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="200dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer">
+            <TextView
+                android:id="@+id/previewIncomingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:text="Hi there! Check this theme preview."
+                android:textColor="?android:attr/textColorPrimary" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Outgoing -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/previewOutgoingBubble"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="12dp"
+            android:maxWidth="200dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorPrimary">
+            <TextView
+                android:id="@+id/previewOutgoingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:text="Looks great! Love the background image support."
+                android:textColor="?attr/colorOnPrimary" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <View
+        android:id="@+id/previewBottomPanel"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_alignParentBottom="true"
+        android:background="?attr/colorSurface" />
+
+</RelativeLayout>

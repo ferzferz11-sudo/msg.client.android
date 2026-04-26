@@ -254,4 +254,8 @@
     <string name="theme_template_sunset">Закатный оранжевый</string>
     <string name="admin_label">(Админ)</string>
     <string name="super_admin">Суперадмин</string>
+    <string name="about">О программе</string>
+    <string name="about_program">О программе</string>
+    <string name="version_label">Версия: %s</string>
+    <string name="developer_label">Разработчик: ferz (Павел Давыдов)</string>
 </resources>

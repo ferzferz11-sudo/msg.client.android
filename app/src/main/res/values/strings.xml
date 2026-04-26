@@ -252,4 +252,8 @@
     <string name="theme_template_sunset">Sunset Orange</string>
     <string name="admin_label">(Admin)</string>
     <string name="super_admin">Super Admin</string>
+    <string name="about">About</string>
+    <string name="about_program">About Program</string>
+    <string name="version_label">Version: %s</string>
+    <string name="developer_label">Developer: ferz (Pavel Davydov)</string>
 </resources>

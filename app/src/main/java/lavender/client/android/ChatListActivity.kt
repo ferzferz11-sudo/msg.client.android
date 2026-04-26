@@ -835,6 +835,10 @@ class ChatListActivity : AppCompatActivity() {
                 logout()
                 true
             }
+            R.id.action_about -> {
+                showAboutDialog()
+                true
+            }
             R.id.action_super_admin -> {
                 val intent = Intent(this, SuperAdminActivity::class.java)
                 startActivity(intent)
@@ -863,6 +867,7 @@ class ChatListActivity : AppCompatActivity() {
         menu.findItem(R.id.action_notification_history)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_logout)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_about)?.apply { isVisible = !hasSelection }
         
         lifecycleScope.launch {
             grpcClient.isSuperAdmin.collect { isAdmin ->
@@ -1488,5 +1493,20 @@ class ChatListActivity : AppCompatActivity() {
             .create()
 
         dialog.show()
+    }
+
+    private fun showAboutDialog() {
+        val version = try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            pInfo.versionName
+        } catch (e: Exception) {
+            "1.0.2.0"
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.about_program)
+            .setMessage("${getString(R.string.version_label, version)}\n\n${getString(R.string.developer_label)}")
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 }
