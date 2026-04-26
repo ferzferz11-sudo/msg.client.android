@@ -130,7 +130,13 @@ class ProfileActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         refreshParticipantsFromServer(null)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
     }
 
     private fun refreshParticipantsFromServer(onComplete: (() -> Unit)? = null) {

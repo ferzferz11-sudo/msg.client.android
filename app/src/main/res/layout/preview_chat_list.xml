@@ -38,14 +38,6 @@
             android:layout_weight="1" />
 
         <ImageView
-            android:id="@+id/previewToolbarAdd"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="16dp"
-            android:src="@drawable/chat_add_on_24"
-            app:tint="?attr/colorOnPrimary" />
-
-        <ImageView
             android:id="@+id/previewToolbarContacts"
             android:layout_width="24dp"
             android:layout_height="24dp"

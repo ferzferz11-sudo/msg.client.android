@@ -73,7 +73,13 @@ class ThemesActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         loadThemes()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
     }
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {

@@ -411,6 +411,7 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         
         // Hide loading and stop animation
         toolbarLoadingIcon.visibility = View.GONE
@@ -419,6 +420,11 @@ class NewChatActivity : AppCompatActivity() {
         
         applySavedColorScheme()
         refreshChatInfo()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
     }
 
     private fun refreshChatInfo() {

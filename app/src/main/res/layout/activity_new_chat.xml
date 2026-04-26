@@ -79,8 +79,12 @@
                         android:layout_height="wrap_content"
                         android:textColor="?attr/colorOnPrimary"
                         android:textSize="11sp"
-                        android:alpha="0.7"
+                        android:alpha="0.8"
                         android:visibility="gone"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="1dp"
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="#20000000"
                         tools:text="online"
                         tools:visibility="visible" />
                 </LinearLayout>

@@ -162,12 +162,8 @@ class ChatListActivity : AppCompatActivity() {
             if (adapter.getSelectedChats().isNotEmpty()) {
                 adapter.clearSelection()
             } else {
-                // Возвращаемся на главную страницу приложения
-                val intent = Intent(this@ChatListActivity, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                intent.putExtra("extra_skip_autologin", true)
-                startActivity(intent)
-                finish()
+                // Minimize app to background instead of returning to login
+                moveTaskToBack(true)
             }
         }
 
@@ -177,22 +173,14 @@ class ChatListActivity : AppCompatActivity() {
                 if (adapter.getSelectedChats().isNotEmpty()) {
                     adapter.clearSelection()
                 } else {
-                    // Возвращаемся на главную страницу приложения
-                    val intent = Intent(this@ChatListActivity, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    intent.putExtra("extra_skip_autologin", true)
-                    startActivity(intent)
-                    finish()
+                    // Minimize app to background instead of returning to login
+                    moveTaskToBack(true)
                 }
             }
         })
 
         binding.addChatFab.setOnClickListener {
-            binding.addChatFab.isEnabled = false
-            binding.addChatFab.setImageResource(R.drawable.ic_loading_renew)
-            val rotate = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
-            binding.addChatFab.startAnimation(rotate)
-            showCreateChatDialog()
+            showChatActionSheet()
         }
 
         // Check for update availability from SharedPreferences
@@ -324,6 +312,26 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun handleIncomingActions(intent: Intent) {
+        val fromNotification = intent.getBooleanExtra("from_notification", false)
+        val roomId = intent.getStringExtra("room_id")
+        
+        if (fromNotification && !roomId.isNullOrEmpty()) {
+            android.util.Log.d("ChatList", "Coming from notification for room: $roomId")
+            // Wait for chats to load if needed, then open the chat
+            lifecycleScope.launch {
+                var attempts = 0
+                while (viewModel.currentChats.isEmpty() && attempts < 10) {
+                    delay(500)
+                    attempts++
+                }
+                
+                val chat = viewModel.currentChats.find { it.id == roomId }
+                if (chat != null) {
+                    openChat(chat.id, chat.name, chat.type == "direct", chat.participants, chat.creator)
+                }
+            }
+        }
+
         val deleteChatId = intent.getStringExtra("ACTION_DELETE_CHAT_ID")
         val deleteChatName = intent.getStringExtra("ACTION_DELETE_CHAT_NAME")
         if (!deleteChatId.isNullOrEmpty()) {
@@ -395,6 +403,7 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         
         // Reset FAB and Menu state
         binding.addChatFab.isEnabled = true
@@ -655,6 +664,11 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         // Keep connection alive for other activities
@@ -683,17 +697,9 @@ class ChatListActivity : AppCompatActivity() {
                 if (adapter.getSelectedChats().isNotEmpty()) {
                     adapter.clearSelection()
                 } else {
-                    // Возвращаемся на главную страницу приложения
-                    val intent = Intent(this@ChatListActivity, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    intent.putExtra("extra_skip_autologin", true)
-                    startActivity(intent)
-                    finish()
+                    // Minimize app to background instead of returning to login
+                    moveTaskToBack(true)
                 }
-                true
-            }
-            R.id.action_add_chat -> {
-                showCreateChatDialog()
                 true
             }
             R.id.action_search -> {
@@ -860,7 +866,6 @@ class ChatListActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.chat_list_menu, menu)
 
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
-        menu.findItem(R.id.action_add_chat)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_contacts)?.apply { isVisible = !hasSelection }
         menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
@@ -899,8 +904,9 @@ class ChatListActivity : AppCompatActivity() {
                     remove("password")
                 }
                 showToast(getString(R.string.logged_out))
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, SplashActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                intent.putExtra("extra_skip_autologin", true)
                 startActivity(intent)
                 finish()
             }
@@ -1001,6 +1007,90 @@ class ChatListActivity : AppCompatActivity() {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
+    }
+
+    private fun showChatActionSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_chat_actions, binding.root, false)
+        
+        sheetView.findViewById<View>(R.id.actionStartChat).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showCreateDirectChatDialog()
+        }
+        
+        sheetView.findViewById<View>(R.id.actionAddContact).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showAddContactDialog()
+        }
+        
+        sheetView.findViewById<View>(R.id.actionAddGroup).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showCreateChatDialog()
+        }
+        
+        bottomSheetDialog.setContentView(sheetView)
+        bottomSheetDialog.show()
+    }
+
+    private fun showCreateDirectChatDialog() {
+        binding.progressOverlay.isVisible = true
+        
+        grpcClient.loadAllUsers { allUsers ->
+            runOnUiThread {
+                binding.progressOverlay.isVisible = false
+                val dialogView = layoutInflater.inflate(R.layout.dialog_create_direct_chat, null)
+                
+                val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
+                val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
+                val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+                val btnStartChat = dialogView.findViewById<MaterialButton>(R.id.btnStartChat)
+                
+                // Use a simple adapter to show online/offline users
+                val filteredUsers = allUsers.filter { it != username }.sortedWith(
+                    compareByDescending<String> { grpcClient.users.value.contains(it) }.thenBy { it }
+                )
+                
+                var selectedUser: String? = null
+                
+                val userAdapter = lavender.client.android.ui.adapter.UserAdapter(
+                    onUserClick = { user ->
+                        selectedUser = user
+                        btnStartChat.isEnabled = true
+                    },
+                    avatarCache = grpcClient.getAvatarCache(),
+                    onlineUsers = grpcClient.users.value
+                )
+                
+                usersRecyclerView.adapter = userAdapter
+                userAdapter.setUsers(filteredUsers)
+                
+                val dialog = AlertDialog.Builder(this)
+                    .setView(dialogView)
+                    .create()
+                
+                searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        val query = s.toString().lowercase()
+                        val searchFiltered = filteredUsers.filter { it.lowercase().contains(query) }
+                        userAdapter.setUsers(searchFiltered)
+                    }
+                    override fun afterTextChanged(s: android.text.Editable?) {}
+                })
+                
+                btnCancel.setOnClickListener { dialog.dismiss() }
+                
+                btnStartChat.setOnClickListener {
+                    Log.d("ChatList", "Direct chat start clicked for user: $selectedUser")
+                    selectedUser?.let { targetUser ->
+                        dialog.dismiss()
+                        createDirectChat(targetUser)
+                    }
+                }
+                
+                dialog.show()
+            }
+        }
     }
 
     private fun showCreateChatDialog() {
@@ -1130,15 +1220,18 @@ class ChatListActivity : AppCompatActivity() {
                             return@setOnClickListener
                         }
                         
+                        Log.d("ChatList", "Group dialog create clicked. Name: $groupName, Users: $selectedUsers")
                         binding.progressOverlay.isVisible = true
 
                         if (selectedUsers.size == 1 && groupName.isEmpty()) {
                             // Create direct chat
+                            Log.d("ChatList", "Single user and no name - redirecting to createDirectChat")
                             dialog.dismiss()
                             createDirectChat(selectedUsers.first())
                         } else {
                             // Create group chat
                             val finalGroupName = groupName.ifEmpty { getString(R.string.default_group_name) }
+                            Log.d("ChatList", "Creating group: $finalGroupName")
                             dialog.dismiss()
                             createGroupChat(finalGroupName, (selectedUsers + username).toList())
                         }
@@ -1239,8 +1332,11 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
+        binding.progressOverlay.isVisible = true
         lifecycleScope.launch {
+            Log.d("ChatList", "Creating direct chat with $targetUser")
             grpcClient.createDirectChat(username, targetUser) { chatId ->
+                Log.d("ChatList", "Create direct chat result: $chatId")
                 runOnUiThread { binding.progressOverlay.isVisible = false }
                 if (chatId != null) {
                     runOnUiThread {
@@ -1264,8 +1360,11 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun createGroupChat(name: String, participants: List<String>) {
         binding.root.findViewById<TextView>(R.id.progressTitle)?.text = getString(R.string.loading)
+        binding.progressOverlay.isVisible = true
         lifecycleScope.launch {
+            Log.d("ChatList", "Creating group chat $name with ${participants.size} participants")
             grpcClient.createGroupChat(name, participants, username) { chatId ->
+                Log.d("ChatList", "Create group chat result: $chatId")
                 runOnUiThread { binding.progressOverlay.isVisible = false }
                 if (chatId != null) {
                     runOnUiThread {

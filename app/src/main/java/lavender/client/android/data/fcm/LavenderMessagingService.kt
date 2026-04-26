@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.MainActivity
+import lavender.client.android.SplashActivity
 import lavender.client.android.R
 
 class LavenderMessagingService : FirebaseMessagingService() {
@@ -72,7 +73,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         )
         notificationManager.createNotificationChannel(channel)
 
-        val intent = Intent(this, MainActivity::class.java).apply {
+        val intent = Intent(this, SplashActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             putExtra("room_id", roomId)
             putExtra("from_notification", true)

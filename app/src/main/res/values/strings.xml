@@ -287,4 +287,6 @@
     <string name="style_messaging">Messaging (Telegram style)</string>
     <string name="style_big_text">Expanded Text</string>
     <string name="voice_message">Voice Message</string>
+    <string name="start_chat">Start chat</string>
+    <string name="add_group">Add group</string>
 </resources>

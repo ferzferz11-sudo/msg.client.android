@@ -126,6 +126,8 @@ object RealGrpcClient {
 
     var hasCheckedForUpdates = false
     
+    var isAppInBackground = false
+
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         if (context != null) {
             this.appContext = context
@@ -156,7 +158,11 @@ object RealGrpcClient {
             channel = builder.build()
             currentServerAddress = serverAddress
             _connectionState.value = true
-            _error.value = null
+            
+            // Only clear error if in foreground
+            if (!isAppInBackground) {
+                _error.value = null
+            }
             
         } catch (e: Exception) {
             android.util.Log.e("GrpcClient", "Connection failed: ${e.message}")
@@ -493,6 +499,12 @@ object RealGrpcClient {
                     android.util.Log.e("RealGrpcClient", "Chat stream error: ${t.message}", t)
                     isChatStarted = false
                     _connectionState.value = false
+                    
+                    // Show error only if app is in foreground
+                    if (!isAppInBackground) {
+                        _error.value = "Disconnected: ${t.localizedMessage}"
+                    }
+
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
                             android.util.Log.d("GrpcClient", "Attempting automatic reconnection...")
@@ -2182,7 +2194,7 @@ class CreateDirectChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<C
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> chatId = cis.readString()
-                2 -> success = Map.Entry::class.java.getMethod("getValue").invoke(null) as? Boolean ?: cis.readBool() // Dummy fix for weird error if any, but actually cis.readBool() is fine
+                2 -> success = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }

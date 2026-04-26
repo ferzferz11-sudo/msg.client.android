@@ -194,6 +194,12 @@ object ThemeManager {
                         val child = view.getChildAt(i)
                         applyColorToToolbarChild(child, onPrimaryColor)
                     }
+
+                    // Special case for toolbarSubtitle background in chat
+                    val subtitle = view.findViewById<TextView>(R.id.toolbarSubtitle)
+                    if (subtitle != null) {
+                        subtitle.backgroundTintList = ColorStateList.valueOf(backgroundColor.withAlpha(40))
+                    }
                 }
                 is MaterialButton -> {
                     if (view.id != android.R.id.home) {

@@ -54,6 +54,16 @@ class FCMLogsActivity : AppCompatActivity() {
         loadLogs()
     }
 
+    override fun onResume() {
+        super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
+    }
+
     private fun loadLogs() {
         progressBar.visibility = View.VISIBLE
         grpcClient.getFCMLogs { logs ->

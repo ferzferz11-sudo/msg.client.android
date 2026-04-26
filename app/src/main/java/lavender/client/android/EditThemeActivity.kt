@@ -423,7 +423,6 @@ class EditThemeActivity : AppCompatActivity() {
             
             // Toolbar Text and Icons
             root.findViewById<TextView>(R.id.previewToolbarTitle)?.setTextColor(onPrimary)
-            root.findViewById<ImageView>(R.id.previewToolbarAdd)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarContacts)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarProfile)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarMore)?.setColorFilter(onPrimary)

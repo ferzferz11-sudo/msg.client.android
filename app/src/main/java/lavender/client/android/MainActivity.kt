@@ -120,11 +120,11 @@ class MainActivity : AppCompatActivity() {
         // Check if coming from notification
         val fromNotification = intent.getBooleanExtra("from_notification", false)
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
-        val notificationRoomId = intent.getStringExtra("room_id") ?: "general"
+        val notificationRoomId = intent.getStringExtra("room_id")
 
         if (!skipAutoLogin && savedUsername != null && savedPassword != null && savedServerAddress != null) {
             // Credentials exist - navigate to appropriate screen
-            if (fromNotification) {
+            if (fromNotification && !notificationRoomId.isNullOrEmpty()) {
                 // Open the specific chat from notification
                 navigateToChat(savedUsername, savedPassword, savedServerAddress, notificationRoomId)
             } else {
@@ -132,8 +132,10 @@ class MainActivity : AppCompatActivity() {
                 navigateToChatList(savedUsername, savedPassword, savedServerAddress)
             }
         } else {
-            // No credentials - show version check
-            checkForUpdates()
+            // No credentials or explicit skip
+            if (!skipAutoLogin) {
+                checkForUpdates()
+            }
         }
     }
 
@@ -511,11 +513,19 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun logout() {
-        showToast(getString(R.string.exiting_app))
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        prefs.edit {
+            remove("username")
+            remove("password")
+        }
+        showToast(getString(R.string.logged_out))
 
-        // Exit the application completely
-        finishAffinity()
-        System.exit(0)
+        // Re-open via Splash to ensure clean state
+        val intent = Intent(this, SplashActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        intent.putExtra("extra_skip_autologin", true)
+        startActivity(intent)
+        finish()
     }
 
     private fun navigateToChatList(username: String, password: String, serverAddress: String) {

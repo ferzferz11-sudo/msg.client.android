@@ -102,6 +102,17 @@ class ContactsActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onResume() {
+        super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
+        loadContacts()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
+    }
+
     private fun setupRecyclerView() {
         adapter = UserAdapter(
             onUserClick = { selectedUser ->
