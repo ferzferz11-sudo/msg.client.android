@@ -125,6 +125,8 @@ class MessageAdapter(
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             
+            android.util.Log.d("MessageAdapter", "Binding msg from ${message.user}. isOutgoing=$isOutgoing (me=$currentUsername)")
+
             messageText.text = message.text
             userText.text = message.user
 
@@ -147,20 +149,25 @@ class MessageAdapter(
             if (lp is RelativeLayout.LayoutParams) {
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_START)
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_END)
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_LEFT)
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_RIGHT)
                 lp.removeRule(RelativeLayout.END_OF)
+                lp.removeRule(RelativeLayout.RIGHT_OF)
 
                 if (isOutgoing) {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_END)
+                    lp.marginStart = 40.dpToPx()
+                    lp.marginEnd = 0
                 } else {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_START)
                     if (isSelectionMode) {
                         lp.addRule(RelativeLayout.END_OF, R.id.selectionIndicator)
                     }
+                    lp.marginStart = 0
+                    lp.marginEnd = 40.dpToPx()
                 }
                 
-                val topMargin = if (isConsecutive) 2.dpToPx() else 8.dpToPx()
-                val sideMargin = 40.dpToPx()
-                lp.setMargins(if (isOutgoing) sideMargin else 0, topMargin, if (isOutgoing) 0 else sideMargin, 0)
+                lp.topMargin = if (isConsecutive) 2.dpToPx() else 8.dpToPx()
                 messageContainer.layoutParams = lp
             }
 
@@ -168,28 +175,22 @@ class MessageAdapter(
             if (isOutgoing) {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
                 messageBubble.gravity = android.view.Gravity.END
-                messageText.gravity = android.view.Gravity.START // Text still starts from left but inside the bubble
-                avatarImageView.visibility = View.GONE
                 
-                val typedValue = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                messageText.setTextColor(if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data)
-                timeText.setTextColor(ContextCompat.getColor(context, R.color.tg_time_outgoing))
+                val onPrimary = android.util.TypedValue()
+                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimary, true)
+                messageText.setTextColor(onPrimary.data)
+                timeText.setTextColor(onPrimary.data)
+                editedText.setTextColor(onPrimary.data)
             } else {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
                 messageBubble.gravity = android.view.Gravity.START
-                messageText.gravity = android.view.Gravity.START
-                if (canShowSenderInfo) {
-                    avatarImageView.visibility = View.VISIBLE
-                } else {
-                    avatarImageView.visibility = View.INVISIBLE
-                }
                 
-                val typedValue = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                messageText.setTextColor(if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data)
+                val onSurface = android.util.TypedValue()
+                context.theme.resolveAttribute(android.R.attr.textColorPrimary, onSurface, true)
+                messageText.setTextColor(onSurface.data)
+                timeText.setTextColor(onSurface.data)
+                editedText.setTextColor(onSurface.data)
                 userText.setTextColor(ContextCompat.getColor(context, R.color.tg_incoming_name))
-                timeText.setTextColor(ContextCompat.getColor(context, R.color.tg_time_incoming))
             }
 
             // 4. Status

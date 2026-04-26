@@ -74,7 +74,7 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        val searchItem = menu.add(0, 1, 0, R.string.search_users)
+        val searchItem = menu.add(0, 1, 0, R.string.search)
             .setIcon(R.drawable.ic_search_custom)
             .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
         

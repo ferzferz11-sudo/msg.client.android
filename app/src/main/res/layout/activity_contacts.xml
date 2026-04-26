@@ -40,7 +40,7 @@
             android:id="@+id/searchEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/search_users"
+            android:hint="@string/search"
             android:inputType="text"
             android:paddingVertical="8dp"
             android:textSize="14sp" />

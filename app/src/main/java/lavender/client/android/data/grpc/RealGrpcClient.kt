@@ -148,8 +148,8 @@ object RealGrpcClient {
             builder.maxInboundMessageSize(16 * 1024 * 1024)
             builder.maxInboundMetadataSize(1024 * 1024)
             
-            builder.keepAliveTime(10, TimeUnit.SECONDS)
-                .keepAliveTimeout(5, TimeUnit.SECONDS)
+            builder.keepAliveTime(30, TimeUnit.SECONDS)
+                .keepAliveTimeout(10, TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
                 .idleTimeout(24, TimeUnit.HOURS)
             
@@ -489,6 +489,7 @@ object RealGrpcClient {
                 }
                 
                 override fun onError(t: Throwable) {
+                    android.util.Log.e("RealGrpcClient", "Chat stream error: ${t.message}", t)
                     isChatStarted = false
                     _connectionState.value = false
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -680,10 +681,10 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun registerToken(user: String, token: String) {
+    fun registerToken(user: String, token: String, pushEnabled: Boolean = true) {
         val currentChannel = channel ?: return
         
-        val request = TokenRequestProto(user, token)
+        val request = TokenRequestProto(user, token, pushEnabled)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TokenRequestProto, TokenResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1921,6 +1922,7 @@ class TokenRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TokenRequestP
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         cos.writeString(1, value.user)
         cos.writeString(2, value.token)
+        cos.writeBool(3, value.pushEnabled)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1928,16 +1930,18 @@ class TokenRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TokenRequestP
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var user = ""
         var token = ""
+        var pushEnabled = true
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> user = cis.readString()
                 2 -> token = cis.readString()
+                3 -> pushEnabled = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return TokenRequestProto(user, token)
+        return TokenRequestProto(user, token, pushEnabled)
     }
 }
 

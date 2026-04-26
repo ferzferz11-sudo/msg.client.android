@@ -17,6 +17,13 @@ class LavenderMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
+        // Check if receiving is enabled
+        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("push_receive_enabled", true)) {
+            Log.d("FCM", "onMessageReceived: push_receive_enabled is false, skipping")
+            return
+        }
+
         Log.d("FCM", "onMessageReceived called")
         Log.d("FCM", "From: ${remoteMessage.from}")
         Log.d("FCM", "Notification title: ${remoteMessage.notification?.title}")

@@ -1,7 +1,6 @@
 <resources>
     <!-- Night theme for Theme.MsgClientAndroid -->
     <style name="Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="actionOverflowButtonStyle">@style/CustomOverflowStyle</item>
         <item name="isLightTheme">false</item>
         <!-- Primary colors -->
         <item name="colorPrimary">@color/lavender_mist</item>

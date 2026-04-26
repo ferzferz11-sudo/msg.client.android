@@ -54,8 +54,8 @@ object GrpcClient {
         realGrpcClient.setReaction(messageId, username, emoji)
     }
 
-    fun registerToken(user: String, token: String) {
-        realGrpcClient.registerToken(user, token)
+    fun registerToken(user: String, token: String, pushEnabled: Boolean = true) {
+        realGrpcClient.registerToken(user, token, pushEnabled)
     }
 
     fun clearSystemNotification() {

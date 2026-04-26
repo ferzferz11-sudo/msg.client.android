@@ -869,6 +869,18 @@ class NewChatActivity : AppCompatActivity() {
             repliedToUser = replyingTo?.user ?: "",
             repliedToText = replyingTo?.text ?: ""
         )
+        
+        // Log outgoing notification if enabled
+        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        if (prefs.getBoolean("push_send_enabled", true)) {
+            lavender.client.android.data.fcm.NotificationHistory.add(
+                title = "Sent to $chatName",
+                body = text.ifEmpty { "[Image]" },
+                from = roomId,
+                isOutgoing = true
+            )
+        }
+
         grpcClient.sendMessage(msg)
     }
 

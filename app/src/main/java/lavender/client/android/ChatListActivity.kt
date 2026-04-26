@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -662,7 +663,8 @@ class ChatListActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId != androidR.id.home && 
             item.itemId != R.id.action_search && 
-            item.itemId != R.id.action_profile) {
+            item.itemId != R.id.action_profile &&
+            item.itemId != R.id.action_about) {
             
             item.isEnabled = false
             item.setIcon(R.drawable.ic_loading_renew)
@@ -824,7 +826,8 @@ class ChatListActivity : AppCompatActivity() {
                 true
             }
             R.id.action_notification_history -> {
-                showNotificationHistory()
+                val intent = Intent(this, NotificationActivity::class.java)
+                startActivity(intent)
                 true
             }
             R.id.action_update -> {
@@ -883,11 +886,16 @@ class ChatListActivity : AppCompatActivity() {
         val color = typedValue.data
         
         menu.findItem(R.id.action_search)?.icon?.setTint(color)
+        menu.findItem(R.id.action_contacts)?.icon?.setTint(color)
+        menu.findItem(R.id.action_profile)?.icon?.setTint(color)
         
-        binding.toolbar.overflowIcon = ContextCompat.getDrawable(this, R.drawable.ic_overflow_settings)?.apply {
-            setTint(color)
+        // Ensure overflow icon is tinted correctly
+        binding.toolbar.overflowIcon?.let {
+            val tintedIcon = androidx.core.graphics.drawable.DrawableCompat.wrap(it).mutate()
+            androidx.core.graphics.drawable.DrawableCompat.setTint(tintedIcon, color)
+            binding.toolbar.overflowIcon = tintedIcon
         }
-
+        
         return true
     }
 
@@ -1391,112 +1399,6 @@ class ChatListActivity : AppCompatActivity() {
         return false
     }
 
-    private fun showNotificationHistory() {
-        val notifications = NotificationHistory.getAll()
-
-        // Create custom view for dialog
-        val dialogView = layoutInflater.inflate(R.layout.dialog_notification_history, null)
-        val notificationsText = dialogView.findViewById<TextView>(R.id.notificationsText)
-        val fcmTokenText = dialogView.findViewById<TextView>(R.id.fcmTokenText)
-        val copyTokenButton = dialogView.findViewById<Button>(R.id.copyTokenButton)
-        val testNotificationButton = dialogView.findViewById<Button>(R.id.testNotificationButton)
-
-        // Display notifications
-        if (notifications.isEmpty()) {
-            notificationsText.text = getString(R.string.no_notifications)
-        } else {
-            val message = notifications.joinToString("\n\n") { notif ->
-                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                    .format(Date(notif.timestamp))
-                "[$time] ${notif.title}\n${notif.body}${if (notif.from != null) "\nFrom: ${notif.from}" else ""}"
-            }
-            notificationsText.text = message
-        }
-
-        // Get and display FCM token
-        lifecycleScope.launch {
-            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val token = task.result
-                    fcmTokenText.text = token
-                    fcmTokenText.setOnClickListener {
-                        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("FCM Token", token)
-                        clipboard.setPrimaryClip(clip)
-                        showToast(getString(R.string.token_copied))
-                    }
-                } else {
-                    fcmTokenText.text = getString(R.string.failed_to_get_token)
-                }
-            }
-        }
-
-        copyTokenButton.setOnClickListener {
-            val token = fcmTokenText.text.toString()
-            if (token.isNotEmpty() && token != getString(R.string.failed_to_get_token)) {
-                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("FCM Token", token)
-                clipboard.setPrimaryClip(clip)
-                showToast(getString(R.string.token_copied))
-            }
-        }
-
-        testNotificationButton.setOnClickListener {
-            // Simulate receiving a notification
-            NotificationHistory.add("Test Notification", "This is a test notification from the app", "local")
-            notificationsText.text = NotificationHistory.getAll()
-                .joinToString("\n\n") { notif ->
-                    val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                        .format(Date(notif.timestamp))
-                    "[$time] ${notif.title}\n${notif.body}${if (notif.from != null) "\nFrom: ${notif.from}" else ""}"
-                }
-            showToast(getString(R.string.test_notification_added))
-
-            // Create notification channel if needed
-            val channelId = "lavender_messaging_channel"
-            val channelName = "Lavender Messages"
-            val channelDescription = "Notifications for new messages"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(channelId, channelName, importance).apply {
-                description = channelDescription
-            }
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager?.createNotificationChannel(channel)
-
-            // Also show a real system notification
-            val notificationId = 9999
-            val notification = NotificationCompat.Builder(this, channelId)
-                .setContentTitle("Test Notification")
-                .setContentText("This is a test notification from the app")
-                .setSmallIcon(R.drawable.ic_message_sent)
-                .setAutoCancel(true)
-                .build()
-
-            val notificationManagerCompat = NotificationManagerCompat.from(this)
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-                notificationManagerCompat.notify(notificationId, notification)
-            } else {
-                showToast("Notification permission not granted")
-            }
-        }
-
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.notifications))
-            .setView(dialogView)
-            .setOnDismissListener { 
-                clearMenuAnimations()
-                invalidateOptionsMenu() 
-            }
-            .setPositiveButton(getString(R.string.clear)) { _, _ ->
-                NotificationHistory.clear()
-                showToast(getString(R.string.history_cleared))
-            }
-            .setNegativeButton(androidR.string.ok, null)
-            .create()
-
-        dialog.show()
-    }
 
     private fun showAboutDialog() {
         val clientVersion = try {
@@ -1510,23 +1412,43 @@ class ChatListActivity : AppCompatActivity() {
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "") ?: ""
         val isUpdateAvailable = isUpdateAvailable(latestVersion)
 
-        val message = StringBuilder()
-            .append(getString(R.string.version_label, clientVersion)).append("\n")
-            .append(getString(R.string.server_version_format, serverVersion)).append("\n\n")
-            .append(getString(R.string.developer_label))
-            .toString()
+        val developerEmail = "ferzferz11@gmail.com"
 
-        val builder = AlertDialog.Builder(this)
-            .setTitle(R.string.about_program)
-            .setMessage(message)
-            .setPositiveButton(android.R.string.ok, null)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
+        val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
+        val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
+        val btnUpdate = dialogView.findViewById<Button>(R.id.btnUpdate)
+        val btnFeedback = dialogView.findViewById<Button>(R.id.btnFeedback)
+        val btnClose = dialogView.findViewById<Button>(R.id.btnClose)
 
-        if (isUpdateAvailable) {
-            builder.setNeutralButton(R.string.update_now) { _, _ ->
-                downloadAndInstallApk()
+        clientVersionText.text = getString(R.string.version_label, clientVersion)
+        serverVersionText.text = getString(R.string.server_version_format, serverVersion)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnUpdate.isVisible = isUpdateAvailable
+        btnUpdate.setOnClickListener {
+            dialog.dismiss()
+            downloadAndInstallApk()
+        }
+
+        btnFeedback.setOnClickListener {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(developerEmail))
+                putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
+            }
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                showToast("No email app found")
             }
         }
 
-        builder.show()
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
     }
 }

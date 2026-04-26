@@ -103,51 +103,106 @@
                 android:text="@string/is_dark"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Background Image -->
-            <LinearLayout
+            <!-- Background Image Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/background_image_url"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:baselineAligned="false"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1A000000">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="@string/background_image_url">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editBackgroundImageUrl"
-                        android:layout_width="match_parent"
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/bgImagePreviewContainer"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="0dp"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+                        <ImageView
+                            android:id="@+id/bgImagePreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <LinearLayout
+                        android:id="@+id/noBgImagePlaceholder"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:background="#0D000000">
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_gallery"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="textUri" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical">
 
-                <FrameLayout
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="8dp">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSelectBackground"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/attach_file"
+                            app:icon="@drawable/ic_attach" />
+
+                        <TextView
+                            android:id="@+id/bgFileName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:maxLines="1"
+                            android:ellipsize="middle"
+                            android:visibility="gone" />
+
+                    </LinearLayout>
 
                     <ImageButton
-                        android:id="@+id/btnUploadBackground"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:id="@+id/btnDeleteBackground"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_attach"
-                        app:tint="?attr/colorPrimary"
-                        android:contentDescription="@string/attach_file" />
+                        android:src="@drawable/ic_delete"
+                        app:tint="#FF5252"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
 
                     <ProgressBar
                         android:id="@+id/uploadProgress"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:layout_gravity="center"
                         android:visibility="gone" />
-                </FrameLayout>
-            </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Previews -->
             <TextView

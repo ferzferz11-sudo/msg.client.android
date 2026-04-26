@@ -43,14 +43,18 @@ class EditThemeActivity : AppCompatActivity() {
     private var username: String = ""
     private var themeId: String? = null
     private var existingTheme: CustomThemeProto? = null
+    private var backgroundImageUrl: String = ""
 
     private lateinit var editName: TextInputEditText
-    private lateinit var editBackgroundImageUrl: TextInputEditText
+    private lateinit var bgImagePreview: ImageView
+    private lateinit var bgImagePreviewContainer: View
+    private lateinit var noBgImagePlaceholder: View
+    private lateinit var btnSelectBackground: View
+    private lateinit var btnDeleteBackground: View
+    private lateinit var uploadProgress: ProgressBar
     private lateinit var checkIsDark: MaterialCheckBox
     private lateinit var btnSave: MaterialButton
     private lateinit var btnDelete: MaterialButton
-    private lateinit var btnUploadBackground: ImageButton
-    private lateinit var uploadProgress: ProgressBar
     
     private lateinit var previewChatList: View
     private lateinit var previewChat: View
@@ -100,12 +104,16 @@ class EditThemeActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         editName = findViewById(R.id.editThemeName)
-        editBackgroundImageUrl = findViewById(R.id.editBackgroundImageUrl)
+        bgImagePreview = findViewById(R.id.bgImagePreview)
+        bgImagePreviewContainer = findViewById(R.id.bgImagePreviewContainer)
+        noBgImagePlaceholder = findViewById(R.id.noBgImagePlaceholder)
+        btnSelectBackground = findViewById(R.id.btnSelectBackground)
+        btnDeleteBackground = findViewById(R.id.btnDeleteBackground)
+        uploadProgress = findViewById(R.id.uploadProgress)
+        
         checkIsDark = findViewById(R.id.checkIsDark)
         btnSave = findViewById(R.id.btnSave)
         btnDelete = findViewById(R.id.btnDelete)
-        btnUploadBackground = findViewById(R.id.btnUploadBackground)
-        uploadProgress = findViewById(R.id.uploadProgress)
         
         previewChatList = findViewById(R.id.previewChatList)
         previewChat = findViewById(R.id.previewChat)
@@ -119,14 +127,31 @@ class EditThemeActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener { saveTheme() }
         btnDelete.setOnClickListener { deleteTheme() }
-        btnUploadBackground.setOnClickListener { pickBackgroundImageLauncher.launch("image/*") }
+        btnSelectBackground.setOnClickListener { pickBackgroundImageLauncher.launch("image/*") }
+        btnDeleteBackground.setOnClickListener {
+            backgroundImageUrl = ""
+            updateBgImageUI()
+            updateLivePreviews()
+        }
+        
+        bgImagePreview.setOnClickListener {
+            if (backgroundImageUrl.isNotEmpty()) showFullScreenImage(backgroundImageUrl)
+        }
         
         checkIsDark.setOnCheckedChangeListener { _, _ -> updateLivePreviews() }
-        editBackgroundImageUrl.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) { updateLivePreviews() }
-        })
+    }
+
+    private fun updateBgImageUI() {
+        if (backgroundImageUrl.isNotEmpty()) {
+            bgImagePreviewContainer.isVisible = true
+            noBgImagePlaceholder.isVisible = false
+            btnDeleteBackground.isVisible = true
+            Glide.with(this).load(backgroundImageUrl).centerCrop().into(bgImagePreview)
+        } else {
+            bgImagePreviewContainer.isVisible = false
+            noBgImagePlaceholder.isVisible = true
+            btnDeleteBackground.isVisible = false
+        }
     }
 
     private fun setupColorInput(key: String, layoutId: Int, label: String, default: String) {
@@ -217,8 +242,9 @@ class EditThemeActivity : AppCompatActivity() {
                     colorInputs["textPrimary"]?.setText(theme.textPrimaryColor)
                     colorInputs["onPrimary"]?.setText(theme.onPrimaryColor)
                     colorInputs["onSurface"]?.setText(theme.onSurfaceColor)
-                    editBackgroundImageUrl.setText(theme.backgroundImageUrl)
+                    backgroundImageUrl = theme.backgroundImageUrl
                     checkIsDark.isChecked = theme.isDark
+                    updateBgImageUI()
                     updateLivePreviews()
                 }
             }
@@ -237,7 +263,7 @@ class EditThemeActivity : AppCompatActivity() {
             textPrimaryColor = colorInputs["textPrimary"]?.text.toString(),
             textSecondaryColor = colorInputs["textPrimary"]?.text.toString(), // Default to textPrimary for now
             isDark = checkIsDark.isChecked,
-            backgroundImageUrl = editBackgroundImageUrl.text.toString().trim()
+            backgroundImageUrl = backgroundImageUrl
         )
     }
 
@@ -268,6 +294,13 @@ class EditThemeActivity : AppCompatActivity() {
             val textPrimary = theme.textPrimaryColor.toColorInt()
             val onPrimary = theme.onPrimaryColor.toColorInt()
 
+            // System bars preview (StatusBar and NavigationBar)
+            val statusBarColor = if (theme.isDark) Color.BLACK else Color.LTGRAY
+            val navBarColor = if (theme.isDark) Color.BLACK else Color.LTGRAY
+            
+            // Assuming we have dummy views for these in preview or just use root background
+            // For now, let's just use the 'isDark' to affect how we think about the theme.
+            
             // Root backgrounds
             root.findViewById<View>(R.id.previewRoot)?.setBackgroundColor(background)
             root.findViewById<View>(R.id.previewChatRoot)?.setBackgroundColor(background)
@@ -287,8 +320,13 @@ class EditThemeActivity : AppCompatActivity() {
             root.findViewById<TextView>(R.id.previewIncomingText)?.setTextColor(textPrimary)
             root.findViewById<TextView>(R.id.previewOutgoingText)?.setTextColor(onPrimary)
             
-            // Bottom panel
-            root.findViewById<View>(R.id.previewBottomPanel)?.setBackgroundColor(surface)
+            // Toolbar Text and Icons
+            root.findViewById<TextView>(R.id.previewToolbarTitle)?.setTextColor(onPrimary)
+            root.findViewById<TextView>(R.id.previewChatTitle)?.setTextColor(onPrimary)
+            root.findViewById<ImageView>(R.id.previewChatBack)?.setColorFilter(onPrimary)
+            
+            // Bottom panel (Simulate system navigation bar color if dark mode is on)
+            root.findViewById<View>(R.id.previewBottomPanel)?.setBackgroundColor(if (theme.isDark) Color.parseColor("#121212") else surface)
             
         } catch (_: Exception) {}
     }
@@ -322,9 +360,12 @@ class EditThemeActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setMessage(R.string.delete_theme_confirm)
             .setPositiveButton(R.string.delete) { _, _ ->
+                val overlay = findViewById<View>(R.id.progressOverlay)
+                overlay.isVisible = true
                 grpcClient.deleteTheme(username, id) { success ->
-                    if (success) {
-                        runOnUiThread { finish() }
+                    runOnUiThread {
+                        overlay.isVisible = false
+                        if (success) finish()
                     }
                 }
             }
@@ -332,9 +373,42 @@ class EditThemeActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showFullScreenImage(imageUrl: String) {
+        val dialog = AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).create()
+        val layout = RelativeLayout(this)
+        val imageView = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+        val pBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge)
+        
+        layout.addView(imageView, RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
+        layout.addView(pBar, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
+            addRule(RelativeLayout.CENTER_IN_PARENT)
+        })
+
+        dialog.setView(layout)
+        imageView.setOnClickListener { dialog.dismiss() }
+        
+        Glide.with(this)
+            .load(imageUrl)
+            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
+                    pBar.isVisible = false
+                    return false
+                }
+                override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
+                    pBar.isVisible = false
+                    return false
+                }
+            })
+            .into(imageView)
+            
+        dialog.show()
+    }
+
     private fun uploadBackgroundImage(uri: Uri) {
         uploadProgress.isVisible = true
-        btnUploadBackground.isVisible = false
+        btnSelectBackground.isVisible = false
         
         lifecycleScope.launch {
             try {
@@ -357,7 +431,9 @@ class EditThemeActivity : AppCompatActivity() {
                     val responseBody = response.body.string()
                     val fileUrl = JSONObject(responseBody).getString("url")
                     withContext(Dispatchers.Main) {
-                        editBackgroundImageUrl.setText(fileUrl)
+                        backgroundImageUrl = fileUrl
+                        updateBgImageUI()
+                        updateLivePreviews()
                     }
                 } else {
                     withContext(Dispatchers.Main) {
@@ -371,7 +447,7 @@ class EditThemeActivity : AppCompatActivity() {
             } finally {
                 withContext(Dispatchers.Main) {
                     uploadProgress.isVisible = false
-                    btnUploadBackground.isVisible = true
+                    btnSelectBackground.isVisible = true
                 }
             }
         }

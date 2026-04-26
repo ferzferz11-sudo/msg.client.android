@@ -264,7 +264,8 @@ data class DeleteMessagesResponseProto(
 
 data class TokenRequestProto(
     val user: String = "",
-    val token: String = ""
+    val token: String = "",
+    val pushEnabled: Boolean = true
 )
 
 data class TokenResponseProto(

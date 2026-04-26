@@ -3,11 +3,14 @@ package lavender.client.android
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.radiobutton.MaterialRadioButton
@@ -64,10 +67,7 @@ class ThemesActivity : AppCompatActivity() {
         loadThemes()
 
         btnAddTheme.setOnClickListener {
-            val intent = Intent(this, EditThemeActivity::class.java).apply {
-                putExtra("username", username)
-            }
-            startActivity(intent)
+            openEditTheme(null)
         }
     }
 
@@ -148,10 +148,21 @@ class ThemesActivity : AppCompatActivity() {
 
         customThemesContainer.removeAllViews()
         for (theme in customThemes) {
+            val itemLayout = LinearLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 4, 0, 4)
+            }
+
             val rb = MaterialRadioButton(this).apply {
-                layoutParams = RadioGroup.LayoutParams(
-                    RadioGroup.LayoutParams.MATCH_PARENT,
-                    (64 * resources.displayMetrics.density).toInt()
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    (64 * resources.displayMetrics.density).toInt(),
+                    1f
                 )
                 text = theme.name
                 setTextColor(textColor)
@@ -159,16 +170,74 @@ class ThemesActivity : AppCompatActivity() {
                 setOnClickListener { selectTheme(theme.id) }
                 
                 setOnLongClickListener {
-                    val intent = Intent(this@ThemesActivity, EditThemeActivity::class.java).apply {
-                        putExtra("username", username)
-                        putExtra("theme_id", theme.id)
-                    }
-                    startActivity(intent)
+                    openEditTheme(theme.id)
                     true
                 }
             }
-            customThemesContainer.addView(rb)
+
+            val btnEdit = ImageButton(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    (48 * resources.displayMetrics.density).toInt(),
+                    (48 * resources.displayMetrics.density).toInt()
+                )
+                setImageResource(R.drawable.ic_settings_brightness)
+                
+                val typedValue = android.util.TypedValue()
+                this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
+                setBackgroundResource(typedValue.resourceId)
+                
+                imageTintList = ColorStateList.valueOf(textColor)
+                setOnClickListener { openEditTheme(theme.id) }
+            }
+
+            val btnDelete = ImageButton(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    (48 * resources.displayMetrics.density).toInt(),
+                    (48 * resources.displayMetrics.density).toInt()
+                ).apply {
+                    marginEnd = (16 * resources.displayMetrics.density).toInt()
+                }
+                setImageResource(R.drawable.ic_delete)
+                
+                val typedValue = android.util.TypedValue()
+                this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
+                setBackgroundResource(typedValue.resourceId)
+                
+                imageTintList = ColorStateList.valueOf(Color.RED)
+                setOnClickListener { confirmQuickDeleteTheme(theme) }
+            }
+
+            itemLayout.addView(rb)
+            itemLayout.addView(btnEdit)
+            itemLayout.addView(btnDelete)
+            customThemesContainer.addView(itemLayout)
         }
+    }
+
+    private fun confirmQuickDeleteTheme(theme: CustomThemeProto) {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.delete_theme_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                if (currentThemeId == theme.id) {
+                    // Switch to default light theme before deleting active theme
+                    selectTheme("light")
+                }
+                grpcClient.deleteTheme(username, theme.id) { success ->
+                    if (success) {
+                        runOnUiThread { loadThemes() }
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun openEditTheme(themeId: String?) {
+        val intent = Intent(this, EditThemeActivity::class.java).apply {
+            putExtra("username", username)
+            if (themeId != null) putExtra("theme_id", themeId)
+        }
+        startActivity(intent)
     }
 
     private fun getOnSurfaceColor(): Int {

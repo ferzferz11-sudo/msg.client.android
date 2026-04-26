@@ -61,9 +61,26 @@ class UserAdapter(
         fun bind(username: String, isSelected: Boolean, avatarUrl: String?, isOnline: Boolean) {
             usernameText.text = username
             
-            // Highlight if selected
-            itemView.alpha = if (isSelected) 1.0f else 0.7f
-            itemView.setBackgroundResource(if (isSelected) R.drawable.rounded_background else 0)
+            // Apply theme-aware selection background
+            if (isSelected) {
+                val typedValue = android.util.TypedValue()
+                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                itemView.setBackgroundResource(R.drawable.rounded_background)
+                itemView.backgroundTintList = android.content.res.ColorStateList.valueOf(typedValue.data)
+                
+                // Ensure text color is readable on selection
+                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
+                usernameText.setTextColor(typedValue.data)
+                itemView.alpha = 1.0f
+            } else {
+                itemView.background = null
+                itemView.alpha = 0.8f
+                val typedValue = android.util.TypedValue()
+                itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                usernameText.setTextColor(if (typedValue.resourceId != 0) 
+                    androidx.core.content.ContextCompat.getColor(itemView.context, typedValue.resourceId) 
+                    else typedValue.data)
+            }
             
             // Load avatar
             if (!avatarUrl.isNullOrEmpty()) {

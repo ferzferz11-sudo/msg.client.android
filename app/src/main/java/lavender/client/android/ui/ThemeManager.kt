@@ -49,7 +49,27 @@ object ThemeManager {
         
         val root = activity.findViewById<View>(android.R.id.content)
         applyThemeToView(root, theme)
+
+        // System UI bars adjustment based on isDark flag
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            val controller = activity.window.insetsController
+            if (controller != null) {
+                if (theme.isDark) {
+                    // Dark theme -> Light icons on bars
+                    controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+                    controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+                } else {
+                    // Light theme -> Dark icons on bars
+                    controller.setSystemBarsAppearance(android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+                    controller.setSystemBarsAppearance(android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS, android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+                }
+            }
+        }
         
+        // Handle Dialog styling for the activity (using reflections or specific theme overrides)
+        // Since we can't easily change the system AlertDialog theme at runtime without a style resource,
+        // we can at least ensure activities apply the background.
+
         // Activity-specific background
         try {
             val bgColor = Color.parseColor(theme.backgroundColor)
@@ -75,8 +95,22 @@ object ThemeManager {
                 is com.google.android.material.appbar.MaterialToolbar -> {
                     view.setBackgroundColor(primaryColor)
                     view.setTitleTextColor(onPrimaryColor)
+                    view.setSubtitleTextColor(onPrimaryColor)
                     view.setNavigationIconTint(onPrimaryColor)
-                    view.overflowIcon?.setTint(onPrimaryColor)
+                    
+                    // Force overflow icon tinting
+                    val overflowIcon = view.overflowIcon
+                    if (overflowIcon != null) {
+                        val tintedIcon = androidx.core.graphics.drawable.DrawableCompat.wrap(overflowIcon).mutate()
+                        androidx.core.graphics.drawable.DrawableCompat.setTint(tintedIcon, onPrimaryColor)
+                        view.overflowIcon = tintedIcon
+                    }
+
+                    // Tint all menu items
+                    for (i in 0 until view.menu.size()) {
+                        val item = view.menu.getItem(i)
+                        item.icon?.setTint(onPrimaryColor)
+                    }
                 }
                 is MaterialButton -> {
                     if (view.id != android.R.id.home) {

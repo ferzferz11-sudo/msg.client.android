@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -118,7 +119,7 @@ class SuperAdminActivity : AppCompatActivity() {
         usersContainer.removeAllViews()
         if (currentMode == Mode.USERS) {
             for (user in users) {
-                val userView = layoutInflater.inflate(R.layout.item_participant, usersContainer, false)
+                val userView = layoutInflater.inflate(R.layout.item_user_super_admin, usersContainer, false)
                 val nameText = userView.findViewById<TextView>(R.id.participantName)
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
@@ -132,6 +133,14 @@ class SuperAdminActivity : AppCompatActivity() {
                     runOnUiThread {
                         Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
                     }
+                }
+
+                userView.setOnClickListener {
+                    val intent = Intent(this, ProfileActivity::class.java).apply {
+                        putExtra("username", user)
+                        putExtra("is_group", false)
+                    }
+                    startActivity(intent)
                 }
 
                 userView.setOnLongClickListener {
@@ -149,6 +158,17 @@ class SuperAdminActivity : AppCompatActivity() {
                 nameText.text = chat.name
                 typeText.text = "${chat.type} - ID: ${chat.id}"
                 
+                chatView.setOnClickListener {
+                    val intent = Intent(this, ProfileActivity::class.java).apply {
+                        putExtra("username", chat.name)
+                        putExtra("is_group", !chat.type.equals("direct", true))
+                        putExtra("room_id", chat.id)
+                        putExtra("creator", chat.creator)
+                        putExtra("participants", chat.participants)
+                    }
+                    startActivity(intent)
+                }
+
                 chatView.setOnLongClickListener {
                     confirmDeleteChat(chat)
                     true

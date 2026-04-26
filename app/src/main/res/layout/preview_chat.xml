@@ -12,11 +12,32 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop" />
 
-    <View
+    <LinearLayout
         android:id="@+id/previewChatToolbar"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:background="?attr/colorPrimary" />
+        android:background="?attr/colorPrimary"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_back_arrow"
+            android:id="@+id/previewChatBack"
+            app:tint="?attr/colorOnPrimary" />
+
+        <TextView
+            android:id="@+id/previewChatTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Pavel Davydov"
+            android:textColor="?attr/colorOnPrimary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
