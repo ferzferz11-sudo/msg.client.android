@@ -175,7 +175,11 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.2.3**
+Current version: **1.0.2.4**
+
+### Version 1.0.2.4 - Final Interface Polish
+- 🧹 **UI Cleanup**: Removed redundant "Contacts" icon from the main toolbar.
+- 🚀 **Performance**: Optimized list rendering and connection stability.
 
 ### Version 1.0.2.3 - Voice Messages & Performance Fixes
 - 🎤 **Voice Messages**: Full implementation of recording, server-side storage, and real-time playback.

@@ -12,7 +12,7 @@
         android:id="@+id/action_contacts"
         android:icon="@drawable/ic_contacts"
         android:title="@string/contacts"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_themes"
