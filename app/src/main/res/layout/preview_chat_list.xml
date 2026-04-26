@@ -45,15 +45,13 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginEnd="16dp"
-            android:src="@drawable/ic_search_custom"
-            app:tint="?attr/colorOnPrimary" />
+            android:src="@drawable/ic_search_custom" />
 
         <ImageView
             android:id="@+id/previewToolbarMore"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_more_vert"
-            app:tint="?attr/colorOnPrimary" />
+            android:src="@drawable/ic_more_vert" />
     </LinearLayout>
 
     <!-- FAB Preview -->

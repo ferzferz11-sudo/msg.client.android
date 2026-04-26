@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.core.view.updatePadding
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
@@ -90,6 +91,7 @@ class EditThemeActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_theme)
 
@@ -125,6 +127,13 @@ class EditThemeActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
+
+        // Handle window insets for edge-to-edge
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            insets
+        }
 
         editName = findViewById(R.id.editThemeName)
         bgImagePreview = findViewById(R.id.bgImagePreview)
@@ -425,6 +434,8 @@ class EditThemeActivity : AppCompatActivity() {
             root.findViewById<TextView>(R.id.previewToolbarTitle)?.setTextColor(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarSearch)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarMore)?.setColorFilter(onPrimary)
+            root.findViewById<ImageView>(R.id.previewChatBack)?.setColorFilter(onPrimary)
+
             root.findViewById<ImageView>(R.id.previewToolbarAvatar)?.let { avatarView ->
                 if (userAvatarUrl.isNotEmpty()) {
                     Glide.with(this).load(userAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)

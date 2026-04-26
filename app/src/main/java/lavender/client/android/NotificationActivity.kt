@@ -17,6 +17,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
 import lavender.client.android.data.fcm.NotificationEntry
 import lavender.client.android.data.fcm.NotificationHistory
+import androidx.core.view.updatePadding
 import lavender.client.android.data.grpc.GrpcClient
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,6 +42,7 @@ class NotificationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedColorScheme()
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notifications)
 
@@ -48,6 +50,13 @@ class NotificationActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
+
+        // Handle window insets for edge-to-edge
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            insets
+        }
 
         // Apply theme colors to toolbar
         lavender.client.android.ui.ThemeManager.applyTheme(this)
