@@ -423,9 +423,13 @@ class EditThemeActivity : AppCompatActivity() {
             
             // Toolbar Text and Icons
             root.findViewById<TextView>(R.id.previewToolbarTitle)?.setTextColor(onPrimary)
-            root.findViewById<ImageView>(R.id.previewToolbarContacts)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarProfile)?.setColorFilter(onPrimary)
             root.findViewById<ImageView>(R.id.previewToolbarMore)?.setColorFilter(onPrimary)
+            
+            // FAB
+            val fab = root.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.previewFab)
+            fab?.backgroundTintList = android.content.res.ColorStateList.valueOf(primary)
+            fab?.imageTintList = android.content.res.ColorStateList.valueOf(onPrimary)
 
             val chatTitle = root.findViewById<TextView>(R.id.previewChatTitle)
             if (chatTitle != null) {

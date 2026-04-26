@@ -15,15 +15,15 @@
         <item name="colorOnSecondaryContainer">@color/deep_purple</item>
 
         <!-- Background colors -->
-        <item name="android:windowBackground">@color/dark_background</item>
-        <item name="colorSurface">@color/dark_background</item>
+        <item name="android:windowBackground">#04052E</item>
+        <item name="colorSurface">#04052E</item>
         <item name="colorSurfaceVariant">@color/lavender_mist</item>
         <item name="colorOnSurface">@color/white</item>
         <item name="colorOnSurfaceVariant">@color/white</item>
 
         <!-- Dialog colors -->
-        <item name="colorSurfaceContainer">@color/lavender_mist</item>
-        <item name="colorSurfaceContainerHigh">@color/lavender_mist</item>
+        <item name="colorSurfaceContainer">#1A1B46</item>
+        <item name="colorSurfaceContainerHigh">#1A1B46</item>
 
         <!-- Text colors -->
         <item name="android:textColorPrimary">@color/white</item>

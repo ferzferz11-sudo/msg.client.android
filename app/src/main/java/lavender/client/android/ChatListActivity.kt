@@ -1035,7 +1035,8 @@ class ChatListActivity : AppCompatActivity() {
     private fun showCreateDirectChatDialog() {
         binding.progressOverlay.isVisible = true
         
-        grpcClient.loadAllUsers { allUsers ->
+        // Fetch contacts first to only show them in the direct chat dialog
+        grpcClient.getContacts(username) { contacts ->
             runOnUiThread {
                 binding.progressOverlay.isVisible = false
                 val dialogView = layoutInflater.inflate(R.layout.dialog_create_direct_chat, null)
@@ -1045,8 +1046,8 @@ class ChatListActivity : AppCompatActivity() {
                 val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                 val btnStartChat = dialogView.findViewById<MaterialButton>(R.id.btnStartChat)
                 
-                // Use a simple adapter to show online/offline users
-                val filteredUsers = allUsers.filter { it != username }.sortedWith(
+                // Show ONLY contacts, sorted by online status
+                val filteredUsers = contacts.filter { it != username }.sortedWith(
                     compareByDescending<String> { grpcClient.users.value.contains(it) }.thenBy { it }
                 )
                 

@@ -38,14 +38,6 @@
             android:layout_weight="1" />
 
         <ImageView
-            android:id="@+id/previewToolbarContacts"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="16dp"
-            android:src="@drawable/ic_contacts"
-            app:tint="?attr/colorOnPrimary" />
-
-        <ImageView
             android:id="@+id/previewToolbarProfile"
             android:layout_width="24dp"
             android:layout_height="24dp"
@@ -60,6 +52,19 @@
             android:src="@drawable/ic_more_vert"
             app:tint="?attr/colorOnPrimary" />
     </LinearLayout>
+
+    <!-- FAB Preview -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/previewFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_input_add"
+        app:fabSize="normal"
+        app:tint="?attr/colorOnPrimary"
+        app:backgroundTint="?attr/colorPrimary" />
 
     <LinearLayout
         android:layout_width="match_parent"

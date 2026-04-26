@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import androidx.core.content.edit
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -364,53 +365,59 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangeUsernameDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_join_chat, null)
-        
-        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
-        val passwordInputLayout = dialogView.findViewById<TextInputLayout>(R.id.passwordInputLayout)
-        val editText = dialogView.findViewById<EditText>(R.id.editTextUsername)
-        val serverAddressLabel = dialogView.findViewById<View>(R.id.serverAddressSpinner)?.parent as? View
-        val serverStatusContainer = dialogView.findViewById<View>(R.id.serverStatusIndicator)?.parent as? View
-        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
-        val btnJoin = dialogView.findViewById<MaterialButton>(R.id.btnJoin)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_username, null)
+        val editNewUsername = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSave)
 
-        // Hide elements we don't need
-        passwordInputLayout.visibility = View.GONE
-        serverAddressLabel?.visibility = View.GONE
-        serverStatusContainer?.visibility = View.GONE
-        dialogView.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
-        
-        titleText.text = getString(R.string.change_username)
-        editText.hint = getString(R.string.enter_new_username)
-        editText.setText(username)
-        btnJoin.text = getString(R.string.change)
+        editNewUsername.setText(username)
+        editNewUsername.requestFocus()
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
 
+        // Ensure keyboard shows up
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+
         btnCancel.setOnClickListener { dialog.dismiss() }
 
-        btnJoin.setOnClickListener {
-            val newUsername = editText.text.toString().trim()
-            if (newUsername.isNotEmpty() && newUsername != username) {
-                grpcClient.updateUsername(username, newUsername) { success, message ->
-                    runOnUiThread {
-                        if (success) {
-                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                            username = newUsername
-                            setResult(RESULT_OK)
-                            finish()
-                        } else {
-                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        btnSave.setOnClickListener {
+            val newUsername = editNewUsername.text.toString().trim()
+            if (newUsername.isEmpty()) {
+                Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (newUsername == username) {
+                dialog.dismiss()
+                return@setOnClickListener
+            }
+
+            // Show loading state if we had a progress bar, but for now just disable button
+            btnSave.isEnabled = false
+
+            grpcClient.updateUsername(username, newUsername) { success, message ->
+                runOnUiThread {
+                    btnSave.isEnabled = true
+                    if (success) {
+                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                        
+                        // Update local identity
+                        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+                        prefs.edit {
+                            putString("username", newUsername)
                         }
+                        
+                        username = newUsername
+                        dialog.dismiss()
+                        
+                        setResult(RESULT_OK)
+                        finish() 
+                    } else {
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                     }
                 }
-                dialog.dismiss()
-            } else if (newUsername.isEmpty()) {
-                Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_SHORT).show()
-            } else {
-                dialog.dismiss()
             }
         }
 

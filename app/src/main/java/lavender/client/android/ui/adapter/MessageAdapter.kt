@@ -215,7 +215,7 @@ class MessageAdapter(
                     } catch (_: Exception) {}
                 } else {
                     val onSurface = android.util.TypedValue()
-                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, onSurface, true)
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, onSurface, true)
                     val color = if (onSurface.resourceId != 0) ContextCompat.getColor(context, onSurface.resourceId) else onSurface.data
                     messageText.setTextColor(color)
                     timeText.setTextColor(color)
@@ -412,8 +412,13 @@ class MessageAdapter(
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
             itemView.setBackgroundColor(if (isSelected) ContextCompat.getColor(context, R.color.lavender_mist_alpha) else android.graphics.Color.TRANSPARENT)
 
-            messageBubble.setOnClickListener { onClick() }
-            messageBubble.setOnLongClickListener { onLongClick(); true }
+            val genericOnClick = { onClick() }
+            val genericOnLongClick = { onLongClick(); true }
+
+            messageBubble.setOnClickListener { genericOnClick() }
+            messageBubble.setOnLongClickListener { genericOnLongClick() }
+            messageText.setOnClickListener { genericOnClick() }
+            messageText.setOnLongClickListener { genericOnLongClick() }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int {

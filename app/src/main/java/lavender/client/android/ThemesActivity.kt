@@ -217,7 +217,15 @@ class ThemesActivity : AppCompatActivity() {
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
                 setBackgroundResource(typedValue.resourceId)
                 
-                imageTintList = ColorStateList.valueOf(Color.RED)
+                // Get same color for Delete as for Edit
+                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                val iconColor = if (customTheme != null) {
+                    try { Color.parseColor(customTheme.primaryColor) } catch (_: Exception) { getPrimaryColor() }
+                } else {
+                    getPrimaryColor()
+                }
+
+                imageTintList = ColorStateList.valueOf(iconColor)
                 setOnClickListener { confirmQuickDeleteTheme(theme) }
             }
 

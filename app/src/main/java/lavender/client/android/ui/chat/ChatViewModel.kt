@@ -74,8 +74,13 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun markRead(username: String, onCompletion: (() -> Unit)? = null) {
+    fun markRead(username: String, context: android.content.Context? = null, onCompletion: (() -> Unit)? = null) {
         grpcClient.markRead(currentRoomId, username, onCompletion)
+        
+        // Dismiss push notifications for this room locally
+        context?.let {
+            lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, currentRoomId)
+        }
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {

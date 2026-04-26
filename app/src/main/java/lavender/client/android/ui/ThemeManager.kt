@@ -109,6 +109,9 @@ object ThemeManager {
             activity.window.decorView.setBackgroundColor(bgColor)
             root.setBackgroundColor(bgColor)
             
+            // Set background for SwipeRefreshLayout if it exists
+            activity.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)?.setBackgroundColor(bgColor)
+            
             // Handle background images
             val bgImageView = activity.findViewById<android.widget.ImageView>(
                 if (activity.javaClass.simpleName == "ChatListActivity") R.id.chatListBgImage
@@ -125,6 +128,7 @@ object ThemeManager {
                     bgImageView.visibility = View.VISIBLE
                     com.bumptech.glide.Glide.with(activity).load(imageUrl).centerCrop().into(bgImageView)
                     root.setBackgroundColor(Color.TRANSPARENT)
+                    activity.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)?.setBackgroundColor(Color.TRANSPARENT)
                 } else {
                     bgImageView.visibility = View.GONE
                 }

@@ -166,7 +166,8 @@
     <string name="delete_messages_title">Удаление сообщений</string>
     <string name="delete_for_everyone">Удалить для всех</string>
     <string name="delete_for_me">Удалить у меня</string>
-    <string name="delete_messages_confirm">Вы уверены, что хотите удалить выбранные сообщения? Это также удалит изображения с сервера.</string>
+    <string name="delete_messages_confirm">Вы уверены, что хотите удалить выбранные сообщения (%d)? Это также удалит изображения с сервера.</string>
+    <string name="delete_messages_action">Удалить сообщения</string>
     <string name="participants_count">%d участников</string>
     <string name="user_is_typing">%s печатает…</string>
     <string name="users_are_typing">%d пользователей печатают…</string>
@@ -240,6 +241,8 @@
     <string name="on_primary_color">Цвет на основном (Текст в тулбаре, текст исходящих)</string>
     <string name="surface_color">Цвет поверхностей (Плашки чатов, входящие сообщения)</string>
     <string name="on_surface_color">Цвет на поверхностях (Имена в чатах, текст входящих)</string>
+    <string name="bottom_panel_color">Фон нижней панели</string>
+    <string name="on_bottom_panel_color">Иконки нижней панели</string>
     <string name="background_color">Цвет фона (Главный экран, список чатов)</string>
     <string name="text_primary_color">Основной цвет текста (Текст в списке чатов)</string>
     <string name="text_secondary_color">Вторичный цвет текста</string>

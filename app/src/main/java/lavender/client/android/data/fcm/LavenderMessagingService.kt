@@ -60,6 +60,24 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
     }
 
+    companion object {
+        fun dismissNotificationsForRoom(context: Context, roomId: String) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                val activeNotifications = notificationManager.activeNotifications
+                for (notification in activeNotifications) {
+                    val extras = notification.notification.extras
+                    val notifRoomId = extras.getString("room_id")
+                    if (notifRoomId == roomId) {
+                        notificationManager.cancel(notification.id)
+                    }
+                }
+            } else {
+                notificationManager.cancelAll()
+            }
+        }
+    }
+
     private fun showNotification(title: String, body: String, roomId: String) {
         Log.d("FCM", "showNotification called with title: $title, body: $body, room_id: $roomId")
 
@@ -88,6 +106,11 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            
+        // Add room_id to extras so we can filter and dismiss later
+        val extras = android.os.Bundle()
+        extras.putString("room_id", roomId)
+        notificationBuilder.addExtras(extras)
 
         when (style) {
             "messaging" -> {

@@ -214,7 +214,7 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.switchRoom(roomId)
         viewModel.startChat(username, password, "") { _ ->
             // Mark as read after chat starts and history loads
-            viewModel.markRead(username)
+            viewModel.markRead(username, this)
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -493,11 +493,13 @@ class NewChatActivity : AppCompatActivity() {
                 val totalItemCount = layoutManager.itemCount
 
                 if (lastVisiblePosition == totalItemCount - 1) {
-                    viewModel.markRead(username)
+                    viewModel.markRead(username, this@NewChatActivity)
                 }
             }
         })
     }
+
+    private var lastMessageCount = 0
 
     private fun setupObservers() {
         val factory = ChatViewModelFactory(roomId)
@@ -509,9 +511,19 @@ class NewChatActivity : AppCompatActivity() {
                 val roomMessages = messages.filter { it.roomId == roomId }
                     .sortedBy { it.timestamp }
 
+                val wasAtBottom = (messagesRecyclerView.layoutManager as? LinearLayoutManager)?.let {
+                    it.findLastVisibleItemPosition() >= lastMessageCount - 2
+                } ?: true
+
+                val isFirstLoad = lastMessageCount == 0
+                val hasNewMessages = roomMessages.size > lastMessageCount
+
                 adapter.submitList(roomMessages) {
-                    if (roomMessages.isNotEmpty()) messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
+                    if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) {
+                        messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
+                    }
                 }
+                lastMessageCount = roomMessages.size
             }
         }
 
@@ -718,13 +730,13 @@ class NewChatActivity : AppCompatActivity() {
         deleteMessages.setOnClickListener {
             val selected = adapter.getSelectedMessages()
             AlertDialog.Builder(this)
-                .setTitle("Delete Messages")
-                .setMessage("Are you sure you want to delete ${selected.size} messages?")
-                .setPositiveButton("Delete") { _, _ ->
+                .setTitle(R.string.delete_messages_title)
+                .setMessage(getString(R.string.delete_messages_confirm, selected.size))
+                .setPositiveButton(R.string.delete) { _, _ ->
                     selected.forEach { grpcClient.deleteMessage(it) }
                     hideSelectionToolbar()
                 }
-                .setNegativeButton("Cancel", null).show()
+                .setNegativeButton(R.string.cancel, null).show()
         }
 
         forwardMessages.setOnClickListener {
@@ -922,7 +934,7 @@ class NewChatActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
 
         // Add emoji reactions (top)
-        val emojis = listOf("❤️", "👍", "🔥", "😂", "😮", "😢", "🙏")
+        val emojis = listOf("❤️", "👍", "🔥", "😂", "😮", "😢", "🙏", "✅")
         emojis.forEach { emoji ->
             container.addView(TextView(this).apply {
                 text = emoji
@@ -1154,7 +1166,7 @@ class NewChatActivity : AppCompatActivity() {
                         // Switch to the new room
                         viewModel.switchRoom(roomId)
                         viewModel.startChat(username, password, "") { _ ->
-                            viewModel.markRead(username)
+                            viewModel.markRead(username, this@NewChatActivity)
                         }
                     }
                     .setNegativeButton(R.string.cancel, null)

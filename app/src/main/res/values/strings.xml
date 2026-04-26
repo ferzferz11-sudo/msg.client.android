@@ -167,6 +167,7 @@
     <string name="delete_for_everyone">Delete for everyone</string>
     <string name="delete_for_me">Delete for me</string>
     <string name="delete_messages_confirm">Are you sure you want to delete %d selected messages?</string>
+    <string name="delete_messages_action">Delete messages</string>
     <string name="participants_count">%d participants</string>
     <string name="user_is_typing">%s is typing…</string>
     <string name="users_are_typing">%d users are typing…</string>
