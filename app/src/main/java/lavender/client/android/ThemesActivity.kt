@@ -176,32 +176,36 @@ class ThemesActivity : AppCompatActivity() {
             }
 
             val btnEdit = ImageButton(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    (56 * resources.displayMetrics.density).toInt(),
-                    (56 * resources.displayMetrics.density).toInt()
-                )
+                val size = (64 * resources.displayMetrics.density).toInt()
+                layoutParams = LinearLayout.LayoutParams(size, size)
                 setImageResource(R.drawable.ic_settings_brightness)
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setPadding(12, 12, 12, 12)
                 
                 val typedValue = android.util.TypedValue()
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
                 setBackgroundResource(typedValue.resourceId)
                 
-                // Use primary color for the edit button to make it stand out and follow theme
-                val primaryColor = getPrimaryColor()
-                imageTintList = ColorStateList.valueOf(primaryColor)
+                // Get color from ThemeManager to match the ACTUAL toolbar background
+                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                val iconColor = if (customTheme != null) {
+                    try { Color.parseColor(customTheme.primaryColor) } catch (_: Exception) { getPrimaryColor() }
+                } else {
+                    getPrimaryColor()
+                }
+                
+                imageTintList = ColorStateList.valueOf(iconColor)
                 setOnClickListener { openEditTheme(theme.id) }
             }
 
             val btnDelete = ImageButton(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    (56 * resources.displayMetrics.density).toInt(),
-                    (56 * resources.displayMetrics.density).toInt()
-                ).apply {
+                val size = (64 * resources.displayMetrics.density).toInt()
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     marginEnd = (8 * resources.displayMetrics.density).toInt()
                 }
                 setImageResource(R.drawable.ic_delete)
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setPadding(12, 12, 12, 12)
                 
                 val typedValue = android.util.TypedValue()
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
