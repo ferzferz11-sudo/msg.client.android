@@ -6,6 +6,16 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
+    <ImageView
+        android:id="@+id/chatBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/replyPreview_anchor"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -78,6 +88,7 @@
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:visibility="gone"
+                            android:layout_marginEnd="8dp"
                             tools:visibility="visible" />
 
                         <TextView
@@ -88,11 +99,6 @@
                             android:textSize="11sp"
                             android:alpha="0.8"
                             android:visibility="gone"
-                            android:layout_marginStart="8dp"
-                            android:paddingHorizontal="6dp"
-                            android:paddingVertical="1dp"
-                            android:background="@drawable/rounded_background"
-                            android:backgroundTint="#20000000"
                             tools:text="online"
                             tools:visibility="visible" />
                     </LinearLayout>
@@ -231,16 +237,6 @@
 
     </com.google.android.material.appbar.MaterialToolbar>
 
-    <ImageView
-        android:id="@+id/chatBackground"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:scaleType="centerCrop"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/replyPreview_anchor"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="0dp"
@@ -263,7 +259,30 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="top"
-        app:constraint_referenced_ids="replyPreview,bottomPanel" />
+        app:constraint_referenced_ids="mentionContainer,replyPreview,bottomPanel" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/mentionContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:layout_constraintBottom_toTopOf="@id/replyPreview"
+        app:layout_constrainedHeight="true"
+        app:layout_constraintHeight_max="200dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/mentionList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="4dp"
+            tools:listitem="@layout/item_mention" />
+
+    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/replyPreview"
@@ -334,6 +353,7 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
+            android:id="@+id/bottomPanelContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">

@@ -150,20 +150,22 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Handle window insets to avoid overlapping with status bar (edge-to-edge mode)
-        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar) { view, insets ->
+        // Handle window insets to avoid overlapping with system bars (edge-to-edge mode)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top)
-            insets
-        }
-
-        // Adjust FAB position to avoid overlapping with bottom system navigation bar
-        ViewCompat.setOnApplyWindowInsetsListener(binding.addChatFab) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            
+            // Apply top padding to toolbar
+            binding.toolbar.updatePadding(top = systemBars.top)
+            
+            // Apply bottom padding to list so last item isn't covered by nav bar
+            binding.chatsRecyclerView.updatePadding(bottom = systemBars.bottom)
+            
+            // Adjust FAB position
+            binding.addChatFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = 28.dpToPx() + systemBars.bottom
                 marginEnd = 16.dpToPx()
             }
+
             insets
         }
 

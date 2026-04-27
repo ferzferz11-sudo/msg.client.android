@@ -145,21 +145,43 @@ class ChatAdapter(
             chatName.text = chat.name
 
             val context = itemView.context
+            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
 
             if (isSelected) {
                 cardView.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(context, R.color.lavender_mist_alpha))
                 itemView.alpha = 0.7f
             } else {
-                val typedValue = android.util.TypedValue()
-                context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                val color = if (typedValue.resourceId != 0) {
-                    androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+                if (theme != null) {
+                    try {
+                        val surfaceColor = android.graphics.Color.parseColor(theme.surfaceColor)
+                        cardView.setCardBackgroundColor(surfaceColor)
+                    } catch (_: Exception) {
+                        applyDefaultCardBackground(context)
+                    }
                 } else {
-                    typedValue.data
+                    applyDefaultCardBackground(context)
                 }
-                cardView.setCardBackgroundColor(color)
                 itemView.alpha = 1.0f
             }
+
+            // Apply text colors based on theme
+            if (theme != null) {
+                try {
+                    val textPrimary = android.graphics.Color.parseColor(theme.textPrimaryColor)
+                    val textSecondary = android.graphics.Color.parseColor(theme.textSecondaryColor)
+                    chatName.setTextColor(textPrimary)
+                    chatType.setTextColor(textSecondary)
+                } catch (_: Exception) {}
+            } else {
+                val typedPrimary = android.util.TypedValue()
+                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedPrimary, true)
+                chatName.setTextColor(if (typedPrimary.resourceId != 0) androidx.core.content.ContextCompat.getColor(context, typedPrimary.resourceId) else typedPrimary.data)
+
+                val typedSecondary = android.util.TypedValue()
+                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedSecondary, true)
+                chatType.setTextColor(if (typedSecondary.resourceId != 0) androidx.core.content.ContextCompat.getColor(context, typedSecondary.resourceId) else typedSecondary.data)
+            }
+
             val isRussian = context.resources.configuration.locales[0].language == "ru"
             
             if (chat.type == "direct") {
@@ -375,6 +397,17 @@ class ChatAdapter(
                     }
                 }
             } catch (_: Exception) {}
+        }
+
+        private fun applyDefaultCardBackground(context: android.content.Context) {
+            val typedValue = android.util.TypedValue()
+            context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+            val color = if (typedValue.resourceId != 0) {
+                androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
+            cardView.setCardBackgroundColor(color)
         }
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()

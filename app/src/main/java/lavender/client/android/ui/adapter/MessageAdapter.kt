@@ -207,21 +207,27 @@ class MessageAdapter(
                 if (theme != null) {
                     try {
                         val surface = android.graphics.Color.parseColor(theme.surfaceColor)
-                        val onSurface = android.graphics.Color.parseColor(theme.onSurfaceColor)
                         val textPrimary = android.graphics.Color.parseColor(theme.textPrimaryColor)
+                        val textSecondary = android.graphics.Color.parseColor(theme.textSecondaryColor)
+                        
                         messageBubble.backgroundTintList = ColorStateList.valueOf(surface)
                         messageText.setTextColor(textPrimary)
-                        timeText.setTextColor(onSurface)
-                        editedText.setTextColor(onSurface)
-                        userText.setTextColor(onSurface)
+                        timeText.setTextColor(textSecondary)
+                        editedText.setTextColor(textSecondary)
+                        userText.setTextColor(textSecondary)
                     } catch (_: Exception) {}
                 } else {
                     val onSurface = android.util.TypedValue()
                     context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, onSurface, true)
                     val color = if (onSurface.resourceId != 0) ContextCompat.getColor(context, onSurface.resourceId) else onSurface.data
+                    
+                    val onSurfaceVariant = android.util.TypedValue()
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, onSurfaceVariant, true)
+                    val colorVariant = if (onSurfaceVariant.resourceId != 0) ContextCompat.getColor(context, onSurfaceVariant.resourceId) else onSurfaceVariant.data
+                    
                     messageText.setTextColor(color)
-                    timeText.setTextColor(color)
-                    editedText.setTextColor(color)
+                    timeText.setTextColor(colorVariant)
+                    editedText.setTextColor(colorVariant)
                     userText.setTextColor(ContextCompat.getColor(context, R.color.tg_incoming_name))
                     messageBubble.backgroundTintList = null
                 }

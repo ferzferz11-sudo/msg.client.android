@@ -413,6 +413,11 @@ Current version: **1.0.2.9**
 - 🛠️ Modernized toolbar to MaterialToolbar
 - 🔧 Downgraded coreKtx dependency from 1.18.0 to 1.15.0 for stability
 
+### Version 1.0.2.11 - Mentions and Improvements
+- 👤 Added user mention system using the `@` symbol in group chats.
+- ⌨️ Improved keyboard and system bar handling for Android 12 and 14.
+- 🎨 Unified incoming message bubble and chat card colors across all themes.
+
 ### Version 1.0.2.10 - UI Unification and Voice Messages
 - 🎨 Unified toolbars across the app: increased height (up to 100dp) and rounded corners (24dp).
 - 📱 Custom toolbar height for direct chats (84dp) to optimize space.

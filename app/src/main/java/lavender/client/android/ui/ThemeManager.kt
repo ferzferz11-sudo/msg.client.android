@@ -59,6 +59,9 @@ object ThemeManager {
         activity.window.statusBarColor = Color.TRANSPARENT
         @Suppress("DEPRECATION")
         activity.window.navigationBarColor = Color.TRANSPARENT
+        
+        // Fix for Android 15+ and better Edge-to-Edge consistency
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(activity.window, false)
 
         if (theme == null) {
             // Support standard themes (light/dark)
@@ -206,12 +209,6 @@ object ThemeManager {
                     for (i in 0 until view.childCount) {
                         val child = view.getChildAt(i)
                         applyColorToToolbarChild(child, onPrimaryColor)
-                    }
-
-                    // Special case for toolbarSubtitle background in chat
-                    val subtitle = view.findViewById<TextView>(R.id.toolbarSubtitle)
-                    if (subtitle != null) {
-                        subtitle.backgroundTintList = ColorStateList.valueOf(backgroundColor.withAlpha(40))
                     }
                 }
                 is MaterialButton -> {

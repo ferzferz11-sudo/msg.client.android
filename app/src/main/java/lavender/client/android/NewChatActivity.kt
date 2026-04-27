@@ -55,6 +55,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
+import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
@@ -108,6 +109,10 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var replyText: TextView
     private lateinit var cancelReply: ImageButton
     private lateinit var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+
+    private lateinit var mentionContainer: View
+    private lateinit var mentionList: RecyclerView
+    private lateinit var mentionAdapter: MentionAdapter
 
     private lateinit var searchBar: LinearLayout
     private lateinit var searchInput: EditText
@@ -191,6 +196,12 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        @Suppress("DEPRECATION")
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
         applySavedColorScheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_chat)
@@ -222,6 +233,7 @@ class NewChatActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 if (selectionMode) hideSelectionToolbar()
                 else if (searchBar.isVisible) hideSearchBar()
+                else if (mentionContainer.isVisible) mentionContainer.isVisible = false
                 else finish()
             }
         })
@@ -230,26 +242,30 @@ class NewChatActivity : AppCompatActivity() {
     private fun setupKeyboardHandling() {
         val root = findViewById<View>(android.R.id.content)
         val bottomPanel = findViewById<View>(R.id.bottomPanel)
+        val bottomPanelContent = findViewById<View>(R.id.bottomPanelContent)
         
-        // Handle window insets for toolbar
-        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top)
-            insets
-        }
-
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            
+            // Apply top padding for status bar to toolbar
+            toolbar.updatePadding(top = systemBars.top)
 
             // Handle bottom panel and keyboard
+            // Use margin to push the whole panel above the keyboard/nav bar
+            val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            
             bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = if (imeInsets.bottom > 0) {
-                    imeInsets.bottom - systemBars.bottom
+                bottomMargin = if (isImeVisible) {
+                    imeInsets.bottom
                 } else {
                     systemBars.bottom
                 }
             }
+            
+            // Add a small padding to the inner content
+            bottomPanelContent.updatePadding(bottom = 4.dpToPx())
+
             insets
         }
     }
@@ -282,6 +298,14 @@ class NewChatActivity : AppCompatActivity() {
         replyText = findViewById(R.id.replyText)
         cancelReply = findViewById(R.id.cancelReply)
         emojiButton = findViewById(R.id.emojiButton)
+
+        mentionContainer = findViewById(R.id.mentionContainer)
+        mentionList = findViewById(R.id.mentionList)
+        mentionAdapter = MentionAdapter { selectedUser ->
+            insertMention(selectedUser)
+        }
+        mentionList.layoutManager = LinearLayoutManager(this)
+        mentionList.adapter = mentionAdapter
 
         searchBar = findViewById(R.id.searchBar)
         searchInput = findViewById(R.id.searchInput)
@@ -328,8 +352,10 @@ class NewChatActivity : AppCompatActivity() {
             if (selectionMode) hideSelectionToolbar() else finish()
         }
 
+        // Use consistent height for all chat types for better Edge-to-Edge support
+        toolbar.layoutParams.height = resources.getDimensionPixelSize(R.dimen.custom_toolbar_height)
+        
         if (isDirect) {
-            toolbar.layoutParams.height = 84.dpToPx()
             toolbarAvatar.isVisible = true
             groupParticipantsContainer.isVisible = false
             val arr = JSONArray(participantsJson)
@@ -405,8 +431,8 @@ class NewChatActivity : AppCompatActivity() {
         for (i in 0 until arr.length().coerceAtMost(3)) {
             val u = arr.getString(i)
             val iv = CircleImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(42.dpToPx(), 42.dpToPx()).apply {
-                    marginStart = if (i > 0) (-16).dpToPx() else 0
+                layoutParams = LinearLayout.LayoutParams(34.dpToPx(), 34.dpToPx()).apply {
+                    marginStart = if (i > 0) (-10).dpToPx() else 0
                 }
                 borderWidth = 1.dpToPx()
                 borderColor = ContextCompat.getColor(this@NewChatActivity, R.color.lavender_mist)
@@ -718,6 +744,8 @@ class NewChatActivity : AppCompatActivity() {
                 // Show/hide audio button based on text input
                 val hasText = s.toString().trim().isNotEmpty()
                 audioButton.visibility = if (hasText && audioRecordingView.visibility == View.GONE) View.GONE else View.VISIBLE
+                
+                handleMention(s, start, count)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -860,6 +888,72 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun handleMention(s: CharSequence?, start: Int, count: Int) {
+        if (isDirect) return
+        
+        val cursorPosition = messageInput.selectionStart
+        val text = s?.toString() ?: ""
+        
+        if (cursorPosition <= 0) {
+            mentionContainer.isVisible = false
+            return
+        }
+
+        // Find the start of the current word
+        var lastAt = -1
+        for (i in (cursorPosition - 1) downTo 0) {
+            if (text[i] == '@') {
+                lastAt = i
+                break
+            }
+            if (text[i] == ' ') break
+        }
+
+        if (lastAt != -1) {
+            val query = text.substring(lastAt + 1, cursorPosition).lowercase()
+            val participants = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
+            val filteredUsers = mutableListOf<String>()
+            val avatarCache = grpcClient.getAvatarCache()
+            
+            for (i in 0 until participants.length()) {
+                val u = participants.getString(i)
+                if (u != username && u.lowercase().contains(query)) {
+                    filteredUsers.add(u)
+                }
+            }
+
+            if (filteredUsers.isNotEmpty()) {
+                mentionAdapter.setUsers(filteredUsers, avatarCache)
+                mentionContainer.isVisible = true
+            } else {
+                mentionContainer.isVisible = false
+            }
+        } else {
+            mentionContainer.isVisible = false
+        }
+    }
+
+    private fun insertMention(selectedUser: String) {
+        val cursorPosition = messageInput.selectionStart
+        val text = messageInput.text.toString()
+        
+        var lastAt = -1
+        for (i in (cursorPosition - 1) downTo 0) {
+            if (text[i] == '@') {
+                lastAt = i
+                break
+            }
+            if (text[i] == ' ') break
+        }
+
+        if (lastAt != -1) {
+            val newText = text.substring(0, lastAt + 1) + selectedUser + " " + text.substring(cursorPosition)
+            messageInput.setText(newText)
+            messageInput.setSelection(lastAt + selectedUser.length + 2)
+        }
+        mentionContainer.isVisible = false
     }
 
     private fun showFullScreenImage(imageUrl: String) {
