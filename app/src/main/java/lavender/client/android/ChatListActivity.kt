@@ -130,6 +130,7 @@ class ChatListActivity : AppCompatActivity() {
         currentTheme = getSavedColorScheme() ?: "dark"
         applySavedColorScheme()
         applySavedLanguage()
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -145,9 +146,9 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         // Handle window insets to avoid overlapping with status bar (edge-to-edge mode)
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            view.updatePadding(top = systemBars.top)
             insets
         }
 
@@ -177,6 +178,8 @@ class ChatListActivity : AppCompatActivity() {
         binding.addChatFab.setOnClickListener {
             showChatActionSheet()
         }
+        
+        updateToolbarAvatar()
 
         // Check for update availability from SharedPreferences
         val updatePrefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
@@ -185,7 +188,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Handle update icon click - directly start download process
         binding.updateAvailableIcon.setOnClickListener {
-            showUpdateConfirmationDialog()
+            showUpdateConfirmationDialog(true)
         }
 
         adapter = ChatAdapter(
@@ -197,6 +200,7 @@ class ChatListActivity : AppCompatActivity() {
                     .putExtra("username", chat.name)
                     .putExtra("is_group", !chat.type.equals("direct", true))
                     .putExtra("room_id", chat.id)
+                    .putExtra("avatar_url", chat.avatarUrl)
                     .putExtra("participants", chat.participants)
                     .putExtra("creator", chat.creator)
                 startActivity(intent)
@@ -542,6 +546,19 @@ class ChatListActivity : AppCompatActivity() {
 
             grpcClient.connect(host, false, port, applicationContext)
 
+            // Load current user profile immediately after connection
+            grpcClient.getUserProfile(username) { profile ->
+                if (profile != null) {
+                    grpcClient.updateAvatarCache(username, profile.avatarUrl)
+                    runOnUiThread {
+                        if (profile.avatarUrl.isNotEmpty()) {
+                            adapter.updateAvatarCache(grpcClient.getAvatarCache())
+                            updateToolbarAvatar()
+                        }
+                    }
+                }
+            }
+
             // Send auth message first
             grpcClient.startChat(username, password, "") { _ -> }
 
@@ -601,6 +618,9 @@ class ChatListActivity : AppCompatActivity() {
                         lifecycleScope.launch {
                             var updateCount = 0
                             for (participant in allParticipants) {
+                                // Skip current user to avoid overwriting their avatar with potentially stale/empty data
+                                if (participant == username) continue
+
                                 grpcClient.getUserAvatar(participant) { avatarUrl ->
                                     grpcClient.updateAvatarCache(participant, avatarUrl)
                                     updateCount++
@@ -635,16 +655,6 @@ class ChatListActivity : AppCompatActivity() {
                     showToast(getString(R.string.connection_failed))
                 }
             }
-
-            // Load current user avatar for chat list
-            grpcClient.getUserAvatar(username) { avatarUrl ->
-                runOnUiThread {
-                    if (avatarUrl.isNotEmpty()) {
-                        adapter.updateAvatarCache(grpcClient.getAvatarCache())
-                        updateToolbarAvatar()
-                    }
-                }
-            }
         }
     }
 
@@ -657,6 +667,7 @@ class ChatListActivity : AppCompatActivity() {
                 .putExtra("ROOM_ID", chatId)
                 .putExtra("CHAT_NAME", roomName ?: chat?.name ?: "Chat")
                 .putExtra("IS_DIRECT", isDirect ?: (chat?.type == "direct"))
+                .putExtra("AVATAR_URL", chat?.avatarUrl ?: "")
             
             val finalParticipants = participants ?: chat?.participants
             if (!finalParticipants.isNullOrEmpty()) {
@@ -685,7 +696,9 @@ class ChatListActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId != androidR.id.home && 
             item.itemId != R.id.action_search && 
-            item.itemId != R.id.action_about) {
+            item.itemId != R.id.action_about &&
+            item.itemId != R.id.action_update &&
+            item.itemId != R.id.action_super_admin) {
             
             item.isEnabled = false
             item.setIcon(R.drawable.ic_loading_renew)
@@ -807,7 +820,9 @@ class ChatListActivity : AppCompatActivity() {
                 true
             }
             R.id.action_update -> {
-                showUpdateConfirmationDialog()
+                val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                val isUpdateAvailable = prefs.getBoolean("update_available", false)
+                showUpdateConfirmationDialog(isUpdateAvailable)
                 true
             }
             R.id.action_about -> {
@@ -870,27 +885,41 @@ class ChatListActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showUpdateConfirmationDialog() {
+    private fun showUpdateConfirmationDialog(isUpdateAvailable: Boolean) {
         val currentVersion = try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName
         } catch (e: Exception) {
-            "1.0.2.7"
+            BuildConfig.VERSION_NAME
         }
-        val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "...") ?: "..."
+        val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", currentVersion) ?: currentVersion
 
-        AlertDialog.Builder(this)
-            .setTitle(R.string.update_available)
-            .setMessage(
+        val builder = AlertDialog.Builder(this)
+        
+        if (isUpdateAvailable) {
+            builder.setTitle(R.string.update_available)
+            builder.setMessage(
                 getString(R.string.version_current, currentVersion) + "\n" +
                 getString(R.string.version_available, latestVersion) + "\n\n" +
                 getString(R.string.update_confirmation_message)
             )
-            .setPositiveButton(R.string.update_now) { _, _ ->
+            builder.setPositiveButton(R.string.update_now) { _, _ ->
                 downloadAndInstallApk()
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+            builder.setNegativeButton(R.string.cancel, null)
+        } else {
+            builder.setTitle(R.string.no_updates_available)
+            builder.setMessage(
+                getString(R.string.version_current, currentVersion) + "\n\n" +
+                getString(R.string.version_latest_message)
+            )
+            builder.setPositiveButton(R.string.ok, null)
+            builder.setNeutralButton(R.string.force_download) { _, _ ->
+                downloadAndInstallApk()
+            }
+        }
+        
+        builder.show()
     }
 
     private fun downloadAndInstallApk() {
@@ -1575,7 +1604,7 @@ class ChatListActivity : AppCompatActivity() {
         btnUpdate.isVisible = isUpdateAvailable
         btnUpdate.setOnClickListener {
             dialog.dismiss()
-            showUpdateConfirmationDialog()
+            showUpdateConfirmationDialog(true)
         }
 
         btnFeedback.setOnClickListener {

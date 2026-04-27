@@ -175,7 +175,16 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.2.8**
+Current version: **1.0.2.9**
+
+### Version 1.0.2.9 - Group Avatars, Edge-to-Edge & UI Refinement
+- 👥 **Group Avatars**: Full support for group avatars in Chat List, Chat Toolbar, and Group Info screens.
+- 🎨 **Edge-to-Edge Themes**: Added transparent status and navigation bars for all custom themes for a seamless look.
+- ⚙️ **Unified UI**: 30% larger, unified gear icons for group settings and theme editing.
+- 👤 **Stable Identity**: Fixed profile photo loading to appear immediately and prevented overwriting during list refreshes.
+- 🔄 **Advanced Updates**: Added "Download anyway" option and fixed a bug where the update menu would lock after first use.
+- 🔍 **Search & Contrast**: Fixed search icon visibility in Dark theme and improved incoming message readability.
+- 🧹 **Clean Interface**: Removed redundant theme toggle from the Themes screen and updated ProfileActivity for custom themes.
 
 ### Version 1.0.2.8 - Group Chat Previews & Update Dialog
 - 👥 **Group Chat Previews**: Now shows sender username before message preview in group/general chats.

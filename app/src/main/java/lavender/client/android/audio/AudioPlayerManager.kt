@@ -80,6 +80,10 @@ class AudioPlayerManager private constructor(private val context: Context) {
             val mediaItem = MediaItem.fromUri(audioUrl)
             exoPlayer?.setMediaItem(mediaItem)
             exoPlayer?.prepare()
+        } else if (exoPlayer?.playbackState == androidx.media3.common.Player.STATE_ENDED) {
+            // Same audio but finished playing, reset to start
+            exoPlayer?.seekTo(0)
+            exoPlayer?.prepare()
         }
         
         // Attach to PlayerView if provided

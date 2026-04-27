@@ -136,6 +136,7 @@ class NewChatActivity : AppCompatActivity() {
     private var isDirect: Boolean = false
     private lateinit var participantsJson: String
     private var creator: String = ""
+    private var chatAvatarUrl: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -297,6 +298,7 @@ class NewChatActivity : AppCompatActivity() {
         isDirect = intent.getBooleanExtra("IS_DIRECT", false)
         participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"
         creator = intent.getStringExtra("CREATOR") ?: ""
+        chatAvatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
     }
 
     private var otherUserAvatarUrl: String = ""
@@ -361,9 +363,17 @@ class NewChatActivity : AppCompatActivity() {
 
         } else {
             toolbarTitle.text = chatName
-            toolbarAvatar.isVisible = false
-            groupParticipantsContainer.isVisible = true
-            setupGroupAvatars()
+            
+            if (chatAvatarUrl.isNotEmpty()) {
+                toolbarAvatar.isVisible = true
+                groupParticipantsContainer.isVisible = false
+                com.bumptech.glide.Glide.with(this).load(chatAvatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar).into(toolbarAvatar)
+            } else {
+                toolbarAvatar.isVisible = false
+                groupParticipantsContainer.isVisible = true
+                setupGroupAvatars()
+            }
 
             val openGroupInfo = {
                 showToolbarLoading()
@@ -372,10 +382,12 @@ class NewChatActivity : AppCompatActivity() {
                     .putExtra("username", chatName)
                     .putExtra("is_group", true)
                     .putExtra("room_id", roomId)
+                    .putExtra("avatar_url", chatAvatarUrl)
                     .putExtra("participants", participantsJson)
                     .putExtra("creator", creator)
                 startActivity(intent)
             }
+            toolbarAvatar.setOnClickListener { openGroupInfo() }
             toolbarTitle.setOnClickListener { openGroupInfo() }
             groupParticipantsContainer.setOnClickListener { openGroupInfo() }
             toolbarSubtitle.setOnClickListener { openGroupInfo() }
@@ -436,9 +448,19 @@ class NewChatActivity : AppCompatActivity() {
                     participantsJson = chat.participants
                     creator = chat.creator
                     chatName = chat.name
+                    chatAvatarUrl = chat.avatarUrl
                     if (!isDirect) {
                         toolbarTitle.text = chatName
-                        setupGroupAvatars()
+                        if (chatAvatarUrl.isNotEmpty()) {
+                            toolbarAvatar.isVisible = true
+                            groupParticipantsContainer.isVisible = false
+                            com.bumptech.glide.Glide.with(this@NewChatActivity).load(chatAvatarUrl)
+                                .placeholder(R.drawable.ic_default_avatar).into(toolbarAvatar)
+                        } else {
+                            toolbarAvatar.isVisible = false
+                            groupParticipantsContainer.isVisible = true
+                            setupGroupAvatars()
+                        }
                     }
                 }
             } else {
@@ -465,6 +487,10 @@ class NewChatActivity : AppCompatActivity() {
                 if (message.imageUrl.isNotEmpty()) showFullScreenImage(message.imageUrl)
                 else if (message.text.startsWith("geo:")) openLocation(message.text)
                 else showReactionsDialog(message)
+            },
+            onImageLongClick = { message ->
+                // Show reactions dialog on long press for images
+                showReactionsDialog(message)
             }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }

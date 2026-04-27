@@ -3,14 +3,21 @@ package lavender.client.android
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.scale
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,11 +29,18 @@ import com.bumptech.glide.request.target.Target
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import lavender.client.android.ui.adapter.UserAdapter
-import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import java.util.Locale
 
@@ -49,13 +63,34 @@ class ProfileActivity : AppCompatActivity() {
     private var roomId: String = ""
     private var creator: String = ""
     private var currentParticipants = mutableListOf<String>()
+    private var selectedAvatarUri: Uri? = null
+    private var currentProfileAvatar: CircleImageView? = null
+
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                selectedAvatarUri = uri
+                uploadGroupAvatar(uri)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedColorScheme()
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+        lavender.client.android.ui.ThemeManager.applyTheme(this)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        
+        // Handle window insets for edge-to-edge
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
+        }
+
         val profileName = findViewById<TextView>(R.id.profileName)
 
         username = intent.getStringExtra("username") ?: ""
@@ -84,10 +119,25 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         profileName.text = username
+        
+        // Store avatar reference for later updates
+        val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar)
+        currentProfileAvatar = profileAvatar
+        
+        // Load current avatar if provided
+        if (avatarUrl.isNotEmpty()) {
+            Glide.with(this)
+                .load(avatarUrl)
+                .placeholder(R.drawable.ic_default_avatar)
+                .error(R.drawable.ic_default_avatar)
+                .into(profileAvatar)
+        }
+
         if (isGroup) {
             val currentMe = grpcClient.getCurrentUsername()
             val isMeAdmin = currentMe == creator && creator.isNotEmpty()
             if (isMeAdmin) {
+                // Allow admin to change group name
                 profileName.setOnClickListener {
                     val editName = EditText(this).apply {
                         setText(username)
@@ -117,6 +167,12 @@ class ProfileActivity : AppCompatActivity() {
                         }
                         .setNegativeButton(R.string.cancel, null)
                         .show()
+                }
+                
+                // Allow admin to change group avatar
+                profileAvatar.setOnClickListener {
+                    val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    pickImageLauncher.launch(intent)
                 }
             }
         }
@@ -322,9 +378,23 @@ class ProfileActivity : AppCompatActivity() {
 
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
-            profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
         } else {
             profileAvatar.setImageResource(R.drawable.ic_default_avatar)
+        }
+
+        val currentMeForAvatar = grpcClient.getCurrentUsername() ?: ""
+        val isMeAdminForAvatar = isGroup && currentMeForAvatar == creator && creator.isNotEmpty()
+        if (isMeAdminForAvatar) {
+            profileAvatar.setOnClickListener {
+                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                pickImageLauncher.launch(intent)
+            }
+        } else {
+            if (avatarUrl.isNotEmpty()) {
+                profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
+            } else {
+                profileAvatar.setOnClickListener(null)
+            }
         }
     }
 
@@ -448,5 +518,155 @@ class ProfileActivity : AppCompatActivity() {
     private fun getSavedColorScheme(): String? {
         val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", null)
+    }
+
+    private fun uploadGroupAvatar(uri: Uri) {
+        val progressOverlay = findViewById<View>(R.id.progressOverlay)
+        progressOverlay?.isVisible = true
+
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val mimeType = contentResolver.getType(uri)
+                    val isGif = mimeType == "image/gif"
+
+                    val bytes: ByteArray
+                    val mediaType: String
+
+                    if (isGif) {
+                        val inputStream = contentResolver.openInputStream(uri)
+                        bytes = inputStream?.readBytes() ?: byteArrayOf()
+                        inputStream?.close()
+                        mediaType = "image/gif"
+                    } else {
+                        val resizedBytes = resizeImageForGroup(uri)
+
+                        if (resizedBytes == null) {
+                            runOnUiThread {
+                                progressOverlay?.isVisible = false
+                                Toast.makeText(this@ProfileActivity, "Failed to resize image", Toast.LENGTH_SHORT).show()
+                            }
+                            return@withContext
+                        }
+
+                        bytes = resizedBytes
+                        mediaType = "image/jpeg"
+                    }
+
+                    if (bytes.isEmpty()) {
+                        runOnUiThread {
+                            progressOverlay?.isVisible = false
+                            Toast.makeText(this@ProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show()
+                        }
+                        return@withContext
+                    }
+
+                    // Upload to HTTP server with multipart/form-data
+                    val requestBody = MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+                        .build()
+
+                    val request = Request.Builder()
+                        .url("http://159.195.38.145:8082/upload-avatar")
+                        .post(requestBody)
+                        .build()
+
+                    val client = OkHttpClient()
+                    val response = client.newCall(request).execute()
+
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string() ?: ""
+                        val url = extractUrlFromResponse(responseBody)
+
+                        if (url.isNotEmpty()) {
+                            // Update group avatar via gRPC
+                            val currentMe = grpcClient.getCurrentUsername() ?: ""
+                            grpcClient.updateChatAvatar(roomId, url, currentMe) { success, message ->
+                                runOnUiThread {
+                                    progressOverlay?.isVisible = false
+                                    if (success) {
+                                        Toast.makeText(this@ProfileActivity, "Групповой аватар обновлен", Toast.LENGTH_SHORT).show()
+                                        // Update avatar view
+                                        currentProfileAvatar?.let {
+                                            Glide.with(this@ProfileActivity)
+                                                .load(url)
+                                                .placeholder(R.drawable.ic_default_avatar)
+                                                .error(R.drawable.ic_default_avatar)
+                                                .into(it)
+                                        }
+                                        avatarUrl = url
+                                    } else {
+                                        Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        } else {
+                            runOnUiThread {
+                                progressOverlay?.isVisible = false
+                                Toast.makeText(this@ProfileActivity, "Failed to parse server response", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        runOnUiThread {
+                            progressOverlay?.isVisible = false
+                            Toast.makeText(this@ProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressOverlay?.isVisible = false
+                    Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun resizeImageForGroup(uri: Uri): ByteArray? {
+        val maxWidth = 512
+        val maxHeight = 512
+        val inputStream = contentResolver.openInputStream(uri) ?: return null
+        val options = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+        inputStream.close()
+
+        val imageStream = contentResolver.openInputStream(uri) ?: return null
+        val bitmap = android.graphics.BitmapFactory.decodeStream(imageStream)
+        imageStream.close()
+
+        if (bitmap == null) return null
+
+        val width = bitmap.width
+        val height = bitmap.height
+        val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+
+        val scaledBitmap = if (scale < 1) {
+            bitmap.scale((width * scale).toInt(), (height * scale).toInt())
+        } else {
+            bitmap
+        }
+
+        val outputStream = java.io.ByteArrayOutputStream()
+        scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream)
+        val bytes = outputStream.toByteArray()
+        scaledBitmap.recycle()
+        bitmap.recycle()
+
+        return bytes
+    }
+
+    private fun extractUrlFromResponse(response: String): String {
+        val jsonPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
+        val match = jsonPattern.find(response)
+        if (match != null) {
+            return match.groupValues[1]
+        }
+        if (response.startsWith("http")) {
+            return response.trim()
+        }
+        return ""
     }
 }

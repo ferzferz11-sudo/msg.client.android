@@ -67,6 +67,10 @@ object ThemeManager {
         
         applyThemeToView(root, theme)
         
+        // Ensure Edge-to-Edge by making system bars transparent
+        activity.window.statusBarColor = Color.TRANSPARENT
+        activity.window.navigationBarColor = Color.TRANSPARENT
+        
         // Handle bottom panel specifically if it exists
         activity.findViewById<View>(R.id.bottomPanel)?.let { 
             applyThemeToBottomPanel(it, theme)

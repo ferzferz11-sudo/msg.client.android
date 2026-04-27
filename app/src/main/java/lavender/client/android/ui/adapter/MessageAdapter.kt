@@ -23,7 +23,8 @@ class MessageAdapter(
     private val isGroupChat: Boolean,
     private val adminUsername: String = "",
     private val onMessageClick: (Message) -> Unit,
-    private val onSelectionChanged: (Int) -> Unit
+    private val onSelectionChanged: (Int) -> Unit,
+    private val onImageLongClick: ((Message) -> Unit)? = null
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
@@ -101,7 +102,8 @@ class MessageAdapter(
                         }
                     }
                 }
-            }
+            },
+            onImageLongClick = onImageLongClick
         )
     }
 
@@ -123,7 +125,7 @@ class MessageAdapter(
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         
-        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
+        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onImageLongClick: ((Message) -> Unit)? = null) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             
@@ -215,7 +217,7 @@ class MessageAdapter(
                     } catch (_: Exception) {}
                 } else {
                     val onSurface = android.util.TypedValue()
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, onSurface, true)
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, onSurface, true)
                     val color = if (onSurface.resourceId != 0) ContextCompat.getColor(context, onSurface.resourceId) else onSurface.data
                     messageText.setTextColor(color)
                     timeText.setTextColor(color)
@@ -327,6 +329,20 @@ class MessageAdapter(
                     .load(message.imageUrl)
                     .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
                     .into(messageImageView)
+                
+                // Enable click on images to open viewer
+                messageImageView.setOnClickListener {
+                    onMessageClick(message)
+                }
+                
+                // Enable long click on images for reactions
+                messageImageView.setOnLongClickListener {
+                    onImageLongClick?.invoke(message)
+                    true
+                }
+            } else {
+                messageImageView.setOnClickListener(null)
+                messageImageView.setOnLongClickListener(null)
             }
             
             // Handle audio message visibility

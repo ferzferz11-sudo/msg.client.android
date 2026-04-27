@@ -24,7 +24,6 @@ class ThemesActivity : AppCompatActivity() {
     private lateinit var themeRadioGroup: RadioGroup
     private lateinit var customThemesContainer: LinearLayout
     private lateinit var btnAddTheme: MaterialButton
-    private var colorSchemeMenuItem: MenuItem? = null
     private val grpcClient = GrpcClient
     private var username: String = ""
     private var currentThemeId: String = "dark"
@@ -63,9 +62,9 @@ class ThemesActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         // Handle window insets for edge-to-edge
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            view.updatePadding(top = systemBars.top)
             insets
         }
 
@@ -89,43 +88,6 @@ class ThemesActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
-    }
-
-    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
-        menuInflater.inflate(R.menu.themes_menu, menu)
-        colorSchemeMenuItem = menu.findItem(R.id.action_color_scheme)
-        updateColorSchemeIcon()
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_color_scheme -> {
-                toggleColorScheme()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun toggleColorScheme() {
-        val schemes = listOf("light", "dark")
-        val currentScheme = getSavedColorScheme() ?: "dark"
-        val currentIndex = schemes.indexOf(currentScheme)
-        val nextIndex = (currentIndex + 1) % schemes.size
-        val newScheme = schemes[nextIndex]
-
-        selectTheme(newScheme)
-    }
-
-    private fun updateColorSchemeIcon() {
-        val currentScheme = getSavedColorScheme() ?: "dark"
-        val iconRes = if (currentScheme == "dark") {
-            R.drawable.ic_light_mode
-        } else {
-            R.drawable.ic_theme_dark
-        }
-        colorSchemeMenuItem?.setIcon(iconRes)
     }
 
     private fun loadThemes() {
@@ -191,11 +153,11 @@ class ThemesActivity : AppCompatActivity() {
             }
 
             val btnEdit = ImageButton(this).apply {
-                val size = (64 * resources.displayMetrics.density).toInt()
+                val size = (48 * resources.displayMetrics.density).toInt()
                 layoutParams = LinearLayout.LayoutParams(size, size)
-                setImageResource(R.drawable.ic_settings_brightness)
+                setImageResource(R.drawable.ic_settings)
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                setPadding(12, 12, 12, 12)
+                setPadding(8, 8, 8, 8)
                 
                 val typedValue = android.util.TypedValue()
                 this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
@@ -281,11 +243,6 @@ class ThemesActivity : AppCompatActivity() {
         val typedValue = android.util.TypedValue()
         theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
         return typedValue.data
-    }
-
-    private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", null)
     }
 
     private fun selectTheme(themeId: String) {

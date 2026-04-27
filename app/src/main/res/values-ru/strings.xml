@@ -22,7 +22,7 @@
 
     <!-- Messages -->
     <string name="lavender_messenger">Лаванда</string>
-    <string name="app_version">1.0.2.7</string>
+    <string name="app_version">1.0.2.9</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">обновить</string>
@@ -297,4 +297,9 @@
     <string name="voice_message">Голосовое сообщение</string>
     <string name="start_chat">Начать чат</string>
     <string name="add_group">Создать группу</string>
+    <string name="no_updates_available">Обновлений не найдено</string>
+    <string name="version_latest_message">У вас установлена последняя версия приложения.</string>
+    <string name="ok">ОК</string>
+    <string name="force_download">Все равно скачать</string>
+    <string name="force_download_description">У вас установлена последняя версия, но вы можете скачать APK заново, если это необходимо.</string>
 </resources>

@@ -71,6 +71,8 @@ import lavender.client.android.data.proto.EditMessageRequestProto
 import lavender.client.android.data.proto.EditMessageResponseProto
 import lavender.client.android.data.proto.UpdateChatNameRequestProto
 import lavender.client.android.data.proto.UpdateChatNameResponseProto
+import lavender.client.android.data.proto.UpdateChatAvatarRequestProto
+import lavender.client.android.data.proto.UpdateChatAvatarResponseProto
 import lavender.client.android.data.proto.GetAllChatsRequestProto
 import lavender.client.android.data.proto.GetAllChatsResponseProto
 import java.util.concurrent.TimeUnit
@@ -1532,6 +1534,30 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<UpdateChatNameResponseProto>() {
             override fun onMessage(message: UpdateChatNameResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) callback(false, status.description ?: "Unknown error")
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun updateChatAvatar(chatId: String, avatarUrl: String, username: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = UpdateChatAvatarRequestProto(chatId, avatarUrl, username)
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatAvatarRequestProto, UpdateChatAvatarResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/UpdateChatAvatar")
+            .setRequestMarshaller(UpdateChatAvatarRequestMarshaller())
+            .setResponseMarshaller(UpdateChatAvatarResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<UpdateChatAvatarResponseProto>() {
+            override fun onMessage(message: UpdateChatAvatarResponseProto) {
                 callback(message.success, message.message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -3339,6 +3365,61 @@ class UpdateChatNameResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upd
             }
         }
         return UpdateChatNameResponseProto(success, message)
+    }
+}
+
+class UpdateChatAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateChatAvatarRequestProto> {
+    override fun stream(value: UpdateChatAvatarRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.chatId.isNotEmpty()) cos.writeString(1, value.chatId)
+        if (value.avatarUrl.isNotEmpty()) cos.writeString(2, value.avatarUrl)
+        if (value.username.isNotEmpty()) cos.writeString(3, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): UpdateChatAvatarRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var chatId = ""
+        var avatarUrl = ""
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> chatId = cis.readString()
+                2 -> avatarUrl = cis.readString()
+                3 -> username = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateChatAvatarRequestProto(chatId, avatarUrl, username)
+    }
+}
+
+class UpdateChatAvatarResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateChatAvatarResponseProto> {
+    override fun stream(value: UpdateChatAvatarResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): UpdateChatAvatarResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateChatAvatarResponseProto(success, message)
     }
 }
 

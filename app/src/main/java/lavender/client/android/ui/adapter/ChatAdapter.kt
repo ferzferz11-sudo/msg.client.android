@@ -202,7 +202,7 @@ class ChatAdapter(
             }
 
             // Load participant avatars
-            loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers)
+            loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
 
             itemView.setOnClickListener {
                 if (selectedPositions.isNotEmpty()) {
@@ -234,19 +234,38 @@ class ChatAdapter(
             }
         }
 
-        private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>) {
+        private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {
             participantAvatars.removeAllViews()
 
             if (participantsJson.isEmpty()) return
 
             try {
+                val context = itemView.context
+                
+                if (chatAvatarUrl.isNotEmpty()) {
+                    // Show a single chat avatar if available
+                    val avatarSize = 52.dpToPx()
+                    val avatar = ImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                    }
+                    
+                    Glide.with(context)
+                        .load(chatAvatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .error(R.drawable.ic_default_avatar)
+                        .circleCrop()
+                        .into(avatar)
+                        
+                    participantAvatars.addView(avatar)
+                    return
+                }
+
                 val participantsArray = JSONArray(participantsJson)
                 val participantsList = mutableListOf<String>()
                 for (i in 0 until participantsArray.length()) {
                     participantsList.add(participantsArray.getString(i))
                 }
-
-                val context = itemView.context
                 
                 if (chatType == "direct") {
                     // Larger avatar of the OTHER person
