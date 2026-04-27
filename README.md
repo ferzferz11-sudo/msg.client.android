@@ -184,6 +184,7 @@ Current version: **1.0.2.9**
 - 👤 **Stable Identity**: Fixed profile photo loading to appear immediately and prevented overwriting during list refreshes.
 - 🔄 **Advanced Updates**: Added "Download anyway" option and fixed a bug where the update menu would lock after first use.
 - 🔍 **Search & Contrast**: Fixed search icon visibility in Dark theme and improved incoming message readability.
+- 🔇 **Silent Connectivity**: Removed intrusive "Server unavailable" toasts, replaced with a subtle "Connecting..." status in the toolbar.
 - 🧹 **Clean Interface**: Removed redundant theme toggle from the Themes screen and updated ProfileActivity for custom themes.
 
 ### Version 1.0.2.8 - Group Chat Previews & Update Dialog
@@ -411,6 +412,15 @@ Current version: **1.0.2.9**
 - 📨 Added message read status indicators (sent/read icons)
 - 🛠️ Modernized toolbar to MaterialToolbar
 - 🔧 Downgraded coreKtx dependency from 1.18.0 to 1.15.0 for stability
+
+### Version 1.0.2.10 - UI Unification and Voice Messages
+- 🎨 Unified toolbars across the app: increased height (up to 100dp) and rounded corners (24dp).
+- 📱 Custom toolbar height for direct chats (84dp) to optimize space.
+- 🖼️ Added full-screen avatar viewing from the profile menu.
+- 🌈 Improved Edge-to-Edge support: chat background now flows under system bars without white artifacts.
+- 🎤 Implemented voice message recording and sending with waveform visualization.
+- 🛠️ Fixed critical bugs in chat activity and theme manager code.
+- 🎨 Added subtle toolbar border-bottom for a more layered interface look.
 
 ### Version 1.0.1 - Chat List and Profile
 - 📱 Added dedicated chat list activity

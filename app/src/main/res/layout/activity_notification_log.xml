@@ -6,25 +6,23 @@
     android:layout_height="match_parent"
     android:background="?android:attr/windowBackground">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            app:title="@string/notification_history"
-            app:titleTextColor="?attr/colorOnPrimary"
-            app:navigationIcon="@drawable/ic_back_arrow"
-            app:navigationIconTint="?attr/colorOnPrimary" />
-    </com.google.android.material.appbar.AppBarLayout>
+        android:layout_height="@dimen/custom_toolbar_height"
+        android:background="@drawable/toolbar_background"
+        android:elevation="4dp"
+        app:title="@string/notification_history"
+        app:titleTextColor="?attr/colorOnPrimary"
+        app:navigationIcon="@drawable/ic_back_arrow"
+        app:navigationIconTint="?attr/colorOnPrimary" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:layout_marginTop="@dimen/custom_toolbar_height">
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"

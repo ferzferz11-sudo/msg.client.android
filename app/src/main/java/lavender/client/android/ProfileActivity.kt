@@ -91,6 +91,12 @@ class ProfileActivity : AppCompatActivity() {
             insets
         }
 
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(bottom = systemBars.bottom)
+            insets
+        }
+
         val profileName = findViewById<TextView>(R.id.profileName)
 
         username = intent.getStringExtra("username") ?: ""

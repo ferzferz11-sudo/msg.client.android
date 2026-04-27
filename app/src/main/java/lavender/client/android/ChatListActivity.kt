@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,7 @@ import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -152,6 +154,16 @@ class ChatListActivity : AppCompatActivity() {
             insets
         }
 
+        // Adjust FAB position to avoid overlapping with bottom system navigation bar
+        ViewCompat.setOnApplyWindowInsetsListener(binding.addChatFab) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = 28.dpToPx() + systemBars.bottom
+                marginEnd = 16.dpToPx()
+            }
+            insets
+        }
+
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = ""
@@ -174,6 +186,19 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         })
+
+        // Observe connection state to update title
+        lifecycleScope.launch {
+            grpcClient.connectionState.collect { connected ->
+                runOnUiThread {
+                    if (!connected) {
+                        binding.toolbarTitle.text = getString(R.string.connecting)
+                    } else if (binding.toolbarTitle.text == getString(R.string.connecting)) {
+                        binding.toolbarTitle.text = getString(R.string.chats)
+                    }
+                }
+            }
+        }
 
         binding.addChatFab.setOnClickListener {
             showChatActionSheet()
@@ -538,8 +563,7 @@ class ChatListActivity : AppCompatActivity() {
             
             if (!serverAvailable) {
                 runOnUiThread {
-                    binding.toolbarTitle.text = getString(R.string.chats)
-                    showToast(getString(R.string.server_unavailable))
+                    binding.toolbarTitle.text = getString(R.string.connecting)
                 }
                 return@launch
             }
@@ -570,7 +594,6 @@ class ChatListActivity : AppCompatActivity() {
                 if (notification == "auth_failed") {
                     runOnUiThread {
                         binding.toolbarTitle.text = getString(R.string.chats)
-                        showToast(getString(R.string.auth_failed), Toast.LENGTH_LONG)
                         grpcClient.disconnect()
                         finish()
                     }
@@ -647,12 +670,11 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
 
-            // Fallback: hide progress after 10 seconds total if still loading
+            // Fallback: stay on "Connecting..." if still loading
             delay(10000)
             runOnUiThread {
                 if (binding.toolbarTitle.text == getString(R.string.connecting)) {
                     binding.toolbarTitle.text = getString(R.string.chats)
-                    showToast(getString(R.string.connection_failed))
                 }
             }
         }
@@ -1016,6 +1038,8 @@ class ChatListActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
     private fun showUserMenuSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_user_menu, binding.root, false)
@@ -1042,6 +1066,12 @@ class ChatListActivity : AppCompatActivity() {
         val myAvatarUrl = avatarCache[username]
         if (!myAvatarUrl.isNullOrEmpty()) {
             Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(menuUserAvatar)
+            menuUserAvatar.setOnClickListener {
+                bottomSheetDialog.dismiss()
+                val intent = Intent(this, FullScreenImageActivity::class.java)
+                intent.putExtra("image_url", myAvatarUrl)
+                startActivity(intent)
+            }
         }
         
         sheetView.findViewById<View>(R.id.actionEditProfile).setOnClickListener {
@@ -1578,7 +1608,7 @@ class ChatListActivity : AppCompatActivity() {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName
         } catch (e: Exception) {
-            "1.0.2.0"
+            "1.0.2.10"
         }
 
         val serverVersion = grpcClient.serverVersion.value.ifEmpty { "..." }

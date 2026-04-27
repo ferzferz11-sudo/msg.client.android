@@ -71,18 +71,24 @@ class EditProfileActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedColorScheme()
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_profile)
 
-        // Handle window insets
-        val root = findViewById<View>(android.R.id.content)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+
+        // Handle window insets for edge-to-edge
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            view.updatePadding(top = systemBars.top)
             insets
         }
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(bottom = systemBars.bottom)
+            insets
+        }
         val avatarImageView = findViewById<CircleImageView>(R.id.avatarImageView)
         val editTextBio = findViewById<EditText>(R.id.editTextBio)
         val btnChangeUsername = findViewById<Button>(R.id.btnChangeUsername)

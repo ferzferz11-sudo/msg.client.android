@@ -231,13 +231,17 @@ class NewChatActivity : AppCompatActivity() {
         val root = findViewById<View>(android.R.id.content)
         val bottomPanel = findViewById<View>(R.id.bottomPanel)
         
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+        // Handle window insets for toolbar
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-            
-            // Apply top padding for status bar
-            view.updatePadding(top = systemBars.top)
-            
+
             // Handle bottom panel and keyboard
             bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = if (imeInsets.bottom > 0) {
@@ -304,7 +308,7 @@ class NewChatActivity : AppCompatActivity() {
     private var otherUserAvatarUrl: String = ""
 
     private fun showToolbarLoading() {
-        if (toolbarAvatar.visibility == View.VISIBLE) {
+        if (toolbarAvatar.isVisible) {
             toolbarAvatar.tag = "visible"
             toolbarAvatar.visibility = View.GONE
         } else {
@@ -325,6 +329,7 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         if (isDirect) {
+            toolbar.layoutParams.height = 84.dpToPx()
             toolbarAvatar.isVisible = true
             groupParticipantsContainer.isVisible = false
             val arr = JSONArray(participantsJson)
@@ -400,8 +405,8 @@ class NewChatActivity : AppCompatActivity() {
         for (i in 0 until arr.length().coerceAtMost(3)) {
             val u = arr.getString(i)
             val iv = CircleImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(24.dpToPx(), 24.dpToPx()).apply {
-                    marginStart = if (i > 0) (-8).dpToPx() else 0
+                layoutParams = LinearLayout.LayoutParams(42.dpToPx(), 42.dpToPx()).apply {
+                    marginStart = if (i > 0) (-16).dpToPx() else 0
                 }
                 borderWidth = 1.dpToPx()
                 borderColor = ContextCompat.getColor(this@NewChatActivity, R.color.lavender_mist)
@@ -574,9 +579,32 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            grpcClient.connectionState.collect { connected ->
+                runOnUiThread {
+                    if (!connected) {
+                        toolbarSubtitle.isVisible = true
+                        toolbarSubtitle.text = getString(R.string.connecting)
+                        val typedValue = android.util.TypedValue()
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                        toolbarSubtitle.setTextColor(typedValue.data)
+                    } else {
+                        // Restore normal subtitle when connected
+                        if (isDirect) {
+                            // Online status observation will handle this
+                        } else {
+                            val arr = JSONArray(participantsJson)
+                            toolbarSubtitle.isVisible = true
+                            toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
+                        }
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
             grpcClient.users.collect { onlineUsers ->
                 runOnUiThread {
-                    if (isDirect) {
+                    if (isDirect && grpcClient.connectionState.value) {
                         val otherUser = (0 until JSONArray(participantsJson).length())
                             .map { JSONArray(participantsJson).getString(it) }
                             .find { it != username } ?: return@runOnUiThread

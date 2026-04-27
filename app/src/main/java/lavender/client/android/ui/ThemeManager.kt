@@ -54,6 +54,12 @@ object ThemeManager {
         val theme = currentCustomTheme
         val root = activity.findViewById<View>(android.R.id.content)
 
+        // Ensure Edge-to-Edge by making system bars transparent
+        @Suppress("DEPRECATION")
+        activity.window.statusBarColor = Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        activity.window.navigationBarColor = Color.TRANSPARENT
+
         if (theme == null) {
             // Support standard themes (light/dark)
             val typedValue = android.util.TypedValue()
@@ -66,10 +72,6 @@ object ThemeManager {
         }
         
         applyThemeToView(root, theme)
-        
-        // Ensure Edge-to-Edge by making system bars transparent
-        activity.window.statusBarColor = Color.TRANSPARENT
-        activity.window.navigationBarColor = Color.TRANSPARENT
         
         // Handle bottom panel specifically if it exists
         activity.findViewById<View>(R.id.bottomPanel)?.let { 
@@ -115,6 +117,9 @@ object ThemeManager {
             
             // Set background for SwipeRefreshLayout if it exists
             activity.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)?.setBackgroundColor(bgColor)
+            
+            // Fix: ensure the content view itself is transparent to see root background
+            (root as? ViewGroup)?.getChildAt(0)?.setBackgroundColor(Color.TRANSPARENT)
             
             // Handle background images
             val bgImageView = activity.findViewById<android.widget.ImageView>(
@@ -178,7 +183,7 @@ object ThemeManager {
 
             when (view) {
                 is com.google.android.material.appbar.MaterialToolbar -> {
-                    view.setBackgroundColor(primaryColor)
+                    view.backgroundTintList = ColorStateList.valueOf(primaryColor)
                     view.setTitleTextColor(onPrimaryColor)
                     view.setSubtitleTextColor(onPrimaryColor)
                     view.setNavigationIconTint(onPrimaryColor)

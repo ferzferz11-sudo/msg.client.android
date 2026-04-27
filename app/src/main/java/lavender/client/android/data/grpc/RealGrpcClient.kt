@@ -168,7 +168,6 @@ object RealGrpcClient {
             
         } catch (e: Exception) {
             android.util.Log.e("GrpcClient", "Connection failed: ${e.message}")
-            _error.value = "Connection failed: ${e.message}"
             _connectionState.value = false
         }
     }
@@ -501,11 +500,6 @@ object RealGrpcClient {
                     android.util.Log.e("RealGrpcClient", "Chat stream error: ${t.message}", t)
                     isChatStarted = false
                     _connectionState.value = false
-                    
-                    // Show error only if app is in foreground
-                    if (!isAppInBackground) {
-                        _error.value = "Disconnected: ${t.localizedMessage}"
-                    }
 
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {

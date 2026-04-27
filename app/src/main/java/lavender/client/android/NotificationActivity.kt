@@ -52,9 +52,15 @@ class NotificationActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         // Handle window insets for edge-to-edge
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
+        }
+
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top, bottom = systemBars.bottom)
+            view.updatePadding(bottom = systemBars.bottom)
             insets
         }
 

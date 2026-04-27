@@ -9,7 +9,7 @@
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="@dimen/custom_toolbar_height"
         android:background="@drawable/toolbar_background"
         android:elevation="4dp"
         app:navigationIcon="@drawable/ic_back_arrow"
