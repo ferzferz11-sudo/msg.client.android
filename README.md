@@ -183,6 +183,23 @@ Current version: **1.0.2.8**
 - 🌐 **Localization**: New EN/RU strings for update flow.
 - 🔗 **Server Sync**: Matched server version 1.0.2.8.
 
+### Version 1.0.2.7 - Edge-to-Edge & Final Navigation Consolidation
+- 🧭 **Navigation & Localization**: Language toggle moved to User Avatar menu, completing consolidation of all account actions.
+- 📐 **Edge-to-Edge Design**: Chat List, Themes, and Notifications toolbars now use edge-to-edge design, blending with the status bar.
+- 🎨 **Theme Editor Previews**: Synchronized chat previews with real bottom panel icons and theming logic.
+- 🐛 **Bug Fixes**: Suppressed background "Connecting..." status messages on newer Android versions.
+
+### Version 1.0.2.6 - UI/UX Polishing & Enhanced Customization
+- 🎨 **Theme Editor Improvements**: Added "Default Light" and "Default Dark" templates for quick customization.
+- 🔍 **Chat List & Search**: Increased toolbar avatar size (+30%), search now filters by message content.
+- 🔔 **Notifications**: Personalized style preview using the current user's name.
+
+### Version 1.0.2.5 - Consolidated User Identity & Enhanced Chat List
+- 👤 **Navigation**: Replaced "Exit" icon with User Avatar in the main toolbar.
+- 📋 **User Menu**: Added modern Bottom Sheet menu for profile actions, themes, notifications, and logout.
+- 💬 **Chat Previews**: Chat List now displays last message text instead of chat type.
+- 🖥️ **Server**: Added `last_message_text` field to `ChatInfo` response.
+
 ### Version 1.0.2.4 - Final Interface Polish
 - 🧹 **UI Cleanup**: Removed redundant "Contacts" icon from the main toolbar.
 - 🚀 **Performance**: Optimized list rendering and connection stability.
