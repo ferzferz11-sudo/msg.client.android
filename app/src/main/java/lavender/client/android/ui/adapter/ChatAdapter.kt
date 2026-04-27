@@ -174,7 +174,11 @@ class ChatAdapter(
 
             // Show last message instead of chat type
             if (chat.lastMessageText.isNotEmpty()) {
-                chatType.text = chat.lastMessageText
+                val prefix = if (chat.type == "group" || chat.type == "general") {
+                    if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
+                } else ""
+                
+                chatType.text = "$prefix${chat.lastMessageText}"
                 chatType.maxLines = 1
                 chatType.ellipsize = android.text.TextUtils.TruncateAt.END
             } else {

@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.2.4**
+Current version: **1.0.2.8**
+
+### Version 1.0.2.8 - Group Chat Previews & Update Dialog
+- 👥 **Group Chat Previews**: Now shows sender username before message preview in group/general chats.
+- 🔄 **Update Confirmation**: Added confirmation dialog before downloading updates with version comparison.
+- 🌐 **Localization**: New EN/RU strings for update flow.
+- 🔗 **Server Sync**: Matched server version 1.0.2.8.
 
 ### Version 1.0.2.4 - Final Interface Polish
 - 🧹 **UI Cleanup**: Removed redundant "Contacts" icon from the main toolbar.

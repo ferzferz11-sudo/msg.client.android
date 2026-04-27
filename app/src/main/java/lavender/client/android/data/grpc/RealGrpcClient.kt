@@ -780,7 +780,8 @@ object RealGrpcClient {
                         lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
                         creator = proto.creator,
                         lastMessageText = proto.lastMessageText,
-                        avatarUrl = proto.avatarUrl
+                        avatarUrl = proto.avatarUrl,
+                        lastMessageUsername = proto.lastMessageUsername
                     )
                 }
                 callback(chats)
@@ -1572,7 +1573,8 @@ object RealGrpcClient {
                         lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + (it.nanos / 1000000) } ?: 0,
                         creator = proto.creator,
                         lastMessageText = proto.lastMessageText,
-                        avatarUrl = proto.avatarUrl
+                        avatarUrl = proto.avatarUrl,
+                        lastMessageUsername = proto.lastMessageUsername
                     )
                 }
                 callback(chats)
@@ -2064,6 +2066,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
         if (value.creator.isNotEmpty()) cos.writeString(8, value.creator)
         if (value.lastMessageText.isNotEmpty()) cos.writeString(9, value.lastMessageText)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(10, value.avatarUrl)
+        if (value.lastMessageUsername.isNotEmpty()) cos.writeString(11, value.lastMessageUsername)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -2079,6 +2082,7 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
         var creator = ""
         var lastMessageText = ""
         var avatarUrl = ""
+        var lastMessageUsername = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -2103,10 +2107,11 @@ class ChatInfoMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatInfoProto> {
                 8 -> creator = cis.readString()
                 9 -> lastMessageText = cis.readString()
                 10 -> avatarUrl = cis.readString()
+                11 -> lastMessageUsername = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime, creator, lastMessageText, avatarUrl)
+        return ChatInfoProto(id, name, type, participants, createdAt, unreadCount, lastMessageTime, creator, lastMessageText, avatarUrl, lastMessageUsername)
     }
 }
 

@@ -262,6 +262,9 @@
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>
     <string name="version_label">Версия: %s</string>
+    <string name="version_current">Текущая версия: %s</string>
+    <string name="version_available">Доступная версия: %s</string>
+    <string name="update_confirmation_message">Доступна новая версия Lavender Messenger. Обновить сейчас?</string>
     <string name="developer_label">Разработчик</string>
     <string name="send_feedback">Отправить отзыв</string>
     <string name="close">Закрыть</string>

@@ -161,7 +161,8 @@ data class ChatInfoProto(
     val lastMessageTime: Timestamp? = null,
     val creator: String = "",
     val lastMessageText: String = "",
-    val avatarUrl: String = ""
+    val avatarUrl: String = "",
+    val lastMessageUsername: String = ""
 )
 
 // Mark Read Request/Response

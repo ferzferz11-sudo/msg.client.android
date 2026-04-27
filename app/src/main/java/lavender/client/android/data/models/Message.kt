@@ -34,5 +34,6 @@ data class ChatInfo(
     val lastMessageTime: Long = 0,
     val creator: String = "",
     val lastMessageText: String = "",
-    val avatarUrl: String = ""
+    val avatarUrl: String = "",
+    val lastMessageUsername: String = ""
 )

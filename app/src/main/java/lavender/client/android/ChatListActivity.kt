@@ -185,7 +185,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Handle update icon click - directly start download process
         binding.updateAvailableIcon.setOnClickListener {
-            downloadAndInstallApk()
+            showUpdateConfirmationDialog()
         }
 
         adapter = ChatAdapter(
@@ -807,7 +807,7 @@ class ChatListActivity : AppCompatActivity() {
                 true
             }
             R.id.action_update -> {
-                downloadAndInstallApk()
+                showUpdateConfirmationDialog()
                 true
             }
             R.id.action_about -> {
@@ -867,6 +867,29 @@ class ChatListActivity : AppCompatActivity() {
                 finish()
             }
             .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showUpdateConfirmationDialog() {
+        val currentVersion = try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            pInfo.versionName
+        } catch (e: Exception) {
+            "1.0.2.7"
+        }
+        val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "...") ?: "..."
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.update_available)
+            .setMessage(
+                getString(R.string.version_current, currentVersion) + "\n" +
+                getString(R.string.version_available, latestVersion) + "\n\n" +
+                getString(R.string.update_confirmation_message)
+            )
+            .setPositiveButton(R.string.update_now) { _, _ ->
+                downloadAndInstallApk()
+            }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -1552,7 +1575,7 @@ class ChatListActivity : AppCompatActivity() {
         btnUpdate.isVisible = isUpdateAvailable
         btnUpdate.setOnClickListener {
             dialog.dismiss()
-            downloadAndInstallApk()
+            showUpdateConfirmationDialog()
         }
 
         btnFeedback.setOnClickListener {
