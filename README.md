@@ -421,6 +421,8 @@ Current version: **1.0.2.9**
 - 🎤 Implemented voice message recording and sending with waveform visualization.
 - 🛠️ Fixed critical bugs in chat activity and theme manager code.
 - 🎨 Added subtle toolbar border-bottom for a more layered interface look.
+- 🔄 Fixed update system: forced check on "Update" click and on every startup.
+- 🔝 Raised [+] FAB button to avoid overlapping with navigation bar.
 
 ### Version 1.0.1 - Chat List and Profile
 - 📱 Added dedicated chat list activity

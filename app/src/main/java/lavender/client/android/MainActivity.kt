@@ -131,11 +131,11 @@ class MainActivity : AppCompatActivity() {
                 // Navigate to chat list
                 navigateToChatList(savedUsername, savedPassword, savedServerAddress)
             }
+            // Still check for updates in background
+            checkForUpdates()
         } else {
             // No credentials or explicit skip
-            if (!skipAutoLogin) {
-                checkForUpdates()
-            }
+            checkForUpdates()
         }
     }
 

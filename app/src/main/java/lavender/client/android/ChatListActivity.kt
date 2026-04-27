@@ -140,6 +140,9 @@ class ChatListActivity : AppCompatActivity() {
         username = intent.getStringExtra("username") ?: ""
         password = intent.getStringExtra("password") ?: ""
 
+        // Check for updates on startup
+        checkForUpdates()
+
         // Load and apply custom theme if needed
         lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
             runOnUiThread {
@@ -842,9 +845,11 @@ class ChatListActivity : AppCompatActivity() {
                 true
             }
             R.id.action_update -> {
-                val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-                val isUpdateAvailable = prefs.getBoolean("update_available", false)
-                showUpdateConfirmationDialog(isUpdateAvailable)
+                // Show loading toast while checking
+                showToast(getString(R.string.checking_for_updates))
+                checkForUpdates { isUpdateAvailable ->
+                    showUpdateConfirmationDialog(isUpdateAvailable)
+                }
                 true
             }
             R.id.action_about -> {
@@ -1553,7 +1558,7 @@ class ChatListActivity : AppCompatActivity() {
         resources.updateConfiguration(config, resources.displayMetrics)
     }
 
-    private fun checkForUpdates() {
+    private fun checkForUpdates(onComplete: ((Boolean) -> Unit)? = null) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val url = URL(VERSION_CHECK_URL)
@@ -1574,11 +1579,19 @@ class ChatListActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         binding.updateAvailableIcon.isVisible = isAvailable
+                        onComplete?.invoke(isAvailable)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        onComplete?.invoke(false)
                     }
                 }
                 connection.disconnect()
             } catch (e: Exception) {
                 Log.e("ChatListActivity", "Version check failed: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(false)
+                }
             }
         }
     }

@@ -23,7 +23,7 @@
 
     <!-- Messages -->
     <string name="lavender_messenger">Lavender Messenger</string>
-    <string name="app_version">1.0.2.9</string>
+    <string name="app_version">1.0.2.10</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">update</string>
@@ -300,4 +300,5 @@
     <string name="ok">OK</string>
     <string name="force_download">Download anyway</string>
     <string name="force_download_description">You have the latest version, but you can download the APK again if needed.</string>
+    <string name="checking_for_updates">Checking for updates…</string>
 </resources>
