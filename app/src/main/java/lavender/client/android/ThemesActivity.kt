@@ -12,8 +12,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.radiobutton.MaterialRadioButton
+import lavender.client.android.ui.adapter.ThemeAdapter
 import androidx.core.view.updatePadding
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
@@ -21,9 +23,8 @@ import java.util.*
 
 class ThemesActivity : AppCompatActivity() {
 
-    private lateinit var themeRadioGroup: RadioGroup
-    private lateinit var customThemesContainer: LinearLayout
-    private lateinit var btnAddTheme: MaterialButton
+    private lateinit var themesRecyclerView: RecyclerView
+    private lateinit var adapter: ThemeAdapter
     private val grpcClient = GrpcClient
     private var username: String = ""
     private var currentThemeId: String = "dark"
@@ -68,15 +69,19 @@ class ThemesActivity : AppCompatActivity() {
             insets
         }
 
-        themeRadioGroup = findViewById(R.id.themeRadioGroup)
-        customThemesContainer = findViewById(R.id.customThemesContainer)
-        btnAddTheme = findViewById(R.id.btnAddTheme)
+        themesRecyclerView = findViewById(R.id.themesRecyclerView)
+
+        adapter = ThemeAdapter(
+            onThemeClick = { theme -> selectTheme(theme.id) },
+            onEditClick = { theme -> openEditTheme(theme.id) },
+            onAddClick = { openEditTheme(null) },
+            onSelectionChanged = { count -> invalidateOptionsMenu() },
+            currentThemeId = currentThemeId
+        )
+        themesRecyclerView.layoutManager = LinearLayoutManager(this)
+        themesRecyclerView.adapter = adapter
 
         loadThemes()
-
-        btnAddTheme.setOnClickListener {
-            openEditTheme(null)
-        }
     }
 
     override fun onResume() {
@@ -108,116 +113,62 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun updateUI() {
-        themeRadioGroup.clearCheck()
+        val allThemes = mutableListOf<CustomThemeProto>()
+        allThemes.add(CustomThemeProto(id = "light", name = getString(R.string.light_theme)))
+        allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
+        allThemes.addAll(customThemes)
         
-        val radioLight = findViewById<MaterialRadioButton>(R.id.radioLight)
-        val radioDark = findViewById<MaterialRadioButton>(R.id.radioDark)
-        
-        val textColor = getOnSurfaceColor()
-        radioLight.setTextColor(textColor)
-        radioDark.setTextColor(textColor)
-        
-        radioLight.isChecked = currentThemeId == "light"
-        radioDark.isChecked = currentThemeId == "dark"
-
-        radioLight.setOnClickListener { selectTheme("light") }
-        radioDark.setOnClickListener { selectTheme("dark") }
-
-        customThemesContainer.removeAllViews()
-        for (theme in customThemes) {
-            val itemLayout = LinearLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(0, 4, 0, 4)
-            }
-
-            val rb = MaterialRadioButton(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    (64 * resources.displayMetrics.density).toInt(),
-                    1f
-                )
-                text = theme.name
-                setTextColor(textColor)
-                isChecked = currentThemeId == theme.id
-                setOnClickListener { selectTheme(theme.id) }
-                
-                setOnLongClickListener {
-                    openEditTheme(theme.id)
-                    true
-                }
-            }
-
-            val btnEdit = ImageButton(this).apply {
-                val size = (48 * resources.displayMetrics.density).toInt()
-                layoutParams = LinearLayout.LayoutParams(size, size)
-                setImageResource(R.drawable.ic_settings)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                setPadding(8, 8, 8, 8)
-                
-                val typedValue = android.util.TypedValue()
-                this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
-                setBackgroundResource(typedValue.resourceId)
-                
-                // Get color from ThemeManager to match the ACTUAL toolbar background
-                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-                val iconColor = if (customTheme != null) {
-                    try { Color.parseColor(customTheme.primaryColor) } catch (_: Exception) { getPrimaryColor() }
-                } else {
-                    getPrimaryColor()
-                }
-                
-                imageTintList = ColorStateList.valueOf(iconColor)
-                setOnClickListener { openEditTheme(theme.id) }
-            }
-
-            val btnDelete = ImageButton(this).apply {
-                val size = (44 * resources.displayMetrics.density).toInt()
-                layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                    marginEnd = (8 * resources.displayMetrics.density).toInt()
-                }
-                setImageResource(R.drawable.ic_delete)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                setPadding(10, 10, 10, 10)
-                
-                val typedValue = android.util.TypedValue()
-                this@ThemesActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
-                setBackgroundResource(typedValue.resourceId)
-                
-                // Get same color for Delete as for Edit
-                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-                val iconColor = if (customTheme != null) {
-                    try { Color.parseColor(customTheme.primaryColor) } catch (_: Exception) { getPrimaryColor() }
-                } else {
-                    getPrimaryColor()
-                }
-
-                imageTintList = ColorStateList.valueOf(iconColor)
-                setOnClickListener { confirmQuickDeleteTheme(theme) }
-            }
-
-            itemLayout.addView(rb)
-            itemLayout.addView(btnEdit)
-            itemLayout.addView(btnDelete)
-            customThemesContainer.addView(itemLayout)
-        }
+        adapter.setCurrentThemeId(currentThemeId)
+        adapter.setThemes(allThemes)
     }
 
-    private fun confirmQuickDeleteTheme(theme: CustomThemeProto) {
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        val selected = adapter.getSelectedThemes()
+        if (selected.isNotEmpty()) {
+            val item = menu.add(0, 100, 0, R.string.delete)
+            item.setIcon(R.drawable.ic_delete)
+            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 100) {
+            val selected = adapter.getSelectedThemes()
+            if (selected.isNotEmpty()) {
+                confirmDeleteThemes(selected)
+            }
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun getOnPrimaryColor(): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+        return typedValue.data
+    }
+
+    private fun confirmDeleteThemes(selected: List<CustomThemeProto>) {
         AlertDialog.Builder(this)
-            .setMessage(R.string.delete_theme_confirm)
+            .setMessage(getString(R.string.delete_theme_confirm))
             .setPositiveButton(R.string.delete) { _, _ ->
-                if (currentThemeId == theme.id) {
-                    // Switch to default light theme before deleting active theme
-                    selectTheme("light")
-                }
-                grpcClient.deleteTheme(username, theme.id) { success ->
-                    if (success) {
-                        runOnUiThread { loadThemes() }
+                val themesToDelete = selected.toList()
+                adapter.clearSelection()
+                
+                var deletedCount = 0
+                for (theme in themesToDelete) {
+                    if (currentThemeId == theme.id) {
+                        selectTheme("light")
+                    }
+                    grpcClient.deleteTheme(username, theme.id) { success ->
+                        if (success) {
+                            deletedCount++
+                            if (deletedCount == themesToDelete.size) {
+                                runOnUiThread { loadThemes() }
+                            }
+                        }
                     }
                 }
             }
@@ -231,18 +182,6 @@ class ThemesActivity : AppCompatActivity() {
             if (themeId != null) putExtra("theme_id", themeId)
         }
         startActivity(intent)
-    }
-
-    private fun getOnSurfaceColor(): Int {
-        val typedValue = android.util.TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
-        return typedValue.data
-    }
-
-    private fun getPrimaryColor(): Int {
-        val typedValue = android.util.TypedValue()
-        theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-        return typedValue.data
     }
 
     private fun selectTheme(themeId: String) {
