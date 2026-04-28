@@ -33,7 +33,7 @@
             android:id="@+id/clientVersionText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Client Version: 1.0.2.0"
+            android:text="Client Version: --"
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurface"
             android:alpha="0.8"
@@ -43,7 +43,7 @@
             android:id="@+id/serverVersionText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Server Version: 1.0.2.0"
+            android:text="Server Version: --"
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurface"
             android:alpha="0.8" />

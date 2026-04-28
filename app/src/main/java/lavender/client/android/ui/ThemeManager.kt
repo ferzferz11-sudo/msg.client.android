@@ -20,12 +20,75 @@ import org.json.JSONObject
 object ThemeManager {
     private var currentCustomTheme: CustomThemeProto? = null
 
+    val builtInThemes = listOf(
+        CustomThemeProto(
+            id = "builtin_green",
+            name = "Зеленый лес",
+            primaryColor = "#2E7D32",
+            backgroundColor = "#F1F8E9",
+            surfaceColor = "#DCEDC8",
+            textPrimaryColor = "#1B5E20",
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#33691E",
+            bottomPanelColor = "#E8F5E9",
+            onBottomPanelColor = "#2E7D32",
+            isDark = false
+        ),
+        CustomThemeProto(
+            id = "builtin_blue",
+            name = "Океанский синий",
+            primaryColor = "#1565C0",
+            backgroundColor = "#E3F2FD",
+            surfaceColor = "#BBDEFB",
+            textPrimaryColor = "#0D47A1",
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#01579B",
+            bottomPanelColor = "#E3F2FD",
+            onBottomPanelColor = "#1565C0",
+            isDark = false
+        ),
+        CustomThemeProto(
+            id = "builtin_purple",
+            name = "Королевский пурпур",
+            primaryColor = "#6A1B9A",
+            backgroundColor = "#F3E5F5",
+            surfaceColor = "#E1BEE7",
+            textPrimaryColor = "#4A148C",
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#4A148C",
+            bottomPanelColor = "#F3E5F5",
+            onBottomPanelColor = "#6A1B9A",
+            isDark = false
+        ),
+        CustomThemeProto(
+            id = "builtin_sunset",
+            name = "Закатный оранжевый",
+            primaryColor = "#D84315",
+            backgroundColor = "#FFF3E0",
+            surfaceColor = "#FFE0B2",
+            textPrimaryColor = "#BF360C",
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#E65100",
+            bottomPanelColor = "#FFF3E0",
+            onBottomPanelColor = "#D84315",
+            isDark = false
+        )
+    )
+
     fun loadTheme(context: Context, username: String, onComplete: () -> Unit = {}) {
         val prefs = context.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
         val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
         
         if (themeId == "light" || themeId == "dark") {
             currentCustomTheme = null
+            onComplete()
+            return
+        }
+
+        // Check built-in themes first
+        val builtIn = builtInThemes.find { it.id == themeId }
+        if (builtIn != null) {
+            currentCustomTheme = builtIn
             onComplete()
             return
         }

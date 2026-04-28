@@ -129,6 +129,19 @@ class ThemesActivity : AppCompatActivity() {
         val allThemes = mutableListOf<CustomThemeProto>()
         allThemes.add(CustomThemeProto(id = "light", name = getString(R.string.light_theme)))
         allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
+        
+        // Add built-in template themes with localized names
+        lavender.client.android.ui.ThemeManager.builtInThemes.forEach { theme ->
+            val localizedName = when (theme.id) {
+                "builtin_green" -> getString(R.string.theme_template_green)
+                "builtin_blue" -> getString(R.string.theme_template_blue)
+                "builtin_purple" -> getString(R.string.theme_template_purple)
+                "builtin_sunset" -> getString(R.string.theme_template_sunset)
+                else -> theme.name
+            }
+            allThemes.add(theme.copy(name = localizedName))
+        }
+
         allThemes.addAll(customThemes)
         
         adapter.setCurrentThemeId(currentThemeId)
@@ -145,8 +158,9 @@ class ThemesActivity : AppCompatActivity() {
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
             item.iconTintList = ColorStateList.valueOf(onPrimary)
         } else {
-            // Edit button for custom themes
-            if (currentThemeId != "light" && currentThemeId != "dark") {
+            // Edit button for custom themes (not built-in ones)
+            val isBuiltIn = currentThemeId == "light" || currentThemeId == "dark" || currentThemeId.startsWith("builtin_")
+            if (!isBuiltIn) {
                 val editItem = menu.add(0, 300, 0, R.string.edit_theme_button)
                 editItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
                 val spanString = android.text.SpannableString(editItem.title.toString())
@@ -233,7 +247,7 @@ class ThemesActivity : AppCompatActivity() {
                 if (success) {
                     val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
                     val scheme = if (themeId == "light" || themeId == "dark") themeId else {
-                        val theme = customThemes.find { it.id == themeId }
+                        val theme = (customThemes + lavender.client.android.ui.ThemeManager.builtInThemes).find { it.id == themeId }
                         if (theme?.isDark == true) "dark" else "light"
                     }
                     prefs.edit {

@@ -16,6 +16,18 @@ android {
         targetSdk = 35
         versionName = versionFromFile
 
+        // Generate versionCode from version parts (e.g., 1.0.2.15 -> 1000215)
+        val parts = versionFromFile.split(".")
+        versionCode = try {
+            if (parts.size >= 3) {
+                val major = parts[0].toInt()
+                val minor = parts[1].toInt()
+                val patch = parts[2].toInt()
+                val build = if (parts.size > 3) parts[3].toInt() else 0
+                major * 1000000 + minor * 10000 + patch * 100 + build
+            } else 1
+        } catch (e: Exception) { 1 }
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Add version as BuildConfig fields

@@ -568,7 +568,7 @@ class ChatListActivity : AppCompatActivity() {
         val clientVersion = try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName
-        } catch (_: Exception) { "1.0.2.10" }
+        } catch (_: Exception) { "1.0.2.15" }
         val serverVersion = grpcClient.serverVersion.value.ifEmpty { "..." }
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "") ?: ""
         val isUpdateAvailable = isUpdateAvailable(latestVersion)
