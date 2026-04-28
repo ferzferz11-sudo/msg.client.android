@@ -577,8 +577,19 @@ class ChatListActivity : AppCompatActivity() {
             }
             try { startActivity(intent) } catch (_: Exception) { showToast("No email app found") }
         }
+        dialogView.findViewById<Button>(R.id.btnShare).setOnClickListener {
+            shareApp()
+        }
         dialogView.findViewById<Button>(R.id.btnClose).setOnClickListener { dialog.dismiss() }
         dialog.show()
+    }
+
+    private fun shareApp() {
+        val shareIntent = Intent(Intent.ACTION_SEND)
+        shareIntent.type = "text/plain"
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
+        shareIntent.putExtra(Intent.EXTRA_TEXT, APK_URL)
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
     }
 
     private fun checkForUpdates(onComplete: ((Boolean) -> Unit)? = null) {
@@ -760,6 +771,10 @@ class ChatListActivity : AppCompatActivity() {
                 val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", myAvatarUrl) }
                 startActivity(intent)
             }
+        }
+        sheetView.findViewById<View>(R.id.actionShareHeader).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            shareApp()
         }
         sheetView.findViewById<View>(R.id.actionEditProfile).setOnClickListener {
             bottomSheetDialog.dismiss()

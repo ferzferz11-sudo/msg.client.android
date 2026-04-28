@@ -310,4 +310,5 @@
     <string name="install_now">Установить</string>
     <string name="onboarding_profile_hint">Настройте профиль, чтобы друзья могли вас узнать!</string>
     <string name="onboarding_fab_hint">Добавьте контакты людей, с которыми хотите общаться!\nСоздайте новый чат или присоединяйтесь к группам, чтобы всегда быть на связи!</string>
+    <string name="share_with_friends">Поделиться с друзьями</string>
 </resources>

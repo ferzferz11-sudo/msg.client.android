@@ -95,6 +95,17 @@
         app:cornerRadius="24dp" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShare"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/share_with_friends"
+        android:layout_marginBottom="12dp"
+        app:cornerRadius="24dp"
+        app:icon="@drawable/ic_share"
+        app:iconGravity="textStart" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnClose"
         style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="match_parent"

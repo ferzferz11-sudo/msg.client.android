@@ -308,4 +308,5 @@
     <string name="install_now">Install Now</string>
     <string name="onboarding_profile_hint">Set up your profile so friends can recognize you!</string>
     <string name="onboarding_fab_hint">Add contacts of the people you want to message!\nCreate a new chat or join groups to stay always connected!</string>
+    <string name="share_with_friends">Share with friends</string>
 </resources>
