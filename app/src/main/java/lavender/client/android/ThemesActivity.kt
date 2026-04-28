@@ -14,7 +14,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.button.MaterialButton
 import lavender.client.android.ui.adapter.ThemeAdapter
 import androidx.core.view.updatePadding
 import lavender.client.android.data.grpc.GrpcClient
@@ -129,17 +128,28 @@ class ThemesActivity : AppCompatActivity() {
             item.setIcon(R.drawable.ic_delete)
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
             item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
+        } else {
+            val item = menu.add(0, 200, 0, R.string.apply)
+            item.setIcon(R.drawable.ic_checked)
+            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
         }
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == 100) {
-            val selected = adapter.getSelectedThemes()
-            if (selected.isNotEmpty()) {
-                confirmDeleteThemes(selected)
+        when (item.itemId) {
+            100 -> {
+                val selected = adapter.getSelectedThemes()
+                if (selected.isNotEmpty()) {
+                    confirmDeleteThemes(selected)
+                }
+                return true
             }
-            return true
+            200 -> {
+                applyAndRestart()
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -200,9 +210,27 @@ class ThemesActivity : AppCompatActivity() {
                     putString("color_scheme", scheme)
                     putString("current_theme_id", themeId)
                 }
-                runOnUiThread { recreate() }
+                runOnUiThread { 
+                    // Refresh current activity theme
+                    lavender.client.android.ui.ThemeManager.loadTheme(this@ThemesActivity, username) {
+                        runOnUiThread {
+                            lavender.client.android.ui.ThemeManager.applyTheme(this@ThemesActivity)
+                            adapter.setCurrentThemeId(themeId)
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private fun applyAndRestart() {
+        lavender.client.android.ui.ThemeManager.clearAllCaches(this)
+        
+        // Restart the app from SplashActivity to ensure all activities are reloaded with the new theme
+        val intent = Intent(this, SplashActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        startActivity(intent)
+        finish()
     }
 
     private fun applySavedColorScheme() {

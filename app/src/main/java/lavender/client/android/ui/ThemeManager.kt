@@ -50,6 +50,15 @@ object ThemeManager {
         currentCustomTheme = null
     }
 
+    fun clearAllCaches(context: Context) {
+        val prefs = context.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val allKeys = prefs.all.keys
+        prefs.edit {
+            allKeys.filter { it.startsWith("custom_theme_json_") }.forEach { remove(it) }
+        }
+        currentCustomTheme = null
+    }
+
     fun applyTheme(activity: AppCompatActivity) {
         val theme = currentCustomTheme
         val root = activity.findViewById<View>(android.R.id.content)
