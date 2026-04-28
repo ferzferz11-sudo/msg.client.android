@@ -308,4 +308,6 @@
     <string name="download_complete">Загрузка завершена!</string>
     <string name="manual_install_hint">Если установка не началась автоматически, пожалуйста, нажмите на кнопку ниже.</string>
     <string name="install_now">Установить</string>
+    <string name="onboarding_profile_hint">Настройте профиль, чтобы друзья могли вас узнать!</string>
+    <string name="onboarding_fab_hint">Добавьте контакты людей, с которыми хотите общаться!\nСоздайте новый чат или присоединяйтесь к группам, чтобы всегда быть на связи!</string>
 </resources>

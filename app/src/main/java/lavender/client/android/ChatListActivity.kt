@@ -313,6 +313,7 @@ class ChatListActivity : AppCompatActivity() {
                     adapter.setChats(viewModel.currentChats)
                     binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
                     binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
+                    checkOnboarding(viewModel.currentChats)
                     refreshAvatars()
                 }
                 if (!grpcClient.hasCheckedForUpdates) {
@@ -328,6 +329,27 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun checkOnboarding(chats: List<ChatInfo>) {
+        val isNewUser = chats.isEmpty()
+        if (isNewUser && !binding.onboardingProfileBubble.isVisible) {
+            binding.onboardingProfileBubble.visibility = View.VISIBLE
+            binding.onboardingProfileBubble.alpha = 0f
+            binding.onboardingProfileBubble.animate().alpha(1f).setDuration(500).start()
+
+            binding.onboardingFabBubble.visibility = View.VISIBLE
+            binding.onboardingFabBubble.alpha = 0f
+            binding.onboardingFabBubble.animate().alpha(1f).setDuration(500).setStartDelay(300).start()
+        } else if (!isNewUser) {
+            binding.onboardingProfileBubble.isVisible = false
+            binding.onboardingFabBubble.isVisible = false
+        }
+
+        if (isNewUser) {
+            binding.onboardingProfileBubble.setOnClickListener { it.animate().alpha(0f).setDuration(300).withEndAction { it.visibility = View.GONE }.start() }
+            binding.onboardingFabBubble.setOnClickListener { it.animate().alpha(0f).setDuration(300).withEndAction { it.visibility = View.GONE }.start() }
         }
     }
 
@@ -380,6 +402,7 @@ class ChatListActivity : AppCompatActivity() {
                                 adapter.setChats(viewModel.currentChats)
                                 binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
                                 binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
+                                checkOnboarding(viewModel.currentChats)
                                 if (viewModel.currentChats.size != previousChatCount) {
                                     refreshAvatars()
                                 }
