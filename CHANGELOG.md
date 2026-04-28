@@ -5,10 +5,40 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2.2] - [Unreleased]
+## [1.0.2.12] - 2026-04-27
+
+### Fixed
+- 🛠️ Fixed missing `logout()` functionality and unresolved references in `ChatListActivity`.
+- 🐛 Resolved systemic string syntax errors across the application.
+- 🛡️ Improved code stability and cleaned up IDE warnings/errors.
+- 🎨 Final unified styling for toolbars and avatars.
 
 ### Added
-- 🚀 Starting development of 1.0.2.2.
+- ⌨️ Fully implemented listeners for message input actions (send, attach, audio).
+
+## [1.0.2.11] - 2026-04-27
+
+### Fixed
+- 🛠️ Fixed crash when opening chats with no messages.
+- 🎨 Minor UI refinements in chat list.
+
+## [1.0.2.10] - 2026-04-27
+
+### Added
+- 👤 **Mention System**: Added user mention system using the `@` symbol in group chats.
+- 🎤 **Voice Messages**: Implemented voice message recording and sending with waveform visualization.
+- 🖼️ **Avatar Viewer**: Added full-screen avatar viewing from the profile menu.
+- 🌈 **Edge-to-Edge**: Improved support for Edge-to-Edge display on Android 12-14.
+
+### Changed
+- 🎨 **UI Unification**: Unified incoming message bubble and chat card colors.
+- 🎨 **Modern Toolbars**: Increased height (up to 100dp) and added rounded corners (24dp) to all toolbars.
+- 📱 **Optimized Layouts**: Custom toolbar height for direct chats (84dp) to maximize screen space.
+
+### Fixed
+- ⌨️ Improved keyboard and system bar handling for Android 12 and 14.
+- 🔄 Fixed update system: forced check on "Update" click and on every startup.
+- 🔝 Adjusted FAB position to avoid overlapping with navigation bar.
 
 ## [1.0.2.1] - 2026-04-26
 
