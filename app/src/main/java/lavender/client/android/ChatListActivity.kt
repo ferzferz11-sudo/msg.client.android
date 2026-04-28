@@ -313,25 +313,7 @@ class ChatListActivity : AppCompatActivity() {
                     adapter.setChats(viewModel.currentChats)
                     binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
                     binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
-                    val allParticipants = viewModel.currentChats.flatMap { chat ->
-                        try {
-                            val arr = JSONArray(chat.participants)
-                            List(arr.length()) { arr.getString(it) }
-                        } catch (_: Exception) { emptyList() }
-                    }.distinct()
-                    var updateCount = 0
-                    for (participant in allParticipants) {
-                        grpcClient.getUserProfile(participant) { _ ->
-                            updateCount++
-                            if (updateCount % 10 == 0 || updateCount == allParticipants.size) {
-                                viewModel.avatarCache = grpcClient.getAvatarCache()
-                                runOnUiThread {
-                                    adapter.updateAvatarCache(viewModel.avatarCache)
-                                    updateToolbarAvatar()
-                                }
-                            }
-                        }
-                    }
+                    refreshAvatars()
                 }
                 if (!grpcClient.hasCheckedForUpdates) {
                     checkForUpdates()
@@ -349,6 +331,40 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshAvatars() {
+        if (username.isEmpty()) return
+        
+        // Fetch own profile first
+        grpcClient.getUserProfile(username) { profile ->
+            if (profile != null) {
+                viewModel.avatarCache = grpcClient.getAvatarCache()
+                runOnUiThread { updateToolbarAvatar() }
+            }
+        }
+
+        val allParticipants = viewModel.currentChats.flatMap { chat ->
+            try {
+                val arr = JSONArray(chat.participants)
+                List(arr.length()) { arr.getString(it) }
+            } catch (_: Exception) { emptyList() }
+        }.distinct().filter { it != username }
+        
+        if (allParticipants.isEmpty()) return
+
+        var updateCount = 0
+        for (participant in allParticipants) {
+            grpcClient.getUserProfile(participant) { _ ->
+                updateCount++
+                if (updateCount % 5 == 0 || updateCount == allParticipants.size) {
+                    viewModel.avatarCache = grpcClient.getAvatarCache()
+                    runOnUiThread {
+                        adapter.updateAvatarCache(viewModel.avatarCache)
+                    }
+                }
+            }
+        }
+    }
+
     private fun loadAllUsers() {
         grpcClient.loadAllUsers()
     }
@@ -357,12 +373,16 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             while (isActive) {
                 if (username.isNotEmpty()) {
+                    val previousChatCount = viewModel.currentChats.size
                     viewModel.loadChats(username) { success, _ ->
                         if (success) {
                             runOnUiThread {
                                 adapter.setChats(viewModel.currentChats)
                                 binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
                                 binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
+                                if (viewModel.currentChats.size != previousChatCount) {
+                                    refreshAvatars()
+                                }
                             }
                         }
                     }

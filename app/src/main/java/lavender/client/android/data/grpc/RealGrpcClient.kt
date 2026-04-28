@@ -1067,6 +1067,9 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetUserProfileResponseProto>() {
             override fun onMessage(message: GetUserProfileResponseProto) {
+                if (message.avatarUrl.isNotEmpty()) {
+                    avatarCache[message.username] = message.avatarUrl
+                }
                 callback(message)
             }
 

@@ -12,7 +12,7 @@ class ChatListViewModel : ViewModel() {
 
     fun loadChats(username: String, callback: (Boolean, String) -> Unit) {
         GrpcClient.getChats(username) { chats ->
-            currentChats = chats
+            currentChats = chats.sortedByDescending { maxOf(it.lastMessageTime, it.createdAt) }
             isInitialLoadComplete = true
             callback(true, "")
         }
