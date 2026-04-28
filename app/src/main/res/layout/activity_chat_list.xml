@@ -44,7 +44,7 @@
             <TextView
                 android:id="@+id/toolbarTitle"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:text="@string/chats"
                 android:textColor="?attr/colorOnPrimary"
@@ -52,7 +52,11 @@
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:letterSpacing="0.05" />
+                android:letterSpacing="0.05"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless" />
 
             <ImageView
                 android:id="@+id/updateAvailableIcon"

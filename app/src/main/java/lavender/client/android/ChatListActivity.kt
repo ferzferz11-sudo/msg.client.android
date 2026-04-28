@@ -141,6 +141,9 @@ class ChatListActivity : AppCompatActivity() {
         binding.root.findViewById<CircleImageView>(R.id.toolbarUserAvatar).setOnClickListener {
             showUserMenuSheet()
         }
+        binding.toolbarTitle.setOnClickListener {
+            showUserMenuSheet()
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
