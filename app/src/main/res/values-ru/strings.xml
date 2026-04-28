@@ -181,7 +181,7 @@
     <string name="forward">Переслать</string>
     <string name="forward_to">Переслать…</string>
     <string name="message_edited">Сообщение отредактировано</string>
-    <string name="edited_label">отредактировано</string>
+    <string name="edited_label">изменено</string>
     <string name="group_info">Информация о группе</string>
     <string name="delete_group">Удалить группу</string>
     <string name="delete_group_confirm">Вы уверены, что хотите удалить эту группу?</string>

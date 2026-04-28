@@ -369,7 +369,7 @@ class NewChatActivity : AppCompatActivity() {
                         toolbarSubtitle.isVisible = true
                         toolbarSubtitle.text = getString(R.string.connecting)
                         val typedValue = TypedValue()
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
                         toolbarSubtitle.setTextColor(typedValue.data)
                     } else if (!isDirect) {
                         updateGroupSubtitle(grpcClient.users.value)
@@ -388,10 +388,10 @@ class NewChatActivity : AppCompatActivity() {
                         toolbarSubtitle.isVisible = true
                         toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
                         toolbarSubtitle.setTextColor(
-                            if (isOnline) getColor(android.R.color.holo_green_dark)
+                            if (isOnline) getColor(android.R.color.holo_green_light)
                             else {
                                 val typedValue = TypedValue()
-                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
                                 typedValue.data
                             }
                         )
@@ -628,7 +628,7 @@ class NewChatActivity : AppCompatActivity() {
             toolbarSubtitle.text = getString(R.string.participants_online_count, total, onlineCount)
             
             val typedValue = TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
             toolbarSubtitle.setTextColor(typedValue.data)
         } catch (e: Exception) {
             toolbarSubtitle.isVisible = false

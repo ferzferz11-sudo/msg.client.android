@@ -82,7 +82,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginTop="2dp">
+                        android:layout_marginTop="4dp">
 
                         <LinearLayout
                             android:id="@+id/groupParticipantsContainer"
@@ -99,7 +99,10 @@
                             android:layout_height="wrap_content"
                             android:textColor="?attr/colorOnPrimary"
                             android:textSize="11sp"
-                            android:alpha="0.8"
+                            android:alpha="1.0"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="1dp"
+                            android:background="@drawable/bg_status_bubble"
                             android:visibility="gone"
                             tools:text="online"
                             tools:visibility="visible" />

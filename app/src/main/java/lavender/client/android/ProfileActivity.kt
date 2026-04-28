@@ -256,10 +256,11 @@ class ProfileActivity : AppCompatActivity() {
         val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar) ?: return
         val profileBio = findViewById<TextView>(R.id.profileBio) ?: return
         val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
+        val bioCard = findViewById<View>(R.id.bioCard)
 
         if (isGroup) {
-            profileStatus.text = getString(R.string.group_chat)
-            profileBio.text = getString(R.string.chat_id_format, roomId)
+            profileStatus.isVisible = false
+            bioCard?.isVisible = false
             
             val participantsCard = findViewById<View>(R.id.participantsCard)
             val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)

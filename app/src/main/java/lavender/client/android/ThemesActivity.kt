@@ -26,6 +26,7 @@ class ThemesActivity : AppCompatActivity() {
     private lateinit var adapter: ThemeAdapter
     private val grpcClient = GrpcClient
     private var username: String = ""
+    private var activeThemeId: String = "dark"
     private var currentThemeId: String = "dark"
     private var customThemes = mutableListOf<CustomThemeProto>()
 
@@ -54,7 +55,13 @@ class ThemesActivity : AppCompatActivity() {
             }
         }
         
-        currentThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", "dark") ?: "dark"
+        val localThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", null)
+        if (localThemeId == null) {
+            currentThemeId = "dark"
+        } else {
+            currentThemeId = localThemeId
+        }
+        activeThemeId = currentThemeId
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -104,13 +111,16 @@ class ThemesActivity : AppCompatActivity() {
             
             val localThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", null)
             if (localThemeId == null) {
+                activeThemeId = currentId
                 currentThemeId = currentId
             } else {
+                activeThemeId = localThemeId
                 currentThemeId = localThemeId
             }
 
             runOnUiThread {
                 updateUI()
+                invalidateOptionsMenu()
             }
         }
     }
@@ -127,23 +137,30 @@ class ThemesActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
         val selected = adapter.getSelectedThemes()
+        val onPrimary = getOnPrimaryColor()
+        
         if (selected.isNotEmpty()) {
             val item = menu.add(0, 100, 0, R.string.delete)
             item.setIcon(R.drawable.ic_delete)
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-            item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
+            item.iconTintList = ColorStateList.valueOf(onPrimary)
         } else {
             // Edit button for custom themes
             if (currentThemeId != "light" && currentThemeId != "dark") {
                 val editItem = menu.add(0, 300, 0, R.string.edit_theme_button)
                 editItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+                val spanString = android.text.SpannableString(editItem.title.toString())
+                spanString.setSpan(android.text.style.ForegroundColorSpan(onPrimary), 0, spanString.length, 0)
+                editItem.title = spanString
             }
             
-            val applyItem = menu.add(0, 200, 0, R.string.apply)
-            applyItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
-            val typedValue = android.util.TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-            applyItem.iconTintList = ColorStateList.valueOf(typedValue.data)
+            if (currentThemeId != activeThemeId) {
+                val applyItem = menu.add(0, 200, 0, R.string.apply)
+                applyItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+                val spanString = android.text.SpannableString(applyItem.title.toString())
+                spanString.setSpan(android.text.style.ForegroundColorSpan(onPrimary), 0, spanString.length, 0)
+                applyItem.title = spanString
+            }
         }
         return true
     }

@@ -120,7 +120,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="16sp"
-                    android:paddingEnd="42dp"
+                    android:paddingEnd="80dp"
                     tools:text="Hello world" />
 
                 <LinearLayout
@@ -133,18 +133,18 @@
                     android:layout_marginBottom="2dp">
 
                     <TextView
-                        android:id="@+id/timeText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="10sp" />
-
-                    <TextView
                         android:id="@+id/editedText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="10sp"
-                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
                         android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/timeText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="10sp" />
 
                     <ImageView
                         android:id="@+id/readStatusIcon"

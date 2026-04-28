@@ -538,8 +538,19 @@ class ChatListActivity : AppCompatActivity() {
         clearMenuAnimations()
         menuInflater.inflate(R.menu.chat_list_menu, menu)
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
-        menu.findItem(R.id.action_search)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_delete)?.apply { isVisible = hasSelection }
+        
+        val typedValue = TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+        val onPrimary = typedValue.data
+
+        menu.findItem(R.id.action_search)?.apply { 
+            isVisible = !hasSelection
+            iconTintList = ColorStateList.valueOf(onPrimary)
+        }
+        menu.findItem(R.id.action_delete)?.apply { 
+            isVisible = hasSelection 
+            iconTintList = ColorStateList.valueOf(onPrimary)
+        }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
         return true
     }
