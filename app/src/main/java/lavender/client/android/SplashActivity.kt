@@ -10,7 +10,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Determine where to go
-        val prefs = getSharedPreferences("LavenderPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
         val savedUsername = prefs.getString("username", null)
         val savedPassword = prefs.getString("password", null)
         val savedServerAddress = prefs.getString("server_address", null)

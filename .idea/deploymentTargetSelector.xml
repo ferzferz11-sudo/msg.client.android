@@ -4,11 +4,11 @@
     <selectionStates>
       <SelectionState runConfigName="Lavender">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-04-27T18:37:00.906916Z">
+        <DropdownSelection timestamp="2026-04-28T16:27:12.724441Z">
           <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=z9uoxko7qox49trg" />
-            </handle>
+            <template>
+              <DeviceId pluginId="FirebaseDirectAccess" type="TEMPLATE" identifier="model_id=e1q/36" />
+            </template>
           </Target>
         </DropdownSelection>
         <DialogSelection />

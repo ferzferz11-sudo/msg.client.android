@@ -368,6 +368,8 @@ object RealGrpcClient {
     private var lastOnMessageReceived: ((Message) -> Unit)? = null
 
     fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
+        val userChanged = lastUsername != username
+        
         lastUsername = username
         lastPassword = password
         lastJoinMessage = joinMessage
@@ -385,7 +387,16 @@ object RealGrpcClient {
             }
         }
         
-        if (!_connectionState.value || channel == null || isChatStarted) return
+        if (!_connectionState.value || channel == null) return
+        
+        if (isChatStarted && !userChanged) return
+        
+        if (userChanged && isChatStarted) {
+            android.util.Log.d("RealGrpcClient", "User changed, restarting chat stream")
+            requestObserver?.onCompleted()
+            requestObserver = null
+            isChatStarted = false
+        }
         
         try {
             isChatStarted = true
@@ -604,6 +615,7 @@ object RealGrpcClient {
                         requestObserver?.onNext(protoMessage)
                     }
                 }
+                return@sendMessage // Important: don't send again below
             } else if (avatarCache.containsKey(message.user)) {
                 // Use cached avatar URL
                 android.util.Log.d("RealGrpcClient", "Using cached avatar for ${message.user}")

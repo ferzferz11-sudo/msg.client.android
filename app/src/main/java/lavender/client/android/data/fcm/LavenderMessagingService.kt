@@ -50,7 +50,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         Log.d("FCM", "Refreshed token: $token")
 
         // Get saved username from SharedPreferences
-        val prefs = getSharedPreferences("LavenderPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
         val username = prefs.getString("username", "")
 
         if (username != null && username.isNotEmpty()) {
@@ -91,15 +91,34 @@ class LavenderMessagingService : FirebaseMessagingService() {
         )
         notificationManager.createNotificationChannel(channel)
 
-        val intent = Intent(this, SplashActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra("room_id", roomId)
-            putExtra("from_notification", true)
+        // Get saved credentials to pass to NewChatActivity
+        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val username = prefs.getString("username", "") ?: ""
+        val password = prefs.getString("password", "") ?: ""
+
+        val intent = if (username.isNotEmpty() && password.isNotEmpty()) {
+            // Logged in - go straight to chat
+            Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("USERNAME", username)
+                putExtra("PASSWORD", password)
+                putExtra("ROOM_ID", roomId)
+                putExtra("CHAT_NAME", title) // Use title as chat name for now
+                putExtra("IS_DIRECT", !roomId.startsWith("group_") && roomId != "general")
+                putExtra("from_notification", true)
+            }
+        } else {
+            // Not logged in - go to Splash to handle auth
+            Intent(this, lavender.client.android.SplashActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("room_id", roomId)
+                putExtra("from_notification", true)
+            }
         }
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent,
+
+        val pendingIntent = PendingIntent.getActivity(this, System.currentTimeMillis().toInt(), intent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
 
-        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
         val style = prefs.getString("notification_style", "standard") ?: "standard"
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)

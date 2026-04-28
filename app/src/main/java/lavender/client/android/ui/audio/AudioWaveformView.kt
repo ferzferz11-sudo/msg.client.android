@@ -42,13 +42,17 @@ class AudioWaveformView @JvmOverloads constructor(
         
         if (waveformBars.isEmpty()) return
         
-        val barWidth = width.toFloat() / waveformBars.size
+        val maxBars = 100
+        val barWidth = width.toFloat() / maxBars
         val barSpacing = barWidth * 0.2f
         val actualBarWidth = barWidth - barSpacing
         
+        // Center the waveform if we have fewer bars than maxBars
+        val startOffset = if (waveformBars.size < maxBars) 0f else 0f 
+        
         for (i in waveformBars.indices) {
             val barHeight = waveformBars[i] * height * 0.8f
-            val x = i * barWidth + barSpacing / 2
+            val x = i * barWidth + barSpacing / 2 + startOffset
             val y = (height - barHeight) / 2
             
             // Draw default waveform
@@ -61,7 +65,8 @@ class AudioWaveformView @JvmOverloads constructor(
             )
             
             // Draw playback progress
-            if (i < waveformBars.size * playbackProgress) {
+            val progressThreshold = waveformBars.size * playbackProgress
+            if (i < progressThreshold) {
                 canvas.drawRect(
                     x,
                     y,
@@ -87,6 +92,14 @@ class AudioWaveformView @JvmOverloads constructor(
     fun setWaveformData(data: List<Float>) {
         waveformBars.clear()
         waveformBars.addAll(data)
+        invalidate()
+    }
+
+    fun addAmplitude(amplitude: Float) {
+        if (waveformBars.size >= 100) {
+            waveformBars.removeAt(0)
+        }
+        waveformBars.add(amplitude.coerceIn(0.1f, 1f))
         invalidate()
     }
     

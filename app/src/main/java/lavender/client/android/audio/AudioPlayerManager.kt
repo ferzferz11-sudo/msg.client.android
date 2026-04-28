@@ -116,33 +116,30 @@ class AudioPlayerManager private constructor(private val context: Context) {
     
     fun isCurrentAudio(audioUrl: String): Boolean = currentAudioUrl == audioUrl
     
+    private var positionUpdateHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var positionUpdateRunnable: Runnable? = null
+    
     private fun startPositionUpdates() {
-        // Stop any existing position updates
         stopPositionUpdates()
         
-        val updateRunnable = object : Runnable {
+        positionUpdateRunnable = object : Runnable {
             override fun run() {
                 exoPlayer?.let { player ->
                     if (player.isPlaying) {
                         _currentPosition.value = player.currentPosition
-                        // Schedule next update
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this, 100)
+                        positionUpdateHandler.postDelayed(this, 100)
                     } else if (player.playbackState == androidx.media3.common.Player.STATE_READY) {
-                         // Even if not playing, we might have seeked
                          _currentPosition.value = player.currentPosition
                     }
                 }
             }
         }
-        android.os.Handler(android.os.Looper.getMainLooper()).post(updateRunnable)
-        playbackPositionListener = {
-             // This is a dummy to keep track that we have a listener active if needed
-        }
+        positionUpdateRunnable?.let { positionUpdateHandler.post(it) }
     }
     
     private fun stopPositionUpdates() {
-        // In this simple implementation, the runnable stops itself if !isPlaying
-        // But we could use a handler with a specific token if we wanted more control
+        positionUpdateRunnable?.let { positionUpdateHandler.removeCallbacks(it) }
+        positionUpdateRunnable = null
     }
     
     fun release() {

@@ -12,7 +12,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:visibility="gone" />
+        android:visibility="gone"
+        android:contentDescription="@null" />
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
@@ -210,15 +211,45 @@
                 android:layout_marginTop="16dp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="14sp" />
-            <Button
-                android:id="@+id/cancelDownloadButton"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+
+            <TextView
+                android:id="@+id/manualInstallText"
+                android:layout_width="260dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/manual_install_hint"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:visibility="gone" />
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/cancel_dialog"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp" />
+                android:orientation="horizontal"
+                android:layout_marginTop="24dp">
+
+                <Button
+                    android:id="@+id/cancelDownloadButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/cancel_dialog"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
+
+                <Button
+                    android:id="@+id/installNowButton"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/install_now"
+                    android:visibility="gone"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
+
+            </LinearLayout>
         </LinearLayout>
     </FrameLayout>
 

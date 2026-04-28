@@ -106,6 +106,14 @@ class AudioRecorder(private val context: Context) {
     
     fun isCurrentlyRecording(): Boolean = isRecording
     
+    fun getMaxAmplitude(): Int {
+        return if (isRecording) {
+            mediaRecorder?.maxAmplitude ?: 0
+        } else {
+            0
+        }
+    }
+    
     fun getRecordingDuration(): Int {
         return if (isRecording) {
             ((System.currentTimeMillis() - startTime) / 1000).toInt()

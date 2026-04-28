@@ -11,6 +11,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="centerCrop"
+        android:contentDescription="@null"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/replyPreview_anchor"
         app:layout_constraintStart_toStartOf="parent"
@@ -56,6 +57,7 @@
                     android:layout_marginEnd="12dp"
                     android:src="@drawable/ic_loading_renew"
                     android:visibility="gone"
+                    android:contentDescription="@null"
                     app:tint="?attr/colorOnPrimary" />
 
                 <LinearLayout
@@ -391,7 +393,8 @@
                     android:padding="12dp"
                     android:maxLines="6"
                     android:textSize="16sp"
-                    android:inputType="textCapSentences|textMultiLine" />
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:autofillHints="none" />
 
                 <FrameLayout
                     android:layout_width="48dp"

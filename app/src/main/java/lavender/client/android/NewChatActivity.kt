@@ -10,13 +10,13 @@ import java.io.File
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.GridLayout
 import android.widget.ImageButton
@@ -37,6 +37,7 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.isGone
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
@@ -67,6 +68,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
+import android.content.pm.PackageManager
 
 class NewChatActivity : AppCompatActivity() {
 
@@ -80,8 +82,25 @@ class NewChatActivity : AppCompatActivity() {
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
     }
-    private val okHttpClient = OkHttpClient()
-    private lateinit var toolbar: Toolbar
+
+    private lateinit var viewModel: ChatViewModel
+    private val grpcClient = GrpcClient
+    private var username = ""
+    private var password = ""
+    private var roomId = ""
+    private var chatName = ""
+    private var isDirect = false
+    private var participantsJson = "[]"
+    private var creator = ""
+    private var chatAvatarUrl = ""
+
+    private var isTypingSignalSent = false
+    private var selectionMode = false
+    private var replyingTo: Message? = null
+    private var lastMessageCount = 0
+    private var currentPhotoUri: Uri? = null
+
+    private lateinit var toolbar: com.google.android.material.appbar.MaterialToolbar
     private lateinit var toolbarTitle: TextView
     private lateinit var toolbarSubtitle: TextView
     private lateinit var toolbarAvatar: CircleImageView
@@ -120,37 +139,15 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var searchNext: ImageButton
     private lateinit var searchPrev: ImageButton
     private lateinit var searchResultsCount: TextView
-    private var searchResults = listOf<Int>()
-    private var currentSearchIndex = -1
 
-    private var selectionMode = false
-    private var replyingTo: Message? = null
-    private var editingMessage: Message? = null
-
-    private lateinit var viewModel: ChatViewModel
     private lateinit var adapter: MessageAdapter
-
-    private var typingJob: Job? = null
-    private var isTypingSignalSent = false
-    private val grpcClient = GrpcClient
-
-    private lateinit var username: String
-    private lateinit var password: String
-    private lateinit var roomId: String
-    private lateinit var chatName: String
-    private var isDirect: Boolean = false
-    private lateinit var participantsJson: String
-    private var creator: String = ""
-    private var chatAvatarUrl: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val uris = mutableSetOf<Uri>()
             result.data?.data?.let { uris.add(it) }
             result.data?.clipData?.let { clipData ->
-                for (i in 0 until clipData.itemCount) {
-                    uris.add(clipData.getItemAt(i).uri)
-                }
+                for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
             }
             if (uris.isNotEmpty()) uploadFiles(uris.toList())
         }
@@ -161,31 +158,15 @@ class NewChatActivity : AppCompatActivity() {
             val uris = mutableSetOf<Uri>()
             result.data?.data?.let { uris.add(it) }
             result.data?.clipData?.let { clipData ->
-                for (i in 0 until clipData.itemCount) {
-                    uris.add(clipData.getItemAt(i).uri)
-                }
+                for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
             }
             if (uris.isNotEmpty()) uploadFiles(uris.toList())
         }
     }
 
-    private val pickLocationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val lat = result.data?.getDoubleExtra("lat", 0.0) ?: 0.0
-            val lng = result.data?.getDoubleExtra("lng", 0.0) ?: 0.0
-            if (lat != 0.0 || lng != 0.0) {
-                sendMessage("geo:$lat,$lng", "")
-            }
-        }
-    }
-
     private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) {
-            currentPhotoUri?.let { uploadFiles(listOf(it)) }
-        }
+        if (success) currentPhotoUri?.let { uploadFiles(listOf(it)) }
     }
-
-    private var currentPhotoUri: Uri? = null
 
     private fun createImageUri(): Uri? {
         val contentValues = android.content.ContentValues().apply {
@@ -196,39 +177,21 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        applySavedColorScheme()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         @Suppress("DEPRECATION")
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-        applySavedColorScheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_chat)
-
-        loadDataFromIntent()
-        initViews()
-        
-        // Load and apply theme
+        loadDataFromIntent(); initViews()
         lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
-                applyChatBackground()
-            }
+            runOnUiThread { lavender.client.android.ui.ThemeManager.applyTheme(this); applyChatBackground() }
         }
-        setupToolbar()
-        setupRecyclerView()
-        setupObservers()
-        setupListeners()
-        setupKeyboardHandling()
-
-        // Start chat and load history for the current room
+        setupToolbar(); setupRecyclerView(); setupObservers(); setupListeners(); setupKeyboardHandling(); fetchChatMetadataIfNeeded()
         viewModel.switchRoom(roomId)
-        viewModel.startChat(username, password, "") { _ ->
-            // Mark as read after chat starts and history loads
-            viewModel.markRead(username, this)
-        }
-
+        viewModel.startChat(username, password, "") { _ -> viewModel.markRead(username, this) }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (selectionMode) hideSelectionToolbar()
@@ -239,189 +202,74 @@ class NewChatActivity : AppCompatActivity() {
         })
     }
 
+    private fun fetchChatMetadataIfNeeded() {
+        if (participantsJson == "[]" || chatName == "Chat") {
+            grpcClient.getChats(username) { chats ->
+                val chat = chats.find { it.id == roomId }
+                if (chat != null) runOnUiThread {
+                    chatName = chat.name; isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl
+                    toolbarTitle.text = chatName
+                    if (!isDirect) {
+                        setupGroupAvatars()
+                        val arr = JSONArray(participantsJson)
+                        toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
+                        toolbarSubtitle.isVisible = true
+                    }
+                }
+            }
+        }
+    }
+
     private fun setupKeyboardHandling() {
         val root = findViewById<View>(android.R.id.content)
         val bottomPanel = findViewById<View>(R.id.bottomPanel)
         val bottomPanelContent = findViewById<View>(R.id.bottomPanelContent)
-        
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-            
-            // Apply top padding for status bar to toolbar
             toolbar.updatePadding(top = systemBars.top)
-
-            // Handle bottom panel and keyboard
-            // Use margin to push the whole panel above the keyboard/nav bar
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
-            
-            bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = if (isImeVisible) {
-                    imeInsets.bottom
-                } else {
-                    systemBars.bottom
-                }
-            }
-            
-            // Add a small padding to the inner content
-            bottomPanelContent.updatePadding(bottom = 4.dpToPx())
-
-            insets
+            bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom }
+            bottomPanelContent.updatePadding(bottom = 4.dpToPx()); insets
         }
     }
 
     private fun initViews() {
-        toolbar = findViewById(R.id.toolbar)
-        toolbarTitle = findViewById(R.id.toolbarTitle)
-        toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
-        toolbarAvatar = findViewById(R.id.toolbarAvatar)
-        toolbarLoadingIcon = findViewById(R.id.toolbarLoadingIcon)
-        groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer)
-        selectionToolbar = findViewById(R.id.selectionToolbar)
-        selectionCountText = findViewById(R.id.selectionCountText)
-        closeSelection = findViewById(R.id.closeSelection)
-        copyMessages = findViewById(R.id.copyMessages)
-        replyMessage = findViewById(R.id.replyMessage)
-        deleteMessages = findViewById(R.id.deleteMessages)
-        forwardMessages = findViewById(R.id.forwardMessages)
-        toolbarContent = findViewById(R.id.toolbarContent)
-        messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
-        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
-        messageInput = findViewById(R.id.messageInput)
-        sendButton = findViewById(R.id.sendButton)
-        attachButton = findViewById(R.id.attachButton)
-        audioButton = findViewById(R.id.audioButton)
-        uploadProgressBar = findViewById(R.id.uploadProgressBar)
-        audioRecordingView = findViewById(R.id.audioRecordingView)
-        replyPreview = findViewById(R.id.replyPreview)
-        replyUser = findViewById(R.id.replyUser)
-        replyText = findViewById(R.id.replyText)
-        cancelReply = findViewById(R.id.cancelReply)
-        emojiButton = findViewById(R.id.emojiButton)
-
-        mentionContainer = findViewById(R.id.mentionContainer)
-        mentionList = findViewById(R.id.mentionList)
-        mentionAdapter = MentionAdapter { selectedUser ->
-            insertMention(selectedUser)
-        }
-        mentionList.layoutManager = LinearLayoutManager(this)
-        mentionList.adapter = mentionAdapter
-
-        searchBar = findViewById(R.id.searchBar)
-        searchInput = findViewById(R.id.searchInput)
-        closeSearch = findViewById(R.id.closeSearch)
-        searchNext = findViewById(R.id.searchNext)
-        searchPrev = findViewById(R.id.searchPrev)
-        searchResultsCount = findViewById(R.id.searchResultsCount)
-        
-        // Initialize audio button visibility
-        audioButton.visibility = View.VISIBLE
+        toolbar = findViewById(R.id.toolbar); toolbarTitle = findViewById(R.id.toolbarTitle); toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
+        toolbarAvatar = findViewById(R.id.toolbarAvatar); toolbarLoadingIcon = findViewById(R.id.toolbarLoadingIcon)
+        groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer); selectionToolbar = findViewById(R.id.selectionToolbar)
+        selectionCountText = findViewById(R.id.selectionCountText); closeSelection = findViewById(R.id.closeSelection); copyMessages = findViewById(R.id.copyMessages)
+        replyMessage = findViewById(R.id.replyMessage); deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
+        toolbarContent = findViewById(R.id.toolbarContent); messagesRecyclerView = findViewById(R.id.messagesRecyclerView); swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
+        messageInput = findViewById(R.id.messageInput); sendButton = findViewById(R.id.sendButton); attachButton = findViewById(R.id.attachButton); audioButton = findViewById(R.id.audioButton)
+        uploadProgressBar = findViewById(R.id.uploadProgressBar); audioRecordingView = findViewById(R.id.audioRecordingView); replyPreview = findViewById(R.id.replyPreview)
+        replyUser = findViewById(R.id.replyUser); replyText = findViewById(R.id.replyText); cancelReply = findViewById(R.id.cancelReply); emojiButton = findViewById(R.id.emojiButton)
+        mentionContainer = findViewById(R.id.mentionContainer); mentionList = findViewById(R.id.mentionList); mentionAdapter = MentionAdapter { insertMention(it) }
+        mentionList.layoutManager = LinearLayoutManager(this); mentionList.adapter = mentionAdapter
+        searchBar = findViewById(R.id.searchBar); searchInput = findViewById(R.id.searchInput); closeSearch = findViewById(R.id.closeSearch)
+        searchNext = findViewById(R.id.searchNext); searchPrev = findViewById(R.id.searchPrev); searchResultsCount = findViewById(R.id.searchResultsCount)
+        audioButton.isVisible = true
     }
 
     private fun loadDataFromIntent() {
-        username = intent.getStringExtra("USERNAME") ?: ""
-        password = intent.getStringExtra("PASSWORD") ?: ""
-        roomId = intent.getStringExtra("ROOM_ID") ?: ""
-        chatName = intent.getStringExtra("CHAT_NAME") ?: "Chat"
-        isDirect = intent.getBooleanExtra("IS_DIRECT", false)
-        participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"
-        creator = intent.getStringExtra("CREATOR") ?: ""
-        chatAvatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
-    }
-
-    private var otherUserAvatarUrl: String = ""
-
-    private fun showToolbarLoading() {
-        if (toolbarAvatar.isVisible) {
-            toolbarAvatar.tag = "visible"
-            toolbarAvatar.visibility = View.GONE
-        } else {
-            toolbarAvatar.tag = "gone"
-        }
-        toolbarLoadingIcon.visibility = View.VISIBLE
-        val rotate = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
-        toolbarLoadingIcon.startAnimation(rotate)
+        username = intent.getStringExtra("USERNAME") ?: ""; password = intent.getStringExtra("PASSWORD") ?: ""; roomId = intent.getStringExtra("ROOM_ID") ?: ""
+        chatName = intent.getStringExtra("CHAT_NAME") ?: "Chat"; isDirect = intent.getBooleanExtra("IS_DIRECT", false)
+        participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"; creator = intent.getStringExtra("CREATOR") ?: ""; chatAvatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
     }
 
     private fun setupToolbar() {
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
-
-        toolbar.setNavigationOnClickListener {
-            if (selectionMode) hideSelectionToolbar() else finish()
-        }
-
-        // Use consistent height for all chat types for better Edge-to-Edge support
+        setSupportActionBar(toolbar); supportActionBar?.setDisplayHomeAsUpEnabled(true); supportActionBar?.setDisplayShowTitleEnabled(false)
+        toolbar.setNavigationOnClickListener { if (selectionMode) hideSelectionToolbar() else finish() }
         toolbar.layoutParams.height = resources.getDimensionPixelSize(R.dimen.custom_toolbar_height)
-        
-        if (isDirect) {
-            toolbarAvatar.isVisible = true
-            groupParticipantsContainer.isVisible = false
-            val arr = JSONArray(participantsJson)
-            val otherUser = if (arr.length() > 0) {
-                var found = ""
-                for (i in 0 until arr.length()) {
-                    val u = arr.getString(i)
-                    if (u != username) { found = u; break }
-                }
-                found.ifEmpty { arr.getString(0) }
-            } else chatName
-
-            toolbarTitle.text = otherUser
-            
-            grpcClient.getUserAvatar(otherUser) { url ->
-                otherUserAvatarUrl = url
-                runOnUiThread {
-                    if (url.isNotEmpty()) {
-                        com.bumptech.glide.Glide.with(this).load(url)
-                            .placeholder(R.drawable.ic_default_avatar).into(toolbarAvatar)
-                    } else toolbarAvatar.setImageResource(R.drawable.ic_default_avatar)
-                }
-            }
-
-            val openProfile = {
-                showToolbarLoading()
-                val intent = Intent(this, ProfileActivity::class.java)
-                    .putExtra("username", otherUser)
-                    .putExtra("avatar_url", otherUserAvatarUrl)
-                startActivity(intent)
-            }
-
-            toolbarAvatar.setOnClickListener { openProfile() }
-            toolbarTitle.setOnClickListener { openProfile() }
-            toolbarSubtitle.setOnClickListener { openProfile() }
-
-        } else {
-            toolbarTitle.text = chatName
-            
+        if (isDirect) toolbarAvatar.isVisible = true else {
             if (chatAvatarUrl.isNotEmpty()) {
-                toolbarAvatar.isVisible = true
-                groupParticipantsContainer.isVisible = false
-                com.bumptech.glide.Glide.with(this).load(chatAvatarUrl)
-                    .placeholder(R.drawable.ic_default_avatar).into(toolbarAvatar)
-            } else {
-                toolbarAvatar.isVisible = false
-                groupParticipantsContainer.isVisible = true
-                setupGroupAvatars()
-            }
-
-            val openGroupInfo = {
-                showToolbarLoading()
-                // For group chat, we can also show a profile-like activity or group info
-                val intent = Intent(this, ProfileActivity::class.java)
-                    .putExtra("username", chatName)
-                    .putExtra("is_group", true)
-                    .putExtra("room_id", roomId)
-                    .putExtra("avatar_url", chatAvatarUrl)
-                    .putExtra("participants", participantsJson)
-                    .putExtra("creator", creator)
-                startActivity(intent)
-            }
-            toolbarAvatar.setOnClickListener { openGroupInfo() }
-            toolbarTitle.setOnClickListener { openGroupInfo() }
-            groupParticipantsContainer.setOnClickListener { openGroupInfo() }
-            toolbarSubtitle.setOnClickListener { openGroupInfo() }
+                toolbarAvatar.isVisible = true; com.bumptech.glide.Glide.with(this).load(chatAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
+            } else { toolbarAvatar.isVisible = false; groupParticipantsContainer.isVisible = true; setupGroupAvatars() }
+        }
+        toolbarTitle.text = chatName
+        toolbarContent.setOnClickListener {
+            val intent = Intent(this, ProfileActivity::class.java).apply { putExtra("username", chatName); putExtra("is_group", !isDirect); putExtra("room_id", roomId); putExtra("avatar_url", chatAvatarUrl); putExtra("participants", participantsJson); putExtra("creator", creator) }
+            startActivity(intent)
         }
     }
 
@@ -431,217 +279,86 @@ class NewChatActivity : AppCompatActivity() {
         for (i in 0 until arr.length().coerceAtMost(3)) {
             val u = arr.getString(i)
             val iv = CircleImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(34.dpToPx(), 34.dpToPx()).apply {
-                    marginStart = if (i > 0) (-10).dpToPx() else 0
-                }
-                borderWidth = 1.dpToPx()
-                borderColor = ContextCompat.getColor(this@NewChatActivity, R.color.lavender_mist)
+                layoutParams = LinearLayout.LayoutParams(34.dpToPx(), 34.dpToPx()).apply { marginStart = if (i > 0) (-10).dpToPx() else 0 }
+                borderWidth = 1.dpToPx(); borderColor = ContextCompat.getColor(this@NewChatActivity, R.color.lavender_mist)
             }
-            grpcClient.getUserAvatar(u) { url ->
-                runOnUiThread {
-                    if (url.isNotEmpty()) {
-                        com.bumptech.glide.Glide.with(this).load(url)
-                            .placeholder(R.drawable.ic_default_avatar).into(iv)
-                    } else iv.setImageResource(R.drawable.ic_default_avatar)
-                }
-            }
+            val cache = grpcClient.getAvatarCache(); val url = cache[u]
+            if (!url.isNullOrEmpty()) com.bumptech.glide.Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).circleCrop().into(iv)
+            else iv.setImageResource(R.drawable.ic_default_avatar)
             groupParticipantsContainer.addView(iv)
         }
-        toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
     }
-
-    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
-
-    override fun onResume() {
-        super.onResume()
-        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
-        
-        // Hide loading and stop animation
-        toolbarLoadingIcon.visibility = View.GONE
-        toolbarLoadingIcon.clearAnimation()
-        if (toolbarAvatar.tag == "visible") toolbarAvatar.visibility = View.VISIBLE
-        
-        applySavedColorScheme()
-        refreshChatInfo()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
-    }
-
-    private fun refreshChatInfo() {
-        if (roomId.isEmpty()) return
-        grpcClient.getChats(username) { chats ->
-            val chat = chats.find { it.id == roomId }
-            if (chat != null) {
-                runOnUiThread {
-                    participantsJson = chat.participants
-                    creator = chat.creator
-                    chatName = chat.name
-                    chatAvatarUrl = chat.avatarUrl
-                    if (!isDirect) {
-                        toolbarTitle.text = chatName
-                        if (chatAvatarUrl.isNotEmpty()) {
-                            toolbarAvatar.isVisible = true
-                            groupParticipantsContainer.isVisible = false
-                            com.bumptech.glide.Glide.with(this@NewChatActivity).load(chatAvatarUrl)
-                                .placeholder(R.drawable.ic_default_avatar).into(toolbarAvatar)
-                        } else {
-                            toolbarAvatar.isVisible = false
-                            groupParticipantsContainer.isVisible = true
-                            setupGroupAvatars()
-                        }
-                    }
-                }
-            } else {
-                // Room no longer exists (deleted)
-                runOnUiThread {
-                    finish()
-                }
-            }
-        }
-    }
-
-    private fun getSavedColorScheme(): String? = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")
 
     private fun setupRecyclerView() {
         adapter = MessageAdapter(
             currentUsername = username,
             isGroupChat = !isDirect,
             adminUsername = creator,
-            onSelectionChanged = { count ->
-                if (count > 0) showSelectionToolbar(count) else hideSelectionToolbar()
-            },
-            onMessageClick = { message ->
-                if (selectionMode) return@MessageAdapter
-                if (message.imageUrl.isNotEmpty()) showFullScreenImage(message.imageUrl)
-                else if (message.text.startsWith("geo:")) openLocation(message.text)
-                else showReactionsDialog(message)
-            },
-            onImageLongClick = { message ->
-                // Show reactions dialog on long press for images
-                showReactionsDialog(message)
-            }
+            onMessageClick = { if (it.imageUrl.isNotEmpty()) showFullScreenImage(it.imageUrl) },
+            onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
+            onImageLongClick = { showReactionsDialog(it) }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
-        
-        swipeRefreshLayout.setOnRefreshListener {
-            fullReloadHistory()
-        }
         messagesRecyclerView.adapter = adapter
-
-        val swipeController = MessageSwipeController(this) { position, direction ->
-            if (direction == androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
-                val message = adapter.currentList[position]
-                showReplyPreview(message)
-                adapter.notifyItemChanged(position)
-            } else if (direction == androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
-                finish()
-            }
+        val swipeController = MessageSwipeController(this) { position, _ ->
+            showReplyPreview(adapter.currentList[position])
+            adapter.notifyItemChanged(position)
         }
         ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
-
-        // Mark as read when scrolling to bottom
-        messagesRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                val lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
-                val totalItemCount = layoutManager.itemCount
-
-                if (lastVisiblePosition == totalItemCount - 1) {
-                    viewModel.markRead(username, this@NewChatActivity)
-                }
-            }
-        })
+        swipeRefreshLayout.setOnRefreshListener { fullReloadHistory() }
     }
 
-    private var lastMessageCount = 0
-
     private fun setupObservers() {
-        val factory = ChatViewModelFactory(roomId)
-        viewModel = ViewModelProvider(this, factory)[ChatViewModel::class.java]
-
+        viewModel = ViewModelProvider(this, ChatViewModelFactory(roomId))[ChatViewModel::class.java]
         lifecycleScope.launch {
-            viewModel.messages.collect { messages ->
-                // Filter messages by current room_id and sort by timestamp
-                val roomMessages = messages.filter { it.roomId == roomId }
-                    .sortedBy { it.timestamp }
-
-                val wasAtBottom = (messagesRecyclerView.layoutManager as? LinearLayoutManager)?.let {
-                    it.findLastVisibleItemPosition() >= lastMessageCount - 2
-                } ?: true
-
-                val isFirstLoad = lastMessageCount == 0
-                val hasNewMessages = roomMessages.size > lastMessageCount
-
-                adapter.submitList(roomMessages) {
-                    if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) {
-                        messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
-                    }
-                }
+            viewModel.messages.collect { roomMessages ->
+                val wasAtBottom = (messagesRecyclerView.layoutManager as? LinearLayoutManager)?.let { it.findLastVisibleItemPosition() >= lastMessageCount - 2 } ?: true
+                val isFirstLoad = lastMessageCount == 0; val hasNewMessages = roomMessages.size > lastMessageCount
+                adapter.submitList(roomMessages) { if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
                 lastMessageCount = roomMessages.size
             }
         }
-
         lifecycleScope.launch {
             grpcClient.typingUsers.collect { typingMap ->
-                val users = typingMap[roomId] ?: emptySet()
-                val otherTyping = users.filter { it != username }
+                val otherTyping = (typingMap[roomId] ?: emptySet()).filter { it != username }
                 runOnUiThread {
                     if (otherTyping.isNotEmpty()) {
-                        toolbarSubtitle.isVisible = true
-                        toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first())
-                        else getString(R.string.users_are_typing, otherTyping.size)
-                    } else {
-                        if (isDirect) toolbarSubtitle.isVisible = false
-                        else {
-                            val arr = JSONArray(participantsJson)
-                            toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
-                        }
-                    }
+                        toolbarSubtitle.isVisible = true; toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first()) else getString(R.string.users_are_typing, otherTyping.size)
+                    } else if (!isDirect) { val arr = JSONArray(participantsJson); toolbarSubtitle.text = getString(R.string.participants_count, arr.length()) }
                 }
             }
         }
-
         lifecycleScope.launch {
             grpcClient.connectionState.collect { connected ->
                 runOnUiThread {
                     if (!connected) {
                         toolbarSubtitle.isVisible = true
                         toolbarSubtitle.text = getString(R.string.connecting)
-                        val typedValue = android.util.TypedValue()
+                        val typedValue = TypedValue()
                         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
                         toolbarSubtitle.setTextColor(typedValue.data)
-                    } else {
-                        // Restore normal subtitle when connected
-                        if (isDirect) {
-                            // Online status observation will handle this
-                        } else {
-                            val arr = JSONArray(participantsJson)
-                            toolbarSubtitle.isVisible = true
-                            toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
-                        }
+                    } else if (!isDirect) {
+                        val arr = JSONArray(participantsJson)
+                        toolbarSubtitle.isVisible = true
+                        toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
                     }
                 }
             }
         }
-
         lifecycleScope.launch {
             grpcClient.users.collect { onlineUsers ->
                 runOnUiThread {
                     if (isDirect && grpcClient.connectionState.value) {
-                        val otherUser = (0 until JSONArray(participantsJson).length())
-                            .map { JSONArray(participantsJson).getString(it) }
-                            .find { it != username } ?: return@runOnUiThread
-                        
+                        val otherUser = JSONArray(participantsJson).let { arr ->
+                            (0 until arr.length()).asSequence().map { arr.getString(it) }.find { it != username }
+                        } ?: return@runOnUiThread
                         val isOnline = onlineUsers.contains(otherUser)
                         toolbarSubtitle.isVisible = true
                         toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
                         toolbarSubtitle.setTextColor(
-                            if (isOnline) getColor(android.R.color.holo_green_dark) 
+                            if (isOnline) getColor(android.R.color.holo_green_dark)
                             else {
-                                val typedValue = android.util.TypedValue()
+                                val typedValue = TypedValue()
                                 theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
                                 typedValue.data
                             }
@@ -652,821 +369,145 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.chat_menu, menu)
-        return true
-    }
-
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val searchItem = menu.findItem(R.id.action_search)
-        searchItem?.isVisible = !selectionMode
-        return super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_search -> {
-                showSearchBar()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun showSearchBar() {
-        toolbarContent.isVisible = false
-        searchBar.isVisible = true
-        toolbar.navigationIcon = null
-        searchInput.requestFocus()
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.showSoftInput(searchInput, 0)
-    }
-
-    private fun hideSearchBar() {
-        searchBar.isVisible = false
-        toolbarContent.isVisible = true
-        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
-        searchInput.setText("")
-        searchResults = emptyList()
-        currentSearchIndex = -1
-        adapter.setSearchHighlight(null)
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.hideSoftInputFromWindow(searchInput.windowToken, 0)
-    }
-
-    private fun performSearch(query: String) {
-        if (query.isEmpty()) {
-            searchResults = emptyList()
-            currentSearchIndex = -1
-            searchResultsCount.text = ""
-            adapter.setSearchHighlight(null)
-            return
-        }
-
-        val messages = adapter.currentList
-        searchResults = messages.indices.filter { i ->
-            messages[i].text.contains(query, ignoreCase = true)
-        }
-
-        if (searchResults.isNotEmpty()) {
-            currentSearchIndex = searchResults.size - 1 // Start from most recent
-            updateSearchNavigation()
-        } else {
-            currentSearchIndex = -1
-            searchResultsCount.text = getString(R.string.no_results)
-            adapter.setSearchHighlight(null)
-        }
-    }
-
-    private fun updateSearchNavigation() {
-        if (searchResults.isEmpty()) return
-        searchResultsCount.text = getString(R.string.search_results_format, currentSearchIndex + 1, searchResults.size)
-        val targetPos = searchResults[currentSearchIndex]
-        messagesRecyclerView.scrollToPosition(targetPos)
-        adapter.setSearchHighlight(searchInput.text.toString())
-    }
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean { menuInflater.inflate(R.menu.chat_menu, menu); return true }
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean { menu.findItem(R.id.action_search)?.isVisible = !selectionMode; return super.onPrepareOptionsMenu(menu) }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean { return when (item.itemId) { R.id.action_search -> { showSearchBar(); true }; else -> super.onOptionsItemSelected(item) } }
 
     private fun setupListeners() {
+        sendButton.setOnClickListener {
+            val text = messageInput.text.toString().trim()
+            if (text.isNotEmpty()) {
+                sendMessage(text, "")
+                messageInput.text.clear()
+                hideReplyPreview()
+            }
+        }
+        attachButton.setOnClickListener {
+            val options = arrayOf(getString(R.string.take_photo), getString(R.string.gallery), getString(R.string.file))
+            AlertDialog.Builder(this).setTitle(R.string.attach_file).setItems(options) { _, which ->
+                when (which) {
+                    0 -> { currentPhotoUri = createImageUri(); currentPhotoUri?.let { takePhotoLauncher.launch(it) } }
+                    1 -> { val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply { putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }; pickImageLauncher.launch(intent) }
+                    2 -> { val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }; pickFileLauncher.launch(intent) }
+                }
+            }.show()
+        }
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                handleMention(s)
                 if (!isTypingSignalSent) {
-                    grpcClient.sendTypingSignal(username, true)
-                    isTypingSignalSent = true
+                    isTypingSignalSent = true; grpcClient.sendTypingSignal(username, true)
+                    lifecycleScope.launch { delay(3000); isTypingSignalSent = false }
                 }
-                typingJob?.cancel()
-                typingJob = lifecycleScope.launch {
-                    delay(3000)
-                    grpcClient.sendTypingSignal(username, false)
-                    isTypingSignalSent = false
-                }
-                
-                // Show/hide audio button based on text input
-                val hasText = s.toString().trim().isNotEmpty()
-                audioButton.visibility = if (hasText && audioRecordingView.visibility == View.GONE) View.GONE else View.VISIBLE
-                
-                handleMention(s, start, count)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
-
-        sendButton.setOnClickListener {
-            val text = messageInput.text.toString().trim()
-            if (text.isNotEmpty() || replyingTo != null) {
-                if (editingMessage != null) {
-                    val originalMessage = editingMessage!!
-                    if (text != originalMessage.text) {
-                        Log.d("NewChatActivity", "Editing message ${originalMessage.id} to: $text")
-                        grpcClient.editMessage(originalMessage.id, text) { success, errorMsg ->
-                            Log.d("NewChatActivity", "Edit result: success=$success, error=$errorMsg")
-                            if (success) {
-                                // Update local message immediately with edited flag
-                                val updatedMessage = originalMessage.copy(text = text, timestamp = System.currentTimeMillis(), edited = true)
-                                viewModel.updateMessage(updatedMessage)
-                            } else {
-                                Log.e("NewChatActivity", "Failed to edit message: $errorMsg")
-                            }
-                        }
-                    }
-                    editingMessage = null
-                    messageInput.setText("")
-                    sendButton.setImageResource(R.drawable.send_24)
-                } else {
-                    sendMessage(text, "")
-                    messageInput.setText("")
-                    hideReplyPreview()
-                }
-            }
-        }
-
-        attachButton.setOnClickListener {
-            showAttachmentDialog()
-        }
-
-        audioButton.setOnClickListener {
-            showAudioRecordingView()
-        }
-
-        closeSelection.setOnClickListener { hideSelectionToolbar() }
-
-        emojiButton.setOnClickListener {
-            showEmojiDialog()
-        }
-
-        copyMessages.setOnClickListener {
-            val selected = adapter.getSelectedMessages()
-            val text = selected.joinToString("\n") { "[${it.user}]: ${it.text}" }
-            (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("messages", text))
-            Toast.makeText(this, "Copied ${selected.size} messages", Toast.LENGTH_SHORT).show()
-            hideSelectionToolbar()
-        }
-
-        replyMessage.setOnClickListener {
-            val selected = adapter.getSelectedMessages()
-            if (selected.size == 1) {
-                showReplyPreview(selected[0])
-                hideSelectionToolbar()
-            }
-        }
-
-        deleteMessages.setOnClickListener {
-            val selected = adapter.getSelectedMessages()
-            AlertDialog.Builder(this)
-                .setTitle(R.string.delete_messages_title)
-                .setMessage(getString(R.string.delete_messages_confirm, selected.size))
-                .setPositiveButton(R.string.delete) { _, _ ->
-                    selected.forEach { grpcClient.deleteMessage(it) }
-                    hideSelectionToolbar()
-                }
-                .setNegativeButton(R.string.cancel, null).show()
-        }
-
-        forwardMessages.setOnClickListener {
-            val selected = adapter.getSelectedMessages()
-            if (selected.isNotEmpty()) {
-                showForwardDialog(selected)
-                hideSelectionToolbar()
-            }
-        }
-
         cancelReply.setOnClickListener { hideReplyPreview() }
-
-        searchInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                performSearch(s.toString())
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
         closeSearch.setOnClickListener { hideSearchBar() }
-        searchNext.setOnClickListener {
-            if (searchResults.isNotEmpty()) {
-                currentSearchIndex = (currentSearchIndex + 1) % searchResults.size
-                updateSearchNavigation()
-            }
-        }
-        searchPrev.setOnClickListener {
-            if (searchResults.isNotEmpty()) {
-                currentSearchIndex = if (currentSearchIndex > 0) currentSearchIndex - 1 else searchResults.size - 1
-                updateSearchNavigation()
-            }
-        }
+        audioButton.setOnClickListener { showAudioRecordingView() }
     }
 
-    private fun showAttachmentDialog() {
-        val root = findViewById<ViewGroup>(android.R.id.content)
-        val dialogView = layoutInflater.inflate(R.layout.dialog_attachment_picker, root, false)
-        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        dialog.setContentView(dialogView)
+    private fun showSearchBar() { searchBar.isVisible = true; toolbarContent.isVisible = false; searchInput.requestFocus(); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0) }
+    private fun hideSearchBar() { searchBar.isVisible = false; toolbarContent.isVisible = true; searchInput.text.clear(); adapter.setSearchHighlight(null); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0) }
 
-        dialogView.findViewById<View>(R.id.attachCamera).setOnClickListener {
-            currentPhotoUri = createImageUri()
-            currentPhotoUri?.let { takePhotoLauncher.launch(it) }
-            dialog.dismiss()
-        }
-        dialogView.findViewById<View>(R.id.attachGallery).setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
-                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-            }
-            pickImageLauncher.launch(intent)
-            dialog.dismiss()
-        }
-        dialogView.findViewById<View>(R.id.attachFile).setOnClickListener {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "*/*"
-                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                addCategory(Intent.CATEGORY_OPENABLE)
-            }
-            pickFileLauncher.launch(intent)
-            dialog.dismiss()
-        }
-        dialogView.findViewById<View>(R.id.attachLocation).setOnClickListener {
-            val intent = Intent(this, MapPickerActivity::class.java)
-            pickLocationLauncher.launch(intent)
-            dialog.dismiss()
-        }
-
-        dialog.show()
-    }
-
-    private fun handleMention(s: CharSequence?, start: Int, count: Int) {
+    private fun handleMention(s: CharSequence?) {
         if (isDirect) return
-        
-        val cursorPosition = messageInput.selectionStart
-        val text = s?.toString() ?: ""
-        
-        if (cursorPosition <= 0) {
-            mentionContainer.isVisible = false
-            return
-        }
-
-        // Find the start of the current word
+        val cursorPosition = messageInput.selectionStart; val text = s?.toString() ?: ""; if (cursorPosition <= 0) { mentionContainer.isVisible = false; return }
         var lastAt = -1
-        for (i in (cursorPosition - 1) downTo 0) {
-            if (text[i] == '@') {
-                lastAt = i
-                break
-            }
-            if (text[i] == ' ') break
-        }
-
+        for (i in (cursorPosition - 1) downTo 0) { if (text[i] == '@') { lastAt = i; break }; if (text[i] == ' ') break }
         if (lastAt != -1) {
-            val query = text.substring(lastAt + 1, cursorPosition).lowercase()
-            val participants = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
-            val filteredUsers = mutableListOf<String>()
-            val avatarCache = grpcClient.getAvatarCache()
-            
-            for (i in 0 until participants.length()) {
-                val u = participants.getString(i)
-                if (u != username && u.lowercase().contains(query)) {
-                    filteredUsers.add(u)
-                }
-            }
-
-            if (filteredUsers.isNotEmpty()) {
-                mentionAdapter.setUsers(filteredUsers, avatarCache)
-                mentionContainer.isVisible = true
-            } else {
-                mentionContainer.isVisible = false
-            }
-        } else {
-            mentionContainer.isVisible = false
-        }
+            val query = text.substring(lastAt + 1, cursorPosition).lowercase(); val participants = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
+            val filteredUsers = mutableListOf<String>(); val avatarCache = grpcClient.getAvatarCache()
+            for (i in 0 until participants.length()) { val u = participants.getString(i); if (u != username && u.lowercase().contains(query)) filteredUsers.add(u) }
+            if (filteredUsers.isNotEmpty()) { mentionAdapter.setUsers(filteredUsers, avatarCache); mentionContainer.isVisible = true } else mentionContainer.isVisible = false
+        } else mentionContainer.isVisible = false
     }
 
     private fun insertMention(selectedUser: String) {
-        val cursorPosition = messageInput.selectionStart
-        val text = messageInput.text.toString()
-        
-        var lastAt = -1
-        for (i in (cursorPosition - 1) downTo 0) {
-            if (text[i] == '@') {
-                lastAt = i
-                break
-            }
-            if (text[i] == ' ') break
-        }
-
-        if (lastAt != -1) {
-            val newText = text.substring(0, lastAt + 1) + selectedUser + " " + text.substring(cursorPosition)
-            messageInput.setText(newText)
-            messageInput.setSelection(lastAt + selectedUser.length + 2)
-        }
+        val cursorPosition = messageInput.selectionStart; val text = messageInput.text.toString(); var lastAt = -1
+        for (i in (cursorPosition - 1) downTo 0) { if (text[i] == '@') { lastAt = i; break }; if (text[i] == ' ') break }
+        if (lastAt != -1) { val newText = text.substring(0, lastAt + 1) + selectedUser + " " + text.substring(cursorPosition); messageInput.setText(newText); messageInput.setSelection(lastAt + selectedUser.length + 1) }
         mentionContainer.isVisible = false
     }
 
-    private fun showFullScreenImage(imageUrl: String) {
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).create()
-        val layout = RelativeLayout(this)
-        val imageView = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-        }
-        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge)
-        
-        layout.addView(imageView, RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
-        layout.addView(progressBar, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        })
-
-        dialog.setView(layout)
-        imageView.setOnClickListener { dialog.dismiss() }
-        
-        com.bumptech.glide.Glide.with(this)
-            .load(imageUrl)
-            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-                    progressBar.isVisible = false
-                    return false
-                }
-                override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
-                    progressBar.isVisible = false
-                    return false
-                }
-            })
-            .into(imageView)
-
-        dialog.show()
-    }
-
-    private fun showSelectionToolbar(count: Int) {
-        selectionMode = true
-        invalidateOptionsMenu()
-        toolbarContent.isVisible = false
-        selectionToolbar.isVisible = true
-        selectionCountText.text = count.toString()
-        supportActionBar?.setDisplayHomeAsUpEnabled(false)
-        replyMessage.isVisible = count == 1
-        forwardMessages.isVisible = count > 0
-    }
-
-    private fun hideSelectionToolbar() {
-        if (!selectionMode) return
-        selectionMode = false
-        adapter.toggleSelectionMode(false)
-        invalidateOptionsMenu()
-        selectionToolbar.isVisible = false
-        toolbarContent.isVisible = true
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
-        toolbar.navigationIcon?.let {
-            val wrapped = DrawableCompat.wrap(it)
-            DrawableCompat.setTint(wrapped, ContextCompat.getColor(this, R.color.white))
-            toolbar.navigationIcon = wrapped
-        }
-    }
-
-    private fun showReplyPreview(message: Message) {
-        replyingTo = message
-        replyPreview.isVisible = true
-        replyUser.text = message.user
-        replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text
-        messageInput.requestFocus()
-    }
-
-    private fun hideReplyPreview() {
-        replyingTo = null
-        replyPreview.isVisible = false
-    }
-
-    private fun fullReloadHistory() {
-        swipeRefreshLayout.isRefreshing = true
-        
-        // Safety timeout
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            if (swipeRefreshLayout.isRefreshing) {
-                swipeRefreshLayout.isRefreshing = false
-            }
-        }, 5000)
-
-        grpcClient.clearMessages() 
-        grpcClient.loadHistory(roomId) {
-            runOnUiThread {
-                swipeRefreshLayout.isRefreshing = false
-            }
-        }
-    }
-
-    private fun sendMessage(text: String, imageUrl: String) {
-        val msg = Message(
-            user = username, text = text, timestamp = System.currentTimeMillis(),
-            roomId = roomId, imageUrl = imageUrl,
-            repliedToMessageId = replyingTo?.id ?: "",
-            repliedToUser = replyingTo?.user ?: "",
-            repliedToText = replyingTo?.text ?: ""
-        )
-        
-        // Log outgoing notification if enabled
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        if (prefs.getBoolean("push_send_enabled", true)) {
-            lavender.client.android.data.fcm.NotificationHistory.add(
-                title = "Sent to $chatName",
-                body = text.ifEmpty { "[Image]" },
-                from = roomId,
-                isOutgoing = true
-            )
-        }
-
-        grpcClient.sendMessage(msg)
-    }
-
+    private fun showFullScreenImage(imageUrl: String) { val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", imageUrl) }; startActivity(intent) }
+    private fun showSelectionToolbar(count: Int) { selectionMode = true; invalidateOptionsMenu(); toolbarContent.isVisible = false; selectionToolbar.isVisible = true; selectionCountText.text = count.toString(); supportActionBar?.setDisplayHomeAsUpEnabled(false); replyMessage.isVisible = count == 1; forwardMessages.isVisible = count > 0 }
+    private fun hideSelectionToolbar() { if (!selectionMode) return; selectionMode = false; adapter.toggleSelectionMode(false); invalidateOptionsMenu(); selectionToolbar.isVisible = false; toolbarContent.isVisible = true; supportActionBar?.setDisplayHomeAsUpEnabled(true); toolbar.setNavigationIcon(R.drawable.ic_back_arrow); toolbar.navigationIcon?.let { val wrapped = DrawableCompat.wrap(it); DrawableCompat.setTint(wrapped, ContextCompat.getColor(this, R.color.white)); toolbar.navigationIcon = wrapped } }
+    private fun showReplyPreview(message: Message) { replyingTo = message; replyPreview.isVisible = true; replyUser.text = message.user; replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text; messageInput.requestFocus() }
+    private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
+    private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
+    private fun sendMessage(text: String, imageUrl: String) { val msg = Message(user = username, text = text, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: ""); grpcClient.sendMessage(msg) }
     private fun showReactionsDialog(message: Message) {
-        val root = findViewById<ViewGroup>(android.R.id.content)
-        val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false)
-        val container = dialogView.findViewById<LinearLayout>(R.id.reactionsContainer)
-        val menuReply = dialogView.findViewById<LinearLayout>(R.id.menuReply)
-        val menuCopy = dialogView.findViewById<LinearLayout>(R.id.menuCopy)
-        val menuEdit = dialogView.findViewById<LinearLayout>(R.id.menuEdit)
-        val menuDelete = dialogView.findViewById<LinearLayout>(R.id.menuDelete)
-
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-
-        // Add emoji reactions (top)
-        val emojis = listOf("❤️", "👍", "🔥", "😂", "😮", "😢", "🙏", "✅")
-        emojis.forEach { emoji ->
-            container.addView(TextView(this).apply {
-                text = emoji
-                textSize = 30f
-                setPadding(16, 16, 16, 16)
-                setOnClickListener {
-                    grpcClient.setReaction(message.id, username, emoji)
-                    dialog.dismiss()
-                }
-            })
-        }
-
-        // Setup menu items
-        menuReply.setOnClickListener {
-            replyingTo = message
-            showReplyPreview(message)
-            dialog.dismiss()
-        }
-
-        menuCopy.setOnClickListener {
-            val text = "[${message.user}]: ${message.text}"
-            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("message", text))
-            Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
-            dialog.dismiss()
-        }
-
-        // Show edit only for own messages
-        menuEdit.isVisible = message.user == username
-        menuEdit.setOnClickListener {
-            editingMessage = message
-            val cleanText = message.text.removeSuffix(" (edited)")
-            messageInput.setText(cleanText)
-            messageInput.setSelection(cleanText.length)
-            messageInput.requestFocus()
-            sendButton.setImageResource(R.drawable.ic_checked)
-            dialog.dismiss()
-        }
-
-        // Show delete only for own messages
-        menuDelete.isVisible = message.user == username
-        menuDelete.setOnClickListener {
-            grpcClient.deleteMessage(message)
-            dialog.dismiss()
-        }
-
-        dialog.show()
-    }
-
-    private fun showEmojiDialog() {
-        val root = findViewById<ViewGroup>(android.R.id.content)
-        val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, root, false)
-        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        dialog.setContentView(dialogView)
-
-        val emojis = listOf("😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
-            "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
-            "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
-            "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
-            "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬",
-            "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗",
-            "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯",
-            "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐",
-            "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈",
-            "👿", "👹", "👺", "🤡", "👻", "💀", "☠️", "👽", "👾", "🤖",
-            "🎃", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾")
-
-        val container = dialogView.findViewById<GridLayout>(R.id.emojiGrid)
-        container.columnCount = 7
-
-        emojis.forEach { emoji ->
-            val textView = TextView(this).apply {
-                text = emoji
-                textSize = 24f
-                gravity = Gravity.CENTER
-                setPadding(8, 8, 8, 8)
-                isClickable = true
-                isFocusable = true
-                val outValue = TypedValue()
-                context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
-                setBackgroundResource(outValue.resourceId)
-                setOnClickListener {
-                    val cursorPosition = messageInput.selectionStart
-                    val text = messageInput.text.toString()
-                    val newText = text.substring(0, cursorPosition) + emoji + text.substring(cursorPosition)
-                    messageInput.setText(newText)
-                    messageInput.setSelection(cursorPosition + emoji.length)
-                    dialog.dismiss()
-                }
-            }
-            container.addView(textView)
-        }
-
-        dialog.show()
-    }
-
-    private fun uploadFiles(uris: List<Uri>) {
-        attachButton.isVisible = false
-        uploadProgressBar.isVisible = true
-        lifecycleScope.launch {
-            try {
-                uris.forEach { uri ->
-                    uploadFile(uri)
-                }
-            } catch (_: Exception) {
-                withContext(Dispatchers.Main) { Toast.makeText(this@NewChatActivity, "Error", Toast.LENGTH_SHORT).show() }
-            } finally {
-                withContext(Dispatchers.Main) {
-                    attachButton.isVisible = true
-                    uploadProgressBar.isVisible = false
-                }
-            }
-        }
-    }
-
-    private suspend fun uploadFile(uri: Uri) {
-        val fileName = getFileName(uri) ?: "file"
-        val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
-        val isImage = mimeType.startsWith("image/")
-
-        val bytes = withContext(Dispatchers.IO) { 
-            contentResolver.openInputStream(uri)?.use { it.readBytes() } 
-        } ?: return
-
-        val formKey = if (isImage) "image" else "file"
-        val uploadEndpoint = if (isImage) "upload-image" else "upload-file"
-
-        val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart(formKey, fileName, bytes.toRequestBody(mimeType.toMediaTypeOrNull()))
-            .build()
-        
-        val request = Request.Builder()
-            .url("http://159.195.38.145:8082/$uploadEndpoint")
-            .post(requestBody)
-            .build()
-        
-        val response = withContext(Dispatchers.IO) { okHttpClient.newCall(request).execute() }
-        if (response.isSuccessful) {
-            val responseBody = response.body.string()
-            val fileUrl = JSONObject(responseBody).getString("url")
-            withContext(Dispatchers.Main) {
-                if (isImage) {
-                    sendMessage("", fileUrl)
-                } else {
-                    sendMessage("File: $fileName\n$fileUrl", "")
-                }
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@NewChatActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun getFileName(uri: Uri): String? {
-        var result: String? = null
-        if (uri.scheme == "content") {
-            val cursor = contentResolver.query(uri, null, null, null, null)
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val index = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                    if (index != -1) result = it.getString(index)
-                }
-            }
-        }
-        if (result == null) {
-            result = uri.path
-            val cut = result?.lastIndexOf('/') ?: -1
-            if (cut != -1) result = result?.substring(cut + 1)
-        }
-        return result
-    }
-
-    private fun openLocation(geoUri: String) {
-        try {
-            // Parse "geo:lat,lng"
-            val coords = geoUri.removePrefix("geo:").split(",")
-            if (coords.size == 2) {
-                val lat = coords[0].toDouble()
-                val lng = coords[1].toDouble()
-                
-                val intent = Intent(this, MapPickerActivity::class.java).apply {
-                    putExtra("view_mode", true)
-                    putExtra("lat", lat)
-                    putExtra("lng", lng)
-                }
-                startActivity(intent)
-            } else {
-                // Fallback to system intent if format is weird
-                val intent = Intent(Intent.ACTION_VIEW, geoUri.toUri())
-                startActivity(intent)
-            }
-        } catch (_: Exception) {
-            Toast.makeText(this, "Unable to open map", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun showForwardDialog(messagesToForward: List<Message>) {
-        grpcClient.getChats(username) { chats ->
-            val chatNames = chats.map { it.name }.toTypedArray()
-            runOnUiThread {
-                AlertDialog.Builder(this@NewChatActivity)
-                    .setTitle(R.string.forward_to)
-                    .setItems(chatNames) { _, which ->
-                        val targetChat = chats[which]
-                        messagesToForward.forEach { msg ->
-                            val forwardedMsg = msg.copy(
-                                id = "",
-                                roomId = targetChat.id,
-                                timestamp = System.currentTimeMillis(),
-                                user = username,
-                                isRead = false,
-                                reactions = emptyList()
-                            )
-                            grpcClient.sendMessage(forwardedMsg)
-                        }
-                        Toast.makeText(this@NewChatActivity, "Forwarded to ${targetChat.name}", Toast.LENGTH_SHORT).show()
-
-                        // Update current activity with new chat data
-                        roomId = targetChat.id
-                        chatName = targetChat.name
-                        isDirect = targetChat.type == "direct"
-                        participantsJson = targetChat.participants
-                        creator = targetChat.creator
-
-                        toolbarTitle.text = chatName
-                        toolbarSubtitle.text = if (isDirect) "" else getString(R.string.general_chat)
-
-                        // Switch to the new room
-                        viewModel.switchRoom(roomId)
-                        viewModel.startChat(username, password, "") { _ ->
-                            viewModel.markRead(username, this@NewChatActivity)
-                        }
-                    }
-                    .setNegativeButton(R.string.cancel, null)
-                    .show()
-            }
-        }
-    }
-
-    private fun applySavedColorScheme() {
-        val themeId = when (getSavedColorScheme()) {
-            "light" -> R.style.Theme_Lavender_Light_NoActionBar
-            "dark" -> R.style.Theme_Lavender_Dark_NoActionBar
-            else -> R.style.Theme_Lavender_Dark_NoActionBar
-        }
-        setTheme(themeId)
-    }
-
-    private fun applyChatBackground() {
-        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
-        if (theme.backgroundImageUrl.isNotEmpty()) {
-            val backgroundView = findViewById<ImageView>(R.id.chatBackground)
-            if (backgroundView != null) {
-                com.bumptech.glide.Glide.with(this)
-                    .load(theme.backgroundImageUrl)
-                    .centerCrop()
-                    .into(backgroundView)
-                
-                // Make chat list transparent to show background
-                messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            }
-        }
+        val root = findViewById<ViewGroup>(android.R.id.content); val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false); val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialogView.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener { dialog.dismiss(); showReplyPreview(message) }
+        dialogView.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener { dialog.dismiss(); (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", message.text)); showToast(getString(R.string.copied_to_clipboard)) }
+        dialogView.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener { dialog.dismiss(); grpcClient.deleteMessage(message) }; dialog.show()
     }
 
     private fun showAudioRecordingView() {
-        // Check for audio permission
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
-                return
-            }
-        }
-        
-        // Show audio recording view
-        audioRecordingView.visibility = View.VISIBLE
-        messageInput.visibility = View.GONE
-        sendButton.visibility = View.GONE
-        attachButton.visibility = View.GONE
-        audioButton.visibility = View.GONE
-        
-        setupAudioRecordingView()
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001); return }
+        audioRecordingView.visibility = View.VISIBLE; messageInput.visibility = View.GONE; sendButton.visibility = View.GONE; attachButton.visibility = View.GONE; audioButton.visibility = View.GONE; setupAudioRecordingView()
     }
-    
+
+    private fun setupAudioRecordingView() {
+        audioRecordingView.setOnRecordingFinished { file, duration ->
+            hideAudioRecordingView()
+            file?.let { uploadAudio(it, duration) }
+        }
+        audioRecordingView.setOnRecordingCancelled {
+            hideAudioRecordingView()
+        }
+    }
+
     private fun hideAudioRecordingView() {
         audioRecordingView.visibility = View.GONE
         messageInput.visibility = View.VISIBLE
         sendButton.visibility = View.VISIBLE
         attachButton.visibility = View.VISIBLE
-        
-        // Show audio button only when input is empty
-        audioButton.visibility = if (messageInput.text.toString().trim().isEmpty()) View.VISIBLE else View.GONE
+        audioButton.visibility = View.VISIBLE
     }
-    
-    private fun setupAudioRecordingView() {
-        audioRecordingView.setOnRecordingStarted {
-            // Handle recording started
-            Log.d("NewChatActivity", "Audio recording started")
-        }
-        
-        audioRecordingView.setOnRecordingFinished { audioFile, duration ->
-            // Handle recording finished
-            Log.d("NewChatActivity", "Audio recording finished: duration=$duration")
-            
-            if (audioFile != null) {
-                uploadAudioMessage(audioFile, duration)
-            }
-            
-            hideAudioRecordingView()
-        }
-        
-        audioRecordingView.setOnRecordingCancelled {
-            // Handle recording cancelled
-            Log.d("NewChatActivity", "Audio recording cancelled")
-            hideAudioRecordingView()
-        }
-    }
-    
-    private fun uploadAudioMessage(audioFile: File, duration: Int) {
+    private fun uploadAudio(file: File, duration: Int) {
+        uploadProgressBar.isVisible = true; audioButton.isVisible = false
         lifecycleScope.launch {
-            try {
-                uploadProgressBar.visibility = View.VISIBLE
-                
-                val audioUploader = AudioUploader(this@NewChatActivity)
-                // Set server address from GrpcClient if available
-                lavender.client.android.data.grpc.RealGrpcClient.currentServerAddress?.let {
-                    audioUploader.setServerAddress(it)
-                }
-                val result = audioUploader.uploadAudio(audioFile, duration)
-                
-                withContext(Dispatchers.Main) {
-                    uploadProgressBar.visibility = View.GONE
-                    
-                    if (result.success) {
-                        // Send voice message
-                        sendVoiceMessage(result.url, result.duration)
-                    } else {
-                        Toast.makeText(this@NewChatActivity, "Upload failed: ${result.error}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    uploadProgressBar.visibility = View.GONE
-                    Toast.makeText(this@NewChatActivity, "Upload error: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-    
-    private fun sendVoiceMessage(voiceUrl: String, duration: Int) {
-        Log.d("NewChatActivity", "Sending voice message: url=$voiceUrl, duration=$duration")
-        
-        val message = Message(
-            id = "",
-            user = username,
-            text = "Voice Message", // Fill text with a neutral label to avoid decryption warnings
-            timestamp = System.currentTimeMillis(),
-            roomId = roomId,
-            voiceUrl = voiceUrl,
-            duration = duration,
-            repliedToMessageId = replyingTo?.id ?: "",
-            repliedToUser = replyingTo?.user ?: "",
-            repliedToText = replyingTo?.text ?: ""
-        )
-        
-        Log.d("NewChatActivity", "Created voice message: $message")
-        grpcClient.sendMessage(message)
-        Log.d("NewChatActivity", "Voice message sent to grpcClient")
-        hideReplyPreview()
-    }
-    
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        when (requestCode) {
-            1001 -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, show audio recording view
-                    showAudioRecordingView()
+            val uploader = AudioUploader(this@NewChatActivity)
+            val result = uploader.uploadAudio(file, duration)
+            runOnUiThread {
+                uploadProgressBar.isVisible = false; audioButton.isVisible = true
+                if (result.success) {
+                    grpcClient.sendMessage(Message(user = username, text = "", timestamp = System.currentTimeMillis(), roomId = roomId, voiceUrl = result.url, duration = result.duration))
                 } else {
-                    Toast.makeText(this, "Audio permission required for voice messages", Toast.LENGTH_SHORT).show()
+                    showToast("Failed to upload audio: ${result.error}")
                 }
             }
         }
     }
+
+    private fun uploadFiles(uris: List<Uri>) {
+        uris.forEach { uri ->
+            uploadProgressBar.isVisible = true; val stream = contentResolver.openInputStream(uri); val bytes = stream?.readBytes(); stream?.close()
+            if (bytes != null) {
+                val body = MultipartBody.Part.createFormData("file", "file_${System.currentTimeMillis()}", bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                val request = Request.Builder().url("http://159.195.38.145:8082/${if (isDirect) "upload" else "upload_group"}").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                OkHttpClient().newCall(request).enqueue(object : okhttp3.Callback {
+                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                        runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
+                    }
+                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                        val url = response.body.string()
+                        runOnUiThread { uploadProgressBar.isVisible = false; if (url.isNotEmpty()) sendMessage("", url) else showToast("Upload failed") }
+                    }
+                })
+            }
+        }
+    }
+
+    private fun applySavedColorScheme() { setTheme(if (getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", null) == "light") R.style.Theme_Lavender_Light_NoActionBar else R.style.Theme_Lavender_Dark_NoActionBar) }
+    private fun applyChatBackground() {
+        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
+        if (theme.backgroundImageUrl.isNotEmpty()) findViewById<ImageView>(R.id.chatBackground)?.let { com.bumptech.glide.Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(it); messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT); swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT) }
+    }
+
+    private fun showToast(message: String) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 }

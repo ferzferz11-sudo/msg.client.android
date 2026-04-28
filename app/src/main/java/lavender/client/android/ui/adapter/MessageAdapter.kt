@@ -9,6 +9,8 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -24,7 +26,7 @@ class MessageAdapter(
     private val adminUsername: String = "",
     private val onMessageClick: (Message) -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
-    private val onImageLongClick: ((Message) -> Unit)? = null
+    private val onImageLongClick: ((Message) -> Unit)? = null,
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
@@ -40,6 +42,7 @@ class MessageAdapter(
         return selectedPositions.map { getItem(it) }
     }
 
+    @Suppress("UNUSED")
     fun clearSelection() {
         val previousSelected = selectedPositions.toList()
         selectedPositions.clear()
@@ -67,10 +70,10 @@ class MessageAdapter(
         val previousMessage = if (position > 0) getItem(position - 1) else null
 
         val isOutgoing = currentMessage.user.trim().equals(currentUsername.trim(), ignoreCase = true)
-        val isConsecutive = previousMessage != null && 
-                           previousMessage.user.trim() == currentMessage.user.trim()
-        val isSameMinute = previousMessage != null && 
-                          (currentMessage.timestamp / 60000 == previousMessage.timestamp / 60000)
+        val isConsecutive = (previousMessage != null &&
+                previousMessage.user.trim() == currentMessage.user.trim())
+        val isSameMinute = previousMessage != null &&
+                (currentMessage.timestamp / 60000 == previousMessage.timestamp / 60000)
 
         holder.bind(
             message = currentMessage,
@@ -129,8 +132,6 @@ class MessageAdapter(
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             
-            android.util.Log.d("MessageAdapter", "Binding msg from ${message.user}. isOutgoing=$isOutgoing (me=$currentUsername)")
-
             messageText.text = message.text
             userText.text = message.user
 
@@ -183,8 +184,8 @@ class MessageAdapter(
                 
                 if (theme != null) {
                     try {
-                        val primary = android.graphics.Color.parseColor(theme.primaryColor)
-                        val onPrimary = android.graphics.Color.parseColor(theme.onPrimaryColor)
+                        val primary = theme.primaryColor.toColorInt()
+                        val onPrimary = theme.onPrimaryColor.toColorInt()
                         messageBubble.backgroundTintList = ColorStateList.valueOf(primary)
                         messageText.setTextColor(onPrimary)
                         timeText.setTextColor(onPrimary)
@@ -206,9 +207,9 @@ class MessageAdapter(
                 
                 if (theme != null) {
                     try {
-                        val surface = android.graphics.Color.parseColor(theme.surfaceColor)
-                        val textPrimary = android.graphics.Color.parseColor(theme.textPrimaryColor)
-                        val textSecondary = android.graphics.Color.parseColor(theme.textSecondaryColor)
+                        val surface = theme.surfaceColor.toColorInt()
+                        val textPrimary = theme.textPrimaryColor.toColorInt()
+                        val textSecondary = theme.textSecondaryColor.toColorInt()
                         
                         messageBubble.backgroundTintList = ColorStateList.valueOf(surface)
                         messageText.setTextColor(textPrimary)
@@ -246,14 +247,24 @@ class MessageAdapter(
             timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
             timeText.isVisible = !shouldHideTime
 
-            // Skip text display logic for voice messages, we'll handle label below
             if (message.voiceUrl.isNotEmpty()) {
-                messageText.isVisible = false
+                messageText.isVisible = true
+                messageText.text = context.getString(R.string.voice_message)
+                messageText.textSize = 12f
+                messageText.alpha = 0.7f
+                
+                audioMessageView.isVisible = true
+                audioMessageView.setAudioData(message.voiceUrl, message.duration)
+                audioMessageView.setOnPlayClickListener { _ -> }
+                audioMessageView.setOnPauseClickListener { }
             } else {
                 messageText.isVisible = message.text.isNotEmpty() || message.imageUrl.isNotEmpty()
+                messageText.textSize = 16f
+                messageText.alpha = 1.0f
+                
+                audioMessageView.isVisible = false
+                
                 val isLocation = message.text.startsWith("geo:")
-
-                // Show edited label based on edited field
                 editedText.text = context.getString(R.string.edited_label)
                 editedText.isVisible = message.edited
 
@@ -262,18 +273,7 @@ class MessageAdapter(
                     messageText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_location, 0, 0, 0)
                     messageText.compoundDrawablePadding = 8.dpToPx()
                     
-                    // Theme-aware icon tint
-                    val iconColorAttr = if (isOutgoing) {
-                        val typedValue = android.util.TypedValue()
-                        if (context.theme.resolveAttribute(R.attr.isLightTheme, typedValue, true) && typedValue.data != 0) {
-                            android.R.attr.textColorPrimary // Use dark text on light bubble in light theme
-                        } else {
-                            android.R.attr.textColorPrimary // Usually white on dark bubble in dark theme
-                        }
-                    } else {
-                        android.R.attr.textColorPrimary
-                    }
-                    
+                    val iconColorAttr = android.R.attr.textColorPrimary
                     val typedValue = android.util.TypedValue()
                     context.theme.resolveAttribute(iconColorAttr, typedValue, true)
                     val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
@@ -282,27 +282,22 @@ class MessageAdapter(
                     val lines = message.text.split("\n")
                     val fileName = if (lines.size > 1) lines[0].removePrefix("File: ") else message.text.removePrefix("File: ")
                     val fileUrl = if (lines.size > 1) lines[1] else ""
-
                     val fileIcon = when {
                         fileName.lowercase().endsWith(".pdf") -> R.drawable.ic_file_pdf
                         fileName.lowercase().endsWith(".zip") || fileName.lowercase().endsWith(".rar") || fileName.lowercase().endsWith(".7z") -> R.drawable.ic_file_archive
                         else -> R.drawable.ic_file
                     }
-
                     messageText.text = fileName
                     messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
                     messageText.compoundDrawablePadding = 8.dpToPx()
-
-                    // Theme-aware icon tint for files
                     val typedValue = android.util.TypedValue()
                     context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
                     val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
                     messageText.compoundDrawables[0]?.setTint(color)
 
-                    // Make text clickable to download file
                     messageText.setOnClickListener {
                         if (fileUrl.isNotEmpty()) {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(fileUrl))
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, fileUrl.toUri())
                             context.startActivity(intent)
                         }
                     }
@@ -328,20 +323,13 @@ class MessageAdapter(
                 }
             }
             
-            // Handle image visibility
             messageImageView.isVisible = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()
             if (message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()) {
                 com.bumptech.glide.Glide.with(context)
                     .load(message.imageUrl)
                     .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
                     .into(messageImageView)
-                
-                // Enable click on images to open viewer
-                messageImageView.setOnClickListener {
-                    onMessageClick(message)
-                }
-                
-                // Enable long click on images for reactions
+                messageImageView.setOnClickListener { onMessageClick(message) }
                 messageImageView.setOnLongClickListener {
                     onImageLongClick?.invoke(message)
                     true
@@ -350,31 +338,7 @@ class MessageAdapter(
                 messageImageView.setOnClickListener(null)
                 messageImageView.setOnLongClickListener(null)
             }
-            
-            // Handle audio message visibility
-            audioMessageView.isVisible = message.voiceUrl.isNotEmpty()
-            if (message.voiceUrl.isNotEmpty()) {
-                audioMessageView.setAudioData(message.voiceUrl, message.duration)
-                
-                // Show localized "Voice Message" label
-                messageText.isVisible = true
-                messageText.text = context.getString(R.string.voice_message)
-                messageText.textSize = 12f // Smaller font
-                messageText.alpha = 0.7f // Slightly faded
-                
-                audioMessageView.setOnPlayClickListener { url ->
-                    android.util.Log.d("MessageAdapter", "Playing audio: $url")
-                }
-                audioMessageView.setOnPauseClickListener {
-                    android.util.Log.d("MessageAdapter", "Pausing audio")
-                }
-            } else {
-                // Restore default text size for non-voice messages
-                messageText.textSize = 16f
-                messageText.alpha = 1.0f
-            }
 
-            // 5.1 Reactions
             reactionsText.isVisible = message.reactions.isNotEmpty()
             if (message.reactions.isNotEmpty()) {
                 val groupedReactions = message.reactions.groupBy { it.emoji }
@@ -389,13 +353,11 @@ class MessageAdapter(
                 replyQuoteUser.text = message.repliedToUser
                 replyQuoteText.text = message.repliedToText
 
-                // Apply theme to quote
                 if (theme != null) {
                     try {
-                        val onPrimary = android.graphics.Color.parseColor(theme.onPrimaryColor)
-                        val onSurface = android.graphics.Color.parseColor(theme.onSurfaceColor)
-                        val textPrimary = android.graphics.Color.parseColor(theme.textPrimaryColor)
-                        
+                        val onPrimary = theme.onPrimaryColor.toColorInt()
+                        val onSurface = theme.onSurfaceColor.toColorInt()
+                        val textPrimary = theme.textPrimaryColor.toColorInt()
                         if (isOutgoing) {
                             replyQuoteUser.setTextColor(onPrimary)
                             replyQuoteText.setTextColor(withAlpha(onPrimary, 200))
@@ -407,7 +369,6 @@ class MessageAdapter(
                         }
                     } catch (_: Exception) {}
                 } else {
-                    // Standard themes
                     val onPrimary = android.util.TypedValue()
                     context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimary, true)
                     val onPrimaryColor = if (onPrimary.resourceId != 0) ContextCompat.getColor(context, onPrimary.resourceId) else onPrimary.data
@@ -428,7 +389,6 @@ class MessageAdapter(
                 }
             }
 
-            // 6. Interaction
             selectionIndicator.isVisible = isSelectionMode
             selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
@@ -436,7 +396,6 @@ class MessageAdapter(
 
             val genericOnClick = { onClick() }
             val genericOnLongClick = { onLongClick(); true }
-
             messageBubble.setOnClickListener { genericOnClick() }
             messageBubble.setOnLongClickListener { genericOnLongClick() }
             messageText.setOnClickListener { genericOnClick() }

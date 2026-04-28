@@ -72,9 +72,9 @@ class AudioRecordingView @JvmOverloads constructor(
             // Start timer
             startTimer()
             
-            // Generate some initial waveform data and start animation
+            // Generate some initial waveform data and start update loop
             waveformView.generateRandomWaveform()
-            waveformView.startAnimation()
+            startWaveformUpdates()
             
             updateUI()
         } else {
@@ -104,13 +104,35 @@ class AudioRecordingView @JvmOverloads constructor(
         audioRecorder = null
         isRecording = false
         stopTimer()
+        stopWaveformUpdates()
         waveformView.stopAnimation()
         updateUI()
     }
     
     private var timerRunnable: Runnable? = null
+    private var waveformRunnable: Runnable? = null
     private var timerHandler = android.os.Handler(android.os.Looper.getMainLooper())
     
+    private fun startWaveformUpdates() {
+        waveformRunnable = object : Runnable {
+            override fun run() {
+                if (isRecording) {
+                    val amplitude = audioRecorder?.getMaxAmplitude() ?: 0
+                    // Normalize amplitude (0-32767) to 0.1-1.0
+                    val normalized = (amplitude.toFloat() / 32767f).coerceIn(0.1f, 1f)
+                    waveformView.addAmplitude(normalized)
+                    timerHandler.postDelayed(this, 100)
+                }
+            }
+        }
+        timerHandler.post(waveformRunnable!!)
+    }
+
+    private fun stopWaveformUpdates() {
+        waveformRunnable?.let { timerHandler.removeCallbacks(it) }
+        waveformRunnable = null
+    }
+
     private fun startTimer() {
         timerRunnable = object : Runnable {
             override fun run() {
