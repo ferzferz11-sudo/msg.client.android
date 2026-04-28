@@ -324,9 +324,13 @@ class NewChatActivity : AppCompatActivity() {
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter
-        val swipeController = MessageSwipeController(this) { position, _ ->
-            showReplyPreview(adapter.currentList[position])
-            adapter.notifyItemChanged(position)
+        val swipeController = MessageSwipeController(this) { position, direction ->
+            if (direction == ItemTouchHelper.LEFT) {
+                showReplyPreview(adapter.currentList[position])
+                adapter.notifyItemChanged(position)
+            } else if (direction == ItemTouchHelper.RIGHT) {
+                finish()
+            }
         }
         ItemTouchHelper(swipeController).attachToRecyclerView(messagesRecyclerView)
         swipeRefreshLayout.setOnRefreshListener { fullReloadHistory() }
