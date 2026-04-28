@@ -556,36 +556,10 @@ class EditThemeActivity : AppCompatActivity() {
     }
 
     private fun showFullScreenImage(imageUrl: String) {
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).create()
-        val layout = RelativeLayout(this)
-        val imageView = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
+        val intent = Intent(this, FullScreenImageActivity::class.java).apply {
+            putExtra("image_url", imageUrl)
         }
-        val pBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge)
-        
-        layout.addView(imageView, RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
-        layout.addView(pBar, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        })
-
-        dialog.setView(layout)
-        imageView.setOnClickListener { dialog.dismiss() }
-        
-        Glide.with(this)
-            .load(imageUrl)
-            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-                    pBar.isVisible = false
-                    return false
-                }
-                override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
-                    pBar.isVisible = false
-                    return false
-                }
-            })
-            .into(imageView)
-            
-        dialog.show()
+        startActivity(intent)
     }
 
     private fun uploadBackgroundImage(uri: Uri, isChatList: Boolean) {

@@ -182,7 +182,7 @@ class ChatListActivity : AppCompatActivity() {
 
         adapter = ChatAdapter(
             onChatClick = { chat ->
-                openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator)
+                openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
             },
             onSettingsClick = { chat ->
                 val isDirect = chat.type == "direct"
@@ -284,7 +284,7 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 val chat = viewModel.currentChats.find { it.id == roomId }
                 if (chat != null) {
-                    openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator)
+                    openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
                 }
             }
         }
@@ -430,13 +430,14 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun openChat(chatId: String, roomName: String, isDirect: Boolean = false, participants: String = "[]", creator: String = "") {
+    private fun openChat(chatId: String, roomName: String, isDirect: Boolean = false, participants: String = "[]", creator: String = "", avatarUrl: String = "") {
         val intent = Intent(this, NewChatActivity::class.java).apply {
             putExtra("ROOM_ID", chatId)
             putExtra("CHAT_NAME", roomName)
             putExtra("IS_DIRECT", isDirect)
             putExtra("PARTICIPANTS", participants)
             putExtra("CREATOR", creator)
+            putExtra("AVATAR_URL", avatarUrl)
             putExtra("USERNAME", username)
             putExtra("PASSWORD", password)
         }

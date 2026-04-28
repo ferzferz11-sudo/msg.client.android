@@ -37,7 +37,17 @@
                 android:src="@drawable/ic_default_avatar"
                 app:civ_border_width="2dp"
                 app:civ_border_color="?attr/colorPrimary"
-                android:contentDescription="@string/change_avatar" />
+                android:contentDescription="@string/profile" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/changeAvatarButton"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/change_avatar"
+                android:visibility="gone"
+                app:icon="@drawable/ic_edit" />
 
             <TextView
                 android:id="@+id/profileName"

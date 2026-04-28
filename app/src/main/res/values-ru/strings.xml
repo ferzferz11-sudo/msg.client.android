@@ -169,6 +169,7 @@
     <string name="delete_messages_confirm">Вы уверены, что хотите удалить выбранные сообщения (%d)? Это также удалит изображения с сервера.</string>
     <string name="delete_messages_action">Удалить сообщения</string>
     <string name="participants_count">%d участников</string>
+    <string name="participants_online_count">%1$d участников (%2$d онлайн)</string>
     <string name="user_is_typing">%s печатает…</string>
     <string name="users_are_typing">%d пользователей печатают…</string>
     <string name="is_typing">печатает…</string>
@@ -194,9 +195,10 @@
     <string name="remove_participant_confirm">Вы уверены, что хотите удалить %s из группы?</string>
     <string name="preview">Просмотр</string>
     <string name="edit">Изменить</string>
+    <string name="edit_theme_button">Редактировать</string>
 
     <string name="welcome_new_user_title">Добро пожаловать в Lavender!</string>
-    <string name="welcome_new_user_description">Добро пожаловать в нашу систему обмена сообщениями!\nВаша приватность — наш главный приоритет, поэтому все чаты здесь защищены сквозным шифрованием.\n\nЧтобы начать:\n Настройте профиль, чтобы друзья могли вас узнать.\n Добавьте контакты людей, с которыми хотите общаться.\n Создайте новый чат или присоединяйтесь к группам, чтобы всегда быть на связи.</string>
+    <string name="welcome_new_user_description">Добро пожаловать в нашу систему обмена сообщениями!\nВаша приватность — наш главный приоритет, поэтому все чаты здесь защищены сквозным шифрованием.</string>
 
     <!-- Notification History -->
     <string name="no_notifications">Нет уведомлений</string>

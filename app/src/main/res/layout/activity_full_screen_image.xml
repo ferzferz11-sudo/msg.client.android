@@ -19,6 +19,7 @@
         android:layout_margin="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_close"
+        android:tint="@android:color/white"
         android:contentDescription="@string/cancel"
         android:padding="12dp"
         android:scaleType="fitCenter" />

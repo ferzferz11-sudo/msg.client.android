@@ -683,6 +683,13 @@ object RealGrpcClient {
             val call = ch.newCall(method, io.grpc.CallOptions.DEFAULT)
             call.start(object : io.grpc.ClientCall.Listener<EditMessageResponseProto>() {
                 override fun onMessage(message: EditMessageResponseProto) {
+                    if (message.success) {
+                        _messages.update { currentList ->
+                            currentList.map { 
+                                if (it.id == messageId) it.copy(text = text, edited = true) else it 
+                            }
+                        }
+                    }
                     callback(message.success, message.message)
                 }
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {

@@ -210,9 +210,7 @@ class NewChatActivity : AppCompatActivity() {
                     chatName = chat.getDisplayName(username); isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl
                     setupToolbar()
                     if (!isDirect) {
-                        val arr = JSONArray(participantsJson)
-                        toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
-                        toolbarSubtitle.isVisible = true
+                        updateGroupSubtitle(grpcClient.users.value)
                     }
                     adapter.isGroupChat = !isDirect
                     adapter.adminUsername = creator
@@ -289,7 +287,7 @@ class NewChatActivity : AppCompatActivity() {
                 putExtra("username", chatName)
                 putExtra("is_group", !isDirect)
                 putExtra("room_id", roomId)
-                putExtra("avatar_url", chatAvatarUrl)
+                putExtra("avatar_url", if (isDirect) effectiveAvatarUrl else chatAvatarUrl)
                 putExtra("participants", participantsJson)
                 putExtra("creator", creator)
             }
@@ -360,7 +358,7 @@ class NewChatActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (otherTyping.isNotEmpty()) {
                         toolbarSubtitle.isVisible = true; toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first()) else getString(R.string.users_are_typing, otherTyping.size)
-                    } else if (!isDirect) { val arr = JSONArray(participantsJson); toolbarSubtitle.text = getString(R.string.participants_count, arr.length()) }
+                    } else if (!isDirect) { updateGroupSubtitle(grpcClient.users.value) }
                 }
             }
         }
@@ -374,9 +372,7 @@ class NewChatActivity : AppCompatActivity() {
                         theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
                         toolbarSubtitle.setTextColor(typedValue.data)
                     } else if (!isDirect) {
-                        val arr = JSONArray(participantsJson)
-                        toolbarSubtitle.isVisible = true
-                        toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
+                        updateGroupSubtitle(grpcClient.users.value)
                     }
                 }
             }
@@ -399,6 +395,8 @@ class NewChatActivity : AppCompatActivity() {
                                 typedValue.data
                             }
                         )
+                    } else if (!isDirect && grpcClient.connectionState.value) {
+                        updateGroupSubtitle(onlineUsers)
                     }
                 }
             }
@@ -615,6 +613,26 @@ class NewChatActivity : AppCompatActivity() {
     private fun applyChatBackground() {
         val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
         if (theme.backgroundImageUrl.isNotEmpty()) findViewById<ImageView>(R.id.chatBackground)?.let { com.bumptech.glide.Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(it); messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT); swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT) }
+    }
+
+    private fun updateGroupSubtitle(onlineUsers: List<String>) {
+        if (isDirect) return
+        try {
+            val arr = JSONArray(participantsJson)
+            val total = arr.length()
+            var onlineCount = 0
+            for (i in 0 until total) {
+                if (onlineUsers.contains(arr.getString(i))) onlineCount++
+            }
+            toolbarSubtitle.isVisible = true
+            toolbarSubtitle.text = getString(R.string.participants_online_count, total, onlineCount)
+            
+            val typedValue = TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+            toolbarSubtitle.setTextColor(typedValue.data)
+        } catch (e: Exception) {
+            toolbarSubtitle.isVisible = false
+        }
     }
 
     private fun showToast(message: String) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }

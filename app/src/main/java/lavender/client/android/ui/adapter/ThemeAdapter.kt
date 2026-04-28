@@ -100,17 +100,17 @@ class ThemeAdapter(
         private val themeName: TextView = itemView.findViewById(R.id.themeName)
         private val themeColorsInfo: TextView = itemView.findViewById(R.id.themeColorsInfo)
         private val themeColorPreview: View = itemView.findViewById(R.id.themeColorPreview)
-        private val selectedIndicator: ImageView = itemView.findViewById(R.id.selectedIndicator)
         private val editIndicator: ImageView = itemView.findViewById(R.id.editIndicator)
+        private val radioButton: android.widget.RadioButton? = itemView.findViewById(R.id.themeRadioButton)
 
         fun bind(onClick: () -> Unit) {
             themeName.text = itemView.context.getString(R.string.add_theme)
             themeColorsInfo.text = itemView.context.getString(R.string.create)
             
             themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
-            selectedIndicator.isVisible = false
             editIndicator.setImageResource(android.R.drawable.ic_input_add)
             editIndicator.isVisible = true
+            radioButton?.isVisible = false
             
             cardView.setCardBackgroundColor(Color.TRANSPARENT)
             cardView.strokeWidth = (1 * itemView.resources.displayMetrics.density).toInt()
@@ -126,32 +126,42 @@ class ThemeAdapter(
         private val themeName: TextView = itemView.findViewById(R.id.themeName)
         private val themeColorsInfo: TextView = itemView.findViewById(R.id.themeColorsInfo)
         private val themeColorPreview: View = itemView.findViewById(R.id.themeColorPreview)
-        private val selectedIndicator: ImageView = itemView.findViewById(R.id.selectedIndicator)
         private val editIndicator: ImageView = itemView.findViewById(R.id.editIndicator)
+        private val radioButton: android.widget.RadioButton? = itemView.findViewById(R.id.themeRadioButton)
 
         fun bind(theme: CustomThemeProto, currentId: String, isSelected: Boolean, onLongClick: () -> Unit) {
             themeName.text = theme.name
             val isCurrent = theme.id == currentId
             
-            selectedIndicator.isVisible = isCurrent
-            editIndicator.setImageResource(R.drawable.ic_edit)
+            radioButton?.isVisible = true
+            radioButton?.isChecked = isCurrent
+            editIndicator.isVisible = false
             
             val context = itemView.context
-            cardView.strokeWidth = 0 // Reset from AddViewHolder if reused
             
             if (isSelected) {
                 cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))
                 itemView.alpha = 0.7f
+                cardView.strokeWidth = 0
             } else {
-                cardView.setCardBackgroundColor(Color.TRANSPARENT)
                 itemView.alpha = 1.0f
-                
                 if (isCurrent) {
+                    cardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
+                    val primaryColorAttr = android.R.attr.colorPrimary
+                    val typedValue = android.util.TypedValue()
+                    context.theme.resolveAttribute(primaryColorAttr, typedValue, true)
+                    cardView.strokeColor = typedValue.data
+                    
                     try {
                         cardView.setCardBackgroundColor(Color.parseColor(theme.surfaceColor).let { 
                             Color.argb(40, Color.red(it), Color.green(it), Color.blue(it))
                         })
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                        cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))
+                    }
+                } else {
+                    cardView.strokeWidth = 0
+                    cardView.setCardBackgroundColor(Color.TRANSPARENT)
                 }
             }
 
@@ -171,9 +181,6 @@ class ThemeAdapter(
             } catch (_: Exception) {
                 themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
             }
-
-            editIndicator.isVisible = theme.id != "light" && theme.id != "dark"
-            editIndicator.setOnClickListener { onEditClick(theme) }
 
             itemView.setOnClickListener {
                 if (selectedPositions.isNotEmpty()) {

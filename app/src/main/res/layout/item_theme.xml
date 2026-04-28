@@ -29,15 +29,6 @@
                 android:layout_height="match_parent"
                 android:background="@drawable/unread_count_background" />
 
-            <ImageView
-                android:id="@+id/selectedIndicator"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_checked"
-                app:tint="@android:color/white"
-                android:visibility="gone" />
-
         </FrameLayout>
 
         <LinearLayout
@@ -68,6 +59,13 @@
 
         </LinearLayout>
 
+        <RadioButton
+            android:id="@+id/themeRadioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="false"
+            android:focusable="false" />
+
         <ImageView
             android:id="@+id/editIndicator"
             android:layout_width="32dp"
@@ -77,7 +75,8 @@
             android:src="@drawable/ic_edit"
             app:tint="?attr/colorOnSurfaceVariant"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/edit" />
+            android:contentDescription="@string/edit"
+            android:visibility="gone" />
 
     </LinearLayout>
 

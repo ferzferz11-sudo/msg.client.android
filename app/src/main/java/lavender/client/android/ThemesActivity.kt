@@ -71,7 +71,11 @@ class ThemesActivity : AppCompatActivity() {
         themesRecyclerView = findViewById(R.id.themesRecyclerView)
 
         adapter = ThemeAdapter(
-            onThemeClick = { theme -> selectTheme(theme.id) },
+            onThemeClick = { theme -> 
+                currentThemeId = theme.id
+                adapter.setCurrentThemeId(currentThemeId)
+                invalidateOptionsMenu()
+            },
             onEditClick = { theme -> openEditTheme(theme.id) },
             onAddClick = { openEditTheme(null) },
             onSelectionChanged = { count -> invalidateOptionsMenu() },
@@ -129,8 +133,17 @@ class ThemesActivity : AppCompatActivity() {
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
             item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
         } else {
-            val item = menu.add(0, 200, 0, R.string.apply)
-            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+            // Edit button for custom themes
+            if (currentThemeId != "light" && currentThemeId != "dark") {
+                val editItem = menu.add(0, 300, 0, R.string.edit_theme_button)
+                editItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+            }
+            
+            val applyItem = menu.add(0, 200, 0, R.string.apply)
+            applyItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            applyItem.iconTintList = ColorStateList.valueOf(typedValue.data)
         }
         return true
     }
@@ -145,7 +158,11 @@ class ThemesActivity : AppCompatActivity() {
                 return true
             }
             200 -> {
-                applyAndRestart()
+                selectTheme(currentThemeId)
+                return true
+            }
+            300 -> {
+                openEditTheme(currentThemeId)
                 return true
             }
         }
@@ -194,28 +211,21 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun selectTheme(themeId: String) {
         currentThemeId = themeId
-        if (themeId == "light" || themeId == "dark") {
-            lavender.client.android.ui.ThemeManager.clearTheme()
-        }
         grpcClient.setCurrentTheme(username, themeId) { success ->
-            if (success) {
-                val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-                val scheme = if (themeId == "light" || themeId == "dark") themeId else {
-                    val theme = customThemes.find { it.id == themeId }
-                    if (theme?.isDark == true) "dark" else "light"
-                }
-                prefs.edit {
-                    putString("color_scheme", scheme)
-                    putString("current_theme_id", themeId)
-                }
-                runOnUiThread { 
-                    // Refresh current activity theme
-                    lavender.client.android.ui.ThemeManager.loadTheme(this@ThemesActivity, username) {
-                        runOnUiThread {
-                            lavender.client.android.ui.ThemeManager.applyTheme(this@ThemesActivity)
-                            adapter.setCurrentThemeId(themeId)
-                        }
+            runOnUiThread {
+                if (success) {
+                    val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+                    val scheme = if (themeId == "light" || themeId == "dark") themeId else {
+                        val theme = customThemes.find { it.id == themeId }
+                        if (theme?.isDark == true) "dark" else "light"
                     }
+                    prefs.edit {
+                        putString("color_scheme", scheme)
+                        putString("current_theme_id", themeId)
+                    }
+                    applyAndRestart()
+                } else {
+                    Toast.makeText(this@ThemesActivity, "Failed to apply theme", Toast.LENGTH_SHORT).show()
                 }
             }
         }

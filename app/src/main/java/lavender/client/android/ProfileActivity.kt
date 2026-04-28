@@ -129,6 +129,7 @@ class ProfileActivity : AppCompatActivity() {
         // Store avatar reference for later updates
         val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar)
         currentProfileAvatar = profileAvatar
+        val changeAvatarButton = findViewById<View>(R.id.changeAvatarButton)
         
         // Load current avatar if provided
         if (avatarUrl.isNotEmpty()) {
@@ -137,6 +138,13 @@ class ProfileActivity : AppCompatActivity() {
                 .placeholder(R.drawable.ic_default_avatar)
                 .error(R.drawable.ic_default_avatar)
                 .into(profileAvatar)
+        }
+
+        // Tapping on photo always opens full screen
+        profileAvatar.setOnClickListener {
+            if (avatarUrl.isNotEmpty()) {
+                showFullScreenImage(avatarUrl)
+            }
         }
 
         if (isGroup) {
@@ -175,8 +183,9 @@ class ProfileActivity : AppCompatActivity() {
                         .show()
                 }
                 
-                // Allow admin to change group avatar
-                profileAvatar.setOnClickListener {
+                // Allow admin to change group avatar via separate button
+                changeAvatarButton.isVisible = true
+                changeAvatarButton.setOnClickListener {
                     val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
                     pickImageLauncher.launch(intent)
                 }
@@ -373,9 +382,10 @@ class ProfileActivity : AppCompatActivity() {
                             theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
                             profileStatus.setTextColor(typedValue.data)
                         }
-                        if (profile.avatarUrl.isNotEmpty() && avatarUrl.isEmpty()) {
+                        if (profile.avatarUrl.isNotEmpty()) {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+                            profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
                         }
                     }
                 }
@@ -384,23 +394,10 @@ class ProfileActivity : AppCompatActivity() {
 
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+            profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
         } else {
             profileAvatar.setImageResource(R.drawable.ic_default_avatar)
-        }
-
-        val currentMeForAvatar = grpcClient.getCurrentUsername() ?: ""
-        val isMeAdminForAvatar = isGroup && currentMeForAvatar == creator && creator.isNotEmpty()
-        if (isMeAdminForAvatar) {
-            profileAvatar.setOnClickListener {
-                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                pickImageLauncher.launch(intent)
-            }
-        } else {
-            if (avatarUrl.isNotEmpty()) {
-                profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
-            } else {
-                profileAvatar.setOnClickListener(null)
-            }
+            profileAvatar.setOnClickListener(null)
         }
     }
 
@@ -481,36 +478,10 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showFullScreenImage(imageUrl: String) {
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen).create()
-        val layout = RelativeLayout(this)
-        val imageView = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
+        val intent = Intent(this, FullScreenImageActivity::class.java).apply {
+            putExtra("image_url", imageUrl)
         }
-        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge)
-        
-        layout.addView(imageView, RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
-        layout.addView(progressBar, RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT).apply {
-            addRule(RelativeLayout.CENTER_IN_PARENT)
-        })
-
-        dialog.setView(layout)
-        imageView.setOnClickListener { dialog.dismiss() }
-        
-        Glide.with(this)
-            .load(imageUrl)
-            .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                    progressBar.isVisible = false
-                    return false
-                }
-                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                    progressBar.isVisible = false
-                    return false
-                }
-            })
-            .into(imageView)
-            
-        dialog.show()
+        startActivity(intent)
     }
 
     private fun applySavedColorScheme() {
