@@ -397,28 +397,21 @@ Current version: **1.0.2.9**
 - 📱 Added landscape layout support for main screen (activity_main.xml)
 - 📱 Added landscape layout support for join chat dialog (dialog_join_chat.xml)
 - 📱 Added landscape layout support for profile dialog (dialog_profile.xml)
-- 🔄 Improved UI adaptation for different screen orientations
+### Version 1.0.2.12 - Stability and Cleanup
+- 🛠️ Fixed missing `logout()` functionality and unresolved references in `ChatListActivity`.
+- 🐛 Resolved systemic string syntax errors across the application.
+- ⌨️ Fully implemented listeners for message input actions (send, attach, audio).
+- 🛡️ Improved code stability and cleaned up IDE warnings/errors for a production-ready state.
+- 🎨 Final unified styling for toolbars and avatars.
 
-### Version 1.0.1.24 - Unread Count Fix
-- 🔔 Fixed unread count calculation - now uses is_read flag instead of last_read_at comparison
-- 🔄 Added DiffUtil to ChatAdapter for efficient UI updates
-- ⚡ Reduced polling interval from 5 to 3 seconds for faster unread count updates
-- 🔄 Added onResume() to refresh chat list when returning from chat
-- 🐛 Fixed issue where unread count was always 0 due to incorrect time comparison
+### Version 1.0.2.11 - Bugfixes
+- 🛠️ Fixed crash when opening chats with no messages.
+- 🎨 Minor UI refinements in chat list.
 
-### Version 1.0.1.23 - Chat List UI Improvements
-- 🎨 Updated chat list to use MaterialCardView with improved styling
-- 🔔 Added unread count badges for chats
-- 📨 Added message read status indicators (sent/read icons)
-- 🛠️ Modernized toolbar to MaterialToolbar
-- 🔧 Downgraded coreKtx dependency from 1.18.0 to 1.15.0 for stability
-
-### Version 1.0.2.11 - Mentions and Improvements
+### Version 1.0.2.10 - Mentions and Improvements
 - 👤 Added user mention system using the `@` symbol in group chats.
 - ⌨️ Improved keyboard and system bar handling for Android 12 and 14.
 - 🎨 Unified incoming message bubble and chat card colors across all themes.
-
-### Version 1.0.2.10 - UI Unification and Voice Messages
 - 🎨 Unified toolbars across the app: increased height (up to 100dp) and rounded corners (24dp).
 - 📱 Custom toolbar height for direct chats (84dp) to optimize space.
 - 🖼️ Added full-screen avatar viewing from the profile menu.
@@ -428,6 +421,14 @@ Current version: **1.0.2.9**
 - 🎨 Added subtle toolbar border-bottom for a more layered interface look.
 - 🔄 Fixed update system: forced check on "Update" click and on every startup.
 - 🔝 Raised [+] FAB button to avoid overlapping with navigation bar.
+
+### Version 1.0.1.25 - Orientation Support
+- 📱 Added layout for horizontal orientation of the main screen.
+- 📱 Added layout for horizontal orientation of the login dialog.
+- 📱 Added layout for horizontal orientation of the profile dialog.
+- 🔄 Improved UI adaptation for different screen orientations
+
+### Version 1.0.1.24 - Unread Count Fix
 
 ### Version 1.0.1 - Chat List and Profile
 - 📱 Added dedicated chat list activity
