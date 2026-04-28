@@ -130,9 +130,7 @@ class ThemesActivity : AppCompatActivity() {
             item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
         } else {
             val item = menu.add(0, 200, 0, R.string.apply)
-            item.setIcon(R.drawable.ic_checked)
-            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-            item.iconTintList = ColorStateList.valueOf(getOnPrimaryColor())
+            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         }
         return true
     }
