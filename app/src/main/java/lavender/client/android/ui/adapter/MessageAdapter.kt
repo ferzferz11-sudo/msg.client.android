@@ -26,7 +26,7 @@ class MessageAdapter(
     private val adminUsername: String = "",
     private val onMessageClick: (Message) -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
-    private val onImageLongClick: ((Message) -> Unit)? = null,
+    private val onMessageLongClick: ((Message) -> Unit)? = null,
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
@@ -93,20 +93,19 @@ class MessageAdapter(
                 } else onMessageClick(currentMessage)
             },
             onLongClick = {
-                if (!selectionMode) {
+                if (selectionMode) {
                     val currentPosition = holder.bindingAdapterPosition
                     if (currentPosition != RecyclerView.NO_POSITION) {
-                        val isAdmin = currentUsername == adminUsername
-                        if (isAdmin || isOutgoing) {
-                            selectionMode = true
-                            selectedPositions.add(currentPosition)
-                            notifyItemRangeChanged(0, itemCount)
-                            onSelectionChanged(selectedPositions.size)
-                        }
+                        if (selectedPositions.contains(currentPosition)) selectedPositions.remove(currentPosition)
+                        else selectedPositions.add(currentPosition)
+                        notifyItemChanged(currentPosition)
+                        onSelectionChanged(selectedPositions.size)
                     }
+                } else {
+                    onMessageLongClick?.invoke(currentMessage)
                 }
             },
-            onImageLongClick = onImageLongClick
+            onMessageLongClick = onMessageLongClick
         )
     }
 
@@ -128,7 +127,7 @@ class MessageAdapter(
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         
-        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onImageLongClick: ((Message) -> Unit)? = null) {
+        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             
@@ -301,6 +300,10 @@ class MessageAdapter(
                             context.startActivity(intent)
                         }
                     }
+                    messageText.setOnLongClickListener {
+                        if (isSelectionMode) onLongClick() else onMessageLongClick?.invoke(message)
+                        true
+                    }
                 } else {
                     val text = message.text
                     val highlight = searchHighlight
@@ -320,6 +323,8 @@ class MessageAdapter(
                     }
                     messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
                     messageText.setOnClickListener(null)
+                    messageText.isClickable = false
+                    messageText.isFocusable = false
                 }
             }
             
@@ -329,9 +334,11 @@ class MessageAdapter(
                     .load(message.imageUrl)
                     .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
                     .into(messageImageView)
-                messageImageView.setOnClickListener { onMessageClick(message) }
+                messageImageView.setOnClickListener { 
+                    if (isSelectionMode) onClick() else onMessageClick(message) 
+                }
                 messageImageView.setOnLongClickListener {
-                    onImageLongClick?.invoke(message)
+                    if (isSelectionMode) onLongClick() else onMessageLongClick?.invoke(message)
                     true
                 }
             } else {
@@ -398,8 +405,9 @@ class MessageAdapter(
             val genericOnLongClick = { onLongClick(); true }
             messageBubble.setOnClickListener { genericOnClick() }
             messageBubble.setOnLongClickListener { genericOnLongClick() }
-            messageText.setOnClickListener { genericOnClick() }
-            messageText.setOnLongClickListener { genericOnLongClick() }
+            
+            // reactionsText should also be clickable to show the dialog
+            reactionsText.setOnClickListener { genericOnLongClick() }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int {

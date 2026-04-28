@@ -296,7 +296,7 @@ class NewChatActivity : AppCompatActivity() {
             adminUsername = creator,
             onMessageClick = { if (it.imageUrl.isNotEmpty()) showFullScreenImage(it.imageUrl) },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
-            onImageLongClick = { showReactionsDialog(it) }
+            onMessageLongClick = { showReactionsDialog(it) }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter
@@ -315,6 +315,14 @@ class NewChatActivity : AppCompatActivity() {
                 val wasAtBottom = (messagesRecyclerView.layoutManager as? LinearLayoutManager)?.let { it.findLastVisibleItemPosition() >= lastMessageCount - 2 } ?: true
                 val isFirstLoad = lastMessageCount == 0; val hasNewMessages = roomMessages.size > lastMessageCount
                 adapter.submitList(roomMessages) { if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
+                
+                if (hasNewMessages) {
+                    val incomingMessages = roomMessages.filter { it.user != username && !it.isRead }
+                    if (incomingMessages.isNotEmpty()) {
+                        viewModel.markRead(username, this@NewChatActivity)
+                    }
+                }
+
                 lastMessageCount = roomMessages.size
             }
         }
@@ -437,12 +445,85 @@ class NewChatActivity : AppCompatActivity() {
     private fun showReplyPreview(message: Message) { replyingTo = message; replyPreview.isVisible = true; replyUser.text = message.user; replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text; messageInput.requestFocus() }
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
-    private fun sendMessage(text: String, imageUrl: String) { val msg = Message(user = username, text = text, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: ""); grpcClient.sendMessage(msg) }
+    private fun sendMessage(text: String, imageUrl: String) { 
+        val msg = Message(user = username, text = text, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
+        grpcClient.sendMessage(msg)
+        viewModel.markRead(username, this)
+    }
     private fun showReactionsDialog(message: Message) {
-        val root = findViewById<ViewGroup>(android.R.id.content); val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false); val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialogView.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener { dialog.dismiss(); showReplyPreview(message) }
-        dialogView.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener { dialog.dismiss(); (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", message.text)); showToast(getString(R.string.copied_to_clipboard)) }
-        dialogView.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener { dialog.dismiss(); grpcClient.deleteMessage(message) }; dialog.show()
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false)
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        
+        val reactionsContainer = dialogView.findViewById<LinearLayout>(R.id.reactionsContainer)
+        val emojis = listOf("👍", "❤️", "🔥", "😂", "😮", "😢", "🙏", "✅")
+        
+        for (emoji in emojis) {
+            val textView = TextView(this).apply {
+                text = emoji
+                textSize = 30f
+                setPadding(16, 8, 16, 8)
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
+                setBackgroundResource(typedValue.resourceId)
+                setOnClickListener {
+                    grpcClient.setReaction(message.id, username, emoji)
+                    dialog.dismiss()
+                }
+            }
+            reactionsContainer.addView(textView)
+        }
+
+        dialogView.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener { 
+            dialog.dismiss()
+            showReplyPreview(message) 
+        }
+        dialogView.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener { 
+            dialog.dismiss()
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("message", message.text))
+            showToast(getString(R.string.copied_to_clipboard))
+        }
+        
+        val editButton = dialogView.findViewById<LinearLayout>(R.id.menuEdit)
+        if (message.user == username) {
+            editButton.isVisible = true
+            editButton.setOnClickListener {
+                dialog.dismiss()
+                showEditMessageDialog(message)
+            }
+        } else {
+            editButton.isVisible = false
+        }
+        
+        dialogView.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener { 
+            dialog.dismiss()
+            grpcClient.deleteMessage(message) 
+        }
+        
+        dialog.show()
+    }
+
+    private fun showEditMessageDialog(message: Message) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_message, null)
+        val editText = dialogView.findViewById<EditText>(R.id.editMessageInput)
+        editText.setText(message.text)
+        editText.setSelection(message.text.length)
+        
+        AlertDialog.Builder(this)
+            .setTitle(R.string.edit_message)
+            .setView(dialogView)
+            .setPositiveButton(R.string.change_bio) { d, _ ->
+                val newText = editText.text.toString().trim()
+                if (newText.isNotEmpty() && newText != message.text) {
+                    grpcClient.editMessage(message.id, newText) { success, msg ->
+                        if (!success) runOnUiThread { showToast(msg) }
+                    }
+                }
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showAudioRecordingView() {
