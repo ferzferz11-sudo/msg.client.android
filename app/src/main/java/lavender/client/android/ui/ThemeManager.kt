@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import lavender.client.android.R
@@ -28,19 +30,17 @@ object ThemeManager {
             return
         }
 
-        // Try to load from cache first
         val cachedTheme = prefs.getString("custom_theme_json_$themeId", null)
         if (cachedTheme != null) {
             currentCustomTheme = parseThemeFromJson(cachedTheme)
             onComplete()
         }
 
-        // Always refresh from server
         GrpcClient.getThemes(username) { _, themes ->
             val theme = themes.find { it.id == themeId }
             if (theme != null) {
                 currentCustomTheme = theme
-                prefs.edit().putString("custom_theme_json_$themeId", serializeThemeToJson(theme)).apply()
+                prefs.edit { putString("custom_theme_json_$themeId", serializeThemeToJson(theme)) }
                 onComplete()
             }
         }
@@ -54,43 +54,35 @@ object ThemeManager {
         val theme = currentCustomTheme
         val root = activity.findViewById<View>(android.R.id.content)
 
-        // Ensure Edge-to-Edge by making system bars transparent
         @Suppress("DEPRECATION")
         activity.window.statusBarColor = Color.TRANSPARENT
         @Suppress("DEPRECATION")
         activity.window.navigationBarColor = Color.TRANSPARENT
         
-        // Fix for Android 15+ and better Edge-to-Edge consistency
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(activity.window, false)
 
         if (theme == null) {
-            // Support standard themes (light/dark)
             val typedValue = android.util.TypedValue()
             activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
             val onPrimary = if (typedValue.resourceId != 0) ContextCompat.getColor(activity, typedValue.resourceId) else typedValue.data
-            
-            // Force tinting for toolbar children (handles custom titles and icons in standard themes)
             findAndTintToolbars(root, onPrimary)
             return
         }
         
         applyThemeToView(root, theme)
         
-        // Handle bottom panel specifically if it exists
         activity.findViewById<View>(R.id.bottomPanel)?.let { 
             applyThemeToBottomPanel(it, theme)
         }
 
-        // Automatic System UI bars adjustment based on brightness of Primary Color
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             val controller = activity.window.insetsController
             if (controller != null) {
                 try {
-                    val primaryColor = Color.parseColor(theme.primaryColor)
+                    val primaryColor = theme.primaryColor.toColorInt()
                     val isLight = isColorLight(primaryColor)
                     
                     if (isLight) {
-                        // Light background -> Dark icons on bars
                         controller.setSystemBarsAppearance(
                             android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
                             android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
@@ -100,7 +92,6 @@ object ThemeManager {
                             android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
                         )
                     } else {
-                        // Dark background -> Light icons on bars
                         controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
                         controller.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
                     }
@@ -108,23 +99,15 @@ object ThemeManager {
             }
         }
         
-        // Handle Dialog styling for the activity (using reflections or specific theme overrides)
-        // Since we can't easily change the system AlertDialog theme at runtime without a style resource,
-        // we can at least ensure activities apply the background.
-
-        // Activity-specific background
         try {
-            val bgColor = Color.parseColor(theme.backgroundColor)
+            val bgColor = theme.backgroundColor.toColorInt()
             activity.window.decorView.setBackgroundColor(bgColor)
             root.setBackgroundColor(bgColor)
             
-            // Set background for SwipeRefreshLayout if it exists
             activity.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)?.setBackgroundColor(bgColor)
             
-            // Fix: ensure the content view itself is transparent to see root background
             (root as? ViewGroup)?.getChildAt(0)?.setBackgroundColor(Color.TRANSPARENT)
             
-            // Handle background images
             val bgImageView = activity.findViewById<android.widget.ImageView>(
                 if (activity.javaClass.simpleName == "ChatListActivity") R.id.chatListBgImage
                 else R.id.chatBackground
@@ -177,12 +160,12 @@ object ThemeManager {
 
     fun applyThemeToView(view: View, theme: CustomThemeProto) {
         try {
-            val primaryColor = Color.parseColor(theme.primaryColor)
-            val onPrimaryColor = Color.parseColor(theme.onPrimaryColor)
-            val backgroundColor = Color.parseColor(theme.backgroundColor)
-            val textPrimaryColor = Color.parseColor(theme.textPrimaryColor)
-            val surfaceColor = Color.parseColor(theme.surfaceColor)
-            val onSurfaceColor = Color.parseColor(theme.onSurfaceColor)
+            val primaryColor = theme.primaryColor.toColorInt()
+            val onPrimaryColor = theme.onPrimaryColor.toColorInt()
+            val backgroundColor = theme.backgroundColor.toColorInt()
+            val textPrimaryColor = theme.textPrimaryColor.toColorInt()
+            val surfaceColor = theme.surfaceColor.toColorInt()
+            val onSurfaceColor = theme.onSurfaceColor.toColorInt()
 
             when (view) {
                 is com.google.android.material.appbar.MaterialToolbar -> {
@@ -191,7 +174,6 @@ object ThemeManager {
                     view.setSubtitleTextColor(onPrimaryColor)
                     view.setNavigationIconTint(onPrimaryColor)
                     
-                    // Force overflow icon tinting
                     val overflowIcon = view.overflowIcon
                     if (overflowIcon != null) {
                         val tintedIcon = androidx.core.graphics.drawable.DrawableCompat.wrap(overflowIcon).mutate()
@@ -199,13 +181,11 @@ object ThemeManager {
                         view.overflowIcon = tintedIcon
                     }
 
-                    // Tint all menu items
                     for (i in 0 until view.menu.size()) {
                         val item = view.menu.getItem(i)
                         item.icon?.setTint(onPrimaryColor)
                     }
 
-                    // Deep search for all text and icons in toolbar
                     for (i in 0 until view.childCount) {
                         val child = view.getChildAt(i)
                         applyColorToToolbarChild(child, onPrimaryColor)
@@ -229,7 +209,7 @@ object ThemeManager {
                 is MaterialCardView -> {
                     if (view.id == R.id.bottomPanel) {
                         try {
-                            val bpColor = Color.parseColor(theme.bottomPanelColor)
+                            val bpColor = theme.bottomPanelColor.toColorInt()
                             view.setCardBackgroundColor(bpColor)
                         } catch (_: Exception) {
                             view.setCardBackgroundColor(surfaceColor)
@@ -244,12 +224,10 @@ object ThemeManager {
                 }
             }
             
-            // Handle background for generic containers
             if (view.tag == "themed_background") {
                 view.setBackgroundColor(backgroundColor)
             }
 
-            // CRITICAL: Skip recursion for MaterialToolbar children to avoid overwriting tinted items
             if (view is com.google.android.material.appbar.MaterialToolbar) {
                 return
             }
@@ -263,7 +241,6 @@ object ThemeManager {
     }
 
     private fun applyColorToToolbarChild(view: View, color: Int) {
-        // Skip tinting for avatars - they should show the real photo
         val idName = try { view.resources.getResourceEntryName(view.id) } catch (_: Exception) { "" }
         if (idName.contains("avatar", ignoreCase = true)) {
             return
@@ -285,9 +262,9 @@ object ThemeManager {
 
     fun applyThemeToBottomPanel(view: View, theme: CustomThemeProto) {
         try {
-            val bpColor = Color.parseColor(theme.bottomPanelColor)
-            val onBpColor = Color.parseColor(theme.onBottomPanelColor)
-            val textPrimary = Color.parseColor(theme.textPrimaryColor)
+            val bpColor = theme.bottomPanelColor.toColorInt()
+            val onBpColor = theme.onBottomPanelColor.toColorInt()
+            val textPrimary = theme.textPrimaryColor.toColorInt()
 
             if (view is MaterialCardView) {
                 view.setCardBackgroundColor(bpColor)
@@ -298,9 +275,8 @@ object ThemeManager {
                     val child = view.getChildAt(i)
                     when (child) {
                         is android.widget.ImageButton -> {
-                            // Don't tint the send button if it's the primary color
                             if (child.id == R.id.sendButton) {
-                                child.imageTintList = ColorStateList.valueOf(Color.parseColor(theme.primaryColor))
+                                child.imageTintList = ColorStateList.valueOf(theme.primaryColor.toColorInt())
                             } else {
                                 child.imageTintList = ColorStateList.valueOf(onBpColor)
                             }
