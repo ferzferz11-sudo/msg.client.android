@@ -188,7 +188,8 @@ object RealGrpcClient {
     }
 
     private fun getMessageHash(message: Message): String {
-        return "${message.user}:${message.text}:${message.imageUrl}:${message.timestamp / 1000}"
+        if (message.id.isNotEmpty()) return "id:${message.id}"
+        return "${message.user}:${message.text}:${message.imageUrl}:${message.voiceUrl}:${message.timestamp / 1000}"
     }
 
     fun loadHistory(roomId: String = "general", onComplete: () -> Unit = {}) {
@@ -448,6 +449,7 @@ object RealGrpcClient {
                     if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return
 
                     val incoming = ProtoUtils.createMessageFromProto(value)
+                    android.util.Log.d("RealGrpcClient", "Parsed incoming message: id=${incoming.id}, text='${incoming.text}', voice='${incoming.voiceUrl}'")
 
                     // Load avatar for incoming message if not cached and avatarUrl is empty
                     if (incoming.avatarUrl.isEmpty() && !avatarCache.containsKey(incoming.user)) {
@@ -1724,11 +1726,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.isRead) cos.writeBool(11, value.isRead)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(12, value.avatarUrl)
         if (value.imageUrl.isNotEmpty()) cos.writeString(13, value.imageUrl)
-        if (value.voiceUrl.isNotEmpty()) cos.writeString(14, value.voiceUrl)
-        if (value.duration != 0) cos.writeInt32(15, value.duration)
-        if (value.edited) cos.writeBool(16, value.edited)
-        if (value.clientVersion.isNotEmpty()) cos.writeString(17, value.clientVersion)
-        if (value.isSuperAdmin) cos.writeBool(18, value.isSuperAdmin)
+        if (value.edited) cos.writeBool(14, value.edited)
+        if (value.clientVersion.isNotEmpty()) cos.writeString(15, value.clientVersion)
+        if (value.isSuperAdmin) cos.writeBool(16, value.isSuperAdmin)
+        if (value.voiceUrl.isNotEmpty()) cos.writeString(17, value.voiceUrl)
+        if (value.duration != 0) cos.writeInt32(18, value.duration)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1777,11 +1779,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 11 -> isRead = cis.readBool()
                 12 -> avatarUrl = cis.readString()
                 13 -> imageUrl = cis.readString()
-                14 -> voiceUrl = cis.readString()
-                15 -> duration = cis.readInt32()
-                16 -> edited = cis.readBool()
-                17 -> clientVersion = cis.readString()
-                18 -> isSuperAdmin = cis.readBool()
+                14 -> edited = cis.readBool()
+                15 -> clientVersion = cis.readString()
+                16 -> isSuperAdmin = cis.readBool()
+                17 -> voiceUrl = cis.readString()
+                18 -> duration = cis.readInt32()
                 else -> cis.skipField(tag)
             }
         }

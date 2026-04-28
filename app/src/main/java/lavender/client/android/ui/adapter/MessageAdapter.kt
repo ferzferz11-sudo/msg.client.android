@@ -281,6 +281,20 @@ class MessageAdapter(
                     context.theme.resolveAttribute(iconColorAttr, typedValue, true)
                     val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
                     messageText.compoundDrawables[0]?.setTint(color)
+
+                    messageText.setOnClickListener {
+                        val coords = message.text.removePrefix("geo:").split(",")
+                        if (coords.size == 2) {
+                            val lat = coords[0].toDoubleOrNull() ?: 0.0
+                            val lng = coords[1].toDoubleOrNull() ?: 0.0
+                            val intent = android.content.Intent(context, lavender.client.android.MapPickerActivity::class.java).apply {
+                                putExtra("view_mode", true)
+                                putExtra("lat", lat)
+                                putExtra("lng", lng)
+                            }
+                            context.startActivity(intent)
+                        }
+                    }
                 } else if (message.text.startsWith("File: ")) {
                     val lines = message.text.split("\n")
                     val fileName = if (lines.size > 1) lines[0].removePrefix("File: ") else message.text.removePrefix("File: ")

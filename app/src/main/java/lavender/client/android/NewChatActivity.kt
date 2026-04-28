@@ -149,7 +149,7 @@ class NewChatActivity : AppCompatActivity() {
             result.data?.clipData?.let { clipData ->
                 for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
             }
-            if (uris.isNotEmpty()) uploadFiles(uris.toList())
+            if (uris.isNotEmpty()) uploadFiles(uris.toList(), isImage = true)
         }
     }
 
@@ -160,12 +160,22 @@ class NewChatActivity : AppCompatActivity() {
             result.data?.clipData?.let { clipData ->
                 for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
             }
-            if (uris.isNotEmpty()) uploadFiles(uris.toList())
+            if (uris.isNotEmpty()) uploadFiles(uris.toList(), isImage = false)
         }
     }
 
     private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) currentPhotoUri?.let { uploadFiles(listOf(it)) }
+        if (success) currentPhotoUri?.let { uploadFiles(listOf(it), isImage = true) }
+    }
+
+    private val pickLocationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val lat = result.data?.getDoubleExtra("lat", 0.0) ?: 0.0
+            val lng = result.data?.getDoubleExtra("lng", 0.0) ?: 0.0
+            if (lat != 0.0 || lng != 0.0) {
+                sendMessage("geo:$lat,$lng", "")
+            }
+        }
     }
 
     private fun createImageUri(): Uri? {
@@ -353,52 +363,18 @@ class NewChatActivity : AppCompatActivity() {
             }
         }
         lifecycleScope.launch {
-            grpcClient.typingUsers.collect { typingMap ->
-                val otherTyping = (typingMap[roomId] ?: emptySet()).filter { it != username }
-                runOnUiThread {
-                    if (otherTyping.isNotEmpty()) {
-                        toolbarSubtitle.isVisible = true; toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first()) else getString(R.string.users_are_typing, otherTyping.size)
-                    } else if (!isDirect) { updateGroupSubtitle(grpcClient.users.value) }
-                }
+            grpcClient.typingUsers.collect { _ ->
+                updateSubtitle(grpcClient.users.value, grpcClient.connectionState.value)
             }
         }
         lifecycleScope.launch {
             grpcClient.connectionState.collect { connected ->
-                runOnUiThread {
-                    if (!connected) {
-                        toolbarSubtitle.isVisible = true
-                        toolbarSubtitle.text = getString(R.string.connecting)
-                        val typedValue = TypedValue()
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                        toolbarSubtitle.setTextColor(typedValue.data)
-                    } else if (!isDirect) {
-                        updateGroupSubtitle(grpcClient.users.value)
-                    }
-                }
+                updateSubtitle(grpcClient.users.value, connected)
             }
         }
         lifecycleScope.launch {
             grpcClient.users.collect { onlineUsers ->
-                runOnUiThread {
-                    if (isDirect && grpcClient.connectionState.value) {
-                        val otherUser = JSONArray(participantsJson).let { arr ->
-                            (0 until arr.length()).asSequence().map { arr.getString(it) }.find { it != username }
-                        } ?: return@runOnUiThread
-                        val isOnline = onlineUsers.contains(otherUser)
-                        toolbarSubtitle.isVisible = true
-                        toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
-                        toolbarSubtitle.setTextColor(
-                            if (isOnline) getColor(android.R.color.holo_green_light)
-                            else {
-                                val typedValue = TypedValue()
-                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                                typedValue.data
-                            }
-                        )
-                    } else if (!isDirect && grpcClient.connectionState.value) {
-                        updateGroupSubtitle(onlineUsers)
-                    }
-                }
+                updateSubtitle(onlineUsers, grpcClient.connectionState.value)
             }
         }
     }
@@ -417,14 +393,7 @@ class NewChatActivity : AppCompatActivity() {
             }
         }
         attachButton.setOnClickListener {
-            val options = arrayOf(getString(R.string.take_photo), getString(R.string.gallery), getString(R.string.file))
-            AlertDialog.Builder(this).setTitle(R.string.attach_file).setItems(options) { _, which ->
-                when (which) {
-                    0 -> { currentPhotoUri = createImageUri(); currentPhotoUri?.let { takePhotoLauncher.launch(it) } }
-                    1 -> { val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply { putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }; pickImageLauncher.launch(intent) }
-                    2 -> { val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }; pickFileLauncher.launch(intent) }
-                }
-            }.show()
+            showAttachmentSheet()
         }
         messageInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -491,6 +460,43 @@ class NewChatActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    private fun showAttachmentSheet() {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
+        
+        view.findViewById<LinearLayout>(R.id.attachCamera).setOnClickListener {
+            bottomSheet.dismiss()
+            currentPhotoUri = createImageUri()
+            currentPhotoUri?.let { takePhotoLauncher.launch(it) }
+        }
+        
+        view.findViewById<LinearLayout>(R.id.attachGallery).setOnClickListener {
+            bottomSheet.dismiss()
+            val intent = Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            }
+            pickImageLauncher.launch(intent)
+        }
+        
+        view.findViewById<LinearLayout>(R.id.attachFile).setOnClickListener {
+            bottomSheet.dismiss()
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "*/*"
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            }
+            pickFileLauncher.launch(intent)
+        }
+        
+        view.findViewById<LinearLayout>(R.id.attachLocation).setOnClickListener {
+            bottomSheet.dismiss()
+            val intent = Intent(this, MapPickerActivity::class.java)
+            pickLocationLauncher.launch(intent)
+        }
+        
+        bottomSheet.setContentView(view)
+        bottomSheet.show()
+    }
+
     private fun showSearchBar() { searchBar.isVisible = true; toolbarContent.isVisible = false; searchInput.requestFocus(); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0) }
     private fun hideSearchBar() { searchBar.isVisible = false; toolbarContent.isVisible = true; searchInput.text.clear(); adapter.setSearchHighlight(null); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0) }
 
@@ -521,7 +527,8 @@ class NewChatActivity : AppCompatActivity() {
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
     private fun sendMessage(text: String, imageUrl: String) { 
-        val msg = Message(user = username, text = text, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
+        val effectiveText = if (text.isEmpty() && imageUrl.isNotEmpty()) "Image" else if (text.isEmpty()) "Message" else text
+        val msg = Message(user = username, text = effectiveText, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
         grpcClient.sendMessage(msg)
         viewModel.markRead(username, this)
     }
@@ -630,32 +637,46 @@ class NewChatActivity : AppCompatActivity() {
             val result = uploader.uploadAudio(file, duration)
             runOnUiThread {
                 uploadProgressBar.isVisible = false; audioButton.isVisible = true
-                if (result.success) {
-                    grpcClient.sendMessage(Message(user = username, text = "", timestamp = System.currentTimeMillis(), roomId = roomId, voiceUrl = result.url, duration = result.duration))
+                if (result.success && result.url.isNotEmpty() && !result.url.contains("404")) {
+                    grpcClient.sendMessage(Message(user = username, text = "Voice message", timestamp = System.currentTimeMillis(), roomId = roomId, voiceUrl = result.url, duration = result.duration))
                 } else {
-                    showToast("Failed to upload audio: ${result.error}")
+                    showToast("Failed to upload audio: ${if (result.url.contains("404")) "Server error 404" else result.error}")
                 }
             }
         }
     }
 
-    private fun uploadFiles(uris: List<Uri>) {
+    private fun uploadFiles(uris: List<Uri>, isImage: Boolean) {
         uris.forEach { uri ->
             uploadProgressBar.isVisible = true; val stream = contentResolver.openInputStream(uri); val bytes = stream?.readBytes(); stream?.close()
             if (bytes != null) {
-                val body = MultipartBody.Part.createFormData("file", "file_${System.currentTimeMillis()}", bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
-                val request = Request.Builder().url("http://159.195.38.145:8082/${if (isDirect) "upload" else "upload_group"}").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                val fileName = getFileName(uri) ?: (if (isImage) "image.jpg" else "file")
+                val formKey = if (isImage) "image" else "file"
+                val endpoint = if (isImage) "upload-image" else "upload-file"
+                
+                val body = MultipartBody.Part.createFormData(formKey, fileName, bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                val request = Request.Builder().url("http://159.195.38.145:8082/$endpoint").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 OkHttpClient().newCall(request).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
                         runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                        val url = response.body.string()
-                        val fileName = getFileName(uri) ?: "file"
+                        val responseBody = response.body.string()
+                        if (!response.isSuccessful || responseBody.contains("404")) {
+                            runOnUiThread { uploadProgressBar.isVisible = false; showToast("Server error: 404 or ${response.code}") }
+                            return
+                        }
+                        
+                        val url = if (responseBody.contains("\"url\":")) {
+                            try { org.json.JSONObject(responseBody).getString("url") } catch (e: Exception) { "" }
+                        } else if (responseBody.startsWith("http")) responseBody else ""
+                        
                         runOnUiThread { 
                             uploadProgressBar.isVisible = false
-                            if (url.isNotEmpty()) sendMessage("File: $fileName\n$url", url) 
-                            else showToast("Upload failed") 
+                            if (url.isNotEmpty() && !url.contains("404")) {
+                                if (isImage) sendMessage("Image", url)
+                                else sendMessage("File: $fileName\n$url", "")
+                            } else showToast("Upload failed: Invalid server response")
                         }
                     }
                 })
@@ -688,6 +709,51 @@ class NewChatActivity : AppCompatActivity() {
     private fun applyChatBackground() {
         val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
         if (theme.backgroundImageUrl.isNotEmpty()) findViewById<ImageView>(R.id.chatBackground)?.let { com.bumptech.glide.Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(it); messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT); swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT) }
+    }
+
+    private fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean) {
+        runOnUiThread {
+            if (!isConnected) {
+                toolbarSubtitle.isVisible = true
+                toolbarSubtitle.text = getString(R.string.connecting)
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                toolbarSubtitle.setTextColor(typedValue.data)
+                return@runOnUiThread
+            }
+
+            val otherTyping = (grpcClient.typingUsers.value[roomId] ?: emptySet()).filter { it != username }
+            if (otherTyping.isNotEmpty()) {
+                toolbarSubtitle.isVisible = true
+                toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first()) else getString(R.string.users_are_typing, otherTyping.size)
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                toolbarSubtitle.setTextColor(typedValue.data)
+                return@runOnUiThread
+            }
+
+            if (isDirect) {
+                val otherUser = try {
+                    JSONArray(participantsJson).let { arr ->
+                        (0 until arr.length()).asSequence().map { arr.getString(it) }.find { it != username }
+                    }
+                } catch (e: Exception) { null } ?: return@runOnUiThread
+                
+                val isOnline = onlineUsers.contains(otherUser)
+                toolbarSubtitle.isVisible = true
+                toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
+                toolbarSubtitle.setTextColor(
+                    if (isOnline) getColor(android.R.color.holo_green_light)
+                    else {
+                        val typedValue = TypedValue()
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                        typedValue.data
+                    }
+                )
+            } else {
+                updateGroupSubtitle(onlineUsers)
+            }
+        }
     }
 
     private fun updateGroupSubtitle(onlineUsers: List<String>) {
