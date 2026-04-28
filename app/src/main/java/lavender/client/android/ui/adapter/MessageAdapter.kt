@@ -1,6 +1,7 @@
 package lavender.client.android.ui.adapter
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -132,11 +133,6 @@ class MessageAdapter(
             val isGroup = this@MessageAdapter.isGroupChat
             val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
             
-            val isLightMode = if (theme != null) !theme.isDark else {
-                val nightMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-                nightMode == android.content.res.Configuration.UI_MODE_NIGHT_NO
-            }
-            
             messageText.text = message.text
             userText.text = message.user
 
@@ -182,93 +178,59 @@ class MessageAdapter(
             }
 
             // 3. Child Ordering & Background
-            if (isOutgoing) {
-                if (isLightMode) {
-                    messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
+            val surfaceColor: Int
+            val textPrimaryColor: Int
+            val textSecondaryColor: Int
+
+            if (theme != null) {
+                val surface = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { Color.LTGRAY }
+                val primary = try { theme.primaryColor.toColorInt() } catch (_: Exception) { Color.BLUE }
+                val textPrimary = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { Color.BLACK }
+                val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { Color.DKGRAY }
+                val onPrimary = try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { Color.WHITE }
+
+                if (isOutgoing) {
+                    surfaceColor = primary
+                    textPrimaryColor = onPrimary
+                    textSecondaryColor = onPrimary
                 } else {
-                    messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
+                    surfaceColor = surface
+                    textPrimaryColor = textPrimary
+                    textSecondaryColor = textSecondary
                 }
-                messageBubble.gravity = android.view.Gravity.END
+            } else {
+                val typedValue = android.util.TypedValue()
                 
-                if (theme != null) {
-                    try {
-                        if (isLightMode) {
-                            val surface = theme.surfaceColor.toColorInt()
-                            val textPrimary = theme.textPrimaryColor.toColorInt()
-                            val textSecondary = theme.textSecondaryColor.toColorInt()
-                            
-                            messageBubble.backgroundTintList = ColorStateList.valueOf(surface)
-                            messageText.setTextColor(textPrimary)
-                            timeText.setTextColor(textSecondary)
-                            editedText.setTextColor(textSecondary)
-                        } else {
-                            val primary = theme.primaryColor.toColorInt()
-                            val onPrimary = theme.onPrimaryColor.toColorInt()
-                            messageBubble.backgroundTintList = ColorStateList.valueOf(primary)
-                            messageText.setTextColor(onPrimary)
-                            timeText.setTextColor(onPrimary)
-                            editedText.setTextColor(onPrimary)
-                        }
-                    } catch (_: Exception) {}
+                if (isOutgoing) {
+                    context.theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+                    surfaceColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                    textPrimaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                    textSecondaryColor = textPrimaryColor
                 } else {
-                    val typedValue = android.util.TypedValue()
-                    if (isLightMode) {
-                        context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                        val surfaceColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                        messageBubble.backgroundTintList = ColorStateList.valueOf(surfaceColor)
-                        
-                        context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                        messageText.setTextColor(if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data)
-                        
-                        context.theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
-                        val secondaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                        timeText.setTextColor(secondaryColor)
-                        editedText.setTextColor(secondaryColor)
-                    } else {
-                        context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                        val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                        messageText.setTextColor(color)
-                        timeText.setTextColor(color)
-                        editedText.setTextColor(color)
-                        messageBubble.backgroundTintList = null
-                    }
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                    surfaceColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
+                    textPrimaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                    textSecondaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
                 }
+            }
+
+            // Apply Background & Gravity
+            if (isOutgoing) {
+                messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
+                messageBubble.gravity = android.view.Gravity.END
             } else {
                 messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
                 messageBubble.gravity = android.view.Gravity.START
-                
-                if (theme != null) {
-                    try {
-                        val surface = theme.surfaceColor.toColorInt()
-                        val textPrimary = theme.textPrimaryColor.toColorInt()
-                        val textSecondary = theme.textSecondaryColor.toColorInt()
-                        
-                        messageBubble.backgroundTintList = ColorStateList.valueOf(surface)
-                        messageText.setTextColor(textPrimary)
-                        timeText.setTextColor(textSecondary)
-                        editedText.setTextColor(textSecondary)
-                        userText.setTextColor(textSecondary)
-                    } catch (_: Exception) {}
-                } else {
-                    val typedValue = android.util.TypedValue()
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                    val surfaceColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                    messageBubble.backgroundTintList = ColorStateList.valueOf(surfaceColor)
-                    
-                    val onSurface = android.util.TypedValue()
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, onSurface, true)
-                    val color = if (onSurface.resourceId != 0) ContextCompat.getColor(context, onSurface.resourceId) else onSurface.data
-                    
-                    val onSurfaceVariant = android.util.TypedValue()
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, onSurfaceVariant, true)
-                    val colorVariant = if (onSurfaceVariant.resourceId != 0) ContextCompat.getColor(context, onSurfaceVariant.resourceId) else onSurfaceVariant.data
-                    
-                    messageText.setTextColor(color)
-                    timeText.setTextColor(colorVariant)
-                    editedText.setTextColor(colorVariant)
-                    userText.setTextColor(ContextCompat.getColor(context, R.color.tg_incoming_name))
-                }
+                userText.setTextColor(textSecondaryColor)
             }
+            
+            messageBubble.backgroundTintList = ColorStateList.valueOf(surfaceColor)
+            messageText.setTextColor(textPrimaryColor)
+            timeText.setTextColor(textSecondaryColor)
+            editedText.setTextColor(textSecondaryColor)
 
             // 4. Status
             readStatusIcon.isVisible = isOutgoing
@@ -276,16 +238,12 @@ class MessageAdapter(
                 val icon = if (message.isRead) R.drawable.ic_message_read else R.drawable.ic_message_sent
                 readStatusIcon.setImageResource(icon)
                 
-                if (theme != null) {
-                    try {
-                        val iconColor = if (isLightMode) theme.textSecondaryColor.toColorInt() else theme.onPrimaryColor.toColorInt()
-                        readStatusIcon.imageTintList = ColorStateList.valueOf(iconColor)
-                        if (message.isRead) readStatusIcon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.tg_read_check))
-                    } catch (_: Exception) {}
+                val iconColor = if (message.isRead) {
+                    ContextCompat.getColor(context, R.color.tg_read_check)
                 } else {
-                    val color = if (message.isRead) R.color.tg_read_check else if (isLightMode) R.color.tg_time_incoming else R.color.tg_time_outgoing
-                    readStatusIcon.setColorFilter(ContextCompat.getColor(context, color))
+                    textSecondaryColor
                 }
+                readStatusIcon.imageTintList = ColorStateList.valueOf(iconColor)
             }
 
             // 5. Content
@@ -445,7 +403,7 @@ class MessageAdapter(
             selectionIndicator.isVisible = isSelectionMode
             selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
-            itemView.setBackgroundColor(if (isSelected) ContextCompat.getColor(context, R.color.lavender_mist_alpha) else android.graphics.Color.TRANSPARENT)
+            itemView.setBackgroundColor(if (isSelected) ContextCompat.getColor(context, R.color.lavender_mist_alpha) else Color.TRANSPARENT)
 
             val genericOnClick = { onClick() }
             val genericOnLongClick = { onLongClick(); true }

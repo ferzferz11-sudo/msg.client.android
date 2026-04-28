@@ -488,10 +488,10 @@ object RealGrpcClient {
                     }
 
                     _messages.update { currentList ->
-                        // Ищем, нет ли уже такого сообщения в списке (по тексту и пользователю, если ID еще нет)
+                        // Ищем, нет ли уже такого сообщения в списке
                         val existingIndex = currentList.indexOfFirst { 
                             (it.id == incoming.id && it.id.isNotEmpty()) || 
-                            (it.user == incoming.user && it.text == incoming.text && it.imageUrl == incoming.imageUrl && Math.abs(it.timestamp - incoming.timestamp) < 5000)
+                            (it.user == incoming.user && it.text == incoming.text && it.imageUrl == incoming.imageUrl && it.voiceUrl == incoming.voiceUrl && Math.abs(it.timestamp - incoming.timestamp) < 5000)
                         }
 
                         if (existingIndex != -1) {
@@ -1724,11 +1724,11 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.isRead) cos.writeBool(11, value.isRead)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(12, value.avatarUrl)
         if (value.imageUrl.isNotEmpty()) cos.writeString(13, value.imageUrl)
-        if (value.edited) cos.writeBool(14, value.edited)
-        if (value.clientVersion.isNotEmpty()) cos.writeString(15, value.clientVersion)
-        if (value.isSuperAdmin) cos.writeBool(16, value.isSuperAdmin)
-        if (value.voiceUrl.isNotEmpty()) cos.writeString(17, value.voiceUrl)
-        if (value.duration != 0) cos.writeInt32(18, value.duration)
+        if (value.voiceUrl.isNotEmpty()) cos.writeString(14, value.voiceUrl)
+        if (value.duration != 0) cos.writeInt32(15, value.duration)
+        if (value.edited) cos.writeBool(16, value.edited)
+        if (value.clientVersion.isNotEmpty()) cos.writeString(17, value.clientVersion)
+        if (value.isSuperAdmin) cos.writeBool(18, value.isSuperAdmin)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -1777,15 +1777,34 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 11 -> isRead = cis.readBool()
                 12 -> avatarUrl = cis.readString()
                 13 -> imageUrl = cis.readString()
-                14 -> edited = cis.readBool()
-                15 -> clientVersion = cis.readString()
-                16 -> isSuperAdmin = cis.readBool()
-                17 -> voiceUrl = cis.readString()
-                18 -> duration = cis.readInt32()
+                14 -> voiceUrl = cis.readString()
+                15 -> duration = cis.readInt32()
+                16 -> edited = cis.readBool()
+                17 -> clientVersion = cis.readString()
+                18 -> isSuperAdmin = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin, voiceUrl, duration)
+        return MessageProto(
+            id = id,
+            user = user,
+            text = text,
+            createdAt = createdAt,
+            reactions = reactions,
+            password = password,
+            repliedToMessageId = repliedToMessageId,
+            repliedToUser = repliedToUser,
+            repliedToText = repliedToText,
+            roomId = roomId,
+            isRead = isRead,
+            avatarUrl = avatarUrl,
+            imageUrl = imageUrl,
+            edited = edited,
+            clientVersion = clientVersion,
+            isSuperAdmin = isSuperAdmin,
+            voiceUrl = voiceUrl,
+            duration = duration
+        )
     }
 }
 

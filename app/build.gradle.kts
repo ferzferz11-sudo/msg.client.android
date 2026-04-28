@@ -16,7 +16,7 @@ android {
         targetSdk = 35
         versionName = versionFromFile
 
-        // Generate versionCode from version parts (e.g., 1.0.2.15 -> 1000215)
+        // Generate versionCode from version parts (e.g., 1.0.2.16 -> 1000216)
         val parts = versionFromFile.split(".")
         versionCode = try {
             if (parts.size >= 3) {

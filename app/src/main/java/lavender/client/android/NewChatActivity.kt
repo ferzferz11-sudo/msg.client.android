@@ -440,6 +440,55 @@ class NewChatActivity : AppCompatActivity() {
         cancelReply.setOnClickListener { hideReplyPreview() }
         closeSearch.setOnClickListener { hideSearchBar() }
         audioButton.setOnClickListener { showAudioRecordingView() }
+        emojiButton.setOnClickListener { showEmojiPicker() }
+    }
+
+    private fun showEmojiPicker() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, null)
+        val emojiGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+        val emojis = listOf(
+            "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+            "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
+            "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
+            "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
+            "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬",
+            "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤔",
+            "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦",
+            "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴",
+            "🤢", "🤮", "🤧", "🥵", "🥶", "😷", "🤒", "🤕", "🤑", "🤠",
+            "😈", "👿", "👹", "👺", "🤡", "💩", "👻", "💀", "☠️", "👽",
+            "👾", "🤖", "🎃", "😺", "😸", "😹", "😻", "😼", "😽", "🙀",
+            "😿", "😾", "👋", "🤚", "🖐", "✋", "🖖", "👌", "🤏", "✌️",
+            "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️",
+            "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲",
+            "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦿", "🦶"
+        )
+
+        val size = (48 * resources.displayMetrics.density).toInt()
+        for (emoji in emojis) {
+            val textView = TextView(this).apply {
+                text = emoji
+                textSize = 24f
+                gravity = android.view.Gravity.CENTER
+                layoutParams = android.view.ViewGroup.LayoutParams(size, size)
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
+                setBackgroundResource(typedValue.resourceId)
+                setOnClickListener {
+                    val cursorPosition = messageInput.selectionStart
+                    val currentText = messageInput.text.toString()
+                    val newText = currentText.substring(0, cursorPosition) + emoji + currentText.substring(cursorPosition)
+                    messageInput.setText(newText)
+                    messageInput.setSelection(cursorPosition + emoji.length)
+                    dialog.dismiss()
+                }
+            }
+            emojiGrid.addView(textView)
+        }
+
+        dialog.show()
     }
 
     private fun showSearchBar() { searchBar.isVisible = true; toolbarContent.isVisible = false; searchInput.requestFocus(); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0) }
@@ -602,11 +651,37 @@ class NewChatActivity : AppCompatActivity() {
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val url = response.body.string()
-                        runOnUiThread { uploadProgressBar.isVisible = false; if (url.isNotEmpty()) sendMessage("", url) else showToast("Upload failed") }
+                        val fileName = getFileName(uri) ?: "file"
+                        runOnUiThread { 
+                            uploadProgressBar.isVisible = false
+                            if (url.isNotEmpty()) sendMessage("File: $fileName\n$url", url) 
+                            else showToast("Upload failed") 
+                        }
                     }
                 })
             }
         }
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) result = cursor.getString(index)
+                }
+            } finally {
+                cursor?.close()
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/') ?: -1
+            if (cut != -1) result = result?.substring(cut + 1)
+        }
+        return result
     }
 
     private fun applySavedColorScheme() { setTheme(if (getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", null) == "light") R.style.Theme_Lavender_Light_NoActionBar else R.style.Theme_Lavender_Dark_NoActionBar) }
