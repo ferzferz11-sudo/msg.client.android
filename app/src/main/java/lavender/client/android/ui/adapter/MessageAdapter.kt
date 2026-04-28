@@ -22,8 +22,8 @@ import java.util.*
 
 class MessageAdapter(
     private val currentUsername: String,
-    private val isGroupChat: Boolean,
-    private val adminUsername: String = "",
+    var isGroupChat: Boolean,
+    var adminUsername: String = "",
     private val onMessageClick: (Message) -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
     private val onMessageLongClick: ((Message) -> Unit)? = null,

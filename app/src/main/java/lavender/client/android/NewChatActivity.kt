@@ -207,14 +207,15 @@ class NewChatActivity : AppCompatActivity() {
             grpcClient.getChats(username) { chats ->
                 val chat = chats.find { it.id == roomId }
                 if (chat != null) runOnUiThread {
-                    chatName = chat.name; isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl
-                    toolbarTitle.text = chatName
+                    chatName = chat.getDisplayName(username); isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl
+                    setupToolbar()
                     if (!isDirect) {
-                        setupGroupAvatars()
                         val arr = JSONArray(participantsJson)
                         toolbarSubtitle.text = getString(R.string.participants_count, arr.length())
                         toolbarSubtitle.isVisible = true
                     }
+                    adapter.isGroupChat = !isDirect
+                    adapter.adminUsername = creator
                 }
             }
         }
@@ -261,14 +262,37 @@ class NewChatActivity : AppCompatActivity() {
         setSupportActionBar(toolbar); supportActionBar?.setDisplayHomeAsUpEnabled(true); supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { if (selectionMode) hideSelectionToolbar() else finish() }
         toolbar.layoutParams.height = resources.getDimensionPixelSize(R.dimen.custom_toolbar_height)
-        if (isDirect) toolbarAvatar.isVisible = true else {
-            if (chatAvatarUrl.isNotEmpty()) {
-                toolbarAvatar.isVisible = true; com.bumptech.glide.Glide.with(this).load(chatAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
-            } else { toolbarAvatar.isVisible = false; groupParticipantsContainer.isVisible = true; setupGroupAvatars() }
+
+        val effectiveAvatarUrl = if (chatAvatarUrl.isNotEmpty()) chatAvatarUrl else if (isDirect) {
+            try {
+                val arr = JSONArray(participantsJson)
+                var other = ""
+                for (i in 0 until arr.length()) {
+                    val p = arr.getString(i)
+                    if (p != username) { other = p; break }
+                }
+                if (other.isNotEmpty()) grpcClient.getAvatarCache()[other] else null
+            } catch (e: Exception) { null }
+        } else null
+
+        if (isDirect || chatAvatarUrl.isNotEmpty()) {
+            toolbarAvatar.isVisible = true; groupParticipantsContainer.isVisible = false
+            com.bumptech.glide.Glide.with(this).load(effectiveAvatarUrl ?: R.drawable.ic_default_avatar)
+                .placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
+        } else {
+            toolbarAvatar.isVisible = false; groupParticipantsContainer.isVisible = true; setupGroupAvatars()
         }
+
         toolbarTitle.text = chatName
         toolbarContent.setOnClickListener {
-            val intent = Intent(this, ProfileActivity::class.java).apply { putExtra("username", chatName); putExtra("is_group", !isDirect); putExtra("room_id", roomId); putExtra("avatar_url", chatAvatarUrl); putExtra("participants", participantsJson); putExtra("creator", creator) }
+            val intent = Intent(this, ProfileActivity::class.java).apply {
+                putExtra("username", chatName)
+                putExtra("is_group", !isDirect)
+                putExtra("room_id", roomId)
+                putExtra("avatar_url", chatAvatarUrl)
+                putExtra("participants", participantsJson)
+                putExtra("creator", creator)
+            }
             startActivity(intent)
         }
     }

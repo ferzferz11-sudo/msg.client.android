@@ -36,4 +36,22 @@ data class ChatInfo(
     val lastMessageText: String = "",
     val avatarUrl: String = "",
     val lastMessageUsername: String = ""
-)
+) {
+    fun getDisplayName(currentUsername: String): String {
+        if (type != "direct") return name
+        return try {
+            val arr = org.json.JSONArray(participants)
+            var other = ""
+            for (i in 0 until arr.length()) {
+                val p = arr.getString(i)
+                if (p != currentUsername) {
+                    other = p
+                    break
+                }
+            }
+            if (other.isEmpty()) name else other
+        } catch (e: Exception) {
+            name
+        }
+    }
+}

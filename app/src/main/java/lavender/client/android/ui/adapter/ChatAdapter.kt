@@ -148,13 +148,7 @@ class ChatAdapter(
                 context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedSecondary, true)
                 chatType.setTextColor(if (typedSecondary.resourceId != 0) ContextCompat.getColor(context, typedSecondary.resourceId) else typedSecondary.data)
             }
-            if (chat.type == "direct") {
-                val participantsArray = JSONArray(chat.participants)
-                val otherPerson = (0 until participantsArray.length()).asSequence()
-                    .map { participantsArray.getString(it) }
-                    .find { it != currentUsername } ?: chat.name
-                chatName.text = otherPerson
-            } else chatName.text = chat.name
+            chatName.text = chat.getDisplayName(currentUsername)
             if (chat.lastMessageText.isNotEmpty()) {
                 val prefix = if (chat.type == "group" || chat.type == "general") { if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else "" } else ""
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)

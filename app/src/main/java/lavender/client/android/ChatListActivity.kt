@@ -182,12 +182,13 @@ class ChatListActivity : AppCompatActivity() {
 
         adapter = ChatAdapter(
             onChatClick = { chat ->
-                openChat(chat.id, chat.name, creator = chat.creator, participants = chat.participants)
+                openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator)
             },
             onSettingsClick = { chat ->
+                val isDirect = chat.type == "direct"
                 val intent = Intent(this, ProfileActivity::class.java)
-                    .putExtra("username", chat.name)
-                    .putExtra("is_group", !chat.type.equals("direct", true))
+                    .putExtra("username", chat.getDisplayName(username))
+                    .putExtra("is_group", !isDirect)
                     .putExtra("room_id", chat.id)
                     .putExtra("avatar_url", chat.avatarUrl)
                     .putExtra("participants", chat.participants)
@@ -283,7 +284,7 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 val chat = viewModel.currentChats.find { it.id == roomId }
                 if (chat != null) {
-                    openChat(chat.id, chat.name, chat.type == "direct", chat.participants, chat.creator)
+                    openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator)
                 }
             }
         }
