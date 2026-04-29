@@ -61,6 +61,16 @@ class MessageAdapter(
         if (!enabled) onSelectionChanged(0)
     }
 
+    fun toggleSelection(position: Int) {
+        if (selectedPositions.contains(position)) {
+            selectedPositions.remove(position)
+        } else {
+            selectedPositions.add(position)
+        }
+        notifyItemChanged(position)
+        onSelectionChanged(selectedPositions.size)
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_message, parent, false)
         return MessageViewHolder(view)
@@ -83,25 +93,21 @@ class MessageAdapter(
             shouldHideTime = isConsecutive && isSameMinute,
             isConsecutive = isConsecutive,
             isSelectionMode = selectionMode,
+            adapterPosition = position,
             onClick = {
-                val currentPosition = holder.bindingAdapterPosition
-                if (currentPosition == RecyclerView.NO_POSITION) return@bind
                 if (selectionMode) {
-                    if (selectedPositions.contains(currentPosition)) selectedPositions.remove(currentPosition)
-                    else selectedPositions.add(currentPosition)
-                    notifyItemChanged(currentPosition)
+                    if (selectedPositions.contains(position)) selectedPositions.remove(position)
+                    else selectedPositions.add(position)
+                    notifyItemChanged(position)
                     onSelectionChanged(selectedPositions.size)
                 } else onMessageClick(currentMessage)
             },
             onLongClick = {
                 if (selectionMode) {
-                    val currentPosition = holder.bindingAdapterPosition
-                    if (currentPosition != RecyclerView.NO_POSITION) {
-                        if (selectedPositions.contains(currentPosition)) selectedPositions.remove(currentPosition)
-                        else selectedPositions.add(currentPosition)
-                        notifyItemChanged(currentPosition)
-                        onSelectionChanged(selectedPositions.size)
-                    }
+                    if (selectedPositions.contains(position)) selectedPositions.remove(position)
+                    else selectedPositions.add(position)
+                    notifyItemChanged(position)
+                    onSelectionChanged(selectedPositions.size)
                 } else {
                     onMessageLongClick?.invoke(currentMessage)
                 }
@@ -128,7 +134,7 @@ class MessageAdapter(
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         
-        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
+        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
@@ -137,9 +143,9 @@ class MessageAdapter(
             userText.text = message.user
 
             // 1. Visibility (Telegram Style)
-            val canShowSenderInfo = isGroup && !isOutgoing && !isConsecutive
+            val canShowSenderInfo = isGroup && !isOutgoing && !isConsecutive && !isSelectionMode
             userText.isVisible = canShowSenderInfo
-            
+
             if (canShowSenderInfo) {
                 avatarImageView.isVisible = true
                 if (message.avatarUrl.isNotEmpty()) {
@@ -255,11 +261,22 @@ class MessageAdapter(
                 messageText.text = context.getString(R.string.voice_message)
                 messageText.textSize = 12f
                 messageText.alpha = 0.7f
-                
+
                 audioMessageView.isVisible = true
                 audioMessageView.setAudioData(message.voiceUrl, message.duration)
                 audioMessageView.setOnPlayClickListener { _ -> }
                 audioMessageView.setOnPauseClickListener { }
+                audioMessageView.setOnClickListener {
+                    if (isSelectionMode) onClick()
+                }
+                audioMessageView.setOnLongClickListener {
+                    if (isSelectionMode) onLongClick() else {
+                        if (adapterPosition != RecyclerView.NO_POSITION) {
+                            onLongClick()
+                        }
+                    }
+                    true
+                }
             } else {
                 messageText.isVisible = message.text.isNotEmpty() || message.imageUrl.isNotEmpty()
                 messageText.textSize = 16f
@@ -283,17 +300,29 @@ class MessageAdapter(
                     messageText.compoundDrawables[0]?.setTint(color)
 
                     messageText.setOnClickListener {
-                        val coords = message.text.removePrefix("geo:").split(",")
-                        if (coords.size == 2) {
-                            val lat = coords[0].toDoubleOrNull() ?: 0.0
-                            val lng = coords[1].toDoubleOrNull() ?: 0.0
-                            val intent = android.content.Intent(context, lavender.client.android.MapPickerActivity::class.java).apply {
-                                putExtra("view_mode", true)
-                                putExtra("lat", lat)
-                                putExtra("lng", lng)
+                        if (isSelectionMode) {
+                            onClick()
+                        } else {
+                            val coords = message.text.removePrefix("geo:").split(",")
+                            if (coords.size == 2) {
+                                val lat = coords[0].toDoubleOrNull() ?: 0.0
+                                val lng = coords[1].toDoubleOrNull() ?: 0.0
+                                val intent = android.content.Intent(context, lavender.client.android.MapPickerActivity::class.java).apply {
+                                    putExtra("view_mode", true)
+                                    putExtra("lat", lat)
+                                    putExtra("lng", lng)
+                                }
+                                context.startActivity(intent)
                             }
-                            context.startActivity(intent)
                         }
+                    }
+                    messageText.setOnLongClickListener {
+                        if (isSelectionMode) onLongClick() else {
+                            if (adapterPosition != RecyclerView.NO_POSITION) {
+                                onLongClick()
+                            }
+                        }
+                        true
                     }
                 } else if (message.text.startsWith("File: ")) {
                     val lines = message.text.split("\n")
@@ -313,13 +342,19 @@ class MessageAdapter(
                     messageText.compoundDrawables[0]?.setTint(color)
 
                     messageText.setOnClickListener {
-                        if (fileUrl.isNotEmpty()) {
+                        if (isSelectionMode) {
+                            onClick()
+                        } else if (fileUrl.isNotEmpty()) {
                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, fileUrl.toUri())
                             context.startActivity(intent)
                         }
                     }
                     messageText.setOnLongClickListener {
-                        if (isSelectionMode) onLongClick() else onMessageLongClick?.invoke(message)
+                        if (isSelectionMode) onLongClick() else {
+                            if (adapterPosition != RecyclerView.NO_POSITION) {
+                                onLongClick()
+                            }
+                        }
                         true
                     }
                 } else {
@@ -340,23 +375,35 @@ class MessageAdapter(
                         messageText.text = message.text
                     }
                     messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                    messageText.setOnClickListener(null)
-                    messageText.isClickable = false
-                    messageText.isFocusable = false
+                    messageText.setOnClickListener { if (isSelectionMode) onClick() else onMessageLongClick?.invoke(message) }
+                    messageText.isClickable = true
+                    messageText.isFocusable = true
+                    messageText.setOnLongClickListener {
+                        if (isSelectionMode) onLongClick() else {
+                            if (adapterPosition != RecyclerView.NO_POSITION) {
+                                onLongClick()
+                            }
+                        }
+                        true
+                    }
                 }
             }
-            
+
             messageImageView.isVisible = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()
             if (message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()) {
                 com.bumptech.glide.Glide.with(context)
                     .load(message.imageUrl)
                     .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
                     .into(messageImageView)
-                messageImageView.setOnClickListener { 
-                    if (isSelectionMode) onClick() else onMessageClick(message) 
+                messageImageView.setOnClickListener {
+                    if (isSelectionMode) onClick() else onMessageClick(message)
                 }
                 messageImageView.setOnLongClickListener {
-                    if (isSelectionMode) onLongClick() else onMessageLongClick?.invoke(message)
+                    if (isSelectionMode) onLongClick() else {
+                        if (adapterPosition != RecyclerView.NO_POSITION) {
+                            onLongClick()
+                        }
+                    }
                     true
                 }
             } else {
@@ -425,7 +472,7 @@ class MessageAdapter(
             messageBubble.setOnLongClickListener { genericOnLongClick() }
             
             // reactionsText should also be clickable to show the dialog
-            reactionsText.setOnClickListener { genericOnLongClick() }
+            reactionsText.setOnClickListener { if (isSelectionMode) onClick() else onMessageLongClick?.invoke(message) }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int {

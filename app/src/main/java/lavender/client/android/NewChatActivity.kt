@@ -33,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -326,9 +327,9 @@ class NewChatActivity : AppCompatActivity() {
             currentUsername = username,
             isGroupChat = !isDirect,
             adminUsername = creator,
-            onMessageClick = { if (it.imageUrl.isNotEmpty()) showFullScreenImage(it.imageUrl) },
+            onMessageClick = { showReactionsDialog(it) },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
-            onMessageLongClick = { showReactionsDialog(it) }
+            onMessageLongClick = { enterSelectionMode(it) }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter
@@ -410,6 +411,12 @@ class NewChatActivity : AppCompatActivity() {
         closeSearch.setOnClickListener { hideSearchBar() }
         audioButton.setOnClickListener { showAudioRecordingView() }
         emojiButton.setOnClickListener { showEmojiPicker() }
+
+        closeSelection.setOnClickListener { hideSelectionToolbar() }
+        copyMessages.setOnClickListener { copySelectedMessages() }
+        replyMessage.setOnClickListener { replyToSelectedMessage() }
+        deleteMessages.setOnClickListener { deleteSelectedMessages() }
+        forwardMessages.setOnClickListener { forwardSelectedMessages() }
     }
 
     private fun showEmojiPicker() {
@@ -525,6 +532,65 @@ class NewChatActivity : AppCompatActivity() {
     private fun hideSelectionToolbar() { if (!selectionMode) return; selectionMode = false; adapter.toggleSelectionMode(false); invalidateOptionsMenu(); selectionToolbar.isVisible = false; toolbarContent.isVisible = true; supportActionBar?.setDisplayHomeAsUpEnabled(true); toolbar.setNavigationIcon(R.drawable.ic_back_arrow); toolbar.navigationIcon?.let { val wrapped = DrawableCompat.wrap(it); DrawableCompat.setTint(wrapped, ContextCompat.getColor(this, R.color.white)); toolbar.navigationIcon = wrapped } }
     private fun showReplyPreview(message: Message) { replyingTo = message; replyPreview.isVisible = true; replyUser.text = message.user; replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text; messageInput.requestFocus() }
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
+    private fun enterSelectionMode(message: Message) {
+        val position = adapter.currentList.indexOf(message)
+        if (position != -1) {
+            adapter.toggleSelectionMode(true)
+            adapter.toggleSelection(position)
+            showSelectionToolbar(adapter.getSelectedMessages().size)
+        }
+    }
+
+    private fun copySelectedMessages() {
+        val selectedMessages = adapter.getSelectedMessages()
+        val textToCopy = selectedMessages.joinToString("\n\n") { "${it.user}: ${it.text}" }
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("messages", textToCopy))
+        showToast(getString(R.string.copied_to_clipboard))
+        hideSelectionToolbar()
+    }
+
+    private fun replyToSelectedMessage() {
+        val selectedMessages = adapter.getSelectedMessages()
+        if (selectedMessages.size == 1) {
+            showReplyPreview(selectedMessages[0])
+            hideSelectionToolbar()
+        }
+    }
+
+    private fun deleteSelectedMessages() {
+        val selectedMessages = adapter.getSelectedMessages()
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(R.string.delete_messages_title)
+        builder.setMessage(getString(R.string.delete_messages_confirm, selectedMessages.size))
+        builder.setPositiveButton(R.string.delete) { _, _ ->
+            selectedMessages.forEach { grpcClient.deleteMessage(it) }
+            hideSelectionToolbar()
+        }
+        builder.setNegativeButton(R.string.cancel, null)
+        val dialog = builder.create()
+        dialog.show()
+
+        // Apply theme colors to dialog
+        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (theme != null) {
+            try {
+                val textColor = theme.textPrimaryColor.toColorInt()
+                val titleView = dialog.findViewById<TextView>(android.R.id.title)
+                val messageView = dialog.findViewById<TextView>(android.R.id.message)
+                titleView?.setTextColor(textColor)
+                messageView?.setTextColor(textColor)
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun forwardSelectedMessages() {
+        val selectedMessages = adapter.getSelectedMessages()
+        // TODO: Implement forwarding to another chat
+        showToast("Forwarding not implemented yet")
+        hideSelectionToolbar()
+    }
+
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
     private fun sendMessage(text: String, imageUrl: String) { 
         val effectiveText = if (text.isEmpty() && imageUrl.isNotEmpty()) "Image" else if (text.isEmpty()) "Message" else text
