@@ -111,26 +111,24 @@
                 android:layout_height="wrap_content"
                 android:visibility="gone" />
 
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/messageText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="16sp"
-                    android:paddingEnd="80dp"
                     tools:text="Hello world" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_alignBottom="@id/messageText"
-                    android:layout_alignParentEnd="true"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="2dp">
+                    android:gravity="end"
+                    android:layout_marginTop="2dp">
 
                     <TextView
                         android:id="@+id/editedText"
@@ -153,7 +151,7 @@
                         android:layout_marginStart="2dp"
                         android:visibility="gone" />
                 </LinearLayout>
-            </RelativeLayout>
+            </LinearLayout>
             <TextView
                 android:id="@+id/reactionsText"
                 android:layout_width="wrap_content"

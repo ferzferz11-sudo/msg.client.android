@@ -179,6 +179,8 @@
     <string name="edit_message">Редактировать сообщение</string>
     <string name="forward">Переслать</string>
     <string name="forward_to">Переслать…</string>
+    <string name="no_other_chats">Нет других чатов</string>
+    <string name="messages_forwarded">Сообщения успешно переслано</string>
     <string name="message_edited">Сообщение отредактировано</string>
     <string name="edited_label">изменено</string>
     <string name="group_info">Информация о группе</string>

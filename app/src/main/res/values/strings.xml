@@ -180,6 +180,8 @@
     <string name="edit_message">Edit Message</string>
     <string name="forward">Forward</string>
     <string name="forward_to">Forward to…</string>
+    <string name="no_other_chats">No other chats available</string>
+    <string name="messages_forwarded">Messages forwarded successfully</string>
     <string name="message_edited">Message edited</string>
     <string name="edited_label">edited</string>
     <string name="group_info">Group Info</string>

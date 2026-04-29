@@ -586,9 +586,43 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun forwardSelectedMessages() {
         val selectedMessages = adapter.getSelectedMessages()
-        // TODO: Implement forwarding to another chat
-        showToast("Forwarding not implemented yet")
-        hideSelectionToolbar()
+        if (selectedMessages.isEmpty()) {
+            hideSelectionToolbar()
+            return
+        }
+        
+        grpcClient.getChats(username) { chats ->
+            runOnUiThread {
+                val otherChats = chats.filter { it.id != roomId }
+                if (otherChats.isEmpty()) {
+                    showToast(getString(R.string.no_other_chats))
+                    return@runOnUiThread
+                }
+                
+                val chatNames = otherChats.map { it.getDisplayName(username) }.toTypedArray()
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.forward_to)
+                    .setItems(chatNames) { _, which ->
+                        val targetChat = otherChats[which]
+                        selectedMessages.forEach { message ->
+                            val forwardedMessage = Message(
+                                user = username,
+                                text = message.text,
+                                timestamp = System.currentTimeMillis(),
+                                roomId = targetChat.id,
+                                imageUrl = message.imageUrl,
+                                voiceUrl = message.voiceUrl,
+                                duration = message.duration
+                            )
+                            grpcClient.sendMessage(forwardedMessage)
+                        }
+                        showToast(getString(R.string.messages_forwarded))
+                        hideSelectionToolbar()
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
+            }
+        }
     }
 
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }

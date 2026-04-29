@@ -375,7 +375,7 @@ class MessageAdapter(
                         messageText.text = message.text
                     }
                     messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                    messageText.setOnClickListener { if (isSelectionMode) onClick() else onMessageLongClick?.invoke(message) }
+                    messageText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
                     messageText.isClickable = true
                     messageText.isFocusable = true
                     messageText.setOnLongClickListener {
@@ -396,7 +396,14 @@ class MessageAdapter(
                     .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
                     .into(messageImageView)
                 messageImageView.setOnClickListener {
-                    if (isSelectionMode) onClick() else onMessageClick(message)
+                    if (isSelectionMode) {
+                        onClick()
+                    } else {
+                        val intent = android.content.Intent(context, lavender.client.android.FullScreenImageActivity::class.java).apply {
+                            putExtra("image_url", message.imageUrl)
+                        }
+                        context.startActivity(intent)
+                    }
                 }
                 messageImageView.setOnLongClickListener {
                     if (isSelectionMode) onLongClick() else {
@@ -472,7 +479,7 @@ class MessageAdapter(
             messageBubble.setOnLongClickListener { genericOnLongClick() }
             
             // reactionsText should also be clickable to show the dialog
-            reactionsText.setOnClickListener { if (isSelectionMode) onClick() else onMessageLongClick?.invoke(message) }
+            reactionsText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
         }
 
         private fun withAlpha(color: Int, alpha: Int): Int {

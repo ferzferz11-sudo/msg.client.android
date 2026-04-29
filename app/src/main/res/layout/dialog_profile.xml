@@ -30,7 +30,7 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
             android:contentDescription="@string/cancel_dialog"
-            android:tint="?android:attr/textColorSecondary" />
+            app:tint="?android:attr/textColorSecondary" />
 
     </RelativeLayout>
 
