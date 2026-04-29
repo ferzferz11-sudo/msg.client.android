@@ -6,6 +6,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 
 class AudioPlayerManager private constructor(private val context: Context) {
     
@@ -25,6 +30,7 @@ class AudioPlayerManager private constructor(private val context: Context) {
     val isLoading: StateFlow<Boolean> = _isLoading
     
     private var playbackPositionListener: (() -> Unit)? = null
+    private var positionUpdateJob: Job? = null
     
     companion object {
         @Volatile
@@ -116,30 +122,22 @@ class AudioPlayerManager private constructor(private val context: Context) {
     
     fun isCurrentAudio(audioUrl: String): Boolean = currentAudioUrl == audioUrl
     
-    private var positionUpdateHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private var positionUpdateRunnable: Runnable? = null
-    
     private fun startPositionUpdates() {
         stopPositionUpdates()
         
-        positionUpdateRunnable = object : Runnable {
-            override fun run() {
+        positionUpdateJob = CoroutineScope(Dispatchers.Main).launch {
+            while (true) {
                 exoPlayer?.let { player ->
-                    if (player.isPlaying) {
-                        _currentPosition.value = player.currentPosition
-                        positionUpdateHandler.postDelayed(this, 100)
-                    } else if (player.playbackState == androidx.media3.common.Player.STATE_READY) {
-                         _currentPosition.value = player.currentPosition
-                    }
+                    _currentPosition.value = player.currentPosition
                 }
+                delay(100)
             }
         }
-        positionUpdateRunnable?.let { positionUpdateHandler.post(it) }
     }
     
     private fun stopPositionUpdates() {
-        positionUpdateRunnable?.let { positionUpdateHandler.removeCallbacks(it) }
-        positionUpdateRunnable = null
+        positionUpdateJob?.cancel()
+        positionUpdateJob = null
     }
     
     fun release() {

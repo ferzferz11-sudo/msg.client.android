@@ -250,7 +250,11 @@ class ChatListActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     delay(1000)
                     if (username.isNotEmpty()) {
-                        grpcClient.registerToken(username, token)
+                        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+                        val sendEnabled = prefs.getBoolean("push_send_enabled", true)
+                        val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
+                        val finalToken = if (receiveEnabled) token else "DISABLED"
+                        grpcClient.registerToken(username, finalToken, sendEnabled)
                     }
                 }
             }
@@ -543,15 +547,16 @@ class ChatListActivity : AppCompatActivity() {
         theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
         val onPrimary = typedValue.data
 
-        menu.findItem(R.id.action_search)?.apply { 
+        menu.findItem(R.id.action_search)?.apply {
             isVisible = !hasSelection
             iconTintList = ColorStateList.valueOf(onPrimary)
         }
-        menu.findItem(R.id.action_delete)?.apply { 
-            isVisible = hasSelection 
+        menu.findItem(R.id.action_delete)?.apply {
+            isVisible = hasSelection
             iconTintList = ColorStateList.valueOf(onPrimary)
         }
         menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
+        menu.findItem(R.id.action_super_admin)?.apply { isVisible = grpcClient.isSuperAdmin.value }
         return true
     }
 

@@ -5,6 +5,20 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2.19] - 2026-04-29
+Все исправления завершены:
+
+Синхронизация звука в плеере - Заменен Handler на coroutine для постоянного обновления позиции воспроизведения в AudioPlayerManager.kt
+
+Цвет панели выбора в кастомной теме - Добавлено применение цвета из кастомной темы при входе в режим выбора сообщений в NewChatActivity.kt:544-562
+
+Цвет иконки навигации в режиме выбора - Обновлена логика установки цвета иконки с учетом кастомной темы в NewChatActivity.kt:545-562
+
+Видимость меню супер админа - Добавлена проверка флага isSuperAdmin при отображении меню в ChatListActivity.kt:556
+
+Сохранение настроек уведомлений - Исправлена регистрация токена при запуске приложения с передачей сохраненных флагов push_send_enabled и push_receive_enabled в ChatListActivity.kt:247-258
+
+
 ## [1.0.2.12] - 2026-04-27
 
 ### Fixed

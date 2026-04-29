@@ -541,8 +541,46 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showFullScreenImage(imageUrl: String) { val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", imageUrl) }; startActivity(intent) }
-    private fun showSelectionToolbar(count: Int) { selectionMode = true; invalidateOptionsMenu(); toolbarContent.isVisible = false; selectionToolbar.isVisible = true; selectionCountText.text = count.toString(); supportActionBar?.setDisplayHomeAsUpEnabled(false); replyMessage.isVisible = count == 1; forwardMessages.isVisible = count > 0 }
-    private fun hideSelectionToolbar() { if (!selectionMode) return; selectionMode = false; adapter.toggleSelectionMode(false); invalidateOptionsMenu(); selectionToolbar.isVisible = false; toolbarContent.isVisible = true; supportActionBar?.setDisplayHomeAsUpEnabled(true); toolbar.setNavigationIcon(R.drawable.ic_back_arrow); toolbar.navigationIcon?.let { val wrapped = DrawableCompat.wrap(it); DrawableCompat.setTint(wrapped, ContextCompat.getColor(this, R.color.white)); toolbar.navigationIcon = wrapped } }
+    private fun showSelectionToolbar(count: Int) {
+        selectionMode = true
+        invalidateOptionsMenu()
+        toolbarContent.isVisible = false
+        selectionToolbar.isVisible = true
+        selectionCountText.text = count.toString()
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        replyMessage.isVisible = count == 1
+        forwardMessages.isVisible = count > 0
+        
+        // Apply theme color to selection toolbar
+        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (theme != null) {
+            try {
+                val primaryColor = theme.primaryColor.toColorInt()
+                selectionToolbar.setBackgroundColor(primaryColor)
+            } catch (_: Exception) {}
+        }
+    }
+    private fun hideSelectionToolbar() {
+        if (!selectionMode) return
+        selectionMode = false
+        adapter.toggleSelectionMode(false)
+        invalidateOptionsMenu()
+        selectionToolbar.isVisible = false
+        toolbarContent.isVisible = true
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
+        toolbar.navigationIcon?.let {
+            val wrapped = DrawableCompat.wrap(it)
+            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val iconColor = if (theme != null) {
+                try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
+            } else {
+                ContextCompat.getColor(this, R.color.white)
+            }
+            DrawableCompat.setTint(wrapped, iconColor)
+            toolbar.navigationIcon = wrapped
+        }
+    }
     private fun showReplyPreview(message: Message) { replyingTo = message; replyPreview.isVisible = true; replyUser.text = message.user; replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text; messageInput.requestFocus() }
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
     private fun enterSelectionMode(message: Message) {
