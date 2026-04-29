@@ -678,7 +678,11 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
     private fun sendMessage(text: String, imageUrl: String) {
-        val effectiveText = if (text.isEmpty() && imageUrl.isEmpty()) "Message" else text
+        val effectiveText = when {
+            text.isEmpty() && imageUrl.isEmpty() -> "Message"
+            imageUrl.isNotEmpty() && text.isEmpty() -> "" // Empty text for image-only messages
+            else -> text
+        }
         val msg = Message(user = username, text = effectiveText, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
         grpcClient.sendMessage(msg)
         viewModel.markRead(username, this)
@@ -896,11 +900,14 @@ class NewChatActivity : AppCompatActivity() {
                             try { org.json.JSONObject(responseBody).getString("url") } catch (e: Exception) { "" }
                         } else if (responseBody.startsWith("http")) responseBody else ""
                         
-                        runOnUiThread { 
+                        runOnUiThread {
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
-                                if (isImage) sendMessage("", url)
-                                else sendMessage("File: $fileName\n$url", "")
+                                if (isImage) {
+                                    sendMessage("", url)  // sendMessage will set text to "Image" if imageUrl is not empty
+                                } else {
+                                    sendMessage("File: $fileName\n$url", "")
+                                }
                             } else showToast("Upload failed: Invalid server response")
                         }
                     }

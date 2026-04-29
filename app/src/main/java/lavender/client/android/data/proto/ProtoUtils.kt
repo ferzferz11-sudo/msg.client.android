@@ -42,10 +42,28 @@ object ProtoUtils {
             it.seconds * 1000 + (it.nanos / 1000000)
         } ?: System.currentTimeMillis()
 
+        // Handle legacy messages where imageUrl might be empty but text is "Image"
+        // Try to extract URL from text if it looks like a URL
+        var imageUrl = proto.imageUrl
+        var text = proto.text
+        
+        if (text == "Image" && imageUrl.isEmpty()) {
+            // Text is "Image" but imageUrl is empty - this is a legacy message
+            // The imageUrl should have been saved but wasn't, so we can't recover it
+            // Just keep it as is
+        } else if (imageUrl.isEmpty() && text.contains("http")) {
+            // Try to extract URL from text if text contains a URL
+            val urlPattern = """(https?://[^\s]+)""".toRegex()
+            val match = urlPattern.find(text)
+            if (match != null) {
+                imageUrl = match.value
+            }
+        }
+
         return Message(
             id = proto.id,
             user = proto.user,
-            text = proto.text,
+            text = text,
             timestamp = timestamp,
             reactions = proto.reactions.map { Reaction(it.user, it.emoji) },
             repliedToMessageId = proto.repliedToMessageId,
@@ -54,7 +72,7 @@ object ProtoUtils {
             roomId = proto.roomId,
             isRead = proto.isRead,
             avatarUrl = proto.avatarUrl,
-            imageUrl = proto.imageUrl,
+            imageUrl = imageUrl,
             edited = proto.edited,
             isSuperAdmin = proto.isSuperAdmin,
             voiceUrl = proto.voiceUrl,

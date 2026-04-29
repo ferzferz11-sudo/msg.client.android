@@ -5,6 +5,28 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+1.0.2.20
+1. Легковесный прелоадер для загрузки изображений
+   Создан файл app/src/main/res/drawable/loading_spinner.xml с анимированным спиннером, который отображается во время загрузки изображения вместо черного фона.
+
+2. Обновлен layout сообщений
+   В файле app/src/main/res/layout/item_message.xml:
+
+Обернул messageImageView в FrameLayout для наложения прелоадера
+Добавил imageLoadingSpinner (48dp × 48dp) с центрированием
+3. Обновлена логика MessageAdapter
+   В файле app/src/main/java/lavender/client/android/ui/adapter/MessageAdapter.kt:
+
+Добавлена ссылка на imageLoadingSpinner в MessageViewHolder
+При загрузке изображения прелоадер становится видимым
+После успешной загрузки прелоадер скрывается
+При ошибке загрузки прелоадер также скрывается
+Добавлена проверка на файлы: файлы больше не отображаются как изображения (!isFile)
+Файлы отображаются с иконкой и именем:
+PDF файлы → ic_file_pdf
+ZIP/RAR/7Z архивы → ic_file_archive
+Остальные файлы → ic_file
+
 ## [1.0.2.19] - 2026-04-29
 Все исправления завершены:
 

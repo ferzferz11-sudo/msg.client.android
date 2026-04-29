@@ -131,6 +131,7 @@ class MessageAdapter(
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
         private val messageImageView: ImageView = itemView.findViewById(R.id.messageImageView)
+        private val imageLoadingSpinner: ImageView = itemView.findViewById(R.id.imageLoadingSpinner)
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
@@ -139,6 +140,26 @@ class MessageAdapter(
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            
+            // Check if this is an empty/unrecoverable message:
+            // - Legacy "Image" placeholder with no stored imageUrl
+            // - Legacy "Voice message" placeholder with no stored voiceUrl
+            // - Completely empty message (no text, no image, no voice)
+            val isEmptyImageMessage = message.text == "Image" && message.imageUrl.isEmpty()
+            val isEmptyVoiceMessage = message.text == "Voice message" && message.voiceUrl.isEmpty()
+            val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty()
+            val isEmptyMessage = isEmptyImageMessage || isEmptyVoiceMessage || isCompletelyEmpty
+            
+            // Hide entire message if it's empty — use GONE + zero height to avoid blank gaps
+            if (isEmptyMessage) {
+                itemView.visibility = View.GONE
+                itemView.layoutParams = itemView.layoutParams.also { it.height = 0 }
+                return
+            }
+            itemView.visibility = View.VISIBLE
+            itemView.layoutParams = itemView.layoutParams.also {
+                if (it.height == 0) it.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            }
             
             messageText.text = message.text
             userText.text = message.user
@@ -278,7 +299,8 @@ class MessageAdapter(
                     true
                 }
             } else {
-                messageText.isVisible = message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message"
+                val isFile = message.text.startsWith("File: ")
+                messageText.isVisible = message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message" || (message.imageUrl.isNotEmpty() && message.text.isEmpty() && !isFile)
                 messageText.textSize = 16f
                 messageText.alpha = 1.0f
                 
@@ -336,6 +358,7 @@ class MessageAdapter(
                     messageText.text = fileName
                     messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
                     messageText.compoundDrawablePadding = 8.dpToPx()
+                    messageText.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     val typedValue = android.util.TypedValue()
                     context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
                     val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
@@ -389,25 +412,65 @@ class MessageAdapter(
                 }
             }
 
-            messageImageView.isVisible = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()
-            if (message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()) {
-                android.util.Log.d("MessageAdapter", "Loading image: ${message.imageUrl}")
-                com.bumptech.glide.Glide.with(context)
-                    .load(message.imageUrl)
-                    .placeholder(R.drawable.rounded_background)
-                    .error(R.drawable.rounded_background)
-                    .fitCenter()
-                    .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                        override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?, isFirstResource: Boolean): Boolean {
-                            android.util.Log.e("MessageAdapter", "Failed to load image: ${message.imageUrl}", e)
-                            return false
+            // Show image if imageUrl is not empty (but not if it's a file)
+            val isFile = message.text.startsWith("File: ")
+            val shouldShowImage = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty() && !isFile
+            messageImageView.isVisible = shouldShowImage
+            if (shouldShowImage) {
+                android.util.Log.d("MessageAdapter", "Loading image via OkHttp: ${message.imageUrl}")
+                // Show loading spinner initially
+                imageLoadingSpinner.isVisible = true
+                if (message.text.isEmpty()) {
+                    messageText.isVisible = false
+                }
+                // Use OkHttp to fetch image bytes, then load into Glide as ByteArray
+                // This bypasses Glide's default HttpUrlConnection which may not handle HTTP cleartext
+                val imageUrl = message.imageUrl
+                val okHttpClient = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val request = okhttp3.Request.Builder().url(imageUrl).build()
+                okHttpClient.newCall(request).enqueue(object : okhttp3.Callback {
+                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                        android.util.Log.e("MessageAdapter", "OkHttp failed to load image: $imageUrl", e)
+                        messageImageView.post {
+                            imageLoadingSpinner.isVisible = false
+                            messageImageView.isVisible = false
+                            if (message.text.isEmpty()) {
+                                messageText.text = "🖼 $imageUrl"
+                                messageText.isVisible = true
+                            }
                         }
-                        override fun onResourceReady(resource: android.graphics.drawable.Drawable?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?, dataSource: com.bumptech.glide.load.DataSource?, isFirstResource: Boolean): Boolean {
-                            android.util.Log.d("MessageAdapter", "Image loaded successfully: ${message.imageUrl}")
-                            return false
+                    }
+                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                        val bytes = response.body?.bytes()
+                        if (bytes != null && response.isSuccessful) {
+                            android.util.Log.d("MessageAdapter", "OkHttp loaded image bytes: ${bytes.size} for $imageUrl")
+                            messageImageView.post {
+                                com.bumptech.glide.Glide.with(context)
+                                    .load(bytes)
+                                    .fitCenter()
+                                    .into(messageImageView)
+                                imageLoadingSpinner.isVisible = false
+                                messageImageView.isVisible = true
+                                if (message.text.isEmpty()) {
+                                    messageText.isVisible = false
+                                }
+                            }
+                        } else {
+                            android.util.Log.e("MessageAdapter", "OkHttp bad response ${response.code} for $imageUrl")
+                            messageImageView.post {
+                                imageLoadingSpinner.isVisible = false
+                                messageImageView.isVisible = false
+                                if (message.text.isEmpty()) {
+                                    messageText.text = "🖼 $imageUrl"
+                                    messageText.isVisible = true
+                                }
+                            }
                         }
-                    })
-                    .into(messageImageView)
+                    }
+                })
                 messageImageView.setOnClickListener {
                     if (isSelectionMode) {
                         onClick()
@@ -433,6 +496,7 @@ class MessageAdapter(
             } else {
                 messageImageView.setOnClickListener(null)
                 messageImageView.setOnLongClickListener(null)
+                imageLoadingSpinner.isVisible = false
             }
 
             reactionsText.isVisible = message.reactions.isNotEmpty()

@@ -219,7 +219,12 @@ object RealGrpcClient {
             override fun onMessage(message: GetHistoryResponseProto) {
                 val historyMessages = message.messages
                     .filterNot { it.text.endsWith(" joined") || it.text.endsWith(" присоединился") }
-                    .map { ProtoUtils.createMessageFromProto(it) }
+                    .map { proto ->
+                        android.util.Log.d("RealGrpcClient", "HISTORY PROTO: id=${proto.id}, user=${proto.user}, text='${proto.text}', imageUrl='${proto.imageUrl}', voiceUrl='${proto.voiceUrl}'")
+                        val msg = ProtoUtils.createMessageFromProto(proto)
+                        android.util.Log.d("RealGrpcClient", "HISTORY MSG: id=${msg.id}, text='${msg.text}', imageUrl='${msg.imageUrl}', voiceUrl='${msg.voiceUrl}'")
+                        msg
+                    }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
 
                 android.util.Log.d("RealGrpcClient", "Received ${historyMessages.size} history messages for room: $roomId")
@@ -448,8 +453,9 @@ object RealGrpcClient {
 
                     if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return
 
+                    android.util.Log.d("RealGrpcClient", "STREAM PROTO: id=${value.id}, user=${value.user}, text='${value.text}', imageUrl='${value.imageUrl}', voiceUrl='${value.voiceUrl}'")
                     val incoming = ProtoUtils.createMessageFromProto(value)
-                    android.util.Log.d("RealGrpcClient", "Parsed incoming message: id=${incoming.id}, text='${incoming.text}', voice='${incoming.voiceUrl}'")
+                    android.util.Log.d("RealGrpcClient", "STREAM MSG: id=${incoming.id}, text='${incoming.text}', imageUrl='${incoming.imageUrl}', voiceUrl='${incoming.voiceUrl}'")
 
                     // Load avatar for incoming message if not cached and avatarUrl is empty
                     if (incoming.avatarUrl.isEmpty() && !avatarCache.containsKey(incoming.user)) {
