@@ -19,6 +19,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.GridLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -142,6 +143,10 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var searchResultsCount: TextView
 
     private lateinit var adapter: MessageAdapter
+    
+    private lateinit var imagePreviewScroll: HorizontalScrollView
+    private lateinit var imagePreviewContainer: LinearLayout
+    private val selectedImageUris = mutableListOf<Uri>()
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -150,7 +155,10 @@ class NewChatActivity : AppCompatActivity() {
             result.data?.clipData?.let { clipData ->
                 for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
             }
-            if (uris.isNotEmpty()) uploadFiles(uris.toList(), isImage = true)
+            if (uris.isNotEmpty()) {
+                selectedImageUris.addAll(uris)
+                showImagePreview()
+            }
         }
     }
 
@@ -258,6 +266,7 @@ class NewChatActivity : AppCompatActivity() {
         mentionList.layoutManager = LinearLayoutManager(this); mentionList.adapter = mentionAdapter
         searchBar = findViewById(R.id.searchBar); searchInput = findViewById(R.id.searchInput); closeSearch = findViewById(R.id.closeSearch)
         searchNext = findViewById(R.id.searchNext); searchPrev = findViewById(R.id.searchPrev); searchResultsCount = findViewById(R.id.searchResultsCount)
+        imagePreviewScroll = findViewById(R.id.imagePreviewScroll); imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
         audioButton.isVisible = true
     }
 
@@ -386,11 +395,15 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         sendButton.setOnClickListener {
-            val text = messageInput.text.toString().trim()
-            if (text.isNotEmpty()) {
-                sendMessage(text, "")
-                messageInput.text.clear()
-                hideReplyPreview()
+            if (selectedImageUris.isNotEmpty()) {
+                sendSelectedImages()
+            } else {
+                val text = messageInput.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    sendMessage(text, "")
+                    messageInput.text.clear()
+                    hideReplyPreview()
+                }
             }
         }
         attachButton.setOnClickListener {
@@ -626,8 +639,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
-    private fun sendMessage(text: String, imageUrl: String) { 
-        val effectiveText = if (text.isEmpty() && imageUrl.isNotEmpty()) "Image" else if (text.isEmpty()) "Message" else text
+    private fun sendMessage(text: String, imageUrl: String) {
+        val effectiveText = if (text.isEmpty() && imageUrl.isEmpty()) "Message" else text
         val msg = Message(user = username, text = effectiveText, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
         grpcClient.sendMessage(msg)
         viewModel.markRead(username, this)
@@ -746,6 +759,80 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
+    private fun showImagePreview() {
+        imagePreviewContainer.removeAllViews()
+        
+        for ((index, uri) in selectedImageUris.withIndex()) {
+            val previewView = layoutInflater.inflate(R.layout.image_preview_container, imagePreviewContainer, false)
+            val imageView = previewView.findViewById<ImageView>(R.id.previewImage)
+            val removeButton = previewView.findViewById<ImageButton>(R.id.removeImageButton)
+            
+            com.bumptech.glide.Glide.with(this)
+                .load(uri)
+                .centerCrop()
+                .into(imageView)
+            
+            removeButton.setOnClickListener {
+                selectedImageUris.removeAt(index)
+                showImagePreview()
+            }
+            
+            imagePreviewContainer.addView(previewView)
+        }
+        
+        imagePreviewScroll.isVisible = selectedImageUris.isNotEmpty()
+    }
+    
+    private fun sendSelectedImages() {
+        val messageText = messageInput.text.toString().trim()
+        var isFirstImage = true
+        
+        selectedImageUris.forEach { uri ->
+            uploadProgressBar.isVisible = true
+            val stream = contentResolver.openInputStream(uri)
+            val bytes = stream?.readBytes()
+            stream?.close()
+            
+            if (bytes != null) {
+                val fileName = getFileName(uri) ?: "image.jpg"
+                val body = MultipartBody.Part.createFormData("image", fileName, bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                val request = Request.Builder().url("http://159.195.38.145:8082/upload-image").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                
+                OkHttpClient().newCall(request).enqueue(object : okhttp3.Callback {
+                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                        runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
+                    }
+                    
+                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                        val responseBody = response.body.string()
+                        if (!response.isSuccessful || responseBody.contains("404")) {
+                            runOnUiThread { uploadProgressBar.isVisible = false; showToast("Server error: 404 or ${response.code}") }
+                            return
+                        }
+                        
+                        val url = if (responseBody.contains("\"url\":")) {
+                            try { org.json.JSONObject(responseBody).getString("url") } catch (e: Exception) { "" }
+                        } else if (responseBody.startsWith("http")) responseBody else ""
+                        
+                        runOnUiThread {
+                            uploadProgressBar.isVisible = false
+                            if (url.isNotEmpty() && !url.contains("404")) {
+                                val textToSend = if (isFirstImage && messageText.isNotEmpty()) messageText else ""
+                                sendMessage(textToSend, url)
+                                isFirstImage = false
+                                hideReplyPreview()
+                            } else showToast("Upload failed: Invalid server response")
+                        }
+                    }
+                })
+            }
+        }
+        
+        messageInput.text.clear()
+        selectedImageUris.clear()
+        imagePreviewScroll.isVisible = false
+    }
+
     private fun uploadFiles(uris: List<Uri>, isImage: Boolean) {
         uris.forEach { uri ->
             uploadProgressBar.isVisible = true; val stream = contentResolver.openInputStream(uri); val bytes = stream?.readBytes(); stream?.close()
@@ -774,7 +861,7 @@ class NewChatActivity : AppCompatActivity() {
                         runOnUiThread { 
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
-                                if (isImage) sendMessage("Image", url)
+                                if (isImage) sendMessage("", url)
                                 else sendMessage("File: $fileName\n$url", "")
                             } else showToast("Upload failed: Invalid server response")
                         }

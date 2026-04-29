@@ -99,11 +99,15 @@
                 android:id="@+id/messageImageView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minWidth="200dp"
+                android:minHeight="200dp"
                 android:maxWidth="260dp"
                 android:maxHeight="320dp"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@string/app_name"
+                android:background="@drawable/rounded_background" />
 
             <lavender.client.android.ui.audio.AudioMessageView
                 android:id="@+id/audioMessageView"

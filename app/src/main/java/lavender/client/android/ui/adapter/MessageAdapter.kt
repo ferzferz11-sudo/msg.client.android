@@ -28,6 +28,7 @@ class MessageAdapter(
     private val onMessageClick: (Message) -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
     private val onMessageLongClick: ((Message) -> Unit)? = null,
+    private val chatId: String = "",
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
@@ -257,8 +258,7 @@ class MessageAdapter(
             timeText.isVisible = !shouldHideTime
 
             if (message.voiceUrl.isNotEmpty()) {
-                messageText.isVisible = true
-                messageText.text = context.getString(R.string.voice_message)
+                messageText.isVisible = false
                 messageText.textSize = 12f
                 messageText.alpha = 0.7f
 
@@ -278,7 +278,7 @@ class MessageAdapter(
                     true
                 }
             } else {
-                messageText.isVisible = message.text.isNotEmpty() || message.imageUrl.isNotEmpty()
+                messageText.isVisible = message.text.isNotEmpty() && message.text != "Image" && message.text != "Voice message"
                 messageText.textSize = 16f
                 messageText.alpha = 1.0f
                 
@@ -391,16 +391,33 @@ class MessageAdapter(
 
             messageImageView.isVisible = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()
             if (message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty()) {
+                android.util.Log.d("MessageAdapter", "Loading image: ${message.imageUrl}")
                 com.bumptech.glide.Glide.with(context)
                     .load(message.imageUrl)
-                    .transform(com.bumptech.glide.load.resource.bitmap.CenterCrop(), com.bumptech.glide.load.resource.bitmap.RoundedCorners(12.dpToPx()))
+                    .placeholder(R.drawable.rounded_background)
+                    .error(R.drawable.rounded_background)
+                    .fitCenter()
+                    .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                        override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?, isFirstResource: Boolean): Boolean {
+                            android.util.Log.e("MessageAdapter", "Failed to load image: ${message.imageUrl}", e)
+                            return false
+                        }
+                        override fun onResourceReady(resource: android.graphics.drawable.Drawable?, model: Any?, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?, dataSource: com.bumptech.glide.load.DataSource?, isFirstResource: Boolean): Boolean {
+                            android.util.Log.d("MessageAdapter", "Image loaded successfully: ${message.imageUrl}")
+                            return false
+                        }
+                    })
                     .into(messageImageView)
                 messageImageView.setOnClickListener {
                     if (isSelectionMode) {
                         onClick()
                     } else {
+                        val allImageUrls = currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }
                         val intent = android.content.Intent(context, lavender.client.android.FullScreenImageActivity::class.java).apply {
                             putExtra("image_url", message.imageUrl)
+                            putExtra("chat_id", chatId)
+                            putStringArrayListExtra("image_urls", ArrayList(allImageUrls))
+                            putExtra("current_index", allImageUrls.indexOf(message.imageUrl))
                         }
                         context.startActivity(intent)
                     }

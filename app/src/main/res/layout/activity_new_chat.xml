@@ -348,6 +348,22 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <HorizontalScrollView
+        android:id="@+id/imagePreviewScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toTopOf="@id/bottomPanel">
+
+        <LinearLayout
+            android:id="@+id/imagePreviewContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp" />
+    </HorizontalScrollView>
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bottomPanel"
         android:layout_width="match_parent"
