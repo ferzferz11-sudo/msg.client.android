@@ -648,7 +648,23 @@ object RealGrpcClient {
     fun sendMessage(message: Message) {
         android.util.Log.d("RealGrpcClient", "sendMessage called: text='${message.text}', voiceUrl='${message.voiceUrl}', roomId='${message.roomId}'")
         if (requestObserver == null) {
-            android.util.Log.w("RealGrpcClient", "requestObserver is null, cannot send message")
+            android.util.Log.w("RealGrpcClient", "requestObserver is null, attempting to reconnect...")
+            // Try to reconnect if connection was lost
+            if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
+                android.util.Log.d("RealGrpcClient", "Reconnecting to send message...")
+                startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
+                // Queue message to be sent after reconnection
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (requestObserver != null) {
+                        android.util.Log.d("RealGrpcClient", "Reconnection successful, sending queued message")
+                        sendMessage(message)
+                    } else {
+                        android.util.Log.e("RealGrpcClient", "Reconnection failed, cannot send message")
+                    }
+                }, 1000)
+            } else {
+                android.util.Log.e("RealGrpcClient", "Cannot reconnect: missing connection parameters")
+            }
             return
         }
         try {

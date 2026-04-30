@@ -1042,9 +1042,16 @@ class NewChatActivity : AppCompatActivity() {
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
                                 val textToSend = if (isFirstImage && messageText.isNotEmpty()) messageText else ""
-                                sendMessage(textToSend, url)
-                                isFirstImage = false
-                                hideReplyPreview()
+                                // Ensure connection is active before sending message
+                                if (grpcClient.connectionState.value) {
+                                    sendMessage(textToSend, url)
+                                    isFirstImage = false
+                                    hideReplyPreview()
+                                } else {
+                                    android.util.Log.w("NewChatActivity", "Connection lost after image upload, will retry on reconnect")
+                                    // Message will be sent when connection is restored
+                                    sendMessage(textToSend, url)
+                                }
                             } else showToast("Upload failed: Invalid server response")
                         }
                     }
@@ -1086,9 +1093,20 @@ class NewChatActivity : AppCompatActivity() {
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
                                 if (isImage) {
-                                    sendMessage("", url)  // sendMessage will set text to "Image" if imageUrl is not empty
+                                    // Ensure connection is active before sending message
+                                    if (grpcClient.connectionState.value) {
+                                        sendMessage("", url)
+                                    } else {
+                                        android.util.Log.w("NewChatActivity", "Connection lost after image upload, will retry on reconnect")
+                                        sendMessage("", url)
+                                    }
                                 } else {
-                                    sendMessage("File: $fileName\n$url", "")
+                                    if (grpcClient.connectionState.value) {
+                                        sendMessage("File: $fileName\n$url", "")
+                                    } else {
+                                        android.util.Log.w("NewChatActivity", "Connection lost after file upload, will retry on reconnect")
+                                        sendMessage("File: $fileName\n$url", "")
+                                    }
                                 }
                             } else showToast("Upload failed: Invalid server response")
                         }
