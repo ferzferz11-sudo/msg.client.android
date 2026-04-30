@@ -174,7 +174,11 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) currentPhotoUri?.let { uploadFiles(listOf(it), isImage = true) }
+        if (success) currentPhotoUri?.let {
+            selectedImageUris.addAll(listOf(it))
+            showImagePreview()
+            //uploadFiles(listOf(it), isImage = true)
+        }
     }
 
     private val pickLocationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->

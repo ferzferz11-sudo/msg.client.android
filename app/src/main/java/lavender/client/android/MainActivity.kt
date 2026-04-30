@@ -39,6 +39,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
 
@@ -98,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         updateAvailableIndicator = findViewById(R.id.updateAvailableIndicator)
         downloadProgressBar = findViewById(R.id.downloadProgressBar)
         downloadProgressText = findViewById(R.id.downloadProgressText)
+        joinChatButton = findViewById(R.id.joinChatButton)
         languageButton = findViewById(R.id.languageButton)
         logoutButton = findViewById(R.id.logoutButton)
         copyLinkButton = findViewById(R.id.copyLinkButton)
@@ -334,11 +336,11 @@ class MainActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_join_chat, null)
 
         // Set dialog background using Material Design colors
-        val typedValue = android.util.TypedValue()
-        if (isDarkTheme()) {
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-            dialogView.setBackgroundColor(typedValue.data)
-        }
+        //val typedValue = android.util.TypedValue()
+        //if (isDarkTheme()) {
+        //    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+        //    dialogView.setBackgroundColor(typedValue.data)
+        //}
 
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val usernameInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
@@ -491,7 +493,9 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun logout() {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        finishAffinity()
+        exitProcess(0)   // (Опционально) Завершает процесс Java VM
+        /*val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
         prefs.edit {
             remove("username")
             remove("password")
@@ -503,7 +507,7 @@ class MainActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         intent.putExtra("extra_skip_autologin", true)
         startActivity(intent)
-        finish()
+        finish()*/
     }
 
     private fun navigateToChatList(username: String, password: String, serverAddress: String) {

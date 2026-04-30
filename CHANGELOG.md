@@ -5,6 +5,10 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+1.0.2.29
+showImagePreview() for takePhotoLauncher
+logout() fix MainActivity
+
 1.0.2.28
 добавили обработку drag-панирования в onTouchEvent после время pinch-to-zoom
 
