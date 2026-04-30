@@ -129,6 +129,15 @@ object RealGrpcClient {
     var hasCheckedForUpdates = false
     
     var isAppInBackground = false
+    
+    // Reconnection management
+    private var reconnectAttempts = 0
+    private var lastReconnectTime = 0L
+    private val MAX_RECONNECT_ATTEMPTS = 5
+    private val RECONNECT_DELAY_MS = 2000L
+    private val RECONNECT_MAX_DELAY_MS = 30000L
+    private var reconnectHandler: android.os.Handler? = null
+    private var reconnectRunnable: Runnable? = null
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         if (context != null) {
@@ -345,6 +354,14 @@ object RealGrpcClient {
             _connectionState.value = false
             _isSuperAdmin.value = false
             sentMessageHashes.clear()
+            
+            // Cancel any pending reconnection attempts
+            if (reconnectRunnable != null) {
+                reconnectHandler?.removeCallbacks(reconnectRunnable!!)
+            }
+            reconnectAttempts = 0
+            reconnectHandler = null
+            reconnectRunnable = null
         } catch (_: Exception) {}
     }
 
@@ -406,6 +423,9 @@ object RealGrpcClient {
         
         try {
             isChatStarted = true
+            // Reset reconnection attempts on successful connection
+            reconnectAttempts = 0
+            
             val responseObserver = object : StreamObserver<MessageProto> {
                 override fun onNext(value: MessageProto) {
                     // Handle system notifications
@@ -518,11 +538,46 @@ object RealGrpcClient {
                 override fun onError(t: Throwable) {
                     android.util.Log.e("RealGrpcClient", "Chat stream error: ${t.message}", t)
                     isChatStarted = false
-                    _connectionState.value = false
+                    
+                    // Don't immediately set connectionState to false - keep it true if we're going to reconnect
+                    // Only set to false if we've exceeded max reconnect attempts
+                    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                        _connectionState.value = false
+                        android.util.Log.e("RealGrpcClient", "Max reconnection attempts reached, giving up")
+                        return
+                    }
 
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    // Schedule smart reconnection with exponential backoff
+                    scheduleReconnection()
+                }
+                
+                private fun scheduleReconnection() {
+                    // Cancel previous reconnection attempt
+                    if (reconnectRunnable != null) {
+                        reconnectHandler?.removeCallbacks(reconnectRunnable!!)
+                    }
+                    
+                    val currentTime = System.currentTimeMillis()
+                    val timeSinceLastReconnect = currentTime - lastReconnectTime
+                    
+                    // If last reconnect was very recent, increase delay
+                    val delay = if (timeSinceLastReconnect < 5000) {
+                        // Exponential backoff: 2s, 4s, 8s, 16s, 30s max
+                        minOf(RECONNECT_DELAY_MS * (1 shl reconnectAttempts), RECONNECT_MAX_DELAY_MS)
+                    } else {
+                        // Reset attempts if enough time has passed
+                        reconnectAttempts = 0
+                        RECONNECT_DELAY_MS
+                    }
+                    
+                    reconnectAttempts++
+                    lastReconnectTime = currentTime
+                    
+                    android.util.Log.d("GrpcClient", "Scheduling reconnection attempt $reconnectAttempts in ${delay}ms")
+                    
+                    reconnectRunnable = Runnable {
                         if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
-                            android.util.Log.d("GrpcClient", "Attempting automatic reconnection...")
+                            android.util.Log.d("GrpcClient", "Attempting automatic reconnection (attempt $reconnectAttempts)...")
                             startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
                             
                             // Load history after reconnection with delay to ensure stability
@@ -531,9 +586,12 @@ object RealGrpcClient {
                                     android.util.Log.d("GrpcClient", "Loading history after reconnection for room: $currentRoomId")
                                     loadHistory(currentRoomId)
                                 }
-                            }, 2000)
+                            }, 1000)
                         }
-                    }, 2000)
+                    }
+                    
+                    reconnectHandler = android.os.Handler(android.os.Looper.getMainLooper())
+                    reconnectHandler?.postDelayed(reconnectRunnable!!, delay)
                 }
                 
                 override fun onCompleted() { isChatStarted = false }

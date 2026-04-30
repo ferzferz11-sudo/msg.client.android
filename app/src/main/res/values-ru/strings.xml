@@ -199,7 +199,7 @@
     <string name="edit_theme_button">Редактировать</string>
 
     <string name="welcome_new_user_title">Добро пожаловать в Lavender!</string>
-    <string name="welcome_new_user_description">Добро пожаловать в нашу систему обмена сообщениями!\nВаша приватность — наш главный приоритет, поэтому все чаты здесь защищены сквозным шифрованием.</string>
+    <string name="welcome_new_user_description">Это система обмена сообщениями!\nВаша приватность — наш главный приоритет, поэтому все чаты здесь защищены сквозным шифрованием.</string>
 
     <!-- Notification History -->
     <string name="no_notifications">Нет уведомлений</string>
@@ -308,6 +308,7 @@
     <string name="checking_for_updates">Проверка обновлений…</string>
     <string name="chat_last_message_format">%1$s%2$s</string>
     <string name="plus_count_format">+%1$d</string>
+    <string name="online_count_format">%1$d/%2$d онлайн</string>
     <string name="download_complete">Загрузка завершена!</string>
     <string name="manual_install_hint">Если установка не началась автоматически, пожалуйста, нажмите на кнопку ниже.</string>
     <string name="install_now">Установить</string>

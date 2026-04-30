@@ -255,6 +255,21 @@ class ChatAdapter(
                         }
                         participantAvatars.addView(countView)
                     }
+                    
+                    // Add online count indicator for groups
+                    val onlineCount = participantsList.count { onlineUsers.contains(it) }
+                    val totalCount = participantsList.size
+                    if (totalCount > 0) {
+                        val onlineIndicator = TextView(context).apply {
+                            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                                setMargins(8.dpToPx(), 0, 0, 0)
+                            }
+                            text = context.getString(R.string.online_count_format, onlineCount, totalCount)
+                            textSize = 12f
+                            setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                        }
+                        participantAvatars.addView(onlineIndicator)
+                    }
                 }
             } catch (_: Exception) {}
         }
