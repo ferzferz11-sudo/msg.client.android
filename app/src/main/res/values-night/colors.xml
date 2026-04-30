@@ -13,21 +13,21 @@
     
     <!-- Message colors (dark theme) -->
     <color name="message_background">@color/silver_fog</color>
-    <color name="message_border">@color/lavender_mist</color>
+    <color name="message_border">#30ffffff</color><!--@color/lavender_mist-->
     <color name="incoming_message_background">@color/deep_purple</color>
     <color name="outgoing_message_background">@color/lavender_mist</color>
-    <color name="outgoing_message_text">#FFFFFF</color>
+    <color name="outgoing_message_text">#312051</color><!--#FFFFFF-->
     <color name="incoming_message_light">#3A2A5A</color>
 
     <color name="tg_incoming_bubble">@color/lavender_mist</color>
     <color name="tg_outgoing_bubble">#4A3B6D</color>
     <color name="tg_incoming_name">#312051</color>
-    <color name="tg_time_incoming">#CC000000</color>
+    <color name="tg_time_incoming">#A0FFFFFF</color><!--#7A63A0-->
     <color name="tg_time_outgoing">#E0FFFFFF</color>
 
     <!-- UI element colors -->
     <color name="primary">#967BB6</color>
-    <color name="primary_dark">#7A63A0</color>
+    <color name="primary_dark">#25183D</color><!--#7A63A0-->
     <color name="accent">#E6E6FA</color>
     
     <!-- Splash screen background -->
