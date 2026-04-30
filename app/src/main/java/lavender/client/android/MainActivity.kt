@@ -645,13 +645,8 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun toggleColorScheme() {
-        val schemes = listOf("light", "dark")
-        val currentScheme = getSavedColorScheme() ?: "dark"
-        val currentIndex = schemes.indexOf(currentScheme)
-        val nextIndex = (currentIndex + 1) % schemes.size
-        val newScheme = schemes[nextIndex]
-        
-        saveColorScheme(newScheme)
+        // Only dark theme is available now
+        saveColorScheme("dark")
         updateColorSchemeButtonText()
         recreate()
     }

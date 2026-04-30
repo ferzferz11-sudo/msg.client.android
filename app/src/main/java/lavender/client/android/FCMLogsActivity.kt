@@ -92,11 +92,7 @@ class FCMLogsActivity : AppCompatActivity() {
     }
 
     private fun applySavedColorScheme() {
-        val theme = when (getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")) {
-            "light" -> R.style.Theme_Lavender_Light_NoActionBar
-            else -> R.style.Theme_Lavender_Dark_NoActionBar
-        }
-        setTheme(theme)
+        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
 
     class FCMLogsAdapter : RecyclerView.Adapter<FCMLogsAdapter.ViewHolder>() {

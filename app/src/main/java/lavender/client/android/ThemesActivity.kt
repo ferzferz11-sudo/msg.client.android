@@ -127,7 +127,6 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun updateUI() {
         val allThemes = mutableListOf<CustomThemeProto>()
-        allThemes.add(CustomThemeProto(id = "light", name = getString(R.string.light_theme)))
         allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
         
         // Add built-in template themes with localized names
@@ -159,7 +158,7 @@ class ThemesActivity : AppCompatActivity() {
             item.iconTintList = ColorStateList.valueOf(onPrimary)
         } else {
             // Edit button for custom themes (not built-in ones)
-            val isBuiltIn = currentThemeId == "light" || currentThemeId == "dark" || currentThemeId.startsWith("builtin_")
+            val isBuiltIn = currentThemeId == "dark" || currentThemeId.startsWith("builtin_")
             if (!isBuiltIn) {
                 val editItem = menu.add(0, 300, 0, R.string.edit_theme_button)
                 editItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
@@ -216,7 +215,7 @@ class ThemesActivity : AppCompatActivity() {
                 var deletedCount = 0
                 for (theme in themesToDelete) {
                     if (currentThemeId == theme.id) {
-                        selectTheme("light")
+                        selectTheme("dark")
                     }
                     grpcClient.deleteTheme(username, theme.id) { success ->
                         if (success) {
@@ -246,9 +245,9 @@ class ThemesActivity : AppCompatActivity() {
             runOnUiThread {
                 if (success) {
                     val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-                    val scheme = if (themeId == "light" || themeId == "dark") themeId else {
+                    val scheme = if (themeId == "dark") "dark" else {
                         val theme = (customThemes + lavender.client.android.ui.ThemeManager.builtInThemes).find { it.id == themeId }
-                        if (theme?.isDark == true) "dark" else "light"
+                        if (theme?.isDark == true) "dark" else "dark"
                     }
                     prefs.edit {
                         putString("color_scheme", scheme)

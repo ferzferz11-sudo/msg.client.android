@@ -635,8 +635,8 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun isDarkTheme(): Boolean {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", "dark") != "light"
+        // Light theme has been removed, always return true (dark theme)
+        return true
     }
 
     private fun showAboutDialog() {
@@ -1167,8 +1167,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun applySavedColorScheme() {
-        val themeRes = if (getSavedColorScheme() == "light") R.style.Theme_Lavender_Light_NoActionBar else R.style.Theme_Lavender_Dark_NoActionBar
-        setTheme(themeRes)
+        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
 
     private fun applySavedLanguage() {

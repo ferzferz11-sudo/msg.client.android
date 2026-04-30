@@ -970,7 +970,7 @@ class NewChatActivity : AppCompatActivity() {
         return result
     }
 
-    private fun applySavedColorScheme() { setTheme(if (getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", null) == "light") R.style.Theme_Lavender_Light_NoActionBar else R.style.Theme_Lavender_Dark_NoActionBar) }
+    private fun applySavedColorScheme() { setTheme(R.style.Theme_Lavender_Dark_NoActionBar) }
     private fun applyChatBackground() {
         val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
         if (theme.backgroundImageUrl.isNotEmpty()) findViewById<ImageView>(R.id.chatBackground)?.let { com.bumptech.glide.Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(it); messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT); swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT) }

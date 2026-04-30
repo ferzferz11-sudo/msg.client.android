@@ -77,9 +77,15 @@ object ThemeManager {
 
     fun loadTheme(context: Context, username: String, onComplete: () -> Unit = {}) {
         val prefs = context.getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
-        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+        var themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
         
-        if (themeId == "light" || themeId == "dark") {
+        // Migrate users from light theme to dark theme
+        if (themeId == "light") {
+            themeId = "dark"
+            prefs.edit { putString("current_theme_id", "dark") }
+        }
+        
+        if (themeId == "dark") {
             currentCustomTheme = null
             onComplete()
             return

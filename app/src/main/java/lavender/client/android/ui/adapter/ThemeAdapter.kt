@@ -75,7 +75,7 @@ class ThemeAdapter(
                 if (currentPos == RecyclerView.NO_POSITION) return@bind
                 
                 val theme = themes[currentPos]
-                if (theme.id == "light" || theme.id == "dark") {
+                if (theme.id == "dark") {
                     onThemeClick(theme)
                     return@bind
                 }
@@ -167,10 +167,7 @@ class ThemeAdapter(
 
             // Preview colors
             try {
-                if (theme.id == "light") {
-                    themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.WHITE)
-                    themeColorsInfo.text = context.getString(R.string.light_theme)
-                } else if (theme.id == "dark") {
+                if (theme.id == "dark") {
                     themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#1E1E2E"))
                     themeColorsInfo.text = context.getString(R.string.dark_theme)
                 } else {
@@ -184,7 +181,7 @@ class ThemeAdapter(
 
             itemView.setOnClickListener {
                 if (selectedPositions.isNotEmpty()) {
-                    if (theme.id != "light" && theme.id != "dark") {
+                    if (theme.id != "dark") {
                         onLongClick()
                     }
                 } else {
@@ -193,7 +190,7 @@ class ThemeAdapter(
             }
 
             itemView.setOnLongClickListener {
-                if (theme.id != "light" && theme.id != "dark") {
+                if (theme.id != "dark") {
                     onLongClick()
                     true
                 } else false
