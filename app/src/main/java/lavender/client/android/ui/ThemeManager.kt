@@ -25,12 +25,12 @@ object ThemeManager {
             id = "builtin_green",
             name = "Зеленый лес",
             primaryColor = "#2E7D32",
-            backgroundColor = "#F1F8E9",
-            surfaceColor = "#DCEDC8",
-            textPrimaryColor = "#1B5E20",
+            backgroundColor = "#F8FAF5", // F1F8E9
+            surfaceColor = "#EEF7E2", // DCEDC8
+            textPrimaryColor = "#144218", // 1B5E20
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#33691E",
-            bottomPanelColor = "#E8F5E9",
+            bottomPanelColor = "#FFFFFF", // E8F5E9
             onBottomPanelColor = "#2E7D32",
             isDark = false
         ),
@@ -42,8 +42,8 @@ object ThemeManager {
             surfaceColor = "#FFFFFF", // #BBDEFB
             textPrimaryColor = "#1C1C1E", // #0D47A1
             onPrimaryColor = "#FFFFFF",
-            onSurfaceColor = "#3A3A3C", //Второстепенные элементы 01579B
-            bottomPanelColor = "#E3F2FD", //нижняя панель
+            onSurfaceColor = "#3A3A3C", // Второстепенные элементы 01579B
+            bottomPanelColor = "#E3F2FD", // нижняя панель
             onBottomPanelColor = "#1565C0",
             isDark = false
         ),
@@ -51,12 +51,12 @@ object ThemeManager {
             id = "builtin_purple",
             name = "Королевский пурпур",
             primaryColor = "#6A1B9A",
-            backgroundColor = "#F3E5F5",
-            surfaceColor = "#E1BEE7",
-            textPrimaryColor = "#4A148C",
+            backgroundColor = "#FBF8FF", // F3E5F5
+            surfaceColor = "#F0E2F5", // E1BEE7
+            textPrimaryColor = "#2D0C54", // 4A148C
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#4A148C",
-            bottomPanelColor = "#F3E5F5",
+            bottomPanelColor = "#FFFFFF", // F3E5F5
             onBottomPanelColor = "#6A1B9A",
             isDark = false
         ),
