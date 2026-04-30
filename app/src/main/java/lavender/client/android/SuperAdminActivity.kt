@@ -2,15 +2,18 @@ package lavender.client.android
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
@@ -73,6 +76,27 @@ class SuperAdminActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.super_admin_menu, menu)
+        
+        // Get icon color from custom theme or Material Design attributes
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val iconColor = if (customTheme != null) {
+            try {
+                customTheme.textPrimaryColor.toColorInt()
+            } catch (_: Exception) {
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                typedValue.data
+            }
+        } else {
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            typedValue.data
+        }
+        
+        menu.findItem(R.id.action_show_users)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_show_groups)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        
         return true
     }
 

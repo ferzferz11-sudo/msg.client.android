@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
 import lavender.client.android.ui.adapter.UserAdapter
+import androidx.core.graphics.toColorInt
 import java.util.*
 
 class ContactsActivity : AppCompatActivity() {
@@ -95,10 +96,24 @@ class ContactsActivity : AppCompatActivity() {
             .setIcon(R.drawable.ic_search_custom)
             .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
         
+        // Get colors from custom theme or Material Design attributes
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val iconColor = if (customTheme != null) {
+            try {
+                customTheme.onPrimaryColor.toColorInt()
+            } catch (_: Exception) {
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                typedValue.data
+            }
+        } else {
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            typedValue.data
+        }
+        
         // Tint the search icon
-        val typedValue = android.util.TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-        searchItem.icon?.setTint(typedValue.data)
+        searchItem.icon?.setTint(iconColor)
 
         return true
     }

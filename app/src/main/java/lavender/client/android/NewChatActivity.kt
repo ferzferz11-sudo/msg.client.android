@@ -390,8 +390,52 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean { menuInflater.inflate(R.menu.chat_menu, menu); return true }
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean { menu.findItem(R.id.action_search)?.isVisible = !selectionMode; return super.onPrepareOptionsMenu(menu) }
-    override fun onOptionsItemSelected(item: MenuItem): Boolean { return when (item.itemId) { R.id.action_search -> { showSearchBar(); true }; else -> super.onOptionsItemSelected(item) } }
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(R.id.action_search)?.isVisible = !selectionMode
+        
+        // Apply custom theme color to search icon
+        val iconColor = run {
+            val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            if (customTheme != null) {
+                try {
+                    customTheme.onPrimaryColor.toColorInt()
+                } catch (_: Exception) {
+                    val typedValue = TypedValue()
+                    theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                    typedValue.data
+                }
+            } else {
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                typedValue.data
+            }
+        }
+        
+        menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        
+        // Style menu items with custom theme
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val textColor = customTheme.onPrimaryColor.toColorInt()
+                
+                for (i in 0 until menu.size()) {
+                    val item = menu.getItem(i)
+                    val span = android.text.SpannableString(item.title)
+                    span.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, span.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    item.title = span
+                }
+            } catch (_: Exception) {}
+        }
+        
+        return super.onPrepareOptionsMenu(menu)
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_search -> { showSearchBar(); true }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
 
     private fun setupListeners() {
         sendButton.setOnClickListener {
@@ -437,6 +481,17 @@ class NewChatActivity : AppCompatActivity() {
         val emojiGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
 
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shapeDrawable.paint.color = customTheme.backgroundColor.toColorInt()
+                dialogView.background = shapeDrawable
+            } catch (_: Exception) {}
+        }
+
         val emojis = listOf(
             "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
             "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
@@ -477,12 +532,33 @@ class NewChatActivity : AppCompatActivity() {
             emojiGrid.addView(textView)
         }
 
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.show()
     }
 
     private fun showAttachmentSheet() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
+        
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val bgColor = customTheme.backgroundColor.toColorInt()
+                val textColor = customTheme.textPrimaryColor.toColorInt()
+                view.setBackgroundColor(bgColor)
+                val childCount = (view as? LinearLayout)?.childCount ?: 0
+                for (i in 0 until childCount) {
+                    val child = (view as LinearLayout).getChildAt(i)
+                    if (child is LinearLayout) {
+                        for (j in 0 until child.childCount) {
+                            val subChild = child.getChildAt(j)
+                            if (subChild is TextView) subChild.setTextColor(textColor)
+                            if (subChild is ImageView) subChild.setColorFilter(textColor)
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
         
         view.findViewById<LinearLayout>(R.id.attachCamera).setOnClickListener {
             bottomSheet.dismiss()
@@ -517,7 +593,26 @@ class NewChatActivity : AppCompatActivity() {
         bottomSheet.show()
     }
 
-    private fun showSearchBar() { searchBar.isVisible = true; toolbarContent.isVisible = false; searchInput.requestFocus(); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0) }
+    private fun showSearchBar() {
+        searchBar.isVisible = true
+        toolbarContent.isVisible = false
+        
+        // Apply custom theme colors to search bar
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val bgColor = customTheme.textPrimaryColor.toColorInt()
+                val textColor = customTheme.backgroundColor.toColorInt()
+                searchBar.setBackgroundColor(bgColor)
+                searchInput.setTextColor(textColor)
+                searchInput.setHintTextColor(textColor)
+                searchResultsCount.setTextColor(textColor)
+            } catch (_: Exception) {}
+        }
+        
+        searchInput.requestFocus()
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0)
+    }
     private fun hideSearchBar() { searchBar.isVisible = false; toolbarContent.isVisible = true; searchInput.text.clear(); adapter.setSearchHighlight(null); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0) }
 
     private fun handleMention(s: CharSequence?) {
@@ -684,7 +779,8 @@ class NewChatActivity : AppCompatActivity() {
                 }
                 
                 val chatNames = otherChats.map { it.getDisplayName(username) }.toTypedArray()
-                AlertDialog.Builder(this)
+                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                val builder = AlertDialog.Builder(this)
                     .setTitle(R.string.forward_to)
                     .setItems(chatNames) { _, which ->
                         val targetChat = otherChats[which]
@@ -704,7 +800,20 @@ class NewChatActivity : AppCompatActivity() {
                         hideSelectionToolbar()
                     }
                     .setNegativeButton(R.string.cancel, null)
-                    .show()
+                
+                if (customTheme != null) {
+                    try {
+                        val textColor = customTheme.textPrimaryColor.toColorInt()
+                        val dialog = builder.show()
+                        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                        val titleView = dialog.findViewById<TextView>(android.R.id.title)
+                        titleView?.setTextColor(textColor)
+                    } catch (_: Exception) {
+                        builder.show()
+                    }
+                } else {
+                    builder.show()
+                }
             }
         }
     }
@@ -725,6 +834,30 @@ class NewChatActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val bgColor = customTheme.backgroundColor.toColorInt()
+                val textColor = customTheme.textPrimaryColor.toColorInt()
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shapeDrawable.paint.color = bgColor
+                dialogView.background = shapeDrawable
+                val childCount = (dialogView as? LinearLayout)?.childCount ?: 0
+                for (i in 0 until childCount) {
+                    val child = (dialogView as LinearLayout).getChildAt(i)
+                    if (child is LinearLayout) {
+                        for (j in 0 until child.childCount) {
+                            val subChild = child.getChildAt(j)
+                            if (subChild is TextView) subChild.setTextColor(textColor)
+                            if (subChild is ImageView) subChild.setColorFilter(textColor)
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        
         val reactionsContainer = dialogView.findViewById<LinearLayout>(R.id.reactionsContainer)
         val emojis = listOf("👍", "❤️", "🔥", "😂", "😮", "😢", "🙏", "✅")
         
@@ -744,11 +877,11 @@ class NewChatActivity : AppCompatActivity() {
             reactionsContainer.addView(textView)
         }
 
-        dialogView.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener { 
+        dialogView.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener {
             dialog.dismiss()
-            showReplyPreview(message) 
+            showReplyPreview(message)
         }
-        dialogView.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener { 
+        dialogView.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener {
             dialog.dismiss()
             val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("message", message.text))
@@ -766,11 +899,12 @@ class NewChatActivity : AppCompatActivity() {
             editButton.isVisible = false
         }
         
-        dialogView.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener { 
+        dialogView.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener {
             dialog.dismiss()
-            grpcClient.deleteMessage(message) 
+            grpcClient.deleteMessage(message)
         }
         
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.show()
     }
 
@@ -779,6 +913,21 @@ class NewChatActivity : AppCompatActivity() {
         val editText = dialogView.findViewById<EditText>(R.id.editMessageInput)
         editText.setText(message.text)
         editText.setSelection(message.text.length)
+        
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val textColor = customTheme.textPrimaryColor.toColorInt()
+                val bgColor = customTheme.backgroundColor.toColorInt()
+                editText.setTextColor(textColor)
+                editText.setBackgroundColor(bgColor)
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shapeDrawable.paint.color = bgColor
+                dialogView.background = shapeDrawable
+            } catch (_: Exception) {}
+        }
         
         AlertDialog.Builder(this)
             .setTitle(R.string.edit_message)

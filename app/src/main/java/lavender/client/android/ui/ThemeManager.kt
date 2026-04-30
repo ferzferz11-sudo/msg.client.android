@@ -36,14 +36,14 @@ object ThemeManager {
         ),
         CustomThemeProto(
             id = "builtin_blue",
-            name = "Океанский синий",
-            primaryColor = "#1565C0",
-            backgroundColor = "#E3F2FD",
-            surfaceColor = "#BBDEFB",
-            textPrimaryColor = "#0D47A1",
+            name = "Современный синий",
+            primaryColor = "#007AFF", // #1565C0
+            backgroundColor = "#E3F2FD", // #F8FAFF
+            surfaceColor = "#FFFFFF", // #BBDEFB
+            textPrimaryColor = "#1C1C1E", // #0D47A1
             onPrimaryColor = "#FFFFFF",
-            onSurfaceColor = "#01579B",
-            bottomPanelColor = "#E3F2FD",
+            onSurfaceColor = "#3A3A3C", //Второстепенные элементы 01579B
+            bottomPanelColor = "#E3F2FD", //нижняя панель
             onBottomPanelColor = "#1565C0",
             isDark = false
         ),

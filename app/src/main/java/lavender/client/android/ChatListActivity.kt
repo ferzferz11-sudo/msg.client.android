@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
+import android.text.SpannableString
 import android.text.TextWatcher
 import android.util.Log
 import android.util.TypedValue
@@ -613,20 +614,63 @@ class ChatListActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.chat_list_menu, menu)
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         
-        val typedValue = TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-        val onPrimary = typedValue.data
+        // Get colors from custom theme or Material Design attributes
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val (iconColor, textColor, backgroundColor) = if (customTheme != null) {
+            try {
+                Triple(customTheme.onPrimaryColor.toColorInt(), customTheme.onPrimaryColor.toColorInt(), customTheme.backgroundColor.toColorInt())
+            } catch (_: Exception) {
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                Triple(typedValue.data, typedValue.data, 0)
+            }
+        } else {
+            val typedValue = TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            Triple(typedValue.data, typedValue.data, 0)
+        }
+
 
         menu.findItem(R.id.action_search)?.apply {
             isVisible = !hasSelection
-            iconTintList = ColorStateList.valueOf(onPrimary)
+            iconTintList = ColorStateList.valueOf(iconColor)
         }
         menu.findItem(R.id.action_delete)?.apply {
             isVisible = hasSelection
-            iconTintList = ColorStateList.valueOf(onPrimary)
+            iconTintList = ColorStateList.valueOf(iconColor)
         }
-        menu.findItem(R.id.action_update)?.apply { isVisible = !hasSelection }
-        menu.findItem(R.id.action_super_admin)?.apply { isVisible = grpcClient.isSuperAdmin.value }
+        menu.findItem(R.id.action_update)?.apply {
+            isVisible = !hasSelection
+            if (customTheme != null) {
+                try {
+                    val textColorInt = customTheme.onPrimaryColor.toColorInt()
+                    title = SpannableString(title).apply {
+                        setSpan(android.text.style.ForegroundColorSpan(textColorInt), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        menu.findItem(R.id.action_about)?.apply {
+            if (customTheme != null) {
+                try {
+                    val textColorInt = customTheme.onPrimaryColor.toColorInt()
+                    title = SpannableString(title).apply {
+                        setSpan(android.text.style.ForegroundColorSpan(textColorInt), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        menu.findItem(R.id.action_super_admin)?.apply {
+            isVisible = grpcClient.isSuperAdmin.value
+            if (customTheme != null) {
+                try {
+                    val textColorInt = customTheme.onPrimaryColor.toColorInt()
+                    title = SpannableString(title).apply {
+                        setSpan(android.text.style.ForegroundColorSpan(textColorInt), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
         return true
     }
 
@@ -727,19 +771,79 @@ class ChatListActivity : AppCompatActivity() {
             pInfo.versionName
         } catch (e: Exception) { BuildConfig.VERSION_NAME }
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", currentVersion) ?: currentVersion
-        val builder = AlertDialog.Builder(this)
+        
+        // Create custom dialog view
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
+        
+        // Set content
         if (isUpdateAvailable) {
-            builder.setTitle(R.string.update_available)
-            builder.setMessage(getString(R.string.version_current, currentVersion) + "\n" + getString(R.string.version_available, latestVersion) + "\n\n" + getString(R.string.update_confirmation_message))
-            builder.setPositiveButton(R.string.update_now) { _, _ -> downloadAndInstallApk() }
-            builder.setNegativeButton(R.string.cancel, null)
+            titleText.text = getString(R.string.update_available)
+            messageText.text = getString(R.string.version_current, currentVersion) + "\n" + getString(R.string.version_available, latestVersion) + "\n\n" + getString(R.string.update_confirmation_message)
+            btnDelete.text = getString(R.string.update_now)
+            btnCancel.text = getString(R.string.cancel)
         } else {
-            builder.setTitle(R.string.no_updates_available)
-            builder.setMessage(getString(R.string.version_current, currentVersion) + "\n\n" + getString(R.string.version_latest_message))
-            builder.setPositiveButton(R.string.ok, null)
-            builder.setNeutralButton(R.string.force_download) { _, _ -> downloadAndInstallApk() }
+            titleText.text = getString(R.string.no_updates_available)
+            messageText.text = getString(R.string.version_current, currentVersion) + "\n\n" + getString(R.string.version_latest_message)
+            btnDelete.text = getString(R.string.force_download)
+            btnCancel.text = getString(R.string.ok)
         }
-        builder.show()
+        
+        // Apply theme colors - custom theme or built-in theme
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
+                titleText.setTextColor(onPrimaryContainerColor)
+                messageText.setTextColor(onPrimaryContainerColor)
+                btnCancel.setTextColor(onPrimaryContainerColor)
+                btnDelete.setTextColor(onPrimaryContainerColor)
+                // Create a shape drawable with custom color for rounded background
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
+                dialogView.background = shapeDrawable
+            } catch (_: Exception) {}
+        } else {
+            // Use Material Design attributes for built-in themes
+            val typedValue = TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+            val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
+            
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+            val textColor = ContextCompat.getColor(this, typedValue.resourceId)
+            
+            titleText.setTextColor(textColor)
+            messageText.setTextColor(textColor)
+            btnCancel.setTextColor(textColor)
+            btnDelete.setTextColor(textColor)
+            
+            // Create a shape drawable with built-in theme color for rounded background
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+            ))
+            shapeDrawable.paint.color = bgColor
+            dialogView.background = shapeDrawable
+        }
+        
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnDelete.setOnClickListener {
+            dialog.dismiss()
+            if (isUpdateAvailable) {
+                downloadAndInstallApk()
+            } else {
+                downloadAndInstallApk()
+            }
+        }
+        
+        dialog.show()
     }
 
     private fun downloadAndInstallApk() {
@@ -839,6 +943,77 @@ class ChatListActivity : AppCompatActivity() {
         val menuUserAvatar = sheetView.findViewById<CircleImageView>(R.id.menuUserAvatar)
         val menuUsername = sheetView.findViewById<TextView>(R.id.menuUsername)
         val menuUserBio = sheetView.findViewById<TextView>(R.id.menuUserBio)
+        
+        // Apply custom theme colors to the sheet
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val backgroundColor = customTheme.backgroundColor.toColorInt()
+                val textPrimaryColor = customTheme.textPrimaryColor.toColorInt()
+                val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
+                val primaryColor = customTheme.primaryColor.toColorInt()
+                
+                sheetView.setBackgroundColor(backgroundColor)
+                menuUsername.setTextColor(textPrimaryColor)
+                menuUserBio.setTextColor(onSurfaceColor)
+                
+                // Apply colors to all action items - find TextViews inside LinearLayouts
+                val actionEditProfile = sheetView.findViewById<LinearLayout>(R.id.actionEditProfile)
+                actionEditProfile?.let {
+                    for (i in 0 until it.childCount) {
+                        val child = it.getChildAt(i)
+                        if (child is TextView) child.setTextColor(textPrimaryColor)
+                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
+                    }
+                }
+                
+                val actionThemes = sheetView.findViewById<LinearLayout>(R.id.actionThemes)
+                actionThemes?.let {
+                    for (i in 0 until it.childCount) {
+                        val child = it.getChildAt(i)
+                        if (child is TextView) child.setTextColor(textPrimaryColor)
+                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
+                    }
+                }
+                
+                val actionNotifications = sheetView.findViewById<LinearLayout>(R.id.actionNotifications)
+                actionNotifications?.let {
+                    for (i in 0 until it.childCount) {
+                        val child = it.getChildAt(i)
+                        if (child is TextView) child.setTextColor(textPrimaryColor)
+                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
+                    }
+                }
+                
+                val actionContacts = sheetView.findViewById<LinearLayout>(R.id.actionContacts)
+                actionContacts?.let {
+                    for (i in 0 until it.childCount) {
+                        val child = it.getChildAt(i)
+                        if (child is TextView) child.setTextColor(textPrimaryColor)
+                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
+                    }
+                }
+                
+                val actionToggleLanguage = sheetView.findViewById<LinearLayout>(R.id.actionToggleLanguage)
+                actionToggleLanguage?.let {
+                    for (i in 0 until it.childCount) {
+                        val child = it.getChildAt(i)
+                        if (child is TextView) child.setTextColor(textPrimaryColor)
+                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
+                    }
+                }
+                
+                val actionLogout = sheetView.findViewById<LinearLayout>(R.id.actionLogout)
+                actionLogout?.let {
+                    for (i in 0 until it.childCount) {
+                        val child = it.getChildAt(i)
+                        if (child is TextView) child.setTextColor(customTheme.textPrimaryColor.toColorInt())
+                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(customTheme.textPrimaryColor.toColorInt())
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        
         menuUsername.text = username
         grpcClient.getUserProfile(username) { profile ->
             runOnUiThread {

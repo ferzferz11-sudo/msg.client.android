@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ✅ Тёмная тема установлена по умолчанию
 ✅ Кастомные темы и пользователи, которые их используют, остаются без изменений
 ✅ Встроенные светлые темы (зелёная, синяя, фиолетовая, оранжевая) остаются доступными как кастомные темы
+Fixed search bar background color in NewChatActivity.kt. The showSearchBar() method now applies custom theme colors:
+
+Background: customTheme.textPrimaryColor.toColorInt()
+Text color: customTheme.backgroundColor.toColorInt()
+Hint text color: customTheme.backgroundColor.toColorInt()
+Results count text: customTheme.backgroundColor.toColorInt()
+When a custom theme is active, the search bar will display with the correct background and text colors. Falls back to default theme colors if no custom theme is set
 
 1.0.2.21
 Встроенная светлая тема: светлый фон с тёмным текстом + закруглённые углы

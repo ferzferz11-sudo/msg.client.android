@@ -255,7 +255,7 @@
     <string name="delete_theme">Удалить тему</string>
     <string name="delete_theme_confirm">Вы уверены, что хотите удалить эту тему?</string>
     <string name="theme_template_green">Зеленый лес</string>
-    <string name="theme_template_blue">Океанский синий</string>
+    <string name="theme_template_blue">Современный синий</string>
     <string name="theme_template_purple">Королевский пурпур</string>
     <string name="theme_template_sunset">Закатный оранжевый</string>
     <string name="theme_template_custom_light">Стандартная светлая</string>

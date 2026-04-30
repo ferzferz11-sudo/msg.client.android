@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -139,10 +140,12 @@ class NotificationActivity : AppCompatActivity() {
         
         // Force tint if current custom theme is applied
         lavender.client.android.ui.ThemeManager.getCurrentTheme()?.let { theme ->
-            val color = android.graphics.Color.parseColor(theme.onPrimaryColor)
-            for (i in 0 until menu.size()) {
-                menu.getItem(i).icon?.setTint(color)
-            }
+            try {
+                val color = theme.onPrimaryColor.toColorInt()
+                for (i in 0 until menu.size()) {
+                    menu.getItem(i).icon?.setTint(color)
+                }
+            } catch (_: Exception) {}
         }
         
         return true

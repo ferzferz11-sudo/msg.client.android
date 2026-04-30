@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.ui.adapter.ThemeAdapter
@@ -200,9 +201,20 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun getOnPrimaryColor(): Int {
-        val typedValue = android.util.TypedValue()
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-        return typedValue.data
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        return if (customTheme != null) {
+            try {
+                customTheme.textPrimaryColor.toColorInt()
+            } catch (_: Exception) {
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                typedValue.data
+            }
+        } else {
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            typedValue.data
+        }
     }
 
     private fun confirmDeleteThemes(selected: List<CustomThemeProto>) {
