@@ -1253,18 +1253,23 @@ class ChatListActivity : AppCompatActivity() {
         val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
         val allUsers = mutableListOf<String>()
+        val userContacts = mutableListOf<String>()
         val userAdapter = UserAdapter(
-            onUserClick = { selected -> btnAdd.isEnabled = selected != username },
+            onUserClick = { selected -> btnAdd.isEnabled = selected != username && !userContacts.contains(selected) },
             avatarCache = grpcClient.getAvatarCache(),
             onlineUsers = grpcClient.users.value
         )
         usersRecyclerView.adapter = userAdapter
         usersRecyclerView.layoutManager = LinearLayoutManager(this)
         grpcClient.loadAllUsers()
+        grpcClient.getContacts(username) { contacts ->
+            userContacts.clear()
+            userContacts.addAll(contacts)
+        }
         lifecycleScope.launch {
             delay(500)
             allUsers.clear()
-            allUsers.addAll(grpcClient.allUsers.value.filter { it != username })
+            allUsers.addAll(grpcClient.allUsers.value.filter { it != username && !userContacts.contains(it) })
             runOnUiThread {
                 binding.toolbarTitle.text = getString(R.string.chats)
                 userAdapter.setUsers(allUsers)
@@ -1274,7 +1279,7 @@ class ChatListActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().lowercase()
-                userAdapter.setUsers(allUsers.filter { it.lowercase().contains(query) })
+                userAdapter.setUsers(allUsers.filter { it.lowercase().contains(query) && !userContacts.contains(it) })
             }
             override fun afterTextChanged(s: Editable?) {}
         })

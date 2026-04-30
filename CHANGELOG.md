@@ -5,6 +5,10 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+1.0.2.23
+Исправлена критическая ошибка в MessageAdapter.kt с переиспользованием ViewHolder'ов при загрузке изображений.
+Исправлена контрастность текста в активити ThemesActivity
+
 1.0.2.22
 Светлая тема полностью удалена из приложения
 ✅ Все пользователи, у которых была включена светлая тема, автоматически переключатся на тёмную при следующем запуске приложения

@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -107,6 +108,26 @@ class ThemeAdapter(
             themeName.text = itemView.context.getString(R.string.add_theme)
             themeColorsInfo.text = itemView.context.getString(R.string.create)
             
+            // Set theme name text color based on current theme
+            try {
+                val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                if (currentTheme != null) {
+                    themeName.setTextColor(currentTheme.textPrimaryColor.toColorInt())
+                } else {
+                    val typedValue = android.util.TypedValue()
+                    itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                    themeName.setTextColor(if (typedValue.resourceId != 0)
+                        ContextCompat.getColor(itemView.context, typedValue.resourceId)
+                        else typedValue.data)
+                }
+            } catch (_: Exception) {
+                val typedValue = android.util.TypedValue()
+                itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                themeName.setTextColor(if (typedValue.resourceId != 0)
+                    ContextCompat.getColor(itemView.context, typedValue.resourceId)
+                    else typedValue.data)
+            }
+            
             themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
             editIndicator.setImageResource(android.R.drawable.ic_input_add)
             editIndicator.isVisible = true
@@ -138,6 +159,26 @@ class ThemeAdapter(
             editIndicator.isVisible = false
             
             val context = itemView.context
+            
+            // Set theme name text color based on current theme
+            try {
+                val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                if (currentTheme != null) {
+                    themeName.setTextColor(currentTheme.textPrimaryColor.toColorInt())
+                } else {
+                    val typedValue = android.util.TypedValue()
+                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                    themeName.setTextColor(if (typedValue.resourceId != 0)
+                        ContextCompat.getColor(context, typedValue.resourceId)
+                        else typedValue.data)
+                }
+            } catch (_: Exception) {
+                val typedValue = android.util.TypedValue()
+                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                themeName.setTextColor(if (typedValue.resourceId != 0)
+                    ContextCompat.getColor(context, typedValue.resourceId)
+                    else typedValue.data)
+            }
             
             if (isSelected) {
                 cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))

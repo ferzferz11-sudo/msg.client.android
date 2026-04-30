@@ -236,7 +236,7 @@ class ContactsActivity : AppCompatActivity() {
             // Give a bit of time for users to load
             kotlinx.coroutines.delay(500)
             allUsers.clear()
-            allUsers.addAll(grpcClient.allUsers.value.filter { it != username })
+            allUsers.addAll(grpcClient.allUsers.value.filter { it != username && !contacts.contains(it) })
             filteredUsers.clear()
             filteredUsers.addAll(allUsers)
             runOnUiThread { userAdapter.setUsers(filteredUsers) }
@@ -247,7 +247,7 @@ class ContactsActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().lowercase()
                 filteredUsers.clear()
-                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) })
+                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) && !contacts.contains(it) })
                 userAdapter.setUsers(filteredUsers)
             }
             override fun afterTextChanged(s: Editable?) {}

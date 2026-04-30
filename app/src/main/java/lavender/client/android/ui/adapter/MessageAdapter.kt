@@ -136,10 +136,20 @@ class MessageAdapter(
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         
+        // Track pending image load requests to cancel them when ViewHolder is reused
+        private var pendingImageCall: okhttp3.Call? = null
+        private var currentImageUrl: String? = null
+        
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            
+            // Cancel any pending image load from previous bind
+            if (currentImageUrl != message.imageUrl) {
+                pendingImageCall?.cancel()
+                pendingImageCall = null
+            }
             
             // Check if this is an empty/unrecoverable message:
             // - Legacy "Image" placeholder with no stored imageUrl
@@ -418,6 +428,13 @@ class MessageAdapter(
             messageImageView.isVisible = shouldShowImage
             if (shouldShowImage) {
                 android.util.Log.d("MessageAdapter", "Loading image via OkHttp: ${message.imageUrl}")
+                // Cancel any pending image load for this ViewHolder
+                if (currentImageUrl != message.imageUrl) {
+                    pendingImageCall?.cancel()
+                    pendingImageCall = null
+                    currentImageUrl = message.imageUrl
+                }
+                
                 // Show loading spinner initially
                 imageLoadingSpinner.isVisible = true
                 if (message.text.isEmpty()) {
@@ -431,10 +448,16 @@ class MessageAdapter(
                     .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
                 val request = okhttp3.Request.Builder().url(imageUrl).build()
-                okHttpClient.newCall(request).enqueue(object : okhttp3.Callback {
+                val call = okHttpClient.newCall(request)
+                pendingImageCall = call
+                call.enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                        // Only update UI if this is still the current image for this ViewHolder
+                        if (currentImageUrl != imageUrl) return
                         android.util.Log.e("MessageAdapter", "OkHttp failed to load image: $imageUrl", e)
                         messageImageView.post {
+                            // Double-check that we're still loading the same image
+                            if (currentImageUrl != imageUrl) return@post
                             imageLoadingSpinner.isVisible = false
                             messageImageView.isVisible = false
                             if (message.text.isEmpty()) {
@@ -444,10 +467,14 @@ class MessageAdapter(
                         }
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                        // Only update UI if this is still the current image for this ViewHolder
+                        if (currentImageUrl != imageUrl) return
                         val bytes = response.body?.bytes()
                         if (bytes != null && response.isSuccessful) {
                             android.util.Log.d("MessageAdapter", "OkHttp loaded image bytes: ${bytes.size} for $imageUrl")
                             messageImageView.post {
+                                // Triple-check that we're still loading the same image
+                                if (currentImageUrl != imageUrl) return@post
                                 com.bumptech.glide.Glide.with(context)
                                     .load(bytes)
                                     .fitCenter()
@@ -461,6 +488,8 @@ class MessageAdapter(
                         } else {
                             android.util.Log.e("MessageAdapter", "OkHttp bad response ${response.code} for $imageUrl")
                             messageImageView.post {
+                                // Triple-check that we're still loading the same image
+                                if (currentImageUrl != imageUrl) return@post
                                 imageLoadingSpinner.isVisible = false
                                 messageImageView.isVisible = false
                                 if (message.text.isEmpty()) {
@@ -494,6 +523,12 @@ class MessageAdapter(
                     true
                 }
             } else {
+                // Cancel any pending image load when image should not be shown
+                if (pendingImageCall != null) {
+                    pendingImageCall?.cancel()
+                    pendingImageCall = null
+                    currentImageUrl = null
+                }
                 messageImageView.setOnClickListener(null)
                 messageImageView.setOnLongClickListener(null)
                 imageLoadingSpinner.isVisible = false

@@ -150,13 +150,13 @@ class ThemesActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
         val selected = adapter.getSelectedThemes()
-        val onPrimary = getOnPrimaryColor()
+        val textColor = getOnPrimaryColor()
         
         if (selected.isNotEmpty()) {
             val item = menu.add(0, 100, 0, R.string.delete)
             item.setIcon(R.drawable.ic_delete)
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-            item.iconTintList = ColorStateList.valueOf(onPrimary)
+            item.iconTintList = ColorStateList.valueOf(textColor)
         } else {
             // Edit button for custom themes (not built-in ones)
             val isBuiltIn = currentThemeId == "dark" || currentThemeId.startsWith("builtin_")
@@ -164,7 +164,7 @@ class ThemesActivity : AppCompatActivity() {
                 val editItem = menu.add(0, 300, 0, R.string.edit_theme_button)
                 editItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
                 val spanString = android.text.SpannableString(editItem.title.toString())
-                spanString.setSpan(android.text.style.ForegroundColorSpan(onPrimary), 0, spanString.length, 0)
+                spanString.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spanString.length, 0)
                 editItem.title = spanString
             }
             
@@ -172,7 +172,7 @@ class ThemesActivity : AppCompatActivity() {
                 val applyItem = menu.add(0, 200, 0, R.string.apply)
                 applyItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
                 val spanString = android.text.SpannableString(applyItem.title.toString())
-                spanString.setSpan(android.text.style.ForegroundColorSpan(onPrimary), 0, spanString.length, 0)
+                spanString.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spanString.length, 0)
                 applyItem.title = spanString
             }
         }
