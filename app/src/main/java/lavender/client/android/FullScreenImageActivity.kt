@@ -3,6 +3,7 @@ package lavender.client.android
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
@@ -13,9 +14,15 @@ class FullScreenImageActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var btnClose: ImageButton
     private lateinit var gestureDetector: GestureDetector
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
     
     private var imageUrls: List<String> = emptyList()
     private var currentIndex: Int = 0
+    
+    // Zoom state
+    private var currentScale = 1f
+    private val MIN_SCALE = 1f
+    private val MAX_SCALE = 5f
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +48,9 @@ class FullScreenImageActivity : AppCompatActivity() {
         // Initialize gesture detector for swipe
         gestureDetector = GestureDetector(this, SwipeGestureListener())
         
+        // Initialize scale gesture detector for pinch-to-zoom
+        scaleGestureDetector = ScaleGestureDetector(this, ScaleListener())
+        
         // Load images
         if (imageUrlsList != null && imageUrlsList.isNotEmpty()) {
             imageUrls = imageUrlsList
@@ -60,6 +70,11 @@ class FullScreenImageActivity : AppCompatActivity() {
     
     private fun loadImage(imageUrl: String) {
         if (imageUrl.isNotEmpty()) {
+            // Reset zoom when loading new image
+            currentScale = MIN_SCALE
+            imageView.scaleX = currentScale
+            imageView.scaleY = currentScale
+            
             Glide.with(this)
                 .load(imageUrl)
                 .into(imageView)
@@ -82,6 +97,7 @@ class FullScreenImageActivity : AppCompatActivity() {
     
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         return if (event != null) {
+            scaleGestureDetector.onTouchEvent(event)
             gestureDetector.onTouchEvent(event)
         } else {
             super.onTouchEvent(event)
@@ -119,6 +135,32 @@ class FullScreenImageActivity : AppCompatActivity() {
                 }
             } else {
                 false
+            }
+        }
+    }
+    
+    private inner class ScaleListener : ScaleGestureDetector.OnScaleGestureListener {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            currentScale *= detector.scaleFactor
+            currentScale = currentScale.coerceIn(MIN_SCALE, MAX_SCALE)
+            imageView.scaleX = currentScale
+            imageView.scaleY = currentScale
+            return true
+        }
+        
+        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+            return true
+        }
+        
+        override fun onScaleEnd(detector: ScaleGestureDetector) {
+            // Optional: add animation to snap back to min scale if user zoomed out too much
+            if (currentScale < MIN_SCALE) {
+                currentScale = MIN_SCALE
+                imageView.animate()
+                    .scaleX(currentScale)
+                    .scaleY(currentScale)
+                    .setDuration(200)
+                    .start()
             }
         }
     }

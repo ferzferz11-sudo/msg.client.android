@@ -34,6 +34,9 @@ class MessageAdapter(
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
     private var searchHighlight: String? = null
+    
+    // Image cache to prevent reloading images during scrolling
+    private val imageCache = mutableMapOf<String, ByteArray>()
 
     fun setSearchHighlight(query: String?) {
         searchHighlight = query
@@ -435,60 +438,44 @@ class MessageAdapter(
                     currentImageUrl = message.imageUrl
                 }
                 
-                // Show loading spinner initially
-                imageLoadingSpinner.isVisible = true
-                if (message.text.isEmpty()) {
-                    messageText.isVisible = false
-                }
-                // Use OkHttp to fetch image bytes, then load into Glide as ByteArray
-                // This bypasses Glide's default HttpUrlConnection which may not handle HTTP cleartext
                 val imageUrl = message.imageUrl
-                val okHttpClient = okhttp3.OkHttpClient.Builder()
-                    .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                    .build()
-                val request = okhttp3.Request.Builder().url(imageUrl).build()
-                val call = okHttpClient.newCall(request)
-                pendingImageCall = call
-                call.enqueue(object : okhttp3.Callback {
-                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        // Only update UI if this is still the current image for this ViewHolder
-                        if (currentImageUrl != imageUrl) return
-                        android.util.Log.e("MessageAdapter", "OkHttp failed to load image: $imageUrl", e)
-                        messageImageView.post {
-                            // Double-check that we're still loading the same image
-                            if (currentImageUrl != imageUrl) return@post
-                            imageLoadingSpinner.isVisible = false
-                            messageImageView.isVisible = false
-                            if (message.text.isEmpty()) {
-                                messageText.text = "🖼 $imageUrl"
-                                messageText.isVisible = true
-                            }
-                        }
+                
+                // Check if image is already cached
+                val cachedBytes = imageCache[imageUrl]
+                if (cachedBytes != null) {
+                    android.util.Log.d("MessageAdapter", "Loading image from cache: $imageUrl")
+                    // Load from cache immediately
+                    com.bumptech.glide.Glide.with(context)
+                        .load(cachedBytes)
+                        .fitCenter()
+                        .into(messageImageView)
+                    imageLoadingSpinner.isVisible = false
+                    messageImageView.isVisible = true
+                    if (message.text.isEmpty()) {
+                        messageText.isVisible = false
                     }
-                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                        // Only update UI if this is still the current image for this ViewHolder
-                        if (currentImageUrl != imageUrl) return
-                        val bytes = response.body?.bytes()
-                        if (bytes != null && response.isSuccessful) {
-                            android.util.Log.d("MessageAdapter", "OkHttp loaded image bytes: ${bytes.size} for $imageUrl")
+                } else {
+                    // Show loading spinner initially
+                    imageLoadingSpinner.isVisible = true
+                    if (message.text.isEmpty()) {
+                        messageText.isVisible = false
+                    }
+                    // Use OkHttp to fetch image bytes, then load into Glide as ByteArray
+                    // This bypasses Glide's default HttpUrlConnection which may not handle HTTP cleartext
+                    val okHttpClient = okhttp3.OkHttpClient.Builder()
+                        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                        .build()
+                    val request = okhttp3.Request.Builder().url(imageUrl).build()
+                    val call = okHttpClient.newCall(request)
+                    pendingImageCall = call
+                    call.enqueue(object : okhttp3.Callback {
+                        override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                            // Only update UI if this is still the current image for this ViewHolder
+                            if (currentImageUrl != imageUrl) return
+                            android.util.Log.e("MessageAdapter", "OkHttp failed to load image: $imageUrl", e)
                             messageImageView.post {
-                                // Triple-check that we're still loading the same image
-                                if (currentImageUrl != imageUrl) return@post
-                                com.bumptech.glide.Glide.with(context)
-                                    .load(bytes)
-                                    .fitCenter()
-                                    .into(messageImageView)
-                                imageLoadingSpinner.isVisible = false
-                                messageImageView.isVisible = true
-                                if (message.text.isEmpty()) {
-                                    messageText.isVisible = false
-                                }
-                            }
-                        } else {
-                            android.util.Log.e("MessageAdapter", "OkHttp bad response ${response.code} for $imageUrl")
-                            messageImageView.post {
-                                // Triple-check that we're still loading the same image
+                                // Double-check that we're still loading the same image
                                 if (currentImageUrl != imageUrl) return@post
                                 imageLoadingSpinner.isVisible = false
                                 messageImageView.isVisible = false
@@ -498,8 +485,43 @@ class MessageAdapter(
                                 }
                             }
                         }
-                    }
-                })
+                        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                            // Only update UI if this is still the current image for this ViewHolder
+                            if (currentImageUrl != imageUrl) return
+                            val bytes = response.body?.bytes()
+                            if (bytes != null && response.isSuccessful) {
+                                android.util.Log.d("MessageAdapter", "OkHttp loaded image bytes: ${bytes.size} for $imageUrl")
+                                // Cache the bytes
+                                imageCache[imageUrl] = bytes
+                                messageImageView.post {
+                                    // Triple-check that we're still loading the same image
+                                    if (currentImageUrl != imageUrl) return@post
+                                    com.bumptech.glide.Glide.with(context)
+                                        .load(bytes)
+                                        .fitCenter()
+                                        .into(messageImageView)
+                                    imageLoadingSpinner.isVisible = false
+                                    messageImageView.isVisible = true
+                                    if (message.text.isEmpty()) {
+                                        messageText.isVisible = false
+                                    }
+                                }
+                            } else {
+                                android.util.Log.e("MessageAdapter", "OkHttp bad response ${response.code} for $imageUrl")
+                                messageImageView.post {
+                                    // Triple-check that we're still loading the same image
+                                    if (currentImageUrl != imageUrl) return@post
+                                    imageLoadingSpinner.isVisible = false
+                                    messageImageView.isVisible = false
+                                    if (message.text.isEmpty()) {
+                                        messageText.text = "🖼 $imageUrl"
+                                        messageText.isVisible = true
+                                    }
+                                }
+                            }
+                        }
+                    })
+                }
                 messageImageView.setOnClickListener {
                     if (isSelectionMode) {
                         onClick()
