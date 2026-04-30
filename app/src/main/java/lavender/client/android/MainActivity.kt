@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.pm.ActivityInfo
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -48,8 +49,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isDarkTheme(): Boolean {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", "dark") != "light"
+        return true
     }
 
     companion object {
@@ -62,13 +62,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var downloadProgressText: TextView
     private lateinit var updateAvailableIndicator: ImageView
     private lateinit var languageButton: Button
-    private lateinit var colorSchemeButton: Button
     private lateinit var logoutButton: Button
     private lateinit var copyLinkButton: ImageButton
     private lateinit var shareLinkButton: ImageButton
     private lateinit var downloadUpdateButton: Button
     private var currentLanguage: String? = null
-    private var currentColorScheme: String? = null
     private var updateCheckJob: Job? = null
     private var connectivityJob: Job? = null
 
@@ -83,6 +81,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Для портретного режима
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
         // Handle window insets to avoid overlapping with status bar
         val root = findViewById<View>(android.R.id.content)
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
@@ -92,15 +93,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         currentLanguage = getSavedLanguage()
-        currentColorScheme = getSavedColorScheme()
         updateLanguageButtonText()
-        updateColorSchemeButtonText()
 
         updateAvailableIndicator = findViewById(R.id.updateAvailableIndicator)
         downloadProgressBar = findViewById(R.id.downloadProgressBar)
         downloadProgressText = findViewById(R.id.downloadProgressText)
         languageButton = findViewById(R.id.languageButton)
-        colorSchemeButton = findViewById(R.id.colorSchemeButton)
         logoutButton = findViewById(R.id.logoutButton)
         copyLinkButton = findViewById(R.id.copyLinkButton)
         shareLinkButton = findViewById(R.id.shareLinkButton)
@@ -109,7 +107,6 @@ class MainActivity : AppCompatActivity() {
         setupJoinChatButton()
         setupLogoutButton()
         setupLanguageButton()
-        setupColorSchemeButton()
         setupDownloadUpdateButton()
 
         // Auto-navigate if credentials are saved
@@ -171,17 +168,6 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             updateLanguageButtonText()
-            updateColorSchemeButtonText()
-        }
-
-        // Check if color scheme changed and recreate activity if needed
-        val savedColorScheme = getSavedColorScheme()
-        if (savedColorScheme != currentColorScheme) {
-            currentColorScheme = savedColorScheme
-            lifecycleScope.launch {
-                delay(10)
-                recreate()
-            }
         }
 
         // Only start periodic update check if not navigating away immediately
@@ -224,13 +210,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupLanguageButton() {
         languageButton.setOnClickListener {
             toggleLanguage()
-        }
-    }
-
-    // Add color scheme toggle button
-    private fun setupColorSchemeButton() {
-        colorSchemeButton.setOnClickListener {
-            toggleColorScheme()
         }
     }
 
@@ -332,7 +311,6 @@ class MainActivity : AppCompatActivity() {
     private fun setButtonsEnabled(enabled: Boolean) {
         if (::joinChatButton.isInitialized) joinChatButton.isEnabled = enabled
         if (::languageButton.isInitialized) languageButton.isEnabled = enabled
-        if (::colorSchemeButton.isInitialized) colorSchemeButton.isEnabled = enabled
         if (::logoutButton.isInitialized) logoutButton.isEnabled = enabled
         if (::copyLinkButton.isInitialized) copyLinkButton.isEnabled = enabled
         if (::shareLinkButton.isInitialized) shareLinkButton.isEnabled = enabled
@@ -581,17 +559,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun applySavedColorScheme() {
-        val savedScheme = getSavedColorScheme()
-        if (savedScheme == null) {
-            // First launch: save "dark" as default and apply it
-            saveColorScheme("dark")
-        }
-        
-        val theme = when (getSavedColorScheme()) {
-            "light" -> R.style.Theme_Lavender_Light_NoActionBar
-            else -> R.style.Theme_Lavender_Dark_NoActionBar
-        }
-        setTheme(theme)
+        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
     
     private fun getSavedLanguage(): String? {
@@ -632,25 +600,6 @@ class MainActivity : AppCompatActivity() {
         resources.updateConfiguration(config, resources.displayMetrics)
     }
     
-    private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", null)
-    }
-    
-    private fun saveColorScheme(scheme: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit {
-            putString("color_scheme", scheme)
-        }
-    }
-    
-    private fun toggleColorScheme() {
-        // Only dark theme is available now
-        saveColorScheme("dark")
-        updateColorSchemeButtonText()
-        recreate()
-    }
-    
     private fun updateLanguageButtonText() {
         val languageButton: Button? = findViewById(R.id.languageButton)
         if (languageButton != null) {
@@ -661,19 +610,6 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.russian)
             }
             languageButton.text = getString(R.string.language_format, languageName)
-        }
-    }
-    
-    private fun updateColorSchemeButtonText() {
-        val colorSchemeButton: Button? = findViewById(R.id.colorSchemeButton)
-        if (colorSchemeButton != null) {
-            val currentScheme = getSavedColorScheme() ?: "dark"
-            val schemeName = if (currentScheme == "dark") {
-                getString(R.string.dark)
-            } else {
-                getString(R.string.light)
-            }
-            colorSchemeButton.text = getString(R.string.color_scheme_format, schemeName)
         }
     }
     

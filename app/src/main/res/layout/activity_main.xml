@@ -158,16 +158,6 @@
         android:layout_marginBottom="12dp" />
 
     <Button
-        android:id="@+id/colorSchemeButton"
-        android:layout_width="240dp"
-        android:layout_height="56dp"
-        android:text="@string/toggle_color_scheme"
-        android:textSize="16sp"
-        android:textColor="?attr/colorOnSecondary"
-        android:backgroundTint="?attr/colorSecondary"
-        android:layout_marginBottom="12dp" />
-
-    <Button
         android:id="@+id/logoutButton"
         android:layout_width="240dp"
         android:layout_height="56dp"
