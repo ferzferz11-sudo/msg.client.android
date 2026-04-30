@@ -5,7 +5,8 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="?attr/colorSurface">
+    android:layout_margin="16dp"
+    android:background="?attr/colorPrimaryContainer">
 
     <TextView
         android:id="@+id/titleText"
@@ -14,7 +15,7 @@
         android:text="@string/delete_chats"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="?attr/colorOnPrimaryContainer"
         android:layout_marginBottom="16dp" />
 
     <TextView
@@ -22,7 +23,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="14sp"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="?attr/colorOnPrimaryContainer"
         android:layout_marginBottom="16dp"
         android:contentDescription="Confirmation message" />
 
@@ -34,29 +35,25 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancel"
-            style="@style/Widget.MaterialComponents.Button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@android:string/cancel"
             android:textSize="12sp"
-            android:textColor="?attr/colorOnPrimary"
-            app:backgroundTint="?attr/colorPrimary"
-            android:layout_marginEnd="8dp"
-            app:cornerRadius="24dp" />
+            android:textColor="?attr/colorOnPrimaryContainer"
+            android:layout_marginEnd="8dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDelete"
-            style="@style/Widget.MaterialComponents.Button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/delete"
             android:textSize="12sp"
-            android:textColor="?attr/colorOnPrimary"
-            app:backgroundTint="?attr/colorPrimary"
-            android:layout_marginStart="8dp"
-            app:cornerRadius="24dp" />
+            android:textColor="#FF3B30"
+            android:layout_marginStart="8dp" />
     </LinearLayout>
 
 </LinearLayout>

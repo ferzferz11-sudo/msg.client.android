@@ -25,8 +25,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -295,19 +297,63 @@ class ChatListActivity : AppCompatActivity() {
 
         val deleteChatId = intent.getStringExtra("ACTION_DELETE_CHAT_ID")
         if (!deleteChatId.isNullOrEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.delete_chats)
-                .setMessage(getString(R.string.delete_chats_confirmation, 1))
-                .setPositiveButton(R.string.delete) { _, _ ->
-                    grpcClient.deleteChat(deleteChatId) { success, _ ->
-                        if (success) {
-                            runOnUiThread { showToast(getString(R.string.deleted_count, 1)) }
-                            loadChats()
-                        }
+            val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+            val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+            val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+            val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+            val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
+            titleText.text = getString(R.string.delete_chats)
+            messageText.text = getString(R.string.delete_chats_confirmation, 1)
+            
+            // Apply theme colors - custom theme or built-in theme
+            val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            if (customTheme != null) {
+                try {
+                    val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
+                    titleText.setTextColor(onPrimaryContainerColor)
+                    messageText.setTextColor(onPrimaryContainerColor)
+                    btnCancel.setTextColor(onPrimaryContainerColor)
+                    // Create a shape drawable with custom color for rounded background
+                    val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                        floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                    ))
+                    shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
+                    dialogView.background = shapeDrawable
+                } catch (_: Exception) {}
+            } else {
+                // Use Material Design attributes for built-in themes
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+                val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
+                
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+                val textColor = ContextCompat.getColor(this, typedValue.resourceId)
+                
+                titleText.setTextColor(textColor)
+                messageText.setTextColor(textColor)
+                btnCancel.setTextColor(textColor)
+                
+                // Create a shape drawable with built-in theme color for rounded background
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shapeDrawable.paint.color = bgColor
+                dialogView.background = shapeDrawable
+            }
+            
+            val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            btnCancel.setOnClickListener { dialog.dismiss() }
+            btnDelete.setOnClickListener {
+                dialog.dismiss()
+                grpcClient.deleteChat(deleteChatId) { success, _ ->
+                    if (success) {
+                        runOnUiThread { showToast(getString(R.string.deleted_count, 1)) }
+                        loadChats()
                     }
                 }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
+            }
+            dialog.show()
         }
     }
 
@@ -466,27 +512,51 @@ class ChatListActivity : AppCompatActivity() {
                 val selected = adapter.getSelectedChats()
                 if (selected.isNotEmpty()) {
                     val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
-                    val typedValue = TypedValue()
-                    if (isDarkTheme()) {
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                        dialogView.setBackgroundColor(typedValue.data)
-                    }
                     val titleText = dialogView.findViewById<TextView>(R.id.titleText)
                     val messageText = dialogView.findViewById<TextView>(R.id.messageText)
                     val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                     val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
                     titleText.text = getString(R.string.delete_chats)
                     messageText.text = getString(R.string.delete_chats_confirmation, selected.size)
-                    if (isDarkTheme()) {
-                        val primaryValue = TypedValue()
-                        theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                        val strokeColor = ColorStateList.valueOf(primaryValue.data)
-                        btnCancel.strokeColor = strokeColor
-                        btnCancel.strokeWidth = 2
-                        btnDelete.strokeColor = strokeColor
-                        btnDelete.strokeWidth = 2
+                    
+                    // Apply theme colors - custom theme or built-in theme
+                    val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                    if (customTheme != null) {
+                        try {
+                            val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
+                            titleText.setTextColor(onPrimaryContainerColor)
+                            messageText.setTextColor(onPrimaryContainerColor)
+                            btnCancel.setTextColor(onPrimaryContainerColor)
+                            // Create a shape drawable with custom color for rounded background
+                            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                            ))
+                            shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
+                            dialogView.background = shapeDrawable
+                        } catch (_: Exception) {}
+                    } else {
+                        // Use Material Design attributes for built-in themes
+                        val typedValue = TypedValue()
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+                        val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
+                        
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+                        val textColor = ContextCompat.getColor(this, typedValue.resourceId)
+                        
+                        titleText.setTextColor(textColor)
+                        messageText.setTextColor(textColor)
+                        btnCancel.setTextColor(textColor)
+                        
+                        // Create a shape drawable with built-in theme color for rounded background
+                        val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                            floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                        ))
+                        shapeDrawable.paint.color = bgColor
+                        dialogView.background = shapeDrawable
                     }
+                    
                     val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+                    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
                     btnCancel.setOnClickListener { dialog.dismiss() }
                     btnDelete.setOnClickListener {
                         dialog.dismiss()

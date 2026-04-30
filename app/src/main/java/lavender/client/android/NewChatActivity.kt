@@ -611,28 +611,61 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun deleteSelectedMessages() {
         val selectedMessages = adapter.getSelectedMessages()
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle(R.string.delete_messages_title)
-        builder.setMessage(getString(R.string.delete_messages_confirm, selectedMessages.size))
-        builder.setPositiveButton(R.string.delete) { _, _ ->
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_messages, null)
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnDelete = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete)
+        
+        messageText.text = getString(R.string.delete_messages_confirm, selectedMessages.size)
+        
+        // Apply theme colors - custom theme or built-in theme
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
+                titleText.setTextColor(onPrimaryContainerColor)
+                messageText.setTextColor(onPrimaryContainerColor)
+                btnCancel.setTextColor(onPrimaryContainerColor)
+                // Create a shape drawable with custom color for rounded background
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
+                dialogView.background = shapeDrawable
+            } catch (_: Exception) {}
+        } else {
+            // Use Material Design attributes for built-in themes
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+            val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
+            
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+            val textColor = ContextCompat.getColor(this, typedValue.resourceId)
+            
+            titleText.setTextColor(textColor)
+            messageText.setTextColor(textColor)
+            btnCancel.setTextColor(textColor)
+            
+            // Create a shape drawable with built-in theme color for rounded background
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+            ))
+            shapeDrawable.paint.color = bgColor
+            dialogView.background = shapeDrawable
+        }
+        
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnDelete.setOnClickListener {
             selectedMessages.forEach { grpcClient.deleteMessage(it) }
             hideSelectionToolbar()
+            dialog.dismiss()
         }
-        builder.setNegativeButton(R.string.cancel, null)
-        val dialog = builder.create()
+        
         dialog.show()
-
-        // Apply theme colors to dialog
-        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-        if (theme != null) {
-            try {
-                val textColor = theme.textPrimaryColor.toColorInt()
-                val titleView = dialog.findViewById<TextView>(android.R.id.title)
-                val messageView = dialog.findViewById<TextView>(android.R.id.message)
-                titleView?.setTextColor(textColor)
-                messageView?.setTextColor(textColor)
-            } catch (_: Exception) {}
-        }
     }
 
     private fun forwardSelectedMessages() {
