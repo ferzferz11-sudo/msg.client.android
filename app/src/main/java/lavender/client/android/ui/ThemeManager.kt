@@ -72,6 +72,49 @@ object ThemeManager {
             bottomPanelColor = "#FFF3E0",
             onBottomPanelColor = "#D84315",
             isDark = false
+        ),
+        // 1. ПРЕМИАЛЬНАЯ: Сдержанный стиль, замена синему
+        CustomThemeProto(
+            id = "builtin_graphite",
+            name = "Графит и золото",
+            primaryColor = "#85754E",      // Приглушенное золото
+            backgroundColor = "#F5F5F5",   // Светло-серый бетон
+            surfaceColor = "#FFFFFF",      // Чисто белый (бабл)
+            textPrimaryColor = "#212121",  // Почти черный текст
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#424242",
+            bottomPanelColor = "#FFFFFF",
+            onBottomPanelColor = "#85754E",
+            isDark = false
+        ),
+        // 2. УЮТНАЯ: Мягкая палитра, отличная от мессенджеров конкурентов
+        CustomThemeProto(
+            id = "builtin_rose",
+            name = "Северная роза",
+            primaryColor = "#B08990",      // Пыльная роза
+            backgroundColor = "#EAECEF",   // Холодный серо-голубой фон
+            surfaceColor = "#F9F6F7",      // Едва розоватый бабл
+            textPrimaryColor = "#443C3D",  // Темный графит
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#5E5455",
+            bottomPanelColor = "#EAECEF",
+            onBottomPanelColor = "#B08990",
+            isDark = false
+        ),
+
+        // 3. ЭНЕРГИЧНАЯ: Чистая, технологичная и свежая
+        CustomThemeProto(
+            id = "builtin_mint",
+            name = "Кибер Мята",
+            primaryColor = "#00BFA5",      // Яркая мята
+            backgroundColor = "#F1FBF9",   // Мятный тинт на фоне
+            surfaceColor = "#FFFFFF",      // Чисто белый бабл
+            textPrimaryColor = "#002B26",  // Глубокий темно-зеленый текст
+            onPrimaryColor = "#FFFFFF",
+            onSurfaceColor = "#004D40",
+            bottomPanelColor = "#FFFFFF",
+            onBottomPanelColor = "#00BFA5",
+            isDark = false
         )
     )
 

@@ -634,7 +634,10 @@ class EditThemeActivity : AppCompatActivity() {
         ThemeTemplate(R.string.theme_template_green, "#2E7D32", "#F8FAF5", "#EEF7E2", "#144218", "#FFFFFF", "#33691E", "#FFFFFF", "#2E7D32", false),
         ThemeTemplate(R.string.theme_template_blue, "#007AFF", "#E3F2FD", "#FFFFFF", "#1C1C1E", "#FFFFFF", "#3A3A3C", "#E3F2FD", "#1565C0", false),
         ThemeTemplate(R.string.theme_template_purple, "#6A1B9A", "#FBF8FF", "#F0E2F5", "#2D0C54", "#FFFFFF", "#4A148C", "#FFFFFF", "#6A1B9A", false),
-        ThemeTemplate(R.string.theme_template_sunset, "#D84315", "#FFF3E0", "#FFE0B2", "#BF360C", "#FFFFFF", "#E65100", "#FFF3E0", "#D84315", false)
+        ThemeTemplate(R.string.theme_template_sunset, "#D84315", "#FFF3E0", "#FFE0B2", "#BF360C", "#FFFFFF", "#E65100", "#FFF3E0", "#D84315", false),
+        ThemeTemplate(R.string.theme_template_graphite, "#85754E", "#F5F5F5", "#FFFFFF", "#212121", "#FFFFFF", "#424242", "#FFFFFF", "#85754E", false),
+        ThemeTemplate(R.string.theme_template_rose, "#B08990", "#EAECEF", "#F9F6F7", "#443C3D", "#FFFFFF", "#5E5455", "#EAECEF", "#B08990", false),
+        ThemeTemplate(R.string.theme_template_mint, "#00BFA5", "#F1FBF9", "#FFFFFF", "#002B26", "#FFFFFF", "#004D40", "#FFFFFF", "#00BFA5", false)
     )
 
     private fun setupTemplates() {

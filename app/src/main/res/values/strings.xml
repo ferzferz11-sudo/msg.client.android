@@ -253,11 +253,12 @@
     <string name="delete_theme">Delete Theme</string>
     <string name="delete_theme_confirm">Are you sure you want to delete this theme?</string>
     <string name="theme_template_green">Green Forest</string>
-    <string name="theme_template_blue">Ocean Blue</string>
+    <string name="theme_template_blue">Modern Blue</string>
     <string name="theme_template_purple">Royal Purple</string>
     <string name="theme_template_sunset">Sunset Orange</string>
-    <string name="theme_template_custom_light">Default Light</string>
-    <string name="theme_template_custom_dark">Default Dark</string>
+    <string name="theme_template_graphite">Graphite &amp; Gold</string>
+    <string name="theme_template_rose">Nordic Rose</string>
+    <string name="theme_template_mint">Cyber Mint</string>
     <string name="admin_label">(Admin)</string>
     <string name="super_admin">Super Admin</string>
     <string name="about">About</string>
