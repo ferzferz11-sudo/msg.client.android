@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.hdodenhof.circleimageview.CircleImageView
@@ -75,11 +77,26 @@ class UserAdapter(
             } else {
                 itemView.background = null
                 itemView.alpha = 0.8f
-                val typedValue = android.util.TypedValue()
-                itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                usernameText.setTextColor(if (typedValue.resourceId != 0) 
-                    androidx.core.content.ContextCompat.getColor(itemView.context, typedValue.resourceId) 
-                    else typedValue.data)
+                
+                // Set text color based on current theme
+                try {
+                    val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                    if (currentTheme != null) {
+                        usernameText.setTextColor(currentTheme.textPrimaryColor.toColorInt())
+                    } else {
+                        val typedValue = android.util.TypedValue()
+                        itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                        usernameText.setTextColor(if (typedValue.resourceId != 0)
+                            ContextCompat.getColor(itemView.context, typedValue.resourceId)
+                            else typedValue.data)
+                    }
+                } catch (_: Exception) {
+                    val typedValue = android.util.TypedValue()
+                    itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
+                    usernameText.setTextColor(if (typedValue.resourceId != 0)
+                        ContextCompat.getColor(itemView.context, typedValue.resourceId)
+                        else typedValue.data)
+                }
             }
             
             // Load avatar

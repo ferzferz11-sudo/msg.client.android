@@ -53,6 +53,15 @@ class ContactsActivity : AppCompatActivity() {
         binding = ActivityContactsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        username = intent.getStringExtra("username") ?: ""
+        password = intent.getStringExtra("password") ?: ""
+
+        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+            }
+        }
+
         // Handle window insets for edge-to-edge
         ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -65,9 +74,6 @@ class ContactsActivity : AppCompatActivity() {
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
-
-        username = intent.getStringExtra("username") ?: ""
-        password = intent.getStringExtra("password") ?: ""
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)

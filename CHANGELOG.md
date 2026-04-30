@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 1.0.2.23
 Исправлена критическая ошибка в MessageAdapter.kt с переиспользованием ViewHolder'ов при загрузке изображений.
 Исправлена контрастность текста в активити ThemesActivity
+Теперь ContactsActivity будет использовать стили кастомной темы так же, как ChatListActivity и ThemesActivity, обеспечивая единообразный внешний вид приложения.
 
 1.0.2.22
 Светлая тема полностью удалена из приложения
