@@ -217,10 +217,17 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.startChat(username, password, "") { _ -> viewModel.markRead(username, this) }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (selectionMode) hideSelectionToolbar()
-                else if (searchBar.isVisible) hideSearchBar()
-                else if (mentionContainer.isVisible) mentionContainer.isVisible = false
-                else finish()
+                if (audioRecordingView.isVisible) {
+                    audioRecordingView.cancel()
+                } else if (selectionMode) {
+                    hideSelectionToolbar()
+                } else if (searchBar.isVisible) {
+                    hideSearchBar()
+                } else if (mentionContainer.isVisible) {
+                    mentionContainer.isVisible = false
+                } else {
+                    finish()
+                }
             }
         })
     }
@@ -666,7 +673,6 @@ class NewChatActivity : AppCompatActivity() {
         adapter.setSearchHighlight(null)
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0)
         setToolbarNavigationIcon(R.drawable.ic_back_arrow) // Restore back icon
-        closeSearch.isVisible = true // Restore the old close icon's visibility if needed elsewhere
     }
 
     private fun handleMention(s: CharSequence?) {
@@ -988,8 +994,20 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showAudioRecordingView() {
-        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001); return }
-        audioRecordingView.visibility = View.VISIBLE; messageInput.visibility = View.GONE; sendButton.visibility = View.GONE; attachButton.visibility = View.GONE; audioButton.visibility = View.GONE; setupAudioRecordingView()
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+            return
+        }
+        audioRecordingView.visibility = View.VISIBLE
+        messageInput.visibility = View.GONE
+        sendButton.visibility = View.GONE
+        attachButton.visibility = View.GONE
+        audioButton.visibility = View.GONE
+
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        audioRecordingView.applyCustomTheme(customTheme)
+
+        setupAudioRecordingView()
     }
 
     private fun setupAudioRecordingView() {
