@@ -281,8 +281,13 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        setSupportActionBar(toolbar); supportActionBar?.setDisplayHomeAsUpEnabled(true); supportActionBar?.setDisplayShowTitleEnabled(false)
-        toolbar.setNavigationOnClickListener { if (selectionMode) hideSelectionToolbar() else finish() }
+        setSupportActionBar(toolbar); supportActionBar?.setDisplayShowTitleEnabled(false)
+        setToolbarNavigationIcon(R.drawable.ic_back_arrow) // Set initial icon
+        toolbar.setNavigationOnClickListener {
+            if (selectionMode) hideSelectionToolbar()
+            else if (searchBar.isVisible) hideSearchBar()
+            else finish()
+        }
         toolbar.layoutParams.height = resources.getDimensionPixelSize(R.dimen.custom_toolbar_height)
 
         val effectiveAvatarUrl = if (chatAvatarUrl.isNotEmpty()) chatAvatarUrl else if (isDirect) {
@@ -316,6 +321,22 @@ class NewChatActivity : AppCompatActivity() {
                 putExtra("creator", creator)
             }
             startActivity(intent)
+        }
+    }
+
+    private fun setToolbarNavigationIcon(iconResId: Int) {
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationIcon(iconResId)
+        toolbar.navigationIcon?.let {
+            val wrapped = DrawableCompat.wrap(it)
+            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val iconColor = if (theme != null) {
+                try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
+            } else {
+                ContextCompat.getColor(this, R.color.white)
+            }
+            DrawableCompat.setTint(wrapped, iconColor)
+            toolbar.navigationIcon = wrapped
         }
     }
 
@@ -469,7 +490,6 @@ class NewChatActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
         cancelReply.setOnClickListener { hideReplyPreview() }
-        closeSearch.setOnClickListener { hideSearchBar() }
         audioButton.setOnClickListener { showAudioRecordingView() }
         emojiButton.setOnClickListener { showEmojiPicker() }
 
@@ -600,24 +620,54 @@ class NewChatActivity : AppCompatActivity() {
     private fun showSearchBar() {
         searchBar.isVisible = true
         toolbarContent.isVisible = false
-        
+        setToolbarNavigationIcon(R.drawable.ic_close) // Set close icon for search mode
+        closeSearch.isVisible = false // Hide the old close icon
+
         // Apply custom theme colors to search bar
         val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
-                val bgColor = customTheme.textPrimaryColor.toColorInt()
-                val textColor = customTheme.backgroundColor.toColorInt()
-                searchBar.setBackgroundColor(bgColor)
+                // Set background to transparent for custom themes
+                searchBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                val textColor = customTheme.textPrimaryColor.toColorInt()
                 searchInput.setTextColor(textColor)
                 searchInput.setHintTextColor(textColor)
                 searchResultsCount.setTextColor(textColor)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                // Fallback to default behavior if custom theme colors fail
+                val typedValue = TypedValue()
+                theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)
+                searchBar.setBackgroundColor(typedValue.data)
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+                val textColor = typedValue.data
+                searchInput.setTextColor(textColor)
+                searchInput.setHintTextColor(textColor)
+                searchResultsCount.setTextColor(textColor)
+            }
+        } else {
+            // Default theme behavior
+            val typedValue = TypedValue()
+            theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)
+            searchBar.setBackgroundColor(typedValue.data)
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            val textColor = typedValue.data
+            searchInput.setTextColor(textColor)
+            searchInput.setHintTextColor(textColor)
+            searchResultsCount.setTextColor(textColor)
         }
         
         searchInput.requestFocus()
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0)
     }
-    private fun hideSearchBar() { searchBar.isVisible = false; toolbarContent.isVisible = true; searchInput.text.clear(); adapter.setSearchHighlight(null); (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0) }
+    private fun hideSearchBar() {
+        searchBar.isVisible = false
+        toolbarContent.isVisible = true
+        searchInput.text.clear()
+        adapter.setSearchHighlight(null)
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0)
+        setToolbarNavigationIcon(R.drawable.ic_back_arrow) // Restore back icon
+        closeSearch.isVisible = true // Restore the old close icon's visibility if needed elsewhere
+    }
 
     private fun handleMention(s: CharSequence?) {
         if (isDirect) return
@@ -646,7 +696,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbarContent.isVisible = false
         selectionToolbar.isVisible = true
         selectionCountText.text = count.toString()
-        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        setToolbarNavigationIcon(R.drawable.ic_close) // Set close icon for selection mode
         replyMessage.isVisible = count == 1
         forwardMessages.isVisible = count > 0
         
@@ -666,19 +716,7 @@ class NewChatActivity : AppCompatActivity() {
         invalidateOptionsMenu()
         selectionToolbar.isVisible = false
         toolbarContent.isVisible = true
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
-        toolbar.navigationIcon?.let {
-            val wrapped = DrawableCompat.wrap(it)
-            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-            val iconColor = if (theme != null) {
-                try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
-            } else {
-                ContextCompat.getColor(this, R.color.white)
-            }
-            DrawableCompat.setTint(wrapped, iconColor)
-            toolbar.navigationIcon = wrapped
-        }
+        setToolbarNavigationIcon(R.drawable.ic_back_arrow) // Restore back icon
     }
     private fun showReplyPreview(message: Message) { replyingTo = message; replyPreview.isVisible = true; replyUser.text = message.user; replyText.text = if (message.imageUrl.isNotEmpty()) "Photo" else message.text; messageInput.requestFocus() }
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
