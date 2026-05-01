@@ -501,11 +501,7 @@ object RealGrpcClient {
 
                                 if (existingIndex != -1) {
                                     val updatedList = currentList.toMutableList()
-                                    // Handle message updates (like edited text)
-                                    val existingMessage = updatedList[existingIndex]
-                                    if (existingMessage.id == incomingWithAvatar.id && incomingWithAvatar.id.isNotEmpty()) {
-                                        updatedList[existingIndex] = incomingWithAvatar
-                                    }
+                                    updatedList[existingIndex] = incomingWithAvatar
                                     updatedList
                                 } else {
                                     onMessageReceived(incomingWithAvatar)
