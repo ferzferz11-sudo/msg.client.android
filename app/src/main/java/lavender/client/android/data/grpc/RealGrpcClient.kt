@@ -6,6 +6,7 @@ import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import lavender.client.android.data.grpc.GrpcClient.getUserAvatar
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.proto.MessageProto
@@ -164,7 +165,7 @@ object RealGrpcClient {
             builder.keepAliveTime(15, TimeUnit.SECONDS)
                 .keepAliveTimeout(5, TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
-                .idleTimeout(24, TimeUnit.HOURS)
+                .idleTimeout(20, TimeUnit.SECONDS)
             
             channel = builder.build()
             currentServerAddress = serverAddress
@@ -578,6 +579,7 @@ object RealGrpcClient {
                     reconnectRunnable = Runnable {
                         if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
                             android.util.Log.d("GrpcClient", "Attempting automatic reconnection (attempt $reconnectAttempts)...")
+                            disconnect()
                             startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
                             
                             // Load history after reconnection with delay to ensure stability
@@ -1214,7 +1216,7 @@ object RealGrpcClient {
                 synchronized(this) {
                     processedCount++
                     if (success) successCount++ else lastError = msg
-                    
+
                     if (processedCount == usernames.size) {
                         callback(successCount > 0, if (successCount == usernames.size) "Added all users" else "Added $successCount users. Last error: $lastError")
                     }

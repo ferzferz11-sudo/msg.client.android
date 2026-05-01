@@ -272,6 +272,20 @@ class ChatListActivity : AppCompatActivity() {
         handleIncomingActions(intent)
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Re-establish connection if it was dropped while the app was in the background.
+        if (!grpcClient.connectionState.value) {
+            val serverAddressFull = intent.getStringExtra("serverAddress") ?: "159.195.38.145"
+            val parts = serverAddressFull.split(":")
+            val serverHost = parts[0]
+            val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
+
+            grpcClient.connect(serverHost, false, serverPort, this)
+            grpcClient.startChat(username, password, "") { _ -> }
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

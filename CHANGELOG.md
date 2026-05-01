@@ -5,6 +5,9 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+1.0.2.30
+исправлены проблемы переподключения к серверу при разрыве соединения или уходе в сон
+
 1.0.2.29
 showImagePreview() for takePhotoLauncher
 logout() fix MainActivity
