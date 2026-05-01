@@ -6,7 +6,6 @@ import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import lavender.client.android.data.grpc.GrpcClient.getUserAvatar
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.proto.MessageProto
@@ -78,6 +77,13 @@ import lavender.client.android.data.proto.GetAllChatsRequestProto
 import lavender.client.android.data.proto.GetAllChatsResponseProto
 import java.util.concurrent.TimeUnit
 
+enum class ConnectionStatus {
+    DISCONNECTED, // Отключен вручную или не инициализирован
+    CONNECTING,   // Пытается установить соединение
+    READY,        // Соединение установлено, можно слать сообщения
+    FAILED        // Ошибка (сервер упал или нет интернета)
+}
+
 object RealGrpcClient {
     private var channel: ManagedChannel? = null
     private var requestObserver: StreamObserver<MessageProto>? = null
@@ -85,9 +91,9 @@ object RealGrpcClient {
     var currentServerAddress: String? = null
     var currentRoomId = ""
         private set
-    
-    private val _connectionState = MutableStateFlow(false)
-    val connectionState: StateFlow<Boolean> = _connectionState
+
+    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus
     
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -133,53 +139,104 @@ object RealGrpcClient {
     
     // Reconnection management
     private var reconnectAttempts = 0
-    private var lastReconnectTime = 0L
-    private val MAX_RECONNECT_ATTEMPTS = 5
-    private val RECONNECT_DELAY_MS = 2000L
-    private val RECONNECT_MAX_DELAY_MS = 30000L
     private var reconnectHandler: android.os.Handler? = null
     private var reconnectRunnable: Runnable? = null
+    private var isMonitoring = false
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         if (context != null) {
             this.appContext = context
             loadDeletedMessages()
         }
-        
-        if (_connectionState.value && currentServerAddress == serverAddress) {
+
+        // Проверяем: если мы уже READY и адрес тот же — ничего не делаем
+        if (_connectionStatus.value == ConnectionStatus.READY && currentServerAddress == serverAddress) {
             android.util.Log.d("GrpcClient", "Already connected to $serverAddress:$port")
             return
         }
 
         try {
             android.util.Log.d("GrpcClient", "Connecting to Go server at $serverAddress:$port")
+
+            // 1. Полностью сносим старое перед созданием нового
             disconnect()
-            
+
+            // 2. Сразу ставим статус "В процессе подключения"
+            _connectionStatus.value = ConnectionStatus.CONNECTING
+
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
             if (useTls) builder.useTransportSecurity() else builder.usePlaintext()
-            
+
             builder.directExecutor()
             builder.maxInboundMessageSize(16 * 1024 * 1024)
             builder.maxInboundMetadataSize(1024 * 1024)
-            
-            builder.keepAliveTime(15, TimeUnit.SECONDS)
-                .keepAliveTimeout(5, TimeUnit.SECONDS)
-                .keepAliveWithoutCalls(true)
-                .idleTimeout(20, TimeUnit.SECONDS)
-            
-            channel = builder.build()
+
+            // 3. Тонкая настройка KeepAlive для мобильных сетей
+            builder.keepAliveTime(10, TimeUnit.SECONDS) // Пинг сервера каждые 10 сек
+                .keepAliveTimeout(3, TimeUnit.SECONDS)  // Ждем ответа на пинг 3 сек
+                .keepAliveWithoutCalls(true)            // Пингуем даже если чат простаивает
+                .idleTimeout(1, TimeUnit.MINUTES)       // Не закрываем канал слишком быстро
+
+            val newChannel = builder.build()
+            channel = newChannel
             currentServerAddress = serverAddress
-            _connectionState.value = true
-            
-            // Only clear error if in foreground
+
+            // 4. ЗАПУСКАЕМ «ДВИЖОК» МОНИТОРИНГА
+            startChannelMonitoring(newChannel)
+
             if (!isAppInBackground) {
                 _error.value = null
             }
-            
+
         } catch (e: Exception) {
             android.util.Log.e("GrpcClient", "Connection failed: ${e.message}")
-            _connectionState.value = false
+            _connectionStatus.value = ConnectionStatus.FAILED
         }
+    }
+
+    private fun startChannelMonitoring(monitoredChannel: io.grpc.ManagedChannel) {
+        // Если уже мониторим этот канал — выходим
+        if (isMonitoring) return
+        isMonitoring = true
+
+        fun checkState() {
+            val grpcState = monitoredChannel.getState(false)
+
+            // Маппим состояние gRPC на наш понятный UI-статус
+            val newStatus = when (grpcState) {
+                io.grpc.ConnectivityState.READY -> ConnectionStatus.READY
+                io.grpc.ConnectivityState.CONNECTING,
+                io.grpc.ConnectivityState.IDLE -> ConnectionStatus.CONNECTING
+                io.grpc.ConnectivityState.TRANSIENT_FAILURE -> ConnectionStatus.FAILED
+                io.grpc.ConnectivityState.SHUTDOWN -> ConnectionStatus.DISCONNECTED
+                else -> ConnectionStatus.DISCONNECTED
+            }
+
+            // Обновляем StateFlow, который слушает твой UI
+            if (_connectionStatus.value != newStatus) {
+                _connectionStatus.value = newStatus
+
+                // ЕСЛИ СТАЛО READY — АВТОМАТИЧЕСКИ ЗАХОДИМ В ЧАТ
+                if (newStatus == ConnectionStatus.READY) {
+                    lastUsername?.let { user ->
+                        android.util.Log.d("GrpcClient", "Channel READY, auto-starting chat for $user")
+                        startChat(user, lastPassword ?: "", lastJoinMessage ?: "", lastOnMessageReceived ?: {})
+                    }
+                }
+            }
+
+            // Рекурсивно подписываемся на следующее изменение стейта
+            monitoredChannel.notifyWhenStateChanged(grpcState) {
+                // Проверяем, что канал не сменился на другой в процессе
+                if (channel == monitoredChannel) {
+                    checkState()
+                } else {
+                    isMonitoring = false
+                }
+            }
+        }
+
+        checkState()
     }
 
     private fun loadDeletedMessages() {
@@ -352,7 +409,10 @@ object RealGrpcClient {
             channel?.shutdownNow()
             channel = null
             currentServerAddress = null
-            _connectionState.value = false
+
+            _connectionStatus.value = ConnectionStatus.DISCONNECTED
+            isMonitoring = false
+
             _isSuperAdmin.value = false
             sentMessageHashes.clear()
             
@@ -393,205 +453,168 @@ object RealGrpcClient {
 
     fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
         val userChanged = lastUsername != username
-        
+
+        // 1. Обновляем кэш данных для переподключения
         lastUsername = username
         lastPassword = password
         lastJoinMessage = joinMessage
         lastOnMessageReceived = onMessageReceived
 
-        // Load history for the current room if set
+        // 2. Проверяем, готов ли канал.
+        // Если статус не READY, gRPC сам попробует подключиться,
+        // но запускать стрим сообщений (BIDI) пока рано.
+        if (connectionStatus.value != ConnectionStatus.READY || channel == null) {
+            android.util.Log.w("RealGrpcClient", "Channel not ready. Waiting for READY state...")
+            // Можно вызвать channel?.getState(true), чтобы подтолкнуть подключение
+            return
+        }
+
+        // 3. Загружаем историю (теперь мы уверены, что коннект есть)
         if (currentRoomId.isNotEmpty()) {
             loadHistory(currentRoomId)
         }
 
-        // Load current user avatar
+        // 4. Кэшируем аватарку
         getUserAvatar(username) { avatarUrl ->
             if (avatarUrl.isNotEmpty()) {
                 avatarCache[username] = avatarUrl
             }
         }
-        
-        if (!_connectionState.value || channel == null) return
-        
+
+        // 5. Защита от дублирования стримов
         if (isChatStarted && !userChanged) return
-        
+
+        // 6. Если юзер сменился — сносим старый стрим
         if (userChanged && isChatStarted) {
             android.util.Log.d("RealGrpcClient", "User changed, restarting chat stream")
             requestObserver?.onCompleted()
             requestObserver = null
             isChatStarted = false
         }
-        
+
         try {
             isChatStarted = true
-            // Reset reconnection attempts on successful connection
             reconnectAttempts = 0
-            
+
             val responseObserver = object : StreamObserver<MessageProto> {
                 override fun onNext(value: MessageProto) {
-                    // Handle system notifications
+                    // 1. Обработка системных уведомлений (SYSTEM)
                     if (value.user == "SYSTEM") {
-                        when (value.text) {
-                            "REGISTRATION_SUCCESS" -> {
-                                _systemNotification.value = "registration_success"
-                                return
-                            }
-                            "AUTH_FAILED" -> {
-                                _systemNotification.value = "auth_failed"
-                                return
-                            }
-                            "SET_SUPER_ADMIN" -> {
-                                _isSuperAdmin.value = true
-                                return
-                            }
-                        }
-                        if (value.text.startsWith("SERVER_INFO:")) {
-                            _serverVersion.value = value.text.substring("SERVER_INFO:".length)
-                            return
-                        }
-                        if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
-                            try {
-                                val jsonStr = value.text.substring("ONLINE_USERS_UPDATE:".length)
-                                val jsonArray = org.json.JSONArray(jsonStr)
-                                val usersList = mutableListOf<String>()
-                                for (i in 0 until jsonArray.length()) {
-                                    usersList.add(jsonArray.getString(i))
-                                }
-                                _users.value = usersList
-                            } catch (e: Exception) {
-                                android.util.Log.e("GrpcClient", "Error parsing online users", e)
-                            }
-                            return
-                        }
-                        if (value.text.startsWith("FORCE_DISCONNECT:")) {
-                            val target = value.text.substring("FORCE_DISCONNECT:".length)
-                            if (target == lastUsername) {
-                                disconnect()
-                            }
-                            return
-                        }
-                    }
-
-                    if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return
-
-                    android.util.Log.d("RealGrpcClient", "STREAM PROTO: id=${value.id}, user=${value.user}, text='${value.text}', imageUrl='${value.imageUrl}', voiceUrl='${value.voiceUrl}'")
-                    val incoming = ProtoUtils.createMessageFromProto(value)
-                    android.util.Log.d("RealGrpcClient", "STREAM MSG: id=${incoming.id}, text='${incoming.text}', imageUrl='${incoming.imageUrl}', voiceUrl='${incoming.voiceUrl}'")
-
-                    // Load avatar for incoming message if not cached and avatarUrl is empty
-                    if (incoming.avatarUrl.isEmpty() && !avatarCache.containsKey(incoming.user)) {
-                        getUserAvatar(incoming.user) { avatarUrl ->
-                            if (avatarUrl.isNotEmpty()) {
-                                avatarCache[incoming.user] = avatarUrl
-                                // Update message with avatar URL, preserving imageUrl
-                                _messages.update { currentList ->
-                                    currentList.map { if (it.id == incoming.id && it.id.isNotEmpty()) it.copy(avatarUrl = avatarUrl, imageUrl = it.imageUrl) else it }
-                                }
-                            }
-                        }
-                    } else if (incoming.avatarUrl.isEmpty() && avatarCache.containsKey(incoming.user)) {
-                        // Use cached avatar URL
-                        avatarCache[incoming.user]?.let { cachedUrl ->
-                            val incomingWithAvatar = incoming.copy(avatarUrl = cachedUrl, imageUrl = incoming.imageUrl)
-                            _messages.update { currentList ->
-                                val existingIndex = currentList.indexOfFirst {
-                                    (it.id == incomingWithAvatar.id && it.id.isNotEmpty()) ||
-                                    (it.user == incomingWithAvatar.user && it.text == incomingWithAvatar.text && it.imageUrl == incomingWithAvatar.imageUrl && Math.abs(it.timestamp - incomingWithAvatar.timestamp) < 5000)
-                                }
-
-                                if (existingIndex != -1) {
-                                    val updatedList = currentList.toMutableList()
-                                    updatedList[existingIndex] = incomingWithAvatar
-                                    updatedList
-                                } else {
-                                    onMessageReceived(incomingWithAvatar)
-                                    currentList + incomingWithAvatar
-                                }
-                            }
-                            return@onNext
-                        }
-                    }
-
-                    _messages.update { currentList ->
-                        // Ищем, нет ли уже такого сообщения в списке
-                        val existingIndex = currentList.indexOfFirst { 
-                            (it.id == incoming.id && it.id.isNotEmpty()) || 
-                            (it.user == incoming.user && it.text == incoming.text && it.imageUrl == incoming.imageUrl && it.voiceUrl == incoming.voiceUrl && Math.abs(it.timestamp - incoming.timestamp) < 5000)
-                        }
-
-                        if (existingIndex != -1) {
-                            // Если нашли, обновляем его (теперь у него есть ID от сервера)
-                            val updatedList = currentList.toMutableList()
-                            updatedList[existingIndex] = incoming
-                            updatedList
-                        } else {
-                            // Если не нашли (чужое сообщение), добавляем в конец
-                            onMessageReceived(incoming)
-                            currentList + incoming
-                        }
-                    }
-                }
-                
-                override fun onError(t: Throwable) {
-                    android.util.Log.e("RealGrpcClient", "Chat stream error: ${t.message}", t)
-                    isChatStarted = false
-                    
-                    // Don't immediately set connectionState to false - keep it true if we're going to reconnect
-                    // Only set to false if we've exceeded max reconnect attempts
-                    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-                        _connectionState.value = false
-                        android.util.Log.e("RealGrpcClient", "Max reconnection attempts reached, giving up")
+                        handleSystemCommand(value)
                         return
                     }
 
-                    // Schedule smart reconnection with exponential backoff
-                    scheduleReconnection()
-                }
-                
-                private fun scheduleReconnection() {
-                    // Cancel previous reconnection attempt
-                    if (reconnectRunnable != null) {
-                        reconnectHandler?.removeCallbacks(reconnectRunnable!!)
-                    }
-                    
-                    val currentTime = System.currentTimeMillis()
-                    val timeSinceLastReconnect = currentTime - lastReconnectTime
-                    
-                    // If last reconnect was very recent, increase delay
-                    val delay = if (timeSinceLastReconnect < 5000) {
-                        // Exponential backoff: 2s, 4s, 8s, 16s, 30s max
-                        minOf(RECONNECT_DELAY_MS * (1 shl reconnectAttempts), RECONNECT_MAX_DELAY_MS)
+                    // 2. Фильтр сервисных сообщений о входе
+                    if (value.text.endsWith(" joined") || value.text.endsWith(" присоединился")) return
+
+                    // 3. Конвертируем Proto в нашу модель Message
+                    val incoming = ProtoUtils.createMessageFromProto(value)
+
+                    // 4. Работа с аватаркой (подставляем из кэша сразу, чтобы не моргало)
+                    val cachedAvatar = avatarCache[incoming.user]
+                    val messageWithAvatar = if (incoming.avatarUrl.isEmpty() && cachedAvatar != null) {
+                        incoming.copy(avatarUrl = cachedAvatar)
                     } else {
-                        // Reset attempts if enough time has passed
-                        reconnectAttempts = 0
-                        RECONNECT_DELAY_MS
+                        incoming
                     }
-                    
-                    reconnectAttempts++
-                    lastReconnectTime = currentTime
-                    
-                    android.util.Log.d("GrpcClient", "Scheduling reconnection attempt $reconnectAttempts in ${delay}ms")
-                    
-                    reconnectRunnable = Runnable {
-                        if (lastUsername != null && lastPassword != null && lastJoinMessage != null && lastOnMessageReceived != null) {
-                            android.util.Log.d("GrpcClient", "Attempting automatic reconnection (attempt $reconnectAttempts)...")
-                            disconnect()
-                            startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
-                            
-                            // Load history after reconnection with delay to ensure stability
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                if (currentRoomId.isNotEmpty()) {
-                                    android.util.Log.d("GrpcClient", "Loading history after reconnection for room: $currentRoomId")
-                                    loadHistory(currentRoomId)
-                                }
-                            }, 1000)
+
+                    // 5. Синхронизируем список сообщений
+                    _messages.update { currentList ->
+                        // Ищем индекс сообщения (либо по ID, либо по схожести контента для Local Echo)
+                        val existingIndex = currentList.indexOfFirst {
+                            (it.id == messageWithAvatar.id && it.id.isNotEmpty()) ||
+                                    (it.user == messageWithAvatar.user &&
+                                            it.text == messageWithAvatar.text &&
+                                            it.imageUrl == messageWithAvatar.imageUrl &&
+                                            it.voiceUrl == messageWithAvatar.voiceUrl &&
+                                            Math.abs(it.timestamp - messageWithAvatar.timestamp) < 5000)
+                        }
+
+                        if (existingIndex != -1) {
+                            // Обновляем существующее (например, пришел ID от сервера для нашего сообщения)
+                            val updatedList = currentList.toMutableList()
+                            updatedList[existingIndex] = messageWithAvatar
+                            updatedList
+                        } else {
+                            // Это новое сообщение от другого пользователя
+                            onMessageReceived(messageWithAvatar)
+                            currentList + messageWithAvatar
                         }
                     }
-                    
-                    reconnectHandler = android.os.Handler(android.os.Looper.getMainLooper())
-                    reconnectHandler?.postDelayed(reconnectRunnable!!, delay)
+
+                    // 6. Фоновая загрузка аватарки, если её нет ни в сообщении, ни в кэше
+                    if (messageWithAvatar.avatarUrl.isEmpty() && !avatarCache.containsKey(messageWithAvatar.user)) {
+                        fetchAvatarAsync(messageWithAvatar.user, messageWithAvatar.id)
+                    }
                 }
-                
+
+                private fun handleSystemCommand(value: MessageProto) {
+                    when {
+                        value.text == "REGISTRATION_SUCCESS" -> _systemNotification.value = "registration_success"
+                        value.text == "AUTH_FAILED" -> _systemNotification.value = "auth_failed"
+                        value.text == "SET_SUPER_ADMIN" -> _isSuperAdmin.value = true
+                        value.text.startsWith("SERVER_INFO:") -> {
+                            _serverVersion.value = value.text.substring("SERVER_INFO:".length)
+                        }
+                        value.text.startsWith("FORCE_DISCONNECT:") -> {
+                            if (value.text.substring("FORCE_DISCONNECT:".length) == lastUsername) disconnect()
+                        }
+                        value.text.startsWith("ONLINE_USERS_UPDATE:") -> {
+                            parseOnlineUsers(value.text.substring("ONLINE_USERS_UPDATE:".length))
+                        }
+                    }
+                }
+
+                private fun parseOnlineUsers(jsonStr: String) {
+                    try {
+                        val jsonArray = org.json.JSONArray(jsonStr)
+                        _users.value = List(jsonArray.length()) { jsonArray.getString(it) }
+                    } catch (e: Exception) {
+                        android.util.Log.e("GrpcClient", "Error parsing online users", e)
+                    }
+                }
+
+                private fun fetchAvatarAsync(username: String, messageId: String) {
+                    getUserAvatar(username) { url ->
+                        if (url.isNotEmpty()) {
+                            avatarCache[username] = url
+                            // Точечно обновляем аватарку в списке сообщений
+                            _messages.update { list ->
+                                list.map { if (it.user == username && it.avatarUrl.isEmpty()) it.copy(avatarUrl = url) else it }
+                            }
+                        }
+                    }
+                }
+
+                override fun onError(t: Throwable) {
+                    android.util.Log.e("RealGrpcClient", "Chat stream error: ${t.message}")
+                    isChatStarted = false
+
+                    // 1. Проверяем состояние самого канала
+                    val currentStatus = _connectionStatus.value
+
+                    if (currentStatus == ConnectionStatus.READY) {
+                        // Если канал в порядке, но стрим упал (глюк сервера или тайм-аут стрима)
+                        android.util.Log.d("RealGrpcClient", "Channel is READY, but stream failed. Restarting stream in 2s...")
+
+                        // Используем простой Handler для небольшой задержки перед перезапуском стрима
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (!isChatStarted && lastUsername != null) {
+                                // Просто вызываем startChat, мониторинг трогать не нужно
+                                startChat(lastUsername!!, lastPassword!!, lastJoinMessage!!, lastOnMessageReceived!!)
+                            }
+                        }, 2000)
+
+                    } else {
+                        // 2. Если канал НЕ в READY (FAILED или CONNECTING)
+                        // Мы ничего не делаем здесь!
+                        // Наш startChannelMonitoring сам увидит, когда канал станет READY,
+                        // и сам вызовет startChat.
+                        android.util.Log.w("RealGrpcClient", "Stream error due to connection loss. Monitor will handle this.")
+                        _connectionStatus.value = ConnectionStatus.FAILED
+                    }
+                }
+
                 override fun onCompleted() { isChatStarted = false }
             }
             
@@ -601,28 +624,53 @@ object RealGrpcClient {
                 .setRequestMarshaller(MessageProtoMarshaller())
                 .setResponseMarshaller(MessageProtoMarshaller())
                 .build()
-            
+
+            // ... (после создания methodDescriptor)
+
             val call = channel!!.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+
             call.start(object : io.grpc.ClientCall.Listener<MessageProto>() {
-                override fun onHeaders(headers: io.grpc.Metadata) { call.request(100) }
-                override fun onMessage(message: MessageProto) { responseObserver.onNext(message) }
+                override fun onHeaders(headers: io.grpc.Metadata) {
+                    // Запрашиваем сообщения от сервера
+                    call.request(100)
+                }
+
+                override fun onMessage(message: MessageProto) {
+                    responseObserver.onNext(message)
+                }
+
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                    isChatStarted = false
                     if (!status.isOk) {
-                        _connectionState.value = false
+                        android.util.Log.e("RealGrpcClient", "Stream closed with error: ${status.code}")
+
+                        // Обновляем статус на FAILED, чтобы UI отреагировал
+                        _connectionStatus.value = ConnectionStatus.FAILED
+
+                        // Передаем ошибку в responseObserver (там сработает наша новая логика переподключения)
                         responseObserver.onError(status.asRuntimeException())
-                    } else responseObserver.onCompleted()
+                    } else {
+                        android.util.Log.d("RealGrpcClient", "Stream closed normally")
+                        responseObserver.onCompleted()
+                    }
                 }
             }, io.grpc.Metadata())
-            
+
+            // Инициализируем observer для отправки сообщений
             requestObserver = object : StreamObserver<MessageProto> {
                 override fun onNext(value: MessageProto) {
-                    call.sendMessage(value)
-                    call.request(1)
+                    try {
+                        call.sendMessage(value)
+                        call.request(1)
+                    } catch (e: Exception) {
+                        android.util.Log.e("RealGrpcClient", "Error sending message: ${e.message}")
+                    }
                 }
-                override fun onError(t: Throwable) { call.cancel("Error", t) }
+                override fun onError(t: Throwable) { call.cancel("Error in requestObserver", t) }
                 override fun onCompleted() { call.halfClose() }
             }
-            
+
+            // 1. Отправляем приветственное сообщение/авторизацию
             requestObserver?.onNext(MessageProto.newBuilder()
                 .setUser(username)
                 .setText(joinMessage)
@@ -631,15 +679,24 @@ object RealGrpcClient {
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
                 .build())
-            
+
+            // 2. Запускаем стрим статуса печати
             startTypingStream(username)
 
+            // 3. Загружаем историю и список юзеров через небольшую паузу
+            // Это нужно, чтобы BIDI-стрим успел стабилизироваться
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                loadHistory(currentRoomId) { loadUsers() }
+                if (currentRoomId.isNotEmpty()) {
+                    loadHistory(currentRoomId) {
+                        loadUsers()
+                    }
+                }
             }, 300)
-            
-        } catch (_: Exception) {
+
+        } catch (e: Exception) {
+            android.util.Log.e("RealGrpcClient", "Failed to start chat: ${e.message}")
             isChatStarted = false
+            _connectionStatus.value = ConnectionStatus.FAILED
         }
     }
     
@@ -1326,7 +1383,10 @@ object RealGrpcClient {
     }
 
     fun startTypingStream(username: String) {
-        if (!_connectionState.value || channel == null || typingRequestObserver != null) return
+        // 1. Проверяем статус через Enum и наличие канала
+        if (connectionStatus.value != ConnectionStatus.READY || channel == null || typingRequestObserver != null) {
+            return
+        }
 
         try {
             val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TypingRequestProto, TypingSignalProto>()
@@ -1337,35 +1397,68 @@ object RealGrpcClient {
                 .build()
 
             val call = channel!!.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+
             call.start(object : io.grpc.ClientCall.Listener<TypingSignalProto>() {
-                override fun onHeaders(headers: io.grpc.Metadata) { call.request(100) }
+                override fun onHeaders(headers: io.grpc.Metadata) {
+                    call.request(100)
+                }
+
                 override fun onMessage(message: TypingSignalProto) {
+                    // Обновляем Flow с печатающими пользователями
                     _typingUsers.update { currentMap ->
                         val roomTypists = currentMap[message.roomId]?.toMutableSet() ?: mutableSetOf()
+
                         if (message.isTyping) {
-                            if (message.username != username) { // Don't show ourselves
+                            if (message.username != username) { // Не показываем самих себя
                                 roomTypists.add(message.username)
                             }
                         } else {
                             roomTypists.remove(message.username)
                         }
+
+                        // Возвращаем новую карту состояний
                         currentMap + (message.roomId to roomTypists)
                     }
                 }
+
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                    if (!status.isOk) {
+                        android.util.Log.e("RealGrpcClient", "Typing stream closed with error: ${status.code}")
+                    }
+                    // Обнуляем обзервер, чтобы при следующем вызове стрим мог пересоздаться
                     typingRequestObserver = null
                 }
             }, io.grpc.Metadata())
 
+            // Инициализируем обзервер для отправки наших сигналов "печатает..."
             typingRequestObserver = object : StreamObserver<TypingRequestProto> {
                 override fun onNext(value: TypingRequestProto) {
-                    call.sendMessage(value)
-                    call.request(1)
+                    try {
+                        call.sendMessage(value)
+                        call.request(1)
+                    } catch (e: Exception) {
+                        android.util.Log.e("RealGrpcClient", "Error sending typing signal: ${e.message}")
+                    }
                 }
-                override fun onError(t: Throwable) { call.cancel("Error", t) }
-                override fun onCompleted() { call.halfClose() }
+
+                override fun onError(t: Throwable) {
+                    android.util.Log.e("RealGrpcClient", "Typing stream error", t)
+                    call.cancel("Error in typingRequestObserver", t)
+                    typingRequestObserver = null
+                }
+
+                override fun onCompleted() {
+                    call.halfClose()
+                    typingRequestObserver = null
+                }
             }
-        } catch (_: Exception) {}
+
+            android.util.Log.d("RealGrpcClient", "Typing stream started for $username")
+
+        } catch (e: Exception) {
+            android.util.Log.e("RealGrpcClient", "Failed to start typing stream: ${e.message}")
+            typingRequestObserver = null
+        }
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {

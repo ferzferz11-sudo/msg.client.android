@@ -1,16 +1,34 @@
 package lavender.client.android.data.grpc
 
-import kotlinx.coroutines.flow.StateFlow
-import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.models.Message
+import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.*
+import lavender.client.android.data.models.Message // 🛠️ ВАЖНЫЙ ИМПОРТ
+import lavender.client.android.data.models.ChatInfo // 🛠️ ВАЖНЫЙ ИМПОРТ
+import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
 
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
-    
-    val connectionState: StateFlow<Boolean> = realGrpcClient.connectionState
+
+    // Область видимости для конвертации потоков
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // 1. Основной статус (Enum)
+    val connectionStatus: StateFlow<ConnectionStatus> = realGrpcClient.connectionStatus
+
+    // 2. Boolean статус (для совместимости), теперь с .value!
+    val connectionState: StateFlow<Boolean> = realGrpcClient.connectionStatus
+        .map { it == ConnectionStatus.READY }
+        .stateIn(scope, SharingStarted.Eagerly, realGrpcClient.connectionStatus.value == ConnectionStatus.READY)
+
+    // 3. Список сообщений и юзеров (они и так StateFlow в RealGrpcClient)
     val messages: StateFlow<List<Message>> = realGrpcClient.messages
     val users: StateFlow<List<String>> = realGrpcClient.users
+
     val allUsers: StateFlow<List<String>> = realGrpcClient.allUsers
     val error: StateFlow<String?> = realGrpcClient.error
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
@@ -22,7 +40,7 @@ object GrpcClient {
         get() = realGrpcClient.hasCheckedForUpdates
         set(value) { realGrpcClient.hasCheckedForUpdates = value }
 
-    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
+    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null) {
         realGrpcClient.connect(serverAddress, useTls, port, context)
     }
     
@@ -78,11 +96,11 @@ object GrpcClient {
         realGrpcClient.getChatListVersion(username, callback)
     }
 
-    fun getThemes(username: String, callback: (String, List<lavender.client.android.data.proto.CustomThemeProto>) -> Unit) {
+    fun getThemes(username: String, callback: (String, List<CustomThemeProto>) -> Unit) {
         realGrpcClient.getThemes(username, callback)
     }
 
-    fun saveTheme(username: String, theme: lavender.client.android.data.proto.CustomThemeProto, callback: (Boolean, String) -> Unit) {
+    fun saveTheme(username: String, theme: CustomThemeProto, callback: (Boolean, String) -> Unit) {
         realGrpcClient.saveTheme(username, theme, callback)
     }
 
@@ -186,7 +204,7 @@ object GrpcClient {
         realGrpcClient.getContacts(username, callback)
     }
 
-    fun getFCMLogs(callback: (List<lavender.client.android.data.proto.FCMLogEntryProto>) -> Unit) {
+    fun getFCMLogs(callback: (List<FCMLogEntryProto>) -> Unit) {
         realGrpcClient.getFCMLogs(callback)
     }
 

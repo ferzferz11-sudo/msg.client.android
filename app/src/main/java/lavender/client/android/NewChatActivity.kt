@@ -4,61 +4,56 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import java.io.File
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.GridLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.graphics.toColorInt
-import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.isGone
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import de.hdodenhof.circleimageview.CircleImageView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import lavender.client.android.audio.AudioUploader
+import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
-import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
@@ -68,9 +63,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
-import org.json.JSONObject
+import java.io.File
 import java.util.Locale
-import android.content.pm.PackageManager
 
 class NewChatActivity : AppCompatActivity() {
 
@@ -200,33 +194,65 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 1. Настройка прозрачности и темы (до super.onCreate)
         applySavedColorScheme()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         @Suppress("DEPRECATION")
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_chat)
-        loadDataFromIntent(); initViews()
+
+        // 2. Извлекаем данные. Убедись, что loadDataFromIntent() проверяет "roomId" из extras!
+        loadDataFromIntent()
+
+        // 3. СИНХРОНИЗАЦИЯ: Говорим клиенту, где мы сейчас.
+        // Очищаем старые сообщения, чтобы не было "фантомных" текстов из другого чата.
+        grpcClient.setRoomId(roomId)
+        grpcClient.clearMessages()
+
+        initViews()
+
+        // 4. Темизация
         lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
-            runOnUiThread { lavender.client.android.ui.ThemeManager.applyTheme(this); applyChatBackground() }
+            runOnUiThread {
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+                applyChatBackground()
+            }
         }
-        setupToolbar(); setupRecyclerView(); setupObservers(); setupListeners(); setupKeyboardHandling(); fetchChatMetadataIfNeeded()
+
+        // 5. Инициализация компонентов.
+        // ВАЖНО: setupObservers() должен идти РАНЬШЕ старта чата.
+        setupToolbar()
+        setupRecyclerView()
+        setupObservers()
+        setupListeners()
+        setupKeyboardHandling()
+        fetchChatMetadataIfNeeded()
+
+        // 6. Запуск логики ViewModel
         viewModel.switchRoom(roomId)
-        viewModel.startChat(username, password, "") { _ -> viewModel.markRead(username, this) }
+
+        // Если мы уже READY (например, вернулись из фона), принудительно грузим историю
+        if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+            grpcClient.loadHistory(roomId)
+        }
+
+        viewModel.startChat(username, password, "") { _ ->
+            viewModel.markRead(username, this)
+        }
+
+        // 7. Обработка кнопки "Назад" через When (так чище)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (audioRecordingView.isVisible) {
-                    audioRecordingView.cancel()
-                } else if (selectionMode) {
-                    hideSelectionToolbar()
-                } else if (searchBar.isVisible) {
-                    hideSearchBar()
-                } else if (mentionContainer.isVisible) {
-                    mentionContainer.isVisible = false
-                } else {
-                    finish()
+                when {
+                    audioRecordingView.isVisible -> audioRecordingView.cancel()
+                    selectionMode -> hideSelectionToolbar()
+                    searchBar.isVisible -> hideSearchBar()
+                    mentionContainer.isVisible -> mentionContainer.isVisible = false
+                    else -> finish()
                 }
             }
         })
@@ -282,9 +308,28 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun loadDataFromIntent() {
-        username = intent.getStringExtra("USERNAME") ?: ""; password = intent.getStringExtra("PASSWORD") ?: ""; roomId = intent.getStringExtra("ROOM_ID") ?: ""
-        chatName = intent.getStringExtra("CHAT_NAME") ?: "Chat"; isDirect = intent.getBooleanExtra("IS_DIRECT", false)
-        participantsJson = intent.getStringExtra("PARTICIPANTS") ?: "[]"; creator = intent.getStringExtra("CREATOR") ?: ""; chatAvatarUrl = intent.getStringExtra("AVATAR_URL") ?: ""
+        // 1. Извлекаем Room ID (самое важное для навигации из Пушей)
+        // Проверяем оба варианта ключа: и твой стандартный, и тот, что может прийти из FCM
+        val incomingRoomId = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("roomId")
+        if (!incomingRoomId.isNullOrEmpty()) {
+            roomId = incomingRoomId
+        }
+
+        // 2. Безопасное обновление остальных полей
+        // Используем ?.let { ... }, чтобы НЕ затирать данные пустыми строками,
+        // если в новом интенте (из Пуша) этих полей нет.
+        intent.getStringExtra("USERNAME")?.let { username = it }
+        intent.getStringExtra("PASSWORD")?.let { password = it }
+        intent.getStringExtra("CHAT_NAME")?.let { chatName = it }
+
+        // Для Boolean используем текущее значение как дефолтное
+        isDirect = intent.getBooleanExtra("IS_DIRECT", isDirect)
+
+        intent.getStringExtra("PARTICIPANTS")?.let { participantsJson = it }
+        intent.getStringExtra("CREATOR")?.let { creator = it }
+        intent.getStringExtra("AVATAR_URL")?.let { chatAvatarUrl = it }
+
+        android.util.Log.d("ChatData", "Loaded RoomId: $roomId, User: $username, IsDirect: $isDirect")
     }
 
     private fun setupToolbar() {
@@ -388,35 +433,54 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun setupObservers() {
         viewModel = ViewModelProvider(this, ChatViewModelFactory(roomId))[ChatViewModel::class.java]
+
+        // 1. Наблюдатель за сообщениями (скролл и отметки о прочтении)
         lifecycleScope.launch {
-            viewModel.messages.collect { roomMessages ->
-                val wasAtBottom = (messagesRecyclerView.layoutManager as? LinearLayoutManager)?.let { it.findLastVisibleItemPosition() >= lastMessageCount - 2 } ?: true
-                val isFirstLoad = lastMessageCount == 0; val hasNewMessages = roomMessages.size > lastMessageCount
-                adapter.submitList(roomMessages) { if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
-                
-                if (hasNewMessages) {
-                    val incomingMessages = roomMessages.filter { it.user != username && !it.isRead }
-                    if (incomingMessages.isNotEmpty()) {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.messages.collect { roomMessages ->
+                    val layoutManager = messagesRecyclerView.layoutManager as? LinearLayoutManager
+                    val wasAtBottom = layoutManager?.let {
+                        it.findLastVisibleItemPosition() >= lastMessageCount - 2
+                    } ?: true
+
+                    val isFirstLoad = lastMessageCount == 0
+                    val hasNewMessages = roomMessages.size > lastMessageCount
+
+                    adapter.submitList(roomMessages) {
+                        if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) {
+                            messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
+                        }
+                    }
+
+                    if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) {
                         viewModel.markRead(username, this@NewChatActivity)
                     }
+                    lastMessageCount = roomMessages.size
                 }
+            }
+        }
 
-                lastMessageCount = roomMessages.size
-            }
-        }
+        // 2. Объединенный наблюдатель: Сеть + Юзеры + Тайпинг
         lifecycleScope.launch {
-            grpcClient.typingUsers.collect { _ ->
-                updateSubtitle(grpcClient.users.value, grpcClient.connectionState.value)
-            }
-        }
-        lifecycleScope.launch {
-            grpcClient.connectionState.collect { connected ->
-                updateSubtitle(grpcClient.users.value, connected)
-            }
-        }
-        lifecycleScope.launch {
-            grpcClient.users.collect { onlineUsers ->
-                updateSubtitle(onlineUsers, grpcClient.connectionState.value)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(
+                    grpcClient.users,
+                    grpcClient.connectionStatus,
+                    grpcClient.typingUsers
+                ) { onlineUsers, status, typingMap ->
+                    // Фильтруем печатающих (кроме себя) прямо в потоке
+                    val currentTypists = typingMap[roomId]?.filter { it != username } ?: emptyList()
+                    Triple(onlineUsers, status, currentTypists)
+                }.collect { (onlineUsers, status, currentTypists) ->
+                    val isConnected = status == ConnectionStatus.READY
+
+                    // Обновляем весь заголовок одной функцией
+                    updateSubtitle(onlineUsers, isConnected, currentTypists)
+
+                    if (isConnected) {
+                        syncChatListIfNeeded()
+                    }
+                }
             }
         }
     }
@@ -1203,49 +1267,66 @@ class NewChatActivity : AppCompatActivity() {
         if (theme.backgroundImageUrl.isNotEmpty()) findViewById<ImageView>(R.id.chatBackground)?.let { com.bumptech.glide.Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(it); messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT); swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT) }
     }
 
-    private fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean) {
-        runOnUiThread {
-            if (!isConnected) {
-                toolbarSubtitle.isVisible = true
+    private fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>) {
+        val colorOnPrimary = getThemeColor(com.google.android.material.R.attr.colorOnPrimary)
+        val colorGreen = getColor(android.R.color.holo_green_light)
+
+        toolbarSubtitle.isVisible = true
+        // Сбрасываем курсив, если он был от тайпинга
+        toolbarSubtitle.setTypeface(null, android.graphics.Typeface.NORMAL)
+
+        when {
+            // Приоритет 1: Нет сети
+            !isConnected -> {
                 toolbarSubtitle.text = getString(R.string.connecting)
-                val typedValue = TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                toolbarSubtitle.setTextColor(typedValue.data)
-                return@runOnUiThread
+                toolbarSubtitle.setTextColor(colorOnPrimary)
             }
 
-            val otherTyping = (grpcClient.typingUsers.value[roomId] ?: emptySet()).filter { it != username }
-            if (otherTyping.isNotEmpty()) {
-                toolbarSubtitle.isVisible = true
-                toolbarSubtitle.text = if (otherTyping.size == 1) getString(R.string.user_is_typing, otherTyping.first()) else getString(R.string.users_are_typing, otherTyping.size)
-                val typedValue = TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                toolbarSubtitle.setTextColor(typedValue.data)
-                return@runOnUiThread
+            // Приоритет 2: Кто-то печатает
+            typists.isNotEmpty() -> {
+                toolbarSubtitle.text = if (typists.size == 1) {
+                    getString(R.string.user_is_typing, typists.first())
+                } else {
+                    getString(R.string.users_are_typing, typists.size)
+                }
+                toolbarSubtitle.setTextColor(colorOnPrimary)
+                toolbarSubtitle.setTypeface(null, android.graphics.Typeface.ITALIC)
             }
 
-            if (isDirect) {
-                val otherUser = try {
-                    JSONArray(participantsJson).let { arr ->
-                        (0 until arr.length()).asSequence().map { arr.getString(it) }.find { it != username }
-                    }
-                } catch (e: Exception) { null } ?: return@runOnUiThread
-                
+            // Приоритет 3: Статус собеседника (Online/Offline) в личке
+            isDirect -> {
+                val otherUser = getOtherParticipant()
                 val isOnline = onlineUsers.contains(otherUser)
-                toolbarSubtitle.isVisible = true
+
                 toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
-                toolbarSubtitle.setTextColor(
-                    if (isOnline) getColor(android.R.color.holo_green_light)
-                    else {
-                        val typedValue = TypedValue()
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                        typedValue.data
-                    }
-                )
-            } else {
+                toolbarSubtitle.setTextColor(if (isOnline) colorGreen else colorOnPrimary)
+            }
+
+            // Приоритет 4: Групповой чат
+            else -> {
                 updateGroupSubtitle(onlineUsers)
             }
         }
+    }
+
+    private var cachedOtherUser: String? = null
+
+    private fun getOtherParticipant(): String? {
+        if (cachedOtherUser != null) return cachedOtherUser
+        return try {
+            org.json.JSONArray(participantsJson).let { arr ->
+                (0 until arr.length()).asSequence()
+                    .map { arr.getString(it) }
+                    .find { it != username }
+                    .also { cachedOtherUser = it }
+            }
+        } catch (e: Exception) { null }
+    }
+
+    private fun getThemeColor(attr: Int): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
     }
 
     private fun updateGroupSubtitle(onlineUsers: List<String>) {
@@ -1270,4 +1351,37 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun showToast(message: String) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+    private fun syncChatListIfNeeded() {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val localVersion = prefs.getLong("chat_list_version", 0L)
+        val username = grpcClient.getCurrentUsername() ?: return
+
+        android.util.Log.d("ChatSync", "Checking version... Local: $localVersion")
+
+        grpcClient.getChatListVersion(username) { serverVersion ->
+            if (serverVersion > localVersion) {
+                android.util.Log.d("ChatSync", "New version $serverVersion found. Fetching chats...")
+
+                grpcClient.getChats(username) { chats ->
+                    // Здесь обновляй свой адаптер со списком чатов
+                    // chatAdapter.submitList(chats)
+
+                    prefs.edit().putLong("chat_list_version", serverVersion).apply()
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        loadDataFromIntent()
+
+        grpcClient.setRoomId(roomId)
+        grpcClient.clearMessages() // Очищаем экран
+        grpcClient.loadHistory(roomId) // 🛠️ Форсируем загрузку для НОВОЙ комнаты
+
+        viewModel.switchRoom(roomId)
+    }
 }

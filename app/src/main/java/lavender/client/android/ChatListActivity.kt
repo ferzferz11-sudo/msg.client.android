@@ -1,26 +1,29 @@
 package lavender.client.android
 
 import android.Manifest
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableString
 import android.text.TextWatcher
-import android.util.Log
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import android.widget.*
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -36,16 +39,26 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.messaging.FirebaseMessaging
-import kotlinx.coroutines.*
+import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.fcm.NotificationHistory
+import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.ui.adapter.ChatAdapter
@@ -56,8 +69,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.*
-import de.hdodenhof.circleimageview.CircleImageView
+import java.util.Locale
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -159,13 +171,32 @@ class ChatListActivity : AppCompatActivity() {
         })
 
         lifecycleScope.launch {
-            grpcClient.connectionState.collect { connected ->
-                runOnUiThread {
-                    if (!connected) {
-                        binding.toolbarTitle.text = getString(R.string.connecting)
-                    } else if (binding.toolbarTitle.text == getString(R.string.connecting)) {
-                        binding.toolbarTitle.text = getString(R.string.chats)
+            // repeatOnLifecycle — это «золотой стандарт».
+            // Он останавливает прослушивание, когда приложение свернуто, экономя батарею.
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                RealGrpcClient.connectionStatus.collect { status ->
+                    // Обновляем заголовок в зависимости от реального статуса
+                    binding.toolbarTitle.text = when (status) {
+                        ConnectionStatus.READY -> {
+                            // Соединение есть — показываем название экрана
+                            getString(R.string.chats)
+                        }
+                        ConnectionStatus.CONNECTING -> {
+                            // В процессе попытки подключения
+                            getString(R.string.connecting)
+                        }
+                        ConnectionStatus.FAILED -> {
+                            // Сеть пропала или сервер недоступен
+                            "Waiting for network..." // Можешь добавить свой R.string.waiting_network
+                        }
+                        ConnectionStatus.DISCONNECTED -> {
+                            // Полностью отключены (например, после logout)
+                            "Offline"
+                        }
                     }
+
+                    // Опционально: можно менять прозрачность или цвет текста
+                    binding.toolbarTitle.alpha = if (status == ConnectionStatus.READY) 1.0f else 0.6f
                 }
             }
         }
@@ -274,15 +305,17 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        // Re-establish connection if it was dropped while the app was in the background.
-        if (!grpcClient.connectionState.value) {
+        // Проверяем статус напрямую через Enum. Это надежнее.
+        if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
             val serverAddressFull = intent.getStringExtra("serverAddress") ?: "159.195.38.145"
             val parts = serverAddressFull.split(":")
             val serverHost = parts[0]
             val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
 
             grpcClient.connect(serverHost, false, serverPort, this)
-            grpcClient.startChat(username, password, "") { _ -> }
+            // Мы не вызываем startChat здесь вручную,
+            // так как наш новый RealGrpcClient сделает это САМ,
+            // как только статус станет READY!
         }
     }
 
@@ -1395,11 +1428,18 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        // Используем "lavender_prefs", чтобы всё было в одном месте
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
             remove("username")
             remove("password")
+            // 🛠️ ОБЯЗАТЕЛЬНО: Сбрасываем версию чатов при выходе
+            remove("chat_list_version")
         }
+
+        // Останавливаем сетевой клиент, чтобы не было попыток переподключения
+        grpcClient.disconnect()
+
         showToast(getString(R.string.logged_out))
 
         val intent = Intent(this, SplashActivity::class.java)

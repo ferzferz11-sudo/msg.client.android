@@ -169,10 +169,6 @@
     <string name="delete_messages_action">Удалить сообщения</string>
     <string name="participants_count">%d участников</string>
     <string name="participants_online_count">%1$d участников (%2$d онлайн)</string>
-    <string name="user_is_typing">%s печатает…</string>
-    <string name="users_are_typing">%d пользователей печатают…</string>
-    <string name="is_typing">печатает…</string>
-    <string name="are_typing">печатают…</string>
     <string name="search">Поиск</string>
     <string name="no_results">Нет результатов</string>
     <string name="search_results_format">%1$d/%2$d</string>
@@ -317,4 +313,6 @@
     <string name="onboarding_fab_hint">Добавьте контакты людей, с которыми хотите общаться!\nСоздайте новый чат или присоединяйтесь к группам, чтобы всегда быть на связи!</string>
     <string name="share_with_friends">Поделиться с друзьями</string>
     <string name="apply">Применить</string>
+    <string name="user_is_typing">%1$s печатает…</string>
+    <string name="users_are_typing">%1$d чел. печатают…</string>
 </resources>
