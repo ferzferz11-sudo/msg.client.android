@@ -36,7 +36,7 @@ class ContactsActivity : AppCompatActivity() {
     private var contacts = mutableListOf<String>()
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -129,7 +129,7 @@ class ContactsActivity : AppCompatActivity() {
             binding.searchLayout.isVisible = !binding.searchLayout.isVisible
             if (binding.searchLayout.isVisible) {
                 binding.searchEditText.requestFocus()
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.showSoftInput(binding.searchEditText, 0)
             } else {
                 binding.searchEditText.text?.clear()
@@ -307,7 +307,7 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", null)
     }
 }

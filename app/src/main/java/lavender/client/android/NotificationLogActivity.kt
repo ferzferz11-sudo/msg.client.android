@@ -26,7 +26,7 @@ class NotificationLogActivity : AppCompatActivity() {
     private lateinit var recyclerOutgoing: RecyclerView
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)

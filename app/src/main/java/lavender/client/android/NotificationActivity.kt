@@ -2,26 +2,19 @@ package lavender.client.android
 
 import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
-import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.tabs.TabLayout
-import lavender.client.android.data.fcm.NotificationEntry
-import lavender.client.android.data.fcm.NotificationHistory
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.appbar.MaterialToolbar
+import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class NotificationActivity : AppCompatActivity() {
 
@@ -31,7 +24,7 @@ class NotificationActivity : AppCompatActivity() {
     private lateinit var previewTime: TextView
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -68,7 +61,7 @@ class NotificationActivity : AppCompatActivity() {
         // Apply theme colors to toolbar
         lavender.client.android.ui.ThemeManager.applyTheme(this)
 
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val switchReceive = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchReceivePush)
         val switchSend = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSendPush)
         
@@ -160,7 +153,7 @@ class NotificationActivity : AppCompatActivity() {
     }
 
     private fun updatePreview(style: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val username = prefs.getString("username", "") ?: ""
         
         when (style) {
@@ -180,7 +173,7 @@ class NotificationActivity : AppCompatActivity() {
     }
 
     private fun updateTokenOnServer() {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val username = prefs.getString("username", "") ?: ""
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)

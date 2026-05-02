@@ -1,40 +1,56 @@
 package lavender.client.android
 
-import android.content.Context
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 
+@SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Determine where to go
-        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val savedUsername = prefs.getString("username", null)
         val savedPassword = prefs.getString("password", null)
         val savedServerAddress = prefs.getString("server_address", null)
 
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
+        val isLoggedIn = !skipAutoLogin && savedUsername != null && savedPassword != null
 
-        val targetIntent = if (!skipAutoLogin && savedUsername != null && savedPassword != null && savedServerAddress != null) {
-            // Already logged in - go to ChatListActivity
-            Intent(this, ChatListActivity::class.java).apply {
-                putExtra("username", savedUsername)
-                putExtra("password", savedPassword)
-                putExtra("serverAddress", savedServerAddress)
+        // Проверяем, пришел ли ID комнаты из уведомления
+        val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
+
+        val targetIntent = if (isLoggedIn) {
+            val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
+
+            if (roomIdFromPush != null) {
+                // А. Если нажали на пуш — летим сразу в чат
+                Intent(this, NewChatActivity::class.java).apply {
+                    putExtra("USERNAME", savedUsername)
+                    putExtra("PASSWORD", savedPassword)
+                    putExtra("SERVER_ADDRESS", savedServerAddress)
+                    putExtra("ROOM_ID", roomIdFromPush)
+                    putExtra("from_notification", true)
+                }
+            } else {
+                // Б. Если просто открыли приложение — идем в СПИСОК ЧАТОВ
+                Intent(this, ChatListActivity::class.java).apply {
+                    putExtra("USERNAME", savedUsername)
+                    putExtra("PASSWORD", savedPassword)
+                    putExtra("SERVER_ADDRESS", savedServerAddress)
+                }
             }
         } else {
-            // Not logged in - go to MainActivity
+            // Если не залогинены — на экран входа
             Intent(this, MainActivity::class.java).apply {
-                // Ensure we skip auto-login if explicitly requested (e.g. after logout)
                 putExtra("extra_skip_autologin", skipAutoLogin)
             }
         }
 
-        // Forward extras from original intent (e.g. from notification)
+        // Пробрасываем все остальные флаги и данные (flags, extras)
         intent.extras?.let { targetIntent.putExtras(it) }
-        
+
         startActivity(targetIntent)
         finish()
     }

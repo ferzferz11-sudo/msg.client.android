@@ -433,7 +433,7 @@ class MainActivity : AppCompatActivity() {
                 savePassword(password)
                 saveServerAddress(serverAddress)
                 android.util.Log.d("MainActivity", "Connecting to server: $serverAddress")
-                val intent = Intent(this, ChatListActivity::class.java)
+                val intent = Intent(this, NewChatActivity::class.java)
                 intent.putExtra("username", username)
                 intent.putExtra("password", password)
                 intent.putExtra("serverAddress", serverAddress)
@@ -457,36 +457,36 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun getSavedUsername(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("username", null)
     }
     
     private fun saveUsername(username: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
             putString("username", username)
         }
     }
     
     private fun getSavedPassword(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("password", null)
     }
     
     private fun savePassword(password: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
             putString("password", password)
         }
     }
     
     private fun getSavedServerAddress(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("server_address", null)
     }
     
     private fun saveServerAddress(address: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
             putString("server_address", address)
         }
@@ -511,45 +511,61 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun navigateToChatList(username: String, password: String, serverAddress: String) {
-        android.util.Log.d("MainActivity", "Auto-navigating to chat list")
-        val intent = Intent(this, ChatListActivity::class.java)
-        intent.putExtra("username", username)
-        intent.putExtra("password", password)
-        intent.putExtra("serverAddress", serverAddress)
+        android.util.Log.d("MainActivity", "Navigating to main chat hub")
+
+        val intent = Intent(this, ChatListActivity::class.java).apply {
+            // 1. КЛЮЧИ В ВЕРХНЕМ РЕГИСТРЕ — теперь всё синхронизировано со Splash и NewChat
+            putExtra("USERNAME", username)
+            putExtra("PASSWORD", password)
+            putExtra("SERVER_ADDRESS", serverAddress)
+
+            // 2. ROOM_ID НЕ НУЖЕН для списка чатов.
+            // Список сам запросит данные у сервера после авторизации.
+
+            // 3. Очищаем стек, чтобы нельзя было вернуться назад на экран логина
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
         startActivity(intent)
-        finish()
+        finish() // Закрываем MainActivity окончательно
     }
 
-    private fun navigateToChat(username: String, password: String, serverAddress: String, roomId: String) {
-        android.util.Log.d("MainActivity", "Auto-navigating to chat room: $roomId")
-        // Need to get chat info first
-        lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, false, 50051, this)
-        
-        // Start chat session (auth)
-        lavender.client.android.data.grpc.GrpcClient.startChat(username, password, "") { _ -> }
+    private fun navigateToChat(username: String, password: String, serverAddress: String, roomId: String?) {
+        android.util.Log.d("MainActivity", "Navigating to chat room: $roomId")
 
-        // Use lifecycleScope to wait for auth and then get chats
-        lifecycleScope.launch {
-            delay(500) // Wait for auth to complete
-            
+        // 1. Подключаемся к серверу
+        lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, false, 50051, this)
+
+        // 2. Авторизуемся
+        lavender.client.android.data.grpc.GrpcClient.startChat(username, password, "") {
+            // Внутри этого колбэка мы уже авторизованы, можно запрашивать данные
+
             lavender.client.android.data.grpc.GrpcClient.getChats(username) { chats ->
                 runOnUiThread {
-                    val chat = chats.find { it.id == roomId }
-                    if (chat != null) {
-                        val intent = Intent(this@MainActivity, NewChatActivity::class.java)
-                        intent.putExtra("USERNAME", username)
-                        intent.putExtra("PASSWORD", password)
-                        intent.putExtra("ROOM_ID", roomId)
-                        intent.putExtra("CHAT_NAME", chat.name)
-                        intent.putExtra("IS_DIRECT", chat.type == "direct")
-                        intent.putExtra("PARTICIPANTS", chat.participants)
-                        intent.putExtra("CREATOR", chat.creator)
-                        startActivity(intent)
-                        finish()
-                    } else {
-                        // Chat not found, navigate to chat list
-                        navigateToChatList(username, password, serverAddress)
+                    // Пытаемся найти чат, если передан конкретный ID
+                    val chat = if (!roomId.isNullOrEmpty()) chats.find { it.id == roomId } else null
+
+                    val intent = Intent(this@MainActivity, NewChatActivity::class.java).apply {
+                        putExtra("USERNAME", username)
+                        putExtra("PASSWORD", password)
+
+                        if (chat != null) {
+                            // Если нашли конкретный чат из пуша
+                            putExtra("ROOM_ID", chat.id)
+                            putExtra("CHAT_NAME", chat.name)
+                            putExtra("IS_DIRECT", chat.type == "direct")
+                            putExtra("PARTICIPANTS", chat.participants)
+                            putExtra("CREATOR", chat.creator)
+                        } else {
+                            // Если чат не найден или roomId пустой — открываем общий хаб (general)
+                            putExtra("ROOM_ID", "general")
+                            putExtra("CHAT_NAME", getString(R.string.chats)) // Название по умолчанию
+                            // Остальные параметры NewChatActivity подтянет сама через fetchChatMetadataIfNeeded()
+                        }
                     }
+
+                    startActivity(intent)
+                    finish()
                 }
             }
         }
@@ -567,12 +583,12 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun getSavedLanguage(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("language", null)
     }
     
     private fun saveLanguage(languageCode: String) {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
             putString("language", languageCode)
         }

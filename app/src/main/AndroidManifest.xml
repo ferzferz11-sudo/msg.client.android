@@ -51,55 +51,36 @@
             android:theme="@style/Theme.MsgClientAndroid" />
 
         <activity
-            android:name=".NewChatActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
             android:name=".ChatListActivity"
-            android:exported="true" />
-
-        <activity
-            android:name=".ProfileActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".EditProfileActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ContactsActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme_Lavender_NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
             android:name=".ThemesActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:theme="@style/Theme_Lavender_NoActionBar" />
 
         <activity
-            android:name=".EditThemeActivity"
-            android:exported="false" />
+            android:name=".NewChatActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity android:name=".ProfileActivity" android:exported="false" />
+        <activity android:name=".EditProfileActivity" android:exported="false" />
+        <activity android:name=".ContactsActivity" android:exported="false" />
+        <activity android:name=".EditThemeActivity" android:exported="false" />
+        <activity android:name=".SuperAdminActivity" android:exported="false" />
+        <activity android:name=".NotificationActivity" android:exported="false" />
+        <activity android:name=".NotificationLogActivity" android:exported="false" />
+        <activity android:name=".FCMLogsActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"
             android:exported="false"
             android:theme="@style/Theme_Lavender_NoActionBar" />
-
-        <activity
-            android:name=".SuperAdminActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".NotificationActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".NotificationLogActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".FCMLogsActivity"
-            android:exported="false" />
 
         <activity
             android:name=".FullScreenImageActivity"

@@ -3,23 +3,21 @@ package lavender.client.android
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
-import android.view.View
-import android.widget.*
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import lavender.client.android.ui.adapter.ThemeAdapter
-import androidx.core.view.updatePadding
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
-import java.util.*
+import lavender.client.android.ui.ThemeManager
+import lavender.client.android.ui.adapter.ThemeAdapter
+import java.util.Locale
 
 class ThemesActivity : AppCompatActivity() {
 
@@ -32,7 +30,7 @@ class ThemesActivity : AppCompatActivity() {
     private var customThemes = mutableListOf<CustomThemeProto>()
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -43,43 +41,38 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
+        // 1. Настройка Edge-to-Edge ДО создания вьюх
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_themes)
 
+        // 2. Получаем данные из интента
         username = intent.getStringExtra("username") ?: ""
 
-        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
-            }
-        }
-        
-        val localThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", null)
-        if (localThemeId == null) {
-            currentThemeId = "dark"
-        } else {
-            currentThemeId = localThemeId
-        }
+        // 3. Инициализируем текущий ID из ПРАВИЛЬНЫХ префсов (lavender_prefs)
+        // Делаем это сразу, чтобы адаптер не "моргал"
+        val themePrefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        currentThemeId = themePrefs.getString("current_theme_id", "dark") ?: "dark"
         activeThemeId = currentThemeId
 
+        // 4. Настройка Тулбара
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
 
-        // Handle window insets for edge-to-edge
+        // Отступы для Edge-to-Edge (чтобы тулбар не залезал под статус-бар)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             view.updatePadding(top = systemBars.top)
             insets
         }
 
+        // 5. Настройка RecyclerView и Адаптера
         themesRecyclerView = findViewById(R.id.themesRecyclerView)
-
         adapter = ThemeAdapter(
-            onThemeClick = { theme -> 
+            onThemeClick = { theme ->
                 currentThemeId = theme.id
                 adapter.setCurrentThemeId(currentThemeId)
                 invalidateOptionsMenu()
@@ -92,6 +85,19 @@ class ThemesActivity : AppCompatActivity() {
         themesRecyclerView.layoutManager = LinearLayoutManager(this)
         themesRecyclerView.adapter = adapter
 
+        // 6. МАГИЯ ТЕМИЗАЦИИ: Загружаем и применяем цвета
+        ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                ThemeManager.applyTheme(this)
+                val loadedId = ThemeManager.getCurrentTheme()?.id ?: "dark"
+                adapter.setCurrentThemeId(loadedId)
+
+                // После применения темы обновляем цвета текста и иконок в меню тулбара
+                invalidateOptionsMenu()
+            }
+        }
+
+        // 7. Загружаем список всех тем (Built-in + Custom)
         loadThemes()
     }
 
@@ -110,7 +116,7 @@ class ThemesActivity : AppCompatActivity() {
         grpcClient.getThemes(username) { currentId, list ->
             customThemes = list.toMutableList()
             
-            val localThemeId = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("current_theme_id", null)
+            val localThemeId = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_theme_id", null)
             if (localThemeId == null) {
                 activeThemeId = currentId
                 currentThemeId = currentId
@@ -129,14 +135,17 @@ class ThemesActivity : AppCompatActivity() {
     private fun updateUI() {
         val allThemes = mutableListOf<CustomThemeProto>()
         allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
-        
+
         // Add built-in template themes with localized names
-        lavender.client.android.ui.ThemeManager.builtInThemes.forEach { theme ->
+        ThemeManager.builtInThemes.forEach { theme ->
             val localizedName = when (theme.id) {
-                "builtin_green" -> getString(R.string.theme_template_green)
-                "builtin_blue" -> getString(R.string.theme_template_blue)
-                "builtin_purple" -> getString(R.string.theme_template_purple)
-                "builtin_sunset" -> getString(R.string.theme_template_sunset)
+                "builtin_green"    -> getString(R.string.theme_template_green)
+                "builtin_blue"     -> getString(R.string.theme_template_blue)
+                "builtin_purple"   -> getString(R.string.theme_template_purple)
+                "builtin_sunset"   -> getString(R.string.theme_template_sunset)
+                "builtin_graphite" -> getString(R.string.theme_template_graphite)
+                "builtin_rose"     -> getString(R.string.theme_template_rose)
+                "builtin_mint"     -> getString(R.string.theme_template_mint)
                 else -> theme.name
             }
             allThemes.add(theme.copy(name = localizedName))
@@ -201,7 +210,7 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun getOnPrimaryColor(): Int {
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         return if (customTheme != null) {
             try {
                 customTheme.textPrimaryColor.toColorInt()
@@ -256,16 +265,17 @@ class ThemesActivity : AppCompatActivity() {
         grpcClient.setCurrentTheme(username, themeId) { success ->
             runOnUiThread {
                 if (success) {
-                    val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-                    val scheme = if (themeId == "dark") "dark" else {
-                        val theme = (customThemes + lavender.client.android.ui.ThemeManager.builtInThemes).find { it.id == themeId }
-                        if (theme?.isDark == true) "dark" else "dark"
-                    }
+                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                    // Записываем ID темы ОБЯЗАТЕЛЬНО
                     prefs.edit {
-                        putString("color_scheme", scheme)
                         putString("current_theme_id", themeId)
+                        commit() // Используем commit для синхронной записи
                     }
-                    applyAndRestart()
+
+                    // Сначала загружаем тему в память менеджера, чтобы SplashActivity её подхватила
+                    ThemeManager.loadTheme(this, username) {
+                        runOnUiThread { applyAndRestart() }
+                    }
                 } else {
                     Toast.makeText(this@ThemesActivity, "Failed to apply theme", Toast.LENGTH_SHORT).show()
                 }
@@ -274,7 +284,7 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun applyAndRestart() {
-        lavender.client.android.ui.ThemeManager.clearAllCaches(this)
+        // ThemeManager.clearAllCaches(this)
         
         // Restart the app from SplashActivity to ensure all activities are reloaded with the new theme
         val intent = Intent(this, SplashActivity::class.java)
@@ -284,10 +294,15 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun applySavedColorScheme() {
-        val theme = when (getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", "dark")) {
+        val theme = when (getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("color_scheme", "dark")) {
             "light" -> R.style.Theme_Lavender_Light_NoActionBar
             else -> R.style.Theme_Lavender_Dark_NoActionBar
         }
         setTheme(theme)
+    }
+
+    fun onSetBackgroundClicked(themeId: String, newUrl: String) {
+        ThemeManager.saveBackgroundOverride(this, themeId, newUrl)
+        ThemeManager.applyTheme(this) // Сразу перекрашиваем текущий экран
     }
 }

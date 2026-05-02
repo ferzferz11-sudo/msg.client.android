@@ -1,11 +1,13 @@
 package lavender.client.android
 
-import androidx.core.content.edit
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -14,25 +16,21 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.google.android.material.appbar.MaterialToolbar
-import de.hdodenhof.circleimageview.CircleImageView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import lavender.client.android.data.grpc.GrpcClient
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.util.Log
+import androidx.core.content.edit
 import androidx.core.graphics.scale
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
-import android.widget.TextView
-import com.google.android.material.textfield.TextInputLayout
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import lavender.client.android.data.grpc.GrpcClient
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -59,7 +57,7 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -279,7 +277,7 @@ class EditProfileActivity : AppCompatActivity() {
                                                 .error(R.drawable.ic_default_avatar)
                                                 .into(it)
                                         }
-                                        // Set result to notify ChatListActivity to refresh
+                                        // Set result to notify NewChatActivity to refresh
                                         setResult(RESULT_OK)
                                     } else {
                                         Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
@@ -362,7 +360,7 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", null)
     }
 
@@ -406,7 +404,7 @@ class EditProfileActivity : AppCompatActivity() {
                         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                         
                         // Update local identity
-                        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                         prefs.edit {
                             putString("username", newUsername)
                         }

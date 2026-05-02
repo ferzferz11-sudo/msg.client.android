@@ -17,6 +17,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.FCMLogEntryProto
 import java.util.*
+import androidx.core.graphics.toColorInt
 
 class FCMLogsActivity : AppCompatActivity() {
 
@@ -25,7 +26,7 @@ class FCMLogsActivity : AppCompatActivity() {
     private lateinit var progressBar: View
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -115,10 +116,10 @@ class FCMLogsActivity : AppCompatActivity() {
             holder.message.text = item.message
             
             val color = when (item.level) {
-                "ERROR" -> Color.RED
-                "WARN" -> Color.parseColor("#FFA500")
-                "SUCCESS" -> Color.parseColor("#4CAF50")
-                else -> Color.parseColor("#2196F3")
+                "ERROR"   -> Color.RED
+                "WARN"    -> "#FFA500".toColorInt()
+                "SUCCESS" -> "#4CAF50".toColorInt()
+                else      -> "#2196F3".toColorInt()
             }
             holder.level.setTextColor(color)
         }

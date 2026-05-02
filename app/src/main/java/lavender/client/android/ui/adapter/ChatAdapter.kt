@@ -106,12 +106,30 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
+        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         val isSelected = selectedPositions.contains(position)
-        holder.bind(displayedChats[position], currentUsername, avatarCache, isSelected, onlineUsers) {
+
+        // Передаем theme шестым параметром, как того ожидает новый метод bind
+        holder.bind(
+            displayedChats[position],
+            currentUsername,
+            avatarCache,
+            isSelected,
+            onlineUsers,
+            theme // <--- Теперь параметр на месте
+        ) {
+            // Это лямбда для onLongClick (аргумент onLongClick: () -> Unit)
             val currentPos = holder.bindingAdapterPosition
             if (currentPos == RecyclerView.NO_POSITION) return@bind
-            if (selectedPositions.contains(currentPos)) selectedPositions.remove(currentPos) else selectedPositions.add(currentPos)
-            notifyItemChanged(currentPos); onSelectionChanged(selectedPositions.size)
+
+            if (selectedPositions.contains(currentPos)) {
+                selectedPositions.remove(currentPos)
+            } else {
+                selectedPositions.add(currentPos)
+            }
+
+            notifyItemChanged(currentPos)
+            onSelectionChanged(selectedPositions.size)
         }
     }
 
@@ -125,57 +143,130 @@ class ChatAdapter(
         private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, currentUsername: String, avatarCache: Map<String, String>, isSelected: Boolean, onlineUsers: List<String>, onLongClick: () -> Unit) {
-            chatName.text = chat.name
+        fun bind(
+            chat: ChatInfo,
+            currentUsername: String,
+            avatarCache: Map<String, String>,
+            isSelected: Boolean,
+            onlineUsers: List<String>,
+            theme: lavender.client.android.data.proto.CustomThemeProto?,
+            onLongClick: () -> Unit
+        ) {
             val context = itemView.context
-            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+
+            // --- 1. ДЕФОЛТНЫЕ ЦВЕТА (Твоя Night Theme) ---
+            val defaultCardBg = "#1A1B46".toColorInt()
+            val defaultText = android.graphics.Color.WHITE
+            val defaultSecondary = "#E6E6FA".toColorInt()
+            val defaultPrimary = "#B19CD9".toColorInt()
+
+            // --- 2. БЕЗОПАСНЫЙ ПАРСИНГ ЦВЕТОВ ---
+            val primaryColor = parseSafeColor(theme?.primaryColor, defaultPrimary)
+            val textPrimary = parseSafeColor(theme?.textPrimaryColor, defaultText)
+            val textSecondary = parseSafeColor(theme?.onSurfaceColor, defaultSecondary)
+            val surfaceColor = parseSafeColor(theme?.surfaceColor, defaultCardBg)
+
+            // --- 3. ВИЗУАЛ ЭЛЕМЕНТА ---
             if (isSelected) {
-                cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))
-                itemView.alpha = 0.7f
+                // Подсветка выделения
+                cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.3f))
+                itemView.alpha = 0.8f
             } else {
-                if (theme != null) {
-                    try { cardView.setCardBackgroundColor(theme.surfaceColor.toColorInt()) } catch (_: Exception) { applyDefaultCardBackground(context) }
-                } else applyDefaultCardBackground(context)
+                cardView.setCardBackgroundColor(surfaceColor)
                 itemView.alpha = 1.0f
             }
-            if (theme != null) {
-                try { chatName.setTextColor(theme.textPrimaryColor.toColorInt()); chatType.setTextColor(theme.textSecondaryColor.toColorInt()) } catch (_: Exception) {}
-            } else {
-                val typedPrimary = android.util.TypedValue()
-                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedPrimary, true)
-                chatName.setTextColor(if (typedPrimary.resourceId != 0) ContextCompat.getColor(context, typedPrimary.resourceId) else typedPrimary.data)
-                val typedSecondary = android.util.TypedValue()
-                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedSecondary, true)
-                chatType.setTextColor(if (typedSecondary.resourceId != 0) ContextCompat.getColor(context, typedSecondary.resourceId) else typedSecondary.data)
-            }
+
+            // --- 4. ТЕКСТЫ И ИНДИКАТОРЫ ---
+            chatName.setTextColor(textPrimary)
+            chatType.setTextColor(textSecondary)
+
             chatName.text = chat.getDisplayName(currentUsername)
+
+            // Последнее сообщение
             if (chat.lastMessageText.isNotEmpty()) {
-                val prefix = if (chat.type == "group" || chat.type == "general") { if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else "" } else ""
+                val prefix = if (chat.type == "group" || chat.type == "general") {
+                    if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
+                } else ""
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)
-                chatType.maxLines = 1; chatType.ellipsize = android.text.TextUtils.TruncateAt.END
-            } else chatType.text = if (context.resources.configuration.locales[0].language == "ru") "Нет сообщений" else "No messages"
+                chatType.maxLines = 1
+                chatType.ellipsize = android.text.TextUtils.TruncateAt.END
+            } else {
+                chatType.text = if (context.resources.configuration.locales[0].language == "ru") "Нет сообщений" else "No messages"
+            }
+
+            // Счетчик непрочитанных
             unreadCount.isVisible = chat.unreadCount > 0
-            if (chat.unreadCount > 0) unreadCount.text = chat.unreadCount.toString()
+            if (chat.unreadCount > 0) {
+                unreadCount.text = chat.unreadCount.toString()
+                unreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+
+                // ИНТЕЛЛЕКТУАЛЬНЫЙ КОНТРАСТ:
+                // Если кружок светлый — текст черный, если темный — белый.
+                val textColorForBadge = if (primaryColor.isLight()) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                unreadCount.setTextColor(textColorForBadge)
+            }
+
+            // Индикатор админа
             val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
             adminIndicator.isVisible = !chat.type.equals("direct", ignoreCase = true) && isMeAdmin
-            if (isMeAdmin) adminIndicator.setOnClickListener { onSettingsClick?.invoke(chat) } else adminIndicator.setOnClickListener(null)
+            adminIndicator.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+
+            if (isMeAdmin) {
+                adminIndicator.setOnClickListener { onSettingsClick?.invoke(chat) }
+            } else {
+                adminIndicator.setOnClickListener(null)
+            }
+
+            // --- 5. АВАТАРЫ И КЛИКИ ---
             loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
+
             itemView.setOnClickListener {
                 if (selectedPositions.isNotEmpty()) {
-                    if ((chat.type == "group" || chat.type == "general") && !chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)) {
-                        val msg = if (context.resources.configuration.locales[0].language == "ru") "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
-                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show(); return@setOnClickListener
+                    if ((chat.type == "group" || chat.type == "general") && !isMeAdmin) {
+                        val msg = if (context.resources.configuration.locales[0].language == "ru")
+                            "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
                     }
                     onLongClick()
-                } else onChatClick(chat)
-            }
-            itemView.setOnLongClickListener {
-                if ((chat.type == "group" || chat.type == "general") && !chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)) {
-                    val msg = if (context.resources.configuration.locales[0].language == "ru") "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
-                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show(); return@setOnLongClickListener true
+                } else {
+                    onChatClick(chat)
                 }
-                onLongClick(); true
             }
+
+            itemView.setOnLongClickListener {
+                if ((chat.type == "group" || chat.type == "general") && !isMeAdmin) {
+                    val msg = if (context.resources.configuration.locales[0].language == "ru")
+                        "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
+                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnLongClickListener true
+                }
+                onLongClick()
+                true
+            }
+        }
+
+        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Внутри ChatViewHolder или ChatAdapter) ---
+
+        private fun parseSafeColor(colorStr: String?, defaultColor: Int): Int {
+            if (colorStr.isNullOrEmpty()) return defaultColor
+            return try {
+                colorStr.toColorInt()
+            } catch (_: Exception) {
+                defaultColor
+            }
+        }
+
+        private fun Int.isLight(): Boolean {
+            val darkness = 1 - (0.299 * android.graphics.Color.red(this) +
+                    0.587 * android.graphics.Color.green(this) +
+                    0.114 * android.graphics.Color.blue(this)) / 255
+            return darkness < 0.5
+        }
+
+        private fun adjustAlpha(color: Int, factor: Float): Int {
+            val alpha = Math.round(android.graphics.Color.alpha(color) * factor)
+            return android.graphics.Color.argb(alpha, android.graphics.Color.red(color), android.graphics.Color.green(color), android.graphics.Color.blue(color))
         }
 
         private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {

@@ -1,11 +1,9 @@
 package lavender.client.android
 
-import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableString
@@ -61,6 +59,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
+import lavender.client.android.ui.ThemeManager
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
 import lavender.client.android.ui.viewmodel.ChatListViewModel
@@ -85,135 +84,49 @@ class ChatListActivity : AppCompatActivity() {
     private var username: String = ""
     private var password: String = ""
     private var downloadJob: Job? = null
-    private var currentTheme: String? = null
 
     private val editProfileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
+            // После редактирования профиля (например, смены аватарки) обновляем список
             loadChats()
         }
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
+
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
+
         val config = newBase.resources.configuration
         config.setLocale(locale)
+
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onCreate(savedInstanceState: Bundle?) {
-        currentTheme = getSavedColorScheme() ?: "dark"
-        applySavedColorScheme()
+        // 1. Системные настройки (Язык и Edge-to-Edge)
         applySavedLanguage()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+
         super.onCreate(savedInstanceState)
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        username = intent.getStringExtra("username") ?: ""
-        password = intent.getStringExtra("password") ?: ""
-        val serverAddressFull = intent.getStringExtra("serverAddress") ?: "159.195.38.145"
+        // 2. Базовая инициализация данных
+        username = intent.getStringExtra("USERNAME") ?: ""
+        password = intent.getStringExtra("PASSWORD") ?: ""
+        val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS") ?: "159.195.38.145"
 
-        // Parse server address and port
         val parts = serverAddressFull.split(":")
         val serverHost = parts[0]
         val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
 
-        // Connect to gRPC server if not connected
-        grpcClient.connect(serverHost, false, serverPort, this)
-        
-        // Start chat session (auth and history loading)
-        grpcClient.startChat(username, password, "") { _ -> }
-
-        checkForUpdates()
-
-        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
-            }
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            binding.toolbar.updatePadding(top = systemBars.top)
-            binding.chatsRecyclerView.updatePadding(bottom = systemBars.bottom)
-            binding.addChatFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = 28.dpToPx() + systemBars.bottom
-                marginEnd = 16.dpToPx()
-            }
-            insets
-        }
-
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.apply {
-            title = ""
-            setDisplayHomeAsUpEnabled(false)
-        }
-
-        binding.root.findViewById<CircleImageView>(R.id.toolbarUserAvatar).setOnClickListener {
-            showUserMenuSheet()
-        }
-        binding.toolbarTitle.setOnClickListener {
-            showUserMenuSheet()
-        }
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (adapter.getSelectedChats().isNotEmpty()) {
-                    adapter.clearSelection()
-                } else {
-                    moveTaskToBack(true)
-                }
-            }
-        })
-
-        lifecycleScope.launch {
-            // repeatOnLifecycle — это «золотой стандарт».
-            // Он останавливает прослушивание, когда приложение свернуто, экономя батарею.
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                RealGrpcClient.connectionStatus.collect { status ->
-                    // Обновляем заголовок в зависимости от реального статуса
-                    binding.toolbarTitle.text = when (status) {
-                        ConnectionStatus.READY -> {
-                            // Соединение есть — показываем название экрана
-                            getString(R.string.chats)
-                        }
-                        ConnectionStatus.CONNECTING -> {
-                            // В процессе попытки подключения
-                            getString(R.string.connecting)
-                        }
-                        ConnectionStatus.FAILED -> {
-                            // Сеть пропала или сервер недоступен
-                            "Waiting for network..." // Можешь добавить свой R.string.waiting_network
-                        }
-                        ConnectionStatus.DISCONNECTED -> {
-                            // Полностью отключены (например, после logout)
-                            "Offline"
-                        }
-                    }
-
-                    // Опционально: можно менять прозрачность или цвет текста
-                    binding.toolbarTitle.alpha = if (status == ConnectionStatus.READY) 1.0f else 0.6f
-                }
-            }
-        }
-
-        binding.addChatFab.setOnClickListener {
-            showChatActionSheet()
-        }
-        
-        updateToolbarAvatar()
-
-        val updatePrefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-        val updateAvailable = updatePrefs.getBoolean("update_available", false)
-        binding.updateAvailableIcon.isVisible = updateAvailable
-        binding.updateAvailableIcon.setOnClickListener {
-            showUpdateConfirmationDialog(true)
-        }
-
+        // 3. !!! ВАЖНО: Сначала ИНИЦИАЛИЗИРУЕМ АДАПТЕР !!!
+        // Перенесли этот блок вверх, чтобы избежать UninitializedPropertyAccessException
         adapter = ChatAdapter(
             onChatClick = { chat ->
                 openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
@@ -236,35 +149,77 @@ class ChatListActivity : AppCompatActivity() {
             initialAvatarCache = grpcClient.getAvatarCache(),
             onlineUsers = grpcClient.users.value
         )
+
+        // Привязываем уже созданный адаптер
         binding.chatsRecyclerView.adapter = adapter
         binding.chatsRecyclerView.layoutManager = LinearLayoutManager(this)
 
-        binding.swipeRefreshLayout.setOnRefreshListener {
-            loadChats()
+        // 4. Сетевое подключение
+        grpcClient.connect(serverHost, false, serverPort, this)
+        grpcClient.startChat(username, password, "") { _ -> }
+
+        // 5. Темизация (теперь адаптер точно готов)
+        ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                android.util.Log.d("ThemeManager.applyTheme()", "ChatListActivity call $this")
+                ThemeManager.applyTheme(this)
+
+                val theme = ThemeManager.getCurrentTheme()
+                android.util.Log.d("ThemeManager.getCurrentTheme()", "ChatListActivity call $theme")
+
+                if (theme != null) {
+                    val primary = theme.primaryColor.toColorInt()
+                    binding.swipeRefreshLayout.setColorSchemeColors(primary)
+                } else {
+                    val nightColor = "#04052E".toColorInt()
+                    binding.root.setBackgroundColor(nightColor)
+                    binding.chatsRecyclerView.setBackgroundColor(nightColor)
+                    binding.swipeRefreshLayout.setBackgroundColor(nightColor)
+                }
+                adapter.notifyDataSetChanged()
+            }
         }
 
+        // 6. Остальные настройки UI
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.apply {
+            title = ""
+            setDisplayHomeAsUpEnabled(false)
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            binding.toolbar.updatePadding(top = systemBars.top)
+            binding.chatsRecyclerView.updatePadding(bottom = systemBars.bottom)
+            binding.addChatFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = 28.dpToPx() + systemBars.bottom
+                marginEnd = 16.dpToPx()
+            }
+            insets
+        }
+
+        // Обработка кликов и Flow
+        binding.toolbarTitle.setOnClickListener { showUserMenuSheet() }
+        binding.root.findViewById<CircleImageView>(R.id.toolbarUserAvatar).setOnClickListener { showUserMenuSheet() }
+        binding.addChatFab.setOnClickListener { showChatActionSheet() }
+
+        // Слушаем статус подключения
         lifecycleScope.launch {
-            grpcClient.systemNotification.collect { notification ->
-                if (notification != null) {
-                    runOnUiThread {
-                        AlertDialog.Builder(this@ChatListActivity)
-                            .setTitle(R.string.lavender_messenger)
-                            .setMessage(notification)
-                            .setPositiveButton(R.string.ok, null)
-                            .show()
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                RealGrpcClient.connectionStatus.collect { status ->
+                    binding.toolbarTitle.text = when (status) {
+                        ConnectionStatus.READY -> getString(R.string.chats)
+                        ConnectionStatus.CONNECTING -> getString(R.string.connecting)
+                        ConnectionStatus.FAILED -> "Waiting for network..."
+                        ConnectionStatus.DISCONNECTED -> "Offline"
                     }
-                    grpcClient.clearSystemNotification()
+                    binding.toolbarTitle.alpha = if (status == ConnectionStatus.READY) 1.0f else 0.6f
                 }
             }
         }
 
-        lifecycleScope.launch {
-            grpcClient.users.collect { onlineUsers ->
-                runOnUiThread {
-                    adapter.setOnlineUsers(onlineUsers)
-                }
-            }
-        }
+        // Загрузка чатов
+        binding.swipeRefreshLayout.setOnRefreshListener { loadChats() }
 
         if (viewModel.isInitialLoadComplete) {
             binding.swipeRefreshLayout.isRefreshing = false
@@ -275,28 +230,30 @@ class ChatListActivity : AppCompatActivity() {
             loadChats()
         }
 
+        // Всё остальное (Updates, FCM, BackPress)
+        checkForUpdates()
+        updateToolbarAvatar()
         loadAllUsers()
         startPollingChats()
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (adapter.getSelectedChats().isNotEmpty()) adapter.clearSelection()
+                else moveTaskToBack(true)
+            }
+        })
+
+        // FCM Token registration
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
+            if (task.isSuccessful && username.isNotEmpty()) {
                 val token = task.result
                 lifecycleScope.launch {
                     delay(1000)
-                    if (username.isNotEmpty()) {
-                        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-                        val sendEnabled = prefs.getBoolean("push_send_enabled", true)
-                        val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
-                        val finalToken = if (receiveEnabled) token else "DISABLED"
-                        grpcClient.registerToken(username, finalToken, sendEnabled)
-                    }
+                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                    val sendEnabled = prefs.getBoolean("push_send_enabled", true)
+                    val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
+                    grpcClient.registerToken(username, if (receiveEnabled) token else "DISABLED", sendEnabled)
                 }
-            }
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
             }
         }
 
@@ -307,15 +264,14 @@ class ChatListActivity : AppCompatActivity() {
         super.onStart()
         // Проверяем статус напрямую через Enum. Это надежнее.
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
-            val serverAddressFull = intent.getStringExtra("serverAddress") ?: "159.195.38.145"
+            val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS") ?: "159.195.38.145"
+
             val parts = serverAddressFull.split(":")
             val serverHost = parts[0]
             val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
 
+            // Переподключаемся, если связь была разорвана
             grpcClient.connect(serverHost, false, serverPort, this)
-            // Мы не вызываем startChat здесь вручную,
-            // так как наш новый RealGrpcClient сделает это САМ,
-            // как только статус станет READY!
         }
     }
 
@@ -354,7 +310,7 @@ class ChatListActivity : AppCompatActivity() {
             messageText.text = getString(R.string.delete_chats_confirmation, 1)
             
             // Apply theme colors - custom theme or built-in theme
-            val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val customTheme = ThemeManager.getCurrentTheme()
             if (customTheme != null) {
                 try {
                     val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
@@ -530,14 +486,21 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun openChat(chatId: String, roomName: String, isDirect: Boolean = false, participants: String = "[]", creator: String = "", avatarUrl: String = "") {
         val intent = Intent(this, NewChatActivity::class.java).apply {
+            // Данные чата
             putExtra("ROOM_ID", chatId)
             putExtra("CHAT_NAME", roomName)
             putExtra("IS_DIRECT", isDirect)
             putExtra("PARTICIPANTS", participants)
             putExtra("CREATOR", creator)
             putExtra("AVATAR_URL", avatarUrl)
+
+            // Данные пользователя (ВЕРХНИЙ РЕГИСТРЕ)
             putExtra("USERNAME", username)
             putExtra("PASSWORD", password)
+
+            // 🛠️ ДОБАВЛЯЕМ: проброс сервера
+            val serverAddressFull = this@ChatListActivity.intent.getStringExtra("SERVER_ADDRESS")
+            putExtra("SERVER_ADDRESS", serverAddressFull)
         }
         startActivity(intent)
     }
@@ -568,7 +531,7 @@ class ChatListActivity : AppCompatActivity() {
                     messageText.text = getString(R.string.delete_chats_confirmation, selected.size)
                     
                     // Apply theme colors - custom theme or built-in theme
-                    val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                    val customTheme = ThemeManager.getCurrentTheme()
                     if (customTheme != null) {
                         try {
                             val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
@@ -660,65 +623,80 @@ class ChatListActivity : AppCompatActivity() {
         clearMenuAnimations()
         menuInflater.inflate(R.menu.chat_list_menu, menu)
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
-        
-        // Get colors from custom theme or Material Design attributes
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-        val (iconColor, textColor, backgroundColor) = if (customTheme != null) {
+
+        // --- 1. ОПРЕДЕЛЯЕМ ЦВЕТА ДЛЯ МЕНЮ ---
+        val customTheme = ThemeManager.getCurrentTheme()
+
+        // Твои дефолтные цвета из стиля (Night Theme)
+        val defaultIconColor = "#E6E6FA".toColorInt() // lavender_mist
+        val defaultTextColor = android.graphics.Color.WHITE
+
+        val (iconColor, textColor) = if (customTheme != null) {
             try {
-                Triple(customTheme.onPrimaryColor.toColorInt(), customTheme.onPrimaryColor.toColorInt(), customTheme.backgroundColor.toColorInt())
+                val color = customTheme.onPrimaryColor.toColorInt()
+                Pair(color, color)
             } catch (_: Exception) {
-                val typedValue = TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                Triple(typedValue.data, typedValue.data, 0)
+                Pair(defaultIconColor, defaultTextColor)
             }
         } else {
-            val typedValue = TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-            Triple(typedValue.data, typedValue.data, 0)
+            Pair(defaultIconColor, defaultTextColor)
         }
 
-
+        // --- 2. ПРИМЕНЯЕМ К ИКОНКАМ (Поиск, Удаление) ---
         menu.findItem(R.id.action_search)?.apply {
             isVisible = !hasSelection
             iconTintList = ColorStateList.valueOf(iconColor)
         }
+
         menu.findItem(R.id.action_delete)?.apply {
             isVisible = hasSelection
             iconTintList = ColorStateList.valueOf(iconColor)
         }
-        menu.findItem(R.id.action_update)?.apply {
-            isVisible = !hasSelection
-            if (customTheme != null) {
-                try {
-                    val textColorInt = customTheme.onPrimaryColor.toColorInt()
-                    title = SpannableString(title).apply {
-                        setSpan(android.text.style.ForegroundColorSpan(textColorInt), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                } catch (_: Exception) {}
+
+        // --- 3. ПРИМЕНЯЕМ К ТЕКСТОВЫМ ПУНКТАМ (Обновление, О программе, Админка) ---
+        // Используем вспомогательную функцию для покраски текста в меню
+        val menuItemsToColor = listOf(
+            R.id.action_update,
+            R.id.action_about,
+            R.id.action_super_admin
+        )
+
+        for (itemId in menuItemsToColor) {
+            menu.findItem(itemId)?.apply {
+                if (itemId == R.id.action_super_admin) {
+                    isVisible = grpcClient.isSuperAdmin.value
+                }
+
+                // Красим текст пункта меню через Spannable
+                val spanString = SpannableString(title.toString())
+                spanString.setSpan(
+                    android.text.style.ForegroundColorSpan(textColor),
+                    0,
+                    spanString.length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                title = spanString
             }
         }
-        menu.findItem(R.id.action_about)?.apply {
-            if (customTheme != null) {
-                try {
-                    val textColorInt = customTheme.onPrimaryColor.toColorInt()
-                    title = SpannableString(title).apply {
-                        setSpan(android.text.style.ForegroundColorSpan(textColorInt), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-        menu.findItem(R.id.action_super_admin)?.apply {
-            isVisible = grpcClient.isSuperAdmin.value
-            if (customTheme != null) {
-                try {
-                    val textColorInt = customTheme.onPrimaryColor.toColorInt()
-                    title = SpannableString(title).apply {
-                        setSpan(android.text.style.ForegroundColorSpan(textColorInt), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                } catch (_: Exception) {}
-            }
-        }
+
         return true
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    override fun onResume() {
+        super.onResume()
+        // 1. Снова загружаем тему (вдруг она изменилась в другом окне)
+        ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                // 2. Применяем к фону и тулбару
+                ThemeManager.applyTheme(this)
+
+                // 3. САМОЕ ВАЖНОЕ: Говорим списку, что пора перерисовать карточки
+                if (::adapter.isInitialized) {
+                    adapter.notifyDataSetChanged()
+                }
+            }
+        }
     }
 
     private fun showToast(message: String) {
@@ -816,7 +794,7 @@ class ChatListActivity : AppCompatActivity() {
         val currentVersion = try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName
-        } catch (e: Exception) { BuildConfig.VERSION_NAME }
+        } catch (_: Exception) { BuildConfig.VERSION_NAME }
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", currentVersion) ?: currentVersion
         
         // Create custom dialog view
@@ -840,7 +818,7 @@ class ChatListActivity : AppCompatActivity() {
         }
         
         // Apply theme colors - custom theme or built-in theme
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
@@ -992,7 +970,7 @@ class ChatListActivity : AppCompatActivity() {
         val menuUserBio = sheetView.findViewById<TextView>(R.id.menuUserBio)
         
         // Apply custom theme colors to the sheet
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val backgroundColor = customTheme.backgroundColor.toColorInt()
@@ -1407,9 +1385,9 @@ class ChatListActivity : AppCompatActivity() {
         resources.updateConfiguration(config, resources.displayMetrics)
     }
 
-    private fun getSavedColorScheme(): String? = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("color_scheme", null)
-    private fun getSavedLanguage(): String? = getSharedPreferences("ChatPrefs", MODE_PRIVATE).getString("language", null)
-    private fun saveLanguage(languageCode: String) { getSharedPreferences("ChatPrefs", MODE_PRIVATE).edit { putString("language", languageCode) } }
+    private fun getSavedColorScheme(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("color_scheme", null)
+    private fun getSavedLanguage(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("language", null)
+    private fun saveLanguage(languageCode: String) { getSharedPreferences("lavender_prefs", MODE_PRIVATE).edit { putString("language", languageCode) } }
 
     private fun toggleLanguage() {
         val next = if (getSavedLanguage() == "en") "ru" else "en"

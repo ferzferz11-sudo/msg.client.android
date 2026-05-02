@@ -9,8 +9,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import lavender.client.android.MainActivity
-import lavender.client.android.SplashActivity
 import lavender.client.android.R
 
 class LavenderMessagingService : FirebaseMessagingService() {
@@ -18,30 +16,20 @@ class LavenderMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        // Check if receiving is enabled
-        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         if (!prefs.getBoolean("push_receive_enabled", true)) {
             Log.d("FCM", "onMessageReceived: push_receive_enabled is false, skipping")
             return
         }
 
-        Log.d("FCM", "onMessageReceived called")
-        Log.d("FCM", "From: ${remoteMessage.from}")
-        Log.d("FCM", "Notification title: ${remoteMessage.notification?.title}")
-        Log.d("FCM", "Notification body: ${remoteMessage.notification?.body}")
-        Log.d("FCM", "Data: ${remoteMessage.data}")
+        Log.d("FCM", "onMessageReceived called from: ${remoteMessage.from}")
 
-        // Extract title and body from data payload (for background messages)
+        // Извлекаем данные (приоритет payload из data, затем notification)
         val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "Новое сообщение"
         val body = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: ""
-
-        // Extract room_id from data payload
         val roomId = remoteMessage.data["room_id"] ?: "general"
 
-        // Save to history for testing
-        NotificationHistory.add(title, body, remoteMessage.from)
-
-        // Show notification with room_id
+        // Показываем уведомление
         showNotification(title, body, roomId)
     }
 
@@ -49,26 +37,102 @@ class LavenderMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         Log.d("FCM", "Refreshed token: $token")
 
-        // Get saved username from SharedPreferences
-        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
+        // 🛠️ ИСПРАВЛЕНО: Используем lavender_prefs для получения имени пользователя
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val username = prefs.getString("username", "")
 
-        if (username != null && username.isNotEmpty()) {
-            // Register new token on server
+        if (!username.isNullOrEmpty()) {
+            // Регистрируем новый токен на сервере
             lavender.client.android.data.grpc.GrpcClient.registerToken(username, token)
             Log.d("FCM", "New token registered for user: $username")
         }
+    }
+
+    private fun showNotification(title: String, body: String, roomId: String) {
+        val channelId = "lavender_messages"
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        // Создаем канал уведомлений (обязательно для Android 8.0+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Сообщения Lavender",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val username = prefs.getString("username", "") ?: ""
+        val password = prefs.getString("password", "") ?: ""
+        val serverAddress = prefs.getString("server_address", "") ?: ""
+
+        val intent = if (username.isNotEmpty() && password.isNotEmpty()) {
+            // Логин есть — летим сразу в NewChatActivity
+            Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("USERNAME", username)
+                putExtra("PASSWORD", password)
+                putExtra("SERVER_ADDRESS", serverAddress)
+                putExtra("ROOM_ID", roomId)
+                putExtra("CHAT_NAME", title)
+                putExtra("IS_DIRECT", !roomId.startsWith("group_") && roomId != "general")
+                putExtra("from_notification", true)
+            }
+        } else {
+            // Логина нет — идем в SplashActivity
+            Intent(this, lavender.client.android.SplashActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("ROOM_ID", roomId)
+                putExtra("from_notification", true)
+            }
+        }
+
+        // Уникальный PendingIntent для каждой комнаты
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            roomId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        // Добавляем ID комнаты в экстра для возможности удаления программно
+        val extras = android.os.Bundle()
+        extras.putString("room_id", roomId)
+        notificationBuilder.addExtras(extras)
+
+        // Применяем стиль (если выбран messaging)
+        val style = prefs.getString("notification_style", "standard")
+        if (style == "messaging") {
+            val user = androidx.core.app.Person.Builder().setName(title).build()
+            val messagingStyle = NotificationCompat.MessagingStyle(user)
+                .addMessage(body, System.currentTimeMillis(), user)
+
+            if (roomId != "general") {
+                messagingStyle.setConversationTitle(title)
+                messagingStyle.setGroupConversation(!roomId.startsWith("direct_"))
+            }
+            notificationBuilder.setStyle(messagingStyle)
+        }
+
+        notificationManager.notify(roomId.hashCode(), notificationBuilder.build())
+        Log.d("FCM", "Notification shown for room: $roomId")
     }
 
     companion object {
         fun dismissNotificationsForRoom(context: Context, roomId: String) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                val activeNotifications = notificationManager.activeNotifications
-                for (notification in activeNotifications) {
-                    val extras = notification.notification.extras
-                    val notifRoomId = extras.getString("room_id")
-                    if (notifRoomId == roomId) {
+                notificationManager.activeNotifications.forEach { notification ->
+                    if (notification.notification.extras.getString("room_id") == roomId) {
                         notificationManager.cancel(notification.id)
                     }
                 }
@@ -76,87 +140,5 @@ class LavenderMessagingService : FirebaseMessagingService() {
                 notificationManager.cancelAll()
             }
         }
-    }
-
-    private fun showNotification(title: String, body: String, roomId: String) {
-        Log.d("FCM", "showNotification called with title: $title, body: $body, room_id: $roomId")
-
-        val channelId = "lavender_messages"
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        val channel = NotificationChannel(
-            channelId,
-            "Сообщения Lavender",
-            NotificationManager.IMPORTANCE_DEFAULT
-        )
-        notificationManager.createNotificationChannel(channel)
-
-        // Get saved credentials to pass to NewChatActivity
-        val prefs = getSharedPreferences("ChatPrefs", Context.MODE_PRIVATE)
-        val username = prefs.getString("username", "") ?: ""
-        val password = prefs.getString("password", "") ?: ""
-
-        val intent = if (username.isNotEmpty() && password.isNotEmpty()) {
-            // Logged in - go straight to chat
-            Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                putExtra("USERNAME", username)
-                putExtra("PASSWORD", password)
-                putExtra("ROOM_ID", roomId)
-                putExtra("CHAT_NAME", title) // Use title as chat name for now
-                putExtra("IS_DIRECT", !roomId.startsWith("group_") && roomId != "general")
-                putExtra("from_notification", true)
-            }
-        } else {
-            // Not logged in - go to Splash to handle auth
-            Intent(this, lavender.client.android.SplashActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                putExtra("room_id", roomId)
-                putExtra("from_notification", true)
-            }
-        }
-
-        val pendingIntent = PendingIntent.getActivity(this, System.currentTimeMillis().toInt(), intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
-
-        val style = prefs.getString("notification_style", "standard") ?: "standard"
-
-        val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            
-        // Add room_id to extras so we can filter and dismiss later
-        val extras = android.os.Bundle()
-        extras.putString("room_id", roomId)
-        notificationBuilder.addExtras(extras)
-
-        when (style) {
-            "messaging" -> {
-                val user = androidx.core.app.Person.Builder()
-                    .setName(title)
-                    .build()
-                
-                val messagingStyle = NotificationCompat.MessagingStyle(user)
-                    .addMessage(body, System.currentTimeMillis(), user)
-                
-                if (roomId != "general" && roomId != "general_chat") {
-                    messagingStyle.setConversationTitle("Chat: $roomId")
-                    messagingStyle.setGroupConversation(true)
-                }
-
-                notificationBuilder.setStyle(messagingStyle)
-            }
-            "big_text" -> {
-                notificationBuilder.setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            }
-        }
-        
-        // Always set basic fields for compatibility and non-styled display
-        notificationBuilder.setContentTitle(title)
-        notificationBuilder.setContentText(body)
-
-        notificationManager.notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
-        Log.d("FCM", "Notification shown with room_id: $roomId")
     }
 }

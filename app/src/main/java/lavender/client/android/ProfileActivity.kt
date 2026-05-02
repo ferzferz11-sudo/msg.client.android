@@ -2,14 +2,18 @@ package lavender.client.android
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.widget.*
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -22,10 +26,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
@@ -33,9 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.ui.adapter.SelectableUserAdapter
-import lavender.client.android.ui.adapter.UserAdapter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -47,7 +45,7 @@ import java.util.Locale
 class ProfileActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -355,7 +353,7 @@ class ProfileActivity : AppCompatActivity() {
                             .setTitle(R.string.delete_group)
                             .setMessage(R.string.delete_group_confirm)
                             .setPositiveButton(R.string.delete) { _, _ ->
-                                val intent = Intent(this@ProfileActivity, ChatListActivity::class.java).apply {
+                                val intent = Intent(this@ProfileActivity, NewChatActivity::class.java).apply {
                                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
                                     putExtra("ACTION_DELETE_CHAT_ID", roomId)
                                     putExtra("ACTION_DELETE_CHAT_NAME", username)
@@ -490,7 +488,7 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("color_scheme", null)
     }
 

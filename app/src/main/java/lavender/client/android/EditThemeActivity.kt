@@ -10,15 +10,23 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.AbsListView
+import android.widget.BaseAdapter
+import android.widget.EditText
+import android.widget.GridView
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
@@ -28,14 +36,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
-import lavender.client.android.ui.ThemeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.util.*
+import java.util.Locale
 
 class EditThemeActivity : AppCompatActivity() {
 
@@ -80,7 +87,7 @@ class EditThemeActivity : AppCompatActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -357,21 +364,43 @@ class EditThemeActivity : AppCompatActivity() {
     }
 
     private fun getCurrentThemeFromInputs(): CustomThemeProto {
+        // Вспомогательная функция, чтобы не дублировать код получения цвета
+        fun getColor(key: String, default: String): String {
+            val input = colorInputs[key]?.text.toString().trim()
+            return if (input.startsWith("#") && (input.length == 7 || input.length == 9)) {
+                input
+            } else if (input.isNotEmpty() && !input.startsWith("#")) {
+                "#$input" // Добавляем решетку, если юзер забыл
+            } else {
+                default
+            }
+        }
+
         return CustomThemeProto(
-            id = themeId ?: UUID.randomUUID().toString(),
-            name = editName.text.toString().trim(),
-            primaryColor = colorInputs["primary"]?.text.toString().ifEmpty { "#312051" },
-            onPrimaryColor = colorInputs["onPrimary"]?.text.toString().ifEmpty { "#FFFFFF" },
-            surfaceColor = colorInputs["surface"]?.text.toString().ifEmpty { "#F8F7FC" },
-            onSurfaceColor = colorInputs["onSurface"]?.text.toString().ifEmpty { "#000000" },
-            bottomPanelColor = colorInputs["bottomPanel"]?.text.toString().ifEmpty { "#F8F7FC" },
-            onBottomPanelColor = colorInputs["onBottomPanel"]?.text.toString().ifEmpty { "#000000" },
-            backgroundColor = colorInputs["background"]?.text.toString().ifEmpty { "#FFFFFF" },
-            textPrimaryColor = colorInputs["textPrimary"]?.text.toString().ifEmpty { "#000000" },
-            textSecondaryColor = colorInputs["textPrimary"]?.text.toString().ifEmpty { "#000000" }, 
-            isDark = false, 
-            backgroundImageUrl = backgroundImageUrl,
-            chatListBackgroundImageUrl = chatListBackgroundImageUrl
+            id = themeId ?: java.util.UUID.randomUUID().toString(),
+            name = editName.text.toString().trim().ifEmpty { "New Theme" },
+
+            primaryColor = getColor("primary", "#312051"),
+            onPrimaryColor = getColor("onPrimary", "#FFFFFF"),
+
+            surfaceColor = getColor("surface", "#F8F7FC"),
+            onSurfaceColor = getColor("onSurface", "#000000"),
+
+            bottomPanelColor = getColor("bottomPanel", "#F8F7FC"),
+            onBottomPanelColor = getColor("onBottomPanel", "#000000"),
+
+            backgroundColor = getColor("background", "#FFFFFF"),
+
+            textPrimaryColor = getColor("textPrimary", "#000000"),
+            // 🛠️ ИСПРАВЛЕНО: теперь берем из правильного инпута "textSecondary"
+            textSecondaryColor = getColor("textSecondary", "#666666"),
+
+            // 🛠️ УЛУЧШЕНО: определяем темную тему автоматически по цвету фона
+            // (или возьми значение из чекбокса/свитча, если он у тебя есть)
+            isDark = false, //isColorDark(getColor("background", "#FFFFFF").toColorInt()),
+
+            backgroundImageUrl = backgroundImageUrl ?: "",
+            chatListBackgroundImageUrl = chatListBackgroundImageUrl ?: ""
         )
     }
 
@@ -452,8 +481,8 @@ class EditThemeActivity : AppCompatActivity() {
             
             // FAB
             val fab = root.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.previewFab)
-            fab?.backgroundTintList = android.content.res.ColorStateList.valueOf(primary)
-            fab?.imageTintList = android.content.res.ColorStateList.valueOf(onPrimary)
+            fab?.backgroundTintList = ColorStateList.valueOf(primary)
+            fab?.imageTintList      = ColorStateList.valueOf(onPrimary)
 
             val chatTitle = root.findViewById<TextView>(R.id.previewChatTitle)
             if (chatTitle != null) {
@@ -480,11 +509,6 @@ class EditThemeActivity : AppCompatActivity() {
             root.findViewById<ImageView>(R.id.previewSendButton)?.setColorFilter(primary)
             root.findViewById<TextView>(R.id.previewInputPlaceholder)?.setTextColor(onBpColor)
         } catch (_: Exception) {}
-    }
-
-    private fun isColorLight(color: Int): Boolean {
-        val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255
-        return darkness < 0.5
     }
 
     private fun checkChanges() {

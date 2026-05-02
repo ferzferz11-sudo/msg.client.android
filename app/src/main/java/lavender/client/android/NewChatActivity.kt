@@ -57,6 +57,7 @@ import lavender.client.android.ui.adapter.MessageSwipeController
 import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
+import lavender.client.android.ui.ThemeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -69,7 +70,7 @@ import java.util.Locale
 class NewChatActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("ChatPrefs", MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
@@ -216,15 +217,14 @@ class NewChatActivity : AppCompatActivity() {
         initViews()
 
         // 4. Темизация
-        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+        ThemeManager.loadTheme(this, username) {
             runOnUiThread {
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
+                ThemeManager.applyTheme(this)
                 applyChatBackground()
             }
         }
 
-        // 5. Инициализация компонентов.
-        // ВАЖНО: setupObservers() должен идти РАНЬШЕ старта чата.
+        // 5. Инициализация компонентов
         setupToolbar()
         setupRecyclerView()
         setupObservers()
@@ -308,28 +308,42 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun loadDataFromIntent() {
-        // 1. Извлекаем Room ID (самое важное для навигации из Пушей)
-        // Проверяем оба варианта ключа: и твой стандартный, и тот, что может прийти из FCM
-        val incomingRoomId = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("roomId")
-        if (!incomingRoomId.isNullOrEmpty()) {
-            roomId = incomingRoomId
+        // 1. Извлекаем Room ID (сначала из Пуша, потом из обычного интента)
+        // Если ничего не пришло — по умолчанию идем в "general"
+        roomId = intent.getStringExtra("ROOM_ID")
+            ?: intent.getStringExtra("roomId")
+                    ?: (if (roomId.isEmpty()) "general" else roomId)
+
+        // 2. Безопасное извлечение USERNAME и PASSWORD
+        // Если интент пустой (например, при открытии с иконки), берем данные из SharedPreferences
+        val incomingUser = intent.getStringExtra("USERNAME")
+        val incomingPass = intent.getStringExtra("PASSWORD")
+
+        if (!incomingUser.isNullOrEmpty()) {
+            username = incomingUser
+        }
+        if (!incomingPass.isNullOrEmpty()) {
+            password = incomingPass
         }
 
-        // 2. Безопасное обновление остальных полей
-        // Используем ?.let { ... }, чтобы НЕ затирать данные пустыми строками,
-        // если в новом интенте (из Пуша) этих полей нет.
-        intent.getStringExtra("USERNAME")?.let { username = it }
-        intent.getStringExtra("PASSWORD")?.let { password = it }
+        // если после интента данных всё еще нет, тянем из префов
+        if (username.isEmpty() || password.isEmpty()) {
+            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            username = prefs.getString("username", "") ?: ""
+            password = prefs.getString("password", "") ?: ""
+        }
+
+        // 3. Остальные поля (обновляем только если они переданы)
         intent.getStringExtra("CHAT_NAME")?.let { chatName = it }
 
-        // Для Boolean используем текущее значение как дефолтное
+        // Для Boolean: если в интенте нет ключа, сохраняем текущее значение isDirect
         isDirect = intent.getBooleanExtra("IS_DIRECT", isDirect)
 
         intent.getStringExtra("PARTICIPANTS")?.let { participantsJson = it }
         intent.getStringExtra("CREATOR")?.let { creator = it }
         intent.getStringExtra("AVATAR_URL")?.let { chatAvatarUrl = it }
 
-        android.util.Log.d("ChatData", "Loaded RoomId: $roomId, User: $username, IsDirect: $isDirect")
+        android.util.Log.d("ChatData", "Room: $roomId, User: $username, Direct: $isDirect")
     }
 
     private fun setupToolbar() {
@@ -381,7 +395,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbar.setNavigationIcon(iconResId)
         toolbar.navigationIcon?.let {
             val wrapped = DrawableCompat.wrap(it)
-            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val theme = ThemeManager.getCurrentTheme()
             val iconColor = if (theme != null) {
                 try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
             } else {
@@ -491,7 +505,7 @@ class NewChatActivity : AppCompatActivity() {
         
         // Apply custom theme color to search icon
         val iconColor = run {
-            val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val customTheme = ThemeManager.getCurrentTheme()
             if (customTheme != null) {
                 try {
                     customTheme.onPrimaryColor.toColorInt()
@@ -510,7 +524,7 @@ class NewChatActivity : AppCompatActivity() {
         menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
         
         // Style menu items with custom theme
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val textColor = customTheme.onPrimaryColor.toColorInt()
@@ -576,7 +590,7 @@ class NewChatActivity : AppCompatActivity() {
         val emojiGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
 
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
@@ -611,8 +625,8 @@ class NewChatActivity : AppCompatActivity() {
                 text = emoji
                 textSize = 24f
                 gravity = android.view.Gravity.CENTER
-                layoutParams = android.view.ViewGroup.LayoutParams(size, size)
-                val typedValue = android.util.TypedValue()
+                layoutParams = ViewGroup.LayoutParams(size, size)
+                val typedValue = TypedValue()
                 theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
                 setBackgroundResource(typedValue.resourceId)
                 setOnClickListener {
@@ -635,7 +649,7 @@ class NewChatActivity : AppCompatActivity() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
         
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
@@ -695,7 +709,7 @@ class NewChatActivity : AppCompatActivity() {
         closeSearch.isVisible = false // Hide the old close icon
 
         // Apply custom theme colors to search bar
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 // Set background to transparent for custom themes
@@ -771,7 +785,7 @@ class NewChatActivity : AppCompatActivity() {
         forwardMessages.isVisible = count > 0
         
         // Apply theme color to selection toolbar
-        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val theme = ThemeManager.getCurrentTheme()
         if (theme != null) {
             try {
                 val primaryColor = theme.primaryColor.toColorInt()
@@ -827,7 +841,7 @@ class NewChatActivity : AppCompatActivity() {
         messageText.text = getString(R.string.delete_messages_confirm, selectedMessages.size)
         
         // Apply theme colors - custom theme or built-in theme
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
@@ -843,7 +857,7 @@ class NewChatActivity : AppCompatActivity() {
             } catch (_: Exception) {}
         } else {
             // Use Material Design attributes for built-in themes
-            val typedValue = android.util.TypedValue()
+            val typedValue = TypedValue()
             theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
             val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
             
@@ -891,7 +905,7 @@ class NewChatActivity : AppCompatActivity() {
                 }
                 
                 val chatNames = otherChats.map { it.getDisplayName(username) }.toTypedArray()
-                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+                val customTheme = ThemeManager.getCurrentTheme()
                 val builder = AlertDialog.Builder(this)
                     .setTitle(R.string.forward_to)
                     .setItems(chatNames) { _, which ->
@@ -946,7 +960,7 @@ class NewChatActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
@@ -1026,7 +1040,7 @@ class NewChatActivity : AppCompatActivity() {
         editText.setText(message.text)
         editText.setSelection(message.text.length)
         
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val textColor = customTheme.textPrimaryColor.toColorInt()
@@ -1068,7 +1082,7 @@ class NewChatActivity : AppCompatActivity() {
         attachButton.visibility = View.GONE
         audioButton.visibility = View.GONE
 
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         audioRecordingView.applyCustomTheme(customTheme)
 
         setupAudioRecordingView()
@@ -1159,7 +1173,7 @@ class NewChatActivity : AppCompatActivity() {
                         }
                         
                         val url = if (responseBody.contains("\"url\":")) {
-                            try { org.json.JSONObject(responseBody).getString("url") } catch (e: Exception) { "" }
+                            try { org.json.JSONObject(responseBody).getString("url") } catch (_: Exception) { "" }
                         } else if (responseBody.startsWith("http")) responseBody else ""
                         
                         runOnUiThread {
@@ -1210,7 +1224,7 @@ class NewChatActivity : AppCompatActivity() {
                         }
                         
                         val url = if (responseBody.contains("\"url\":")) {
-                            try { org.json.JSONObject(responseBody).getString("url") } catch (e: Exception) { "" }
+                            try { org.json.JSONObject(responseBody).getString("url") } catch (_: Exception) { "" }
                         } else if (responseBody.startsWith("http")) responseBody else ""
                         
                         runOnUiThread {
@@ -1261,10 +1275,32 @@ class NewChatActivity : AppCompatActivity() {
         return result
     }
 
-    private fun applySavedColorScheme() { setTheme(R.style.Theme_Lavender_Dark_NoActionBar) }
+    private fun applySavedColorScheme() {
+        // Твоя дефолтная темная тема
+        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
+    }
+
     private fun applyChatBackground() {
-        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme() ?: return
-        if (theme.backgroundImageUrl.isNotEmpty()) findViewById<ImageView>(R.id.chatBackground)?.let { com.bumptech.glide.Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(it); messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT); swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT) }
+        // 1. Получаем тему через наш новый метод
+        val theme = ThemeManager.getCurrentTheme() ?: return
+
+        // 2. Если есть ссылка на фон — грузим её
+        if (theme.backgroundImageUrl.isNotEmpty()) {
+            findViewById<ImageView>(R.id.chatBackground)?.let { imageView ->
+                com.bumptech.glide.Glide.with(this)
+                    .load(theme.backgroundImageUrl)
+                    // 🛠️ Исправленный синтаксис centerCrop, чтобы не было ошибок компиляции
+                    .apply(com.bumptech.glide.request.RequestOptions.centerCropTransform())
+                    .into(imageView)
+
+                // 3. Делаем контейнеры прозрачными, чтобы видеть картинку
+                messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+
+                // Если у тебя ConstraintLayout (root), его тоже можно сделать прозрачным
+                findViewById<View>(android.R.id.content).setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            }
+        }
     }
 
     private fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>) {
@@ -1320,7 +1356,7 @@ class NewChatActivity : AppCompatActivity() {
                     .find { it != username }
                     .also { cachedOtherUser = it }
             }
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
     }
 
     private fun getThemeColor(attr: Int): Int {
@@ -1344,7 +1380,7 @@ class NewChatActivity : AppCompatActivity() {
             val typedValue = TypedValue()
             theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
             toolbarSubtitle.setTextColor(typedValue.data)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             toolbarSubtitle.isVisible = false
         }
     }
