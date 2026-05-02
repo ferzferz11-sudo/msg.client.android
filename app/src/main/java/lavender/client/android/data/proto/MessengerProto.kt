@@ -521,3 +521,40 @@ data class GetFCMLogsRequestProto(
 data class GetFCMLogsResponseProto(
     val logs: List<FCMLogEntryProto> = emptyList()
 )
+
+// Draft messages
+data class SaveDraftRequestProto(
+    val username: String = "",
+    val roomId: String = "",
+    val draftText: String = "",
+    val repliedToMessageId: String = "",
+    val repliedToUser: String = "",
+    val repliedToText: String = ""
+)
+
+data class SaveDraftResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetDraftRequestProto(
+    val username: String = "",
+    val roomId: String = ""
+)
+
+data class GetDraftResponseProto(
+    val draftText: String = "",
+    val repliedToMessageId: String = "",
+    val repliedToUser: String = "",
+    val repliedToText: String = "",
+    val hasDraft: Boolean = false
+)
+
+data class DeleteDraftRequestProto(
+    val username: String = "",
+    val roomId: String = ""
+)
+
+data class DeleteDraftResponseProto(
+    val success: Boolean = false
+)

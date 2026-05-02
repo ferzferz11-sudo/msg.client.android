@@ -5,6 +5,21 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+1.0.3.0
+### Message Drafts (Unsent Message Persistence)
+- Draft messages are now automatically saved when leaving a chat.
+- Draft text and reply context are restored when re-entering the chat.
+- Draft is automatically cleared after successful message send.
+- Works across all chats with server-side storage for multi-device support.
+- New gRPC methods: SaveDraft, GetDraft, DeleteDraft.
+- Full reply preservation: message ID, username, and text are saved with the draft.
+
+### Server Health Monitoring
+- Added `monitor.sh` script for automated server health checks.
+- Runs every 30 minutes via cron to verify server availability.
+- Auto-restarts server if down, with detailed logging to `logs.txt`.
+- Integrated into deployment process for automatic setup.
+
 1.0.2.33
 масштабный рефакторинг системы тем
 

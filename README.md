@@ -175,7 +175,15 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.2.9**
+Current version: **1.0.3.0**
+
+### Version 1.0.3.0 - Message Drafts & Server Monitoring
+- 💾 **Draft Messages**: Unsent messages are now automatically saved when leaving a chat.
+- 🔄 **Auto-Restore**: Draft text and reply context are restored when re-entering the chat.
+- 🗑️ **Auto-Clear**: Draft is automatically deleted after successful message send.
+- ☁️ **Server-Side Storage**: Drafts persist across devices with server-side storage.
+- 💬 **Reply Preservation**: Full reply context (message ID, username, text) is saved with the draft.
+- 🔍 **Server Health Monitor**: Automated health checks every 30 minutes with auto-restart capability.
 
 ### Version 1.0.2.9 - Group Avatars, Edge-to-Edge & UI Refinement
 - 👥 **Group Avatars**: Full support for group avatars in Chat List, Chat Toolbar, and Group Info screens.

@@ -245,6 +245,9 @@ class NewChatActivity : AppCompatActivity() {
             viewModel.markRead(username, this)
         }
 
+        // Load draft message when entering chat
+        loadDraft()
+
         // 7. Обработка кнопки "Назад" через When (так чище)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -955,6 +958,8 @@ class NewChatActivity : AppCompatActivity() {
         val msg = Message(user = username, text = effectiveText, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
         grpcClient.sendMessage(msg)
         viewModel.markRead(username, this)
+        // Delete draft after successful send
+        grpcClient.deleteDraft(roomId)
     }
     private fun showReactionsDialog(message: Message) {
         val root = findViewById<ViewGroup>(android.R.id.content)
@@ -1420,5 +1425,68 @@ class NewChatActivity : AppCompatActivity() {
         grpcClient.loadHistory(roomId) // 🛠️ Форсируем загрузку для НОВОЙ комнаты
 
         viewModel.switchRoom(roomId)
+        // Load draft for the new room
+        loadDraft()
+    }
+
+    private fun loadDraft() {
+        if (roomId.isEmpty() || username.isEmpty()) return
+
+        grpcClient.getDraft(roomId) { draftText, repliedToMessageId, repliedToUser, repliedToText, hasDraft ->
+            runOnUiThread {
+                if (hasDraft && draftText.isNotEmpty()) {
+                    // Restore draft text
+                    messageInput.setText(draftText)
+                    messageInput.setSelection(draftText.length)
+
+                    // Restore reply if present
+                    if (repliedToMessageId.isNotEmpty()) {
+                        replyingTo = Message(
+                            id = repliedToMessageId,
+                            user = repliedToUser,
+                            text = repliedToText,
+                            timestamp = System.currentTimeMillis(),
+                            roomId = roomId
+                        )
+                        showReplyPreview(replyingTo!!)
+                    }
+
+                    android.util.Log.d("Draft", "Draft loaded for room $roomId: ${draftText.take(50)}...")
+                }
+            }
+        }
+    }
+
+    private fun saveDraft() {
+        if (roomId.isEmpty() || username.isEmpty()) return
+
+        val draftText = messageInput.text?.toString()?.trim() ?: ""
+        val hasReply = replyingTo != null
+
+        // Only save if there's text or a reply
+        if (draftText.isNotEmpty() || hasReply) {
+            grpcClient.saveDraft(
+                roomId = roomId,
+                draftText = draftText,
+                repliedToMessageId = replyingTo?.id ?: "",
+                repliedToUser = replyingTo?.user ?: "",
+                repliedToText = replyingTo?.text ?: ""
+            ) { success, message ->
+                if (success) {
+                    android.util.Log.d("Draft", "Draft saved for room $roomId")
+                } else {
+                    android.util.Log.e("Draft", "Failed to save draft: $message")
+                }
+            }
+        } else {
+            // If no text and no reply, delete any existing draft
+            grpcClient.deleteDraft(roomId)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Save draft when leaving the chat (but not when sending)
+        saveDraft()
     }
 }

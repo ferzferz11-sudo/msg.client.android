@@ -1828,6 +1828,98 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun saveDraft(roomId: String, draftText: String, repliedToMessageId: String, repliedToUser: String, repliedToText: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val currentUsername = lastUsername ?: return
+
+        val request = lavender.client.android.data.proto.SaveDraftRequestProto(
+            currentUsername, roomId, draftText, repliedToMessageId, repliedToUser, repliedToText
+        )
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.SaveDraftRequestProto, lavender.client.android.data.proto.SaveDraftResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SaveDraft")
+            .setRequestMarshaller(SaveDraftRequestMarshaller())
+            .setResponseMarshaller(SaveDraftResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.SaveDraftResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.SaveDraftResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "SaveDraft failed: ${status.code}")
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getDraft(roomId: String, callback: (draftText: String, repliedToMessageId: String, repliedToUser: String, repliedToText: String, hasDraft: Boolean) -> Unit) {
+        val currentChannel = channel ?: return
+        val currentUsername = lastUsername ?: return
+
+        val request = lavender.client.android.data.proto.GetDraftRequestProto(currentUsername, roomId)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetDraftRequestProto, lavender.client.android.data.proto.GetDraftResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetDraft")
+            .setRequestMarshaller(GetDraftRequestMarshaller())
+            .setResponseMarshaller(GetDraftResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.GetDraftResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.GetDraftResponseProto) {
+                callback(message.draftText, message.repliedToMessageId, message.repliedToUser, message.repliedToText, message.hasDraft)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "GetDraft failed: ${status.code}")
+                    callback("", "", "", "", false)
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun deleteDraft(roomId: String, callback: (Boolean) -> Unit) {
+        val currentChannel = channel ?: return
+        val currentUsername = lastUsername ?: return
+
+        val request = lavender.client.android.data.proto.DeleteDraftRequestProto(currentUsername, roomId)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.DeleteDraftRequestProto, lavender.client.android.data.proto.DeleteDraftResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteDraft")
+            .setRequestMarshaller(DeleteDraftRequestMarshaller())
+            .setResponseMarshaller(DeleteDraftResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.DeleteDraftResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.DeleteDraftResponseProto) {
+                callback(message.success)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "DeleteDraft failed: ${status.code}")
+                    callback(false)
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return avatarCache.toMap()
     }
@@ -3781,5 +3873,180 @@ class GetFCMLogsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavende
             } else cis.skipField(tag)
         }
         return lavender.client.android.data.proto.GetFCMLogsResponseProto(logs)
+    }
+}
+
+// Draft message marshallers
+class SaveDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.SaveDraftRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.SaveDraftRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
+        if (value.draftText.isNotEmpty()) cos.writeString(3, value.draftText)
+        if (value.repliedToMessageId.isNotEmpty()) cos.writeString(4, value.repliedToMessageId)
+        if (value.repliedToUser.isNotEmpty()) cos.writeString(5, value.repliedToUser)
+        if (value.repliedToText.isNotEmpty()) cos.writeString(6, value.repliedToText)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.SaveDraftRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var roomId = ""
+        var draftText = ""
+        var repliedToMessageId = ""
+        var repliedToUser = ""
+        var repliedToText = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> roomId = cis.readString()
+                3 -> draftText = cis.readString()
+                4 -> repliedToMessageId = cis.readString()
+                5 -> repliedToUser = cis.readString()
+                6 -> repliedToText = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.SaveDraftRequestProto(username, roomId, draftText, repliedToMessageId, repliedToUser, repliedToText)
+    }
+}
+
+class SaveDraftResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.SaveDraftResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.SaveDraftResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.SaveDraftResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.SaveDraftResponseProto(success, message)
+    }
+}
+
+class GetDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetDraftRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetDraftRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetDraftRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var roomId = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> roomId = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.GetDraftRequestProto(username, roomId)
+    }
+}
+
+class GetDraftResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetDraftResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetDraftResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.draftText.isNotEmpty()) cos.writeString(1, value.draftText)
+        if (value.repliedToMessageId.isNotEmpty()) cos.writeString(2, value.repliedToMessageId)
+        if (value.repliedToUser.isNotEmpty()) cos.writeString(3, value.repliedToUser)
+        if (value.repliedToText.isNotEmpty()) cos.writeString(4, value.repliedToText)
+        if (value.hasDraft) cos.writeBool(5, value.hasDraft)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetDraftResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var draftText = ""
+        var repliedToMessageId = ""
+        var repliedToUser = ""
+        var repliedToText = ""
+        var hasDraft = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> draftText = cis.readString()
+                2 -> repliedToMessageId = cis.readString()
+                3 -> repliedToUser = cis.readString()
+                4 -> repliedToText = cis.readString()
+                5 -> hasDraft = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.GetDraftResponseProto(draftText, repliedToMessageId, repliedToUser, repliedToText, hasDraft)
+    }
+}
+
+class DeleteDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.DeleteDraftRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.DeleteDraftRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.DeleteDraftRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        var roomId = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> roomId = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.DeleteDraftRequestProto(username, roomId)
+    }
+}
+
+class DeleteDraftResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.DeleteDraftResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.DeleteDraftResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.DeleteDraftResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.DeleteDraftResponseProto(success)
     }
 }

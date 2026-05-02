@@ -208,6 +208,18 @@ object GrpcClient {
         realGrpcClient.getFCMLogs(callback)
     }
 
+    fun saveDraft(roomId: String, draftText: String, repliedToMessageId: String = "", repliedToUser: String = "", repliedToText: String = "", callback: (Boolean, String) -> Unit = { _, _ -> }) {
+        realGrpcClient.saveDraft(roomId, draftText, repliedToMessageId, repliedToUser, repliedToText, callback)
+    }
+
+    fun getDraft(roomId: String, callback: (draftText: String, repliedToMessageId: String, repliedToUser: String, repliedToText: String, hasDraft: Boolean) -> Unit) {
+        realGrpcClient.getDraft(roomId, callback)
+    }
+
+    fun deleteDraft(roomId: String, callback: (Boolean) -> Unit = {}) {
+        realGrpcClient.deleteDraft(roomId, callback)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return realGrpcClient.getAvatarCache()
     }
