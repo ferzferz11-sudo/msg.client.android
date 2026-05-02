@@ -3,8 +3,8 @@
     <style name="Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="isLightTheme">false</item>
         <!-- Primary colors -->
-        <item name="colorPrimary">@color/lavender_mist</item>
-        <item name="colorOnPrimary">@color/deep_purple</item>
+        <item name="colorPrimary">@color/deep_purple</item>
+        <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryContainer">@color/deep_purple</item>
         <item name="colorOnPrimaryContainer">@color/lavender_mist</item>
 
@@ -15,11 +15,11 @@
         <item name="colorOnSecondaryContainer">@color/deep_purple</item>
 
         <!-- Background colors -->
-        <item name="android:windowBackground">#04052E</item>
-        <item name="colorSurface">#04052E</item>
+        <item name="android:windowBackground">@color/dark_background</item>
+        <item name="colorSurface">@color/lavender_mist</item>
         <item name="colorSurfaceVariant">@color/lavender_mist</item>
-        <item name="colorOnSurface">@color/white</item>
-        <item name="colorOnSurfaceVariant">@color/white</item>
+        <item name="colorOnSurface">@color/dark_background</item>
+        <item name="colorOnSurfaceVariant">@color/dark_background</item>
 
         <!-- Dialog colors -->
         <item name="colorSurfaceContainer">#1A1B46</item>

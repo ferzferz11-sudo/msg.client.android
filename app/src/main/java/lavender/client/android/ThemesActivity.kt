@@ -134,7 +134,7 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun updateUI() {
         val allThemes = mutableListOf<CustomThemeProto>()
-        allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
+        allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme),))
 
         // Add built-in template themes with localized names
         ThemeManager.builtInThemes.forEach { theme ->

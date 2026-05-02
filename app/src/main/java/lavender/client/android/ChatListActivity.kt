@@ -8,12 +8,12 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableString
 import android.text.TextWatcher
+import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.util.TypedValue
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -125,6 +125,20 @@ class ChatListActivity : AppCompatActivity() {
         val serverHost = parts[0]
         val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
 
+        // 1. Поиск (теперь через карточку, которая всегда под рукой)
+        binding.searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                adapter.filter(s.toString()) // Мгновенный фильтр при вводе
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        // 2. Кнопка удаления в тулбаре (которую ты добавил в XML)
+        binding.actionDelete.setOnClickListener {
+            showDeleteChatsDialog()
+        }
+
         // 3. !!! ВАЖНО: Сначала ИНИЦИАЛИЗИРУЕМ АДАПТЕР !!!
         // Перенесли этот блок вверх, чтобы избежать UninitializedPropertyAccessException
         adapter = ChatAdapter(
@@ -142,8 +156,19 @@ class ChatListActivity : AppCompatActivity() {
                     .putExtra("creator", chat.creator)
                 startActivity(intent)
             },
-            onSelectionChanged = { _ ->
-                invalidateOptionsMenu()
+            onSelectionChanged = { selectedCount ->
+                val hasSelection = selectedCount > 0
+                binding.actionDelete.isVisible = hasSelection
+
+                // Меняем заголовок тулбара, если что-то выбрано
+                binding.toolbarTitle.text = if (hasSelection) {
+                    getString(R.string.selected_count, selectedCount)
+                } else {
+                    getString(R.string.chats)
+                }
+
+                // Прячем аватар в режиме удаления для красоты
+                binding.toolbarUserAvatar.isVisible = !hasSelection
             },
             currentUsername = username,
             initialAvatarCache = grpcClient.getAvatarCache(),
@@ -208,9 +233,9 @@ class ChatListActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 RealGrpcClient.connectionStatus.collect { status ->
                     binding.toolbarTitle.text = when (status) {
-                        ConnectionStatus.READY -> getString(R.string.chats)
-                        ConnectionStatus.CONNECTING -> getString(R.string.connecting)
-                        ConnectionStatus.FAILED -> "Waiting for network..."
+                        ConnectionStatus.READY        -> getString(R.string.chats)
+                        ConnectionStatus.CONNECTING   -> getString(R.string.connecting)
+                        ConnectionStatus.FAILED       -> "Waiting for network..."
                         ConnectionStatus.DISCONNECTED -> "Offline"
                     }
                     binding.toolbarTitle.alpha = if (status == ConnectionStatus.READY) 1.0f else 0.6f
@@ -505,181 +530,69 @@ class ChatListActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.action_search -> {
-                binding.searchLayout.isVisible = !binding.searchLayout.isVisible
-                if (binding.searchLayout.isVisible) {
-                    binding.searchEditText.requestFocus()
-                    val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.showSoftInput(binding.searchEditText, 0)
-                } else {
-                    binding.searchEditText.text?.clear()
-                    adapter.filter("")
-                }
-                return true
-            }
-            R.id.action_delete -> {
-                val selected = adapter.getSelectedChats()
-                if (selected.isNotEmpty()) {
-                    val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
-                    val titleText = dialogView.findViewById<TextView>(R.id.titleText)
-                    val messageText = dialogView.findViewById<TextView>(R.id.messageText)
-                    val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
-                    val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
-                    titleText.text = getString(R.string.delete_chats)
-                    messageText.text = getString(R.string.delete_chats_confirmation, selected.size)
-                    
-                    // Apply theme colors - custom theme or built-in theme
-                    val customTheme = ThemeManager.getCurrentTheme()
-                    if (customTheme != null) {
-                        try {
-                            val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
-                            titleText.setTextColor(onPrimaryContainerColor)
-                            messageText.setTextColor(onPrimaryContainerColor)
-                            btnCancel.setTextColor(onPrimaryContainerColor)
-                            // Create a shape drawable with custom color for rounded background
-                            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
-                            ))
-                            shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
-                            dialogView.background = shapeDrawable
-                        } catch (_: Exception) {}
-                    } else {
-                        // Use Material Design attributes for built-in themes
-                        val typedValue = TypedValue()
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
-                        val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
-                        
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
-                        val textColor = ContextCompat.getColor(this, typedValue.resourceId)
-                        
-                        titleText.setTextColor(textColor)
-                        messageText.setTextColor(textColor)
-                        btnCancel.setTextColor(textColor)
-                        
-                        // Create a shape drawable with built-in theme color for rounded background
-                        val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                            floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
-                        ))
-                        shapeDrawable.paint.color = bgColor
-                        dialogView.background = shapeDrawable
-                    }
-                    
-                    val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-                    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-                    btnCancel.setOnClickListener { dialog.dismiss() }
-                    btnDelete.setOnClickListener {
-                        dialog.dismiss()
-                        binding.toolbarTitle.text = getString(R.string.loading)
-                        val chatsToDelete = selected.toList()
-                        adapter.clearSelection()
-                        lifecycleScope.launch {
-                            var successCount = 0
-                            var lastErrorMessage = ""
-                            for (chat in chatsToDelete) {
-                                val result: Pair<Boolean, String> = withContext(Dispatchers.IO) {
-                                    val deferred = CompletableDeferred<Pair<Boolean, String>>()
-                                    grpcClient.deleteChat(chat.id) { success, message ->
-                                        deferred.complete(Pair(success, message))
-                                    }
-                                    deferred.await()
-                                }
-                                if (result.first) successCount++ else lastErrorMessage = result.second
-                            }
-                            runOnUiThread {
-                                binding.toolbarTitle.text = getString(R.string.chats)
-                                if (successCount > 0) showToast(getString(R.string.deleted_count, successCount))
-                                if (lastErrorMessage.isNotEmpty()) showToast(lastErrorMessage)
-                                loadChats()
-                            }
-                        }
-                    }
-                    dialog.show()
-                }
-                return true
-            }
-            R.id.action_update -> {
-                showToast(getString(R.string.checking_for_updates))
-                checkForUpdates { isUpdateAvailable ->
-                    showUpdateConfirmationDialog(isUpdateAvailable)
-                }
-                return true
-            }
-            R.id.action_about -> {
-                showAboutDialog()
-                return true
-            }
-            R.id.action_super_admin -> {
-                val intent = Intent(this, SuperAdminActivity::class.java)
-                startActivity(intent)
-                return true
-            }
-            else -> return super.onOptionsItemSelected(item)
+    private fun showDeleteChatsDialog() {
+        val selected = adapter.getSelectedChats()
+        if (selected.isEmpty()) return
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
+
+        titleText.text = getString(R.string.delete_chats)
+        messageText.text = getString(R.string.delete_chats_confirmation, selected.size)
+
+        val customTheme = ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val textColor = customTheme.textPrimaryColor.toColorInt()
+                titleText.setTextColor(textColor)
+                messageText.setTextColor(textColor)
+                btnCancel.setTextColor(textColor)
+                val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shape.paint.color = customTheme.surfaceColor.toColorInt()
+                dialogView.background = shape
+            } catch (_: Exception) {}
         }
+
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnDelete.setOnClickListener {
+            dialog.dismiss()
+            binding.toolbarTitle.text = getString(R.string.loading)
+            val chatsToDelete = selected.toList()
+            adapter.clearSelection()
+
+            lifecycleScope.launch {
+                var successCount = 0
+                for (chat in chatsToDelete) {
+                    val success = withContext(Dispatchers.IO) {
+                        val deferred = CompletableDeferred<Boolean>()
+                        grpcClient.deleteChat(chat.id) { s, _ -> deferred.complete(s) }
+                        deferred.await()
+                    }
+                    if (success) successCount++
+                }
+                runOnUiThread {
+                    binding.toolbarTitle.text = getString(R.string.chats)
+                    if (successCount > 0) showToast(getString(R.string.deleted_count, successCount))
+                    loadChats()
+                }
+            }
+        }
+        dialog.show()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        clearMenuAnimations()
-        menuInflater.inflate(R.menu.chat_list_menu, menu)
-        val hasSelection = adapter.getSelectedChats().isNotEmpty()
-
-        // --- 1. ОПРЕДЕЛЯЕМ ЦВЕТА ДЛЯ МЕНЮ ---
-        val customTheme = ThemeManager.getCurrentTheme()
-
-        // Твои дефолтные цвета из стиля (Night Theme)
-        val defaultIconColor = "#E6E6FA".toColorInt() // lavender_mist
-        val defaultTextColor = android.graphics.Color.WHITE
-
-        val (iconColor, textColor) = if (customTheme != null) {
-            try {
-                val color = customTheme.onPrimaryColor.toColorInt()
-                Pair(color, color)
-            } catch (_: Exception) {
-                Pair(defaultIconColor, defaultTextColor)
-            }
-        } else {
-            Pair(defaultIconColor, defaultTextColor)
-        }
-
-        // --- 2. ПРИМЕНЯЕМ К ИКОНКАМ (Поиск, Удаление) ---
-        menu.findItem(R.id.action_search)?.apply {
-            isVisible = !hasSelection
-            iconTintList = ColorStateList.valueOf(iconColor)
-        }
-
-        menu.findItem(R.id.action_delete)?.apply {
-            isVisible = hasSelection
-            iconTintList = ColorStateList.valueOf(iconColor)
-        }
-
-        // --- 3. ПРИМЕНЯЕМ К ТЕКСТОВЫМ ПУНКТАМ (Обновление, О программе, Админка) ---
-        // Используем вспомогательную функцию для покраски текста в меню
-        val menuItemsToColor = listOf(
-            R.id.action_update,
-            R.id.action_about,
-            R.id.action_super_admin
-        )
-
-        for (itemId in menuItemsToColor) {
-            menu.findItem(itemId)?.apply {
-                if (itemId == R.id.action_super_admin) {
-                    isVisible = grpcClient.isSuperAdmin.value
-                }
-
-                // Красим текст пункта меню через Spannable
-                val spanString = SpannableString(title.toString())
-                spanString.setSpan(
-                    android.text.style.ForegroundColorSpan(textColor),
-                    0,
-                    spanString.length,
-                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                title = spanString
-            }
-        }
-
-        return true
+    private fun applyColorToMenuItem(item: MenuItem, color: Int) {
+        val spanString = SpannableString(item.title.toString())
+        spanString.setSpan(ForegroundColorSpan(color), 0, spanString.length, 0)
+        item.title = spanString
+        item.icon?.setTint(color)
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -690,6 +603,10 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 // 2. Применяем к фону и тулбару
                 ThemeManager.applyTheme(this)
+
+                // ХАК: Принудительное обновление меню тулбара
+                binding.toolbar.dismissPopupMenus() // Закрыть если открыто
+                invalidateOptionsMenu() // Перерисовать иконки и пункты
 
                 // 3. САМОЕ ВАЖНОЕ: Говорим списку, что пора перерисовать карточки
                 if (::adapter.isInitialized) {
@@ -971,72 +888,52 @@ class ChatListActivity : AppCompatActivity() {
         
         // Apply custom theme colors to the sheet
         val customTheme = ThemeManager.getCurrentTheme()
+
+        // ПРИМЕНЯЕМ ТЕМУ К ШТОРКЕ
         if (customTheme != null) {
             try {
-                val backgroundColor = customTheme.backgroundColor.toColorInt()
-                val textPrimaryColor = customTheme.textPrimaryColor.toColorInt()
-                val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
-                val primaryColor = customTheme.primaryColor.toColorInt()
-                
-                sheetView.setBackgroundColor(backgroundColor)
-                menuUsername.setTextColor(textPrimaryColor)
-                menuUserBio.setTextColor(onSurfaceColor)
-                
-                // Apply colors to all action items - find TextViews inside LinearLayouts
-                val actionEditProfile = sheetView.findViewById<LinearLayout>(R.id.actionEditProfile)
-                actionEditProfile?.let {
-                    for (i in 0 until it.childCount) {
-                        val child = it.getChildAt(i)
-                        if (child is TextView) child.setTextColor(textPrimaryColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
+                val bgColor = customTheme.backgroundColor.toColorInt()
+                val txtColor = customTheme.textPrimaryColor.toColorInt()
+                val primColor = customTheme.primaryColor.toColorInt()
+                val secColor = customTheme.onSurfaceColor.toColorInt()
+
+                sheetView.setBackgroundColor(bgColor)
+                menuUsername.setTextColor(txtColor)
+                menuUserBio.setTextColor(secColor)
+
+                // ОБНОВЛЕННЫЙ СПИСОК: Все кнопки, которые должны менять цвет
+                val actionIds = listOf(
+                    R.id.actionEditProfile,
+                    R.id.actionThemes,
+                    R.id.actionNotifications,
+                    R.id.actionContacts,
+                    R.id.actionToggleLanguage,
+                    R.id.actionLogout,
+                    R.id.actionUpdate, // Добавлено
+                    R.id.actionAbout,  // Добавлено
+                    R.id.actionAdmin   // Добавлено
+                )
+
+                actionIds.forEach { id ->
+                    sheetView.findViewById<LinearLayout>(id)?.let { layout ->
+                        for (i in 0 until layout.childCount) {
+                            val child = layout.getChildAt(i)
+                            // Красим текст
+                            if (child is TextView) {
+                                // Для выхода оставляем красный цвет, для остальных — основной текст темы
+                                if (id != R.id.actionLogout) child.setTextColor(txtColor)
+                            }
+                            // Красим иконки
+                            if (child is ImageView) {
+                                // Для выхода оставляем красный, для остальных — основной цвет темы
+                                if (id != R.id.actionLogout) child.imageTintList = ColorStateList.valueOf(primColor)
+                            }
+                        }
                     }
                 }
-                
-                val actionThemes = sheetView.findViewById<LinearLayout>(R.id.actionThemes)
-                actionThemes?.let {
-                    for (i in 0 until it.childCount) {
-                        val child = it.getChildAt(i)
-                        if (child is TextView) child.setTextColor(textPrimaryColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
-                    }
-                }
-                
-                val actionNotifications = sheetView.findViewById<LinearLayout>(R.id.actionNotifications)
-                actionNotifications?.let {
-                    for (i in 0 until it.childCount) {
-                        val child = it.getChildAt(i)
-                        if (child is TextView) child.setTextColor(textPrimaryColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
-                    }
-                }
-                
-                val actionContacts = sheetView.findViewById<LinearLayout>(R.id.actionContacts)
-                actionContacts?.let {
-                    for (i in 0 until it.childCount) {
-                        val child = it.getChildAt(i)
-                        if (child is TextView) child.setTextColor(textPrimaryColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
-                    }
-                }
-                
-                val actionToggleLanguage = sheetView.findViewById<LinearLayout>(R.id.actionToggleLanguage)
-                actionToggleLanguage?.let {
-                    for (i in 0 until it.childCount) {
-                        val child = it.getChildAt(i)
-                        if (child is TextView) child.setTextColor(textPrimaryColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
-                    }
-                }
-                
-                val actionLogout = sheetView.findViewById<LinearLayout>(R.id.actionLogout)
-                actionLogout?.let {
-                    for (i in 0 until it.childCount) {
-                        val child = it.getChildAt(i)
-                        if (child is TextView) child.setTextColor(customTheme.textPrimaryColor.toColorInt())
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(customTheme.textPrimaryColor.toColorInt())
-                    }
-                }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                Log.e("ThemeManager", "Error tinting bottom sheet items")
+            }
         }
         
         menuUsername.text = username

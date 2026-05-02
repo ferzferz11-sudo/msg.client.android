@@ -54,7 +54,7 @@
             android:name=".ChatListActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:theme="@style/Theme_Lavender_NoActionBar"
+            android:theme="@style/Theme_Lavender_Dark_NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity

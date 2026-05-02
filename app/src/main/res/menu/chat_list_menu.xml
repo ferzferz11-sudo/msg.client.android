@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="?attr/colorPrimaryContainer">
 
     <item
         android:id="@+id/action_search"
@@ -13,22 +14,26 @@
         android:icon="@drawable/ic_delete"
         android:title="@string/delete"
         android:visible="false"
+        android:textColor="?attr/colorOnPrimaryContainer"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_update"
         android:title="@string/update"
+        android:textColor="?attr/colorOnPrimaryContainer"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_about"
         android:title="@string/about"
+        android:textColor="?attr/colorOnPrimaryContainer"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_super_admin"
         android:title="@string/super_admin"
         android:visible="false"
+        android:textColor="?attr/colorOnPrimaryContainer"
         app:showAsAction="never" />
 
 </menu>

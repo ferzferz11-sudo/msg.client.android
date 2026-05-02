@@ -3,18 +3,30 @@ package lavender.client.android.ui
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
@@ -29,36 +41,39 @@ object ThemeManager {
             id = "builtin_green",
             name = "Зеленый лес",
             primaryColor = "#2E7D32",
-            backgroundColor = "#F8FAF5", // F1F8E9
-            surfaceColor = "#EEF7E2", // DCEDC8
-            textPrimaryColor = "#144218", // 1B5E20
+            backgroundColor = "#F8FAF5",
+            surfaceColor = "#EEF7E2",
+            surfaceContainer = "#E1EDD1", // Более темный зеленый для меню
+            textPrimaryColor = "#144218",
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#33691E",
-            bottomPanelColor = "#FFFFFF", // E8F5E9
+            bottomPanelColor = "#FFFFFF",
             onBottomPanelColor = "#2E7D32"
         ),
         CustomThemeProto(
             id = "builtin_blue",
             name = "Современный синий",
-            primaryColor = "#007AFF", // #1565C0
-            backgroundColor = "#E3F2FD", // #F8FAFF
-            surfaceColor = "#FFFFFF", // #BBDEFB
-            textPrimaryColor = "#1C1C1E", // #0D47A1
+            primaryColor = "#007AFF",
+            backgroundColor = "#E3F2FD",
+            surfaceColor = "#FFFFFF",
+            surfaceContainer = "#D1E9FF", // Голубой контейнер для меню
+            textPrimaryColor = "#1C1C1E",
             onPrimaryColor = "#FFFFFF",
-            onSurfaceColor = "#3A3A3C", // Второстепенные элементы 01579B
-            bottomPanelColor = "#E3F2FD", // нижняя панель
+            onSurfaceColor = "#3A3A3C",
+            bottomPanelColor = "#E3F2FD",
             onBottomPanelColor = "#1565C0"
         ),
         CustomThemeProto(
             id = "builtin_purple",
             name = "Королевский пурпур",
             primaryColor = "#6A1B9A",
-            backgroundColor = "#FBF8FF", // F3E5F5
-            surfaceColor = "#F0E2F5", // E1BEE7
-            textPrimaryColor = "#2D0C54", // 4A148C
+            backgroundColor = "#FBF8FF",
+            surfaceColor = "#F0E2F5",
+            surfaceContainer = "#E8D0F0", // Пурпурный контейнер
+            textPrimaryColor = "#2D0C54",
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#4A148C",
-            bottomPanelColor = "#FFFFFF", // F3E5F5
+            bottomPanelColor = "#FFFFFF",
             onBottomPanelColor = "#6A1B9A"
         ),
         CustomThemeProto(
@@ -67,47 +82,47 @@ object ThemeManager {
             primaryColor = "#D84315",
             backgroundColor = "#FFF3E0",
             surfaceColor = "#FFE0B2",
+            surfaceContainer = "#FFD180", // Оранжевый контейнер
             textPrimaryColor = "#BF360C",
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#E65100",
             bottomPanelColor = "#FFF3E0",
             onBottomPanelColor = "#D84315"
         ),
-        // 1. ПРЕМИАЛЬНАЯ: Сдержанный стиль, замена синему
         CustomThemeProto(
             id = "builtin_graphite",
             name = "Графит и золото",
-            primaryColor = "#85754E",      // Приглушенное золото
-            backgroundColor = "#F5F5F5",   // Светло-серый бетон
-            surfaceColor = "#FFFFFF",      // Чисто белый (бабл)
-            textPrimaryColor = "#212121",  // Почти черный текст
+            primaryColor = "#85754E",
+            backgroundColor = "#F5F5F5",
+            surfaceColor = "#FFFFFF",
+            surfaceContainer = "#E0E0E0", // Серый бетон для меню
+            textPrimaryColor = "#212121",
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#424242",
             bottomPanelColor = "#FFFFFF",
             onBottomPanelColor = "#85754E"
         ),
-        // 2. УЮТНАЯ: Мягкая палитра, отличная от мессенджеров конкурентов
         CustomThemeProto(
             id = "builtin_rose",
             name = "Северная роза",
-            primaryColor = "#B08990",      // Пыльная роза
-            backgroundColor = "#EAECEF",   // Холодный серо-голубой фон
-            surfaceColor = "#F9F6F7",      // Едва розоватый бабл
-            textPrimaryColor = "#443C3D",  // Темный графит
+            primaryColor = "#B08990",
+            backgroundColor = "#EAECEF",
+            surfaceColor = "#F9F6F7",
+            surfaceContainer = "#D8DCE3", // Холодный серый контейнер
+            textPrimaryColor = "#443C3D",
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#5E5455",
             bottomPanelColor = "#EAECEF",
             onBottomPanelColor = "#B08990"
         ),
-
-        // 3. ЭНЕРГИЧНАЯ: Чистая, технологичная и свежая
         CustomThemeProto(
             id = "builtin_mint",
             name = "Кибер Мята",
-            primaryColor = "#00BFA5",      // Яркая мята
-            backgroundColor = "#F1FBF9",   // Мятный тинт на фоне
-            surfaceColor = "#FFFFFF",      // Чисто белый бабл
-            textPrimaryColor = "#002B26",  // Глубокий темно-зеленый текст
+            primaryColor = "#00BFA5",
+            backgroundColor = "#F1FBF9",
+            surfaceColor = "#FFFFFF",
+            surfaceContainer = "#D7F2ED", // Мятный контейнер
+            textPrimaryColor = "#002B26",
             onPrimaryColor = "#FFFFFF",
             onSurfaceColor = "#004D40",
             bottomPanelColor = "#FFFFFF",
@@ -115,11 +130,75 @@ object ThemeManager {
         )
     )
 
+    // Добавь это внутрь ThemeManager
+    data class MessageColors(
+        val incomingBg: Int,
+        val incomingText: Int,
+        val outgoingBg: Int,
+        val outgoingText: Int
+    )
+
+    fun getMessageColors(context: Context): MessageColors {
+        val theme = currentCustomTheme
+        val typedValue = TypedValue()
+        val res = context.resources
+        val pkg = context.packageName
+
+        return if (theme != null) {
+            // --- 1. КАСТОМНЫЕ И ВСТРОЕННЫЕ ТЕМЫ ---
+            MessageColors(
+                incomingBg = parseSafeColor(theme.primaryColor, Color.BLUE),
+                incomingText = parseSafeColor(theme.onPrimaryColor, Color.WHITE),
+                outgoingBg = parseSafeColor(theme.surfaceColor, Color.LTGRAY),
+                outgoingText = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
+            )
+        } else {
+            // --- 2. СТАНДАРТНАЯ ТЕМНАЯ ТЕМА (Твой концепт) ---
+
+            // Входящие (Акцентные - Deep Purple)
+            val attrPrimary = res.getIdentifier("colorPrimary", "attr", pkg)
+            val attrOnPrimary = res.getIdentifier("colorOnPrimary", "attr", pkg)
+
+            val incBg = if (attrPrimary != 0 && context.theme.resolveAttribute(attrPrimary, typedValue, true)) {
+                typedValue.data
+            } else {
+                Color.parseColor("#6A1B9A") // Наш хардкод-фиолетовый
+            }
+
+            val incText = if (attrOnPrimary != 0 && context.theme.resolveAttribute(attrOnPrimary, typedValue, true)) {
+                typedValue.data
+            } else {
+                Color.WHITE
+            }
+
+            // Исходящие (Фоновые - Темно-синие)
+            // ВАЖНО: Мы будем искать именно colorSurfaceContainer,
+            // который ты настроил как #1A1B46 в themes.xml
+            val attrSurface = res.getIdentifier("colorSurfaceContainer", "attr", pkg)
+            val attrOnSurface = res.getIdentifier("colorOnSurface", "attr", pkg)
+
+            val outBg = if (attrSurface != 0 && context.theme.resolveAttribute(attrSurface, typedValue, true)) {
+                // Если атрибут найден, берем его. Если он вернул 0, берем наш синий.
+                if (typedValue.data != 0) typedValue.data else Color.parseColor("#1A1B46")
+            } else {
+                Color.parseColor("#1A1B46") // Твой темно-синий
+            }
+
+            val outText = if (attrOnSurface != 0 && context.theme.resolveAttribute(attrOnSurface, typedValue, true)) {
+                typedValue.data
+            } else {
+                Color.parseColor("#E6E6FA") // Лавандовый текст
+            }
+
+            MessageColors(incBg, incText, outBg, outText)
+        }
+    }
+
     fun loadTheme(context: Context, username: String, onComplete: () -> Unit = {}) {
         val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
         val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
 
-        android.util.Log.d("ThemeManager", "READING PREFS: current_theme_id is '$themeId'")
+        Log.d("ThemeManager", "READING PREFS: current_theme_id is '$themeId'")
 
         // 1. Если тема системная (dark/light), просто сбрасываем кастом и выходим
         if (themeId == "light" || themeId == "dark") {
@@ -165,7 +244,7 @@ object ThemeManager {
                 // (context as? android.app.Activity)?.runOnUiThread { onComplete() }
             }
 
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
+            Handler(Looper.getMainLooper()).post {
                 onComplete()
             }
         }
@@ -187,81 +266,125 @@ object ThemeManager {
 
     fun applyTheme(activity: AppCompatActivity) {
         val theme = currentCustomTheme
-        val root = activity.findViewById<View>(android.R.id.content)
+        val root = activity.findViewById<View>(android.R.id.content) ?: return
+        val toolbar = activity.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
 
-        // 1. Настройка Edge-to-Edge (прозрачные панели)
+        // 1. Прозрачные панели
         activity.window.apply {
             @Suppress("DEPRECATION")
             statusBarColor = Color.TRANSPARENT
             @Suppress("DEPRECATION")
             navigationBarColor = Color.TRANSPARENT
-            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(this, false)
+            WindowCompat.setDecorFitsSystemWindows(this, false)
         }
 
-        // 2. ОПРЕДЕЛЯЕМ ЦВЕТ ФОНА (для вычисления яркости)
+        // 2. ЦВЕТА
         val defaultBgColor = "#04052E".toColorInt()
+        val defaultContainerColor = "#1A1B46".toColorInt()
+
         val bgColor = if (theme != null) {
             try { theme.backgroundColor.toColorInt() } catch (_: Exception) { defaultBgColor }
         } else {
             defaultBgColor
         }
 
-        // 3. АВТОМАТИЧЕСКАЯ НАСТРОЙКА ИКОНОК СТАТУС-БАРА
-        // Если фон светлый — иконки станут темными, и наоборот.
         val isLightMode = bgColor.isLight()
-        val window = activity.window
-        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
+        WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = isLightMode
             isAppearanceLightNavigationBars = isLightMode
         }
 
-        // 4. ПРИМЕНЯЕМ ФОН К ОКНУ
+        // 3. ФОН
         activity.window.decorView.setBackgroundColor(bgColor)
         root.setBackgroundColor(bgColor)
 
-        android.util.Log.d("ThemeManager", "Applying theme '${theme?.name}' to ${activity.localClassName}")
-
-        // 5. ЛОГИКА ДЛЯ ДЕФОЛТНОЙ ТЕМЫ (Системная или еще не загружена)
-        if (theme === null) {
-            val prefs = activity.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-            val themeId = prefs.getString("current_theme_id", "dark")
-
-            if (themeId != "light" && themeId != "dark") {
-                // Вот это реальная проблема загрузки
-                android.util.Log.w("ThemeManager", "⏳ Theme $themeId is CUSTOM but still NULL. Waiting for network/cache...")
+        // 4. ТЕМИЗАЦИЯ КАРТОЧКИ ПОИСКА
+        activity.findViewById<com.google.android.material.card.MaterialCardView>(R.id.searchCard)?.let { card ->
+            val surfaceColor = if (theme != null) {
+                try { theme.surfaceColor.toColorInt() } catch (_: Exception) { defaultContainerColor }
             } else {
-                // Это штатная работа системы
-                android.util.Log.d("ThemeManager", "✅ Using system theme: $themeId")
+                defaultContainerColor
+            }
+            card.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
+
+            val textColor = if (theme != null) {
+                try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { Color.WHITE }
+            } else {
+                Color.WHITE
             }
 
-            val typedValue = android.util.TypedValue()
-            activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-            val color = if (typedValue.resourceId != 0) ContextCompat.getColor(activity, typedValue.resourceId) else typedValue.data
-            findAndTintToolbars(root, color)
+            card.findViewById<EditText>(R.id.searchEditText)?.apply {
+                setTextColor(textColor)
+                setHintTextColor(adjustAlpha(textColor, 0.6f))
+            }
+
+            card.findViewById<ImageView>(R.id.searchIcon)?.imageTintList = ColorStateList.valueOf(textColor)
+        }
+
+        // 5. ЛОГИКА ДЛЯ ДЕФОЛТНОЙ ТЕМЫ
+        if (theme == null) {
+            Log.d("ThemeManager", "✅ Applying system theme")
+
+            val typedValue = TypedValue()
+            // Используем полный путь к ресурсу Material, чтобы избежать Unresolved reference
+            activity.theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+            val systemPrimaryColor = typedValue.data
+
+            val onPrimaryValue = TypedValue()
+            activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimaryValue, true)
+            val onPrimaryColor = onPrimaryValue.data
+
+            toolbar?.apply {
+                backgroundTintList = ColorStateList.valueOf(systemPrimaryColor)
+                setTitleTextColor(onPrimaryColor)
+                setNavigationIconTint(onPrimaryColor)
+                outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+                clipToOutline = true
+                popupTheme = androidx.appcompat.R.style.ThemeOverlay_AppCompat_Dark
+            }
+
+            activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(onPrimaryColor)
             return
         }
 
-        android.util.Log.d("ThemeManager", "SUCCESS: Applying theme '${theme.name}' to ${activity.localClassName}")
+        // 6. ЛОГИКА ДЛЯ КАСТОМНОЙ ТЕМЫ
+        Log.d("ThemeManager", "SUCCESS: Applying custom theme '${theme.name}'")
 
-        // 6. ПРИМЕНЯЕМ КАСТОМНУЮ ТЕМУ К ВЬЮХАМ
+        val customPrimary = try { theme.primaryColor.toColorInt() } catch (_: Exception) { defaultBgColor }
+        val customOnPrimary = try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { Color.WHITE }
+
+        toolbar?.apply {
+            backgroundTintList = ColorStateList.valueOf(customPrimary)
+            setTitleTextColor(customOnPrimary)
+            setNavigationIconTint(customOnPrimary)
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+            clipToOutline = true
+
+            popupTheme = if (isLightMode)
+                androidx.appcompat.R.style.ThemeOverlay_AppCompat_Light
+            else
+                androidx.appcompat.R.style.ThemeOverlay_AppCompat_Dark
+        }
+
+        // Кнопка удаления для кастомной темы
+        activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
+
         applyThemeToView(root, theme)
 
-        // Нижняя панель (если есть)
         activity.findViewById<View>(R.id.bottomPanel)?.let {
             applyThemeToBottomPanel(it, theme)
         }
 
-        // Фоновое изображение чата
-        val bgImageView = activity.findViewById<android.widget.ImageView>(R.id.chatBackground)
+        // Фоновое изображение
+        val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
         if (bgImageView != null) {
-            if (theme.backgroundImageUrl.isNotEmpty()) {
+            if (!theme.backgroundImageUrl.isNullOrEmpty()) {
                 bgImageView.visibility = View.VISIBLE
-                com.bumptech.glide.Glide.with(activity)
+                Glide.with(activity)
                     .load(theme.backgroundImageUrl)
-                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .centerCrop()
                     .into(bgImageView)
-                // Если есть картинка, делаем фон контейнера прозрачным, чтобы видеть её
                 root.setBackgroundColor(Color.TRANSPARENT)
             } else {
                 bgImageView.visibility = View.GONE
@@ -302,7 +425,7 @@ object ThemeManager {
                             child.setHintTextColor(adjustAlpha(onBpColor, 0.5f))
 
                             // Красим курсор (API 29+)
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 child.textCursorDrawable?.setTint(primaryColor)
                             }
 
@@ -324,7 +447,7 @@ object ThemeManager {
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("ThemeManager", "Error applying theme to bottom panel", e)
+            Log.e("ThemeManager", "Error applying theme to bottom panel", e)
         }
     }
 
@@ -340,7 +463,7 @@ object ThemeManager {
             // 2. ПОКРАСКА КОНКРЕТНЫХ КОМПОНЕНТОВ
             when (view) {
                 // Тулбар
-                is com.google.android.material.appbar.MaterialToolbar -> {
+                is MaterialToolbar -> {
                     view.backgroundTintList = ColorStateList.valueOf(primary)
                     view.setTitleTextColor(onPrimary)
                     view.setSubtitleTextColor(onPrimary)
@@ -370,7 +493,7 @@ object ThemeManager {
                 }
 
                 // FAB (Плавающая кнопка)
-                is com.google.android.material.floatingactionbutton.FloatingActionButton -> {
+                is FloatingActionButton -> {
                     view.backgroundTintList = ColorStateList.valueOf(primary)
                     view.imageTintList = ColorStateList.valueOf(onPrimary)
                 }
@@ -379,7 +502,7 @@ object ThemeManager {
                 is EditText -> {
                     view.setTextColor(textPrimary)
                     view.setHintTextColor(adjustAlpha(onSurface, 0.5f))
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         view.textCursorDrawable?.setTint(primary)
                     }
                 }
@@ -409,25 +532,25 @@ object ThemeManager {
                 }
 
                 // Чекбоксы и Свитчи
-                is com.google.android.material.checkbox.MaterialCheckBox -> {
+                is MaterialCheckBox -> {
                     view.buttonTintList = ColorStateList.valueOf(primary)
                     view.setTextColor(textPrimary)
                 }
             }
 
             // 3. РЕКУРСИЯ (Идем вглубь контейнеров)
-            if (view is ViewGroup && view !is com.google.android.material.appbar.MaterialToolbar) {
+            if (view is ViewGroup && view !is MaterialToolbar) {
                 for (i in 0 until view.childCount) {
                     applyThemeToView(view.getChildAt(i), theme)
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("ThemeManager", "Error in applyThemeToView", e)
+            Log.e("ThemeManager", "Error in applyThemeToView", e)
         }
     }
 
     private fun findAndTintToolbars(view: View, color: Int) {
-        if (view is com.google.android.material.appbar.MaterialToolbar) {
+        if (view is MaterialToolbar) {
             // 1. Красим стандартные элементы
             view.setTitleTextColor(color)
             view.setSubtitleTextColor(color)
@@ -456,7 +579,7 @@ object ThemeManager {
             is TextView -> {
                 view.setTextColor(color)
             }
-            is android.widget.ImageView -> {
+            is ImageView -> {
                 // Используем TintList — это более гибко для Material-компонентов
                 view.imageTintList = ColorStateList.valueOf(color)
             }
@@ -475,7 +598,7 @@ object ThemeManager {
         return try {
             colorStr.toColorInt()
         } catch (_: Exception) {
-            android.util.Log.e("ThemeManager", "Invalid color string: $colorStr")
+            Log.e("ThemeManager", "Invalid color string: $colorStr")
             defaultColor
         }
     }
@@ -510,7 +633,10 @@ object ThemeManager {
             textPrimaryColor = obj.optString("textPrimaryColor", ""),
             backgroundImageUrl = obj.optString("backgroundImageUrl", ""),
             bottomPanelColor = obj.optString("bottomPanelColor", ""),
-            onBottomPanelColor = obj.optString("onBottomPanelColor", "")
+            onBottomPanelColor = obj.optString("onBottomPanelColor", ""),
+            textSecondaryColor = obj.optString("textSecondaryColor", ""),
+            chatListBackgroundImageUrl = obj.optString("chatListBackgroundImageUrl", ""),
+            surfaceContainer = obj.optString("surfaceContainer", ""),
         )
     }
 
@@ -527,6 +653,9 @@ object ThemeManager {
             put("backgroundImageUrl", theme.backgroundImageUrl)
             put("bottomPanelColor", theme.bottomPanelColor)
             put("onBottomPanelColor", theme.onBottomPanelColor)
+            put("textSecondaryColor", theme.textSecondaryColor)
+            put("chatListBackgroundImageUrl", theme.chatListBackgroundImageUrl)
+            put("surfaceContainer", theme.surfaceContainer)
         }.toString()
     }
 
@@ -544,7 +673,7 @@ object ThemeManager {
             currentCustomTheme = current.copy(backgroundImageUrl = imageUrl)
         }
 
-        android.util.Log.d("ThemeManager", "Background override saved for $themeId: $imageUrl")
+        Log.d("ThemeManager", "Background override saved for $themeId: $imageUrl")
     }
 
     // toDo: make interface

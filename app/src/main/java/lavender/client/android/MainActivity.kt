@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
 
         // Handle notification click when app is already running
         val fromNotification = intent.getBooleanExtra("from_notification", false)
-        val notificationRoomId = intent.getStringExtra("room_id") ?: "general"
+        val notificationRoomId = intent.getStringExtra("room_id")
         val savedUsername = getSavedUsername()
         val savedPassword = getSavedPassword()
         val savedServerAddress = getSavedServerAddress()
@@ -334,14 +334,6 @@ class MainActivity : AppCompatActivity() {
     
     private fun showUsernameDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_join_chat, null)
-
-        // Set dialog background using Material Design colors
-        //val typedValue = android.util.TypedValue()
-        //if (isDarkTheme()) {
-        //    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-        //    dialogView.setBackgroundColor(typedValue.data)
-        //}
-
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val usernameInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
         val passwordInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)

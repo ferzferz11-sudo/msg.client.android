@@ -78,16 +78,16 @@
     <style name="Theme_Lavender_Dark_NoActionBar" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="isLightTheme">false</item>
         <!-- Primary colors -->
-        <item name="colorPrimary">@color/lavender_mist</item>
-        <item name="colorOnPrimary">@color/deep_purple</item>
+        <item name="colorPrimary">@color/deep_purple</item>
+        <item name="colorOnPrimary">@color/lavender_mist</item>
         <item name="colorPrimaryContainer">@color/deep_purple</item>
         <item name="colorOnPrimaryContainer">@color/lavender_mist</item>
 
         <!-- Secondary colors -->
         <item name="colorSecondary">@color/white</item>
         <item name="colorOnSecondary">@color/deep_purple</item>
-        <item name="colorSecondaryContainer">@color/deep_purple</item>
-        <item name="colorOnSecondaryContainer">@color/lavender_mist</item>
+        <item name="colorSecondaryContainer">@color/lavender_mist</item>
+        <item name="colorOnSecondaryContainer">@color/deep_purple</item>
 
         <!-- Background colors -->
         <item name="android:windowBackground">@color/dark_background</item>

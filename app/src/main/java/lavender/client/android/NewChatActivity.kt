@@ -66,6 +66,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import java.io.File
 import java.util.Locale
+import androidx.core.view.get
 
 class NewChatActivity : AppCompatActivity() {
 
@@ -530,7 +531,7 @@ class NewChatActivity : AppCompatActivity() {
                 val textColor = customTheme.onPrimaryColor.toColorInt()
                 
                 for (i in 0 until menu.size()) {
-                    val item = menu.getItem(i)
+                    val item = menu[i]
                     val span = android.text.SpannableString(item.title)
                     span.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, span.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     item.title = span
@@ -1360,7 +1361,7 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun getThemeColor(attr: Int): Int {
-        val typedValue = android.util.TypedValue()
+        val typedValue = TypedValue()
         theme.resolveAttribute(attr, typedValue, true)
         return typedValue.data
     }

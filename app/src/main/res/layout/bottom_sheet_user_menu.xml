@@ -14,7 +14,6 @@
         android:layout_marginBottom="24dp"
         android:background="?attr/colorOnSurfaceVariant" />
 
-    <!-- Current User Info -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -92,153 +91,101 @@
         android:background="?android:attr/dividerVertical"
         android:layout_marginBottom="16dp" />
 
-    <!-- Edit Profile -->
     <LinearLayout
         android:id="@+id/actionEditProfile"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
+        style="@style/MenuActionItemStyle">
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_edit"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/edit" />
-
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_edit" />
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/edit"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
+            style="@style/MenuActionTextStyle"
+            android:text="@string/edit" />
     </LinearLayout>
 
-    <!-- Themes -->
     <LinearLayout
         android:id="@+id/actionThemes"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
+        style="@style/MenuActionItemStyle">
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_settings_brightness"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/themes" />
-
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_settings_brightness" />
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/themes"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
+            style="@style/MenuActionTextStyle"
+            android:text="@string/themes" />
     </LinearLayout>
 
-    <!-- Notifications -->
-    <LinearLayout
-        android:id="@+id/actionNotifications"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_notification_history"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/notifications" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/notifications"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
-    </LinearLayout>
-
-    <!-- Contacts -->
     <LinearLayout
         android:id="@+id/actionContacts"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
+        style="@style/MenuActionItemStyle">
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_contacts"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/contacts" />
-
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_contacts" />
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/contacts"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
+            style="@style/MenuActionTextStyle"
+            android:text="@string/contacts" />
     </LinearLayout>
 
-    <!-- Language Toggle -->
+    <View style="@style/MenuDividerStyle" />
+
+    <LinearLayout
+        android:id="@+id/actionNotifications"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_notification_history" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/notifications" />
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/actionToggleLanguage"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
+        style="@style/MenuActionItemStyle">
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_language"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/toggle_language" />
-
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_language" />
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/toggle_language"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
+            style="@style/MenuActionTextStyle"
+            android:text="@string/toggle_language" />
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="?android:attr/dividerVertical"
-        android:layout_marginVertical="8dp" />
+    <LinearLayout
+        android:id="@+id/actionUpdate"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/deployed_code_update_24" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/action_update" />
+    </LinearLayout>
 
-    <!-- Logout -->
+    <View style="@style/MenuDividerStyle" />
+
+    <LinearLayout
+        android:id="@+id/actionAbout"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@android:drawable/ic_dialog_info" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/action_about" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionAdmin"
+        style="@style/MenuActionItemStyle"
+        android:visibility="gone">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@android:drawable/ic_lock_lock" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/action_super_admin" />
+    </LinearLayout>
+
+    <View style="@style/MenuDividerStyle" />
+
     <LinearLayout
         android:id="@+id/actionLogout"
         android:layout_width="match_parent"
@@ -262,6 +209,7 @@
             android:layout_marginStart="16dp"
             android:text="@string/logout_profile"
             android:textSize="16sp"
+            android:textStyle="bold"
             android:textColor="#FF5252" />
     </LinearLayout>
 

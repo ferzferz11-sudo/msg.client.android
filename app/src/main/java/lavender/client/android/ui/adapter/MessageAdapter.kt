@@ -19,7 +19,8 @@ import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.models.Message
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class MessageAdapter(
     private val currentUsername: String,
@@ -218,71 +219,46 @@ class MessageAdapter(
                 messageContainer.layoutParams = lp
             }
 
-            // 3. Child Ordering & Background
-            val surfaceColor: Int
-            val textPrimaryColor: Int
-            val textSecondaryColor: Int
+            // --- 3. ПОЛУЧАЕМ ЦВЕТА ИЗ МЕНЕДЖЕРА ТЕМ (С ЗАЩИТОЙ) ---
+            val msgColors = lavender.client.android.ui.ThemeManager.getMessageColors(context)
 
-            if (theme != null) {
-                val surface = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { Color.LTGRAY }
-                val primary = try { theme.primaryColor.toColorInt() } catch (_: Exception) { Color.BLUE }
-                val textPrimary = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { Color.BLACK }
-                val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { Color.DKGRAY }
-                val onPrimary = try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { Color.WHITE }
-
-                if (isOutgoing) {
-                    surfaceColor = primary
-                    textPrimaryColor = onPrimary
-                    textSecondaryColor = onPrimary
-                } else {
-                    surfaceColor = surface
-                    textPrimaryColor = textPrimary
-                    textSecondaryColor = textSecondary
-                }
+            // Определяем набор цветов в зависимости от стороны
+            val (sColor, pTextColor, sTextColor) = if (isOutgoing) {
+                Triple(msgColors.outgoingBg, msgColors.outgoingText, msgColors.outgoingText)
             } else {
-                val typedValue = android.util.TypedValue()
-                
-                if (isOutgoing) {
-                    context.theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-                    surfaceColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                    textPrimaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                    textSecondaryColor = textPrimaryColor
-                } else {
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                    surfaceColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
-                    textPrimaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-                    textSecondaryColor = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                }
+                Triple(msgColors.incomingBg, msgColors.incomingText, msgColors.incomingText)
             }
 
-            // Apply Background & Gravity
-            if (isOutgoing) {
-                messageBubble.setBackgroundResource(R.drawable.bg_message_outgoing)
-                messageBubble.gravity = android.view.Gravity.END
-            } else {
-                messageBubble.setBackgroundResource(R.drawable.bg_message_incoming)
-                messageBubble.gravity = android.view.Gravity.START
-                userText.setTextColor(textSecondaryColor)
+            // ПРОВЕРКА: Если цвет фона пришел как 0 (прозрачный), ставим аварийный дефолт
+            val finalSurfaceColor = if (sColor != 0) sColor else {
+                if (isOutgoing) "#1A1B46".toColorInt() else "#6A1B9A".toColorInt()
             }
-            
-            messageBubble.backgroundTintList = ColorStateList.valueOf(surfaceColor)
-            messageText.setTextColor(textPrimaryColor)
-            timeText.setTextColor(textSecondaryColor)
-            editedText.setTextColor(textSecondaryColor)
 
-            // 4. Status
+            // 1. Устанавливаем Drawable (Важно сделать это ПЕРЕД тинтом)
+            val bubbleRes = if (isOutgoing) R.drawable.bg_message_outgoing else R.drawable.bg_message_incoming
+            messageBubble.setBackgroundResource(bubbleRes)
+
+            // 2. Применяем тинт (покраску)
+            messageBubble.backgroundTintList = ColorStateList.valueOf(finalSurfaceColor)
+
+            // 3. Красим тексты
+            messageText.setTextColor(pTextColor)
+
+            // Для времени и статуса делаем чуть прозрачнее (80% непрозрачности), чтобы не сливалось
+            val secondaryColorWithAlpha = (sTextColor and 0x00FFFFFF) or (0xCC shl 24)
+            timeText.setTextColor(secondaryColorWithAlpha)
+            editedText.setTextColor(secondaryColorWithAlpha)
+
+            // 4. Status (Галочки)
             readStatusIcon.isVisible = isOutgoing
             if (isOutgoing) {
                 val icon = if (message.isRead) R.drawable.ic_message_read else R.drawable.ic_message_sent
                 readStatusIcon.setImageResource(icon)
-                
+
                 val iconColor = if (message.isRead) {
                     ContextCompat.getColor(context, R.color.tg_read_check)
                 } else {
-                    textSecondaryColor
+                    secondaryColorWithAlpha
                 }
                 readStatusIcon.imageTintList = ColorStateList.valueOf(iconColor)
             }

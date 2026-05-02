@@ -234,10 +234,10 @@
     <string name="add_theme">Add Theme</string>
     <string name="edit_theme">Edit Theme</string>
     <string name="theme_name">Theme Name</string>
-    <string name="primary_color">Primary Color (Toolbar, Outgoing Bubbles)</string>
-    <string name="on_primary_color">Text on Primary (Toolbar Text, Outgoing Text)</string>
-    <string name="surface_color">Surface Color (Chat Cards, Incoming Bubbles)</string>
-    <string name="on_surface_color">Text on Surface (Chat Names, Incoming Text)</string>
+    <string name="primary_color">Primary Color (Toolbar, Incoming Bubbles)</string>
+    <string name="on_primary_color">Text on Primary (Toolbar Text, Incoming Text)</string>
+    <string name="surface_color">Surface Color (Chat Cards, Outgoing Bubbles)</string>
+    <string name="on_surface_color">Text on Surface (Chat Names, Outgoing Text)</string>
     <string name="bottom_panel_color">Bottom Panel Background</string>
     <string name="on_bottom_panel_color">Bottom Panel Icons</string>
     <string name="background_color">Background Color (Main Screen, Chat List)</string>
@@ -311,6 +311,9 @@
     <string name="onboarding_fab_hint">Add contacts of the people you want to message!\nCreate a new chat or join groups to stay always connected!</string>
     <string name="share_with_friends">Share with friends</string>
     <string name="apply">Apply</string>
-    <string name="user_is_typing">%1$s печатает…</string>
-    <string name="users_are_typing">%1$d чел. печатают…</string>
+    <string name="user_is_typing">%1$s typing…</string>
+    <string name="users_are_typing">%1$d users are typing…</string>
+    <string name="action_update">Check for Updates</string>
+    <string name="action_about">About Lavender</string>
+    <string name="action_super_admin">Admin Panel</string>
 </resources>

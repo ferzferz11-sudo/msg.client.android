@@ -464,11 +464,11 @@ data class CustomThemeProto(
     val backgroundColor: String = "",
     val textPrimaryColor: String = "",
     val textSecondaryColor: String = "",
-    val isDark: Boolean = false,
     val backgroundImageUrl: String = "",
     val chatListBackgroundImageUrl: String = "",
     val bottomPanelColor: String = "",
-    val onBottomPanelColor: String = ""
+    val onBottomPanelColor: String = "",
+    val surfaceContainer: String = ""
 )
 
 data class GetThemesRequestProto(

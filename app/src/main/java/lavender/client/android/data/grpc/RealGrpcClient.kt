@@ -194,7 +194,7 @@ object RealGrpcClient {
         }
     }
 
-    private fun startChannelMonitoring(monitoredChannel: io.grpc.ManagedChannel) {
+    private fun startChannelMonitoring(monitoredChannel: ManagedChannel) {
         // Если уже мониторим этот канал — выходим
         if (isMonitoring) return
         isMonitoring = true
@@ -3676,7 +3676,6 @@ private fun writeTheme(cos: com.google.protobuf.CodedOutputStream, theme: Custom
     if (theme.backgroundColor.isNotEmpty()) cos.writeString(7, theme.backgroundColor)
     if (theme.textPrimaryColor.isNotEmpty()) cos.writeString(8, theme.textPrimaryColor)
     if (theme.textSecondaryColor.isNotEmpty()) cos.writeString(9, theme.textSecondaryColor)
-    if (theme.isDark) cos.writeBool(10, theme.isDark)
     if (theme.backgroundImageUrl.isNotEmpty()) cos.writeString(11, theme.backgroundImageUrl)
     if (theme.chatListBackgroundImageUrl.isNotEmpty()) cos.writeString(12, theme.chatListBackgroundImageUrl)
     if (theme.bottomPanelColor.isNotEmpty()) cos.writeString(13, theme.bottomPanelColor)
@@ -3694,7 +3693,6 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
     var backgroundColor = ""
     var textPrimaryColor = ""
     var textSecondaryColor = ""
-    var isDark = false
     var backgroundImageUrl = ""
     var chatListBackgroundImageUrl = ""
     var bottomPanelColor = ""
@@ -3712,15 +3710,28 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
             7 -> backgroundColor = cis.readString()
             8 -> textPrimaryColor = cis.readString()
             9 -> textSecondaryColor = cis.readString()
-            10 -> isDark = cis.readBool()
-            11 -> backgroundImageUrl = cis.readString()
-            12 -> chatListBackgroundImageUrl = cis.readString()
-            13 -> bottomPanelColor = cis.readString()
-            14 -> onBottomPanelColor = cis.readString()
+            10 -> backgroundImageUrl = cis.readString()
+            11 -> chatListBackgroundImageUrl = cis.readString()
+            12 -> bottomPanelColor = cis.readString()
+            13 -> onBottomPanelColor = cis.readString()
             else -> cis.skipField(tag)
         }
     }
-    return CustomThemeProto(id, name, primaryColor, onPrimaryColor, surfaceColor, onSurfaceColor, backgroundColor, textPrimaryColor, textSecondaryColor, isDark, backgroundImageUrl, chatListBackgroundImageUrl, bottomPanelColor, onBottomPanelColor)
+    return CustomThemeProto(
+        id,
+        name,
+        primaryColor,
+        onPrimaryColor,
+        surfaceColor,
+        onSurfaceColor,
+        backgroundColor,
+        textPrimaryColor,
+        textSecondaryColor,
+        backgroundImageUrl,
+        chatListBackgroundImageUrl,
+        bottomPanelColor,
+        onBottomPanelColor,
+    )
 }
 
 class GetFCMLogsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetFCMLogsRequestProto> {

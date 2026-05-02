@@ -315,4 +315,7 @@
     <string name="apply">Применить</string>
     <string name="user_is_typing">%1$s печатает…</string>
     <string name="users_are_typing">%1$d чел. печатают…</string>
+    <string name="action_update">Проверка обновлений</string>
+    <string name="action_about">О программе</string>
+    <string name="action_super_admin">Админ панель</string>
 </resources>

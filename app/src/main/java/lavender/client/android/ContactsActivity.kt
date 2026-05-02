@@ -305,9 +305,4 @@ class ContactsActivity : AppCompatActivity() {
     private fun applySavedColorScheme() {
         setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
-
-    private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", null)
-    }
 }
