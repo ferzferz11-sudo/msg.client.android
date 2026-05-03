@@ -155,6 +155,14 @@
     <string name="delete">Delete</string>
     <string name="deleted_count">Deleted %d chats</string>
     <string name="failed_to_delete_chats">Failed to delete chats</string>
+    <string name="mute_chats">Mute Chats</string>
+    <string name="mute_chats_confirmation">Mute notifications for %d selected chats? You won\'t receive push notifications from these chats.</string>
+    <string name="unmute_chats">Unmute Chats</string>
+    <string name="unmute_chats_confirmation">Unmute notifications for %d selected chats? You will receive push notifications from these chats again.</string>
+    <string name="mute">Mute</string>
+    <string name="unmute">Unmute</string>
+    <string name="muted_count">Muted %d chats</string>
+    <string name="unmuted_count">Unmuted %d chats</string>
     <string name="add_chat">Add Chat</string>
     <string name="create_group">Create Group</string>
     <string name="default_group_name">Group</string>

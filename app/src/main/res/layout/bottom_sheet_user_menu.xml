@@ -71,6 +71,7 @@
             <ImageView
                 android:layout_width="28dp"
                 android:layout_height="28dp"
+                android:contentDescription="@string/share_with_friends"
                 android:src="@drawable/ic_share"
                 app:tint="?attr/colorPrimary" />
 
@@ -78,7 +79,7 @@
                 android:layout_width="70dp"
                 android:layout_height="wrap_content"
                 android:text="@string/share_with_friends"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textColor="?attr/colorPrimary"
                 android:gravity="center"
                 android:maxLines="2" />
@@ -96,6 +97,7 @@
         style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/edit_profile_title"
             android:src="@drawable/ic_edit" />
         <TextView
             style="@style/MenuActionTextStyle"
@@ -118,6 +120,7 @@
         style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/contacts"
             android:src="@drawable/ic_contacts" />
         <TextView
             style="@style/MenuActionTextStyle"
@@ -142,6 +145,7 @@
         style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/language"
             android:src="@drawable/ic_language" />
         <TextView
             style="@style/MenuActionTextStyle"
@@ -166,6 +170,7 @@
         style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/about"
             android:src="@android:drawable/ic_dialog_info" />
         <TextView
             style="@style/MenuActionTextStyle"
@@ -178,6 +183,7 @@
         android:visibility="gone">
         <ImageView
             style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/action_super_admin"
             android:src="@android:drawable/ic_lock_lock" />
         <TextView
             style="@style/MenuActionTextStyle"
@@ -200,6 +206,7 @@
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
+            android:contentDescription="@string/exit"
             android:src="@drawable/exit_to_app_24"
             app:tint="#FF5252" />
 

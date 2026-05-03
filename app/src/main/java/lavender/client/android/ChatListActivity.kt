@@ -84,6 +84,7 @@ class ChatListActivity : AppCompatActivity() {
     private var username: String = ""
     private var password: String = ""
     private var downloadJob: Job? = null
+    private var mutedChats = mutableSetOf<String>() // Set of muted room IDs
 
     private val editProfileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -139,6 +140,14 @@ class ChatListActivity : AppCompatActivity() {
             showDeleteChatsDialog()
         }
 
+        // Кнопка мута чатов в тулбаре
+        binding.actionMute?.setOnClickListener {
+            showMuteChatsDialog()
+        }
+
+        // Загружаем список замьюченных чатов
+        loadMutedChats()
+
         // 3. !!! ВАЖНО: Сначала ИНИЦИАЛИЗИРУЕМ АДАПТЕР !!!
         // Перенесли этот блок вверх, чтобы избежать UninitializedPropertyAccessException
         adapter = ChatAdapter(
@@ -159,6 +168,7 @@ class ChatListActivity : AppCompatActivity() {
             onSelectionChanged = { selectedCount ->
                 val hasSelection = selectedCount > 0
                 binding.actionDelete.isVisible = hasSelection
+                binding.actionMute?.isVisible = hasSelection
 
                 // Меняем заголовок тулбара, если что-то выбрано
                 binding.toolbarTitle.text = if (hasSelection) {
@@ -582,6 +592,92 @@ class ChatListActivity : AppCompatActivity() {
                     binding.toolbarTitle.text = getString(R.string.chats)
                     if (successCount > 0) showToast(getString(R.string.deleted_count, successCount))
                     loadChats()
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun loadMutedChats() {
+        grpcClient.getMutedChats { roomIds ->
+            runOnUiThread {
+                mutedChats.clear()
+                mutedChats.addAll(roomIds)
+            }
+        }
+    }
+
+    private fun showMuteChatsDialog() {
+        val selected = adapter.getSelectedChats()
+        if (selected.isEmpty()) return
+
+        // Проверяем, все ли выбранные чаты уже замьючены
+        val allMuted = selected.all { mutedChats.contains(it.id) }
+        val action = if (allMuted) "unmute" else "mute"
+        val titleRes = if (allMuted) R.string.unmute_chats else R.string.mute_chats
+        val messageRes = if (allMuted) R.string.unmute_chats_confirmation else R.string.mute_chats_confirmation
+        val iconRes = if (allMuted) R.drawable.ic_volume_on else R.drawable.ic_volume_off
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnAction = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
+
+        titleText.text = getString(titleRes)
+        messageText.text = getString(messageRes, selected.size)
+        btnAction.text = getString(if (allMuted) R.string.unmute else R.string.mute)
+        btnAction.icon = ContextCompat.getDrawable(this, iconRes)
+
+        val customTheme = ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val textColor = customTheme.textPrimaryColor.toColorInt()
+                titleText.setTextColor(textColor)
+                messageText.setTextColor(textColor)
+                btnCancel.setTextColor(textColor)
+                val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                ))
+                shape.paint.color = customTheme.surfaceColor.toColorInt()
+                dialogView.background = shape
+            } catch (_: Exception) {}
+        }
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnAction.setOnClickListener {
+            dialog.dismiss()
+            val chatsToToggle = selected.toList()
+            adapter.clearSelection()
+
+            lifecycleScope.launch {
+                var successCount = 0
+                for (chat in chatsToToggle) {
+                    val success = withContext(Dispatchers.IO) {
+                        val deferred = CompletableDeferred<Boolean>()
+                        grpcClient.setMutedChat(chat.id, !allMuted) { deferred.complete(it) }
+                        deferred.await()
+                    }
+                    if (success) {
+                        successCount++
+                        if (!allMuted) {
+                            mutedChats.add(chat.id)
+                        } else {
+                            mutedChats.remove(chat.id)
+                        }
+                    }
+                }
+                runOnUiThread {
+                    binding.toolbarTitle.text = getString(R.string.chats)
+                    if (successCount > 0) {
+                        val toastRes = if (allMuted) R.string.unmuted_count else R.string.muted_count
+                        showToast(getString(toastRes, successCount))
+                    }
+                    adapter.notifyDataSetChanged()
                 }
             }
         }

@@ -220,6 +220,14 @@ object GrpcClient {
         realGrpcClient.deleteDraft(roomId, callback)
     }
 
+    fun getMutedChats(callback: (List<String>) -> Unit) {
+        realGrpcClient.getMutedChats(callback)
+    }
+
+    fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit = {}) {
+        realGrpcClient.setMutedChat(roomId, muted, callback)
+    }
+
     fun getAvatarCache(): Map<String, String> {
         return realGrpcClient.getAvatarCache()
     }

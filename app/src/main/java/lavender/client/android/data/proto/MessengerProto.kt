@@ -558,3 +558,21 @@ data class DeleteDraftRequestProto(
 data class DeleteDraftResponseProto(
     val success: Boolean = false
 )
+
+data class GetMutedChatsRequestProto(
+    val username: String = ""
+)
+
+data class GetMutedChatsResponseProto(
+    val roomIds: List<String> = emptyList()
+)
+
+data class SetMutedChatRequestProto(
+    val username: String = "",
+    val roomId: String = "",
+    val muted: Boolean = true
+)
+
+data class SetMutedChatResponseProto(
+    val success: Boolean = false
+)

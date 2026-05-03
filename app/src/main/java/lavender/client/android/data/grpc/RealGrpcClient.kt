@@ -6,6 +6,7 @@ import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import lavender.client.android.BuildConfig
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.proto.MessageProto
@@ -440,7 +441,7 @@ object RealGrpcClient {
                     .setRoomId(roomId)
                     .setText("") // Empty text acts as a room switch signal
                     .setCreatedAt(ProtoUtils.getCurrentTimestamp())
-                    .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
+                    .setClientVersion(BuildConfig.VERSION_NAME)
                     .build())
             }
         }
@@ -1911,6 +1912,66 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     android.util.Log.e("RealGrpcClient", "DeleteDraft failed: ${status.code}")
+                    callback(false)
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getMutedChats(callback: (List<String>) -> Unit) {
+        val ch = channel ?: return
+        val uname = lastUsername ?: return
+
+        val request = lavender.client.android.data.proto.GetMutedChatsRequestProto(uname)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetMutedChatsRequestProto, lavender.client.android.data.proto.GetMutedChatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetMutedChats")
+            .setRequestMarshaller(GetMutedChatsRequestMarshaller())
+            .setResponseMarshaller(GetMutedChatsResponseMarshaller())
+            .build()
+
+        val call = ch.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.GetMutedChatsResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.GetMutedChatsResponseProto) {
+                callback(message.roomIds)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "GetMutedChats failed: ${status.code}")
+                    callback(emptyList())
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) {
+        val ch = channel ?: return
+        val uname = lastUsername ?: return
+
+        val request = lavender.client.android.data.proto.SetMutedChatRequestProto(uname, roomId, muted)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.SetMutedChatRequestProto, lavender.client.android.data.proto.SetMutedChatResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SetMutedChat")
+            .setRequestMarshaller(SetMutedChatRequestMarshaller())
+            .setResponseMarshaller(SetMutedChatResponseMarshaller())
+            .build()
+
+        val call = ch.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.SetMutedChatResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.SetMutedChatResponseProto) {
+                callback(message.success)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "SetMutedChat failed: ${status.code}")
                     callback(false)
                 }
             }
@@ -4048,5 +4109,96 @@ class DeleteDraftResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavend
             }
         }
         return lavender.client.android.data.proto.DeleteDraftResponseProto(success)
+    }
+}
+
+// Marshallers for Muted Chats
+class GetMutedChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetMutedChatsRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetMutedChatsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetMutedChatsRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
+            else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.GetMutedChatsRequestProto(username)
+    }
+}
+
+class GetMutedChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetMutedChatsResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetMutedChatsResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        for (roomId in value.roomIds) cos.writeString(1, roomId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetMutedChatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val roomIds = mutableListOf<String>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) roomIds.add(cis.readString())
+            else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.GetMutedChatsResponseProto(roomIds)
+    }
+}
+
+class SetMutedChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.SetMutedChatRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.SetMutedChatRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
+        cos.writeBool(3, value.muted)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.SetMutedChatRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""; var roomId = ""; var muted = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> roomId = cis.readString()
+                3 -> muted = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.SetMutedChatRequestProto(username, roomId, muted)
+    }
+}
+
+class SetMutedChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.SetMutedChatResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.SetMutedChatResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.SetMutedChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.SetMutedChatResponseProto(success)
     }
 }

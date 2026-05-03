@@ -154,6 +154,14 @@
     <string name="delete">Удалить</string>
     <string name="deleted_count">Удалено чатов: %d</string>
     <string name="failed_to_delete_chats">Не удалось удалить чаты</string>
+    <string name="mute_chats">Отключить уведомления</string>
+    <string name="mute_chats_confirmation">Отключить уведомления для %d выбранных чатов? Вы не будете получать push-уведомления из этих чатов.</string>
+    <string name="unmute_chats">Включить уведомления</string>
+    <string name="unmute_chats_confirmation">Включить уведомления для %d выбранных чатов? Вы снова будете получать push-уведомления из этих чатов.</string>
+    <string name="mute">Отключить</string>
+    <string name="unmute">Включить</string>
+    <string name="muted_count">Уведомления отключены в %d чатах</string>
+    <string name="unmuted_count">Уведомления включены в %d чатах</string>
     <string name="add_chat">Добавить чат</string>
     <string name="create_group">Создать группу</string>
     <string name="default_group_name">Группа</string>
