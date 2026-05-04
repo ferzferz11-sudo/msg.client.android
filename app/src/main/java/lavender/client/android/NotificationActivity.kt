@@ -60,6 +60,14 @@ class NotificationActivity : AppCompatActivity() {
         // Apply theme colors to toolbar
         lavender.client.android.ui.ThemeManager.applyTheme(this)
 
+        // Apply custom theme background color to activity
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                window.decorView.setBackgroundColor(customTheme.backgroundColor.toColorInt())
+            } catch (_: Exception) {}
+        }
+
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val switchReceive = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchReceivePush)
         val switchSend = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchSendPush)

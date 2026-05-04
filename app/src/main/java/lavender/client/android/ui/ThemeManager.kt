@@ -171,23 +171,20 @@ object ThemeManager {
                 Color.WHITE
             }
 
-            // Исходящие (Фоновые - Темно-синие)
-            // ВАЖНО: Мы будем искать именно colorSurfaceContainer,
-            // который ты настроил как #1A1B46 в themes.xml
-            val attrSurface = res.getIdentifier("colorSurfaceContainer", "attr", pkg)
-            val attrOnSurface = res.getIdentifier("colorOnSurface", "attr", pkg)
+            // Исходящие - используем colorSecondary для фона пузырей
+            val attrSecondary = res.getIdentifier("colorSecondary", "attr", pkg)
+            val attrOnSecondary = res.getIdentifier("colorOnSecondary", "attr", pkg)
 
-            val outBg = if (attrSurface != 0 && context.theme.resolveAttribute(attrSurface, typedValue, true)) {
-                // Если атрибут найден, берем его. Если он вернул 0, берем наш синий.
-                if (typedValue.data != 0) typedValue.data else Color.parseColor("#1A1B46")
+            val outBg = if (attrSecondary != 0 && context.theme.resolveAttribute(attrSecondary, typedValue, true)) {
+                if (typedValue.data != 0) typedValue.data else Color.parseColor("#03DAC6")
             } else {
-                Color.parseColor("#1A1B46") // Твой темно-синий
+                Color.parseColor("#03DAC6") // Material Secondary по умолчанию
             }
 
-            val outText = if (attrOnSurface != 0 && context.theme.resolveAttribute(attrOnSurface, typedValue, true)) {
+            val outText = if (attrOnSecondary != 0 && context.theme.resolveAttribute(attrOnSecondary, typedValue, true)) {
                 typedValue.data
             } else {
-                Color.parseColor("#E6E6FA") // Лавандовый текст
+                Color.parseColor("#000000") // Черный текст по умолчанию
             }
 
             MessageColors(incBg, incText, outBg, outText)
@@ -424,9 +421,8 @@ object ThemeManager {
                     val child = view.getChildAt(i)
                     when (child) {
                         is ImageButton -> {
-                            // Кнопка отправки — главный акцент, остальные — вторичные
-                            val tint = if (child.id == R.id.sendButton) primaryColor else onBpColor
-                            child.imageTintList = ColorStateList.valueOf(tint)
+                            // Все иконки на нижней панели используют primaryColor для консистентности с шторками
+                            child.imageTintList = ColorStateList.valueOf(primaryColor)
                         }
                         is EditText -> {
                             child.setTextColor(textPrimary)

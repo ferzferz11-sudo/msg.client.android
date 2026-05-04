@@ -5,6 +5,15 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+1.0.3.2
+### Theming Improvements
+- Unified bottom sheet styling across all activities (ChatList, Chat, Notifications)
+- Default theme: bottom sheets now use `colorSurfaceContainer` for background and `colorPrimary` for icons/top handle
+- Custom themes: consistent `backgroundColor` and `primaryColor` for all bottom sheets
+- Outgoing message bubbles now use `colorSecondary` for default theme
+- Added `dragHandle` ID to bottom sheet layouts for proper theming
+- Fixed background color handling for NotificationActivity with custom themes
+
 1.0.3.1
 ### Full-Size Group Avatars
 - Extended full-size avatar functionality to group chats (both thumbnail 512x512 and full 1920x1920)

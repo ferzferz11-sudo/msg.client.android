@@ -306,6 +306,21 @@ class ContactsActivity : AppCompatActivity() {
         // Make system window transparent to see rounded corners
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
+        // Theme buttons with colorSecondaryContainer background (same as search in dialog)
+        if (customTheme == null) {
+            val btnBgColor = android.content.res.ColorStateList.valueOf(
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
+                .let { typedValue.data }
+            )
+            val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
+                .let { typedValue.data }
+
+            btnCancel.backgroundTintList = btnBgColor
+            btnCancel.setTextColor(btnTextColor)
+            btnAdd.backgroundTintList = btnBgColor
+            btnAdd.setTextColor(btnTextColor)
+        }
+
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
             val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener

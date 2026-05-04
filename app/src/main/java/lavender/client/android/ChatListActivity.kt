@@ -454,6 +454,36 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun checkOnboarding(chats: List<ChatInfo>) {
         val isNewUser = chats.isEmpty()
+
+        // Apply theme colors to onboarding bubbles
+        val typedValue = TypedValue()
+        val customTheme = ThemeManager.getCurrentTheme()
+
+        // Get colors: use primaryColor for custom themes, colorSecondaryContainer for default (darker)
+        val bubbleBgColor = if (customTheme != null) {
+            try {
+                customTheme.primaryColor.toColorInt()
+            } catch (_: Exception) {
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
+                typedValue.data
+            }
+        } else {
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
+            typedValue.data
+        }
+
+        // Get text color (onSecondaryContainer for better contrast on darker background)
+        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
+        val textColor = typedValue.data
+
+        // Apply background colors
+        binding.onboardingProfileBubble.backgroundTintList = ColorStateList.valueOf(bubbleBgColor)
+        binding.onboardingFabBubble.backgroundTintList = ColorStateList.valueOf(bubbleBgColor)
+
+        // Apply text colors
+        binding.onboardingProfileText.setTextColor(textColor)
+        binding.onboardingFabText.setTextColor(textColor)
+
         if (isNewUser && !binding.onboardingProfileBubble.isVisible) {
             binding.onboardingProfileBubble.visibility = View.VISIBLE
             binding.onboardingProfileBubble.alpha = 0f
@@ -1083,21 +1113,20 @@ class ChatListActivity : AppCompatActivity() {
         // Apply custom theme colors to the sheet
         val customTheme = ThemeManager.getCurrentTheme()
 
-        // ОБНОВЛЕННЫЙ СПИСОК: Все кнопки, которые должны менять цвет
-        val actionIds = listOf(
-            R.id.actionEditProfile,
-            R.id.actionThemes,
-            R.id.actionNotifications,
-            R.id.actionContacts,
-            R.id.actionToggleLanguage,
-            R.id.actionLogout,
-            R.id.actionUpdate,
-            R.id.actionAbout,
-            R.id.actionAdmin
-        )
-
         // ПРИМЕНЯЕМ ТЕМУ К ШТОРКЕ
         if (customTheme != null) {
+            // ОБНОВЛЕННЫЙ СПИСОК: Все кнопки, которые должны менять цвет
+            val actionIds = listOf(
+                R.id.actionEditProfile,
+                R.id.actionThemes,
+                R.id.actionNotifications,
+                R.id.actionContacts,
+                R.id.actionToggleLanguage,
+                R.id.actionLogout,
+                R.id.actionUpdate,
+                R.id.actionAbout,
+                R.id.actionAdmin
+            )
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
                 val txtColor = customTheme.textPrimaryColor.toColorInt()
@@ -1107,6 +1136,9 @@ class ChatListActivity : AppCompatActivity() {
                 sheetView.setBackgroundColor(bgColor)
                 menuUsername.setTextColor(txtColor)
                 menuUserBio.setTextColor(secColor)
+
+                // Color the top handle with primaryColor
+                sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
 
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
@@ -1129,19 +1161,39 @@ class ChatListActivity : AppCompatActivity() {
                 Log.e("ThemeManager", "Error tinting bottom sheet items")
             }
         } else {
-            // For built-in themes: explicitly set icon tint to match text color
+            // For built-in themes: match custom theme styling
             try {
+                val actionIds = listOf(
+                    R.id.actionEditProfile,
+                    R.id.actionThemes,
+                    R.id.actionNotifications,
+                    R.id.actionContacts,
+                    R.id.actionToggleLanguage,
+                    R.id.actionLogout,
+                    R.id.actionUpdate,
+                    R.id.actionAbout,
+                    R.id.actionAdmin
+                )
                 val typedValue = TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
-                val iconColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
 
+                // Set background to match ChatListActivity (colorSurfaceContainer)
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                val bgColor = typedValue.data
+                sheetView.setBackgroundColor(bgColor)
+
+
+                // Use colorPrimary for handle and icons
+                theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+                val primaryColor = typedValue.data
+                sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primaryColor)
+
+                // Color icons with primaryColor (except logout which stays red)
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
                             val child = layout.getChildAt(i)
                             if (child is ImageView) {
-                                // Для выхода оставляем красный, для остальных — цвет текста
-                                if (id != R.id.actionLogout) child.imageTintList = ColorStateList.valueOf(iconColor)
+                                if (id != R.id.actionLogout) child.imageTintList = ColorStateList.valueOf(primaryColor)
                             }
                         }
                     }
@@ -1239,11 +1291,14 @@ class ChatListActivity : AppCompatActivity() {
 
         if (customTheme != null) {
             try {
-                val bgColor = customTheme.surfaceColor.toColorInt()
+                val bgColor = customTheme.backgroundColor.toColorInt()
                 val txtColor = customTheme.textPrimaryColor.toColorInt()
                 val primColor = customTheme.primaryColor.toColorInt()
 
                 sheetView.setBackgroundColor(bgColor)
+
+                // Color the top handle with primaryColor
+                sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
 
                 // Theme all action items
                 actionIds.forEach { id ->
@@ -1263,18 +1318,28 @@ class ChatListActivity : AppCompatActivity() {
                 Log.e("ThemeManager", "Error tinting chat action sheet")
             }
         } else {
-            // For built-in themes: explicitly set icon tint to match text color
+            // For built-in themes: match custom theme styling
             try {
                 val typedValue = TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
-                val iconColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
 
+                // Set background to match ChatListActivity (colorSurfaceContainer)
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                val bgColor = typedValue.data
+                sheetView.setBackgroundColor(bgColor)
+
+
+                // Use colorPrimary for handle and icons
+                theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+                val primaryColor = typedValue.data
+                sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primaryColor)
+
+                // Color icons with primaryColor
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
                             val child = layout.getChildAt(i)
                             if (child is ImageView) {
-                                child.imageTintList = ColorStateList.valueOf(iconColor)
+                                child.imageTintList = ColorStateList.valueOf(primaryColor)
                             }
                         }
                     }
@@ -1304,10 +1369,57 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 binding.toolbarTitle.text = getString(R.string.chats)
                 val dialogView = layoutInflater.inflate(R.layout.dialog_create_direct_chat, null)
+                val typedValue = TypedValue()
+
+                // Apply same theming as in add_contact dialog
+                val customTheme = ThemeManager.getCurrentTheme()
+                val bgColor = if (customTheme != null) {
+                    try {
+                        customTheme.primaryColor.toColorInt()
+                    } catch (_: Exception) {
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                        typedValue.data
+                    }
+                } else {
+                    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                    typedValue.data
+                }
+
+                // Create rounded background drawable
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(
+                    android.graphics.drawable.shapes.RoundRectShape(
+                        floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
+                    )
+                )
+                shapeDrawable.paint.color = bgColor
+                dialogView.background = shapeDrawable
+
                 val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
+                val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
                 val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
                 val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                 val btnStartChat = dialogView.findViewById<MaterialButton>(R.id.btnStartChat)
+
+                // Theme buttons for default theme
+                if (customTheme == null) {
+                    val btnBgColor = android.content.res.ColorStateList.valueOf(
+                        theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
+                            .let { typedValue.data }
+                    )
+                    val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
+                        .let { typedValue.data }
+
+                    btnCancel.backgroundTintList = btnBgColor
+                    btnCancel.setTextColor(btnTextColor)
+                    btnStartChat.backgroundTintList = btnBgColor
+                    btnStartChat.setTextColor(btnTextColor)
+
+                    // Theme search input
+                    val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+                    searchInputLayout.setBoxStrokeColorStateList(boxColor)
+                    searchInputLayout.defaultHintTextColor = boxColor
+                }
+
                 val filteredUsers = contacts.filter { it != username }.sortedWith(compareByDescending<String> { grpcClient.users.value.contains(it) }.thenBy { it })
                 var selectedUser: String? = null
                 val userAdapter = UserAdapter(
@@ -1320,7 +1432,12 @@ class ChatListActivity : AppCompatActivity() {
                 )
                 usersRecyclerView.adapter = userAdapter
                 userAdapter.setUsers(filteredUsers)
+
                 val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+                // Make system window transparent to see rounded corners
+                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
                 searchEditText.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -1370,27 +1487,56 @@ class ChatListActivity : AppCompatActivity() {
                     resetButtons()
                     val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
                     val typedValue = TypedValue()
-                    if (isDarkTheme()) {
+
+                    // Apply same theming as in add_contact dialog
+                    val customTheme = ThemeManager.getCurrentTheme()
+                    val bgColor = if (customTheme != null) {
+                        try {
+                            customTheme.primaryColor.toColorInt()
+                        } catch (_: Exception) {
+                            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                            typedValue.data
+                        }
+                    } else {
                         theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                        dialogView.setBackgroundColor(typedValue.data)
+                        typedValue.data
                     }
+
+                    // Create rounded background drawable
+                    val shapeDrawable = android.graphics.drawable.ShapeDrawable(
+                        android.graphics.drawable.shapes.RoundRectShape(
+                            floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
+                        )
+                    )
+                    shapeDrawable.paint.color = bgColor
+                    dialogView.background = shapeDrawable
+
                     val groupNameInput = dialogView.findViewById<EditText>(R.id.groupNameInput)
                     val usersContainer = dialogView.findViewById<LinearLayout>(R.id.usersContainer)
                     val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                     val btnCreate = dialogView.findViewById<MaterialButton>(R.id.btnCreate)
                     val groupInputLayout = dialogView.findViewById<TextInputLayout>(R.id.groupInputLayout)
-                    if (isDarkTheme()) {
-                        val surfaceValue = TypedValue()
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
-                        groupInputLayout.boxBackgroundColor = surfaceValue.data
-                        val primaryValue = TypedValue()
-                        theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                        val strokeColor = ColorStateList.valueOf(primaryValue.data)
-                        btnCancel.strokeColor = strokeColor
-                        btnCancel.strokeWidth = 2
-                        btnCreate.strokeColor = strokeColor
-                        btnCreate.strokeWidth = 2
+
+                    // Theme buttons and input for default theme
+                    if (customTheme == null) {
+                        val btnBgColor = android.content.res.ColorStateList.valueOf(
+                            theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
+                                .let { typedValue.data }
+                        )
+                        val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
+                            .let { typedValue.data }
+
+                        btnCancel.backgroundTintList = btnBgColor
+                        btnCancel.setTextColor(btnTextColor)
+                        btnCreate.backgroundTintList = btnBgColor
+                        btnCreate.setTextColor(btnTextColor)
+
+                        // Theme group input
+                        val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+                        groupInputLayout.setBoxStrokeColorStateList(boxColor)
+                        groupInputLayout.defaultHintTextColor = boxColor
                     }
+
                     val selectedUsers = mutableSetOf<String>()
                     val sortedUsers = contacts.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
                     for (user in sortedUsers) {
@@ -1418,7 +1564,12 @@ class ChatListActivity : AppCompatActivity() {
                         }
                         usersContainer.addView(userView)
                     }
+
                     val dialog = AlertDialog.Builder(this@ChatListActivity).setView(dialogView).setOnDismissListener { resetButtons() }.create()
+
+                    // Make system window transparent to see rounded corners
+                    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
                     btnCancel.setOnClickListener { dialog.dismiss() }
                     btnCreate.setOnClickListener {
                         val groupName = groupNameInput.text.toString().trim()
@@ -1446,15 +1597,57 @@ class ChatListActivity : AppCompatActivity() {
         binding.toolbarTitle.text = getString(R.string.loading)
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
         val typedValue = TypedValue()
-        if (isDarkTheme()) {
+
+        // Apply same theming as in ContactsActivity
+        val customTheme = ThemeManager.getCurrentTheme()
+        val bgColor = if (customTheme != null) {
+            try {
+                customTheme.primaryColor.toColorInt()
+            } catch (_: Exception) {
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                typedValue.data
+            }
+        } else {
             theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-            dialogView.setBackgroundColor(typedValue.data)
+            typedValue.data
         }
+
+        // Create rounded background drawable
+        val shapeDrawable = android.graphics.drawable.ShapeDrawable(
+            android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
+            )
+        )
+        shapeDrawable.paint.color = bgColor
+        dialogView.background = shapeDrawable
+
         val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
+        val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
         val createChatCheckbox = dialogView.findViewById<CheckBox>(R.id.createChatCheckbox)
         val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
+
+        // Theme buttons for default theme
+        if (customTheme == null) {
+            val btnBgColor = android.content.res.ColorStateList.valueOf(
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
+                    .let { typedValue.data }
+            )
+            val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
+                .let { typedValue.data }
+
+            btnCancel.backgroundTintList = btnBgColor
+            btnCancel.setTextColor(btnTextColor)
+            btnAdd.backgroundTintList = btnBgColor
+            btnAdd.setTextColor(btnTextColor)
+
+            // Theme search input
+            val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+            searchInputLayout.setBoxStrokeColorStateList(boxColor)
+            searchInputLayout.defaultHintTextColor = boxColor
+        }
+
         val allUsers = mutableListOf<String>()
         val userContacts = mutableListOf<String>()
         val userAdapter = UserAdapter(
@@ -1497,6 +1690,10 @@ class ChatListActivity : AppCompatActivity() {
                 invalidateOptionsMenu()
             }
             .create()
+
+        // Make system window transparent to see rounded corners
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
             val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener

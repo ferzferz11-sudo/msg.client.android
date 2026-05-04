@@ -657,21 +657,52 @@ class NewChatActivity : AppCompatActivity() {
     private fun showAttachmentSheet() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
-        
+
         val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
                 val textColor = customTheme.textPrimaryColor.toColorInt()
+                val primColor = customTheme.primaryColor.toColorInt()
                 view.setBackgroundColor(bgColor)
-                val childCount = (view as? LinearLayout)?.childCount ?: 0
-                for (i in 0 until childCount) {
-                    val child = (view as LinearLayout).getChildAt(i)
-                    if (child is LinearLayout) {
-                        for (j in 0 until child.childCount) {
-                            val subChild = child.getChildAt(j)
-                            if (subChild is TextView) subChild.setTextColor(textColor)
-                            if (subChild is ImageView) subChild.setColorFilter(textColor)
+
+                // Color the top handle with primaryColor
+                view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+
+                // Theme all items - icons with primaryColor, text with textPrimaryColor
+                val itemIds = listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation)
+                itemIds.forEach { id ->
+                    view.findViewById<LinearLayout>(id)?.let { layout ->
+                        for (i in 0 until layout.childCount) {
+                            val child = layout.getChildAt(i)
+                            if (child is TextView) child.setTextColor(textColor)
+                            if (child is ImageView) child.imageTintList = android.content.res.ColorStateList.valueOf(primColor)
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        } else {
+            // For built-in themes: match ChatListActivity sheet styling
+            try {
+                val typedValue = TypedValue()
+
+                // Set background to match ChatListActivity (colorSurfaceContainer)
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                val bgColor = typedValue.data
+                view.setBackgroundColor(bgColor)
+
+                // Use colorPrimary for handle and icons
+                theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+                val primaryColor = typedValue.data
+                view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+
+                // Color icons with primaryColor
+                val itemIds = listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation)
+                itemIds.forEach { id ->
+                    view.findViewById<LinearLayout>(id)?.let { layout ->
+                        for (i in 0 until layout.childCount) {
+                            val child = layout.getChildAt(i)
+                            if (child is ImageView) child.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
                         }
                     }
                 }
