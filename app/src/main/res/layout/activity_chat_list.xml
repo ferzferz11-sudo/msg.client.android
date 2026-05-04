@@ -81,6 +81,30 @@
                 android:contentDescription="@string/search"
                 app:tint="?attr/colorOnPrimary" />
 
+            <ImageView
+                android:id="@+id/actionMute"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_volume_off"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone"
+                app:tint="?attr/colorOnPrimary"
+                android:contentDescription="@string/mute" />
+
+            <ImageView
+                android:id="@+id/actionDelete"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_delete"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone"
+                app:tint="?attr/colorOnPrimary"
+                android:contentDescription="@string/delete" />
+
         </LinearLayout>
 
     </com.google.android.material.appbar.MaterialToolbar>
@@ -126,31 +150,6 @@
                 android:textColor="?attr/colorOnSurface"
                 android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:textSize="15sp" />
-
-            <ImageView
-                android:id="@+id/actionDelete"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="8dp"
-                android:padding="8dp"
-                android:src="@drawable/ic_delete"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:visibility="gone"
-                app:tint="?attr/colorOnPrimary"
-                android:contentDescription="@string/delete" />
-
-            <!-- Mute/Unmute button for chat notifications -->
-            <ImageView
-                android:id="@+id/actionMute"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="8dp"
-                android:padding="8dp"
-                android:src="@drawable/ic_volume_off"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:visibility="gone"
-                app:tint="?attr/colorOnPrimary"
-                android:contentDescription="@string/mute" />
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>

@@ -183,6 +183,13 @@ class ChatListActivity : AppCompatActivity() {
 
                 // Прячем аватар в режиме удаления для красоты
                 binding.toolbarUserAvatar.isVisible = !hasSelection
+                
+                // Manage toolbar navigation icon
+                if (hasSelection) {
+                    supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+                } else {
+                    supportActionBar?.setHomeAsUpIndicator(null)
+                }
             },
             currentUsername = username,
             initialAvatarCache = grpcClient.getAvatarCache(),
@@ -230,6 +237,8 @@ class ChatListActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener {
             if (binding.searchCard.isVisible) {
                 hideSearchBar()
+            } else if (adapter.getSelectedChats().isNotEmpty()) {
+                adapter.clearSelection()
             } else {
                 moveTaskToBack(true)
             }
@@ -1523,8 +1532,10 @@ class ChatListActivity : AppCompatActivity() {
         
         // Update toolbar to show close icon
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
-        // Hide search icon when search is active
+        // Hide search icon when search is active, also hide selection icons
         binding.actionSearch.isVisible = false
+        binding.actionDelete.isVisible = false
+        binding.actionMute.isVisible = false
     }
 
     private fun hideSearchBar() {
@@ -1538,10 +1549,18 @@ class ChatListActivity : AppCompatActivity() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
         
-        // Reset toolbar icon
-        supportActionBar?.setHomeAsUpIndicator(null)
-        // Show search icon when search is hidden (if not in selection mode)
-        binding.actionSearch.isVisible = binding.actionDelete.visibility != View.VISIBLE
+        // Restore icons based on current selection state
+        val hasSelection = adapter.getSelectedChats().isNotEmpty()
+        binding.actionSearch.isVisible = !hasSelection
+        binding.actionDelete.isVisible = hasSelection
+        binding.actionMute.isVisible = hasSelection
+        
+        // Reset toolbar icon based on selection state
+        if (hasSelection) {
+            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        } else {
+            supportActionBar?.setHomeAsUpIndicator(null)
+        }
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
