@@ -66,12 +66,13 @@ class UserAdapter(
             // Apply theme-aware selection background
             if (isSelected) {
                 val typedValue = android.util.TypedValue()
-                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                // Use colorSecondary for selected background
+                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorSecondary, typedValue, true)
                 itemView.setBackgroundResource(R.drawable.rounded_background)
                 itemView.backgroundTintList = android.content.res.ColorStateList.valueOf(typedValue.data)
                 
-                // Ensure text color is readable on selection
-                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
+                // Use colorOnSecondary for text on selected background
+                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondary, typedValue, true)
                 usernameText.setTextColor(typedValue.data)
                 itemView.alpha = 1.0f
             } else {
@@ -103,11 +104,11 @@ class UserAdapter(
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context)
                     .load(avatarUrl)
-                    .placeholder(R.drawable.ic_default_avatar)
+                    .placeholder(R.drawable.ic_default_avatar_white)
                     .circleCrop()
                     .into(userAvatar)
             } else {
-                userAvatar.setImageResource(R.drawable.ic_default_avatar)
+                userAvatar.setImageResource(R.drawable.ic_default_avatar_white)
             }
             
             // Show status indicator

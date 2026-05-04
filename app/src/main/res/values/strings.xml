@@ -210,7 +210,7 @@
     <string name="history_cleared">History cleared</string>
 
     <string name="welcome_new_user_title">Welcome to Lavender!</string>
-    <string name="welcome_new_user_description">This is the messaging system. Your privacy is our top priority, which is why all chats here are protected with end-to-end encryption.  To get started: * Set up your profile so your friends can recognize you. * Add contacts of the people you want to message. * Create a new chat or join groups to stay securely connected.</string>
+    <string name="welcome_new_user_description">This is the messaging system. Your privacy is our top priority, which is why all chats here are protected with end-to-end encryption.</string>
     <string name="loading">Loading…</string>
     <string name="change_bio">Save</string>
     <string name="bio_label">Bio</string>
@@ -264,6 +264,7 @@
     <string name="theme_template_rose">Nordic Rose</string>
     <string name="theme_template_mint">Cyber Mint</string>
     <string name="admin_label">(Admin)</string>
+    <string name="muted_label">Muted</string>
     <string name="super_admin">Super Admin</string>
     <string name="about">About</string>
     <string name="about_program">About Program</string>

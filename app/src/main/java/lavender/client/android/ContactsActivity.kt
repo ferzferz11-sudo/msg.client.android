@@ -28,7 +28,7 @@ import java.util.*
 
 class ContactsActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityContactsBinding
+    private var binding: ActivityContactsBinding? = null
     private val grpcClient = GrpcClient
     private lateinit var adapter: UserAdapter
     private var username: String = ""
@@ -49,51 +49,57 @@ class ContactsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-        binding = ActivityContactsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         username = intent.getStringExtra("username") ?: ""
         password = intent.getStringExtra("password") ?: ""
 
+        // Load and apply theme before setting content view
         lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
             runOnUiThread {
+                binding = ActivityContactsBinding.inflate(layoutInflater)
+                setContentView(binding!!.root)
                 lavender.client.android.ui.ThemeManager.applyTheme(this)
+                setupUI()
             }
         }
+    }
 
+    private fun setupUI() {
         // Handle window insets for edge-to-edge
-        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top)
-            insets
-        }
-        
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(bottom = systemBars.bottom)
-            insets
-        }
-
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
-
-        setupRecyclerView()
-        loadContacts()
-
-        binding.addContactFab.setOnClickListener {
-            showAddContactDialog()
-        }
-
-        binding.searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString().lowercase()
-                val filtered = if (query.isEmpty()) contacts else contacts.filter { it.lowercase().contains(query) }
-                adapter.setUsers(filtered)
+        binding?.let { b ->
+            ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { view, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                view.updatePadding(top = systemBars.top)
+                insets
             }
-            override fun afterTextChanged(s: Editable?) {}
-        })
+
+            ViewCompat.setOnApplyWindowInsetsListener(b.root) { view, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                view.updatePadding(bottom = systemBars.bottom)
+                insets
+            }
+
+            setSupportActionBar(b.toolbar)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            b.toolbar.setNavigationOnClickListener { finish() }
+
+            setupRecyclerView()
+            loadContacts()
+
+            b.addContactFab.setOnClickListener {
+                showAddContactDialog()
+            }
+
+            b.searchEditText.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val query = s.toString().lowercase()
+                    val filtered = if (query.isEmpty()) contacts else contacts.filter { it.lowercase().contains(query) }
+                    adapter.setUsers(filtered)
+                }
+                override fun afterTextChanged(s: Editable?) {}
+            })
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -125,14 +131,16 @@ class ContactsActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == 1) {
-            binding.searchLayout.isVisible = !binding.searchLayout.isVisible
-            if (binding.searchLayout.isVisible) {
-                binding.searchEditText.requestFocus()
-                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(binding.searchEditText, 0)
-            } else {
-                binding.searchEditText.text?.clear()
-                adapter.setUsers(contacts)
+            binding?.let { b ->
+                b.searchLayout.isVisible = !b.searchLayout.isVisible
+                if (b.searchLayout.isVisible) {
+                    b.searchEditText.requestFocus()
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(b.searchEditText, 0)
+                } else {
+                    b.searchEditText.text?.clear()
+                    adapter.setUsers(contacts)
+                }
             }
             return true
         }
@@ -157,8 +165,8 @@ class ContactsActivity : AppCompatActivity() {
             },
             avatarCache = grpcClient.getAvatarCache()
         )
-        binding.contactsRecyclerView.adapter = adapter
-        binding.contactsRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding?.contactsRecyclerView?.adapter = adapter
+        binding?.contactsRecyclerView?.layoutManager = LinearLayoutManager(this)
 
         lifecycleScope.launch {
             grpcClient.users.collect { onlineUsers ->
@@ -172,7 +180,7 @@ class ContactsActivity : AppCompatActivity() {
             contacts = list.toMutableList()
             runOnUiThread {
                 adapter.setUsers(contacts)
-                binding.emptyStateContainer.isVisible = contacts.isEmpty()
+                binding?.emptyStateContainer?.isVisible = contacts.isEmpty()
             }
         }
     }
@@ -199,7 +207,7 @@ class ContactsActivity : AppCompatActivity() {
                         if (success) {
                             contacts.remove(contactUsername)
                             adapter.setUsers(contacts)
-                            binding.emptyStateContainer.isVisible = contacts.isEmpty()
+                            binding?.emptyStateContainer?.isVisible = contacts.isEmpty()
                         } else {
                             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                         }
@@ -213,10 +221,43 @@ class ContactsActivity : AppCompatActivity() {
     private fun showAddContactDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
         val searchEditText = dialogView.findViewById<TextInputEditText>(R.id.searchEditText)
+        val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
         val createChatCheckbox = dialogView.findViewById<MaterialCheckBox>(R.id.createChatCheckbox)
         val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+
+        // Apply theme to dialog background
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val typedValue = android.util.TypedValue()
+        val bgColor = if (customTheme != null) {
+            try {
+                // Use primaryColor for custom themes
+                customTheme.primaryColor.toColorInt()
+            } catch (_: Exception) {
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+                typedValue.data
+            }
+        } else {
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
+            typedValue.data
+        }
+
+        // Create rounded background drawable
+        val shapeDrawable = android.graphics.drawable.ShapeDrawable(
+            android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
+            )
+        )
+        shapeDrawable.paint.color = bgColor
+        dialogView.background = shapeDrawable
+
+        // Theme search input for default dark theme
+        if (customTheme == null) {
+            val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+            searchInputLayout.setBoxStrokeColorStateList(boxColor)
+            searchInputLayout.defaultHintTextColor = boxColor
+        }
 
         val allUsers = mutableListOf<String>()
         val filteredUsers = mutableListOf<String>()
@@ -261,6 +302,9 @@ class ContactsActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
+
+        // Make system window transparent to see rounded corners
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {

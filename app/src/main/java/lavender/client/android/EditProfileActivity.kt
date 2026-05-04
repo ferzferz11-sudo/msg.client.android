@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.ui.ThemeManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -46,6 +47,7 @@ class EditProfileActivity : AppCompatActivity() {
     private var selectedAvatarUri: Uri? = null
     private var currentAvatarImageView: CircleImageView? = null
     private var currentAvatarProgressBar: ProgressBar? = null
+    private var currentFullAvatarUrl: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -70,8 +72,20 @@ class EditProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_edit_profile)
 
+        username = intent.getStringExtra("username") ?: ""
+
+        // Load and apply theme before setting content view
+        ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                setContentView(R.layout.activity_edit_profile)
+                ThemeManager.applyTheme(this)
+                setupUI()
+            }
+        }
+    }
+
+    private fun setupUI() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
 
         // Handle window insets for edge-to-edge
@@ -97,7 +111,7 @@ class EditProfileActivity : AppCompatActivity() {
         val editFieldsContainer = findViewById<View>(R.id.editFieldsContainer)
         val btnDeleteProfile = findViewById<Button>(R.id.btnDeleteProfile)
 
-        username = intent.getStringExtra("username") ?: ""
+        // username already set in onCreate
         password = intent.getStringExtra("password") ?: ""
 
         setSupportActionBar(toolbar)
@@ -121,17 +135,33 @@ class EditProfileActivity : AppCompatActivity() {
             }
         }
 
-        // Load current avatar
+        // Load current avatar and full avatar URL
         grpcClient.getUserAvatar(username) { avatarUrl ->
             runOnUiThread {
                 if (avatarUrl.isNotEmpty()) {
                     Glide.with(this)
                         .load(avatarUrl)
-                        .placeholder(R.drawable.ic_default_avatar)
-                        .error(R.drawable.ic_default_avatar)
+                        .placeholder(R.drawable.ic_default_avatar_white)
+                        .error(R.drawable.ic_default_avatar_white)
                         .into(avatarImageView)
+                    // Get full avatar URL from cache
+                    currentFullAvatarUrl = grpcClient.getFullAvatarCache()[username] ?: avatarUrl
+                } else {
+                    // Use white default avatar when no avatar URL
+                    avatarImageView.setImageResource(R.drawable.ic_default_avatar_white)
                 }
             }
+        }
+
+        // Open full screen avatar on click
+        avatarImageView.setOnClickListener {
+            val fullUrl = currentFullAvatarUrl.takeIf { it.isNotEmpty() }
+                ?: grpcClient.getAvatarCache()[username]
+                ?: return@setOnClickListener
+            val intent = Intent(this, FullScreenImageActivity::class.java).apply {
+                putExtra("image_url", fullUrl)
+            }
+            startActivity(intent)
         }
 
         btnToggleEdit.setOnClickListener {
@@ -281,12 +311,14 @@ class EditProfileActivity : AppCompatActivity() {
                                     currentAvatarProgressBar?.isVisible = false
                                     if (success) {
                                         Toast.makeText(this@EditProfileActivity, "Аватар обновлен", Toast.LENGTH_SHORT).show()
+                                        // Update current full avatar URL
+                                        currentFullAvatarUrl = fullUrl.takeIf { it.isNotEmpty() } ?: url
                                         // Update avatarImageView (используем миниатюру)
                                         currentAvatarImageView?.let {
                                             Glide.with(this@EditProfileActivity)
                                                 .load(url)
-                                                .placeholder(R.drawable.ic_default_avatar)
-                                                .error(R.drawable.ic_default_avatar)
+                                                .placeholder(R.drawable.ic_default_avatar_white)
+                                                .error(R.drawable.ic_default_avatar_white)
                                                 .into(it)
                                         }
                                         // Set result to notify NewChatActivity to refresh

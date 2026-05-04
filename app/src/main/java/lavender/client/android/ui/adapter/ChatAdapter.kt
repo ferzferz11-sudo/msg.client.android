@@ -141,6 +141,7 @@ class ChatAdapter(
         private val chatType: TextView = itemView.findViewById(R.id.chatType)
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
         private val adminIndicator: ImageView = itemView.findViewById(R.id.adminIndicator)
+        private val muteIndicator: ImageView = itemView.findViewById(R.id.muteIndicator)
         private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
@@ -217,6 +218,9 @@ class ChatAdapter(
             } else {
                 adminIndicator.setOnClickListener(null)
             }
+
+            // Индикатор mute (слева от шестеренки)
+            muteIndicator.isVisible = chat.isMuted
 
             // --- 5. АВАТАРЫ И КЛИКИ ---
             loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)

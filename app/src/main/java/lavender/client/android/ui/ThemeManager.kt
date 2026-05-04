@@ -334,6 +334,11 @@ object ThemeManager {
             activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimaryValue, true)
             val onPrimaryColor = onPrimaryValue.data
 
+            // Get colorOnPrimaryContainer for button backgrounds
+            val onPrimaryContainerValue = TypedValue()
+            activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, onPrimaryContainerValue, true)
+            val onPrimaryContainerColor = onPrimaryContainerValue.data
+
             toolbar?.apply {
                 backgroundTintList = ColorStateList.valueOf(systemPrimaryColor)
                 setTitleTextColor(onPrimaryColor)
@@ -344,6 +349,9 @@ object ThemeManager {
             }
 
             activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(onPrimaryColor)
+
+            // Theme buttons with colorOnPrimaryContainer background
+            applyDefaultThemeToButtons(root, onPrimaryContainerColor, onPrimaryColor)
             return
         }
 
@@ -481,14 +489,20 @@ object ThemeManager {
 
                 // Кнопки
                 is MaterialButton -> {
-                    // Если это TextButton (без фона), красим только текст и иконку
-                    if (view.backgroundTintList == null || view.stateListAnimator == null) {
+                    // Проверяем, является ли кнопка текстовой.
+                    // У текстовых кнопок Material по умолчанию backgroundTint либо null, либо прозрачный.
+                    val isTextButton = view.backgroundTintList == null
+                            || view.backgroundTintList?.defaultColor == Color.TRANSPARENT
+
+                    if (isTextButton) {
                         view.setTextColor(primary)
                         view.iconTint = ColorStateList.valueOf(primary)
+                        view.rippleColor = ColorStateList.valueOf(adjustAlpha(primary, 0.12f))
                     } else {
-                        view.backgroundTintList = ColorStateList.valueOf(primary)
-                        view.setTextColor(onPrimary)
-                        view.iconTint = ColorStateList.valueOf(onPrimary)
+                        view.backgroundTintList = ColorStateList.valueOf(surface)
+                        view.setTextColor(textPrimary)
+                        view.iconTint = ColorStateList.valueOf(textPrimary)
+                        view.rippleColor = ColorStateList.valueOf(adjustAlpha(primary, 0.24f))
                     }
                 }
 
@@ -546,6 +560,31 @@ object ThemeManager {
             }
         } catch (e: Exception) {
             Log.e("ThemeManager", "Error in applyThemeToView", e)
+        }
+    }
+
+    private fun applyDefaultThemeToButtons(view: View, buttonBgColor: Int, buttonTextColor: Int) {
+        when (view) {
+            is MaterialButton -> {
+                // Если у кнопки есть заливка (не прозрачная), считаем её Contained
+                val isContained = view.backgroundTintList != null &&
+                        view.backgroundTintList?.defaultColor != Color.TRANSPARENT
+
+                if (isContained) {
+                    view.backgroundTintList = ColorStateList.valueOf(buttonBgColor)
+                    view.setTextColor(buttonTextColor)
+                    view.iconTint = ColorStateList.valueOf(buttonTextColor)
+                } else {
+                    // Для текстовых кнопок в дефолтной теме используем buttonBgColor как цвет текста
+                    view.setTextColor(buttonBgColor)
+                    view.iconTint = ColorStateList.valueOf(buttonBgColor)
+                }
+            }
+            is ViewGroup -> {
+                for (i in 0 until view.childCount) {
+                    applyDefaultThemeToButtons(view.getChildAt(i), buttonBgColor, buttonTextColor)
+                }
+            }
         }
     }
 

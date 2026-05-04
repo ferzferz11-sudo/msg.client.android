@@ -224,6 +224,8 @@ class ChatListActivity : AppCompatActivity() {
                     binding.swipeRefreshLayout.setBackgroundColor(nightColor)
                 }
                 adapter.notifyDataSetChanged()
+                // Update avatar after theme is applied
+                updateToolbarAvatar()
             }
         }
 
@@ -540,7 +542,9 @@ class ChatListActivity : AppCompatActivity() {
         if (!myAvatarUrl.isNullOrEmpty()) {
             Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)
         } else {
-            avatarView.setImageResource(R.drawable.ic_default_avatar)
+            // Default white avatar for all themes (built-in and custom)
+            avatarView.setImageResource(R.drawable.ic_default_avatar_white)
+            avatarView.clearColorFilter()
         }
     }
 
@@ -1079,6 +1083,19 @@ class ChatListActivity : AppCompatActivity() {
         // Apply custom theme colors to the sheet
         val customTheme = ThemeManager.getCurrentTheme()
 
+        // ОБНОВЛЕННЫЙ СПИСОК: Все кнопки, которые должны менять цвет
+        val actionIds = listOf(
+            R.id.actionEditProfile,
+            R.id.actionThemes,
+            R.id.actionNotifications,
+            R.id.actionContacts,
+            R.id.actionToggleLanguage,
+            R.id.actionLogout,
+            R.id.actionUpdate,
+            R.id.actionAbout,
+            R.id.actionAdmin
+        )
+
         // ПРИМЕНЯЕМ ТЕМУ К ШТОРКЕ
         if (customTheme != null) {
             try {
@@ -1090,19 +1107,6 @@ class ChatListActivity : AppCompatActivity() {
                 sheetView.setBackgroundColor(bgColor)
                 menuUsername.setTextColor(txtColor)
                 menuUserBio.setTextColor(secColor)
-
-                // ОБНОВЛЕННЫЙ СПИСОК: Все кнопки, которые должны менять цвет
-                val actionIds = listOf(
-                    R.id.actionEditProfile,
-                    R.id.actionThemes,
-                    R.id.actionNotifications,
-                    R.id.actionContacts,
-                    R.id.actionToggleLanguage,
-                    R.id.actionLogout,
-                    R.id.actionUpdate, // Добавлено
-                    R.id.actionAbout,  // Добавлено
-                    R.id.actionAdmin   // Добавлено
-                )
 
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
@@ -1124,6 +1128,25 @@ class ChatListActivity : AppCompatActivity() {
             } catch (_: Exception) {
                 Log.e("ThemeManager", "Error tinting bottom sheet items")
             }
+        } else {
+            // For built-in themes: explicitly set icon tint to match text color
+            try {
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
+                val iconColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
+
+                actionIds.forEach { id ->
+                    sheetView.findViewById<LinearLayout>(id)?.let { layout ->
+                        for (i in 0 until layout.childCount) {
+                            val child = layout.getChildAt(i)
+                            if (child is ImageView) {
+                                // Для выхода оставляем красный, для остальных — цвет текста
+                                if (id != R.id.actionLogout) child.imageTintList = ColorStateList.valueOf(iconColor)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
         }
         
         menuUsername.text = username
@@ -1150,6 +1173,10 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             }
+        } else {
+            // Default white avatar for all themes (built-in and custom)
+            menuUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+            menuUserAvatar.clearColorFilter()
         }
         sheetView.findViewById<View>(R.id.actionShareHeader).setOnClickListener {
             bottomSheetDialog.dismiss()
@@ -1205,6 +1232,56 @@ class ChatListActivity : AppCompatActivity() {
     private fun showChatActionSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_chat_actions, binding.root, false)
+
+        // Apply custom theme colors to the sheet
+        val customTheme = ThemeManager.getCurrentTheme()
+        val actionIds = listOf(R.id.actionStartChat, R.id.actionAddContact, R.id.actionAddGroup)
+
+        if (customTheme != null) {
+            try {
+                val bgColor = customTheme.surfaceColor.toColorInt()
+                val txtColor = customTheme.textPrimaryColor.toColorInt()
+                val primColor = customTheme.primaryColor.toColorInt()
+
+                sheetView.setBackgroundColor(bgColor)
+
+                // Theme all action items
+                actionIds.forEach { id ->
+                    sheetView.findViewById<LinearLayout>(id)?.let { layout ->
+                        for (i in 0 until layout.childCount) {
+                            val child = layout.getChildAt(i)
+                            if (child is TextView) {
+                                child.setTextColor(txtColor)
+                            }
+                            if (child is ImageView) {
+                                child.imageTintList = ColorStateList.valueOf(primColor)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                Log.e("ThemeManager", "Error tinting chat action sheet")
+            }
+        } else {
+            // For built-in themes: explicitly set icon tint to match text color
+            try {
+                val typedValue = TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true)
+                val iconColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
+
+                actionIds.forEach { id ->
+                    sheetView.findViewById<LinearLayout>(id)?.let { layout ->
+                        for (i in 0 until layout.childCount) {
+                            val child = layout.getChildAt(i)
+                            if (child is ImageView) {
+                                child.imageTintList = ColorStateList.valueOf(iconColor)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
         sheetView.findViewById<View>(R.id.actionStartChat).setOnClickListener {
             bottomSheetDialog.dismiss()
             showCreateDirectChatDialog()
