@@ -936,6 +936,7 @@ object RealGrpcClient {
                         creator = proto.creator,
                         lastMessageText = proto.lastMessageText,
                         avatarUrl = proto.avatarUrl,
+                        fullAvatarUrl = proto.fullAvatarUrl,
                         lastMessageUsername = proto.lastMessageUsername
                     )
                 }
@@ -1741,9 +1742,9 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun updateChatAvatar(chatId: String, avatarUrl: String, username: String, callback: (Boolean, String) -> Unit) {
+    fun updateChatAvatar(chatId: String, avatarUrl: String, username: String, fullAvatarUrl: String = "", callback: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
-        val request = UpdateChatAvatarRequestProto(chatId, avatarUrl, username)
+        val request = UpdateChatAvatarRequestProto(chatId, avatarUrl, username, fullAvatarUrl)
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatAvatarRequestProto, UpdateChatAvatarResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateChatAvatar")
@@ -1796,6 +1797,7 @@ object RealGrpcClient {
                         creator = proto.creator,
                         lastMessageText = proto.lastMessageText,
                         avatarUrl = proto.avatarUrl,
+                        fullAvatarUrl = proto.fullAvatarUrl,
                         lastMessageUsername = proto.lastMessageUsername
                     )
                 }
@@ -3761,6 +3763,7 @@ class UpdateChatAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Up
         if (value.chatId.isNotEmpty()) cos.writeString(1, value.chatId)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(2, value.avatarUrl)
         if (value.username.isNotEmpty()) cos.writeString(3, value.username)
+        if (value.fullAvatarUrl.isNotEmpty()) cos.writeString(4, value.fullAvatarUrl)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -3769,6 +3772,7 @@ class UpdateChatAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Up
         var chatId = ""
         var avatarUrl = ""
         var username = ""
+        var fullAvatarUrl = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
@@ -3776,10 +3780,11 @@ class UpdateChatAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Up
                 1 -> chatId = cis.readString()
                 2 -> avatarUrl = cis.readString()
                 3 -> username = cis.readString()
+                4 -> fullAvatarUrl = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return UpdateChatAvatarRequestProto(chatId, avatarUrl, username)
+        return UpdateChatAvatarRequestProto(chatId, avatarUrl, username, fullAvatarUrl)
     }
 }
 

@@ -35,6 +35,7 @@ data class ChatInfo(
     val creator: String = "",
     val lastMessageText: String = "",
     val avatarUrl: String = "",
+    val fullAvatarUrl: String = "",
     val lastMessageUsername: String = ""
 ) {
     fun getDisplayName(currentUsername: String): String {

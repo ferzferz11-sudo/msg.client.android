@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 1.0.3.1
 - new features adaptation
+- upload full avatar ability added
 
 1.0.3.0
 ### Message Drafts (Unsent Message Persistence)

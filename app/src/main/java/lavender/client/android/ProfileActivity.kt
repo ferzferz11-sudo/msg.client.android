@@ -57,6 +57,7 @@ class ProfileActivity : AppCompatActivity() {
     private val grpcClient = GrpcClient
     private var username: String = ""
     private var avatarUrl: String = ""
+    private var fullAvatarUrl: String = ""
     private var isGroup: Boolean = false
     private var roomId: String = ""
     private var creator: String = ""
@@ -98,6 +99,7 @@ class ProfileActivity : AppCompatActivity() {
 
         username = intent.getStringExtra("username") ?: ""
         avatarUrl = intent.getStringExtra("avatar_url") ?: ""
+        fullAvatarUrl = intent.getStringExtra("full_avatar_url") ?: ""
         isGroup = intent.getBooleanExtra("is_group", false)
         roomId = intent.getStringExtra("room_id") ?: ""
         creator = intent.getStringExtra("creator") ?: ""
@@ -143,8 +145,8 @@ class ProfileActivity : AppCompatActivity() {
                 // Для пользователей берем полный URL из кэша если есть
                 grpcClient.getFullAvatarUrl(username) ?: avatarUrl
             } else {
-                // Для групп используем текущий URL
-                avatarUrl
+                // Для групп используем полный URL, если есть, иначе thumbnail
+                fullAvatarUrl.ifEmpty { avatarUrl }
             }
             if (fullImageUrl.isNotEmpty()) {
                 showFullScreenImage(fullImageUrl)
@@ -505,18 +507,23 @@ class ProfileActivity : AppCompatActivity() {
                     val mimeType = contentResolver.getType(uri)
                     val isGif = mimeType == "image/gif"
 
-                    val bytes: ByteArray
+                    val thumbBytes: ByteArray
+                    val fullBytes: ByteArray
                     val mediaType: String
 
                     if (isGif) {
                         val inputStream = contentResolver.openInputStream(uri)
-                        bytes = inputStream?.readBytes() ?: byteArrayOf()
+                        thumbBytes = inputStream?.readBytes() ?: byteArrayOf()
                         inputStream?.close()
+                        fullBytes = thumbBytes // For GIF, use same bytes for both
                         mediaType = "image/gif"
                     } else {
-                        val resizedBytes = resizeImageForGroup(uri)
+                        // Resize for thumbnail (512x512 for groups)
+                        val thumbResizedBytes = resizeImageForGroup(uri)
+                        // Resize for full version (1920x1920 max)
+                        val fullResizedBytes = resizeImageFull(uri)
 
-                        if (resizedBytes == null) {
+                        if (thumbResizedBytes == null || fullResizedBytes == null) {
                             runOnUiThread {
                                 progressOverlay?.isVisible = false
                                 Toast.makeText(this@ProfileActivity, "Failed to resize image", Toast.LENGTH_SHORT).show()
@@ -524,11 +531,12 @@ class ProfileActivity : AppCompatActivity() {
                             return@withContext
                         }
 
-                        bytes = resizedBytes
+                        thumbBytes = thumbResizedBytes
+                        fullBytes = fullResizedBytes
                         mediaType = "image/jpeg"
                     }
 
-                    if (bytes.isEmpty()) {
+                    if (thumbBytes.isEmpty()) {
                         runOnUiThread {
                             progressOverlay?.isVisible = false
                             Toast.makeText(this@ProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show()
@@ -536,10 +544,11 @@ class ProfileActivity : AppCompatActivity() {
                         return@withContext
                     }
 
-                    // Upload to HTTP server with multipart/form-data
+                    // Upload to HTTP server with multipart/form-data (both thumbnail and full)
                     val requestBody = MultipartBody.Builder()
                         .setType(MultipartBody.FORM)
-                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+                        .addFormDataPart("avatar_full", if (isGif) "avatar_full.gif" else "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
                         .build()
 
                     val request = Request.Builder()
@@ -552,12 +561,12 @@ class ProfileActivity : AppCompatActivity() {
 
                     if (response.isSuccessful) {
                         val responseBody = response.body.string() ?: ""
-                        val url = extractUrlFromResponse(responseBody)
+                        val (thumbUrl, fullUrl) = extractUrlsFromResponse(responseBody)
 
-                        if (url.isNotEmpty()) {
-                            // Update group avatar via gRPC
+                        if (thumbUrl.isNotEmpty()) {
+                            // Update group avatar via gRPC with both URLs
                             val currentMe = grpcClient.getCurrentUsername() ?: ""
-                            grpcClient.updateChatAvatar(roomId, url, currentMe) { success, message ->
+                            grpcClient.updateChatAvatar(roomId, thumbUrl, currentMe, fullUrl) { success, message ->
                                 runOnUiThread {
                                     progressOverlay?.isVisible = false
                                     if (success) {
@@ -565,12 +574,12 @@ class ProfileActivity : AppCompatActivity() {
                                         // Update avatar view
                                         currentProfileAvatar?.let {
                                             Glide.with(this@ProfileActivity)
-                                                .load(url)
+                                                .load(thumbUrl)
                                                 .placeholder(R.drawable.ic_default_avatar)
                                                 .error(R.drawable.ic_default_avatar)
                                                 .into(it)
                                         }
-                                        avatarUrl = url
+                                        avatarUrl = thumbUrl
                                     } else {
                                         Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()
                                     }
@@ -633,15 +642,55 @@ class ProfileActivity : AppCompatActivity() {
         return bytes
     }
 
-    private fun extractUrlFromResponse(response: String): String {
-        val jsonPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
-        val match = jsonPattern.find(response)
-        if (match != null) {
-            return match.groupValues[1]
+    private fun resizeImageFull(uri: Uri): ByteArray? {
+        val maxWidth = 1920
+        val maxHeight = 1920
+        return resizeImageWithMax(uri, maxWidth, maxHeight)
+    }
+
+    private fun resizeImageWithMax(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
+        val inputStream = contentResolver.openInputStream(uri) ?: return null
+        val options = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
         }
-        if (response.startsWith("http")) {
-            return response.trim()
+        android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+        inputStream.close()
+
+        val imageStream = contentResolver.openInputStream(uri) ?: return null
+        val bitmap = android.graphics.BitmapFactory.decodeStream(imageStream)
+        imageStream.close()
+
+        if (bitmap == null) return null
+
+        val width = bitmap.width
+        val height = bitmap.height
+        val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+
+        val scaledBitmap = if (scale < 1) {
+            bitmap.scale((width * scale).toInt(), (height * scale).toInt())
+        } else {
+            bitmap
         }
-        return ""
+
+        val outputStream = java.io.ByteArrayOutputStream()
+        scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, outputStream)
+        val bytes = outputStream.toByteArray()
+        scaledBitmap.recycle()
+        bitmap.recycle()
+
+        return bytes
+    }
+
+    private fun extractUrlsFromResponse(response: String): Pair<String, String> {
+        val urlPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
+        val fullUrlPattern = """"full_url"\s*:\s*"([^"]+)"""".toRegex()
+
+        val urlMatch = urlPattern.find(response)
+        val fullUrlMatch = fullUrlPattern.find(response)
+
+        val url = urlMatch?.groupValues?.get(1) ?: ""
+        val fullUrl = fullUrlMatch?.groupValues?.get(1) ?: ""
+
+        return Pair(url, fullUrl)
     }
 }

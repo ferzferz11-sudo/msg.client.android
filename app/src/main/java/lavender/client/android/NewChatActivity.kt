@@ -93,6 +93,7 @@ class NewChatActivity : AppCompatActivity() {
     private var participantsJson = "[]"
     private var creator = ""
     private var chatAvatarUrl = ""
+    private var chatFullAvatarUrl = ""
 
     private var isTypingSignalSent = false
     private var selectionMode = false
@@ -348,6 +349,7 @@ class NewChatActivity : AppCompatActivity() {
         intent.getStringExtra("PARTICIPANTS")?.let { participantsJson = it }
         intent.getStringExtra("CREATOR")?.let { creator = it }
         intent.getStringExtra("AVATAR_URL")?.let { chatAvatarUrl = it }
+        intent.getStringExtra("FULL_AVATAR_URL")?.let { chatFullAvatarUrl = it }
 
         android.util.Log.d("ChatData", "Room: $roomId, User: $username, Direct: $isDirect")
     }
@@ -389,6 +391,7 @@ class NewChatActivity : AppCompatActivity() {
                 putExtra("is_group", !isDirect)
                 putExtra("room_id", roomId)
                 putExtra("avatar_url", if (isDirect) effectiveAvatarUrl else chatAvatarUrl)
+                putExtra("full_avatar_url", chatFullAvatarUrl)
                 putExtra("participants", participantsJson)
                 putExtra("creator", creator)
             }

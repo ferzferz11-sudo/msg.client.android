@@ -162,6 +162,7 @@ data class ChatInfoProto(
     val creator: String = "",
     val lastMessageText: String = "",
     val avatarUrl: String = "",
+    val fullAvatarUrl: String = "",
     val lastMessageUsername: String = ""
 )
 
@@ -377,7 +378,8 @@ data class UpdateChatNameResponseProto(
 data class UpdateChatAvatarRequestProto(
     val chatId: String = "",
     val avatarUrl: String = "",
-    val username: String = ""
+    val username: String = "",
+    val fullAvatarUrl: String = ""
 )
 
 data class UpdateChatAvatarResponseProto(

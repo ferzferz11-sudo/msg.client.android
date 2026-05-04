@@ -186,6 +186,8 @@ class SuperAdminActivity : AppCompatActivity() {
                         putExtra("username", chat.name)
                         putExtra("is_group", !chat.type.equals("direct", true))
                         putExtra("room_id", chat.id)
+                        putExtra("avatar_url", chat.avatarUrl)
+                        putExtra("full_avatar_url", chat.fullAvatarUrl)
                         putExtra("creator", chat.creator)
                         putExtra("participants", chat.participants)
                     }

@@ -164,6 +164,7 @@ class ChatListActivity : AppCompatActivity() {
                     .putExtra("is_group", !isDirect)
                     .putExtra("room_id", chat.id)
                     .putExtra("avatar_url", chat.avatarUrl)
+                    .putExtra("full_avatar_url", chat.fullAvatarUrl)
                     .putExtra("participants", chat.participants)
                     .putExtra("creator", chat.creator)
                 startActivity(intent)
