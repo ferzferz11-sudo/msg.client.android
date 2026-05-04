@@ -36,8 +36,7 @@
 
         <activity
             android:name=".SplashActivity"
-            android:exported="true"
-            android:theme="@style/Theme.MsgClientAndroid">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -47,20 +46,17 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:theme="@style/Theme.MsgClientAndroid" />
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
             android:name=".ChatListActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:theme="@style/Theme_Lavender_Dark_NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
             android:name=".ThemesActivity"
-            android:exported="false"
-            android:theme="@style/Theme_Lavender_NoActionBar" />
+            android:exported="false" />
 
         <activity
             android:name=".NewChatActivity"
@@ -79,13 +75,11 @@
 
         <activity
             android:name=".MapPickerActivity"
-            android:exported="false"
-            android:theme="@style/Theme_Lavender_NoActionBar" />
+            android:exported="false" />
 
         <activity
             android:name=".FullScreenImageActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Material3.Dark.NoActionBar" />
+            android:exported="false" />
 
         <service
             android:name=".data.fcm.LavenderMessagingService"

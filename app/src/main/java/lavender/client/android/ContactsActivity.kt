@@ -24,6 +24,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
 import lavender.client.android.ui.adapter.UserAdapter
 import androidx.core.graphics.toColorInt
+import org.json.JSONArray
 import java.util.*
 
 class ContactsActivity : AppCompatActivity() {
@@ -53,7 +54,6 @@ class ContactsActivity : AppCompatActivity() {
         username = intent.getStringExtra("username") ?: ""
         password = intent.getStringExtra("password") ?: ""
 
-        // Load and apply theme before setting content view
         lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
             runOnUiThread {
                 binding = ActivityContactsBinding.inflate(layoutInflater)
@@ -65,7 +65,6 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        // Handle window insets for edge-to-edge
         binding?.let { b ->
             ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { view, insets ->
                 val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -81,7 +80,13 @@ class ContactsActivity : AppCompatActivity() {
 
             setSupportActionBar(b.toolbar)
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
-            b.toolbar.setNavigationOnClickListener { finish() }
+            b.toolbar.setNavigationOnClickListener {
+                if (adapter.getSelectedUsers().isNotEmpty()) {
+                    adapter.clearSelection()
+                } else {
+                    finish()
+                }
+            }
 
             setupRecyclerView()
             loadContacts()
@@ -103,46 +108,48 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        val searchItem = menu.add(0, 1, 0, R.string.search)
-            .setIcon(R.drawable.ic_search_custom)
-            .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        
-        // Get colors from custom theme or Material Design attributes
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-        val iconColor = if (customTheme != null) {
-            try {
-                customTheme.onPrimaryColor.toColorInt()
-            } catch (_: Exception) {
-                val typedValue = android.util.TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                typedValue.data
-            }
-        } else {
-            val typedValue = android.util.TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-            typedValue.data
-        }
-        
-        // Tint the search icon
-        searchItem.icon?.setTint(iconColor)
-
+        menuInflater.inflate(R.menu.contacts_menu, menu)
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val hasSelection = adapter.getSelectedUsers().isNotEmpty()
+        menu.findItem(R.id.action_create_chat).isVisible = hasSelection
+        menu.findItem(R.id.action_delete_contact).isVisible = hasSelection
+        menu.findItem(R.id.action_search).isVisible = !hasSelection
+        
+        val iconColor = lavender.client.android.ui.ThemeManager.getCurrentTheme()?.onPrimaryColor?.toColorInt() ?: android.graphics.Color.WHITE
+        menu.findItem(R.id.action_create_chat).icon?.setTint(iconColor)
+        menu.findItem(R.id.action_delete_contact).icon?.setTint(iconColor)
+        menu.findItem(R.id.action_search).icon?.setTint(iconColor)
+        
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == 1) {
-            binding?.let { b ->
-                b.searchLayout.isVisible = !b.searchLayout.isVisible
-                if (b.searchLayout.isVisible) {
-                    b.searchEditText.requestFocus()
-                    val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.showSoftInput(b.searchEditText, 0)
-                } else {
-                    b.searchEditText.text?.clear()
-                    adapter.setUsers(contacts)
+        when (item.itemId) {
+            R.id.action_search -> {
+                binding?.let { b ->
+                    b.searchLayout.isVisible = !b.searchLayout.isVisible
+                    if (b.searchLayout.isVisible) {
+                        b.searchEditText.requestFocus()
+                        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.showSoftInput(b.searchEditText, 0)
+                    } else {
+                        b.searchEditText.text?.clear()
+                        adapter.setUsers(contacts)
+                    }
                 }
+                return true
             }
-            return true
+            R.id.action_create_chat -> {
+                createChatFromSelection()
+                return true
+            }
+            R.id.action_delete_contact -> {
+                confirmRemoveSelectedContacts()
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -161,7 +168,17 @@ class ContactsActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = UserAdapter(
             onUserClick = { selectedUser ->
-                showContactOptions(selectedUser)
+                if (adapter.getSelectedUsers().isNotEmpty()) {
+                    adapter.toggleSelection(selectedUser)
+                }
+            },
+            onUserLongClick = { selectedUser ->
+                adapter.toggleSelection(selectedUser)
+            },
+            onSelectionChanged = { count ->
+                invalidateOptionsMenu()
+                supportActionBar?.title = if (count > 0) getString(R.string.selected_count, count) else getString(R.string.contacts)
+                supportActionBar?.setHomeAsUpIndicator(if (count > 0) R.drawable.ic_close else R.drawable.ic_back_arrow)
             },
             avatarCache = grpcClient.getAvatarCache()
         )
@@ -185,34 +202,31 @@ class ContactsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showContactOptions(contactUsername: String) {
-        AlertDialog.Builder(this)
-            .setTitle(contactUsername)
-            .setItems(arrayOf(getString(R.string.create_private_chat), getString(R.string.remove_contact))) { _, which ->
-                when (which) {
-                    0 -> startDirectChat(contactUsername)
-                    1 -> confirmRemoveContact(contactUsername)
-                }
-            }
-            .show()
+    private fun createChatFromSelection() {
+        val selected = adapter.getSelectedUsers()
+        if (selected.isEmpty()) return
+
+        if (selected.size == 1) {
+            startDirectChat(selected.first())
+        } else {
+            createGroupChat(getString(R.string.default_group_name), selected + username)
+        }
+        adapter.clearSelection()
     }
 
-    private fun confirmRemoveContact(contactUsername: String) {
+    private fun confirmRemoveSelectedContacts() {
+        val selected = adapter.getSelectedUsers()
+        if (selected.isEmpty()) return
+
         AlertDialog.Builder(this)
             .setTitle(R.string.remove_contact)
-            .setMessage(getString(R.string.remove_contact_confirm, contactUsername))
+            .setMessage(getString(R.string.remove_multiple_contacts_confirm, selected.size))
             .setPositiveButton(R.string.delete) { _, _ ->
-                grpcClient.removeContact(username, contactUsername) { success, message ->
-                    runOnUiThread {
-                        if (success) {
-                            contacts.remove(contactUsername)
-                            adapter.setUsers(contacts)
-                            binding?.emptyStateContainer?.isVisible = contacts.isEmpty()
-                        } else {
-                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                selected.forEach { contact ->
+                    grpcClient.removeContact(username, contact) { _, _ -> }
                 }
+                loadContacts()
+                adapter.clearSelection()
             }
             .setNegativeButton(R.string.cancel_dialog, null)
             .show()
@@ -227,14 +241,10 @@ class ContactsActivity : AppCompatActivity() {
         val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
 
-        // Apply theme to dialog background
         val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         val typedValue = android.util.TypedValue()
         val bgColor = if (customTheme != null) {
-            try {
-                // Use primaryColor for custom themes
-                customTheme.primaryColor.toColorInt()
-            } catch (_: Exception) {
+            try { customTheme.primaryColor.toColorInt() } catch (_: Exception) {
                 theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
                 typedValue.data
             }
@@ -243,16 +253,12 @@ class ContactsActivity : AppCompatActivity() {
             typedValue.data
         }
 
-        // Create rounded background drawable
         val shapeDrawable = android.graphics.drawable.ShapeDrawable(
-            android.graphics.drawable.shapes.RoundRectShape(
-                floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
-            )
+            android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)
         )
         shapeDrawable.paint.color = bgColor
         dialogView.background = shapeDrawable
 
-        // Theme search input for default dark theme
         if (customTheme == null) {
             val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
@@ -279,7 +285,6 @@ class ContactsActivity : AppCompatActivity() {
 
         grpcClient.loadAllUsers()
         lifecycleScope.launch {
-            // Give a bit of time for users to load
             kotlinx.coroutines.delay(500)
             allUsers.clear()
             allUsers.addAll(grpcClient.allUsers.value.filter { it != username && !contacts.contains(it) })
@@ -299,22 +304,14 @@ class ContactsActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-
-        // Make system window transparent to see rounded corners
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        // Theme buttons with colorSecondaryContainer background (same as search in dialog)
         if (customTheme == null) {
             val btnBgColor = android.content.res.ColorStateList.valueOf(
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
-                .let { typedValue.data }
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true).let { typedValue.data }
             )
-            val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
-                .let { typedValue.data }
-
+            val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true).let { typedValue.data }
             btnCancel.backgroundTintList = btnBgColor
             btnCancel.setTextColor(btnTextColor)
             btnAdd.backgroundTintList = btnBgColor
@@ -354,6 +351,24 @@ class ContactsActivity : AppCompatActivity() {
                         .putExtra("CHAT_NAME", getString(R.string.private_chat_with, targetUser))
                         .putExtra("IS_DIRECT", true)
                         .putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
+                    startActivity(intent)
+                }
+            }
+        }
+    }
+
+    private fun createGroupChat(name: String, participants: List<String>) {
+        grpcClient.createGroupChat(name, participants, username) { chatId ->
+            if (chatId != null) {
+                runOnUiThread {
+                    val intent = Intent(this, NewChatActivity::class.java)
+                        .putExtra("USERNAME", username)
+                        .putExtra("PASSWORD", password)
+                        .putExtra("ROOM_ID", chatId)
+                        .putExtra("CHAT_NAME", name)
+                        .putExtra("IS_DIRECT", false)
+                        .putExtra("PARTICIPANTS", JSONArray(participants).toString())
+                        .putExtra("CREATOR", username)
                     startActivity(intent)
                 }
             }

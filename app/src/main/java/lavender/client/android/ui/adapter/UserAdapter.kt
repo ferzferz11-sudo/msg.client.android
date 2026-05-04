@@ -3,9 +3,10 @@ package lavender.client.android.ui.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.hdodenhof.circleimageview.CircleImageView
@@ -13,109 +14,84 @@ import lavender.client.android.R
 
 class UserAdapter(
     private val onUserClick: (String) -> Unit,
-    private val avatarCache: Map<String, String> = emptyMap(),
+    private val onUserLongClick: ((String) -> Unit)? = null,
+    private val onSelectionChanged: ((Int) -> Unit)? = null,
+    private val avatarCache: Map<String, String>,
     private var onlineUsers: List<String> = emptyList()
 ) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
     private var users = listOf<String>()
-    private var selectedUser: String? = null
-
-    fun setOnlineUsers(users: List<String>) {
-        onlineUsers = users
-        notifyDataSetChanged()
-    }
+    private val selectedUsers = mutableSetOf<String>()
 
     fun setUsers(newUsers: List<String>) {
         users = newUsers
         notifyDataSetChanged()
     }
 
-    fun setSelectedUser(username: String?) {
-        selectedUser = username
+    fun setOnlineUsers(newOnlineUsers: List<String>) {
+        onlineUsers = newOnlineUsers
         notifyDataSetChanged()
     }
 
-    fun getSelectedUser(): String? = selectedUser
+    fun getSelectedUser(): String? = if (selectedUsers.isNotEmpty()) selectedUsers.first() else null
+
+    fun getSelectedUsers(): List<String> = selectedUsers.toList()
+
+    fun clearSelection() {
+        selectedUsers.clear()
+        notifyDataSetChanged()
+        onSelectionChanged?.invoke(0)
+    }
+
+    fun toggleSelection(username: String) {
+        if (selectedUsers.contains(username)) {
+            selectedUsers.remove(username)
+        } else {
+            selectedUsers.add(username)
+        }
+        notifyDataSetChanged()
+        onSelectionChanged?.invoke(selectedUsers.size)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_user, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_user_selectable, parent, false)
         return UserViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
-        val username = users[position]
-        val isOnline = onlineUsers.contains(username)
-        holder.bind(username, username == selectedUser, avatarCache[username], isOnline)
-        holder.itemView.setOnClickListener {
-            selectedUser = username
-            notifyDataSetChanged()
-            onUserClick(username)
-        }
+        val user = users[position]
+        holder.bind(user, selectedUsers.contains(user))
     }
 
     override fun getItemCount(): Int = users.size
 
-    class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val usernameText: TextView = itemView.findViewById(R.id.usernameText)
         private val userAvatar: CircleImageView = itemView.findViewById(R.id.userAvatar)
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
+        private val checkBox: CheckBox = itemView.findViewById(R.id.userCheckBox)
 
-        fun bind(username: String, isSelected: Boolean, avatarUrl: String?, isOnline: Boolean) {
+        fun bind(username: String, isSelected: Boolean) {
             usernameText.text = username
-            
-            // Apply theme-aware selection background
-            if (isSelected) {
-                val typedValue = android.util.TypedValue()
-                // Use colorSecondary for selected background
-                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorSecondary, typedValue, true)
-                itemView.setBackgroundResource(R.drawable.rounded_background)
-                itemView.backgroundTintList = android.content.res.ColorStateList.valueOf(typedValue.data)
-                
-                // Use colorOnSecondary for text on selected background
-                itemView.context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondary, typedValue, true)
-                usernameText.setTextColor(typedValue.data)
-                itemView.alpha = 1.0f
-            } else {
-                itemView.background = null
-                itemView.alpha = 0.8f
-                
-                // Set text color based on current theme
-                try {
-                    val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-                    if (currentTheme != null) {
-                        usernameText.setTextColor(currentTheme.textPrimaryColor.toColorInt())
-                    } else {
-                        val typedValue = android.util.TypedValue()
-                        itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                        usernameText.setTextColor(if (typedValue.resourceId != 0)
-                            ContextCompat.getColor(itemView.context, typedValue.resourceId)
-                            else typedValue.data)
-                    }
-                } catch (_: Exception) {
-                    val typedValue = android.util.TypedValue()
-                    itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                    usernameText.setTextColor(if (typedValue.resourceId != 0)
-                        ContextCompat.getColor(itemView.context, typedValue.resourceId)
-                        else typedValue.data)
-                }
-            }
-            
-            // Load avatar
+            val isOnline = onlineUsers.contains(username)
+            statusIndicator.isVisible = isOnline
+            checkBox.isChecked = isSelected
+            checkBox.isVisible = selectedUsers.isNotEmpty()
+
+            val avatarUrl = avatarCache[username]
             if (!avatarUrl.isNullOrEmpty()) {
-                Glide.with(itemView.context)
-                    .load(avatarUrl)
-                    .placeholder(R.drawable.ic_default_avatar_white)
-                    .circleCrop()
-                    .into(userAvatar)
+                Glide.with(itemView.context).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(userAvatar)
             } else {
-                userAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+                userAvatar.setImageResource(R.drawable.ic_default_avatar)
             }
-            
-            // Show status indicator
-            statusIndicator.visibility = View.VISIBLE
-            statusIndicator.setBackgroundResource(
-                if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot
-            )
+
+            itemView.setOnClickListener {
+                onUserClick(username)
+            }
+            itemView.setOnLongClickListener {
+                onUserLongClick?.invoke(username)
+                true
+            }
         }
     }
 }

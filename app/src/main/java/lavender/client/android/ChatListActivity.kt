@@ -86,7 +86,6 @@ class ChatListActivity : AppCompatActivity() {
 
     private val editProfileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            // После редактирования профиля (например, смены аватарки) обновляем список
             loadChats()
         }
     }
@@ -94,20 +93,15 @@ class ChatListActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
-
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-
+        val locale = Locale(languageCode)
         val config = newBase.resources.configuration
         config.setLocale(locale)
-
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
     }
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. Системные настройки (Язык и Edge-to-Edge)
         applySavedLanguage()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -115,7 +109,6 @@ class ChatListActivity : AppCompatActivity() {
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 2. Базовая инициализация данных
         username = intent.getStringExtra("USERNAME") ?: ""
         password = intent.getStringExtra("PASSWORD") ?: ""
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS") ?: "159.195.38.145"
@@ -124,35 +117,20 @@ class ChatListActivity : AppCompatActivity() {
         val serverHost = parts[0]
         val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
 
-        // 1. Поиск (теперь через карточку, которая всегда под рукой)
         binding.searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                adapter.filter(s.toString()) // Мгновенный фильтр при вводе
+                adapter.filter(s.toString())
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        // 2. Кнопка удаления в тулбаре (которую ты добавил в XML)
-        binding.actionDelete.setOnClickListener {
-            showDeleteChatsDialog()
-        }
+        binding.actionDelete.setOnClickListener { showDeleteChatsDialog() }
+        binding.actionMute.setOnClickListener { showMuteChatsDialog() }
+        binding.actionSearch.setOnClickListener { showSearchBar() }
 
-        // Кнопка мута чатов в тулбаре
-        binding.actionMute.setOnClickListener {
-            showMuteChatsDialog()
-        }
-
-        // Кнопка поиска в тулбаре
-        binding.actionSearch.setOnClickListener {
-            showSearchBar()
-        }
-
-        // Загружаем список замьюченных чатов
         loadMutedChats()
 
-        // 3. !!! ВАЖНО: Сначала ИНИЦИАЛИЗИРУЕМ АДАПТЕР !!!
-        // Перенесли этот блок вверх, чтобы избежать UninitializedPropertyAccessException
         adapter = ChatAdapter(
             onChatClick = { chat ->
                 openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
@@ -171,21 +149,16 @@ class ChatListActivity : AppCompatActivity() {
             },
             onSelectionChanged = { selectedCount ->
                 val hasSelection = selectedCount > 0
-                binding.actionDelete.isVisible = hasSelection
+                val selectedChats = adapter.getSelectedChats()
+                val canDelete = selectedChats.all { chat -> chat.type == "direct" || chat.creator == username }
+
+                binding.actionDelete.isVisible = hasSelection && canDelete
                 binding.actionMute.isVisible = hasSelection
                 binding.actionSearch.isVisible = !hasSelection
 
-                // Меняем заголовок тулбара, если что-то выбрано
-                binding.toolbarTitle.text = if (hasSelection) {
-                    getString(R.string.selected_count, selectedCount)
-                } else {
-                    getString(R.string.chats)
-                }
-
-                // Прячем аватар в режиме удаления для красоты
+                binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, selectedCount) else getString(R.string.chats)
                 binding.toolbarUserAvatar.isVisible = !hasSelection
-                
-                // Manage toolbar navigation icon
+
                 if (hasSelection) {
                     supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
                 } else {
@@ -197,26 +170,18 @@ class ChatListActivity : AppCompatActivity() {
             onlineUsers = grpcClient.users.value
         )
 
-        // Привязываем уже созданный адаптер
         binding.chatsRecyclerView.adapter = adapter
         binding.chatsRecyclerView.layoutManager = LinearLayoutManager(this)
 
-        // 4. Сетевое подключение
         grpcClient.connect(serverHost, false, serverPort, this)
         grpcClient.startChat(username, password, "") { _ -> }
 
-        // 5. Темизация (теперь адаптер точно готов)
         ThemeManager.loadTheme(this, username) {
             runOnUiThread {
-                Log.d("ThemeManager.applyTheme()", "ChatListActivity call $this")
                 ThemeManager.applyTheme(this)
-
                 val theme = ThemeManager.getCurrentTheme()
-                Log.d("ThemeManager.getCurrentTheme()", "ChatListActivity call $theme")
-
                 if (theme != null) {
-                    val primary = theme.primaryColor.toColorInt()
-                    binding.swipeRefreshLayout.setColorSchemeColors(primary)
+                    binding.swipeRefreshLayout.setColorSchemeColors(theme.primaryColor.toColorInt())
                 } else {
                     val nightColor = "#04052E".toColorInt()
                     binding.root.setBackgroundColor(nightColor)
@@ -224,26 +189,21 @@ class ChatListActivity : AppCompatActivity() {
                     binding.swipeRefreshLayout.setBackgroundColor(nightColor)
                 }
                 adapter.notifyDataSetChanged()
-                // Update avatar after theme is applied
                 updateToolbarAvatar()
             }
         }
 
-        // 6. Остальные настройки UI
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = ""
-            setDisplayHomeAsUpEnabled(true)
+            setDisplayHomeAsUpEnabled(false)
         }
         
-        // Handle toolbar navigation click
         binding.toolbar.setNavigationOnClickListener {
             if (binding.searchCard.isVisible) {
                 hideSearchBar()
             } else if (adapter.getSelectedChats().isNotEmpty()) {
                 adapter.clearSelection()
-            } else {
-                moveTaskToBack(true)
             }
         }
 
@@ -258,12 +218,10 @@ class ChatListActivity : AppCompatActivity() {
             insets
         }
 
-        // Обработка кликов и Flow
         binding.toolbarTitle.setOnClickListener { showUserMenuSheet() }
         binding.root.findViewById<CircleImageView>(R.id.toolbarUserAvatar).setOnClickListener { showUserMenuSheet() }
         binding.addChatFab.setOnClickListener { showChatActionSheet() }
 
-        // Слушаем статус подключения
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 RealGrpcClient.connectionStatus.collect { status ->
@@ -278,7 +236,6 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Загрузка чатов
         binding.swipeRefreshLayout.setOnRefreshListener { loadChats() }
 
         if (viewModel.isInitialLoadComplete) {
@@ -290,7 +247,6 @@ class ChatListActivity : AppCompatActivity() {
             loadChats()
         }
 
-        // Всё остальное (Updates, FCM, BackPress)
         checkForUpdates()
         updateToolbarAvatar()
         loadAllUsers()
@@ -304,7 +260,6 @@ class ChatListActivity : AppCompatActivity() {
             }
         })
 
-        // FCM Token registration
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful && username.isNotEmpty()) {
                 val token = task.result
@@ -321,18 +276,13 @@ class ChatListActivity : AppCompatActivity() {
         handleIncomingActions(intent)
     }
 
-    
     override fun onStart() {
         super.onStart()
-        // Проверяем статус напрямую через Enum. Это надежнее.
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
             val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS") ?: "159.195.38.145"
-
             val parts = serverAddressFull.split(":")
             val serverHost = parts[0]
             val serverPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
-
-            // Переподключаемся, если связь была разорвана
             grpcClient.connect(serverHost, false, serverPort, this)
         }
     }
@@ -371,7 +321,6 @@ class ChatListActivity : AppCompatActivity() {
             titleText.text = getString(R.string.delete_chats)
             messageText.text = getString(R.string.delete_chats_confirmation, 1)
             
-            // Apply theme colors - custom theme or built-in theme
             val customTheme = ThemeManager.getCurrentTheme()
             if (customTheme != null) {
                 try {
@@ -379,7 +328,6 @@ class ChatListActivity : AppCompatActivity() {
                     titleText.setTextColor(onPrimaryContainerColor)
                     messageText.setTextColor(onPrimaryContainerColor)
                     btnCancel.setTextColor(onPrimaryContainerColor)
-                    // Create a shape drawable with custom color for rounded background
                     val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
                         floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
                     ))
@@ -387,19 +335,14 @@ class ChatListActivity : AppCompatActivity() {
                     dialogView.background = shapeDrawable
                 } catch (_: Exception) {}
             } else {
-                // Use Material Design attributes for built-in themes
                 val typedValue = TypedValue()
                 theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
                 val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
-                
                 theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
                 val textColor = ContextCompat.getColor(this, typedValue.resourceId)
-                
                 titleText.setTextColor(textColor)
                 messageText.setTextColor(textColor)
                 btnCancel.setTextColor(textColor)
-                
-                // Create a shape drawable with built-in theme color for rounded background
                 val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
                     floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
                 ))
@@ -430,10 +373,13 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 binding.swipeRefreshLayout.isRefreshing = false
                 if (success) {
-                    adapter.setChats(viewModel.currentChats)
-                    binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
-                    binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
-                    checkOnboarding(viewModel.currentChats)
+                    val updatedChats = viewModel.currentChats.map {
+                        it.copy(isMuted = mutedChats.contains(it.id))
+                    }
+                    adapter.setChats(updatedChats)
+                    binding.welcomeContainer.isVisible = updatedChats.isEmpty()
+                    binding.chatsRecyclerView.isVisible = updatedChats.isNotEmpty()
+                    checkOnboarding(updatedChats)
                     refreshAvatars()
                 }
                 if (!grpcClient.hasCheckedForUpdates) {
@@ -454,41 +400,26 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun checkOnboarding(chats: List<ChatInfo>) {
         val isNewUser = chats.isEmpty()
-
-        // Apply theme colors to onboarding bubbles
         val typedValue = TypedValue()
         val customTheme = ThemeManager.getCurrentTheme()
-
-        // Get colors: use primaryColor for custom themes, colorSecondaryContainer for default (darker)
         val bubbleBgColor = if (customTheme != null) {
             try {
                 customTheme.primaryColor.toColorInt()
             } catch (_: Exception) {
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
-                typedValue.data
+                getColorFromAttr(com.google.android.material.R.attr.colorSecondaryContainer)
             }
         } else {
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
-            typedValue.data
+            getColorFromAttr(com.google.android.material.R.attr.colorSecondaryContainer)
         }
-
-        // Get text color (onSecondaryContainer for better contrast on darker background)
-        theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
-        val textColor = typedValue.data
-
-        // Apply background colors
+        val textColor = getColorFromAttr(com.google.android.material.R.attr.colorOnSecondaryContainer)
         binding.onboardingProfileBubble.backgroundTintList = ColorStateList.valueOf(bubbleBgColor)
         binding.onboardingFabBubble.backgroundTintList = ColorStateList.valueOf(bubbleBgColor)
-
-        // Apply text colors
         binding.onboardingProfileText.setTextColor(textColor)
         binding.onboardingFabText.setTextColor(textColor)
-
         if (isNewUser && !binding.onboardingProfileBubble.isVisible) {
             binding.onboardingProfileBubble.visibility = View.VISIBLE
             binding.onboardingProfileBubble.alpha = 0f
             binding.onboardingProfileBubble.animate().alpha(1f).setDuration(500).start()
-
             binding.onboardingFabBubble.visibility = View.VISIBLE
             binding.onboardingFabBubble.alpha = 0f
             binding.onboardingFabBubble.animate().alpha(1f).setDuration(500).setStartDelay(300).start()
@@ -496,7 +427,6 @@ class ChatListActivity : AppCompatActivity() {
             binding.onboardingProfileBubble.isVisible = false
             binding.onboardingFabBubble.isVisible = false
         }
-
         if (isNewUser) {
             binding.onboardingProfileBubble.setOnClickListener { it.animate().alpha(0f).setDuration(300).withEndAction { it.visibility = View.GONE }.start() }
             binding.onboardingFabBubble.setOnClickListener { it.animate().alpha(0f).setDuration(300).withEndAction { it.visibility = View.GONE }.start() }
@@ -505,24 +435,19 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun refreshAvatars() {
         if (username.isEmpty()) return
-        
-        // Fetch own profile first
         grpcClient.getUserProfile(username) { profile ->
             if (profile != null) {
                 viewModel.avatarCache = grpcClient.getAvatarCache()
                 runOnUiThread { updateToolbarAvatar() }
             }
         }
-
         val allParticipants = viewModel.currentChats.flatMap { chat ->
             try {
                 val arr = JSONArray(chat.participants)
                 List(arr.length()) { arr.getString(it) }
             } catch (_: Exception) { emptyList() }
         }.distinct().filter { it != username }
-        
         if (allParticipants.isEmpty()) return
-
         var updateCount = 0
         for (participant in allParticipants) {
             grpcClient.getUserProfile(participant) { _ ->
@@ -549,11 +474,14 @@ class ChatListActivity : AppCompatActivity() {
                     viewModel.loadChats(username) { success, _ ->
                         if (success) {
                             runOnUiThread {
-                                adapter.setChats(viewModel.currentChats)
-                                binding.welcomeContainer.isVisible = viewModel.currentChats.isEmpty()
-                                binding.chatsRecyclerView.isVisible = viewModel.currentChats.isNotEmpty()
-                                checkOnboarding(viewModel.currentChats)
-                                if (viewModel.currentChats.size != previousChatCount) {
+                                val updatedChats = viewModel.currentChats.map {
+                                    it.copy(isMuted = mutedChats.contains(it.id))
+                                }
+                                adapter.setChats(updatedChats)
+                                binding.welcomeContainer.isVisible = updatedChats.isEmpty()
+                                binding.chatsRecyclerView.isVisible = updatedChats.isNotEmpty()
+                                checkOnboarding(updatedChats)
+                                if (updatedChats.size != previousChatCount) {
                                     refreshAvatars()
                                 }
                             }
@@ -572,7 +500,6 @@ class ChatListActivity : AppCompatActivity() {
         if (!myAvatarUrl.isNullOrEmpty()) {
             Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)
         } else {
-            // Default white avatar for all themes (built-in and custom)
             avatarView.setImageResource(R.drawable.ic_default_avatar_white)
             avatarView.clearColorFilter()
         }
@@ -580,19 +507,14 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun openChat(chatId: String, roomName: String, isDirect: Boolean = false, participants: String = "[]", creator: String = "", avatarUrl: String = "") {
         val intent = Intent(this, NewChatActivity::class.java).apply {
-            // Данные чата
             putExtra("ROOM_ID", chatId)
             putExtra("CHAT_NAME", roomName)
             putExtra("IS_DIRECT", isDirect)
             putExtra("PARTICIPANTS", participants)
             putExtra("CREATOR", creator)
             putExtra("AVATAR_URL", avatarUrl)
-
-            // Данные пользователя (ВЕРХНИЙ РЕГИСТРЕ)
             putExtra("USERNAME", username)
             putExtra("PASSWORD", password)
-
-            // 🛠️ ДОБАВЛЯЕМ: проброс сервера
             val serverAddressFull = this@ChatListActivity.intent.getStringExtra("SERVER_ADDRESS")
             putExtra("SERVER_ADDRESS", serverAddressFull)
         }
@@ -602,16 +524,13 @@ class ChatListActivity : AppCompatActivity() {
     private fun showDeleteChatsDialog() {
         val selected = adapter.getSelectedChats()
         if (selected.isEmpty()) return
-
         val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val messageText = dialogView.findViewById<TextView>(R.id.messageText)
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
         val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
-
         titleText.text = getString(R.string.delete_chats)
         messageText.text = getString(R.string.delete_chats_confirmation, selected.size)
-
         val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
@@ -626,17 +545,14 @@ class ChatListActivity : AppCompatActivity() {
                 dialogView.background = shape
             } catch (_: Exception) {}
         }
-
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnDelete.setOnClickListener {
             dialog.dismiss()
             binding.toolbarTitle.text = getString(R.string.loading)
             val chatsToDelete = selected.toList()
             adapter.clearSelection()
-
             lifecycleScope.launch {
                 var successCount = 0
                 for (chat in chatsToDelete) {
@@ -662,6 +578,12 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 mutedChats.clear()
                 mutedChats.addAll(roomIds)
+                if (viewModel.currentChats.isNotEmpty()) {
+                    val updatedChats = viewModel.currentChats.map {
+                        it.copy(isMuted = mutedChats.contains(it.id))
+                    }
+                    adapter.setChats(updatedChats)
+                }
             }
         }
     }
@@ -670,25 +592,19 @@ class ChatListActivity : AppCompatActivity() {
     private fun showMuteChatsDialog() {
         val selected = adapter.getSelectedChats()
         if (selected.isEmpty()) return
-
-        // Проверяем, все ли выбранные чаты уже замьючены
         val allMuted = selected.all { mutedChats.contains(it.id) }
-        val action = if (allMuted) "unmute" else "mute"
         val titleRes = if (allMuted) R.string.unmute_chats else R.string.mute_chats
         val messageRes = if (allMuted) R.string.unmute_chats_confirmation else R.string.mute_chats_confirmation
         val iconRes = if (allMuted) R.drawable.ic_volume_on else R.drawable.ic_volume_off
-
         val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val messageText = dialogView.findViewById<TextView>(R.id.messageText)
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
         val btnAction = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
-
         titleText.text = getString(titleRes)
         messageText.text = getString(messageRes, selected.size)
         btnAction.text = getString(if (allMuted) R.string.unmute else R.string.mute)
         btnAction.icon = ContextCompat.getDrawable(this, iconRes)
-
         val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
@@ -703,17 +619,12 @@ class ChatListActivity : AppCompatActivity() {
                 dialogView.background = shape
             } catch (_: Exception) {}
         }
-
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAction.setOnClickListener {
             dialog.dismiss()
             val chatsToToggle = selected.toList()
             adapter.clearSelection()
-
             lifecycleScope.launch {
                 var successCount = 0
                 for (chat in chatsToToggle) {
@@ -724,11 +635,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
                     if (success) {
                         successCount++
-                        if (!allMuted) {
-                            mutedChats.add(chat.id)
-                        } else {
-                            mutedChats.remove(chat.id)
-                        }
+                        if (!allMuted) mutedChats.add(chat.id) else mutedChats.remove(chat.id)
                     }
                 }
                 runOnUiThread {
@@ -737,7 +644,10 @@ class ChatListActivity : AppCompatActivity() {
                         val toastRes = if (allMuted) R.string.unmuted_count else R.string.muted_count
                         showToast(getString(toastRes, successCount))
                     }
-                    adapter.notifyDataSetChanged()
+                    val updatedChats = adapter.getChats().map {
+                        it.copy(isMuted = mutedChats.contains(it.id))
+                    }
+                    adapter.setChats(updatedChats)
                 }
             }
         }
@@ -747,16 +657,10 @@ class ChatListActivity : AppCompatActivity() {
     @SuppressLint("NotifyDataSetChanged")
     override fun onResume() {
         super.onResume()
-        // 1. Снова загружаем тему (вдруг она изменилась в другом окне)
         ThemeManager.loadTheme(this, username) {
             runOnUiThread {
-                // 2. Применяем к фону и тулбару
                 ThemeManager.applyTheme(this)
-
-                // Закрыть любые открытые меню если они есть
                 binding.toolbar.dismissPopupMenus()
-
-                // 3. САМОЕ ВАЖНОЕ: Говорим списку, что пора перерисовать карточки
                 if (::adapter.isInitialized) {
                     adapter.notifyDataSetChanged()
                 }
@@ -768,51 +672,30 @@ class ChatListActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun isDarkTheme(): Boolean {
-        // Light theme has been removed, always return true (dark theme)
-        return true
-    }
-
     private fun showAboutDialog() {
         val clientVersion = try {
-            val pInfo = packageManager.getPackageInfo(packageName, 0)
-            pInfo.versionName
+            packageManager.getPackageInfo(packageName, 0).versionName
         } catch (_: Exception) { BuildConfig.VERSION_NAME }
-
         val serverVersion = grpcClient.serverVersion.value.ifEmpty { "..." }
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "") ?: ""
         val isUpdateAvailable = isUpdateAvailable(latestVersion)
-
-        // Инфлейтим макет
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
-
-        // Находим все вьюхи
         val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
         val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
         val btnUpdate = dialogView.findViewById<Button>(R.id.btnUpdate)
         val btnFeedback = dialogView.findViewById<Button>(R.id.btnFeedback)
         val btnShare = dialogView.findViewById<Button>(R.id.btnShare)
         val btnClose = dialogView.findViewById<Button>(R.id.btnClose)
-        // Если в dialog_about есть заголовок, можно добавить и его:
-        // val titleText = dialogView.findViewById<TextView>(R.id.aboutTitle)
-
-        // Устанавливаем тексты
         clientVersionText.text = getString(R.string.version_label, clientVersion)
         serverVersionText.text = getString(R.string.server_version_format, serverVersion)
-
-        // --- ЛОГИКА ТЕМИЗАЦИИ (как в диалоге обновления) ---
         val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
                 val surfaceColor = customTheme.surfaceColor.toColorInt()
                 val primaryColor = customTheme.primaryColor.toColorInt()
-
-                // Красим тексты версий
                 clientVersionText.setTextColor(onPrimaryContainerColor)
                 serverVersionText.setTextColor(onPrimaryContainerColor)
-
-                // Красим кнопки
                 listOf(btnUpdate, btnFeedback, btnShare, btnClose).forEach { btn ->
                     if (btn is MaterialButton) {
                         btn.setTextColor(primaryColor)
@@ -822,50 +705,35 @@ class ChatListActivity : AppCompatActivity() {
                         btn.setTextColor(primaryColor)
                     }
                 }
-
-                // Создаем программный фон со скруглением 18dp (как в обновлении)
                 val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
                     floatArrayOf(50f, 50f, 50f, 50f, 50f, 50f, 50f, 50f), null, null
                 ))
                 shapeDrawable.paint.color = surfaceColor
                 dialogView.background = shapeDrawable
-
             } catch (e: Exception) {
                 Log.e("ThemeManager", "Error tinting About dialog", e)
             }
         } else {
-            // Логика для стандартной/встроенной темы (Material 3 атрибуты)
             val typedValue = TypedValue()
-
             theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
             val bgColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
-
             theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
             val textColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
-
             clientVersionText.setTextColor(textColor)
             serverVersionText.setTextColor(textColor)
-
             val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
                 floatArrayOf(50f, 50f, 50f, 50f, 50f, 50f, 50f, 50f), null, null
             ))
             shapeDrawable.paint.color = bgColor
             dialogView.background = shapeDrawable
         }
-
-        // Создаем диалог
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-
-        // КРИТИЧНО: делаем системное окно прозрачным, чтобы видеть наши скругления
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        // Обработка кнопок
         btnUpdate.isVisible = isUpdateAvailable
         btnUpdate.setOnClickListener {
             dialog.dismiss()
             showUpdateConfirmationDialog(true)
         }
-
         btnFeedback.setOnClickListener {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = "mailto:".toUri()
@@ -874,20 +742,17 @@ class ChatListActivity : AppCompatActivity() {
             }
             try { startActivity(intent) } catch (_: Exception) { showToast("No email app found") }
         }
-
-        btnShare.setOnClickListener {
-            shareApp()
-        }
-
+        btnShare.setOnClickListener { shareApp() }
         btnClose.setOnClickListener { dialog.dismiss() }
-
         dialog.show()
     }
+
     private fun shareApp() {
-        val shareIntent = Intent(Intent.ACTION_SEND)
-        shareIntent.type = "text/plain"
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
-        shareIntent.putExtra(Intent.EXTRA_TEXT, APK_URL)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
+            putExtra(Intent.EXTRA_TEXT, APK_URL)
+        }
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
     }
 
@@ -934,19 +799,14 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showUpdateConfirmationDialog(isUpdateAvailable: Boolean) {
         val currentVersion = try {
-            val pInfo = packageManager.getPackageInfo(packageName, 0)
-            pInfo.versionName
+            packageManager.getPackageInfo(packageName, 0).versionName
         } catch (_: Exception) { BuildConfig.VERSION_NAME }
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", currentVersion) ?: currentVersion
-        
-        // Create custom dialog view
         val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val messageText = dialogView.findViewById<TextView>(R.id.messageText)
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
         val btnDelete = dialogView.findViewById<MaterialButton>(R.id.btnDelete)
-        
-        // Set content
         if (isUpdateAvailable) {
             titleText.text = getString(R.string.update_available)
             messageText.text = getString(R.string.version_current, currentVersion) + "\n" + getString(R.string.version_available, latestVersion) + "\n\n" + getString(R.string.update_confirmation_message)
@@ -958,8 +818,6 @@ class ChatListActivity : AppCompatActivity() {
             btnDelete.text = getString(R.string.force_download)
             btnCancel.text = getString(R.string.ok)
         }
-        
-        // Apply theme colors - custom theme or built-in theme
         val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
@@ -968,7 +826,6 @@ class ChatListActivity : AppCompatActivity() {
                 messageText.setTextColor(onPrimaryContainerColor)
                 btnCancel.setTextColor(onPrimaryContainerColor)
                 btnDelete.setTextColor(onPrimaryContainerColor)
-                // Create a shape drawable with custom color for rounded background
                 val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
                     floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
                 ))
@@ -976,40 +833,28 @@ class ChatListActivity : AppCompatActivity() {
                 dialogView.background = shapeDrawable
             } catch (_: Exception) {}
         } else {
-            // Use Material Design attributes for built-in themes
             val typedValue = TypedValue()
             theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
             val bgColor = ContextCompat.getColor(this, typedValue.resourceId)
-            
             theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
             val textColor = ContextCompat.getColor(this, typedValue.resourceId)
-            
             titleText.setTextColor(textColor)
             messageText.setTextColor(textColor)
             btnCancel.setTextColor(textColor)
             btnDelete.setTextColor(textColor)
-            
-            // Create a shape drawable with built-in theme color for rounded background
             val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
                 floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
             ))
             shapeDrawable.paint.color = bgColor
             dialogView.background = shapeDrawable
         }
-        
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnDelete.setOnClickListener {
             dialog.dismiss()
-            if (isUpdateAvailable) {
-                downloadAndInstallApk()
-            } else {
-                downloadAndInstallApk()
-            }
+            downloadAndInstallApk()
         }
-        
         dialog.show()
     }
 
@@ -1109,49 +954,26 @@ class ChatListActivity : AppCompatActivity() {
         val menuUserAvatar = sheetView.findViewById<CircleImageView>(R.id.menuUserAvatar)
         val menuUsername = sheetView.findViewById<TextView>(R.id.menuUsername)
         val menuUserBio = sheetView.findViewById<TextView>(R.id.menuUserBio)
-        
-        // Apply custom theme colors to the sheet
         val customTheme = ThemeManager.getCurrentTheme()
-
-        // ПРИМЕНЯЕМ ТЕМУ К ШТОРКЕ
         if (customTheme != null) {
-            // ОБНОВЛЕННЫЙ СПИСОК: Все кнопки, которые должны менять цвет
-            val actionIds = listOf(
-                R.id.actionEditProfile,
-                R.id.actionThemes,
-                R.id.actionNotifications,
-                R.id.actionContacts,
-                R.id.actionToggleLanguage,
-                R.id.actionLogout,
-                R.id.actionUpdate,
-                R.id.actionAbout,
-                R.id.actionAdmin
-            )
+            val actionIds = listOf(R.id.actionEditProfile, R.id.actionThemes, R.id.actionNotifications, R.id.actionContacts, R.id.actionToggleLanguage, R.id.actionLogout, R.id.actionUpdate, R.id.actionAbout, R.id.actionAdmin)
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
                 val txtColor = customTheme.textPrimaryColor.toColorInt()
                 val primColor = customTheme.primaryColor.toColorInt()
                 val secColor = customTheme.onSurfaceColor.toColorInt()
-
                 sheetView.setBackgroundColor(bgColor)
                 menuUsername.setTextColor(txtColor)
                 menuUserBio.setTextColor(secColor)
-
-                // Color the top handle with primaryColor
                 sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
-
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
                             val child = layout.getChildAt(i)
-                            // Красим текст
                             if (child is TextView) {
-                                // Для выхода оставляем красный цвет, для остальных — основной текст темы
                                 if (id != R.id.actionLogout) child.setTextColor(txtColor)
                             }
-                            // Красим иконки
                             if (child is ImageView) {
-                                // Для выхода оставляем красный, для остальных — основной цвет темы
                                 if (id != R.id.actionLogout) child.imageTintList = ColorStateList.valueOf(primColor)
                             }
                         }
@@ -1161,33 +983,15 @@ class ChatListActivity : AppCompatActivity() {
                 Log.e("ThemeManager", "Error tinting bottom sheet items")
             }
         } else {
-            // For built-in themes: match custom theme styling
             try {
-                val actionIds = listOf(
-                    R.id.actionEditProfile,
-                    R.id.actionThemes,
-                    R.id.actionNotifications,
-                    R.id.actionContacts,
-                    R.id.actionToggleLanguage,
-                    R.id.actionLogout,
-                    R.id.actionUpdate,
-                    R.id.actionAbout,
-                    R.id.actionAdmin
-                )
+                val actionIds = listOf(R.id.actionEditProfile, R.id.actionThemes, R.id.actionNotifications, R.id.actionContacts, R.id.actionToggleLanguage, R.id.actionLogout, R.id.actionUpdate, R.id.actionAbout, R.id.actionAdmin)
                 val typedValue = TypedValue()
-
-                // Set background to match ChatListActivity (colorSurfaceContainer)
                 theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
                 val bgColor = typedValue.data
                 sheetView.setBackgroundColor(bgColor)
-
-
-                // Use colorPrimary for handle and icons
                 theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
                 val primaryColor = typedValue.data
                 sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primaryColor)
-
-                // Color icons with primaryColor (except logout which stays red)
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
@@ -1200,7 +1004,6 @@ class ChatListActivity : AppCompatActivity() {
                 }
             } catch (_: Exception) {}
         }
-        
         menuUsername.text = username
         grpcClient.getUserProfile(username) { profile ->
             runOnUiThread {
@@ -1226,7 +1029,6 @@ class ChatListActivity : AppCompatActivity() {
                 startActivity(intent)
             }
         } else {
-            // Default white avatar for all themes (built-in and custom)
             menuUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
             menuUserAvatar.clearColorFilter()
         }
@@ -1284,33 +1086,21 @@ class ChatListActivity : AppCompatActivity() {
     private fun showChatActionSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_chat_actions, binding.root, false)
-
-        // Apply custom theme colors to the sheet
         val customTheme = ThemeManager.getCurrentTheme()
         val actionIds = listOf(R.id.actionStartChat, R.id.actionAddContact, R.id.actionAddGroup)
-
         if (customTheme != null) {
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
                 val txtColor = customTheme.textPrimaryColor.toColorInt()
                 val primColor = customTheme.primaryColor.toColorInt()
-
                 sheetView.setBackgroundColor(bgColor)
-
-                // Color the top handle with primaryColor
                 sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
-
-                // Theme all action items
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
                             val child = layout.getChildAt(i)
-                            if (child is TextView) {
-                                child.setTextColor(txtColor)
-                            }
-                            if (child is ImageView) {
-                                child.imageTintList = ColorStateList.valueOf(primColor)
-                            }
+                            if (child is TextView) child.setTextColor(txtColor)
+                            if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primColor)
                         }
                     }
                 }
@@ -1318,35 +1108,24 @@ class ChatListActivity : AppCompatActivity() {
                 Log.e("ThemeManager", "Error tinting chat action sheet")
             }
         } else {
-            // For built-in themes: match custom theme styling
             try {
                 val typedValue = TypedValue()
-
-                // Set background to match ChatListActivity (colorSurfaceContainer)
                 theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
                 val bgColor = typedValue.data
                 sheetView.setBackgroundColor(bgColor)
-
-
-                // Use colorPrimary for handle and icons
                 theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
                 val primaryColor = typedValue.data
                 sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primaryColor)
-
-                // Color icons with primaryColor
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
                             val child = layout.getChildAt(i)
-                            if (child is ImageView) {
-                                child.imageTintList = ColorStateList.valueOf(primaryColor)
-                            }
+                            if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
                         }
                     }
                 }
             } catch (_: Exception) {}
         }
-
         sheetView.findViewById<View>(R.id.actionStartChat).setOnClickListener {
             bottomSheetDialog.dismiss()
             showCreateDirectChatDialog()
@@ -1369,57 +1148,33 @@ class ChatListActivity : AppCompatActivity() {
             runOnUiThread {
                 binding.toolbarTitle.text = getString(R.string.chats)
                 val dialogView = layoutInflater.inflate(R.layout.dialog_create_direct_chat, null)
-                val typedValue = TypedValue()
-
-                // Apply same theming as in add_contact dialog
                 val customTheme = ThemeManager.getCurrentTheme()
                 val bgColor = if (customTheme != null) {
-                    try {
-                        customTheme.primaryColor.toColorInt()
-                    } catch (_: Exception) {
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                        typedValue.data
-                    }
+                    try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
                 } else {
-                    theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                    typedValue.data
+                    getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer)
                 }
-
-                // Create rounded background drawable
                 val shapeDrawable = android.graphics.drawable.ShapeDrawable(
-                    android.graphics.drawable.shapes.RoundRectShape(
-                        floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
-                    )
+                    android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)
                 )
                 shapeDrawable.paint.color = bgColor
                 dialogView.background = shapeDrawable
-
                 val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
                 val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
                 val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
                 val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                 val btnStartChat = dialogView.findViewById<MaterialButton>(R.id.btnStartChat)
-
-                // Theme buttons for default theme
                 if (customTheme == null) {
-                    val btnBgColor = android.content.res.ColorStateList.valueOf(
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
-                            .let { typedValue.data }
-                    )
-                    val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
-                        .let { typedValue.data }
-
+                    val btnBgColor = ColorStateList.valueOf(getColorFromAttr(com.google.android.material.R.attr.colorSecondaryContainer))
+                    val btnTextColor = getColorFromAttr(com.google.android.material.R.attr.colorOnSecondaryContainer)
                     btnCancel.backgroundTintList = btnBgColor
                     btnCancel.setTextColor(btnTextColor)
                     btnStartChat.backgroundTintList = btnBgColor
                     btnStartChat.setTextColor(btnTextColor)
-
-                    // Theme search input
-                    val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+                    val boxColor = ColorStateList.valueOf(bgColor)
                     searchInputLayout.setBoxStrokeColorStateList(boxColor)
                     searchInputLayout.defaultHintTextColor = boxColor
                 }
-
                 val filteredUsers = contacts.filter { it != username }.sortedWith(compareByDescending<String> { grpcClient.users.value.contains(it) }.thenBy { it })
                 var selectedUser: String? = null
                 val userAdapter = UserAdapter(
@@ -1432,12 +1187,8 @@ class ChatListActivity : AppCompatActivity() {
                 )
                 usersRecyclerView.adapter = userAdapter
                 userAdapter.setUsers(filteredUsers)
-
                 val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-
-                // Make system window transparent to see rounded corners
                 dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
                 searchEditText.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -1486,57 +1237,33 @@ class ChatListActivity : AppCompatActivity() {
                     binding.progressOverlay.isVisible = false
                     resetButtons()
                     val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
-                    val typedValue = TypedValue()
-
-                    // Apply same theming as in add_contact dialog
                     val customTheme = ThemeManager.getCurrentTheme()
                     val bgColor = if (customTheme != null) {
-                        try {
-                            customTheme.primaryColor.toColorInt()
-                        } catch (_: Exception) {
-                            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                            typedValue.data
-                        }
+                        try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
                     } else {
-                        theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                        typedValue.data
+                        getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer)
                     }
-
-                    // Create rounded background drawable
                     val shapeDrawable = android.graphics.drawable.ShapeDrawable(
-                        android.graphics.drawable.shapes.RoundRectShape(
-                            floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
-                        )
+                        android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)
                     )
                     shapeDrawable.paint.color = bgColor
                     dialogView.background = shapeDrawable
-
                     val groupNameInput = dialogView.findViewById<EditText>(R.id.groupNameInput)
                     val usersContainer = dialogView.findViewById<LinearLayout>(R.id.usersContainer)
                     val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                     val btnCreate = dialogView.findViewById<MaterialButton>(R.id.btnCreate)
                     val groupInputLayout = dialogView.findViewById<TextInputLayout>(R.id.groupInputLayout)
-
-                    // Theme buttons and input for default theme
                     if (customTheme == null) {
-                        val btnBgColor = android.content.res.ColorStateList.valueOf(
-                            theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
-                                .let { typedValue.data }
-                        )
-                        val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
-                            .let { typedValue.data }
-
+                        val btnBgColor = ColorStateList.valueOf(getColorFromAttr(com.google.android.material.R.attr.colorSecondaryContainer))
+                        val btnTextColor = getColorFromAttr(com.google.android.material.R.attr.colorOnSecondaryContainer)
                         btnCancel.backgroundTintList = btnBgColor
                         btnCancel.setTextColor(btnTextColor)
                         btnCreate.backgroundTintList = btnBgColor
                         btnCreate.setTextColor(btnTextColor)
-
-                        // Theme group input
-                        val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+                        val boxColor = ColorStateList.valueOf(bgColor)
                         groupInputLayout.setBoxStrokeColorStateList(boxColor)
                         groupInputLayout.defaultHintTextColor = boxColor
                     }
-
                     val selectedUsers = mutableSetOf<String>()
                     val sortedUsers = contacts.sortedWith(compareByDescending<String> { onlineUsers.contains(it) }.thenBy { it })
                     for (user in sortedUsers) {
@@ -1550,7 +1277,7 @@ class ChatListActivity : AppCompatActivity() {
                         usernameText.text = user
                         val avatarCache = grpcClient.getAvatarCache()
                         val cachedAvatarUrl = avatarCache[user]
-                        if (!cachedAvatarUrl.isNullOrEmpty()) {
+                        if (!cachedAvatarUrl.isNullOrBlank()) {
                             Glide.with(this@ChatListActivity).load(cachedAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(userAvatar)
                         } else {
                             userAvatar.setImageResource(R.drawable.ic_default_avatar)
@@ -1564,12 +1291,8 @@ class ChatListActivity : AppCompatActivity() {
                         }
                         usersContainer.addView(userView)
                     }
-
                     val dialog = AlertDialog.Builder(this@ChatListActivity).setView(dialogView).setOnDismissListener { resetButtons() }.create()
-
-                    // Make system window transparent to see rounded corners
                     dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
                     btnCancel.setOnClickListener { dialog.dismiss() }
                     btnCreate.setOnClickListener {
                         val groupName = groupNameInput.text.toString().trim()
@@ -1596,58 +1319,34 @@ class ChatListActivity : AppCompatActivity() {
     private fun showAddContactDialog() {
         binding.toolbarTitle.text = getString(R.string.loading)
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
-        val typedValue = TypedValue()
-
-        // Apply same theming as in ContactsActivity
         val customTheme = ThemeManager.getCurrentTheme()
         val bgColor = if (customTheme != null) {
-            try {
-                customTheme.primaryColor.toColorInt()
-            } catch (_: Exception) {
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                typedValue.data
-            }
+            try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
         } else {
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-            typedValue.data
+            getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer)
         }
-
-        // Create rounded background drawable
         val shapeDrawable = android.graphics.drawable.ShapeDrawable(
-            android.graphics.drawable.shapes.RoundRectShape(
-                floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
-            )
+            android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)
         )
         shapeDrawable.paint.color = bgColor
         dialogView.background = shapeDrawable
-
         val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
         val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
         val createChatCheckbox = dialogView.findViewById<CheckBox>(R.id.createChatCheckbox)
         val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
-
-        // Theme buttons for default theme
         if (customTheme == null) {
-            val btnBgColor = android.content.res.ColorStateList.valueOf(
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)
-                    .let { typedValue.data }
-            )
-            val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true)
-                .let { typedValue.data }
-
+            val btnBgColor = ColorStateList.valueOf(getColorFromAttr(com.google.android.material.R.attr.colorSecondaryContainer))
+            val btnTextColor = getColorFromAttr(com.google.android.material.R.attr.colorOnSecondaryContainer)
             btnCancel.backgroundTintList = btnBgColor
             btnCancel.setTextColor(btnTextColor)
             btnAdd.backgroundTintList = btnBgColor
             btnAdd.setTextColor(btnTextColor)
-
-            // Theme search input
-            val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+            val boxColor = ColorStateList.valueOf(bgColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
         }
-
         val allUsers = mutableListOf<String>()
         val userContacts = mutableListOf<String>()
         val userAdapter = UserAdapter(
@@ -1690,10 +1389,7 @@ class ChatListActivity : AppCompatActivity() {
                 invalidateOptionsMenu()
             }
             .create()
-
-        // Make system window transparent to see rounded corners
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
             val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener
@@ -1748,12 +1444,8 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun applySavedLanguage() {
         val lang = getSavedLanguage() ?: "en"
-        val locale = Locale.forLanguageTag(lang)
+        val locale = Locale(lang)
         Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        @Suppress("DEPRECATION")
-        resources.updateConfiguration(config, resources.displayMetrics)
     }
 
     private fun getSavedLanguage(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("language", null)
@@ -1762,34 +1454,18 @@ class ChatListActivity : AppCompatActivity() {
     private fun toggleLanguage() {
         val next = if (getSavedLanguage() == "en") "ru" else "en"
         saveLanguage(next)
-        setLocale(next)
         recreate()
     }
 
-    private fun setLocale(languageCode: String) {
-        val locale = Locale.forLanguageTag(languageCode)
-        Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        @Suppress("DEPRECATION")
-        resources.updateConfiguration(config, resources.displayMetrics)
-    }
-
     private fun logout() {
-        // Используем "lavender_prefs", чтобы всё было в одном месте
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
             remove("username")
             remove("password")
-            // 🛠️ ОБЯЗАТЕЛЬНО: Сбрасываем версию чатов при выходе
             remove("chat_list_version")
         }
-
-        // Останавливаем сетевой клиент, чтобы не было попыток переподключения
         grpcClient.disconnect()
-
         showToast(getString(R.string.logged_out))
-
         val intent = Intent(this, SplashActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         intent.putExtra("extra_skip_autologin", true)
@@ -1797,21 +1473,14 @@ class ChatListActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun clearMenuAnimations() {
-        // Optional: clear any pending menu animations if they exist
-    }
+    private fun clearMenuAnimations() {}
 
     private fun showSearchBar() {
         binding.searchCard.isVisible = true
         binding.searchEditText.requestFocus()
-        
-        // Show keyboard
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(binding.searchEditText, 0)
-        
-        // Update toolbar to show close icon
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
-        // Hide search icon when search is active, also hide selection icons
         binding.actionSearch.isVisible = false
         binding.actionDelete.isVisible = false
         binding.actionMute.isVisible = false
@@ -1820,21 +1489,13 @@ class ChatListActivity : AppCompatActivity() {
     private fun hideSearchBar() {
         binding.searchCard.isVisible = false
         binding.searchEditText.text.clear()
-        
-        // Clear search filter
         adapter.filter("")
-        
-        // Hide keyboard
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
-        
-        // Restore icons based on current selection state
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
         binding.actionSearch.isVisible = !hasSelection
         binding.actionDelete.isVisible = hasSelection
         binding.actionMute.isVisible = hasSelection
-        
-        // Reset toolbar icon based on selection state
         if (hasSelection) {
             supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
         } else {
@@ -1843,4 +1504,10 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+    private fun getColorFromAttr(attr: Int): Int {
+        val typedValue = TypedValue()
+        theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
+    }
 }

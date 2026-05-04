@@ -1,36 +1,32 @@
 <resources>
-    <!-- Night theme for Theme.MsgClientAndroid -->
+    <!-- Base application theme for dark mode. -->
     <style name="Theme.MsgClientAndroid" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="isLightTheme">false</item>
-        <!-- Primary colors -->
-        <item name="colorPrimary">@color/deep_purple</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/deep_purple</item>
-        <item name="colorOnPrimaryContainer">@color/lavender_mist</item>
+        <!--
+            Theme customizations available in newer API levels can go in
+            res/values-vXX/themes.xml, while customizations related to
+            backward-compatibility can go here.
+        -->
 
-        <!-- Secondary colors -->
-        <item name="colorSecondary">@color/white</item>
-        <item name="colorOnSecondary">@color/deep_purple</item>
-        <item name="colorSecondaryContainer">@color/lavender_mist</item>
-        <item name="colorOnSecondaryContainer">@color/deep_purple</item>
+        <!-- Base Dark Theme -->
+        <item name="colorPrimary">#04052E</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#1A1B46</item>
+        <item name="colorOnPrimaryContainer">#FFFFFF</item>
 
-        <!-- Background colors -->
-        <item name="android:windowBackground">@color/dark_background</item>
-        <item name="colorSurface">@color/lavender_mist</item>
-        <item name="colorSurfaceVariant">@color/lavender_mist</item>
-        <item name="colorOnSurface">@color/dark_background</item>
-        <item name="colorOnSurfaceVariant">@color/dark_background</item>
+        <item name="colorSecondary">#1A1B46</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#04052E</item>
+        <item name="colorOnSecondaryContainer">#FFFFFF</item>
 
-        <!-- Dialog colors -->
+        <item name="android:colorBackground">#04052E</item>
+        <item name="colorSurface">#1A1B46</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+
+        <item name="colorSurfaceVariant">#1A1B46</item>
+        <item name="colorOnSurfaceVariant">#E0E0E0</item>
+
         <item name="colorSurfaceContainer">#1A1B46</item>
-        <item name="colorSurfaceContainerHigh">#1A1B46</item>
 
-        <!-- Text colors -->
-        <item name="android:textColorPrimary">@color/white</item>
-        <item name="android:textColorSecondary">@color/lavender_mist</item>
-        <item name="android:textColorHint">@color/lavender_mist</item>
-
-        <!-- Button colors -->
-        <item name="colorPrimaryInverse">@color/deep_purple</item>
+        <item name="android:textColor">#FFFFFF</item>
     </style>
 </resources>

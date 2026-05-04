@@ -109,17 +109,14 @@ class ChatAdapter(
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
         val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         val isSelected = selectedPositions.contains(position)
+        val chat = displayedChats[position]
 
-        // Передаем theme шестым параметром, как того ожидает новый метод bind
         holder.bind(
-            displayedChats[position],
+            chat,
             currentUsername,
-            avatarCache,
             isSelected,
-            onlineUsers,
-            theme // <--- Теперь параметр на месте
+            theme
         ) {
-            // Это лямбда для onLongClick (аргумент onLongClick: () -> Unit)
             val currentPos = holder.bindingAdapterPosition
             if (currentPos == RecyclerView.NO_POSITION) return@bind
 
@@ -132,6 +129,9 @@ class ChatAdapter(
             notifyItemChanged(currentPos)
             onSelectionChanged(selectedPositions.size)
         }
+
+        // Lazy load avatars
+        holder.loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
     }
 
     override fun getItemCount(): Int = displayedChats.size
@@ -142,35 +142,29 @@ class ChatAdapter(
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
         private val adminIndicator: ImageView = itemView.findViewById(R.id.adminIndicator)
         private val muteIndicator: ImageView = itemView.findViewById(R.id.muteIndicator)
-        private val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
+        val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
         fun bind(
             chat: ChatInfo,
             currentUsername: String,
-            avatarCache: Map<String, String>,
             isSelected: Boolean,
-            onlineUsers: List<String>,
             theme: lavender.client.android.data.proto.CustomThemeProto?,
             onLongClick: () -> Unit
         ) {
             val context = itemView.context
 
-            // --- 1. ДЕФОЛТНЫЕ ЦВЕТА (Твоя Night Theme) ---
             val defaultCardBg = "#1A1B46".toColorInt()
             val defaultText = android.graphics.Color.WHITE
             val defaultSecondary = "#E6E6FA".toColorInt()
             val defaultPrimary = "#B19CD9".toColorInt()
 
-            // --- 2. БЕЗОПАСНЫЙ ПАРСИНГ ЦВЕТОВ ---
             val primaryColor = parseSafeColor(theme?.primaryColor, defaultPrimary)
             val textPrimary = parseSafeColor(theme?.textPrimaryColor, defaultText)
             val textSecondary = parseSafeColor(theme?.onSurfaceColor, defaultSecondary)
             val surfaceColor = parseSafeColor(theme?.surfaceColor, defaultCardBg)
 
-            // --- 3. ВИЗУАЛ ЭЛЕМЕНТА ---
             if (isSelected) {
-                // Подсветка выделения
                 cardView.setCardBackgroundColor(ThemeManager.adjustAlpha(primaryColor, 0.3f))
                 itemView.alpha = 0.8f
             } else {
@@ -178,13 +172,10 @@ class ChatAdapter(
                 itemView.alpha = 1.0f
             }
 
-            // --- 4. ТЕКСТЫ И ИНДИКАТОРЫ ---
             chatName.setTextColor(textPrimary)
             chatType.setTextColor(textSecondary)
-
             chatName.text = chat.getDisplayName(currentUsername)
 
-            // Последнее сообщение
             if (chat.lastMessageText.isNotEmpty()) {
                 val prefix = if (chat.type == "group" || chat.type == "general") {
                     if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
@@ -196,19 +187,14 @@ class ChatAdapter(
                 chatType.text = if (context.resources.configuration.locales[0].language == "ru") "Нет сообщений" else "No messages"
             }
 
-            // Счетчик непрочитанных
             unreadCount.isVisible = chat.unreadCount > 0
             if (chat.unreadCount > 0) {
                 unreadCount.text = chat.unreadCount.toString()
                 unreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
-
-                // ИНТЕЛЛЕКТУАЛЬНЫЙ КОНТРАСТ:
-                // Если кружок светлый — текст черный, если темный — белый.
                 val textColorForBadge = if (primaryColor.isLight()) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 unreadCount.setTextColor(textColorForBadge)
             }
 
-            // Индикатор админа
             val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
             adminIndicator.isVisible = !chat.type.equals("direct", ignoreCase = true) && isMeAdmin
             adminIndicator.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
@@ -219,20 +205,10 @@ class ChatAdapter(
                 adminIndicator.setOnClickListener(null)
             }
 
-            // Индикатор mute (слева от шестеренки)
             muteIndicator.isVisible = chat.isMuted
-
-            // --- 5. АВАТАРЫ И КЛИКИ ---
-            loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
 
             itemView.setOnClickListener {
                 if (selectedPositions.isNotEmpty()) {
-                    if ((chat.type == "group" || chat.type == "general") && !isMeAdmin) {
-                        val msg = if (context.resources.configuration.locales[0].language == "ru")
-                            "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
-                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
-                        return@setOnClickListener
-                    }
                     onLongClick()
                 } else {
                     onChatClick(chat)
@@ -240,43 +216,19 @@ class ChatAdapter(
             }
 
             itemView.setOnLongClickListener {
-                if ((chat.type == "group" || chat.type == "general") && !isMeAdmin) {
-                    val msg = if (context.resources.configuration.locales[0].language == "ru")
-                        "Вы не являетесь администратором этой группы" else "You are not the admin of this group"
-                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
-                    return@setOnLongClickListener true
-                }
                 onLongClick()
                 true
             }
         }
 
-        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Внутри ChatViewHolder или ChatAdapter) ---
-
-        private fun parseSafeColor(colorStr: String?, defaultColor: Int): Int {
-            if (colorStr.isNullOrEmpty()) return defaultColor
-            return try {
-                colorStr.toColorInt()
-            } catch (_: Exception) {
-                defaultColor
-            }
-        }
-
-        private fun Int.isLight(): Boolean {
-            val darkness = 1 - (0.299 * android.graphics.Color.red(this) +
-                    0.587 * android.graphics.Color.green(this) +
-                    0.114 * android.graphics.Color.blue(this)) / 255
-            return darkness < 0.5
-        }
-
-        private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {
+        fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {
             participantAvatars.removeAllViews()
             if (participantsJson.isEmpty()) return
             try {
                 val context = itemView.context
                 if (chatAvatarUrl.isNotEmpty()) {
                     val avatarSize = 52.dpToPx(); val avatar = ImageView(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
-                    Glide.with(context).load(chatAvatarUrl).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                    Glide.with(context).load(chatAvatarUrl).thumbnail(0.1f).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
                     participantAvatars.addView(avatar); return
                 }
                 val participantsArray = JSONArray(participantsJson); val participantsList = mutableListOf<String>()
@@ -287,7 +239,7 @@ class ChatAdapter(
                     val container = FrameLayout(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize) }
                     val avatar = ImageView(context).apply { layoutParams = FrameLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
                     val cachedAvatarUrl = avatarCache[otherPerson]
-                    if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                    if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(0.1f).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
                     else avatar.setImageResource(R.drawable.ic_default_avatar)
                     container.addView(avatar)
                     if (isOnline) {
@@ -319,7 +271,7 @@ class ChatAdapter(
                             scaleType = ImageView.ScaleType.CENTER_CROP
                         }
                         val cachedAvatarUrl = avatarCache[uName]
-                        if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                        if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(0.1f).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
                         else avatar.setImageResource(R.drawable.ic_default_avatar)
                         container.addView(avatar)
                         if (isOnline) {
@@ -347,7 +299,6 @@ class ChatAdapter(
                         participantAvatars.addView(countView)
                     }
                     
-                    // Add online count indicator for groups
                     val onlineCount = participantsList.count { onlineUsers.contains(it) }
                     val totalCount = participantsList.size
                     if (totalCount > 0) {
@@ -365,11 +316,20 @@ class ChatAdapter(
             } catch (_: Exception) {}
         }
 
-        private fun applyDefaultCardBackground(context: android.content.Context) {
-            val typedValue = android.util.TypedValue()
-            context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-            val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-            cardView.setCardBackgroundColor(color)
+        private fun parseSafeColor(colorStr: String?, defaultColor: Int): Int {
+            if (colorStr.isNullOrEmpty()) return defaultColor
+            return try {
+                colorStr.toColorInt()
+            } catch (_: Exception) {
+                defaultColor
+            }
+        }
+
+        private fun Int.isLight(): Boolean {
+            val darkness = 1 - (0.299 * android.graphics.Color.red(this) +
+                    0.587 * android.graphics.Color.green(this) +
+                    0.114 * android.graphics.Color.blue(this)) / 255
+            return darkness < 0.5
         }
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()

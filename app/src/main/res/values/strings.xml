@@ -325,4 +325,5 @@
     <string name="action_update">Check for Updates</string>
     <string name="action_about">About Lavender</string>
     <string name="action_super_admin">Admin Panel</string>
+    <string name="remove_multiple_contacts_confirm">Are you sure you want to remove %d selected contacts?</string>
 </resources>
