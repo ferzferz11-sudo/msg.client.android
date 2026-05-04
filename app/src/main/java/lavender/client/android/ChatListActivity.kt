@@ -1533,7 +1533,7 @@ class ChatListActivity : AppCompatActivity() {
         
         // Show keyboard
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(binding.searchEditText, InputMethodManager.SHOW_IMPLICIT)
+        imm.showSoftInput(binding.searchEditText, 0)
         
         // Update toolbar to show close icon
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)

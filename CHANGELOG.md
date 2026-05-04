@@ -6,8 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 1.0.3.1
-- new features adaptation
-- upload full avatar ability added
+### Full-Size Group Avatars
+- Extended full-size avatar functionality to group chats (both thumbnail 512x512 and full 1920x1920)
+- Added `full_avatar_url` field to `UpdateChatAvatarRequest` protobuf message
+- Server: Added `full_avatar_url` column to `chats` table with migration
+- Server: Updated `UpdateChatAvatar` handler to store both thumbnail and full URLs
+- Android: Added `fullAvatarUrl` field to `ChatInfo`, `ChatInfoProto`, and `ProfileActivity`
+- Android: Updated all places where `ProfileActivity` is opened to pass `full_avatar_url` (ChatListActivity, NewChatActivity, SuperAdminActivity)
+- Android: Group avatar click now opens full-size image when available
+
+### Server Improvements
+- Reduced avatar upload logging verbosity (now shows compact message with filenames)
+- Replaced hardcoded IP addresses with `PUBLIC_IP` environment variable in `http_server.go`
+- All file upload handlers now use `os.Getenv("PUBLIC_IP")` with `localhost` fallback
+- Server configuration is now fully driven by `.env` file
 
 1.0.3.0
 ### Message Drafts (Unsent Message Persistence)

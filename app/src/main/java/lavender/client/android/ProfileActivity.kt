@@ -136,6 +136,8 @@ class ProfileActivity : AppCompatActivity() {
                 .load(avatarUrl)
                 .placeholder(R.drawable.ic_default_avatar)
                 .error(R.drawable.ic_default_avatar)
+                .skipMemoryCache(true)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                 .into(profileAvatar)
         }
 
@@ -577,9 +579,12 @@ class ProfileActivity : AppCompatActivity() {
                                                 .load(thumbUrl)
                                                 .placeholder(R.drawable.ic_default_avatar)
                                                 .error(R.drawable.ic_default_avatar)
+                                                .skipMemoryCache(true)
+                                                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                                                 .into(it)
                                         }
                                         avatarUrl = thumbUrl
+                                        fullAvatarUrl = fullUrl
                                     } else {
                                         Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()
                                     }
