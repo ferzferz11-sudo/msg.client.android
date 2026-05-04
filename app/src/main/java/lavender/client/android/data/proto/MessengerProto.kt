@@ -292,7 +292,8 @@ data class TokenResponseProto(
 // Update Avatar Request/Response
 data class UpdateAvatarRequestProto(
     val username: String = "",
-    val avatarUrl: String = ""
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = ""
 )
 
 data class UpdateAvatarResponseProto(
@@ -390,7 +391,8 @@ data class GetUserAvatarRequestProto(
 )
 
 data class GetUserAvatarResponseProto(
-    val avatarUrl: String = ""
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = ""
 )
 
 // Delete Profile Request/Response

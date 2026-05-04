@@ -126,8 +126,10 @@ object RealGrpcClient {
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap()) // roomId -> set of usernames
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
 
-    // Avatar cache
+    // Avatar cache (thumbnail URLs for lists)
     private val avatarCache = mutableMapOf<String, String>()
+    // Full avatar cache (high-res URLs for full screen view)
+    private val fullAvatarCache = mutableMapOf<String, String>()
 
     private var isChatStarted = false
     private val sentMessageHashes = mutableSetOf<String>() // Track sent messages to prevent echo
@@ -1135,10 +1137,10 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun updateAvatar(username: String, avatarUrl: String, callback: (Boolean, String) -> Unit) {
+    fun updateAvatar(username: String, avatarUrl: String, fullAvatarUrl: String = "", callback: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
 
-        val request = UpdateAvatarRequestProto(username, avatarUrl)
+        val request = UpdateAvatarRequestProto(username, avatarUrl, fullAvatarUrl)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateAvatarRequestProto, UpdateAvatarResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1151,7 +1153,7 @@ object RealGrpcClient {
         call.start(object : io.grpc.ClientCall.Listener<UpdateAvatarResponseProto>() {
             override fun onMessage(message: UpdateAvatarResponseProto) {
                 if (message.success) {
-                    updateAvatarCache(username, avatarUrl)
+                    updateAvatarCache(username, avatarUrl, fullAvatarUrl)
                 }
                 callback(message.success, message.message)
             }
@@ -1332,6 +1334,10 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetUserAvatarResponseProto>() {
             override fun onMessage(message: GetUserAvatarResponseProto) {
+                // Сохраняем оба URL в кэше
+                if (message.avatarUrl.isNotEmpty()) {
+                    updateAvatarCache(username, message.avatarUrl, message.fullAvatarUrl)
+                }
                 callback(message.avatarUrl)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -1985,9 +1991,20 @@ object RealGrpcClient {
         return avatarCache.toMap()
     }
 
-    fun updateAvatarCache(username: String, avatarUrl: String) {
-        android.util.Log.d("GrpcClient", "Updating avatar cache for $username: $avatarUrl")
+    fun updateAvatarCache(username: String, avatarUrl: String, fullAvatarUrl: String = "") {
+        android.util.Log.d("GrpcClient", "Updating avatar cache for $username: thumb=$avatarUrl, full=$fullAvatarUrl")
         avatarCache[username] = avatarUrl
+        if (fullAvatarUrl.isNotEmpty()) {
+            fullAvatarCache[username] = fullAvatarUrl
+        }
+    }
+
+    fun getFullAvatarCache(): Map<String, String> {
+        return fullAvatarCache.toMap()
+    }
+
+    fun getFullAvatarUrl(username: String): String? {
+        return fullAvatarCache[username]
     }
 
     fun clearMessages() {
@@ -2821,6 +2838,7 @@ class UpdateAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Update
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.username.isNotEmpty()) cos.writeString(1, value.username)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(2, value.avatarUrl)
+        if (value.fullAvatarUrl.isNotEmpty()) cos.writeString(3, value.fullAvatarUrl)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
@@ -2828,16 +2846,18 @@ class UpdateAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Update
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var username = ""
         var avatarUrl = ""
+        var fullAvatarUrl = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> username = cis.readString()
                 2 -> avatarUrl = cis.readString()
+                3 -> fullAvatarUrl = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return UpdateAvatarRequestProto(username, avatarUrl)
+        return UpdateAvatarRequestProto(username, avatarUrl, fullAvatarUrl)
     }
 }
 
@@ -3107,19 +3127,24 @@ class GetUserAvatarResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetU
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.avatarUrl.isNotEmpty()) cos.writeString(1, value.avatarUrl)
+        if (value.fullAvatarUrl.isNotEmpty()) cos.writeString(2, value.fullAvatarUrl)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): GetUserAvatarResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var avatarUrl = ""
+        var fullAvatarUrl = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
-            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) avatarUrl = cis.readString()
-            else cis.skipField(tag)
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> avatarUrl = cis.readString()
+                2 -> fullAvatarUrl = cis.readString()
+                else -> cis.skipField(tag)
+            }
         }
-        return GetUserAvatarResponseProto(avatarUrl)
+        return GetUserAvatarResponseProto(avatarUrl, fullAvatarUrl)
     }
 }
 

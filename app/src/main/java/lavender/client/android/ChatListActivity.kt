@@ -1137,12 +1137,16 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
         val avatarCache = grpcClient.getAvatarCache()
+        val fullAvatarCache = grpcClient.getFullAvatarCache()
         val myAvatarUrl = avatarCache[username]
+        val myFullAvatarUrl = fullAvatarCache[username]
         if (!myAvatarUrl.isNullOrEmpty()) {
             Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(menuUserAvatar)
             menuUserAvatar.setOnClickListener {
                 bottomSheetDialog.dismiss()
-                val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", myAvatarUrl) }
+                val intent = Intent(this, FullScreenImageActivity::class.java).apply {
+                    putExtra("image_url", myFullAvatarUrl ?: myAvatarUrl)
+                }
                 startActivity(intent)
             }
         }

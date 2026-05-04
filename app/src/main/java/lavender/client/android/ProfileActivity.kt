@@ -139,8 +139,15 @@ class ProfileActivity : AppCompatActivity() {
 
         // Tapping on photo always opens full screen
         profileAvatar.setOnClickListener {
-            if (avatarUrl.isNotEmpty()) {
-                showFullScreenImage(avatarUrl)
+            val fullImageUrl = if (!isGroup) {
+                // Для пользователей берем полный URL из кэша если есть
+                grpcClient.getFullAvatarUrl(username) ?: avatarUrl
+            } else {
+                // Для групп используем текущий URL
+                avatarUrl
+            }
+            if (fullImageUrl.isNotEmpty()) {
+                showFullScreenImage(fullImageUrl)
             }
         }
 
@@ -383,7 +390,10 @@ class ProfileActivity : AppCompatActivity() {
                         if (profile.avatarUrl.isNotEmpty()) {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
-                            profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
+                            profileAvatar.setOnClickListener {
+                                val fullImageUrl = grpcClient.getFullAvatarUrl(username) ?: avatarUrl
+                                showFullScreenImage(fullImageUrl)
+                            }
                         }
                     }
                 }
@@ -392,7 +402,10 @@ class ProfileActivity : AppCompatActivity() {
 
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
-            profileAvatar.setOnClickListener { showFullScreenImage(avatarUrl) }
+            profileAvatar.setOnClickListener {
+                val fullImageUrl = if (!isGroup) grpcClient.getFullAvatarUrl(username) ?: avatarUrl else avatarUrl
+                showFullScreenImage(fullImageUrl)
+            }
         } else {
             profileAvatar.setImageResource(R.drawable.ic_default_avatar)
             profileAvatar.setOnClickListener(null)

@@ -212,16 +212,22 @@ class EditProfileActivity : AppCompatActivity() {
                     val mimeType = contentResolver.getType(uri)
                     val isGif = mimeType == "image/gif"
 
-                    val bytes: ByteArray
+                    val thumbBytes: ByteArray
+                    val fullBytes: ByteArray?
                     val mediaType: String
 
                     if (isGif) {
+                        // Для GIF загружаем оригинал без изменений
                         val inputStream = contentResolver.openInputStream(uri)
-                        bytes = inputStream?.readBytes() ?: byteArrayOf()
+                        thumbBytes = inputStream?.readBytes() ?: byteArrayOf()
+                        fullBytes = null // GIF не нужна отдельная полная версия
                         inputStream?.close()
                         mediaType = "image/gif"
                     } else {
+                        // Создаем миниатюру 256x256
                         val resizedBytes = resizeImage(uri)
+                        // Создаем полную версию 1920x1920
+                        val fullResizedBytes = resizeImageFull(uri)
 
                         if (resizedBytes == null) {
                             runOnUiThread {
@@ -231,11 +237,12 @@ class EditProfileActivity : AppCompatActivity() {
                             return@withContext
                         }
 
-                        bytes = resizedBytes
+                        thumbBytes = resizedBytes
+                        fullBytes = fullResizedBytes
                         mediaType = "image/jpeg"
                     }
 
-                    if (bytes.isEmpty()) {
+                    if (thumbBytes.isEmpty()) {
                         runOnUiThread {
                             currentAvatarProgressBar?.isVisible = false
                             Toast.makeText(this@EditProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show()
@@ -244,10 +251,16 @@ class EditProfileActivity : AppCompatActivity() {
                     }
 
                     // Upload to HTTP server with multipart/form-data
-                    val requestBody = MultipartBody.Builder()
+                    val requestBodyBuilder = MultipartBody.Builder()
                         .setType(MultipartBody.FORM)
-                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", bytes.toRequestBody(mediaType.toMediaTypeOrNull()))
-                        .build()
+                        .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+
+                    // Добавляем полную версию если есть
+                    if (fullBytes != null && fullBytes.isNotEmpty()) {
+                        requestBodyBuilder.addFormDataPart("avatar_full", "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
+                    }
+
+                    val requestBody = requestBodyBuilder.build()
 
                     val request = Request.Builder()
                         .url("http://159.195.38.145:8082/upload-avatar")
@@ -259,16 +272,16 @@ class EditProfileActivity : AppCompatActivity() {
 
                     if (response.isSuccessful) {
                         val responseBody = response.body.string()
-                        val url = extractUrlFromResponse(responseBody)
+                        val (url, fullUrl) = extractUrlsFromResponse(responseBody)
 
                         if (url.isNotEmpty()) {
-                            // Update avatar via gRPC
-                            grpcClient.updateAvatar(username, url) { success, message ->
+                            // Update avatar via gRPC - передаем оба URL
+                            grpcClient.updateAvatar(username, url, fullUrl) { success, message ->
                                 runOnUiThread {
                                     currentAvatarProgressBar?.isVisible = false
                                     if (success) {
                                         Toast.makeText(this@EditProfileActivity, "Аватар обновлен", Toast.LENGTH_SHORT).show()
-                                        // Update avatarImageView
+                                        // Update avatarImageView (используем миниатюру)
                                         currentAvatarImageView?.let {
                                             Glide.with(this@EditProfileActivity)
                                                 .load(url)
@@ -305,23 +318,34 @@ class EditProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun extractUrlFromResponse(response: String): String {
-        // Try to extract URL from JSON response
-        val jsonPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
-        val match = jsonPattern.find(response)
-        if (match != null) {
-            return match.groupValues[1]
+    private fun extractUrlsFromResponse(response: String): Pair<String, String> {
+        // Try to extract both URLs from JSON response
+        val urlPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
+        val fullUrlPattern = """"full_url"\s*:\s*"([^"]+)"""".toRegex()
+
+        val urlMatch = urlPattern.find(response)
+        val fullUrlMatch = fullUrlPattern.find(response)
+
+        val url = urlMatch?.groupValues?.get(1) ?: ""
+        val fullUrl = fullUrlMatch?.groupValues?.get(1) ?: ""
+
+        // Fallback: если сервер вернул только один URL
+        if (url.isEmpty() && response.startsWith("http")) {
+            return Pair(response.trim(), "")
         }
-        // Fallback: return the whole response if it looks like a URL
-        if (response.startsWith("http")) {
-            return response.trim()
-        }
-        return ""
+
+        return Pair(url, fullUrl)
     }
 
     private fun resizeImage(uri: Uri): ByteArray? {
-        val maxWidth = 256
-        val maxHeight = 256
+        return resizeImageWithMax(uri, 256, 256)
+    }
+
+    private fun resizeImageFull(uri: Uri): ByteArray? {
+        return resizeImageWithMax(uri, 1920, 1920)
+    }
+
+    private fun resizeImageWithMax(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
         val inputStream = contentResolver.openInputStream(uri) ?: return null
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true

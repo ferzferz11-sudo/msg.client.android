@@ -156,8 +156,8 @@ object GrpcClient {
         realGrpcClient.sendTypingSignal(username, isTyping)
     }
 
-    fun updateAvatar(username: String, avatarUrl: String, callback: (Boolean, String) -> Unit) {
-        realGrpcClient.updateAvatar(username, avatarUrl, callback)
+    fun updateAvatar(username: String, avatarUrl: String, fullAvatarUrl: String = "", callback: (Boolean, String) -> Unit) {
+        realGrpcClient.updateAvatar(username, avatarUrl, fullAvatarUrl, callback)
     }
 
     fun updateChatAvatar(chatId: String, avatarUrl: String, username: String, callback: (Boolean, String) -> Unit) {
@@ -232,8 +232,16 @@ object GrpcClient {
         return realGrpcClient.getAvatarCache()
     }
 
-    fun updateAvatarCache(username: String, avatarUrl: String) {
-        realGrpcClient.updateAvatarCache(username, avatarUrl)
+    fun getFullAvatarCache(): Map<String, String> {
+        return realGrpcClient.getFullAvatarCache()
+    }
+
+    fun getFullAvatarUrl(username: String): String? {
+        return realGrpcClient.getFullAvatarUrl(username)
+    }
+
+    fun updateAvatarCache(username: String, avatarUrl: String, fullAvatarUrl: String = "") {
+        realGrpcClient.updateAvatarCache(username, avatarUrl, fullAvatarUrl)
     }
 
     fun getCurrentUsername(): String? = realGrpcClient.getCurrentUsername()
