@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.ui.ThemeManager
 import org.json.JSONArray
 
 class ChatAdapter(
@@ -169,7 +170,7 @@ class ChatAdapter(
             // --- 3. ВИЗУАЛ ЭЛЕМЕНТА ---
             if (isSelected) {
                 // Подсветка выделения
-                cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.3f))
+                cardView.setCardBackgroundColor(ThemeManager.adjustAlpha(primaryColor, 0.3f))
                 itemView.alpha = 0.8f
             } else {
                 cardView.setCardBackgroundColor(surfaceColor)
@@ -262,11 +263,6 @@ class ChatAdapter(
                     0.587 * android.graphics.Color.green(this) +
                     0.114 * android.graphics.Color.blue(this)) / 255
             return darkness < 0.5
-        }
-
-        private fun adjustAlpha(color: Int, factor: Float): Int {
-            val alpha = Math.round(android.graphics.Color.alpha(color) * factor)
-            return android.graphics.Color.argb(alpha, android.graphics.Color.red(color), android.graphics.Color.green(color), android.graphics.Color.blue(color))
         }
 
         private fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {

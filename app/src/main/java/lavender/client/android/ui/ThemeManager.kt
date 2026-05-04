@@ -604,7 +604,7 @@ object ThemeManager {
     }
 
     // Меняет прозрачность (alpha) для существующего цвета. Factor от 0.0 до 1.0
-    private fun adjustAlpha(color: Int, factor: Float): Int {
+     fun adjustAlpha(color: Int, factor: Float): Int {
         val alpha = (Color.alpha(color) * factor).roundToInt()
         val red   = Color.red(color)
         val green = Color.green(color)

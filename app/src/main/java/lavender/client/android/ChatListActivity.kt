@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableString
@@ -726,20 +727,95 @@ class ChatListActivity : AppCompatActivity() {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             pInfo.versionName
         } catch (_: Exception) { BuildConfig.VERSION_NAME }
+
         val serverVersion = grpcClient.serverVersion.value.ifEmpty { "..." }
         val latestVersion = getSharedPreferences("UpdatePrefs", MODE_PRIVATE).getString("latest_version", "") ?: ""
         val isUpdateAvailable = isUpdateAvailable(latestVersion)
+
+        // Инфлейтим макет
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
-        dialogView.findViewById<TextView>(R.id.clientVersionText).text = getString(R.string.version_label, clientVersion)
-        dialogView.findViewById<TextView>(R.id.serverVersionText).text = getString(R.string.server_version_format, serverVersion)
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+        // Находим все вьюхи
+        val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
+        val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
         val btnUpdate = dialogView.findViewById<Button>(R.id.btnUpdate)
+        val btnFeedback = dialogView.findViewById<Button>(R.id.btnFeedback)
+        val btnShare = dialogView.findViewById<Button>(R.id.btnShare)
+        val btnClose = dialogView.findViewById<Button>(R.id.btnClose)
+        // Если в dialog_about есть заголовок, можно добавить и его:
+        // val titleText = dialogView.findViewById<TextView>(R.id.aboutTitle)
+
+        // Устанавливаем тексты
+        clientVersionText.text = getString(R.string.version_label, clientVersion)
+        serverVersionText.text = getString(R.string.server_version_format, serverVersion)
+
+        // --- ЛОГИКА ТЕМИЗАЦИИ (как в диалоге обновления) ---
+        val customTheme = ThemeManager.getCurrentTheme()
+        if (customTheme != null) {
+            try {
+                val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
+                val surfaceColor = customTheme.surfaceColor.toColorInt()
+                val primaryColor = customTheme.primaryColor.toColorInt()
+
+                // Красим тексты версий
+                clientVersionText.setTextColor(onPrimaryContainerColor)
+                serverVersionText.setTextColor(onPrimaryContainerColor)
+
+                // Красим кнопки
+                listOf(btnUpdate, btnFeedback, btnShare, btnClose).forEach { btn ->
+                    if (btn is com.google.android.material.button.MaterialButton) {
+                        btn.setTextColor(primaryColor)
+                        btn.iconTint = ColorStateList.valueOf(primaryColor)
+                        btn.rippleColor = ColorStateList.valueOf(ThemeManager.adjustAlpha(primaryColor, 0.1f))
+                    } else {
+                        btn.setTextColor(primaryColor)
+                    }
+                }
+
+                // Создаем программный фон со скруглением 18dp (как в обновлении)
+                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                    floatArrayOf(50f, 50f, 50f, 50f, 50f, 50f, 50f, 50f), null, null
+                ))
+                shapeDrawable.paint.color = surfaceColor
+                dialogView.background = shapeDrawable
+
+            } catch (e: Exception) {
+                Log.e("ThemeManager", "Error tinting About dialog", e)
+            }
+        } else {
+            // Логика для стандартной/встроенной темы (Material 3 атрибуты)
+            val typedValue = TypedValue()
+
+            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
+            val bgColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
+
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true)
+            val textColor = if (typedValue.resourceId != 0) ContextCompat.getColor(this, typedValue.resourceId) else typedValue.data
+
+            clientVersionText.setTextColor(textColor)
+            serverVersionText.setTextColor(textColor)
+
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(50f, 50f, 50f, 50f, 50f, 50f, 50f, 50f), null, null
+            ))
+            shapeDrawable.paint.color = bgColor
+            dialogView.background = shapeDrawable
+        }
+
+        // Создаем диалог
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+        // КРИТИЧНО: делаем системное окно прозрачным, чтобы видеть наши скругления
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // Обработка кнопок
         btnUpdate.isVisible = isUpdateAvailable
         btnUpdate.setOnClickListener {
             dialog.dismiss()
             showUpdateConfirmationDialog(true)
         }
-        dialogView.findViewById<Button>(R.id.btnFeedback).setOnClickListener {
+
+        btnFeedback.setOnClickListener {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = "mailto:".toUri()
                 putExtra(Intent.EXTRA_EMAIL, arrayOf("ferzferz11@gmail.com"))
@@ -747,13 +823,15 @@ class ChatListActivity : AppCompatActivity() {
             }
             try { startActivity(intent) } catch (_: Exception) { showToast("No email app found") }
         }
-        dialogView.findViewById<Button>(R.id.btnShare).setOnClickListener {
+
+        btnShare.setOnClickListener {
             shareApp()
         }
-        dialogView.findViewById<Button>(R.id.btnClose).setOnClickListener { dialog.dismiss() }
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+
         dialog.show()
     }
-
     private fun shareApp() {
         val shareIntent = Intent(Intent.ACTION_SEND)
         shareIntent.type = "text/plain"
@@ -1085,6 +1163,16 @@ class ChatListActivity : AppCompatActivity() {
         sheetView.findViewById<View>(R.id.actionToggleLanguage).setOnClickListener {
             bottomSheetDialog.dismiss()
             toggleLanguage()
+        }
+        sheetView.findViewById<View>(R.id.actionAbout).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showAboutDialog()
+        }
+        sheetView.findViewById<View>(R.id.actionUpdate).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            checkForUpdates { available ->
+                showUpdateConfirmationDialog(available)
+            }
         }
         sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {
             bottomSheetDialog.dismiss()
