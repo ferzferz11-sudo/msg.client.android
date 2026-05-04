@@ -4,15 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
-import android.text.SpannableString
 import android.text.TextWatcher
-import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.util.TypedValue
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -142,7 +138,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         // Кнопка мута чатов в тулбаре
-        binding.actionMute?.setOnClickListener {
+        binding.actionMute.setOnClickListener {
             showMuteChatsDialog()
         }
 
@@ -169,7 +165,7 @@ class ChatListActivity : AppCompatActivity() {
             onSelectionChanged = { selectedCount ->
                 val hasSelection = selectedCount > 0
                 binding.actionDelete.isVisible = hasSelection
-                binding.actionMute?.isVisible = hasSelection
+                binding.actionMute.isVisible = hasSelection
 
                 // Меняем заголовок тулбара, если что-то выбрано
                 binding.toolbarTitle.text = if (hasSelection) {
@@ -197,11 +193,11 @@ class ChatListActivity : AppCompatActivity() {
         // 5. Темизация (теперь адаптер точно готов)
         ThemeManager.loadTheme(this, username) {
             runOnUiThread {
-                android.util.Log.d("ThemeManager.applyTheme()", "ChatListActivity call $this")
+                Log.d("ThemeManager.applyTheme()", "ChatListActivity call $this")
                 ThemeManager.applyTheme(this)
 
                 val theme = ThemeManager.getCurrentTheme()
-                android.util.Log.d("ThemeManager.getCurrentTheme()", "ChatListActivity call $theme")
+                Log.d("ThemeManager.getCurrentTheme()", "ChatListActivity call $theme")
 
                 if (theme != null) {
                     val primary = theme.primaryColor.toColorInt()
@@ -608,6 +604,7 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun showMuteChatsDialog() {
         val selected = adapter.getSelectedChats()
         if (selected.isEmpty()) return
@@ -645,7 +642,7 @@ class ChatListActivity : AppCompatActivity() {
             } catch (_: Exception) {}
         }
 
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
 
@@ -683,13 +680,6 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
         dialog.show()
-    }
-
-    private fun applyColorToMenuItem(item: MenuItem, color: Int) {
-        val spanString = SpannableString(item.title.toString())
-        spanString.setSpan(ForegroundColorSpan(color), 0, spanString.length, 0)
-        item.title = spanString
-        item.icon?.setTint(color)
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -763,7 +753,7 @@ class ChatListActivity : AppCompatActivity() {
 
                 // Красим кнопки
                 listOf(btnUpdate, btnFeedback, btnShare, btnClose).forEach { btn ->
-                    if (btn is com.google.android.material.button.MaterialButton) {
+                    if (btn is MaterialButton) {
                         btn.setTextColor(primaryColor)
                         btn.iconTint = ColorStateList.valueOf(primaryColor)
                         btn.rippleColor = ColorStateList.valueOf(ThemeManager.adjustAlpha(primaryColor, 0.1f))
@@ -1452,10 +1442,6 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
-    }
-
     private fun applySavedLanguage() {
         val lang = getSavedLanguage() ?: "en"
         val locale = Locale.forLanguageTag(lang)
@@ -1466,7 +1452,6 @@ class ChatListActivity : AppCompatActivity() {
         resources.updateConfiguration(config, resources.displayMetrics)
     }
 
-    private fun getSavedColorScheme(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("color_scheme", null)
     private fun getSavedLanguage(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("language", null)
     private fun saveLanguage(languageCode: String) { getSharedPreferences("lavender_prefs", MODE_PRIVATE).edit { putString("language", languageCode) } }
 

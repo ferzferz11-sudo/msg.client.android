@@ -77,7 +77,6 @@ class MainActivity : AppCompatActivity() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
         applySavedLanguage()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -568,10 +567,6 @@ class MainActivity : AppCompatActivity() {
         if (savedLanguage != null) {
             setLocale(savedLanguage)
         }
-    }
-    
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
     
     private fun getSavedLanguage(): String? {

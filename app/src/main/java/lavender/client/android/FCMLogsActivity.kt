@@ -37,7 +37,6 @@ class FCMLogsActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fcm_logs)
@@ -55,7 +54,7 @@ class FCMLogsActivity : AppCompatActivity() {
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
@@ -90,10 +89,6 @@ class FCMLogsActivity : AppCompatActivity() {
                 adapter.setData(logs)
             }
         }
-    }
-
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
 
     class FCMLogsAdapter : RecyclerView.Adapter<FCMLogsAdapter.ViewHolder>() {

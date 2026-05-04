@@ -67,6 +67,8 @@ import org.json.JSONArray
 import java.io.File
 import java.util.Locale
 import androidx.core.view.get
+import androidx.core.view.size
+import androidx.core.content.edit
 
 class NewChatActivity : AppCompatActivity() {
 
@@ -197,7 +199,7 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 1. Настройка прозрачности и темы (до super.onCreate)
-        applySavedColorScheme()
+        // applySavedColorScheme()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         @Suppress("DEPRECATION")
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -369,7 +371,7 @@ class NewChatActivity : AppCompatActivity() {
                     if (p != username) { other = p; break }
                 }
                 if (other.isNotEmpty()) grpcClient.getAvatarCache()[other] else null
-            } catch (e: Exception) { null }
+            } catch (_: Exception) { null }
         } else null
 
         if (isDirect || chatAvatarUrl.isNotEmpty()) {
@@ -533,7 +535,7 @@ class NewChatActivity : AppCompatActivity() {
             try {
                 val textColor = customTheme.onPrimaryColor.toColorInt()
                 
-                for (i in 0 until menu.size()) {
+                for (i in 0 until menu.size) {
                     val item = menu[i]
                     val span = android.text.SpannableString(item.title)
                     span.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, span.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -681,7 +683,7 @@ class NewChatActivity : AppCompatActivity() {
         
         view.findViewById<LinearLayout>(R.id.attachGallery).setOnClickListener {
             bottomSheet.dismiss()
-            val intent = Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
                 putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             }
             pickImageLauncher.launch(intent)
@@ -777,6 +779,7 @@ class NewChatActivity : AppCompatActivity() {
         mentionContainer.isVisible = false
     }
 
+    //toDo: check it
     private fun showFullScreenImage(imageUrl: String) { val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", imageUrl) }; startActivity(intent) }
     private fun showSelectionToolbar(count: Int) {
         selectionMode = true
@@ -998,7 +1001,7 @@ class NewChatActivity : AppCompatActivity() {
                 text = emoji
                 textSize = 30f
                 setPadding(16, 8, 16, 8)
-                val typedValue = android.util.TypedValue()
+                val typedValue = TypedValue()
                 theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, typedValue, true)
                 setBackgroundResource(typedValue.resourceId)
                 setOnClickListener {
@@ -1281,10 +1284,10 @@ class NewChatActivity : AppCompatActivity() {
         return result
     }
 
-    private fun applySavedColorScheme() {
+    /*private fun applySavedColorScheme() {
         // Твоя дефолтная темная тема
         setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
-    }
+    }*/
 
     private fun applyChatBackground() {
         // 1. Получаем тему через наш новый метод
@@ -1409,7 +1412,7 @@ class NewChatActivity : AppCompatActivity() {
                     // Здесь обновляй свой адаптер со списком чатов
                     // chatAdapter.submitList(chats)
 
-                    prefs.edit().putLong("chat_list_version", serverVersion).apply()
+                    prefs.edit { putLong("chat_list_version", serverVersion) }
                 }
             }
         }

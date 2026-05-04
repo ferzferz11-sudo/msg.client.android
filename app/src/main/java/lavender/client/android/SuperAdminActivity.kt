@@ -48,7 +48,6 @@ class SuperAdminActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_super_admin)
 
@@ -234,9 +233,5 @@ class SuperAdminActivity : AppCompatActivity() {
                 grpcClient.deleteChat(chat.id) { _, _ -> loadData() }
             }
             .setNegativeButton(android.R.string.cancel, null).show()
-    }
-
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
 }

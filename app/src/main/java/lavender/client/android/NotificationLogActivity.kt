@@ -37,7 +37,6 @@ class NotificationLogActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notification_log)
 
@@ -98,10 +97,6 @@ class NotificationLogActivity : AppCompatActivity() {
         if (recyclerIncoming.isVisible) adapterIncoming.setData(data)
         else adapterOutgoing.setData(data)
         emptyLogText.isVisible = data.isEmpty()
-    }
-
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
     }
 
     class NotificationLogAdapter : RecyclerView.Adapter<NotificationLogAdapter.ViewHolder>() {

@@ -68,7 +68,6 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_profile)
@@ -353,15 +352,6 @@ class EditProfileActivity : AppCompatActivity() {
         bitmap.recycle()
 
         return bytes
-    }
-
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
-    }
-
-    private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", null)
     }
 
     private fun showChangeUsernameDialog() {

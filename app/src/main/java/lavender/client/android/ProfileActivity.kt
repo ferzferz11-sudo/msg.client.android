@@ -74,7 +74,6 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedColorScheme()
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
@@ -483,15 +482,6 @@ class ProfileActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun applySavedColorScheme() {
-        setTheme(R.style.Theme_Lavender_Dark_NoActionBar)
-    }
-
-    private fun getSavedColorScheme(): String? {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        return prefs.getString("color_scheme", null)
-    }
-
     private fun uploadGroupAvatar(uri: Uri) {
         val progressOverlay = findViewById<View>(R.id.progressOverlay)
         progressOverlay?.isVisible = true
@@ -548,7 +538,7 @@ class ProfileActivity : AppCompatActivity() {
                     val response = client.newCall(request).execute()
 
                     if (response.isSuccessful) {
-                        val responseBody = response.body?.string() ?: ""
+                        val responseBody = response.body.string() ?: ""
                         val url = extractUrlFromResponse(responseBody)
 
                         if (url.isNotEmpty()) {

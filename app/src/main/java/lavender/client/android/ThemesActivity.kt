@@ -293,14 +293,6 @@ class ThemesActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun applySavedColorScheme() {
-        val theme = when (getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("color_scheme", "dark")) {
-            "light" -> R.style.Theme_Lavender_Light_NoActionBar
-            else -> R.style.Theme_Lavender_Dark_NoActionBar
-        }
-        setTheme(theme)
-    }
-
     fun onSetBackgroundClicked(themeId: String, newUrl: String) {
         ThemeManager.saveBackgroundOverride(this, themeId, newUrl)
         ThemeManager.applyTheme(this) // Сразу перекрашиваем текущий экран
