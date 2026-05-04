@@ -11,6 +11,7 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -142,6 +143,11 @@ class ChatListActivity : AppCompatActivity() {
             showMuteChatsDialog()
         }
 
+        // Кнопка поиска в тулбаре
+        binding.actionSearch.setOnClickListener {
+            showSearchBar()
+        }
+
         // Загружаем список замьюченных чатов
         loadMutedChats()
 
@@ -166,6 +172,7 @@ class ChatListActivity : AppCompatActivity() {
                 val hasSelection = selectedCount > 0
                 binding.actionDelete.isVisible = hasSelection
                 binding.actionMute.isVisible = hasSelection
+                binding.actionSearch.isVisible = !hasSelection
 
                 // Меняем заголовок тулбара, если что-то выбрано
                 binding.toolbarTitle.text = if (hasSelection) {
@@ -216,7 +223,16 @@ class ChatListActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = ""
-            setDisplayHomeAsUpEnabled(false)
+            setDisplayHomeAsUpEnabled(true)
+        }
+        
+        // Handle toolbar navigation click
+        binding.toolbar.setNavigationOnClickListener {
+            if (binding.searchCard.isVisible) {
+                hideSearchBar()
+            } else {
+                moveTaskToBack(true)
+            }
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
@@ -270,7 +286,8 @@ class ChatListActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (adapter.getSelectedChats().isNotEmpty()) adapter.clearSelection()
+                if (binding.searchCard.isVisible) hideSearchBar()
+                else if (adapter.getSelectedChats().isNotEmpty()) adapter.clearSelection()
                 else moveTaskToBack(true)
             }
         })
@@ -292,6 +309,7 @@ class ChatListActivity : AppCompatActivity() {
         handleIncomingActions(intent)
     }
 
+    
     override fun onStart() {
         super.onStart()
         // Проверяем статус напрямую через Enum. Это надежнее.
@@ -691,9 +709,8 @@ class ChatListActivity : AppCompatActivity() {
                 // 2. Применяем к фону и тулбару
                 ThemeManager.applyTheme(this)
 
-                // ХАК: Принудительное обновление меню тулбара
-                binding.toolbar.dismissPopupMenus() // Закрыть если открыто
-                invalidateOptionsMenu() // Перерисовать иконки и пункты
+                // Закрыть любые открытые меню если они есть
+                binding.toolbar.dismissPopupMenus()
 
                 // 3. САМОЕ ВАЖНОЕ: Говорим списку, что пора перерисовать карточки
                 if (::adapter.isInitialized) {
@@ -972,7 +989,6 @@ class ChatListActivity : AppCompatActivity() {
             downloadJob?.cancel()
             binding.progressOverlay.isVisible = false
             clearMenuAnimations()
-            invalidateOptionsMenu()
         }
         downloadJob = lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -1495,6 +1511,37 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun clearMenuAnimations() {
         // Optional: clear any pending menu animations if they exist
+    }
+
+    private fun showSearchBar() {
+        binding.searchCard.isVisible = true
+        binding.searchEditText.requestFocus()
+        
+        // Show keyboard
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(binding.searchEditText, InputMethodManager.SHOW_IMPLICIT)
+        
+        // Update toolbar to show close icon
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        // Hide search icon when search is active
+        binding.actionSearch.isVisible = false
+    }
+
+    private fun hideSearchBar() {
+        binding.searchCard.isVisible = false
+        binding.searchEditText.text.clear()
+        
+        // Clear search filter
+        adapter.filter("")
+        
+        // Hide keyboard
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
+        
+        // Reset toolbar icon
+        supportActionBar?.setHomeAsUpIndicator(null)
+        // Show search icon when search is hidden (if not in selection mode)
+        binding.actionSearch.isVisible = binding.actionDelete.visibility != View.VISIBLE
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
