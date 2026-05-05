@@ -139,7 +139,6 @@ object ThemeManager {
         )
     )
 
-    // Добавь это внутрь ThemeManager
     data class MessageColors(
         val incomingBg: Int,
         val incomingText: Int,
@@ -148,7 +147,7 @@ object ThemeManager {
     )
 
     fun getMessageColors(context: Context): MessageColors {
-        val theme = currentCustomTheme ?: baseDarkTheme // Используем темную как фоллбэк
+        val theme = currentCustomTheme ?: baseDarkTheme
         return MessageColors(
             incomingBg = parseSafeColor(theme.primaryColor, Color.BLUE),
             incomingText = parseSafeColor(theme.onPrimaryColor, Color.WHITE),
@@ -213,7 +212,9 @@ object ThemeManager {
         }
 
         // 4. Только если это кастомная тема пользователя, идем на сервер
-        GrpcClient.getThemes(username) { _, themes ->
+        // Используем id пользователя, если он доступен
+        val queryId = GrpcClient.getUserId() ?: username
+        GrpcClient.getThemes(queryId) { _, themes ->
             val theme = themes.find { it.id == themeId }
             if (theme != null) {
                 // Применяем скачанную тему поверх базовой светлой
@@ -239,10 +240,8 @@ object ThemeManager {
         }
     }
 
-    // Внутри object ThemeManager
     fun getCurrentTheme(): CustomThemeProto? = currentCustomTheme
 
-    // Temporary unused
     fun clearAllCaches(context: Context) {
         val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
         prefs.edit {
@@ -253,18 +252,16 @@ object ThemeManager {
     }
 
     fun applyTheme(activity: AppCompatActivity) {
-        val theme = currentCustomTheme ?: baseDarkTheme // Фоллбэк на темную тему
+        val theme = currentCustomTheme ?: baseDarkTheme
         val root = activity.findViewById<View>(android.R.id.content) ?: return
         val toolbar = activity.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
 
-        // 1. Прозрачные панели
         activity.window.apply {
             statusBarColor = Color.TRANSPARENT
             navigationBarColor = Color.TRANSPARENT
             WindowCompat.setDecorFitsSystemWindows(this, false)
         }
 
-        // 2. ЦВЕТА
         val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
         val isLightMode = bgColor.isLight()
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
@@ -272,11 +269,9 @@ object ThemeManager {
             isAppearanceLightNavigationBars = isLightMode
         }
 
-        // 3. ФОН
         activity.window.decorView.setBackgroundColor(bgColor)
         root.setBackgroundColor(bgColor)
 
-        // 4. ТЕМИЗАЦИЯ КАРТОЧКИ ПОИСКА
         activity.findViewById<com.google.android.material.card.MaterialCardView>(R.id.searchCard)?.let { card ->
             val surfaceColor = parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             card.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
@@ -289,7 +284,6 @@ object ThemeManager {
             card.findViewById<ImageView>(R.id.searchIcon)?.imageTintList = ColorStateList.valueOf(textColor)
         }
 
-        // 5. ЛОГИКА ДЛЯ КАСТОМНОЙ ТЕМЫ (теперь все темы кастомные)
         Log.d("ThemeManager", "SUCCESS: Applying theme '${theme.name}'")
 
         val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
@@ -313,7 +307,6 @@ object ThemeManager {
             applyThemeToBottomPanel(it, theme)
         }
 
-        // Фоновое изображение
         val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
         if (bgImageView != null) {
             if (!theme.backgroundImageUrl.isNullOrEmpty()) {

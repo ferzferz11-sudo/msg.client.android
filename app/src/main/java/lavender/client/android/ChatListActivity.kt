@@ -996,6 +996,9 @@ class ChatListActivity : AppCompatActivity() {
         val menuUserAvatar = sheetView.findViewById<CircleImageView>(R.id.menuUserAvatar)
         val menuUsername = sheetView.findViewById<TextView>(R.id.menuUsername)
         val menuUserBio = sheetView.findViewById<TextView>(R.id.menuUserBio)
+
+        sheetView.findViewById<View>(R.id.actionAdmin)?.isVisible = grpcClient.isSuperAdmin.value
+
         val customTheme = ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             val actionIds = listOf(R.id.actionEditProfile, R.id.actionThemes, R.id.actionNotifications, R.id.actionContacts, R.id.actionToggleLanguage, R.id.actionLogout, R.id.actionUpdate, R.id.actionAbout, R.id.actionAdmin)
@@ -1110,6 +1113,10 @@ class ChatListActivity : AppCompatActivity() {
         sheetView.findViewById<View>(R.id.actionAbout).setOnClickListener {
             bottomSheetDialog.dismiss()
             showAboutDialog()
+        }
+        sheetView.findViewById<View>(R.id.actionAdmin)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            startActivity(Intent(this, SuperAdminActivity::class.java))
         }
         sheetView.findViewById<View>(R.id.actionUpdate).setOnClickListener {
             bottomSheetDialog.dismiss()
