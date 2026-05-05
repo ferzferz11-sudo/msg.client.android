@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         "192.168.1.135:50051"
     )
 
+    @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedLanguage()
         super.onCreate(savedInstanceState)
@@ -121,14 +123,8 @@ class MainActivity : AppCompatActivity() {
         val notificationRoomId = intent.getStringExtra("room_id")
 
         if (!skipAutoLogin && savedUsername != null && savedPassword != null && savedServerAddress != null) {
-            // Credentials exist - navigate to appropriate screen
-            if (fromNotification && !notificationRoomId.isNullOrEmpty()) {
-                // Open the specific chat from notification
-                navigateToChat(savedUsername, savedPassword, savedServerAddress, notificationRoomId)
-            } else {
-                // Navigate to chat list
-                navigateToChatList(savedUsername, savedPassword, savedServerAddress)
-            }
+            // Credentials exist - fetch ID if missing and navigate
+            processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
             // Still check for updates in background
             checkForUpdates()
         } else {
@@ -149,7 +145,7 @@ class MainActivity : AppCompatActivity() {
         val savedServerAddress = getSavedServerAddress()
 
         if (fromNotification && savedUsername != null && savedPassword != null && savedServerAddress != null) {
-            navigateToChat(savedUsername, savedPassword, savedServerAddress, notificationRoomId)
+            processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
         }
     }
 
@@ -190,6 +186,42 @@ class MainActivity : AppCompatActivity() {
         super.onConfigurationChanged(newConfig)
         // Activity will handle configuration changes without recreation
         // Download will continue in the background
+    }
+
+    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null) {
+        val parts = serverAddress.split(":")
+        val host = if (parts.isNotEmpty()) parts[0] else "159.195.38.145"
+        val port = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
+
+        val savedUserId = getSavedUserId()
+        if (savedUserId != null) {
+            lavender.client.android.data.grpc.GrpcClient.setUserId(savedUserId)
+            if (fromNotification && !roomId.isNullOrEmpty()) {
+                navigateToChat(username, password, serverAddress, roomId)
+            } else {
+                navigateToChatList(username, password, serverAddress)
+            }
+            dialog?.dismiss()
+            return
+        }
+
+        // We don't have the user ID, fetch it before continuing
+        lavender.client.android.data.grpc.GrpcClient.connect(host, false, port, this)
+        lavender.client.android.data.grpc.GrpcClient.fetchUserId(username) { userId, found ->
+            runOnUiThread {
+                if (found && userId != null) {
+                    saveUserId(userId)
+                    lavender.client.android.data.grpc.GrpcClient.setUserId(userId)
+                }
+
+                if (fromNotification && !roomId.isNullOrEmpty()) {
+                    navigateToChat(username, password, serverAddress, roomId)
+                } else {
+                    navigateToChatList(username, password, serverAddress)
+                }
+                dialog?.dismiss()
+            }
+        }
     }
 
     // Show join chat button
@@ -424,8 +456,8 @@ class MainActivity : AppCompatActivity() {
                 savePassword(password)
                 saveServerAddress(serverAddress)
                 android.util.Log.d("MainActivity", "Connecting to server: $serverAddress")
-                navigateToChatList(username, password, serverAddress)
-                dialog.dismiss()
+
+                processLogin(username, password, serverAddress, null, false, dialog)
             } else if (username.isEmpty()) {
                 showToast(getString(R.string.username_empty), Toast.LENGTH_LONG)
             } else {
@@ -493,20 +525,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun logout() {
         finishAffinity()
-        exitProcess(0)   // (Опционально) Завершает процесс Java VM
-        /*val prefs = getSharedPreferences("ChatPrefs", MODE_PRIVATE)
-        prefs.edit {
-            remove("username")
-            remove("password")
-        }
-        showToast(getString(R.string.logged_out))
-
-        // Re-open via Splash to ensure clean state
-        val intent = Intent(this, SplashActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        intent.putExtra("extra_skip_autologin", true)
-        startActivity(intent)
-        finish()*/
+        exitProcess(0)
     }
 
     private fun navigateToChatList(username: String, password: String, serverAddress: String) {
@@ -532,8 +551,12 @@ class MainActivity : AppCompatActivity() {
     private fun navigateToChat(username: String, password: String, serverAddress: String, roomId: String?) {
         android.util.Log.d("MainActivity", "Navigating to chat room: $roomId")
 
+        val parts = serverAddress.split(":")
+        val host = if (parts.isNotEmpty()) parts[0] else "159.195.38.145"
+        val port = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
+
         // 1. Подключаемся к серверу
-        lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, false, 50051, this)
+        lavender.client.android.data.grpc.GrpcClient.connect(host, false, port, this)
 
         // 2. Авторизуемся
         lavender.client.android.data.grpc.GrpcClient.startChat(username, password, "") {
