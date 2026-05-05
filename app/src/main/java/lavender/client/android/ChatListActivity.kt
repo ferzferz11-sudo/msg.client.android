@@ -135,26 +135,36 @@ class ChatListActivity : AppCompatActivity() {
             onChatClick = { chat ->
                 openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
             },
-            onSettingsClick = { chat ->
-                val isDirect = chat.type == "direct"
-                val intent = Intent(this, ProfileActivity::class.java)
-                    .putExtra("username", chat.getDisplayName(username))
-                    .putExtra("is_group", !isDirect)
-                    .putExtra("room_id", chat.id)
-                    .putExtra("avatar_url", chat.avatarUrl)
-                    .putExtra("full_avatar_url", chat.fullAvatarUrl)
-                    .putExtra("participants", chat.participants)
-                    .putExtra("creator", chat.creator)
-                startActivity(intent)
-            },
             onSelectionChanged = { selectedCount ->
                 val hasSelection = selectedCount > 0
                 val selectedChats = adapter.getSelectedChats()
                 val canDelete = selectedChats.all { chat -> chat.type == "direct" || chat.creator == username }
 
+                // Show settings gear only for exactly 1 selected group chat where user is admin
+                val canSettings = selectedCount == 1 && selectedChats.firstOrNull()?.let { chat ->
+                    chat.type != "direct" && chat.creator.trim().equals(username.trim(), ignoreCase = true)
+                } == true
+
                 binding.actionDelete.isVisible = hasSelection && canDelete
                 binding.actionMute.isVisible = hasSelection
                 binding.actionSearch.isVisible = !hasSelection
+                binding.actionSettings.isVisible = canSettings
+
+                // Store selected chat for settings click
+                if (canSettings) {
+                    binding.actionSettings.setOnClickListener {
+                        val chat = selectedChats.first()
+                        val intent = Intent(this, ProfileActivity::class.java)
+                            .putExtra("username", chat.getDisplayName(username))
+                            .putExtra("is_group", true)
+                            .putExtra("room_id", chat.id)
+                            .putExtra("avatar_url", chat.avatarUrl)
+                            .putExtra("full_avatar_url", chat.fullAvatarUrl)
+                            .putExtra("participants", chat.participants)
+                            .putExtra("creator", chat.creator)
+                        startActivity(intent)
+                    }
+                }
 
                 binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, selectedCount) else getString(R.string.chats)
                 binding.toolbarUserAvatar.isVisible = !hasSelection

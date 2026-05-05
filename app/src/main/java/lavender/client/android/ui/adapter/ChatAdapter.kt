@@ -20,7 +20,6 @@ import org.json.JSONArray
 
 class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit,
-    private val onSettingsClick: ((ChatInfo) -> Unit)? = null,
     private val onSelectionChanged: (Int) -> Unit = {},
     private val currentUsername: String = "",
     initialAvatarCache: Map<String, String> = emptyMap(),
@@ -195,15 +194,9 @@ class ChatAdapter(
                 unreadCount.setTextColor(textColorForBadge)
             }
 
-            val isMeAdmin = chat.creator.trim().equals(currentUsername.trim(), ignoreCase = true)
-            adminIndicator.isVisible = !chat.type.equals("direct", ignoreCase = true) && isMeAdmin
-            adminIndicator.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
-
-            if (isMeAdmin) {
-                adminIndicator.setOnClickListener { onSettingsClick?.invoke(chat) }
-            } else {
-                adminIndicator.setOnClickListener(null)
-            }
+            // Admin settings moved to toolbar in ChatListActivity
+            adminIndicator.isVisible = false
+            adminIndicator.setOnClickListener(null)
 
             muteIndicator.isVisible = chat.isMuted
 

@@ -23,6 +23,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -33,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.ui.ThemeManager
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -78,7 +80,13 @@ class ProfileActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
-        lavender.client.android.ui.ThemeManager.applyTheme(this)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val currentUsername = prefs.getString("current_username", "") ?: ""
+        lavender.client.android.ui.ThemeManager.loadTheme(this, currentUsername) {
+            runOnUiThread {
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+            }
+        }
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         
@@ -329,6 +337,24 @@ class ProfileActivity : AppCompatActivity() {
                     }
                 }
                 participantsContainer?.addView(userView)
+
+                // Apply theme to the dynamically added participant item
+                ThemeManager.getCurrentTheme()?.let { theme ->
+                    ThemeManager.applyThemeToView(userView, theme)
+                }
+            }
+
+            // Apply theme to participants card and add button
+            ThemeManager.getCurrentTheme()?.let { theme ->
+                val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
+                participantsCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor(theme.surfaceColor)))
+                participantsCard?.strokeColor = ThemeManager.adjustAlpha(android.graphics.Color.parseColor(theme.onSurfaceColor), 0.2f)
+
+                addParticipantLayout?.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor(theme.surfaceContainer))
+                val addParticipantButton = findViewById<TextView>(R.id.addParticipantButton)
+                addParticipantButton?.setTextColor(android.graphics.Color.parseColor(theme.primaryColor))
             }
 
             if (isMeAdmin) {
@@ -414,11 +440,34 @@ class ProfileActivity : AppCompatActivity() {
             profileAvatar.setImageResource(R.drawable.ic_default_avatar)
             profileAvatar.setOnClickListener(null)
         }
+
+        // Apply theme to bioCard for non-group profiles
+        if (!isGroup) {
+            ThemeManager.getCurrentTheme()?.let { theme ->
+                val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
+                bioCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                    android.graphics.Color.parseColor(theme.surfaceColor)))
+                bioCard?.strokeColor = ThemeManager.adjustAlpha(android.graphics.Color.parseColor(theme.onSurfaceColor), 0.2f)
+            }
+        }
     }
 
     private fun showAddParticipantDialog(contacts: List<String>) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
-        
+
+        // Apply theme to dialog background like in ChatListActivity
+        val customTheme = ThemeManager.getCurrentTheme()
+        val bgColor = if (customTheme != null) {
+            try { android.graphics.Color.parseColor(customTheme.surfaceColor) } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
+        } else {
+            getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer)
+        }
+        val shapeDrawable = android.graphics.drawable.ShapeDrawable(
+            android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)
+        )
+        shapeDrawable.paint.color = bgColor
+        dialogView.background = shapeDrawable
+
         val titleView = dialogView.findViewById<TextView>(R.id.dialogTitle)
         titleView?.text = getString(R.string.add)
 
@@ -465,6 +514,8 @@ class ProfileActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
@@ -697,5 +748,11 @@ class ProfileActivity : AppCompatActivity() {
         val fullUrl = fullUrlMatch?.groupValues?.get(1) ?: ""
 
         return Pair(url, fullUrl)
+    }
+
+    private fun getColorFromAttr(attr: Int): Int {
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
     }
 }

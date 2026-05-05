@@ -73,18 +73,12 @@
             android:contentDescription="@string/muted_label"
             android:background="?attr/selectableItemBackgroundBorderless" />
 
+        <!-- Admin settings moved to toolbar -->
         <ImageView
             android:id="@+id/adminIndicator"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:padding="4dp"
-            android:src="@drawable/ic_settings"
-            app:tint="?attr/colorOnSurfaceVariant"
-            android:visibility="gone"
-            tools:visibility="visible"
-            android:contentDescription="@string/admin_label"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/unreadCount"
