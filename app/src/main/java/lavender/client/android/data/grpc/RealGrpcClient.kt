@@ -910,8 +910,9 @@ object RealGrpcClient {
             callback(emptyList())
             return
         }
+        val currentUserId = lastUserId ?: ""
 
-        val request = GetChatsRequestProto(username)
+        val request = GetChatsRequestProto(username, currentUserId)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -2564,19 +2565,24 @@ class GetChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatsRe
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.userId.isNotEmpty()) cos.writeString(2, value.userId)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): GetChatsRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var username = ""
+        var userId = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
-            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
-            else cis.skipField(tag)
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> username = cis.readString()
+                2 -> userId = cis.readString()
+                else -> cis.skipField(tag)
+            }
         }
-        return GetChatsRequestProto(username)
+        return GetChatsRequestProto(username, userId)
     }
 }
 

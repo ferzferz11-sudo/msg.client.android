@@ -188,7 +188,8 @@ data class DeleteChatResponseProto(
 
 // Get Chats Request/Response
 data class GetChatsRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class GetChatsResponseProto(
