@@ -450,6 +450,7 @@ object RealGrpcClient {
     }
     
     private var lastUsername: String? = null
+    private var lastUserId: String? = null
     private var lastJoinMessage: String? = null
     private var lastPassword: String? = null
     private var lastOnMessageReceived: ((Message) -> Unit)? = null
@@ -1839,10 +1840,10 @@ object RealGrpcClient {
 
     fun saveDraft(roomId: String, draftText: String, repliedToMessageId: String, repliedToUser: String, repliedToText: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
-        val currentUsername = lastUsername ?: return
+        val currentUserId = lastUserId ?: return
 
         val request = lavender.client.android.data.proto.SaveDraftRequestProto(
-            currentUsername, roomId, draftText, repliedToMessageId, repliedToUser, repliedToText
+            currentUserId, roomId, draftText, repliedToMessageId, repliedToUser, repliedToText
         )
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.SaveDraftRequestProto, lavender.client.android.data.proto.SaveDraftResponseProto>()
@@ -1871,9 +1872,9 @@ object RealGrpcClient {
 
     fun getDraft(roomId: String, callback: (draftText: String, repliedToMessageId: String, repliedToUser: String, repliedToText: String, hasDraft: Boolean) -> Unit) {
         val currentChannel = channel ?: return
-        val currentUsername = lastUsername ?: return
+        val currentUserId = lastUserId ?: return
 
-        val request = lavender.client.android.data.proto.GetDraftRequestProto(currentUsername, roomId)
+        val request = lavender.client.android.data.proto.GetDraftRequestProto(currentUserId, roomId)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetDraftRequestProto, lavender.client.android.data.proto.GetDraftResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1901,9 +1902,9 @@ object RealGrpcClient {
 
     fun deleteDraft(roomId: String, callback: (Boolean) -> Unit) {
         val currentChannel = channel ?: return
-        val currentUsername = lastUsername ?: return
+        val currentUserId = lastUserId ?: return
 
-        val request = lavender.client.android.data.proto.DeleteDraftRequestProto(currentUsername, roomId)
+        val request = lavender.client.android.data.proto.DeleteDraftRequestProto(currentUserId, roomId)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.DeleteDraftRequestProto, lavender.client.android.data.proto.DeleteDraftResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1931,9 +1932,9 @@ object RealGrpcClient {
 
     fun getMutedChats(callback: (List<String>) -> Unit) {
         val ch = channel ?: return
-        val uname = lastUsername ?: return
+        val userId = lastUserId ?: return
 
-        val request = lavender.client.android.data.proto.GetMutedChatsRequestProto(uname)
+        val request = lavender.client.android.data.proto.GetMutedChatsRequestProto(userId)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetMutedChatsRequestProto, lavender.client.android.data.proto.GetMutedChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1961,9 +1962,9 @@ object RealGrpcClient {
 
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) {
         val ch = channel ?: return
-        val uname = lastUsername ?: return
+        val userId = lastUserId ?: return
 
-        val request = lavender.client.android.data.proto.SetMutedChatRequestProto(uname, roomId, muted)
+        val request = lavender.client.android.data.proto.SetMutedChatRequestProto(userId, roomId, muted)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.SetMutedChatRequestProto, lavender.client.android.data.proto.SetMutedChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -2014,6 +2015,41 @@ object RealGrpcClient {
     }
 
     fun getCurrentUsername(): String? = lastUsername
+
+    fun setUserId(userId: String) {
+        lastUserId = userId
+    }
+
+    fun getUserId(): String? = lastUserId
+
+    fun getUserId(username: String, callback: (String?, Boolean) -> Unit) {
+        val ch = channel ?: return
+
+        val request = lavender.client.android.data.proto.GetUserIdRequestProto(username)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetUserIdRequestProto, lavender.client.android.data.proto.GetUserIdResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetUserId")
+            .setRequestMarshaller(GetUserIdRequestMarshaller())
+            .setResponseMarshaller(GetUserIdResponseMarshaller())
+            .build()
+
+        val call = ch.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.GetUserIdResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.GetUserIdResponseProto) {
+                callback(message.userId, message.found)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("RealGrpcClient", "GetUserId failed: ${status.code}")
+                    callback(null, false)
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
 }
 
 class ReactionProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionProto> {
@@ -3972,7 +4008,7 @@ class SaveDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.
     override fun stream(value: lavender.client.android.data.proto.SaveDraftRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
         if (value.draftText.isNotEmpty()) cos.writeString(3, value.draftText)
         if (value.repliedToMessageId.isNotEmpty()) cos.writeString(4, value.repliedToMessageId)
@@ -3983,7 +4019,7 @@ class SaveDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.
     }
     override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.SaveDraftRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var username = ""
+        var userId = ""
         var roomId = ""
         var draftText = ""
         var repliedToMessageId = ""
@@ -3993,7 +4029,7 @@ class SaveDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                1 -> username = cis.readString()
+                1 -> userId = cis.readString()
                 2 -> roomId = cis.readString()
                 3 -> draftText = cis.readString()
                 4 -> repliedToMessageId = cis.readString()
@@ -4002,7 +4038,7 @@ class SaveDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.
                 else -> cis.skipField(tag)
             }
         }
-        return lavender.client.android.data.proto.SaveDraftRequestProto(username, roomId, draftText, repliedToMessageId, repliedToUser, repliedToText)
+        return lavender.client.android.data.proto.SaveDraftRequestProto(userId, roomId, draftText, repliedToMessageId, repliedToUser, repliedToText)
     }
 }
 
@@ -4036,25 +4072,25 @@ class GetDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.c
     override fun stream(value: lavender.client.android.data.proto.GetDraftRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetDraftRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var username = ""
+        var userId = ""
         var roomId = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                1 -> username = cis.readString()
+                1 -> userId = cis.readString()
                 2 -> roomId = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return lavender.client.android.data.proto.GetDraftRequestProto(username, roomId)
+        return lavender.client.android.data.proto.GetDraftRequestProto(userId, roomId)
     }
 }
 
@@ -4097,25 +4133,25 @@ class DeleteDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavende
     override fun stream(value: lavender.client.android.data.proto.DeleteDraftRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.DeleteDraftRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var username = ""
+        var userId = ""
         var roomId = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                1 -> username = cis.readString()
+                1 -> userId = cis.readString()
                 2 -> roomId = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return lavender.client.android.data.proto.DeleteDraftRequestProto(username, roomId)
+        return lavender.client.android.data.proto.DeleteDraftRequestProto(userId, roomId)
     }
 }
 
@@ -4147,20 +4183,20 @@ class GetMutedChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<laven
     override fun stream(value: lavender.client.android.data.proto.GetMutedChatsRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
         cos.flush()
         return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetMutedChatsRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var username = ""
+        var userId = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
-            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) userId = cis.readString()
             else cis.skipField(tag)
         }
-        return lavender.client.android.data.proto.GetMutedChatsRequestProto(username)
+        return lavender.client.android.data.proto.GetMutedChatsRequestProto(userId)
     }
 }
 
@@ -4189,7 +4225,7 @@ class SetMutedChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavend
     override fun stream(value: lavender.client.android.data.proto.SetMutedChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
         cos.writeBool(3, value.muted)
         cos.flush()
@@ -4197,18 +4233,18 @@ class SetMutedChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavend
     }
     override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.SetMutedChatRequestProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var username = ""; var roomId = ""; var muted = false
+        var userId = ""; var roomId = ""; var muted = false
         while (!cis.isAtEnd) {
             val tag = cis.readTag()
             if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                1 -> username = cis.readString()
+                1 -> userId = cis.readString()
                 2 -> roomId = cis.readString()
                 3 -> muted = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return lavender.client.android.data.proto.SetMutedChatRequestProto(username, roomId, muted)
+        return lavender.client.android.data.proto.SetMutedChatRequestProto(userId, roomId, muted)
     }
 }
 
@@ -4230,5 +4266,52 @@ class SetMutedChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<laven
             else cis.skipField(tag)
         }
         return lavender.client.android.data.proto.SetMutedChatResponseProto(success)
+    }
+}
+
+class GetUserIdRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetUserIdRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetUserIdRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.username.isNotEmpty()) cos.writeString(1, value.username)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetUserIdRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var username = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) username = cis.readString()
+            else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.GetUserIdRequestProto(username)
+    }
+}
+
+class GetUserIdResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetUserIdResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetUserIdResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
+        if (value.found) cos.writeBool(2, value.found)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetUserIdResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var userId = ""
+        var found = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> userId = cis.readString()
+                2 -> found = cis.readBool()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.GetUserIdResponseProto(userId, found)
     }
 }

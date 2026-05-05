@@ -246,6 +246,16 @@ object GrpcClient {
 
     fun getCurrentUsername(): String? = realGrpcClient.getCurrentUsername()
 
+    fun setUserId(userId: String) {
+        realGrpcClient.setUserId(userId)
+    }
+
+    fun getUserId(): String? = realGrpcClient.getUserId()
+
+    fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) {
+        realGrpcClient.getUserId(username, callback)
+    }
+
     fun clearMessages() {
         realGrpcClient.clearMessages()
     }

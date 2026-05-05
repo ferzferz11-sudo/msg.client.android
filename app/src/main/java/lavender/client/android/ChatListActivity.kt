@@ -574,18 +574,50 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun loadMutedChats() {
-        grpcClient.getMutedChats { roomIds ->
-            runOnUiThread {
-                mutedChats.clear()
-                mutedChats.addAll(roomIds)
-                if (viewModel.currentChats.isNotEmpty()) {
-                    val updatedChats = viewModel.currentChats.map {
-                        it.copy(isMuted = mutedChats.contains(it.id))
+        // Ensure we have userId set before loading muted chats
+        ensureUserIdSet {
+            grpcClient.getMutedChats { roomIds ->
+                runOnUiThread {
+                    mutedChats.clear()
+                    mutedChats.addAll(roomIds)
+                    if (viewModel.currentChats.isNotEmpty()) {
+                        val updatedChats = viewModel.currentChats.map {
+                            it.copy(isMuted = mutedChats.contains(it.id))
+                        }
+                        adapter.setChats(updatedChats)
                     }
-                    adapter.setChats(updatedChats)
                 }
             }
         }
+    }
+
+    private fun ensureUserIdSet(onReady: () -> Unit) {
+        val savedUserId = getSavedUserId()
+        if (savedUserId != null) {
+            grpcClient.setUserId(savedUserId)
+            onReady()
+        } else if (username.isNotEmpty()) {
+            // Fetch userId from server
+            grpcClient.fetchUserId(username) { userId, found ->
+                if (found && userId != null) {
+                    saveUserId(userId)
+                    grpcClient.setUserId(userId)
+                }
+                onReady()
+            }
+        } else {
+            onReady()
+        }
+    }
+
+    private fun getSavedUserId(): String? {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        return prefs.getString("user_id", null)
+    }
+
+    private fun saveUserId(userId: String) {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        prefs.edit { putString("user_id", userId) }
     }
 
     @SuppressLint("NotifyDataSetChanged")

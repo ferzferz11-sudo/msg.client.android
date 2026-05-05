@@ -478,7 +478,19 @@ class MainActivity : AppCompatActivity() {
             putString("server_address", address)
         }
     }
-    
+
+    private fun getSavedUserId(): String? {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        return prefs.getString("user_id", null)
+    }
+
+    private fun saveUserId(userId: String) {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        prefs.edit {
+            putString("user_id", userId)
+        }
+    }
+
     private fun logout() {
         finishAffinity()
         exitProcess(0)   // (Опционально) Завершает процесс Java VM

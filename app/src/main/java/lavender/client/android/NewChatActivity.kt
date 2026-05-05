@@ -248,8 +248,8 @@ class NewChatActivity : AppCompatActivity() {
             viewModel.markRead(username, this)
         }
 
-        // Load draft message when entering chat
-        loadDraft()
+        // Load draft message when entering chat (after ensuring userId is set)
+        ensureUserIdSet { loadDraft() }
 
         // 7. Обработка кнопки "Назад" через When (так чище)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -1468,6 +1468,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun loadDraft() {
         if (roomId.isEmpty() || username.isEmpty()) return
+        if (grpcClient.getUserId() == null) return
 
         grpcClient.getDraft(roomId) { draftText, repliedToMessageId, repliedToUser, repliedToText, hasDraft ->
             runOnUiThread {
@@ -1496,6 +1497,11 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun saveDraft() {
         if (roomId.isEmpty() || username.isEmpty()) return
+        if (grpcClient.getUserId() == null) {
+            // Try to ensure userId is set before saving
+            ensureUserIdSet { saveDraft() }
+            return
+        }
 
         val draftText = messageInput.text?.toString()?.trim() ?: ""
         val hasReply = replyingTo != null
@@ -1517,8 +1523,39 @@ class NewChatActivity : AppCompatActivity() {
             }
         } else {
             // If no text and no reply, delete any existing draft
-            grpcClient.deleteDraft(roomId)
+            if (grpcClient.getUserId() != null) {
+                grpcClient.deleteDraft(roomId)
+            }
         }
+    }
+
+    private fun ensureUserIdSet(onReady: () -> Unit) {
+        val savedUserId = getSavedUserId()
+        if (savedUserId != null) {
+            grpcClient.setUserId(savedUserId)
+            onReady()
+        } else if (username.isNotEmpty()) {
+            // Fetch userId from server
+            grpcClient.fetchUserId(username) { userId, found ->
+                if (found && userId != null) {
+                    saveUserId(userId)
+                    grpcClient.setUserId(userId)
+                }
+                runOnUiThread { onReady() }
+            }
+        } else {
+            onReady()
+        }
+    }
+
+    private fun getSavedUserId(): String? {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        return prefs.getString("user_id", null)
+    }
+
+    private fun saveUserId(userId: String) {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        prefs.edit { putString("user_id", userId) }
     }
 
     override fun onPause() {

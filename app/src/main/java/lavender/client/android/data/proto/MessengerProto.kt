@@ -528,7 +528,7 @@ data class GetFCMLogsResponseProto(
 
 // Draft messages
 data class SaveDraftRequestProto(
-    val username: String = "",
+    val userId: String = "",
     val roomId: String = "",
     val draftText: String = "",
     val repliedToMessageId: String = "",
@@ -542,7 +542,7 @@ data class SaveDraftResponseProto(
 )
 
 data class GetDraftRequestProto(
-    val username: String = "",
+    val userId: String = "",
     val roomId: String = ""
 )
 
@@ -555,7 +555,7 @@ data class GetDraftResponseProto(
 )
 
 data class DeleteDraftRequestProto(
-    val username: String = "",
+    val userId: String = "",
     val roomId: String = ""
 )
 
@@ -564,7 +564,7 @@ data class DeleteDraftResponseProto(
 )
 
 data class GetMutedChatsRequestProto(
-    val username: String = ""
+    val userId: String = ""
 )
 
 data class GetMutedChatsResponseProto(
@@ -572,11 +572,20 @@ data class GetMutedChatsResponseProto(
 )
 
 data class SetMutedChatRequestProto(
-    val username: String = "",
+    val userId: String = "",
     val roomId: String = "",
     val muted: Boolean = true
 )
 
 data class SetMutedChatResponseProto(
     val success: Boolean = false
+)
+
+data class GetUserIdRequestProto(
+    val username: String = ""
+)
+
+data class GetUserIdResponseProto(
+    val userId: String = "",
+    val found: Boolean = false
 )

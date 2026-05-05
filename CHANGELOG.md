@@ -5,7 +5,17 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-1.0.3.2
+## 1.0.3.5
+### Drafts & Mutes Migration to User ID
+- Migrated draft messages and muted chats from username-based to user ID (UUID) based storage.
+- **GrpcClient**: Added `setUserId()`, `getUserId()`, and `fetchUserId()` methods.
+- **Proto**: Updated `SaveDraftRequest`, `GetDraftRequest`, `DeleteDraftRequest`, `GetMutedChatsRequest`, `SetMutedChatRequest` to use `userId` field.
+- **Activities**: `ChatListActivity` and `NewChatActivity` now ensure `userId` is set before draft/mute operations.
+- **Caching**: User ID is retrieved from server once and cached in SharedPreferences.
+- **Server Sync**: Uses new `GetUserId` RPC to resolve UUID from username.
+- **Benefit**: Drafts and muted chats now persist correctly after username changes.
+
+## 1.0.3.2
 ### Theming Improvements
 - Unified bottom sheet styling across all activities (ChatList, Chat, Notifications)
 - Default theme: bottom sheets now use `colorSurfaceContainer` for background and `colorPrimary` for icons/top handle

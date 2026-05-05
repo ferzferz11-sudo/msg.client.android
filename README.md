@@ -175,7 +175,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.3.0**
+Current version: **1.0.3.5**
+
+### Version 1.0.3.5 - User ID Migration for Drafts & Mutes
+- 🆔 **User ID Based Storage**: Draft messages and muted chats now use stable UUID instead of username.
+- 🔄 **Username Change Resilience**: Your drafts and muted chat preferences persist even after changing username.
+- 🔧 **GetUserId RPC**: New server method for resolving UUID from username.
+- 💾 **User ID Caching**: Retrieved once from server and cached locally in SharedPreferences.
 
 ### Version 1.0.3.0 - Message Drafts, Muted Chats & Server Monitoring
 - 💾 **Draft Messages**: Unsent messages are now automatically saved when leaving a chat.
