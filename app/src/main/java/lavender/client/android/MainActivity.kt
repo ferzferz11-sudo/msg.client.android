@@ -424,11 +424,7 @@ class MainActivity : AppCompatActivity() {
                 savePassword(password)
                 saveServerAddress(serverAddress)
                 android.util.Log.d("MainActivity", "Connecting to server: $serverAddress")
-                val intent = Intent(this, NewChatActivity::class.java)
-                intent.putExtra("username", username)
-                intent.putExtra("password", password)
-                intent.putExtra("serverAddress", serverAddress)
-                startActivity(intent)
+                navigateToChatList(username, password, serverAddress)
                 dialog.dismiss()
             } else if (username.isEmpty()) {
                 showToast(getString(R.string.username_empty), Toast.LENGTH_LONG)
