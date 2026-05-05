@@ -629,8 +629,6 @@ object RealGrpcClient {
                 .setResponseMarshaller(MessageProtoMarshaller())
                 .build()
 
-            // ... (после создания methodDescriptor)
-
             val call = channel!!.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
 
             call.start(object : io.grpc.ClientCall.Listener<MessageProto>() {
@@ -847,7 +845,7 @@ object RealGrpcClient {
 
     fun setReaction(messageId: String, username: String, emoji: String) {
         val currentChannel = channel ?: return
-        
+
         val reaction = ReactionProto(username, emoji)
         val request = ReactionRequestProto(messageId, reaction)
 
@@ -882,7 +880,7 @@ object RealGrpcClient {
 
     fun registerToken(user: String, token: String, pushEnabled: Boolean = true) {
         val currentChannel = channel ?: return
-        
+
         val request = TokenRequestProto(user, token, pushEnabled)
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TokenRequestProto, TokenResponseProto>()
@@ -1625,7 +1623,8 @@ object RealGrpcClient {
 
     fun getThemes(username: String, callback: (String, List<CustomThemeProto>) -> Unit) {
         val currentChannel = channel ?: return
-        val request = GetThemesRequestProto(username)
+        val currentUserId = lastUserId ?: username
+        val request = GetThemesRequestProto(currentUserId)
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetThemesRequestProto, GetThemesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetThemes")
@@ -1649,7 +1648,8 @@ object RealGrpcClient {
 
     fun saveTheme(username: String, theme: CustomThemeProto, callback: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
-        val request = SaveThemeRequestProto(username, theme)
+        val currentUserId = lastUserId ?: username
+        val request = SaveThemeRequestProto(currentUserId, theme)
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveThemeRequestProto, SaveThemeResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SaveTheme")
@@ -1673,7 +1673,8 @@ object RealGrpcClient {
 
     fun setCurrentTheme(username: String, themeId: String, callback: (Boolean) -> Unit) {
         val currentChannel = channel ?: return
-        val request = SetCurrentThemeRequestProto(username, themeId)
+        val currentUserId = lastUserId ?: username
+        val request = SetCurrentThemeRequestProto(currentUserId, themeId)
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SetCurrentThemeRequestProto, SetCurrentThemeResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SetCurrentTheme")
@@ -1697,7 +1698,8 @@ object RealGrpcClient {
 
     fun deleteTheme(username: String, themeId: String, callback: (Boolean) -> Unit) {
         val currentChannel = channel ?: return
-        val request = DeleteThemeRequestProto(username, themeId)
+        val currentUserId = lastUserId ?: username
+        val request = DeleteThemeRequestProto(currentUserId, themeId)
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteThemeRequestProto, DeleteThemeResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteTheme")
