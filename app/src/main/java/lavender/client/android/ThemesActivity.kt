@@ -113,7 +113,8 @@ class ThemesActivity : AppCompatActivity() {
     }
 
     private fun loadThemes() {
-        grpcClient.getThemes(username) { currentId, list ->
+        val queryId = grpcClient.getUserId() ?: username
+        grpcClient.getThemes(queryId) { currentId, list ->
             customThemes = list.toMutableList()
             
             val localThemeId = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_theme_id", null)
@@ -238,7 +239,8 @@ class ThemesActivity : AppCompatActivity() {
                     if (currentThemeId == theme.id) {
                         selectTheme("dark")
                     }
-                    grpcClient.deleteTheme(username, theme.id) { success ->
+                    val queryId = grpcClient.getUserId() ?: username
+                    grpcClient.deleteTheme(queryId, theme.id) { success ->
                         if (success) {
                             deletedCount++
                             if (deletedCount == themesToDelete.size) {
@@ -262,7 +264,8 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun selectTheme(themeId: String) {
         currentThemeId = themeId
-        grpcClient.setCurrentTheme(username, themeId) { success ->
+        val queryId = grpcClient.getUserId() ?: username
+        grpcClient.setCurrentTheme(queryId, themeId) { success ->
             runOnUiThread {
                 if (success) {
                     val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)

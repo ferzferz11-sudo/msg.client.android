@@ -477,7 +477,8 @@ data class CustomThemeProto(
 )
 
 data class GetThemesRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class GetThemesResponseProto(

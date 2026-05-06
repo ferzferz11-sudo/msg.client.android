@@ -84,10 +84,33 @@ object ProtoUtils {
         val currentTime = System.currentTimeMillis()
         val seconds = currentTime / 1000
         val nanos = ((currentTime % 1000) * 1000000).toInt()
-        
+
         return Timestamp.newBuilder()
             .setSeconds(seconds)
             .setNanos(nanos)
             .build()
+    }
+
+    fun timestampToProto(timestamp: Timestamp): com.google.protobuf.Timestamp {
+        return com.google.protobuf.Timestamp.newBuilder()
+            .setSeconds(timestamp.seconds)
+            .setNanos(timestamp.nanos)
+            .build()
+    }
+
+    fun parseTimestampFromProto(stream: java.io.InputStream): Timestamp {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var seconds = 0L
+        var nanos = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> seconds = cis.readInt64()
+                2 -> nanos = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return Timestamp.newBuilder().setSeconds(seconds).setNanos(nanos).build()
     }
 }

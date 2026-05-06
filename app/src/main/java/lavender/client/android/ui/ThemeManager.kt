@@ -325,10 +325,27 @@ object ThemeManager {
 
     private fun applyThemeToBottomPanel(view: View, theme: CustomThemeProto) {
         try {
-            val bpColor = parseSafeColor(theme.bottomPanelColor, Color.WHITE)
-            val onBpColor = parseSafeColor(theme.onBottomPanelColor, Color.BLACK)
+            // Исправление бага с дефолтной темой:
+            // Если тема темная (например, базовая темная), и bottomPanelColor не задана (или дефолтная),
+            // нам нужно убедиться, что иконки будут видны.
+            val isDefaultDark = theme.id == "dark"
+            val bpColorStr = if (isDefaultDark) "#1A1B46" else theme.bottomPanelColor
+            val onBpColorStr = if (isDefaultDark) "#FFFFFF" else theme.onBottomPanelColor
+
+            val bpColor = parseSafeColor(bpColorStr, Color.WHITE)
+            val onBpColor = parseSafeColor(onBpColorStr, Color.BLACK)
             val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
             val textPrimary = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
+
+            // Определяем цвет иконок: для дефолтной темной темы делаем их белыми,
+            // иначе primaryColor (как было раньше) или onBottomPanelColor если задан.
+            val iconColor = if (isDefaultDark) {
+                Color.WHITE
+            } else if (theme.onBottomPanelColor.isNotEmpty()) {
+                onBpColor
+            } else {
+                primaryColor
+            }
 
             if (view is MaterialCardView) {
                 view.setCardBackgroundColor(bpColor)
@@ -342,7 +359,7 @@ object ThemeManager {
                     val child = view.getChildAt(i)
                     when (child) {
                         is ImageButton -> {
-                            child.imageTintList = ColorStateList.valueOf(primaryColor)
+                            child.imageTintList = ColorStateList.valueOf(iconColor)
                         }
                         is EditText -> {
                             child.setTextColor(textPrimary)

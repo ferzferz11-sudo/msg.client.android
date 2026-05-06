@@ -90,6 +90,7 @@ message ChatInfo {
 
 message GetChatsRequest {
   string username = 1;
+  string user_id = 2; // For newer clients
 }
 
 message GetChatsResponse {
@@ -215,7 +216,7 @@ message EditMessageResponse {
 }
 
 message SaveDraftRequest {
-  string username = 1;
+  string username = 1; // Used as user_id internally
   string room_id = 2;
   string draft_text = 3;
   string replied_to_message_id = 4;
@@ -229,7 +230,7 @@ message SaveDraftResponse {
 }
 
 message GetDraftRequest {
-  string username = 1;
+  string username = 1; // Used as user_id internally
   string room_id = 2;
 }
 
@@ -242,7 +243,7 @@ message GetDraftResponse {
 }
 
 message DeleteDraftRequest {
-  string username = 1;
+  string username = 1; // Used as user_id internally
   string room_id = 2;
 }
 
@@ -251,7 +252,7 @@ message DeleteDraftResponse {
 }
 
 message GetMutedChatsRequest {
-  string username = 1;
+  string username = 1; // Used as user_id internally
 }
 
 message GetMutedChatsResponse {
@@ -259,13 +260,77 @@ message GetMutedChatsResponse {
 }
 
 message SetMutedChatRequest {
-  string username = 1;
+  string username = 1; // Used as user_id internally
   string room_id = 2;
   bool muted = 3;
 }
 
 message SetMutedChatResponse {
   bool success = 1;
+}
+
+message GetThemesRequest {
+  string username = 1;
+  string user_id = 2;
+}
+
+message GetThemesResponse {
+  string current_theme_id = 1;
+  repeated CustomTheme custom_themes = 2;
+}
+
+message CustomTheme {
+  string id = 1;
+  string name = 2;
+  string primary_color = 3;
+  string on_primary_color = 4;
+  string surface_color = 5;
+  string on_surface_color = 6;
+  string background_color = 7;
+  string text_primary_color = 8;
+  string text_secondary_color = 9;
+  string background_image_url = 11;
+  string chat_list_background_image_url = 12;
+  string bottom_panel_color = 13;
+  string on_bottom_panel_color = 14;
+  string surface_container = 15;
+}
+
+message SaveThemeRequest {
+  string username = 1;
+  CustomTheme theme = 2;
+}
+
+message SaveThemeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SetCurrentThemeRequest {
+  string username = 1;
+  string theme_id = 2;
+}
+
+message SetCurrentThemeResponse {
+  bool success = 1;
+}
+
+message DeleteThemeRequest {
+  string username = 1;
+  string theme_id = 2;
+}
+
+message DeleteThemeResponse {
+  bool success = 1;
+}
+
+message GetUserIdRequest {
+  string username = 1;
+}
+
+message GetUserIdResponse {
+  string user_id = 1;
+  bool found = 2;
 }
 
 service ChatService {
@@ -294,4 +359,9 @@ service ChatService {
   rpc DeleteDraft(DeleteDraftRequest) returns (DeleteDraftResponse);
   rpc GetMutedChats(GetMutedChatsRequest) returns (GetMutedChatsResponse);
   rpc SetMutedChat(SetMutedChatRequest) returns (SetMutedChatResponse);
+  rpc GetThemes(GetThemesRequest) returns (GetThemesResponse);
+  rpc SaveTheme(SaveThemeRequest) returns (SaveThemeResponse);
+  rpc SetCurrentTheme(SetCurrentThemeRequest) returns (SetCurrentThemeResponse);
+  rpc DeleteTheme(DeleteThemeRequest) returns (DeleteThemeResponse);
+  rpc GetUserId(GetUserIdRequest) returns (GetUserIdResponse);
 }

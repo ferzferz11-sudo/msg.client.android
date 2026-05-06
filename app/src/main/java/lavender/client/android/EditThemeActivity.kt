@@ -340,7 +340,8 @@ class EditThemeActivity : AppCompatActivity() {
     }
 
     private fun loadTheme() {
-        grpcClient.getThemes(username) { _, themes ->
+        val queryId = grpcClient.getUserId() ?: username
+        grpcClient.getThemes(queryId) { _, themes ->
             val theme = themes.find { it.id == themeId }
             if (theme != null) {
                 existingTheme = theme
@@ -546,7 +547,8 @@ class EditThemeActivity : AppCompatActivity() {
         val overlay = findViewById<View>(R.id.progressOverlay)
         overlay.isVisible = true
         
-        grpcClient.saveTheme(username, theme) { success, msg ->
+        val queryId = grpcClient.getUserId() ?: username
+        grpcClient.saveTheme(queryId, theme) { success, msg ->
             runOnUiThread {
                 overlay.isVisible = false
                 if (success) {
@@ -566,7 +568,8 @@ class EditThemeActivity : AppCompatActivity() {
             .setPositiveButton(R.string.delete) { _, _ ->
                 val overlay = findViewById<View>(R.id.progressOverlay)
                 overlay.isVisible = true
-                grpcClient.deleteTheme(username, id) { success ->
+                val queryId = grpcClient.getUserId() ?: username
+                grpcClient.deleteTheme(queryId, id) { success ->
                     runOnUiThread {
                         overlay.isVisible = false
                         if (success) finish()

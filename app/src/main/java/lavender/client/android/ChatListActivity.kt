@@ -379,6 +379,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun loadChats() {
         if (username.isEmpty()) return
         binding.swipeRefreshLayout.isRefreshing = true
+        loadMutedChats()
         viewModel.loadChats(username) { success, _ ->
             runOnUiThread {
                 binding.swipeRefreshLayout.isRefreshing = false
@@ -480,6 +481,7 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             while (isActive) {
                 if (username.isNotEmpty()) {
+                    loadMutedChats()
                     val previousChatCount = viewModel.currentChats.size
                     viewModel.loadChats(username) { success, _ ->
                         if (success) {

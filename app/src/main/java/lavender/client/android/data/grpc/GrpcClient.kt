@@ -7,6 +7,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import lavender.client.android.data.models.Message // 🛠️ ВАЖНЫЙ ИМПОРТ
 import lavender.client.android.data.models.ChatInfo // 🛠️ ВАЖНЫЙ ИМПОРТ
+import lavender.client.android.data.proto.ChatInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
@@ -253,7 +254,7 @@ object GrpcClient {
     fun getUserId(): String? = realGrpcClient.getUserId()
 
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) {
-        realGrpcClient.getUserId(username, callback)
+        realGrpcClient.fetchUserId(username, callback)
     }
 
     fun clearMessages() {
