@@ -3,16 +3,15 @@ package lavender.client.android.ui
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -26,8 +25,6 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.checkbox.MaterialCheckBox
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
@@ -35,6 +32,8 @@ import org.json.JSONObject
 import kotlin.math.roundToInt
 
 object ThemeManager {
+    private const val LAVENDER_MIST = "#967BB6"
+
     private var currentCustomTheme: CustomThemeProto? = null
 
     // Базовая светлая тема (Графит и золото)
@@ -49,7 +48,9 @@ object ThemeManager {
         onPrimaryColor = "#FFFFFF",
         onSurfaceColor = "#424242",
         bottomPanelColor = "#FFFFFF",
-        onBottomPanelColor = "#85754E"
+        onBottomPanelColor = "#85754E",
+        outgoingBubbleColor = "#85754E", // Золотой акцент
+        incomingBubbleColor = "#E0E0E0"  // Нейтральный серый
     )
 
     // Базовая темная тема (не будет доступна для выбора)
@@ -64,7 +65,9 @@ object ThemeManager {
         onPrimaryColor = "#FFFFFF",
         onSurfaceColor = "#E0E0E0",
         bottomPanelColor = "#1A1B46",
-        onBottomPanelColor = "#FFFFFF"
+        onBottomPanelColor = LAVENDER_MIST,
+        outgoingBubbleColor = "#2A2C6D", // Насыщенный синий
+        incomingBubbleColor = "#16173A"  // Глубокий синий
     )
 
     val builtInThemes = listOf(
@@ -77,7 +80,9 @@ object ThemeManager {
             surfaceContainer = "#E1EDD1",
             textPrimaryColor = "#144218",
             onSurfaceColor = "#33691E",
-            onBottomPanelColor = "#2E7D32"
+            onBottomPanelColor = "#2E7D32",
+            outgoingBubbleColor = "#2E7D32", // Темно-зеленый
+            incomingBubbleColor = "#E1EDD1"  // Светлая хвоя
         ),
         baseLightTheme.copy(
             id = "builtin_blue",
@@ -89,7 +94,9 @@ object ThemeManager {
             textPrimaryColor = "#1C1C1E",
             onSurfaceColor = "#3A3A3C",
             bottomPanelColor = "#E3F2FD",
-            onBottomPanelColor = "#1565C0"
+            onBottomPanelColor = "#1565C0",
+            outgoingBubbleColor = "#007AFF", // Ярко-синий (iOS style)
+            incomingBubbleColor = "#D1E9FF"  // Небесный
         ),
         baseLightTheme.copy(
             id = "builtin_purple",
@@ -100,7 +107,9 @@ object ThemeManager {
             surfaceContainer = "#E8D0F0",
             textPrimaryColor = "#2D0C54",
             onSurfaceColor = "#4A148C",
-            onBottomPanelColor = "#6A1B9A"
+            onBottomPanelColor = "#6A1B9A",
+            outgoingBubbleColor = "#6A1B9A", // Насыщенный пурпур
+            incomingBubbleColor = "#E8D0F0"  // Нежная сирень
         ),
         baseLightTheme.copy(
             id = "builtin_sunset",
@@ -112,9 +121,14 @@ object ThemeManager {
             textPrimaryColor = "#BF360C",
             onSurfaceColor = "#E65100",
             bottomPanelColor = "#FFF3E0",
-            onBottomPanelColor = "#D84315"
+            onBottomPanelColor = "#D84315",
+            outgoingBubbleColor = "#D84315", // Огненный
+            incomingBubbleColor = "#FFD180"  // Теплый песок
         ),
-        baseLightTheme, // Графит и золото, теперь он же и базовый
+        baseLightTheme.copy(
+            outgoingBubbleColor = "#85754E", // Золото (из Графита)
+            incomingBubbleColor = "#E0E0E0"  // Бетон
+        ),
         baseLightTheme.copy(
             id = "builtin_rose",
             name = "Северная роза",
@@ -125,7 +139,9 @@ object ThemeManager {
             textPrimaryColor = "#443C3D",
             onSurfaceColor = "#5E5455",
             bottomPanelColor = "#EAECEF",
-            onBottomPanelColor = "#B08990"
+            onBottomPanelColor = "#B08990",
+            outgoingBubbleColor = "#B08990", // Пыльная роза
+            incomingBubbleColor = "#D8DCE3"  // Дымчатый
         ),
         baseLightTheme.copy(
             id = "builtin_mint",
@@ -136,7 +152,9 @@ object ThemeManager {
             surfaceContainer = "#D7F2ED",
             textPrimaryColor = "#002B26",
             onSurfaceColor = "#004D40",
-            onBottomPanelColor = "#00BFA5"
+            onBottomPanelColor = "#00BFA5",
+            outgoingBubbleColor = "#00BFA5", // Мята
+            incomingBubbleColor = "#D7F2ED"  // Свежий лед
         )
     )
 
@@ -150,9 +168,9 @@ object ThemeManager {
     fun getMessageColors(context: Context): MessageColors {
         val theme = currentCustomTheme ?: baseDarkTheme
         return MessageColors(
-            incomingBg = parseSafeColor(theme.primaryColor, Color.BLUE),
-            incomingText = parseSafeColor(theme.onPrimaryColor, Color.WHITE),
-            outgoingBg = parseSafeColor(theme.surfaceColor, Color.LTGRAY),
+            incomingBg = parseSafeColor(theme.incomingBubbleColor, Color.BLUE),
+            incomingText = parseSafeColor(theme.primaryColor, Color.WHITE),
+            outgoingBg = parseSafeColor(theme.outgoingBubbleColor, Color.LTGRAY),
             outgoingText = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
         )
     }
@@ -188,7 +206,7 @@ object ThemeManager {
             return
         }
 
-        // 3. Если не встроенная, пробуем КЭШ для скорости
+        // 3. Пробуем КЭШ для скорости
         val cachedTheme = prefs.getString("custom_theme_json_$themeId", null)
         if (cachedTheme != null) {
             try {
@@ -205,14 +223,16 @@ object ThemeManager {
                     textPrimaryColor = custom.textPrimaryColor,
                     backgroundImageUrl = custom.backgroundImageUrl,
                     bottomPanelColor = custom.bottomPanelColor,
-                    onBottomPanelColor = custom.onBottomPanelColor
+                    onBottomPanelColor = custom.onBottomPanelColor,
+                    outgoingBubbleColor = custom.outgoingBubbleColor,
+                    incomingBubbleColor = custom.incomingBubbleColor
                 )
                 onComplete()
                 return
             } catch (_: Exception) {}
         }
 
-        // 4. Только если это кастомная тема пользователя, идем на сервер
+        // 3. Только если это кастомная тема пользователя, идем на сервер
         // Используем id пользователя, если он доступен
         val queryId = GrpcClient.getUserId() ?: username
         GrpcClient.getThemes(queryId) { _, themes ->
@@ -230,7 +250,9 @@ object ThemeManager {
                     textPrimaryColor = theme.textPrimaryColor,
                     backgroundImageUrl = theme.backgroundImageUrl,
                     bottomPanelColor = theme.bottomPanelColor,
-                    onBottomPanelColor = theme.onBottomPanelColor
+                    onBottomPanelColor = theme.onBottomPanelColor,
+                    outgoingBubbleColor = theme.outgoingBubbleColor,
+                    incomingBubbleColor = theme.incomingBubbleColor
                 )
                 prefs.edit { putString("custom_theme_json_$themeId", serializeThemeToJson(theme)) }
             }
@@ -311,13 +333,6 @@ object ThemeManager {
         // 7. Иконки действий и дополнительные панели
         activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
 
-        // Рекурсивное применение к вложенным view
-        applyThemeToView(root, theme)
-
-        activity.findViewById<View>(R.id.bottomPanel)?.let {
-            applyThemeToBottomPanel(it, theme)
-        }
-
         // 8. Фоновое изображение чата
         val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
         if (bgImageView != null) {
@@ -334,155 +349,50 @@ object ThemeManager {
                 bgImageView.visibility = View.GONE
             }
         }
-    }
 
-    private fun applyThemeToBottomPanel(view: View, theme: CustomThemeProto) {
-        try {
-            // Исправление бага с дефолтной темой:
-            // Если тема темная (например, базовая темная), и bottomPanelColor не задана (или дефолтная),
-            // нам нужно убедиться, что иконки будут видны.
-            val isDefaultDark = theme.id == "dark"
-            val bpColorStr = if (isDefaultDark) "#1A1B46" else theme.bottomPanelColor
-            val onBpColorStr = if (isDefaultDark) "#FFFFFF" else theme.onBottomPanelColor
+        // 9. Нижняя панель чата
+        activity.findViewById<MaterialCardView>(R.id.bottomPanel)?.let { panel ->
+            val panelColor = parseSafeColor(theme.bottomPanelColor, bgColor)
+            panel.setCardBackgroundColor(ColorStateList.valueOf(panelColor))
 
-            val bpColor = parseSafeColor(bpColorStr, Color.WHITE)
-            val onBpColor = parseSafeColor(onBpColorStr, Color.BLACK)
-            val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
-            val textPrimary = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
-
-            // Определяем цвет иконок: для дефолтной темной темы делаем их белыми,
-            // иначе primaryColor (как было раньше) или onBottomPanelColor если задан.
-            val iconColor = if (isDefaultDark) {
-                Color.WHITE
-            } else if (theme.onBottomPanelColor.isNotEmpty()) {
-                onBpColor
-            } else {
-                primaryColor
+            val onPanelColor = parseSafeColor(theme.onBottomPanelColor, customPrimary)
+            
+            // Иконки
+            panel.findViewById<ImageButton>(R.id.emojiButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
+            panel.findViewById<ImageButton>(R.id.attachButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
+            panel.findViewById<ImageButton>(R.id.audioButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
+            panel.findViewById<ImageButton>(R.id.sendButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
+            
+            // Текст ввода
+            panel.findViewById<EditText>(R.id.messageInput)?.apply {
+                val textColor = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
+                setTextColor(textColor)
+                setHintTextColor(adjustAlpha(textColor, 0.5f))
             }
-
-            if (view is MaterialCardView) {
-                view.setCardBackgroundColor(bpColor)
-                view.strokeColor = adjustAlpha(onBpColor, 0.1f)
-            } else if (view.id == R.id.bottomPanelContent) {
-                view.setBackgroundColor(bpColor)
-            }
-
-            if (view is ViewGroup) {
-                for (i in 0 until view.childCount) {
-                    val child = view.getChildAt(i)
-                    when (child) {
-                        is ImageButton -> {
-                            child.imageTintList = ColorStateList.valueOf(iconColor)
-                        }
-                        is EditText -> {
-                            child.setTextColor(textPrimary)
-                            child.setHintTextColor(adjustAlpha(onBpColor, 0.5f))
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                child.textCursorDrawable?.setTint(primaryColor)
-                            }
-                            child.highlightColor = adjustAlpha(primaryColor, 0.3f)
-                        }
-                        is ProgressBar -> {
-                            child.indeterminateTintList = ColorStateList.valueOf(primaryColor)
-                        }
-                        is TextView -> {
-                            if (child !is EditText) {
-                                child.setTextColor(onBpColor)
-                            }
-                        }
-                        is ViewGroup -> applyThemeToBottomPanel(child, theme)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("ThemeManager", "Error applying theme to bottom panel", e)
         }
     }
 
     fun applyThemeToView(view: View, theme: CustomThemeProto) {
-        try {
-            val primary = parseSafeColor(theme.primaryColor, Color.BLUE)
-            val onPrimary = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
-            val surface = parseSafeColor(theme.surfaceColor, Color.WHITE)
-            val onSurface = parseSafeColor(theme.onSurfaceColor, Color.GRAY)
-            val textPrimary = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
+        val textPrimary = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
+        val onSurface = parseSafeColor(theme.onSurfaceColor, Color.GRAY)
 
-            when (view) {
-                is MaterialToolbar -> {
-                    view.backgroundTintList = ColorStateList.valueOf(primary)
-                    view.setTitleTextColor(onPrimary)
-                    view.setSubtitleTextColor(onPrimary)
-                    view.setNavigationIconTint(onPrimary)
-                    view.overflowIcon?.setTint(onPrimary)
-                    for (i in 0 until view.menu.size()) {
-                        view.menu.getItem(i).icon?.setTint(onPrimary)
-                    }
-                    for (i in 0 until view.childCount) {
-                        applyColorToToolbarChild(view.getChildAt(i), onPrimary)
-                    }
-                }
-                is MaterialButton -> {
-                    val isTextButton = view.backgroundTintList == null
-                            || view.backgroundTintList?.defaultColor == Color.TRANSPARENT
-                    if (isTextButton) {
-                        view.setTextColor(primary)
-                        view.iconTint = ColorStateList.valueOf(primary)
-                        view.rippleColor = ColorStateList.valueOf(adjustAlpha(primary, 0.12f))
-                    } else {
-                        view.backgroundTintList = ColorStateList.valueOf(surface)
-                        view.setTextColor(textPrimary)
-                        view.iconTint = ColorStateList.valueOf(textPrimary)
-                        view.rippleColor = ColorStateList.valueOf(adjustAlpha(primary, 0.24f))
-                    }
-                }
-                is FloatingActionButton -> {
-                    view.backgroundTintList = ColorStateList.valueOf(primary)
-                    view.imageTintList = ColorStateList.valueOf(onPrimary)
-                }
-                is EditText -> {
-                    view.setTextColor(textPrimary)
-                    view.setHintTextColor(adjustAlpha(onSurface, 0.5f))
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        view.textCursorDrawable?.setTint(primary)
-                    }
-                }
-                is TextView -> {
-                    if (view.id != R.id.toolbarTitle && view.id != R.id.toolbarSubtitle) {
-                        view.setTextColor(textPrimary)
-                    }
-                }
-                is MaterialCardView -> {
-                    if (view.id != R.id.bottomPanel) {
-                        view.setCardBackgroundColor(surface)
-                        view.strokeColor = adjustAlpha(onSurface, 0.2f)
-                    }
-                }
-                is ProgressBar -> {
-                    view.indeterminateTintList = ColorStateList.valueOf(primary)
-                }
-                is MaterialCheckBox -> {
-                    view.buttonTintList = ColorStateList.valueOf(primary)
-                    view.setTextColor(textPrimary)
-                }
-            }
-
-            if (view is ViewGroup && view !is MaterialToolbar) {
-                for (i in 0 until view.childCount) {
-                    applyThemeToView(view.getChildAt(i), theme)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("ThemeManager", "Error in applyThemeToView", e)
-        }
-    }
-
-    private fun applyColorToToolbarChild(view: View, color: Int) {
         when (view) {
-            is TextView -> view.setTextColor(color)
-            is ImageView -> view.imageTintList = ColorStateList.valueOf(color)
+            is MaterialButton -> {
+                view.setTextColor(parseSafeColor(theme.primaryColor, Color.BLUE))
+            }
+            is CheckBox -> {
+                view.buttonTintList = ColorStateList.valueOf(parseSafeColor(theme.primaryColor, Color.BLUE))
+            }
+            is TextView -> {
+                view.setTextColor(textPrimary)
+            }
+            is MaterialCardView -> {
+                view.setCardBackgroundColor(ColorStateList.valueOf(parseSafeColor(theme.surfaceColor, Color.WHITE)))
+                view.strokeColor = adjustAlpha(onSurface, 0.2f)
+            }
             is ViewGroup -> {
                 for (i in 0 until view.childCount) {
-                    applyColorToToolbarChild(view.getChildAt(i), color)
+                    applyThemeToView(view.getChildAt(i), theme)
                 }
             }
         }
@@ -524,12 +434,14 @@ object ThemeManager {
             onSurfaceColor = obj.optString("onSurfaceColor", ""),
             backgroundColor = obj.optString("backgroundColor", ""),
             textPrimaryColor = obj.optString("textPrimaryColor", ""),
+            textSecondaryColor = obj.optString("textSecondaryColor", ""),
             backgroundImageUrl = obj.optString("backgroundImageUrl", ""),
+            chatListBackgroundImageUrl = obj.optString("chatListBackgroundImageUrl", ""),
             bottomPanelColor = obj.optString("bottomPanelColor", ""),
             onBottomPanelColor = obj.optString("onBottomPanelColor", ""),
-            textSecondaryColor = obj.optString("textSecondaryColor", ""),
-            chatListBackgroundImageUrl = obj.optString("chatListBackgroundImageUrl", ""),
             surfaceContainer = obj.optString("surfaceContainer", ""),
+            outgoingBubbleColor = obj.optString("outgoingBubbleColor", ""),
+            incomingBubbleColor = obj.optString("incomingBubbleColor", ""),
         )
     }
 
@@ -549,6 +461,8 @@ object ThemeManager {
             put("textSecondaryColor", theme.textSecondaryColor)
             put("chatListBackgroundImageUrl", theme.chatListBackgroundImageUrl)
             put("surfaceContainer", theme.surfaceContainer)
+            put("outgoingBubbleColor", theme.outgoingBubbleColor)
+            put("incomingBubbleColor", theme.incomingBubbleColor)
         }.toString()
     }
 

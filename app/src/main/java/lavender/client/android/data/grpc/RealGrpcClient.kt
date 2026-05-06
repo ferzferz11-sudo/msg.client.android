@@ -78,7 +78,6 @@ import lavender.client.android.data.proto.UpdateChatAvatarRequestProto
 import lavender.client.android.data.proto.UpdateChatAvatarResponseProto
 import lavender.client.android.data.proto.GetAllChatsRequestProto
 import lavender.client.android.data.proto.GetAllChatsResponseProto
-import lavender.client.android.data.proto.GetUserIdRequestProto
 import lavender.client.android.data.proto.GetUserIdResponseProto
 import java.util.concurrent.TimeUnit
 
@@ -3634,7 +3633,7 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
         backgroundImageUrl,
         chatListBackgroundImageUrl,
         bottomPanelColor,
-        onBottomPanelColor,
+        onBottomPanelColor
     )
 }
 

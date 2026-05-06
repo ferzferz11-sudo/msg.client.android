@@ -399,7 +399,7 @@ class EditThemeActivity : AppCompatActivity() {
             // (или возьми значение из чекбокса/свитча, если он у тебя есть)
             bottomPanelColor = getColor("bottomPanel", "#F8F7FC"), //isColorDark(getColor("background", "#FFFFFF").toColorInt()),
 
-            onBottomPanelColor = getColor("onBottomPanel", "#000000"),
+            onBottomPanelColor = getColor("onBottomPanel", "#000000")
         )
     }
 

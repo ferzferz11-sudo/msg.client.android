@@ -3,7 +3,6 @@ package lavender.client.android
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -194,7 +193,7 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun updateUI() {
         val allThemes = mutableListOf<CustomThemeProto>()
-        allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme),))
+        allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
 
         ThemeManager.builtInThemes.forEach { theme ->
             val localizedName = when (theme.id) {

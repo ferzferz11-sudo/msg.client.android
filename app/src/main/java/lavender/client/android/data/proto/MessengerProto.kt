@@ -473,7 +473,9 @@ data class CustomThemeProto(
     val chatListBackgroundImageUrl: String = "",
     val bottomPanelColor: String = "",
     val onBottomPanelColor: String = "",
-    val surfaceContainer: String = ""
+    val surfaceContainer: String = "",
+    val outgoingBubbleColor: String = "",
+    val incomingBubbleColor: String = ""
 )
 
 data class GetThemesRequestProto(

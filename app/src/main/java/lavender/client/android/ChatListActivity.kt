@@ -1054,7 +1054,11 @@ class ChatListActivity : AppCompatActivity() {
                 val bgColor = typedValue.data
                 sheetView.setBackgroundColor(bgColor)
                 theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
-                val primaryColor = typedValue.data
+                val primaryColor = if (ThemeManager.getCurrentTheme()?.id == "dark") {
+                    "#967BB6".toColorInt()
+                } else {
+                    typedValue.data
+                }
                 sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primaryColor)
                 actionIds.forEach { id ->
                     sheetView.findViewById<LinearLayout>(id)?.let { layout ->
@@ -1228,7 +1232,7 @@ class ChatListActivity : AppCompatActivity() {
                 shapeDrawable.paint.color = bgColor
                 dialogView.background = shapeDrawable
                 val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
-                val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
+                val searchInputLayout = dialogView.findViewById<TextInputLayout>(R.id.searchInputLayout)
                 val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
                 val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
                 val btnStartChat = dialogView.findViewById<MaterialButton>(R.id.btnStartChat)
