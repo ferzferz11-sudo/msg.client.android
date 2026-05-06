@@ -6,7 +6,9 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.widget.ImageButton
 import android.widget.ImageView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import com.bumptech.glide.Glide
 import kotlin.math.abs
 
@@ -35,7 +37,7 @@ class FullScreenImageActivity : AppCompatActivity() {
     private var wasScaling = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        /*super.onCreate(savedInstanceState)
 
         // Ensure black background and dark status bars
         window.statusBarColor = android.graphics.Color.BLACK
@@ -45,7 +47,19 @@ class FullScreenImageActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = false
         }
 
+        setContentView(R.layout.activity_full_screen_image)*/
+
+        // Включаем Edge-to-Edge до super.onCreate. Это делает бары прозрачными
+        enableEdgeToEdge()
+
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_full_screen_image)
+
+        // Настраиваем контраст иконок (белые иконки на черном фоне)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
 
         imageView = findViewById(R.id.fullScreenImageView)
         btnClose = findViewById(R.id.btnClose)

@@ -241,6 +241,8 @@ object GrpcClient {
         return realGrpcClient.getFullAvatarUrl(username)
     }
 
+    val avatarCacheFlow = realGrpcClient.avatarCacheFlow
+
     fun updateAvatarCache(username: String, avatarUrl: String, fullAvatarUrl: String = "") {
         realGrpcClient.updateAvatarCache(username, avatarUrl, fullAvatarUrl)
     }

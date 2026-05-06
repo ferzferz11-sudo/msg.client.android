@@ -307,6 +307,12 @@ class ProfileActivity : AppCompatActivity() {
                     runOnUiThread {
                         if (!isFinishing && avatarView != null) {
                             Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                            avatarView.setOnClickListener {
+                                val fullImageUrl = grpcClient.getFullAvatarUrl(user) ?: url
+                                if (fullImageUrl.isNotEmpty()) {
+                                    showFullScreenImage(fullImageUrl)
+                                }
+                            }
                         }
                     }
                 }
@@ -420,6 +426,9 @@ class ProfileActivity : AppCompatActivity() {
                         if (profile.avatarUrl.isNotEmpty()) {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+                            // Also fetch full avatar to update cache
+                            grpcClient.getUserAvatar(username) { _ -> }
+
                             profileAvatar.setOnClickListener {
                                 val fullImageUrl = if (!isGroup) {
                                     grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl }

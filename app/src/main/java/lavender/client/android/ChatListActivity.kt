@@ -250,6 +250,11 @@ class ChatListActivity : AppCompatActivity() {
                         adapter.setOnlineUsers(users)
                     }
                 }
+                launch {
+                    grpcClient.avatarCacheFlow.collect { cache ->
+                        adapter.updateAvatarCache(cache)
+                    }
+                }
             }
         }
 
@@ -453,8 +458,8 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun refreshAvatars() {
         if (username.isEmpty()) return
-        grpcClient.getUserProfile(username) { profile ->
-            if (profile != null) {
+        grpcClient.getUserAvatar(username) { url ->
+            if (url.isNotEmpty()) {
                 viewModel.avatarCache = grpcClient.getAvatarCache()
                 runOnUiThread { updateToolbarAvatar() }
             }
@@ -468,13 +473,10 @@ class ChatListActivity : AppCompatActivity() {
         if (allParticipants.isEmpty()) return
         var updateCount = 0
         for (participant in allParticipants) {
-            grpcClient.getUserProfile(participant) { _ ->
+            grpcClient.getUserAvatar(participant) { _ ->
                 updateCount++
                 if (updateCount % 5 == 0 || updateCount == allParticipants.size) {
                     viewModel.avatarCache = grpcClient.getAvatarCache()
-                    runOnUiThread {
-                        adapter.updateAvatarCache(viewModel.avatarCache)
-                    }
                 }
             }
         }

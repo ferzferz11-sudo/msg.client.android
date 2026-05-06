@@ -132,6 +132,9 @@ object RealGrpcClient {
 
     // Avatar cache (thumbnail URLs for lists)
     private val avatarCache = mutableMapOf<String, String>()
+    private val _avatarCacheFlow = MutableStateFlow<Map<String, String>>(emptyMap())
+    val avatarCacheFlow: StateFlow<Map<String, String>> = _avatarCacheFlow
+
     // Full avatar cache (high-res URLs for full screen view)
     private val fullAvatarCache = mutableMapOf<String, String>()
 
@@ -1223,6 +1226,9 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetUserAvatarResponseProto>() {
             override fun onMessage(message: GetUserAvatarResponseProto) {
+                if (message.avatarUrl.isNotEmpty()) {
+                    updateAvatarCache(username, message.avatarUrl, message.fullAvatarUrl)
+                }
                 callback(message.avatarUrl)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -1375,6 +1381,9 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetUserProfileResponseProto>() {
             override fun onMessage(message: GetUserProfileResponseProto) {
+                if (message.avatarUrl.isNotEmpty()) {
+                    updateAvatarCache(username, message.avatarUrl)
+                }
                 callback(message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -1696,7 +1705,7 @@ object RealGrpcClient {
     }
 
     fun getAvatarCache(): Map<String, String> {
-        return avatarCache
+        return avatarCache.toMap()
     }
 
     fun getFullAvatarCache(): Map<String, String> {
@@ -1709,6 +1718,7 @@ object RealGrpcClient {
 
     fun updateAvatarCache(username: String, avatarUrl: String, fullAvatarUrl: String = "") {
         avatarCache[username] = avatarUrl
+        _avatarCacheFlow.value = avatarCache.toMap()
         if (fullAvatarUrl.isNotEmpty()) {
             fullAvatarCache[username] = fullAvatarUrl
         }

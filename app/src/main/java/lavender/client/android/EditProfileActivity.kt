@@ -145,7 +145,7 @@ class EditProfileActivity : AppCompatActivity() {
                         .error(R.drawable.ic_default_avatar_white)
                         .into(avatarImageView)
                     // Get full avatar URL from cache
-                    currentFullAvatarUrl = grpcClient.getFullAvatarCache()[username] ?: avatarUrl
+                    currentFullAvatarUrl = grpcClient.getFullAvatarUrl(username) ?: avatarUrl
                 } else {
                     // Use white default avatar when no avatar URL
                     avatarImageView.setImageResource(R.drawable.ic_default_avatar_white)
