@@ -52,9 +52,23 @@ class MapPickerActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_map_picker)
+        
+        // Load and apply theme
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val username = prefs.getString("username", "") ?: ""
+        
+        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+            runOnUiThread {
+                setContentView(R.layout.activity_map_picker)
+                lavender.client.android.ui.ThemeManager.applyTheme(this)
+                setupUI()
+            }
+        }
+    }
 
+    private fun setupUI() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         webView = findViewById(R.id.mapWebView)
         btnSendLocation = findViewById(R.id.btnSendLocation)

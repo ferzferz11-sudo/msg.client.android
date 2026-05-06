@@ -20,6 +20,7 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.updatePadding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.android.material.appbar.MaterialToolbar
@@ -368,6 +369,29 @@ object ThemeManager {
                 val textColor = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
                 setTextColor(textColor)
                 setHintTextColor(adjustAlpha(textColor, 0.5f))
+            }
+        }
+
+        // 10. Панель выбора местоположения (MapPicker)
+        activity.findViewById<View>(R.id.bottomPanelMap)?.let { panel ->
+            val surfaceColor = parseSafeColor(theme.surfaceColor, Color.WHITE)
+            panel.setBackgroundColor(surfaceColor)
+
+            val textColor = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
+            panel.findViewById<TextView>(R.id.locationText)?.setTextColor(textColor)
+            
+            panel.findViewById<MaterialButton>(R.id.btnSendLocation)?.apply {
+                val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
+                val onPrimaryColor = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
+                backgroundTintList = ColorStateList.valueOf(primaryColor)
+                setTextColor(onPrimaryColor)
+            }
+
+            // Добавляем отступ снизу для компенсации системной навигации
+            ViewCompat.setOnApplyWindowInsetsListener(panel) { view, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                view.updatePadding(bottom = insets.bottom + (16 * activity.resources.displayMetrics.density).toInt())
+                windowInsets
             }
         }
     }
