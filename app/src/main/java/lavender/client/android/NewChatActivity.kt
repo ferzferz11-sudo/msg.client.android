@@ -109,7 +109,6 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var groupParticipantsContainer: LinearLayout
     private lateinit var selectionToolbar: LinearLayout
     private lateinit var selectionCountText: TextView
-    private lateinit var closeSelection: ImageButton
     private lateinit var copyMessages: ImageButton
     private lateinit var replyMessage: ImageButton
     private lateinit var deleteMessages: ImageButton
@@ -136,7 +135,6 @@ class NewChatActivity : AppCompatActivity() {
 
     private lateinit var searchBar: LinearLayout
     private lateinit var searchInput: EditText
-    private lateinit var closeSearch: ImageButton
     private lateinit var searchNext: ImageButton
     private lateinit var searchPrev: ImageButton
     private lateinit var searchResultsCount: TextView
@@ -300,7 +298,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbar = findViewById(R.id.toolbar); toolbarTitle = findViewById(R.id.toolbarTitle); toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
         toolbarAvatar = findViewById(R.id.toolbarAvatar); toolbarLoadingIcon = findViewById(R.id.toolbarLoadingIcon)
         groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer); selectionToolbar = findViewById(R.id.selectionToolbar)
-        selectionCountText = findViewById(R.id.selectionCountText); closeSelection = findViewById(R.id.closeSelection); copyMessages = findViewById(R.id.copyMessages)
+        selectionCountText = findViewById(R.id.selectionCountText); copyMessages = findViewById(R.id.copyMessages)
         replyMessage = findViewById(R.id.replyMessage); deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent); messagesRecyclerView = findViewById(R.id.messagesRecyclerView); swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         messageInput = findViewById(R.id.messageInput); sendButton = findViewById(R.id.sendButton); attachButton = findViewById(R.id.attachButton); audioButton = findViewById(R.id.audioButton)
@@ -308,7 +306,7 @@ class NewChatActivity : AppCompatActivity() {
         replyUser = findViewById(R.id.replyUser); replyText = findViewById(R.id.replyText); cancelReply = findViewById(R.id.cancelReply); emojiButton = findViewById(R.id.emojiButton)
         mentionContainer = findViewById(R.id.mentionContainer); mentionList = findViewById(R.id.mentionList); mentionAdapter = MentionAdapter { insertMention(it) }
         mentionList.layoutManager = LinearLayoutManager(this); mentionList.adapter = mentionAdapter
-        searchBar = findViewById(R.id.searchBar); searchInput = findViewById(R.id.searchInput); closeSearch = findViewById(R.id.closeSearch)
+        searchBar = findViewById(R.id.searchBar); searchInput = findViewById(R.id.searchInput)
         searchNext = findViewById(R.id.searchNext); searchPrev = findViewById(R.id.searchPrev); searchResultsCount = findViewById(R.id.searchResultsCount)
         imagePreviewScroll = findViewById(R.id.imagePreviewScroll); imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
         audioButton.isVisible = true
@@ -587,7 +585,6 @@ class NewChatActivity : AppCompatActivity() {
         audioButton.setOnClickListener { showAudioRecordingView() }
         emojiButton.setOnClickListener { showEmojiPicker() }
 
-        closeSelection.setOnClickListener { hideSelectionToolbar() }
         copyMessages.setOnClickListener { copySelectedMessages() }
         replyMessage.setOnClickListener { replyToSelectedMessage() }
         deleteMessages.setOnClickListener { deleteSelectedMessages() }
@@ -746,7 +743,6 @@ class NewChatActivity : AppCompatActivity() {
         searchBar.isVisible = true
         toolbarContent.isVisible = false
         setToolbarNavigationIcon(R.drawable.ic_close) // Set close icon for search mode
-        closeSearch.isVisible = false // Hide the old close icon
 
         // Apply custom theme colors to search bar
         val customTheme = ThemeManager.getCurrentTheme()
@@ -813,8 +809,6 @@ class NewChatActivity : AppCompatActivity() {
         mentionContainer.isVisible = false
     }
 
-    //toDo: check it
-    private fun showFullScreenImage(imageUrl: String) { val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", imageUrl) }; startActivity(intent) }
     private fun showSelectionToolbar(count: Int) {
         selectionMode = true
         invalidateOptionsMenu()

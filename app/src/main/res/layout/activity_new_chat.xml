@@ -120,15 +120,6 @@
                 android:background="?attr/colorPrimaryVariant"
                 tools:visibility="gone">
 
-                <ImageButton
-                    android:id="@+id/closeSelection"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_close"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/cancel" />
-
                 <TextView
                     android:id="@+id/selectionCountText"
                     android:layout_width="0dp"
@@ -187,15 +178,6 @@
                 android:visibility="gone"
                 android:background="?attr/colorPrimary"
                 tools:visibility="visible">
-
-                <ImageButton
-                    android:id="@+id/closeSearch"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_close"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/cancel" />
 
                 <EditText
                     android:id="@+id/searchInput"

@@ -169,10 +169,9 @@ class ChatListActivity : AppCompatActivity() {
                 binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, selectedCount) else getString(R.string.chats)
                 binding.toolbarUserAvatar.isVisible = !hasSelection
 
+                supportActionBar?.setDisplayHomeAsUpEnabled(hasSelection)
                 if (hasSelection) {
                     supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
-                } else {
-                    supportActionBar?.setHomeAsUpIndicator(null)
                 }
             },
             currentUsername = username,
@@ -1392,7 +1391,7 @@ class ChatListActivity : AppCompatActivity() {
         shapeDrawable.paint.color = bgColor
         dialogView.background = shapeDrawable
         val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
-        val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
+        val searchInputLayout = dialogView.findViewById<TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
         val createChatCheckbox = dialogView.findViewById<CheckBox>(R.id.createChatCheckbox)
         val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
@@ -1541,7 +1540,10 @@ class ChatListActivity : AppCompatActivity() {
         binding.searchEditText.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(binding.searchEditText, 0)
-        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_close)
+        }
         binding.actionSearch.isVisible = false
         binding.actionDelete.isVisible = false
         binding.actionMute.isVisible = false
@@ -1554,13 +1556,12 @@ class ChatListActivity : AppCompatActivity() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
         val hasSelection = adapter.getSelectedChats().isNotEmpty()
+        supportActionBar?.setDisplayHomeAsUpEnabled(hasSelection)
         binding.actionSearch.isVisible = !hasSelection
         binding.actionDelete.isVisible = hasSelection
         binding.actionMute.isVisible = hasSelection
         if (hasSelection) {
             supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
-        } else {
-            supportActionBar?.setHomeAsUpIndicator(null)
         }
     }
 

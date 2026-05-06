@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -15,10 +14,12 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -253,26 +254,35 @@ object ThemeManager {
 
     fun applyTheme(activity: AppCompatActivity) {
         val theme = currentCustomTheme ?: baseDarkTheme
-        val root = activity.findViewById<View>(android.R.id.content) ?: return
-        val toolbar = activity.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-
-        activity.window.apply {
-            statusBarColor = Color.TRANSPARENT
-            navigationBarColor = Color.TRANSPARENT
-            WindowCompat.setDecorFitsSystemWindows(this, false)
-        }
-
         val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
         val isLightMode = bgColor.isLight()
+
+        // 1. Включаем Edge-to-Edge (бары становятся прозрачными, убираются warnings)
+        activity.enableEdgeToEdge()
+
+        // 2. Настраиваем цвет иконок системных баров (темные для светлых тем, белые для темных)
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = isLightMode
             isAppearanceLightNavigationBars = isLightMode
         }
 
+        // 3. Базовая установка фона
+        val root = activity.findViewById<View>(android.R.id.content)
         activity.window.decorView.setBackgroundColor(bgColor)
-        root.setBackgroundColor(bgColor)
+        root?.setBackgroundColor(bgColor)
 
-        activity.findViewById<com.google.android.material.card.MaterialCardView>(R.id.searchCard)?.let { card ->
+        // 4. Корректировка Toolbar (Padding для компенсации статус-бара)
+        val toolbar = activity.findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar?.let { tb ->
+            ViewCompat.setOnApplyWindowInsetsListener(tb) { view, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                view.setPadding(0, insets.top, 0, 0)
+                windowInsets
+            }
+        }
+
+        // 5. Темы оформления поисковой карточки
+        activity.findViewById<MaterialCardView>(R.id.searchCard)?.let { card ->
             val surfaceColor = parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             card.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
 
@@ -286,6 +296,7 @@ object ThemeManager {
 
         Log.d("ThemeManager", "SUCCESS: Applying theme '${theme.name}'")
 
+        // 6. Акцентные цвета для Toolbar
         val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
         val customOnPrimary = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
 
@@ -295,18 +306,19 @@ object ThemeManager {
             setNavigationIconTint(customOnPrimary)
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             clipToOutline = true
-            popupTheme = if (isLightMode)
-                androidx.appcompat.R.style.ThemeOverlay_AppCompat_Light
-            else
-                androidx.appcompat.R.style.ThemeOverlay_AppCompat_Dark
         }
 
+        // 7. Иконки действий и дополнительные панели
         activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
+
+        // Рекурсивное применение к вложенным view
         applyThemeToView(root, theme)
+
         activity.findViewById<View>(R.id.bottomPanel)?.let {
             applyThemeToBottomPanel(it, theme)
         }
 
+        // 8. Фоновое изображение чата
         val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
         if (bgImageView != null) {
             if (!theme.backgroundImageUrl.isNullOrEmpty()) {
@@ -316,6 +328,7 @@ object ThemeManager {
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .centerCrop()
                     .into(bgImageView)
+                // Если есть картинка, делаем root прозрачным, чтобы видеть её
                 root.setBackgroundColor(Color.TRANSPARENT)
             } else {
                 bgImageView.visibility = View.GONE

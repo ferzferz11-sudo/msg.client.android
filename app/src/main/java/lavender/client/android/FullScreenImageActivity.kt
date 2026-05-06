@@ -37,18 +37,6 @@ class FullScreenImageActivity : AppCompatActivity() {
     private var wasScaling = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        /*super.onCreate(savedInstanceState)
-
-        // Ensure black background and dark status bars
-        window.statusBarColor = android.graphics.Color.BLACK
-        window.navigationBarColor = android.graphics.Color.BLACK
-        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
-        }
-
-        setContentView(R.layout.activity_full_screen_image)*/
-
         // Включаем Edge-to-Edge до super.onCreate. Это делает бары прозрачными
         enableEdgeToEdge()
 
