@@ -602,7 +602,7 @@ class MainActivity : AppCompatActivity() {
     
     private fun getSavedLanguage(): String? {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        return prefs.getString("language", null)
+        return prefs.getString("language", "ru") // Default to Russian for first launch
     }
     
     private fun saveLanguage(languageCode: String) {
@@ -613,12 +613,12 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun toggleLanguage() {
-        val currentLanguage = getSavedLanguage() ?: "en"
+        val currentLanguage = getSavedLanguage() ?: "ru"
         val newLanguage = if (currentLanguage == "en") "ru" else "en"
         
         saveLanguage(newLanguage)
         setLocale(newLanguage)
-        
+
         // Recreate activity to apply language change
         recreate()
     }
@@ -641,7 +641,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateLanguageButtonText() {
         val languageButton: Button? = findViewById(R.id.languageButton)
         if (languageButton != null) {
-            val currentLanguage = getSavedLanguage() ?: "en"
+            val currentLanguage = getSavedLanguage() ?: "ru"
             val languageName = if (currentLanguage == "en") {
                 getString(R.string.english)
             } else {

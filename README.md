@@ -25,6 +25,7 @@ Lavender Messenger (Android client) is a native Android application designed for
 - 📊 Real-time connection status tracking
 - 🔔 Push notifications with room navigation
 - 🚀 Auto-navigation on app launch (if credentials saved)
+- 🌐 Localization support (Russian/English) with Russian as default language
 
 ## Tech Stack
 
@@ -175,7 +176,14 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.3.5**
+Current version: **1.0.3.10**
+
+### Version 1.0.3.10 - Language Default Update
+- 🌐 **Russian as Default**: Russian language is now set as default for all first-time app installations
+- 🔄 **Language Persistence**: Selected language preference is saved locally and restored on app restart
+- 📝 **Server Logging**: Language changes are logged to server for analytics and user preference tracking
+- 🎯 **Consistent Implementation**: All activities now use unified default language logic
+- 🔧 **Clean Implementation**: Removed local Android logging for language preference errors
 
 ### Version 1.0.3.5 - User ID Migration for Drafts & Mutes
 - 🆔 **User ID Based Storage**: Draft messages and muted chats now use stable UUID instead of username.

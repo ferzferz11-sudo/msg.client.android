@@ -92,7 +92,7 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "en") ?: "en"
+        val languageCode = prefs.getString("language", "ru") ?: "ru" // Default to Russian for first launch
         val locale = Locale.forLanguageTag(languageCode)
         val config = newBase.resources.configuration
         config.setLocale(locale)
@@ -1502,7 +1502,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun applySavedLanguage() {
-        val lang = getSavedLanguage() ?: "en"
+        val lang = getSavedLanguage() ?: "ru"
         val locale = Locale.forLanguageTag(lang)
         Locale.setDefault(locale)
     }

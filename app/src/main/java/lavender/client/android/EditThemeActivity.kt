@@ -88,7 +88,7 @@ class EditThemeActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "en") ?: "en"
+        val languageCode = prefs.getString("language", "ru") ?: "ru" // Default to Russian for first launch
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         val config = newBase.resources.configuration

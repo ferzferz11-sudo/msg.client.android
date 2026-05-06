@@ -5,6 +5,16 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.3.10
+### Language Default Update
+- 🌐 **Russian as Default**: Russian language is now set as default for all first-time app installations
+- 🔄 **Language Persistence**: Selected language preference is saved locally and restored on app restart
+- 📝 **Server Logging**: Language changes are logged to server for analytics and user preference tracking
+- 🎯 **Consistent Implementation**: All activities now use unified default language logic ("ru" instead of "en")
+- 🔧 **Clean Implementation**: Removed local Android logging for language preference errors
+- **Activities Updated**: MainActivity, ChatListActivity, ProfileActivity, NewChatActivity, and all other activities now default to Russian
+- **Language Toggle**: Enhanced language switching in MainActivity and ChatListActivity with proper server logging
+
 ## 1.0.3.5
 ### Drafts & Mutes Migration to User ID
 - Migrated draft messages and muted chats from username-based to user ID (UUID) based storage.
