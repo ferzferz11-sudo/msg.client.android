@@ -76,7 +76,7 @@ class ContactsActivity : AppCompatActivity() {
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            binding.contactsRecyclerView.updatePadding(bottom = systemBars.bottom)
+            binding.contactsRecyclerView.updatePadding(bottom = systemBars.bottom + (80 * resources.displayMetrics.density).toInt())
             binding.addContactFab.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
                 bottomMargin = (28 * resources.displayMetrics.density).toInt() + systemBars.bottom
                 marginEnd = (16 * resources.displayMetrics.density).toInt()

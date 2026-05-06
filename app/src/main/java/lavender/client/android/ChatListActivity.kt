@@ -496,8 +496,8 @@ class ChatListActivity : AppCompatActivity() {
     private fun startPollingChats() {
         lifecycleScope.launch {
             while (isActive) {
+                delay(3000)
                 if (username.isNotEmpty()) {
-                    loadMutedChats()
                     val previousChatCount = viewModel.currentChats.size
                     viewModel.loadChats(username) { success, _ ->
                         if (success) {
