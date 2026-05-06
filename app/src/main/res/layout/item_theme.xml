@@ -19,14 +19,14 @@
         android:gravity="center_vertical">
 
         <FrameLayout
-            android:layout_width="52dp"
-            android:layout_height="52dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="16dp">
 
             <View
                 android:id="@+id/themeColorPreview"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
                 android:background="@drawable/unread_count_background" />
 
         </FrameLayout>
@@ -58,13 +58,6 @@
                 android:layout_marginTop="2dp" />
 
         </LinearLayout>
-
-        <RadioButton
-            android:id="@+id/themeRadioButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:clickable="false"
-            android:focusable="false" />
 
         <ImageView
             android:id="@+id/editIndicator"

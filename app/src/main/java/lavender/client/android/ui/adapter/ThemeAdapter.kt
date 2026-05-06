@@ -18,19 +18,12 @@ import lavender.client.android.data.proto.CustomThemeProto
 
 class ThemeAdapter(
     private val onThemeClick: (CustomThemeProto) -> Unit,
-    private val onEditClick: (CustomThemeProto) -> Unit,
-    private val onAddClick: () -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
     private var currentThemeId: String
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    companion object {
-        private const val TYPE_THEME = 0
-        private const val TYPE_ADD = 1
-    }
+) : RecyclerView.Adapter<ThemeAdapter.ThemeViewHolder>() {
 
     private var themes = listOf<CustomThemeProto>()
-    private val selectedPositions = mutableSetOf<Int>()
+    private val selectedThemes = mutableSetOf<CustomThemeProto>()
 
     fun setThemes(newThemes: List<CustomThemeProto>) {
         val diffResult = DiffUtil.calculateDiff(ThemeDiffCallback(themes, newThemes))
@@ -44,103 +37,46 @@ class ThemeAdapter(
         notifyDataSetChanged()
     }
 
-    fun getSelectedThemes(): List<CustomThemeProto> {
-        return selectedPositions.map { themes[it] }
-    }
+    fun getSelectedThemes(): List<CustomThemeProto> = selectedThemes.toList()
 
     fun clearSelection() {
-        val previousSelected = selectedPositions.toSet()
-        selectedPositions.clear()
-        previousSelected.forEach { notifyItemChanged(it) }
+        selectedThemes.clear()
+        notifyDataSetChanged()
         onSelectionChanged(0)
     }
 
-    override fun getItemViewType(position: Int): Int {
-        return if (position == themes.size) TYPE_ADD else TYPE_THEME
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == TYPE_ADD) {
-            AddViewHolder(inflater.inflate(R.layout.item_theme, parent, false))
+    fun toggleSelection(theme: CustomThemeProto) {
+        if (selectedThemes.contains(theme)) {
+            selectedThemes.remove(theme)
         } else {
-            ThemeViewHolder(inflater.inflate(R.layout.item_theme, parent, false))
+            selectedThemes.add(theme)
         }
+        notifyDataSetChanged()
+        onSelectionChanged(selectedThemes.size)
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (holder is ThemeViewHolder) {
-            val isSelected = selectedPositions.contains(position)
-            holder.bind(themes[position], currentThemeId, isSelected) {
-                val currentPos = holder.bindingAdapterPosition
-                if (currentPos == RecyclerView.NO_POSITION) return@bind
-                
-                val theme = themes[currentPos]
-                if (theme.id == "dark") {
-                    onThemeClick(theme)
-                    return@bind
-                }
-
-                if (selectedPositions.contains(currentPos)) {
-                    selectedPositions.remove(currentPos)
-                } else {
-                    selectedPositions.add(currentPos)
-                }
-                notifyItemChanged(currentPos)
-                onSelectionChanged(selectedPositions.size)
-            }
-        } else if (holder is AddViewHolder) {
-            holder.bind(onAddClick)
+    fun selectSingle(theme: CustomThemeProto) {
+        if (selectedThemes.size == 1 && selectedThemes.contains(theme)) {
+            selectedThemes.clear()
+        } else {
+            selectedThemes.clear()
+            selectedThemes.add(theme)
         }
+        notifyDataSetChanged()
+        onSelectionChanged(selectedThemes.size)
     }
 
-    override fun getItemCount(): Int = themes.size + 1
-
-    inner class AddViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val cardView: MaterialCardView = itemView as MaterialCardView
-        private val themeName: TextView = itemView.findViewById(R.id.themeName)
-        private val themeColorsInfo: TextView = itemView.findViewById(R.id.themeColorsInfo)
-        private val themeColorPreview: View = itemView.findViewById(R.id.themeColorPreview)
-        private val editIndicator: ImageView = itemView.findViewById(R.id.editIndicator)
-        private val radioButton: android.widget.RadioButton? = itemView.findViewById(R.id.themeRadioButton)
-
-        fun bind(onClick: () -> Unit) {
-            themeName.text = itemView.context.getString(R.string.add_theme)
-            themeColorsInfo.text = itemView.context.getString(R.string.create)
-            
-            // Set theme name text color based on current theme
-            try {
-                val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-                if (currentTheme != null) {
-                    themeName.setTextColor(currentTheme.textPrimaryColor.toColorInt())
-                } else {
-                    val typedValue = android.util.TypedValue()
-                    itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                    themeName.setTextColor(if (typedValue.resourceId != 0)
-                        ContextCompat.getColor(itemView.context, typedValue.resourceId)
-                        else typedValue.data)
-                }
-            } catch (_: Exception) {
-                val typedValue = android.util.TypedValue()
-                itemView.context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                themeName.setTextColor(if (typedValue.resourceId != 0)
-                    ContextCompat.getColor(itemView.context, typedValue.resourceId)
-                    else typedValue.data)
-            }
-            
-            themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
-            editIndicator.setImageResource(android.R.drawable.ic_input_add)
-            editIndicator.isVisible = true
-            radioButton?.isVisible = false
-            
-            cardView.setCardBackgroundColor(Color.TRANSPARENT)
-            cardView.strokeWidth = (1 * itemView.resources.displayMetrics.density).toInt()
-            cardView.strokeColor = Color.GRAY
-            
-            itemView.alpha = 1.0f
-            itemView.setOnClickListener { onClick() }
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThemeViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return ThemeViewHolder(inflater.inflate(R.layout.item_theme, parent, false))
     }
+
+    override fun onBindViewHolder(holder: ThemeViewHolder, position: Int) {
+        val theme = themes[position]
+        holder.bind(theme, currentThemeId, selectedThemes.contains(theme))
+    }
+
+    override fun getItemCount(): Int = themes.size
 
     inner class ThemeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: MaterialCardView = itemView as MaterialCardView
@@ -148,62 +84,43 @@ class ThemeAdapter(
         private val themeColorsInfo: TextView = itemView.findViewById(R.id.themeColorsInfo)
         private val themeColorPreview: View = itemView.findViewById(R.id.themeColorPreview)
         private val editIndicator: ImageView = itemView.findViewById(R.id.editIndicator)
-        private val radioButton: android.widget.RadioButton? = itemView.findViewById(R.id.themeRadioButton)
 
-        fun bind(theme: CustomThemeProto, currentId: String, isSelected: Boolean, onLongClick: () -> Unit) {
+        fun bind(theme: CustomThemeProto, currentId: String, isSelected: Boolean) {
             themeName.text = theme.name
             val isCurrent = theme.id == currentId
             
-            radioButton?.isVisible = true
-            radioButton?.isChecked = isCurrent
             editIndicator.isVisible = false
             
             val context = itemView.context
-            
-            // Set theme name text color based on current theme
-            try {
-                val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-                if (currentTheme != null) {
-                    themeName.setTextColor(currentTheme.textPrimaryColor.toColorInt())
-                } else {
-                    val typedValue = android.util.TypedValue()
-                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                    themeName.setTextColor(if (typedValue.resourceId != 0)
-                        ContextCompat.getColor(context, typedValue.resourceId)
-                        else typedValue.data)
-                }
-            } catch (_: Exception) {
-                val typedValue = android.util.TypedValue()
-                context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                themeName.setTextColor(if (typedValue.resourceId != 0)
-                    ContextCompat.getColor(context, typedValue.resourceId)
-                    else typedValue.data)
-            }
-            
+            val currentManagerTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val textPrimary = currentManagerTheme?.textPrimaryColor?.toColorInt() ?: Color.BLACK
+            val onSurface = currentManagerTheme?.onSurfaceColor?.toColorInt() ?: Color.GRAY
+            val primaryColor = currentManagerTheme?.primaryColor?.toColorInt() ?: Color.BLUE
+
+            themeName.setTextColor(textPrimary)
+            themeColorsInfo.setTextColor(adjustAlpha(onSurface, 0.7f))
+
+            itemView.alpha = 1.0f
             if (isSelected) {
-                cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))
-                itemView.alpha = 0.7f
-                cardView.strokeWidth = 0
-            } else {
-                itemView.alpha = 1.0f
-                if (isCurrent) {
-                    cardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
-                    val primaryColorAttr = android.R.attr.colorPrimary
-                    val typedValue = android.util.TypedValue()
-                    context.theme.resolveAttribute(primaryColorAttr, typedValue, true)
-                    cardView.strokeColor = typedValue.data
-                    
-                    try {
-                        cardView.setCardBackgroundColor(Color.parseColor(theme.surfaceColor).let { 
-                            Color.argb(40, Color.red(it), Color.green(it), Color.blue(it))
-                        })
-                    } catch (_: Exception) {
-                        cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.lavender_mist_alpha))
-                    }
-                } else {
-                    cardView.strokeWidth = 0
-                    cardView.setCardBackgroundColor(Color.TRANSPARENT)
+                cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.2f))
+                cardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
+                cardView.strokeColor = primaryColor
+                cardView.cardElevation = (4 * context.resources.displayMetrics.density)
+            } else if (isCurrent) {
+                cardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
+                cardView.strokeColor = adjustAlpha(primaryColor, 0.4f)
+                cardView.cardElevation = 0f
+                
+                try {
+                    val surfaceColor = Color.parseColor(theme.surfaceColor)
+                    cardView.setCardBackgroundColor(adjustAlpha(surfaceColor, 0.15f))
+                } catch (_: Exception) {
+                    cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.1f))
                 }
+            } else {
+                cardView.strokeWidth = 0
+                cardView.cardElevation = 0f
+                cardView.setCardBackgroundColor(adjustAlpha(onSurface, 0.05f))
             }
 
             // Preview colors
@@ -214,29 +131,27 @@ class ThemeAdapter(
                 } else {
                     val pColor = Color.parseColor(theme.primaryColor)
                     themeColorPreview.backgroundTintList = ColorStateList.valueOf(pColor)
-                    themeColorsInfo.text = context.getString(R.string.chat_last_message_format, "${theme.primaryColor} / ", theme.surfaceColor)
+                    themeColorsInfo.text = "${theme.primaryColor} / ${theme.surfaceColor}"
                 }
             } catch (_: Exception) {
                 themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
             }
 
             itemView.setOnClickListener {
-                if (selectedPositions.isNotEmpty()) {
-                    if (theme.id != "dark") {
-                        onLongClick()
-                    }
-                } else {
-                    onThemeClick(theme)
-                }
+                selectSingle(theme)
             }
-
+            
             itemView.setOnLongClickListener {
-                if (theme.id != "dark") {
-                    onLongClick()
-                    true
-                } else false
+                toggleSelection(theme)
+                true
             }
         }
+    }
+
+
+    private fun adjustAlpha(color: Int, factor: Float): Int {
+        val alpha = (Color.alpha(color) * factor).toInt()
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
     private class ThemeDiffCallback(
