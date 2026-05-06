@@ -36,6 +36,8 @@ object ThemeManager {
     private const val LAVENDER_MIST = "#967BB6"
 
     private var currentCustomTheme: CustomThemeProto? = null
+    private var isThemesLoading = false
+    private val themeListeners = mutableListOf<() -> Unit>()
 
     // Базовая светлая тема (Графит и золото)
     private val baseLightTheme = CustomThemeProto(
@@ -58,7 +60,7 @@ object ThemeManager {
     private val baseDarkTheme = CustomThemeProto(
         id = "dark",
         name = "Системная темная",
-        primaryColor = "#1A1B46",
+        primaryColor = "#967BB6", // LAVENDER_MIST для текста входящих (был #1A1B46)
         backgroundColor = "#04052E",
         surfaceColor = "#1A1B46",
         surfaceContainer = "#1A1B46",
@@ -236,6 +238,13 @@ object ThemeManager {
         // 3. Только если это кастомная тема пользователя, идем на сервер
         // Используем id пользователя, если он доступен
         val queryId = GrpcClient.getUserId() ?: username
+        
+        if (isThemesLoading) {
+            themeListeners.add(onComplete)
+            return
+        }
+        
+        isThemesLoading = true
         GrpcClient.getThemes(queryId) { _, themes ->
             val theme = themes.find { it.id == themeId }
             if (theme != null) {
@@ -260,6 +269,9 @@ object ThemeManager {
 
             Handler(Looper.getMainLooper()).post {
                 onComplete()
+                themeListeners.forEach { it.invoke() }
+                themeListeners.clear()
+                isThemesLoading = false
             }
         }
     }
@@ -337,7 +349,7 @@ object ThemeManager {
         // 8. Фоновое изображение чата
         val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
         if (bgImageView != null) {
-            if (!theme.backgroundImageUrl.isNullOrEmpty()) {
+            if (theme.backgroundImageUrl.isNotEmpty()) {
                 bgImageView.visibility = View.VISIBLE
                 Glide.with(activity)
                     .load(theme.backgroundImageUrl)

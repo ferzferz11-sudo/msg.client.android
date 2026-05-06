@@ -185,23 +185,6 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.connect(serverHost, false, serverPort, this)
         grpcClient.startChat(username, password, "") { _ -> }
 
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                ThemeManager.applyTheme(this)
-                val theme = ThemeManager.getCurrentTheme()
-                if (theme != null) {
-                    binding.swipeRefreshLayout.setColorSchemeColors(theme.primaryColor.toColorInt())
-                } else {
-                    val nightColor = "#04052E".toColorInt()
-                    binding.root.setBackgroundColor(nightColor)
-                    binding.chatsRecyclerView.setBackgroundColor(nightColor)
-                    binding.swipeRefreshLayout.setBackgroundColor(nightColor)
-                }
-                adapter.notifyDataSetChanged()
-                updateToolbarAvatar()
-            }
-        }
-
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = ""
