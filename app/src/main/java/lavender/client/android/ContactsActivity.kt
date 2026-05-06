@@ -2,11 +2,11 @@ package lavender.client.android
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Menu
-import android.view.MenuItem
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -24,12 +25,13 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
 import lavender.client.android.ui.adapter.UserAdapter
 import androidx.core.graphics.toColorInt
+import lavender.client.android.ui.ThemeManager
 import org.json.JSONArray
 import java.util.*
 
 class ContactsActivity : AppCompatActivity() {
 
-    private var binding: ActivityContactsBinding? = null
+    private lateinit var binding: ActivityContactsBinding
     private val grpcClient = GrpcClient
     private lateinit var adapter: UserAdapter
     private var username: String = ""
@@ -38,7 +40,7 @@ class ContactsActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru" // Default to Russian for first launch
+        val languageCode = prefs.getString("language", "ru") ?: "ru"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         val config = newBase.resources.configuration
@@ -54,104 +56,103 @@ class ContactsActivity : AppCompatActivity() {
         username = intent.getStringExtra("username") ?: ""
         password = intent.getStringExtra("password") ?: ""
 
-        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
+        ThemeManager.loadTheme(this, username) {
             runOnUiThread {
                 binding = ActivityContactsBinding.inflate(layoutInflater)
-                setContentView(binding!!.root)
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
+                setContentView(binding.root)
+                ThemeManager.applyTheme(this)
                 setupUI()
+                updateToolbarAvatar()
             }
         }
     }
 
     private fun setupUI() {
-        binding?.let { b ->
-            ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { view, insets ->
-                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                view.updatePadding(top = systemBars.top)
-                insets
+        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            binding.contactsRecyclerView.updatePadding(bottom = systemBars.bottom)
+            binding.addContactFab.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
+                bottomMargin = (28 * resources.displayMetrics.density).toInt() + systemBars.bottom
+                marginEnd = (16 * resources.displayMetrics.density).toInt()
             }
+            insets
+        }
 
-            ViewCompat.setOnApplyWindowInsetsListener(b.root) { view, insets ->
-                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                view.updatePadding(bottom = systemBars.bottom)
-                insets
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.apply {
+            title = ""
+            setDisplayHomeAsUpEnabled(true)
+        }
+        
+        binding.toolbar.setNavigationOnClickListener {
+            if (binding.searchCard.isVisible) {
+                hideSearchBar()
+            } else if (adapter.getSelectedUsers().isNotEmpty()) {
+                adapter.clearSelection()
+            } else {
+                finish()
             }
+        }
 
-            setSupportActionBar(b.toolbar)
-            supportActionBar?.setDisplayHomeAsUpEnabled(true)
-            b.toolbar.setNavigationOnClickListener {
-                if (adapter.getSelectedUsers().isNotEmpty()) {
-                    adapter.clearSelection()
-                } else {
-                    finish()
-                }
+        setupRecyclerView()
+        loadContacts()
+
+        binding.addContactFab.setOnClickListener {
+            showAddContactDialog()
+        }
+
+        binding.actionSearch.setOnClickListener { showSearchBar() }
+        binding.actionCreateChat.setOnClickListener { createChatFromSelection() }
+        binding.actionDelete.setOnClickListener { confirmRemoveSelectedContacts() }
+
+        binding.searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                adapter.filter(s.toString())
             }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
 
-            setupRecyclerView()
-            loadContacts()
-
-            b.addContactFab.setOnClickListener {
-                showAddContactDialog()
-            }
-
-            b.searchEditText.addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    val query = s.toString().lowercase()
-                    val filtered = if (query.isEmpty()) contacts else contacts.filter { it.lowercase().contains(query) }
-                    adapter.setUsers(filtered)
-                }
-                override fun afterTextChanged(s: Editable?) {}
-            })
+    private fun updateToolbarAvatar() {
+        val avatarCache = grpcClient.getAvatarCache()
+        val myAvatarUrl = avatarCache[username]
+        binding.toolbarUserAvatar.isVisible = true
+        if (!myAvatarUrl.isNullOrEmpty()) {
+            com.bumptech.glide.Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(binding.toolbarUserAvatar)
+        } else {
+            binding.toolbarUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.contacts_menu, menu)
-        return true
+    private fun showSearchBar() {
+        binding.searchCard.isVisible = true
+        binding.searchEditText.requestFocus()
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(binding.searchEditText, 0)
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        
+        binding.actionSearch.isVisible = false
+        binding.toolbarUserAvatar.isVisible = false
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+    private fun hideSearchBar() {
+        binding.searchCard.isVisible = false
+        binding.searchEditText.text?.clear()
+        adapter.filter("")
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
+        
         val hasSelection = adapter.getSelectedUsers().isNotEmpty()
-        menu.findItem(R.id.action_create_chat).isVisible = hasSelection
-        menu.findItem(R.id.action_delete_contact).isVisible = hasSelection
-        menu.findItem(R.id.action_search).isVisible = !hasSelection
-        
-        val iconColor = lavender.client.android.ui.ThemeManager.getCurrentTheme()?.onPrimaryColor?.toColorInt() ?: android.graphics.Color.WHITE
-        menu.findItem(R.id.action_create_chat).icon?.setTint(iconColor)
-        menu.findItem(R.id.action_delete_contact).icon?.setTint(iconColor)
-        menu.findItem(R.id.action_search).icon?.setTint(iconColor)
-        
-        return super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.action_search -> {
-                binding?.let { b ->
-                    b.searchLayout.isVisible = !b.searchLayout.isVisible
-                    if (b.searchLayout.isVisible) {
-                        b.searchEditText.requestFocus()
-                        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                        imm.showSoftInput(b.searchEditText, 0)
-                    } else {
-                        b.searchEditText.text?.clear()
-                        adapter.setUsers(contacts)
-                    }
-                }
-                return true
-            }
-            R.id.action_create_chat -> {
-                createChatFromSelection()
-                return true
-            }
-            R.id.action_delete_contact -> {
-                confirmRemoveSelectedContacts()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
+        supportActionBar?.setHomeAsUpIndicator(if (hasSelection) R.drawable.ic_close else R.drawable.ic_back_arrow)
+        binding.actionSearch.isVisible = !hasSelection
+        binding.toolbarUserAvatar.isVisible = !hasSelection
     }
 
     override fun onResume() {
@@ -168,22 +169,23 @@ class ContactsActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = UserAdapter(
             onUserClick = { selectedUser ->
-                if (adapter.getSelectedUsers().isNotEmpty()) {
-                    adapter.toggleSelection(selectedUser)
-                }
-            },
-            onUserLongClick = { selectedUser ->
                 adapter.toggleSelection(selectedUser)
             },
             onSelectionChanged = { count ->
-                invalidateOptionsMenu()
-                supportActionBar?.title = if (count > 0) getString(R.string.selected_count, count) else getString(R.string.contacts)
-                supportActionBar?.setHomeAsUpIndicator(if (count > 0) R.drawable.ic_close else R.drawable.ic_back_arrow)
+                val hasSelection = count > 0
+                binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, count) else getString(R.string.contacts)
+                supportActionBar?.setHomeAsUpIndicator(if (hasSelection || binding.searchCard.isVisible) R.drawable.ic_close else R.drawable.ic_back_arrow)
+                
+                binding.actionCreateChat.isVisible = hasSelection
+                binding.actionDelete.isVisible = hasSelection
+                binding.actionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
+                binding.toolbarUserAvatar.isVisible = !hasSelection && !binding.searchCard.isVisible
             },
-            avatarCache = grpcClient.getAvatarCache()
+            avatarCache = grpcClient.getAvatarCache(),
+            onlineUsers = grpcClient.users.value
         )
-        binding?.contactsRecyclerView?.adapter = adapter
-        binding?.contactsRecyclerView?.layoutManager = LinearLayoutManager(this)
+        binding.contactsRecyclerView.adapter = adapter
+        binding.contactsRecyclerView.layoutManager = LinearLayoutManager(this)
 
         lifecycleScope.launch {
             grpcClient.users.collect { onlineUsers ->
@@ -197,7 +199,7 @@ class ContactsActivity : AppCompatActivity() {
             contacts = list.toMutableList()
             runOnUiThread {
                 adapter.setUsers(contacts)
-                binding?.emptyStateContainer?.isVisible = contacts.isEmpty()
+                binding.emptyStateContainer.isVisible = contacts.isEmpty()
             }
         }
     }
@@ -241,7 +243,7 @@ class ContactsActivity : AppCompatActivity() {
         val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
 
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val customTheme = ThemeManager.getCurrentTheme()
         val typedValue = android.util.TypedValue()
         val bgColor = if (customTheme != null) {
             try { customTheme.primaryColor.toColorInt() } catch (_: Exception) {
@@ -260,7 +262,7 @@ class ContactsActivity : AppCompatActivity() {
         dialogView.background = shapeDrawable
 
         if (customTheme == null) {
-            val boxColor = android.content.res.ColorStateList.valueOf(bgColor)
+            val boxColor = ColorStateList.valueOf(bgColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
         }
@@ -308,7 +310,7 @@ class ContactsActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         if (customTheme == null) {
-            val btnBgColor = android.content.res.ColorStateList.valueOf(
+            val btnBgColor = ColorStateList.valueOf(
                 theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true).let { typedValue.data }
             )
             val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true).let { typedValue.data }

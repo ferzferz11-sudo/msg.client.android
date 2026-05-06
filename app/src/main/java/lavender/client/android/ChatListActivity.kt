@@ -421,7 +421,15 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun checkOnboarding(chats: List<ChatInfo>) {
-        val isNewUser = chats.isEmpty()
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        var firstLaunch = prefs.getLong("first_launch_time", 0L)
+        if (firstLaunch == 0L) {
+            firstLaunch = System.currentTimeMillis()
+            prefs.edit { putLong("first_launch_time", firstLaunch) }
+        }
+        val isWithinTwoDays = System.currentTimeMillis() - firstLaunch < 2 * 24 * 60 * 60 * 1000L
+
+        val isNewUser = chats.isEmpty() && isWithinTwoDays
         val typedValue = TypedValue()
         val customTheme = ThemeManager.getCurrentTheme()
         val bubbleBgColor = if (customTheme != null) {

@@ -1,16 +1,20 @@
 package lavender.client.android.ui.adapter
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
+import lavender.client.android.ui.ThemeManager
 
 class UserAdapter(
     private val onUserClick: (String) -> Unit,
@@ -21,10 +25,21 @@ class UserAdapter(
 ) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
     private var users = listOf<String>()
+    private var fullUsersList = listOf<String>()
     private val selectedUsers = mutableSetOf<String>()
 
     fun setUsers(newUsers: List<String>) {
         users = newUsers
+        fullUsersList = newUsers
+        notifyDataSetChanged()
+    }
+
+    fun filter(query: String) {
+        users = if (query.isEmpty()) {
+            fullUsersList
+        } else {
+            fullUsersList.filter { it.lowercase().contains(query.lowercase()) }
+        }
         notifyDataSetChanged()
     }
 
@@ -66,6 +81,7 @@ class UserAdapter(
     override fun getItemCount(): Int = users.size
 
     inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val cardView: MaterialCardView = itemView as MaterialCardView
         private val usernameText: TextView = itemView.findViewById(R.id.usernameText)
         private val userAvatar: CircleImageView = itemView.findViewById(R.id.userAvatar)
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
@@ -77,6 +93,25 @@ class UserAdapter(
             statusIndicator.isVisible = isOnline
             checkBox.isChecked = isSelected
             checkBox.isVisible = selectedUsers.isNotEmpty()
+
+            val currentTheme = ThemeManager.getCurrentTheme()
+            val primaryColor = currentTheme?.primaryColor?.toColorInt() ?: Color.BLUE
+            val onSurface = currentTheme?.onSurfaceColor?.toColorInt() ?: Color.GRAY
+            val textPrimary = currentTheme?.textPrimaryColor?.toColorInt() ?: Color.BLACK
+            
+            usernameText.setTextColor(textPrimary)
+            
+            itemView.alpha = 1.0f
+            if (isSelected) {
+                cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.2f))
+                cardView.strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
+                cardView.strokeColor = primaryColor
+                cardView.cardElevation = (4 * itemView.resources.displayMetrics.density)
+            } else {
+                cardView.strokeWidth = 0
+                cardView.cardElevation = 0f
+                cardView.setCardBackgroundColor(adjustAlpha(onSurface, 0.05f))
+            }
 
             val avatarUrl = avatarCache[username]
             if (!avatarUrl.isNullOrEmpty()) {
@@ -92,6 +127,11 @@ class UserAdapter(
                 onUserLongClick?.invoke(username)
                 true
             }
+        }
+        
+        private fun adjustAlpha(color: Int, factor: Float): Int {
+            val alpha = (Color.alpha(color) * factor).toInt()
+            return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
         }
     }
 }
