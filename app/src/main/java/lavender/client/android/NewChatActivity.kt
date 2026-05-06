@@ -270,7 +270,7 @@ class NewChatActivity : AppCompatActivity() {
             grpcClient.getChats(username) { chats ->
                 val chat = chats.find { it.id == roomId }
                 if (chat != null) runOnUiThread {
-                    chatName = chat.getDisplayName(username); isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl
+                    chatName = chat.getDisplayName(username); isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl; chatFullAvatarUrl = chat.fullAvatarUrl
                     setupToolbar()
                     if (!isDirect) {
                         updateGroupSubtitle(grpcClient.users.value)

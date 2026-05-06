@@ -221,7 +221,7 @@ class ChatAdapter(
                 val context = itemView.context
                 if (chatAvatarUrl.isNotEmpty()) {
                     val avatarSize = 52.dpToPx(); val avatar = ImageView(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
-                    Glide.with(context).load(chatAvatarUrl).thumbnail(0.1f).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                    Glide.with(context).load(chatAvatarUrl).thumbnail(Glide.with(context).load(chatAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
                     participantAvatars.addView(avatar); return
                 }
                 val participantsArray = JSONArray(participantsJson); val participantsList = mutableListOf<String>()
@@ -232,7 +232,7 @@ class ChatAdapter(
                     val container = FrameLayout(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize) }
                     val avatar = ImageView(context).apply { layoutParams = FrameLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
                     val cachedAvatarUrl = avatarCache[otherPerson]
-                    if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(0.1f).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                    if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(Glide.with(context).load(cachedAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
                     else avatar.setImageResource(R.drawable.ic_default_avatar)
                     container.addView(avatar)
                     if (isOnline) {
@@ -264,7 +264,7 @@ class ChatAdapter(
                             scaleType = ImageView.ScaleType.CENTER_CROP
                         }
                         val cachedAvatarUrl = avatarCache[uName]
-                        if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(0.1f).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                        if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(Glide.with(context).load(cachedAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
                         else avatar.setImageResource(R.drawable.ic_default_avatar)
                         container.addView(avatar)
                         if (isOnline) {

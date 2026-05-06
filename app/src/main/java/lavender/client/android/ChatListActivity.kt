@@ -93,7 +93,7 @@ class ChatListActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "en") ?: "en"
-        val locale = Locale(languageCode)
+        val locale = Locale.forLanguageTag(languageCode)
         val config = newBase.resources.configuration
         config.setLocale(locale)
         val context = newBase.createConfigurationContext(config)
@@ -133,7 +133,7 @@ class ChatListActivity : AppCompatActivity() {
 
         adapter = ChatAdapter(
             onChatClick = { chat ->
-                openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
+                openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl, chat.fullAvatarUrl)
             },
             onSelectionChanged = { selectedCount ->
                 val hasSelection = selectedCount > 0
@@ -234,14 +234,21 @@ class ChatListActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                RealGrpcClient.connectionStatus.collect { status ->
-                    binding.toolbarTitle.text = when (status) {
-                        ConnectionStatus.READY        -> getString(R.string.chats)
-                        ConnectionStatus.CONNECTING   -> getString(R.string.connecting)
-                        ConnectionStatus.FAILED       -> "Waiting for network..."
-                        ConnectionStatus.DISCONNECTED -> "Offline"
+                launch {
+                    RealGrpcClient.connectionStatus.collect { status ->
+                        binding.toolbarTitle.text = when (status) {
+                            ConnectionStatus.READY        -> getString(R.string.chats)
+                            ConnectionStatus.CONNECTING   -> getString(R.string.connecting)
+                            ConnectionStatus.FAILED       -> "Waiting for network..."
+                            ConnectionStatus.DISCONNECTED -> "Offline"
+                        }
+                        binding.toolbarTitle.alpha = if (status == ConnectionStatus.READY) 1.0f else 0.6f
                     }
-                    binding.toolbarTitle.alpha = if (status == ConnectionStatus.READY) 1.0f else 0.6f
+                }
+                launch {
+                    grpcClient.users.collect { users ->
+                        adapter.setOnlineUsers(users)
+                    }
                 }
             }
         }
@@ -316,7 +323,7 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 val chat = viewModel.currentChats.find { it.id == roomId }
                 if (chat != null) {
-                    openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl)
+                    openChat(chat.id, chat.getDisplayName(username), chat.type == "direct", chat.participants, chat.creator, chat.avatarUrl, chat.fullAvatarUrl)
                 }
             }
         }
@@ -517,7 +524,7 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun openChat(chatId: String, roomName: String, isDirect: Boolean = false, participants: String = "[]", creator: String = "", avatarUrl: String = "") {
+    private fun openChat(chatId: String, roomName: String, isDirect: Boolean = false, participants: String = "[]", creator: String = "", avatarUrl: String = "", fullAvatarUrl: String = "") {
         val intent = Intent(this, NewChatActivity::class.java).apply {
             putExtra("ROOM_ID", chatId)
             putExtra("CHAT_NAME", roomName)
@@ -525,6 +532,7 @@ class ChatListActivity : AppCompatActivity() {
             putExtra("PARTICIPANTS", participants)
             putExtra("CREATOR", creator)
             putExtra("AVATAR_URL", avatarUrl)
+            putExtra("FULL_AVATAR_URL", fullAvatarUrl)
             putExtra("USERNAME", username)
             putExtra("PASSWORD", password)
             val serverAddressFull = this@ChatListActivity.intent.getStringExtra("SERVER_ADDRESS")
@@ -1495,7 +1503,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun applySavedLanguage() {
         val lang = getSavedLanguage() ?: "en"
-        val locale = Locale(lang)
+        val locale = Locale.forLanguageTag(lang)
         Locale.setDefault(locale)
     }
 

@@ -152,10 +152,10 @@ class ProfileActivity : AppCompatActivity() {
         // Tapping on photo always opens full screen
         profileAvatar.setOnClickListener {
             val fullImageUrl = if (!isGroup) {
-                // Для пользователей берем полный URL из кэша если есть
-                grpcClient.getFullAvatarUrl(username) ?: avatarUrl
+                // Для пользователей берем полный URL из кэша если есть, иначе из интента
+                grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl }
             } else {
-                // Для групп используем полный URL, если есть, иначе thumbnail
+                // Для групп используем полный URL из интента, если есть, иначе thumbnail
                 fullAvatarUrl.ifEmpty { avatarUrl }
             }
             if (fullImageUrl.isNotEmpty()) {
@@ -421,7 +421,11 @@ class ProfileActivity : AppCompatActivity() {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
                             profileAvatar.setOnClickListener {
-                                val fullImageUrl = grpcClient.getFullAvatarUrl(username) ?: avatarUrl
+                                val fullImageUrl = if (!isGroup) {
+                                    grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl }
+                                } else {
+                                    fullAvatarUrl.ifEmpty { avatarUrl }
+                                }
                                 showFullScreenImage(fullImageUrl)
                             }
                         }
@@ -433,7 +437,11 @@ class ProfileActivity : AppCompatActivity() {
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
             profileAvatar.setOnClickListener {
-                val fullImageUrl = if (!isGroup) grpcClient.getFullAvatarUrl(username) ?: avatarUrl else avatarUrl
+                val fullImageUrl = if (!isGroup) {
+                    grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl }
+                } else {
+                    fullAvatarUrl.ifEmpty { avatarUrl }
+                }
                 showFullScreenImage(fullImageUrl)
             }
         } else {
