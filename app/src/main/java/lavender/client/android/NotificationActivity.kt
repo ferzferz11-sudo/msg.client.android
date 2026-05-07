@@ -39,6 +39,8 @@ class NotificationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_notifications)
 
+        lavender.client.android.ui.ThemeManager.applyTheme(this)
+
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -55,17 +57,6 @@ class NotificationActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             view.updatePadding(bottom = systemBars.bottom)
             insets
-        }
-
-        // Apply theme colors to toolbar
-        lavender.client.android.ui.ThemeManager.applyTheme(this)
-
-        // Apply custom theme background color to activity
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-        if (customTheme != null) {
-            try {
-                window.decorView.setBackgroundColor(customTheme.backgroundColor.toColorInt())
-            } catch (_: Exception) {}
         }
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)

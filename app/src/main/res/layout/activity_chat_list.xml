@@ -220,6 +220,7 @@
             android:contentDescription="@string/lavender_messenger" />
 
         <TextView
+            android:id="@+id/welcomeTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/welcome_new_user_title"
@@ -230,6 +231,7 @@
             android:layout_marginBottom="12dp" />
 
         <TextView
+            android:id="@+id/welcomeDescription"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/welcome_new_user_description"

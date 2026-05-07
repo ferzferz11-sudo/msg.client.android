@@ -174,7 +174,14 @@ settings.gradle.kts                 # Настройки Gradle
 Проект следует семантическому версионированию (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (например, 1.0.1.22)
 
-Текущая версия: **1.0.3.10**
+Текущая версия: **1.0.3.17**
+
+### Версия 1.0.3.17 - Улучшения системы тем
+- 🎨 **Адаптация NotificationActivity к темам**: Добавлена поддержка edge-to-edge с обработкой WindowInsets и интеграцией ThemeManager
+- 🎨 **Адаптация SuperAdminActivity к темам**: Добавлена поддержка edge-to-edge с обработкой WindowInsets и интеграцией ThemeManager
+- 🖼️ **Поддержка фоновых изображений**: Добавлен ImageView chatListBackground в NotificationActivity и SuperAdminActivity для кастомных фонов тем
+- 🎨 **Контраст приветственного текста**: Экран приветления ChatListActivity теперь использует цвета темы (textPrimaryColor, onSurfaceColor) для лучшей читаемости на кастомных фонах
+- ➕ **Цвета FAB**: Кнопки с плавающим действием (addChatFab, addContactFab, addThemeFab) теперь используют primaryColor для фона и onPrimaryColor для иконок
 
 ### Версия 1.0.3.10 - Обновление языка по умолчанию
 - 🌐 **Русский по умолчанию**: Русский язык теперь установлен как язык по умолчанию для всех первых установок приложения

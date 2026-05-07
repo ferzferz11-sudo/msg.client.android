@@ -5,6 +5,14 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.3.17
+### Theme System Enhancements
+- 🎨 **NotificationActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeManager integration
+- 🎨 **SuperAdminActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeManager integration
+- 🖼️ **Background Images Support**: Added chatListBackground ImageView to NotificationActivity and SuperAdminActivity for custom theme backgrounds
+- 🎨 **Welcome Text Contrast**: ChatListActivity welcome screen now uses theme colors (textPrimaryColor, onSurfaceColor) for better readability on custom backgrounds
+- ➕ **FAB Theme Colors**: Floating Action Buttons (addChatFab, addContactFab, addThemeFab) now use primaryColor for background and onPrimaryColor for icons
+
 ## 1.0.3.10
 ### Language Default Update
 - 🌐 **Russian as Default**: Russian language is now set as default for all first-time app installations

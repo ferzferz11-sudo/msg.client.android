@@ -176,7 +176,14 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.3.10**
+Current version: **1.0.3.17**
+
+### Version 1.0.3.17 - Theme System Enhancements
+- 🎨 **NotificationActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeManager integration
+- 🎨 **SuperAdminActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeManager integration
+- 🖼️ **Background Images Support**: Added chatListBackground ImageView to NotificationActivity and SuperAdminActivity for custom theme backgrounds
+- 🎨 **Welcome Text Contrast**: ChatListActivity welcome screen now uses theme colors (textPrimaryColor, onSurfaceColor) for better readability on custom backgrounds
+- ➕ **FAB Theme Colors**: Floating Action Buttons (addChatFab, addContactFab, addThemeFab) now use primaryColor for background and onPrimaryColor for icons
 
 ### Version 1.0.3.10 - Language Default Update
 - 🌐 **Russian as Default**: Russian language is now set as default for all first-time app installations

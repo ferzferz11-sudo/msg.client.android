@@ -384,6 +384,7 @@ class ChatListActivity : AppCompatActivity() {
                     adapter.setChats(updatedChats)
                     binding.welcomeContainer.isVisible = updatedChats.isEmpty()
                     binding.chatsRecyclerView.isVisible = updatedChats.isNotEmpty()
+                    if (updatedChats.isEmpty()) applyWelcomeTheme()
                     checkOnboarding(updatedChats)
                     refreshAvatars()
                 }
@@ -401,6 +402,16 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun applyWelcomeTheme() {
+        val theme = ThemeManager.getCurrentTheme() ?: return
+        try {
+            val textPrimary = theme.textPrimaryColor.toColorInt()
+            val onSurface = theme.onSurfaceColor.toColorInt()
+            findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
+            findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(onSurface)
+        } catch (_: Exception) {}
     }
 
     private fun checkOnboarding(chats: List<ChatInfo>) {

@@ -346,7 +346,7 @@ object ThemeManager {
         // 7. Иконки действий и дополнительные панели
         activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
 
-        // 8. Фоновое изображение чата
+        // 8. Фоновое изображение чата (chat screen)
         val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
         if (bgImageView != null) {
             if (theme.backgroundImageUrl.isNotEmpty()) {
@@ -356,10 +356,26 @@ object ThemeManager {
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .centerCrop()
                     .into(bgImageView)
-                // Если есть картинка, делаем root прозрачным, чтобы видеть её
                 root.setBackgroundColor(Color.TRANSPARENT)
             } else {
                 bgImageView.visibility = View.GONE
+            }
+        }
+
+        // 8a. Фоновое изображение для списка чатов (chat list screen)
+        val chatListBgView = activity.findViewById<ImageView>(R.id.chatListBackground)
+        if (chatListBgView != null) {
+            val chatListBgUrl = theme.chatListBackgroundImageUrl
+            if (chatListBgUrl.isNotEmpty()) {
+                chatListBgView.visibility = View.VISIBLE
+                Glide.with(activity)
+                    .load(chatListBgUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .centerCrop()
+                    .into(chatListBgView)
+                root.setBackgroundColor(Color.TRANSPARENT)
+            } else {
+                chatListBgView.visibility = View.GONE
             }
         }
 
@@ -381,6 +397,14 @@ object ThemeManager {
                 val textColor = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
                 setTextColor(textColor)
                 setHintTextColor(adjustAlpha(textColor, 0.5f))
+            }
+        }
+
+        // 9a. FAB (Floating Action Button) - фон primaryColor, иконка onPrimaryColor
+        listOf(R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { fabId ->
+            activity.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(fabId)?.apply {
+                backgroundTintList = ColorStateList.valueOf(customPrimary)
+                imageTintList = ColorStateList.valueOf(customOnPrimary)
             }
         }
 
