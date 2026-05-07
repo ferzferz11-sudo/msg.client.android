@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -20,6 +21,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
 class SuperAdminActivity : AppCompatActivity() {
@@ -52,7 +54,8 @@ class SuperAdminActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_super_admin)
 
-        lavender.client.android.ui.ThemeManager.applyTheme(this)
+        val username = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_username", "") ?: ""
+        ThemeUi.bind(this, username)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -153,6 +156,7 @@ class SuperAdminActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateUI(users: List<String>, chats: List<ChatInfo>) {
         usersContainer.removeAllViews()
         if (currentMode == Mode.USERS) {

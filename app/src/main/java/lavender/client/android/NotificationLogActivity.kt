@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -14,6 +15,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
 import lavender.client.android.data.fcm.NotificationEntry
 import lavender.client.android.data.fcm.NotificationHistory
+import lavender.client.android.theme.ui.ThemeUi
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,8 +47,8 @@ class NotificationLogActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         toolbar.setNavigationOnClickListener { finish() }
 
-        // Apply theme colors to toolbar
-        lavender.client.android.ui.ThemeManager.applyTheme(this)
+        val username = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_username", "") ?: ""
+        ThemeUi.bind(this, username)
 
         emptyLogText = findViewById(R.id.emptyLogText)
         recyclerIncoming = findViewById(R.id.recyclerIncoming)
@@ -102,6 +104,7 @@ class NotificationLogActivity : AppCompatActivity() {
     class NotificationLogAdapter : RecyclerView.Adapter<NotificationLogAdapter.ViewHolder>() {
         private var items = listOf<NotificationEntry>()
 
+        @SuppressLint("NotifyDataSetChanged")
         fun setData(newItems: List<NotificationEntry>) {
             items = newItems
             notifyDataSetChanged()

@@ -6,11 +6,11 @@ import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -23,11 +23,10 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
+import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.UserAdapter
-import androidx.core.graphics.toColorInt
-import lavender.client.android.ui.ThemeManager
 import org.json.JSONArray
-import java.util.*
+import java.util.Locale
 
 class ContactsActivity : AppCompatActivity() {
 
@@ -56,15 +55,11 @@ class ContactsActivity : AppCompatActivity() {
         username = intent.getStringExtra("username") ?: ""
         password = intent.getStringExtra("password") ?: ""
 
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                binding = ActivityContactsBinding.inflate(layoutInflater)
-                setContentView(binding.root)
-                ThemeManager.applyTheme(this)
-                setupUI()
-                updateToolbarAvatar()
-            }
-        }
+        binding = ActivityContactsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        ThemeUi.bind(this, username)
+        setupUI()
+        updateToolbarAvatar()
     }
 
     private fun setupUI() {
@@ -243,7 +238,7 @@ class ContactsActivity : AppCompatActivity() {
         val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
 
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         val typedValue = android.util.TypedValue()
         val bgColor = if (customTheme != null) {
             try { customTheme.primaryColor.toColorInt() } catch (_: Exception) {

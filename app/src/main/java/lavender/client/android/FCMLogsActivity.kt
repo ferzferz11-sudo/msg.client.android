@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
@@ -18,6 +19,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.FCMLogEntryProto
 import java.util.*
 import androidx.core.graphics.toColorInt
+import lavender.client.android.theme.ui.ThemeUi
 
 class FCMLogsActivity : AppCompatActivity() {
 
@@ -59,7 +61,8 @@ class FCMLogsActivity : AppCompatActivity() {
             insets
         }
         
-        lavender.client.android.ui.ThemeManager.applyTheme(this)
+        val username = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_username", "") ?: ""
+        ThemeUi.bind(this, username)
 
         progressBar = findViewById(R.id.progressBar)
         val recycler = findViewById<RecyclerView>(R.id.recyclerLogs)
@@ -94,6 +97,7 @@ class FCMLogsActivity : AppCompatActivity() {
     class FCMLogsAdapter : RecyclerView.Adapter<FCMLogsAdapter.ViewHolder>() {
         private var items = listOf<FCMLogEntryProto>()
 
+        @SuppressLint("NotifyDataSetChanged")
         fun setData(newItems: List<FCMLogEntryProto>) {
             items = newItems.reversed() // Show newest first
             notifyDataSetChanged()

@@ -19,8 +19,11 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.ThemeManager
 import java.util.Locale
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
 data class ColorItem(
     val name: String,
@@ -93,11 +96,9 @@ class ThemePaletteActivity : AppCompatActivity(),
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val currentThemeId = prefs.getString("current_theme_id", "dark") ?: "dark"
         if (currentThemeId != themeId) {
-            prefs.edit().putString("current_theme_id", themeId).apply()
+            prefs.edit { putString("current_theme_id", themeId) }
         }
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread { ThemeManager.applyTheme(this) }
-        }
+        ThemeUi.bind(this, username)
 
         // Check if this is a custom theme with full data passed via extras
         val isCustomThemeWithExtras = intent.hasExtra("primary_color")
@@ -146,8 +147,8 @@ class ThemePaletteActivity : AppCompatActivity(),
         initDefaultColors(originalTheme)
         currentColors.putAll(defaultColors)
 
-        chatListBackgroundUri = intent.getStringExtra("chat_list_background")?.let { Uri.parse(it) }
-        chatBackgroundUri = intent.getStringExtra("chat_background")?.let { Uri.parse(it) }
+        chatListBackgroundUri = intent.getStringExtra("chat_list_background")?.toUri()
+        chatBackgroundUri = intent.getStringExtra("chat_background")?.toUri()
 
         saveButton = findViewById(R.id.saveButton)
         saveButton.setOnClickListener { showSaveThemeDialog() }
@@ -301,7 +302,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                     saveButton.isVisible = false
                     setResult(RESULT_OK)
                 } else {
-                    Toast.makeText(this, error ?: "Failed to save theme", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
                 }
             }
         }

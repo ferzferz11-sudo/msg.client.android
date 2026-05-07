@@ -3,42 +3,21 @@ package lavender.client.android.ui
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.updatePadding
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.tabs.TabLayout
-import lavender.client.android.R
-import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
-import org.json.JSONObject
 import kotlin.math.roundToInt
 
 object ThemeManager {
     private const val LAVENDER_MIST = "#967BB6"
 
     private var currentCustomTheme: CustomThemeProto? = null
-    private var isThemesLoading = false
-    private val themeListeners = mutableListOf<() -> Unit>()
 
     // Базовая светлая тема (Графит и золото)
     private val baseLightTheme = CustomThemeProto(
@@ -179,259 +158,7 @@ object ThemeManager {
         )
     }
 
-    fun loadTheme(context: Context, username: String, onComplete: () -> Unit = {}) {
-        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
-
-        Log.d("ThemeManager", "READING PREFS: current_theme_id is '$themeId'")
-
-        // 1. Обработка системных тем
-        if (themeId == "light") {
-            currentCustomTheme = baseLightTheme
-            onComplete()
-            return
-        }
-        if (themeId == "dark") {
-            currentCustomTheme = baseDarkTheme
-            onComplete()
-            return
-        }
-
-        // 2. Проверка встроенных (Built-in) тем
-        val builtIn = builtInThemes.find { it.id == themeId }
-        if (builtIn != null) {
-            val localBg = prefs.getString("bg_url_$themeId", null)
-            currentCustomTheme = if (!localBg.isNullOrEmpty()) {
-                builtIn.copy(chatListBackgroundImageUrl = localBg)
-            } else {
-                builtIn
-            }
-            onComplete()
-            return
-        }
-
-        // 3. Пробуем КЭШ для скорости
-        val cachedTheme = prefs.getString("custom_theme_json_$themeId", null)
-        if (cachedTheme != null) {
-            try {
-                // Применяем кастомную тему поверх базовой светлой
-                val custom = parseThemeFromJson(cachedTheme)
-                currentCustomTheme = baseLightTheme.copy(
-                    id = custom.id,
-                    name = custom.name,
-                    primaryColor = custom.primaryColor,
-                    onPrimaryColor = custom.onPrimaryColor,
-                    surfaceColor = custom.surfaceColor,
-                    onSurfaceColor = custom.onSurfaceColor,
-                    backgroundColor = custom.backgroundColor,
-                    textPrimaryColor = custom.textPrimaryColor,
-                    chatListBackgroundImageUrl = custom.chatListBackgroundImageUrl,
-                    bottomPanelColor = custom.bottomPanelColor,
-                    onBottomPanelColor = custom.onBottomPanelColor,
-                    outgoingBubbleColor = custom.outgoingBubbleColor,
-                    incomingBubbleColor = custom.incomingBubbleColor
-                )
-                onComplete()
-                return
-            } catch (_: Exception) {}
-        }
-
-        // 3. Только если это кастомная тема пользователя, идем на сервер
-        // Используем id пользователя, если он доступен
-        val queryId = GrpcClient.getUserId() ?: username
-        
-        if (isThemesLoading) {
-            themeListeners.add(onComplete)
-            return
-        }
-        
-        isThemesLoading = true
-        GrpcClient.getThemes(queryId) { _, themes ->
-            val theme = themes.find { it.id == themeId }
-            if (theme != null) {
-                // Применяем скачанную тему поверх базовой светлой
-                currentCustomTheme = baseLightTheme.copy(
-                    id = theme.id,
-                    name = theme.name,
-                    primaryColor = theme.primaryColor,
-                    onPrimaryColor = theme.onPrimaryColor,
-                    surfaceColor = theme.surfaceColor,
-                    onSurfaceColor = theme.onSurfaceColor,
-                    backgroundColor = theme.backgroundColor,
-                    textPrimaryColor = theme.textPrimaryColor,
-                    chatListBackgroundImageUrl = theme.chatListBackgroundImageUrl,
-                    bottomPanelColor = theme.bottomPanelColor,
-                    onBottomPanelColor = theme.onBottomPanelColor,
-                    outgoingBubbleColor = theme.outgoingBubbleColor,
-                    incomingBubbleColor = theme.incomingBubbleColor
-                )
-                prefs.edit { putString("custom_theme_json_$themeId", serializeThemeToJson(theme)) }
-            }
-
-            Handler(Looper.getMainLooper()).post {
-                onComplete()
-                themeListeners.forEach { it.invoke() }
-                themeListeners.clear()
-                isThemesLoading = false
-            }
-        }
-    }
-
     fun getCurrentTheme(): CustomThemeProto? = currentCustomTheme
-
-    fun applyTheme(activity: AppCompatActivity) {
-        val theme = currentCustomTheme ?: baseDarkTheme
-        val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
-        val isLightMode = bgColor.isLight()
-
-        // 1. Включаем Edge-to-Edge (бары становятся прозрачными, убираются warnings)
-        activity.enableEdgeToEdge()
-
-        // 2. Настраиваем цвет иконок системных баров (темные для светлых тем, белые для темных)
-        WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
-            isAppearanceLightStatusBars = isLightMode
-            isAppearanceLightNavigationBars = isLightMode
-        }
-
-        // 3. Базовая установка фона
-        val root = activity.findViewById<View>(android.R.id.content)
-        activity.window.decorView.setBackgroundColor(bgColor)
-        root?.setBackgroundColor(bgColor)
-
-        // 4. Корректировка Toolbar (Padding для компенсации статус-бара)
-        val toolbar = activity.findViewById<MaterialToolbar>(R.id.toolbar)
-        toolbar?.let { tb ->
-            ViewCompat.setOnApplyWindowInsetsListener(tb) { view, windowInsets ->
-                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-                view.setPadding(0, insets.top, 0, 0)
-                windowInsets
-            }
-        }
-
-        // 5. Темы оформления поисковой карточки
-        activity.findViewById<MaterialCardView>(R.id.searchCard)?.let { card ->
-            val surfaceColor = parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-            card.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
-
-            val textColor = parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            card.findViewById<EditText>(R.id.searchEditText)?.apply {
-                setTextColor(textColor)
-                setHintTextColor(adjustAlpha(textColor, 0.6f))
-            }
-            card.findViewById<ImageView>(R.id.searchIcon)?.imageTintList = ColorStateList.valueOf(textColor)
-        }
-
-        Log.d("ThemeManager", "SUCCESS: Applying theme '${theme.name}'")
-
-        // 6. Акцентные цвета для Toolbar
-        val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
-        val customOnPrimary = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
-
-        toolbar?.apply {
-            backgroundTintList = ColorStateList.valueOf(customPrimary)
-            setTitleTextColor(customOnPrimary)
-            setNavigationIconTint(customOnPrimary)
-            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-            clipToOutline = true
-        }
-
-        // 6a. TabLayout (если есть) — иначе останется дефолтная Material-тема
-        activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {
-            val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
-            val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, customOnPrimary)
-            setBackgroundColor(surfaceColor)
-            setTabTextColors(adjustAlpha(onSurfaceColor, 0.75f), customPrimary)
-            setSelectedTabIndicatorColor(customPrimary)
-        }
-
-        // 7. Иконки действий и дополнительные панели
-        activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
-
-        // 8. Фоновое изображение (используем chatListBackgroundImageUrl везде)
-        val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
-        val chatListBgUrl = theme.chatListBackgroundImageUrl
-        if (bgImageView != null) {
-            if (chatListBgUrl.isNotEmpty()) {
-                bgImageView.visibility = View.VISIBLE
-                Glide.with(activity)
-                    .load(chatListBgUrl)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .centerCrop()
-                    .into(bgImageView)
-                root.setBackgroundColor(Color.TRANSPARENT)
-            } else {
-                bgImageView.visibility = View.GONE
-            }
-        }
-
-        // 8a. Фоновое изображение для списка чатов (chat list screen)
-        val chatListBgView = activity.findViewById<ImageView>(R.id.chatListBackground)
-        if (chatListBgView != null) {
-            if (chatListBgUrl.isNotEmpty()) {
-                chatListBgView.visibility = View.VISIBLE
-                Glide.with(activity)
-                    .load(chatListBgUrl)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .centerCrop()
-                    .into(chatListBgView)
-                root.setBackgroundColor(Color.TRANSPARENT)
-            } else {
-                chatListBgView.visibility = View.GONE
-            }
-        }
-
-        // 9. Нижняя панель чата
-        activity.findViewById<MaterialCardView>(R.id.bottomPanel)?.let { panel ->
-            val panelColor = parseSafeColor(theme.bottomPanelColor, bgColor)
-            panel.setCardBackgroundColor(ColorStateList.valueOf(panelColor))
-
-            val onPanelColor = parseSafeColor(theme.onBottomPanelColor, customPrimary)
-            
-            // Иконки
-            panel.findViewById<ImageButton>(R.id.emojiButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
-            panel.findViewById<ImageButton>(R.id.attachButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
-            panel.findViewById<ImageButton>(R.id.audioButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
-            panel.findViewById<ImageButton>(R.id.sendButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
-            
-            // Текст ввода
-            panel.findViewById<EditText>(R.id.messageInput)?.apply {
-                val textColor = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
-                setTextColor(textColor)
-                setHintTextColor(adjustAlpha(textColor, 0.5f))
-            }
-        }
-
-        // 9a. FAB (Floating Action Button) - фон primaryColor, иконка onPrimaryColor
-        listOf(R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { fabId ->
-            activity.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(fabId)?.apply {
-                backgroundTintList = ColorStateList.valueOf(customPrimary)
-                imageTintList = ColorStateList.valueOf(customOnPrimary)
-            }
-        }
-
-        // 10. Панель выбора местоположения (MapPicker)
-        activity.findViewById<View>(R.id.bottomPanelMap)?.let { panel ->
-            val surfaceColor = parseSafeColor(theme.surfaceColor, Color.WHITE)
-            panel.setBackgroundColor(surfaceColor)
-
-            val textColor = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
-            panel.findViewById<TextView>(R.id.locationText)?.setTextColor(textColor)
-            
-            panel.findViewById<MaterialButton>(R.id.btnSendLocation)?.apply {
-                val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
-                val onPrimaryColor = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
-                backgroundTintList = ColorStateList.valueOf(primaryColor)
-                setTextColor(onPrimaryColor)
-            }
-
-            // Добавляем отступ снизу для компенсации системной навигации
-            ViewCompat.setOnApplyWindowInsetsListener(panel) { view, windowInsets ->
-                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-                view.updatePadding(bottom = insets.bottom + (16 * activity.resources.displayMetrics.density).toInt())
-                windowInsets
-            }
-        }
-    }
 
     fun applyThemeToView(view: View, theme: CustomThemeProto) {
         val textPrimary = parseSafeColor(theme.textPrimaryColor, Color.BLACK)
@@ -475,55 +202,6 @@ object ThemeManager {
         val green = Color.green(color)
         val blue  = Color.blue(color)
         return Color.argb(alpha, red, green, blue)
-    }
-
-    private fun Int.isLight(): Boolean {
-        val darkness = 1 - (0.299 * Color.red(this) +
-                0.587 * Color.green(this) +
-                0.114 * Color.blue(this)) / 255
-        return darkness < 0.5
-    }
-
-    private fun parseThemeFromJson(json: String): CustomThemeProto {
-        val obj = JSONObject(json)
-        val chatListBg = obj.optString("chatListBackgroundImageUrl", "")
-        return CustomThemeProto(
-            id = obj.optString("id", ""),
-            name = obj.optString("name", "Unknown"),
-            primaryColor = obj.optString("primaryColor", ""),
-            onPrimaryColor = obj.optString("onPrimaryColor", ""),
-            surfaceColor = obj.optString("surfaceColor", ""),
-            onSurfaceColor = obj.optString("onSurfaceColor", ""),
-            backgroundColor = obj.optString("backgroundColor", ""),
-            textPrimaryColor = obj.optString("textPrimaryColor", ""),
-            textSecondaryColor = obj.optString("textSecondaryColor", ""),
-            chatListBackgroundImageUrl = chatListBg,
-            bottomPanelColor = obj.optString("bottomPanelColor", ""),
-            onBottomPanelColor = obj.optString("onBottomPanelColor", ""),
-            surfaceContainer = obj.optString("surfaceContainer", ""),
-            outgoingBubbleColor = obj.optString("outgoingBubbleColor", ""),
-            incomingBubbleColor = obj.optString("incomingBubbleColor", ""),
-        )
-    }
-
-    private fun serializeThemeToJson(theme: CustomThemeProto): String {
-        return JSONObject().apply {
-            put("id", theme.id)
-            put("name", theme.name)
-            put("primaryColor", theme.primaryColor)
-            put("onPrimaryColor", theme.onPrimaryColor)
-            put("surfaceColor", theme.surfaceColor)
-            put("onSurfaceColor", theme.onSurfaceColor)
-            put("backgroundColor", theme.backgroundColor)
-            put("textPrimaryColor", theme.textPrimaryColor)
-            put("bottomPanelColor", theme.bottomPanelColor)
-            put("onBottomPanelColor", theme.onBottomPanelColor)
-            put("textSecondaryColor", theme.textSecondaryColor)
-            put("chatListBackgroundImageUrl", theme.chatListBackgroundImageUrl)
-            put("surfaceContainer", theme.surfaceContainer)
-            put("outgoingBubbleColor", theme.outgoingBubbleColor)
-            put("incomingBubbleColor", theme.incomingBubbleColor)
-        }.toString()
     }
 
     fun findBuiltInThemeById(id: String): CustomThemeProto? {

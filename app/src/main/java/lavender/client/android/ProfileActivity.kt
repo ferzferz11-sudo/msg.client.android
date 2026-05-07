@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -23,7 +24,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
-import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -34,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.ThemeManager
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -43,6 +44,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import java.util.Locale
+import androidx.core.graphics.toColorInt
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -82,11 +84,7 @@ class ProfileActivity : AppCompatActivity() {
         setContentView(R.layout.activity_profile)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val currentUsername = prefs.getString("current_username", "") ?: ""
-        lavender.client.android.ui.ThemeManager.loadTheme(this, currentUsername) {
-            runOnUiThread {
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
-            }
-        }
+        ThemeUi.bind(this, currentUsername)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         
@@ -266,6 +264,7 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun loadProfileData() {
         if (isFinishing || isDestroyed) return
 
@@ -354,13 +353,13 @@ class ProfileActivity : AppCompatActivity() {
             ThemeManager.getCurrentTheme()?.let { theme ->
                 val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
                 participantsCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor(theme.surfaceColor)))
-                participantsCard?.strokeColor = ThemeManager.adjustAlpha(android.graphics.Color.parseColor(theme.onSurfaceColor), 0.2f)
+                    theme.surfaceColor.toColorInt()))
+                participantsCard?.strokeColor = ThemeManager.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
 
                 addParticipantLayout?.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor(theme.surfaceContainer))
+                    theme.surfaceContainer.toColorInt())
                 val addParticipantButton = findViewById<TextView>(R.id.addParticipantButton)
-                addParticipantButton?.setTextColor(android.graphics.Color.parseColor(theme.primaryColor))
+                addParticipantButton?.setTextColor(theme.primaryColor.toColorInt())
             }
 
             if (isMeAdmin) {
@@ -463,8 +462,8 @@ class ProfileActivity : AppCompatActivity() {
             ThemeManager.getCurrentTheme()?.let { theme ->
                 val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
                 bioCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor(theme.surfaceColor)))
-                bioCard?.strokeColor = ThemeManager.adjustAlpha(android.graphics.Color.parseColor(theme.onSurfaceColor), 0.2f)
+                    theme.surfaceColor.toColorInt()))
+                bioCard?.strokeColor = ThemeManager.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
             }
         }
     }
@@ -475,7 +474,8 @@ class ProfileActivity : AppCompatActivity() {
         // Apply theme to dialog background like in ChatListActivity
         val customTheme = ThemeManager.getCurrentTheme()
         val bgColor = if (customTheme != null) {
-            try { android.graphics.Color.parseColor(customTheme.surfaceColor) } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
+            try {
+                customTheme.surfaceColor.toColorInt() } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
         } else {
             getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer)
         }
@@ -630,7 +630,7 @@ class ProfileActivity : AppCompatActivity() {
                     val response = client.newCall(request).execute()
 
                     if (response.isSuccessful) {
-                        val responseBody = response.body.string() ?: ""
+                        val responseBody = response.body.string()
                         val (thumbUrl, fullUrl) = extractUrlsFromResponse(responseBody)
 
                         if (thumbUrl.isNotEmpty()) {

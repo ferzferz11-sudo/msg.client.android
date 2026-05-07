@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.ThemeManager
 import lavender.client.android.ui.adapter.ThemeAdapter
 import java.util.Locale
@@ -72,7 +74,7 @@ class ThemesActivity : AppCompatActivity() {
 
         themesRecyclerView = findViewById(R.id.themesRecyclerView)
         adapter = ThemeAdapter(
-            onThemeClick = { theme ->
+            onThemeClick = { _ ->
                 // No immediate switch
             },
             onSelectionChanged = { count ->
@@ -136,15 +138,9 @@ class ThemesActivity : AppCompatActivity() {
             }
         }
 
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                ThemeManager.applyTheme(this)
-                val theme = ThemeManager.getCurrentTheme()
-                val loadedId = theme?.id ?: "dark"
-                adapter.setCurrentThemeId(loadedId)
-                updateToolbarAvatar()
-            }
-        }
+        ThemeUi.bind(this, username)
+        adapter.setCurrentThemeId(ThemeStore.theme.value.id)
+        updateToolbarAvatar()
 
         loadThemes()
     }
@@ -228,15 +224,11 @@ class ThemesActivity : AppCompatActivity() {
                         commit()
                     }
 
-                    ThemeManager.loadTheme(this, username) {
-                        runOnUiThread {
-                            ThemeManager.applyTheme(this)
-                            adapter.setCurrentThemeId(themeId)
-                            adapter.clearSelection()
-                            updateToolbarAvatar()
-                            Toast.makeText(this, "Theme applied", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    ThemeUi.bind(this, username)
+                    adapter.setCurrentThemeId(themeId)
+                    adapter.clearSelection()
+                    updateToolbarAvatar()
+                    Toast.makeText(this, "Theme applied", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@ThemesActivity, "Failed to apply theme", Toast.LENGTH_SHORT).show()
                 }

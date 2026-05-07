@@ -58,6 +58,7 @@ import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.ui.ThemeManager
+import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
 import lavender.client.android.ui.viewmodel.ChatListViewModel
@@ -424,7 +425,7 @@ class ChatListActivity : AppCompatActivity() {
         val isWithinTwoDays = System.currentTimeMillis() - firstLaunch < 2 * 24 * 60 * 60 * 1000L
 
         val isNewUser = chats.isEmpty() && isWithinTwoDays
-        val typedValue = TypedValue()
+        TypedValue()
         val customTheme = ThemeManager.getCurrentTheme()
         val bubbleBgColor = if (customTheme != null) {
             try {
@@ -712,14 +713,10 @@ class ChatListActivity : AppCompatActivity() {
     @SuppressLint("NotifyDataSetChanged")
     override fun onResume() {
         super.onResume()
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                ThemeManager.applyTheme(this)
-                binding.toolbar.dismissPopupMenus()
-                if (::adapter.isInitialized) {
-                    adapter.notifyDataSetChanged()
-                }
-            }
+        ThemeUi.bind(this, username)
+        binding.toolbar.dismissPopupMenus()
+        if (::adapter.isInitialized) {
+            adapter.notifyDataSetChanged()
         }
     }
 
@@ -852,6 +849,7 @@ class ChatListActivity : AppCompatActivity() {
         return false
     }
 
+    @SuppressLint("SetTextI18n")
     private fun showUpdateConfirmationDialog(isUpdateAvailable: Boolean) {
         val currentVersion = try {
             packageManager.getPackageInfo(packageName, 0).versionName

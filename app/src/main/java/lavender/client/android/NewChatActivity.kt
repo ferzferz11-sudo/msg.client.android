@@ -57,7 +57,7 @@ import lavender.client.android.ui.adapter.MessageSwipeController
 import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
-import lavender.client.android.ui.ThemeManager
+import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -219,12 +219,7 @@ class NewChatActivity : AppCompatActivity() {
         initViews()
 
         // 4. Темизация
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                ThemeManager.applyTheme(this)
-                applyChatBackground()
-            }
-        }
+        ThemeUi.bind(this, username)
 
         // 5. Инициализация компонентов
         setupToolbar()
@@ -402,7 +397,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbar.setNavigationIcon(iconResId)
         toolbar.navigationIcon?.let {
             val wrapped = DrawableCompat.wrap(it)
-            val theme = ThemeManager.getCurrentTheme()
+            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
             val iconColor = if (theme != null) {
                 try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
             } else {
@@ -512,7 +507,7 @@ class NewChatActivity : AppCompatActivity() {
         
         // Apply custom theme color to search icon
         val iconColor = run {
-            val customTheme = ThemeManager.getCurrentTheme()
+            val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
             if (customTheme != null) {
                 try {
                     customTheme.onPrimaryColor.toColorInt()
@@ -531,7 +526,7 @@ class NewChatActivity : AppCompatActivity() {
         menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
         
         // Style menu items with custom theme
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val textColor = customTheme.onPrimaryColor.toColorInt()
@@ -596,7 +591,7 @@ class NewChatActivity : AppCompatActivity() {
         val emojiGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
 
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
@@ -655,7 +650,7 @@ class NewChatActivity : AppCompatActivity() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
 
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
@@ -745,7 +740,7 @@ class NewChatActivity : AppCompatActivity() {
         setToolbarNavigationIcon(R.drawable.ic_close) // Set close icon for search mode
 
         // Apply custom theme colors to search bar
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 // Set background to transparent for custom themes
@@ -820,7 +815,7 @@ class NewChatActivity : AppCompatActivity() {
         forwardMessages.isVisible = count > 0
         
         // Apply theme color to selection toolbar
-        val theme = ThemeManager.getCurrentTheme()
+        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (theme != null) {
             try {
                 val primaryColor = theme.primaryColor.toColorInt()
@@ -876,7 +871,7 @@ class NewChatActivity : AppCompatActivity() {
         messageText.text = getString(R.string.delete_messages_confirm, selectedMessages.size)
         
         // Apply theme colors - custom theme or built-in theme
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
@@ -940,7 +935,7 @@ class NewChatActivity : AppCompatActivity() {
                 }
                 
                 val chatNames = otherChats.map { it.getDisplayName(username) }.toTypedArray()
-                val customTheme = ThemeManager.getCurrentTheme()
+                val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
                 val builder = AlertDialog.Builder(this)
                     .setTitle(R.string.forward_to)
                     .setItems(chatNames) { _, which ->
@@ -997,7 +992,7 @@ class NewChatActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_reactions, root, false)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val bgColor = customTheme.backgroundColor.toColorInt()
@@ -1077,7 +1072,7 @@ class NewChatActivity : AppCompatActivity() {
         editText.setText(message.text)
         editText.setSelection(message.text.length)
         
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         if (customTheme != null) {
             try {
                 val textColor = customTheme.textPrimaryColor.toColorInt()
@@ -1119,7 +1114,7 @@ class NewChatActivity : AppCompatActivity() {
         attachButton.visibility = View.GONE
         audioButton.visibility = View.GONE
 
-        val customTheme = ThemeManager.getCurrentTheme()
+        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         audioRecordingView.applyCustomTheme(customTheme)
 
         setupAudioRecordingView()
@@ -1318,27 +1313,10 @@ class NewChatActivity : AppCompatActivity() {
     }*/
 
     private fun applyChatBackground() {
-        // 1. Получаем тему через наш новый метод
-        val theme = ThemeManager.getCurrentTheme() ?: return
-
-        // 2. Если есть ссылка на фон — грузим её
-        val bgUrl = theme.chatListBackgroundImageUrl
-        if (bgUrl.isNotEmpty()) {
-            findViewById<ImageView>(R.id.chatBackground)?.let { imageView ->
-                com.bumptech.glide.Glide.with(this)
-                    .load(bgUrl)
-                    // 🛠️ Исправленный синтаксис centerCrop, чтобы не было ошибок компиляции
-                    .apply(com.bumptech.glide.request.RequestOptions.centerCropTransform())
-                    .into(imageView)
-
-                // 3. Делаем контейнеры прозрачными, чтобы видеть картинку
-                messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-
-                // Если у тебя ConstraintLayout (root), его тоже можно сделать прозрачным
-                findViewById<View>(android.R.id.content).setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            }
-        }
+        // Теперь фон применяется централизованно через ThemeApplier.
+        // Здесь оставляем только прозрачность контейнеров, чтобы картинка была видна.
+        messagesRecyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        swipeRefreshLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
     }
 
     private fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>) {

@@ -1,11 +1,11 @@
 package lavender.client.android.ui.adapter
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
@@ -14,7 +14,6 @@ import com.bumptech.glide.Glide
 import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
-import lavender.client.android.ui.ThemeManager
 
 class UserAdapter(
     private val onUserClick: (String) -> Unit,
@@ -28,12 +27,14 @@ class UserAdapter(
     private var fullUsersList = listOf<String>()
     private val selectedUsers = mutableSetOf<String>()
 
+    @SuppressLint("NotifyDataSetChanged")
     fun setUsers(newUsers: List<String>) {
         users = newUsers
         fullUsersList = newUsers
         notifyDataSetChanged()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun filter(query: String) {
         users = if (query.isEmpty()) {
             fullUsersList
@@ -43,6 +44,7 @@ class UserAdapter(
         notifyDataSetChanged()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun setOnlineUsers(newOnlineUsers: List<String>) {
         onlineUsers = newOnlineUsers
         notifyDataSetChanged()
@@ -52,12 +54,14 @@ class UserAdapter(
 
     fun getSelectedUsers(): List<String> = selectedUsers.toList()
 
+    @SuppressLint("NotifyDataSetChanged")
     fun clearSelection() {
         selectedUsers.clear()
         notifyDataSetChanged()
         onSelectionChanged?.invoke(0)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun toggleSelection(username: String) {
         if (selectedUsers.contains(username)) {
             selectedUsers.remove(username)
@@ -94,7 +98,7 @@ class UserAdapter(
             checkBox.isChecked = isSelected
             checkBox.isVisible = selectedUsers.isNotEmpty()
 
-            val currentTheme = ThemeManager.getCurrentTheme()
+            val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
             val primaryColor = currentTheme?.primaryColor?.toColorInt() ?: Color.BLUE
             val onSurface = currentTheme?.onSurfaceColor?.toColorInt() ?: Color.GRAY
             val textPrimary = currentTheme?.textPrimaryColor?.toColorInt() ?: Color.BLACK

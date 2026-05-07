@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
 class MapPickerActivity : AppCompatActivity() {
@@ -54,20 +55,14 @@ class MapPickerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-        
-        // Load and apply theme
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val username = prefs.getString("username", "") ?: ""
-        
-        lavender.client.android.ui.ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                setContentView(R.layout.activity_map_picker)
-                lavender.client.android.ui.ThemeManager.applyTheme(this)
-                setupUI()
-            }
-        }
+
+        setContentView(R.layout.activity_map_picker)
+        val username = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_username", "") ?: ""
+        ThemeUi.bind(this, username)
+        setupUI()
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private fun setupUI() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         webView = findViewById(R.id.mapWebView)

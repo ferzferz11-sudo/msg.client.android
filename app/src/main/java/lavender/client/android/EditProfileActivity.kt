@@ -31,7 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.ui.ThemeManager
+import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -75,14 +75,9 @@ class EditProfileActivity : AppCompatActivity() {
 
         username = intent.getStringExtra("username") ?: ""
 
-        // Load and apply theme before setting content view
-        ThemeManager.loadTheme(this, username) {
-            runOnUiThread {
-                setContentView(R.layout.activity_edit_profile)
-                ThemeManager.applyTheme(this)
-                setupUI()
-            }
-        }
+        setContentView(R.layout.activity_edit_profile)
+        ThemeUi.bind(this, username)
+        setupUI()
     }
 
     private fun setupUI() {
