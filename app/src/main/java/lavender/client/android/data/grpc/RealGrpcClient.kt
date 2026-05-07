@@ -3579,7 +3579,6 @@ private fun writeTheme(cos: com.google.protobuf.CodedOutputStream, theme: Custom
     if (theme.backgroundColor.isNotEmpty()) cos.writeString(7, theme.backgroundColor)
     if (theme.textPrimaryColor.isNotEmpty()) cos.writeString(8, theme.textPrimaryColor)
     if (theme.textSecondaryColor.isNotEmpty()) cos.writeString(9, theme.textSecondaryColor)
-    if (theme.backgroundImageUrl.isNotEmpty()) cos.writeString(11, theme.backgroundImageUrl)
     if (theme.chatListBackgroundImageUrl.isNotEmpty()) cos.writeString(12, theme.chatListBackgroundImageUrl)
     if (theme.bottomPanelColor.isNotEmpty()) cos.writeString(13, theme.bottomPanelColor)
     if (theme.onBottomPanelColor.isNotEmpty()) cos.writeString(14, theme.onBottomPanelColor)
@@ -3596,8 +3595,8 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
     var backgroundColor = ""
     var textPrimaryColor = ""
     var textSecondaryColor = ""
-    var backgroundImageUrl = ""
     var chatListBackgroundImageUrl = ""
+    var legacyBackgroundImageUrl = ""
     var bottomPanelColor = ""
     var onBottomPanelColor = ""
     while (!cis.isAtEnd) {
@@ -3613,13 +3612,14 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
             7 -> backgroundColor = cis.readString()
             8 -> textPrimaryColor = cis.readString()
             9 -> textSecondaryColor = cis.readString()
-            10 -> backgroundImageUrl = cis.readString()
-            11 -> chatListBackgroundImageUrl = cis.readString()
-            12 -> bottomPanelColor = cis.readString()
-            13 -> onBottomPanelColor = cis.readString()
+            11 -> legacyBackgroundImageUrl = cis.readString() // legacy background_image_url
+            12 -> chatListBackgroundImageUrl = cis.readString()
+            13 -> bottomPanelColor = cis.readString()
+            14 -> onBottomPanelColor = cis.readString()
             else -> cis.skipField(tag)
         }
     }
+    if (chatListBackgroundImageUrl.isEmpty()) chatListBackgroundImageUrl = legacyBackgroundImageUrl
     return CustomThemeProto(
         id,
         name,
@@ -3630,7 +3630,6 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
         backgroundColor,
         textPrimaryColor,
         textSecondaryColor,
-        backgroundImageUrl,
         chatListBackgroundImageUrl,
         bottomPanelColor,
         onBottomPanelColor

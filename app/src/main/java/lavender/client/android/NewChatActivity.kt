@@ -1322,10 +1322,11 @@ class NewChatActivity : AppCompatActivity() {
         val theme = ThemeManager.getCurrentTheme() ?: return
 
         // 2. Если есть ссылка на фон — грузим её
-        if (theme.backgroundImageUrl.isNotEmpty()) {
+        val bgUrl = theme.chatListBackgroundImageUrl
+        if (bgUrl.isNotEmpty()) {
             findViewById<ImageView>(R.id.chatBackground)?.let { imageView ->
                 com.bumptech.glide.Glide.with(this)
-                    .load(theme.backgroundImageUrl)
+                    .load(bgUrl)
                     // 🛠️ Исправленный синтаксис centerCrop, чтобы не было ошибок компиляции
                     .apply(com.bumptech.glide.request.RequestOptions.centerCropTransform())
                     .into(imageView)

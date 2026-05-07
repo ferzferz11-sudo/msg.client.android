@@ -255,7 +255,6 @@
     <string name="text_secondary_color">Вторичный цвет текста</string>
     <string name="is_dark">Темная тема</string>
     <string name="background_image_url">URL фонового изображения</string>
-    <string name="save_theme">Сохранить тему</string>
     <string name="delete_theme">Удалить тему</string>
     <string name="delete_theme_confirm">Вы уверены, что хотите удалить эту тему?</string>
     <string name="theme_template_green">Зеленый лес</string>
@@ -266,6 +265,7 @@
     <string name="theme_template_rose">Северная роза</string>
     <string name="theme_template_mint">Кибер Мята</string>
     <string name="admin_label">(Админ)</string>
+    <string name="muted_label">Без звука</string>
     <string name="super_admin">Суперадмин</string>
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>
@@ -284,8 +284,6 @@
     <string name="outgoing">Исходящие</string>
     <string name="notification_history">История уведомлений</string>
     <string name="notification_style_preview">Предпросмотр стиля уведомления</string>
-    <string name="chat_background">Фон экрана чата</string>
-    <string name="chat_list_background">Фон списка чатов</string>
     <string name="notif_preview_sender">Павел Давыдов</string>
     <string name="notif_preview_msg_standard">Получено новое сообщение</string>
     <string name="notif_preview_msg_messaging">Посмотрите, как выглядит стиль мессенджера!</string>
@@ -326,4 +324,49 @@
     <string name="action_update">Проверка обновлений</string>
     <string name="action_about">О программе</string>
     <string name="action_super_admin">Админ панель</string>
+    <string name="remove_multiple_contacts_confirm">Удалить выбранные контакты (%d)?</string>
+
+    <!-- Theme Palette -->
+    <string name="theme_palette">Палитра</string>
+    <string name="color_primary">Основной</string>
+    <string name="color_primary_desc">Тулбар и кнопки</string>
+    <string name="color_background">Фон</string>
+    <string name="color_background_desc">Фон экрана</string>
+    <string name="color_surface">Поверхность</string>
+    <string name="color_surface_desc">Карточки и диалоги</string>
+    <string name="color_surface_container">Контейнер</string>
+    <string name="color_surface_container_desc">Меню и панели</string>
+    <string name="color_text_primary">Текст основной</string>
+    <string name="color_text_primary_desc">Главный цвет текста</string>
+    <string name="color_on_primary">На основном</string>
+    <string name="color_on_primary_desc">Текст на кнопках</string>
+    <string name="color_on_surface">На поверхности</string>
+    <string name="color_on_surface_desc">Текст на карточках</string>
+    <string name="color_bottom_panel">Нижняя панель</string>
+    <string name="color_bottom_panel_desc">Поле ввода чата</string>
+    <string name="color_on_bottom_panel">На нижней панели</string>
+    <string name="color_on_bottom_panel_desc">Иконки ввода</string>
+    <string name="color_outgoing_bubble">Исходящие</string>
+    <string name="color_outgoing_bubble_desc">Ваши сообщения</string>
+    <string name="color_incoming_bubble">Входящие</string>
+    <string name="color_incoming_bubble_desc">Полученные сообщения</string>
+    <string name="edit_color">Изменить цвет</string>
+    <string name="reset_color">Сбросить на стандартный</string>
+    <string name="save_theme">Сохранить тему</string>
+    <string name="theme_name_hint">Название темы</string>
+    <string name="enter_theme_name">Введите название темы</string>
+    <string name="theme_saved">Тема сохранена</string>
+    <string name="unsaved_changes">Есть несохраненные изменения</string>
+    <string name="discard_changes">Отменить изменения?</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="preset_colors">Готовые цвета</string>
+    <string name="custom_color">Свой цвет</string>
+    <string name="invalid_hex">Неверный формат HEX</string>
+    <string name="tab_palette">Палитра</string>
+    <string name="tab_backgrounds">Фоны</string>
+    <string name="chat_list_background">Фон списка чатов</string>
+    <string name="chat_background">Фон чата</string>
+    <string name="select_image">Выбрать изображение</string>
+    <string name="remove_image">Удалить</string>
 </resources>

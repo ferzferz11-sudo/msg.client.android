@@ -253,7 +253,6 @@
     <string name="text_secondary_color">Secondary Text Color</string>
     <string name="is_dark">Is Dark Theme</string>
     <string name="background_image_url">Background Image URL</string>
-    <string name="save_theme">Save Theme</string>
     <string name="delete_theme">Delete Theme</string>
     <string name="delete_theme_confirm">Are you sure you want to delete this theme?</string>
     <string name="theme_template_green">Green Forest</string>
@@ -283,8 +282,6 @@
     <string name="outgoing">Outgoing</string>
     <string name="notification_history">Notification History</string>
     <string name="notification_style_preview">Notification Style Preview</string>
-    <string name="chat_background">Chat Screen Background</string>
-    <string name="chat_list_background">Chat List Background</string>
     <string name="notif_preview_sender">Pavel Davydov</string>
     <string name="notif_preview_msg_standard">New message received</string>
     <string name="notif_preview_msg_messaging">Check out the new MessagingStyle preview!</string>
@@ -326,4 +323,48 @@
     <string name="action_about">About Lavender</string>
     <string name="action_super_admin">Admin Panel</string>
     <string name="remove_multiple_contacts_confirm">Are you sure you want to remove %d selected contacts?</string>
+
+    <!-- Theme Palette -->
+    <string name="theme_palette">Color Palette</string>
+    <string name="color_primary">Primary</string>
+    <string name="color_primary_desc">Toolbar and buttons</string>
+    <string name="color_background">Background</string>
+    <string name="color_background_desc">Screen background</string>
+    <string name="color_surface">Surface</string>
+    <string name="color_surface_desc">Cards and dialogs</string>
+    <string name="color_surface_container">Surface Container</string>
+    <string name="color_surface_container_desc">Menu and panels</string>
+    <string name="color_text_primary">Text Primary</string>
+    <string name="color_text_primary_desc">Main text color</string>
+    <string name="color_on_primary">On Primary</string>
+    <string name="color_on_primary_desc">Text on buttons</string>
+    <string name="color_on_surface">On Surface</string>
+    <string name="color_on_surface_desc">Text on cards</string>
+    <string name="color_bottom_panel">Bottom Panel</string>
+    <string name="color_bottom_panel_desc">Chat input area</string>
+    <string name="color_on_bottom_panel">On Bottom Panel</string>
+    <string name="color_on_bottom_panel_desc">Icons in input</string>
+    <string name="color_outgoing_bubble">Outgoing Bubble</string>
+    <string name="color_outgoing_bubble_desc">Your messages</string>
+    <string name="color_incoming_bubble">Incoming Bubble</string>
+    <string name="color_incoming_bubble_desc">Received messages</string>
+    <string name="edit_color">Edit Color</string>
+    <string name="reset_color">Reset to Default</string>
+    <string name="save_theme">Save Theme</string>
+    <string name="theme_name_hint">Theme name</string>
+    <string name="enter_theme_name">Enter theme name</string>
+    <string name="theme_saved">Theme saved</string>
+    <string name="unsaved_changes">You have unsaved changes</string>
+    <string name="discard_changes">Discard changes?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="preset_colors">Preset Colors</string>
+    <string name="custom_color">Custom Color</string>
+    <string name="invalid_hex">Invalid HEX format</string>
+    <string name="tab_palette">Palette</string>
+    <string name="tab_backgrounds">Backgrounds</string>
+    <string name="chat_list_background">Chat List Background</string>
+    <string name="chat_background">Chat Background</string>
+    <string name="select_image">Select Image</string>
+    <string name="remove_image">Remove</string>
 </resources>

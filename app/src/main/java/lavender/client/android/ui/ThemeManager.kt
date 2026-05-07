@@ -201,7 +201,7 @@ object ThemeManager {
         if (builtIn != null) {
             val localBg = prefs.getString("bg_url_$themeId", null)
             currentCustomTheme = if (!localBg.isNullOrEmpty()) {
-                builtIn.copy(backgroundImageUrl = localBg)
+                builtIn.copy(chatListBackgroundImageUrl = localBg)
             } else {
                 builtIn
             }
@@ -224,7 +224,7 @@ object ThemeManager {
                     onSurfaceColor = custom.onSurfaceColor,
                     backgroundColor = custom.backgroundColor,
                     textPrimaryColor = custom.textPrimaryColor,
-                    backgroundImageUrl = custom.backgroundImageUrl,
+                    chatListBackgroundImageUrl = custom.chatListBackgroundImageUrl,
                     bottomPanelColor = custom.bottomPanelColor,
                     onBottomPanelColor = custom.onBottomPanelColor,
                     outgoingBubbleColor = custom.outgoingBubbleColor,
@@ -258,7 +258,7 @@ object ThemeManager {
                     onSurfaceColor = theme.onSurfaceColor,
                     backgroundColor = theme.backgroundColor,
                     textPrimaryColor = theme.textPrimaryColor,
-                    backgroundImageUrl = theme.backgroundImageUrl,
+                    chatListBackgroundImageUrl = theme.chatListBackgroundImageUrl,
                     bottomPanelColor = theme.bottomPanelColor,
                     onBottomPanelColor = theme.onBottomPanelColor,
                     outgoingBubbleColor = theme.outgoingBubbleColor,
@@ -277,15 +277,6 @@ object ThemeManager {
     }
 
     fun getCurrentTheme(): CustomThemeProto? = currentCustomTheme
-
-    fun clearAllCaches(context: Context) {
-        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        prefs.edit {
-            val allKeys = prefs.all.keys
-            allKeys.filter { it.startsWith("custom_theme_json_") }.forEach { remove(it) }
-        }
-        currentCustomTheme = null
-    }
 
     fun applyTheme(activity: AppCompatActivity) {
         val theme = currentCustomTheme ?: baseDarkTheme
@@ -346,13 +337,14 @@ object ThemeManager {
         // 7. Иконки действий и дополнительные панели
         activity.findViewById<ImageView>(R.id.actionDelete)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
 
-        // 8. Фоновое изображение чата (chat screen)
+        // 8. Фоновое изображение (используем chatListBackgroundImageUrl везде)
         val bgImageView = activity.findViewById<ImageView>(R.id.chatBackground)
+        val chatListBgUrl = theme.chatListBackgroundImageUrl
         if (bgImageView != null) {
-            if (theme.backgroundImageUrl.isNotEmpty()) {
+            if (chatListBgUrl.isNotEmpty()) {
                 bgImageView.visibility = View.VISIBLE
                 Glide.with(activity)
-                    .load(theme.backgroundImageUrl)
+                    .load(chatListBgUrl)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .centerCrop()
                     .into(bgImageView)
@@ -365,7 +357,6 @@ object ThemeManager {
         // 8a. Фоновое изображение для списка чатов (chat list screen)
         val chatListBgView = activity.findViewById<ImageView>(R.id.chatListBackground)
         if (chatListBgView != null) {
-            val chatListBgUrl = theme.chatListBackgroundImageUrl
             if (chatListBgUrl.isNotEmpty()) {
                 chatListBgView.visibility = View.VISIBLE
                 Glide.with(activity)
@@ -485,6 +476,7 @@ object ThemeManager {
 
     private fun parseThemeFromJson(json: String): CustomThemeProto {
         val obj = JSONObject(json)
+        val chatListBg = obj.optString("chatListBackgroundImageUrl", "")
         return CustomThemeProto(
             id = obj.optString("id", ""),
             name = obj.optString("name", "Unknown"),
@@ -495,8 +487,7 @@ object ThemeManager {
             backgroundColor = obj.optString("backgroundColor", ""),
             textPrimaryColor = obj.optString("textPrimaryColor", ""),
             textSecondaryColor = obj.optString("textSecondaryColor", ""),
-            backgroundImageUrl = obj.optString("backgroundImageUrl", ""),
-            chatListBackgroundImageUrl = obj.optString("chatListBackgroundImageUrl", ""),
+            chatListBackgroundImageUrl = chatListBg,
             bottomPanelColor = obj.optString("bottomPanelColor", ""),
             onBottomPanelColor = obj.optString("onBottomPanelColor", ""),
             surfaceContainer = obj.optString("surfaceContainer", ""),
@@ -515,7 +506,6 @@ object ThemeManager {
             put("onSurfaceColor", theme.onSurfaceColor)
             put("backgroundColor", theme.backgroundColor)
             put("textPrimaryColor", theme.textPrimaryColor)
-            put("backgroundImageUrl", theme.backgroundImageUrl)
             put("bottomPanelColor", theme.bottomPanelColor)
             put("onBottomPanelColor", theme.onBottomPanelColor)
             put("textSecondaryColor", theme.textSecondaryColor)
@@ -526,23 +516,7 @@ object ThemeManager {
         }.toString()
     }
 
-    fun saveBackgroundOverride(context: Context, themeId: String, imageUrl: String) {
-        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        prefs.edit {
-            putString("bg_url_$themeId", imageUrl)
-        }
-        val current = currentCustomTheme
-        if (current != null && current.id == themeId) {
-            currentCustomTheme = current.copy(backgroundImageUrl = imageUrl)
-        }
-        Log.d("ThemeManager", "Background override saved for $themeId: $imageUrl")
-    }
-
-    fun clearBackgroundOverride(context: Context, username: String, themeId: String) {
-        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        prefs.edit {
-            remove("bg_url_$themeId")
-        }
-        loadTheme(context, username)
+    fun findBuiltInThemeById(id: String): CustomThemeProto? {
+        return if (id == "dark") baseDarkTheme else builtInThemes.find { it.id == id }
     }
 }

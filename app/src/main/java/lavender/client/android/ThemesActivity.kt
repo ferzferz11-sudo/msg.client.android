@@ -80,11 +80,11 @@ class ThemesActivity : AppCompatActivity() {
                 val selectedThemes = adapter.getSelectedThemes()
                 
                 val canDelete = selectedThemes.isNotEmpty() && selectedThemes.all { !it.id.startsWith("builtin_") && it.id != "dark" }
-                val canEdit = count == 1 && selectedThemes.first().let { !it.id.startsWith("builtin_") && it.id != "dark" }
                 val canApply = count == 1
-                
+                val canViewPalette = count == 1
+
                 actionApply.visibility = if (canApply) android.view.View.VISIBLE else android.view.View.GONE
-                actionEdit.visibility = if (canEdit) android.view.View.VISIBLE else android.view.View.GONE
+                actionEdit.visibility = if (canViewPalette) android.view.View.VISIBLE else android.view.View.GONE
                 actionDelete.visibility = if (canDelete) android.view.View.VISIBLE else android.view.View.GONE
                 
                 if (hasSelection) {
@@ -101,7 +101,7 @@ class ThemesActivity : AppCompatActivity() {
         themesRecyclerView.adapter = adapter
 
         val addThemeFab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.addThemeFab)
-        addThemeFab.setOnClickListener { openEditTheme(null) }
+        addThemeFab.setOnClickListener { openThemePaletteForNewTheme() }
         
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
@@ -124,7 +124,8 @@ class ThemesActivity : AppCompatActivity() {
         actionEdit.setOnClickListener {
             val selected = adapter.getSelectedThemes()
             if (selected.size == 1) {
-                openEditTheme(selected.first().id)
+                val theme = selected.first()
+                openThemePaletteWithTheme(theme)
             }
         }
         
@@ -269,10 +270,47 @@ class ThemesActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun openEditTheme(themeId: String?) {
-        val intent = Intent(this, EditThemeActivity::class.java).apply {
+    private fun openThemePaletteForNewTheme() {
+        val intent = Intent(this, ThemePaletteActivity::class.java).apply {
+            putExtra("theme_id", "custom_new_${System.currentTimeMillis()}")
             putExtra("username", username)
-            if (themeId != null) putExtra("theme_id", themeId)
+            // Use dark theme as base
+            putExtra("primary_color", "#967BB6")
+            putExtra("background_color", "#04052E")
+            putExtra("surface_color", "#1A1B46")
+            putExtra("surface_container", "#1A1B46")
+            putExtra("text_primary_color", "#FFFFFF")
+            putExtra("on_primary_color", "#FFFFFF")
+            putExtra("on_surface_color", "#E0E0E0")
+            putExtra("bottom_panel_color", "#1A1B46")
+            putExtra("on_bottom_panel_color", "#967BB6")
+            putExtra("outgoing_bubble_color", "#2A2C6D")
+            putExtra("incoming_bubble_color", "#16173A")
+        }
+        startActivity(intent)
+    }
+
+    private fun openThemePaletteWithTheme(theme: CustomThemeProto) {
+        val intent = Intent(this, ThemePaletteActivity::class.java).apply {
+            putExtra("theme_id", theme.id)
+            putExtra("username", username)
+            putExtra("primary_color", theme.primaryColor)
+            putExtra("background_color", theme.backgroundColor)
+            putExtra("surface_color", theme.surfaceColor)
+            putExtra("surface_container", theme.surfaceContainer)
+            putExtra("text_primary_color", theme.textPrimaryColor)
+            putExtra("on_primary_color", theme.onPrimaryColor)
+            putExtra("on_surface_color", theme.onSurfaceColor)
+            putExtra("bottom_panel_color", theme.bottomPanelColor)
+            putExtra("on_bottom_panel_color", theme.onBottomPanelColor)
+            putExtra("outgoing_bubble_color", theme.outgoingBubbleColor)
+            putExtra("incoming_bubble_color", theme.incomingBubbleColor)
+            if (theme.chatListBackgroundImageUrl.isNotEmpty()) {
+                putExtra("chat_list_background", theme.chatListBackgroundImageUrl)
+            }
+            if (theme.chatBackgroundImageUrl.isNotEmpty()) {
+                putExtra("chat_background", theme.chatBackgroundImageUrl)
+            }
         }
         startActivity(intent)
     }

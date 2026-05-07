@@ -51,7 +51,6 @@ class EditThemeActivity : AppCompatActivity() {
     private var username: String = ""
     private var themeId: String? = null
     private var existingTheme: CustomThemeProto? = null
-    private var backgroundImageUrl: String = ""
     private var chatListBackgroundImageUrl: String = ""
 
     private lateinit var editName: TextInputEditText
@@ -183,7 +182,7 @@ class EditThemeActivity : AppCompatActivity() {
         btnDelete.setOnClickListener { deleteTheme() }
         btnSelectBackground.setOnClickListener { pickBackgroundImageLauncher.launch("image/*") }
         btnDeleteBackground.setOnClickListener {
-            backgroundImageUrl = ""
+            chatListBackgroundImageUrl = ""
             updateBgImageUI()
             updateLivePreviews()
             checkChanges()
@@ -198,7 +197,7 @@ class EditThemeActivity : AppCompatActivity() {
         }
         
         bgImagePreview.setOnClickListener {
-            if (backgroundImageUrl.isNotEmpty()) showFullScreenImage(backgroundImageUrl)
+            if (chatListBackgroundImageUrl.isNotEmpty()) showFullScreenImage(chatListBackgroundImageUrl)
         }
         
         chatListBgPreview.setOnClickListener {
@@ -238,11 +237,11 @@ class EditThemeActivity : AppCompatActivity() {
     }
 
     private fun updateBgImageUI() {
-        if (backgroundImageUrl.isNotEmpty()) {
+        if (chatListBackgroundImageUrl.isNotEmpty()) {
             bgImagePreviewContainer.isVisible = true
             noBgImagePlaceholder.isVisible = false
             btnDeleteBackground.isVisible = true
-            Glide.with(this).load(backgroundImageUrl).centerCrop().into(bgImagePreview)
+            Glide.with(this).load(chatListBackgroundImageUrl).centerCrop().into(bgImagePreview)
         } else {
             bgImagePreviewContainer.isVisible = false
             noBgImagePlaceholder.isVisible = true
@@ -355,7 +354,6 @@ class EditThemeActivity : AppCompatActivity() {
                     colorInputs["onSurface"]?.setText(theme.onSurfaceColor)
                     colorInputs["bottomPanel"]?.setText(theme.bottomPanelColor)
                     colorInputs["onBottomPanel"]?.setText(theme.onBottomPanelColor)
-                    backgroundImageUrl = theme.backgroundImageUrl
                     chatListBackgroundImageUrl = theme.chatListBackgroundImageUrl
                     updateBgImageUI()
                     updateLivePreviews()
@@ -391,8 +389,6 @@ class EditThemeActivity : AppCompatActivity() {
             textPrimaryColor = getColor("textPrimary", "#000000"),
 
             textSecondaryColor = getColor("textSecondary", "#666666"),
-
-            backgroundImageUrl = backgroundImageUrl,
             chatListBackgroundImageUrl = chatListBackgroundImageUrl,
 
             // 🛠️ УЛУЧШЕНО: определяем темную тему автоматически по цвету фона
@@ -410,8 +406,9 @@ class EditThemeActivity : AppCompatActivity() {
         
         // Chat screen background image
         val bgImage = previewChat.findViewById<ImageView>(R.id.previewChatBgImage)
-        if (theme.backgroundImageUrl.isNotEmpty()) {
-            Glide.with(this).load(theme.backgroundImageUrl).centerCrop().into(bgImage)
+        val bgUrl = theme.chatListBackgroundImageUrl
+        if (bgUrl.isNotEmpty()) {
+            Glide.with(this).load(bgUrl).centerCrop().into(bgImage)
             previewChat.findViewById<View>(R.id.previewChatRoot).setBackgroundColor(Color.TRANSPARENT)
         } else {
             bgImage.setImageDrawable(null)
@@ -530,7 +527,6 @@ class EditThemeActivity : AppCompatActivity() {
                 current.onSurfaceColor != original.onSurfaceColor ||
                 current.bottomPanelColor != original.bottomPanelColor ||
                 current.onBottomPanelColor != original.onBottomPanelColor ||
-                current.backgroundImageUrl != original.backgroundImageUrl ||
                 current.chatListBackgroundImageUrl != original.chatListBackgroundImageUrl
 
         btnSave.isVisible = hasChanges
@@ -618,7 +614,7 @@ class EditThemeActivity : AppCompatActivity() {
                         if (isChatList) {
                             chatListBackgroundImageUrl = fileUrl
                         } else {
-                            backgroundImageUrl = fileUrl
+                            chatListBackgroundImageUrl = fileUrl
                         }
                         updateBgImageUI()
                         updateLivePreviews()
