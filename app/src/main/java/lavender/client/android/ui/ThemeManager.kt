@@ -26,6 +26,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.tabs.TabLayout
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
@@ -332,6 +333,15 @@ object ThemeManager {
             setNavigationIconTint(customOnPrimary)
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             clipToOutline = true
+        }
+
+        // 6a. TabLayout (если есть) — иначе останется дефолтная Material-тема
+        activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {
+            val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
+            val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, customOnPrimary)
+            setBackgroundColor(surfaceColor)
+            setTabTextColors(adjustAlpha(onSurfaceColor, 0.75f), customPrimary)
+            setSelectedTabIndicatorColor(customPrimary)
         }
 
         // 7. Иконки действий и дополнительные панели

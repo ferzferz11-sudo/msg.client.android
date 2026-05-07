@@ -76,6 +76,14 @@ class ThemePaletteActivity : AppCompatActivity(),
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            // Make toolbar physically taller so the next view (tabs) starts below it.
+            val baseHeight = android.util.TypedValue().let { tv ->
+                theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)
+                android.util.TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
+            }
+            toolbar.layoutParams = toolbar.layoutParams.apply {
+                height = baseHeight + systemBars.top
+            }
             toolbar.setPadding(0, systemBars.top, 0, 0)
             view.setPadding(0, 0, 0, systemBars.bottom)
             insets
@@ -120,6 +128,17 @@ class ThemePaletteActivity : AppCompatActivity(),
         }
 
         supportActionBar?.title = originalTheme.name
+        // Localize built-in theme names (same mapping as ThemesActivity).
+        supportActionBar?.title = when (originalTheme.id) {
+            "builtin_green" -> getString(R.string.theme_template_green)
+            "builtin_blue" -> getString(R.string.theme_template_blue)
+            "builtin_purple" -> getString(R.string.theme_template_purple)
+            "builtin_sunset" -> getString(R.string.theme_template_sunset)
+            "builtin_graphite" -> getString(R.string.theme_template_graphite)
+            "builtin_rose" -> getString(R.string.theme_template_rose)
+            "builtin_mint" -> getString(R.string.theme_template_mint)
+            else -> originalTheme.name
+        }
 
         currentColors = mutableMapOf()
         defaultColors = mutableMapOf()
