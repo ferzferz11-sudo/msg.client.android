@@ -131,14 +131,13 @@ class NotificationActivity : AppCompatActivity() {
         }
         
         // Force tint if current custom theme is applied
-        lavender.client.android.ui.ThemeManager.getCurrentTheme()?.let { theme ->
-            try {
-                val color = theme.onPrimaryColor.toColorInt()
-                for (i in 0 until menu.size()) {
-                    menu.getItem(i).icon?.setTint(color)
-                }
-            } catch (_: Exception) {}
-        }
+        val theme = lavender.client.android.theme.ThemeStore.currentTheme()
+        try {
+            val color = theme.onPrimaryColor.toColorInt()
+            for (i in 0 until menu.size()) {
+                menu.getItem(i).icon?.setTint(color)
+            }
+        } catch (_: Exception) {}
         
         return true
     }

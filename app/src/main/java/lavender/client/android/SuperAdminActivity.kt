@@ -95,16 +95,10 @@ class SuperAdminActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.super_admin_menu, menu)
         
         // Get icon color from custom theme or Material Design attributes
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-        val iconColor = if (customTheme != null) {
-            try {
-                customTheme.textPrimaryColor.toColorInt()
-            } catch (_: Exception) {
-                val typedValue = android.util.TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                typedValue.data
-            }
-        } else {
+        val themeObj = lavender.client.android.theme.ThemeStore.currentTheme()
+        val iconColor = try {
+            themeObj.onPrimaryColor.toColorInt()
+        } catch (_: Exception) {
             val typedValue = android.util.TypedValue()
             theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
             typedValue.data
