@@ -176,13 +176,15 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.3.17**
+Current version: **1.0.4.0**
 
-### Version 1.0.3.17 - Theme System Enhancements
-- 🎨 **NotificationActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeStore integration
-- 🎨 **SuperAdminActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeStore integration
-- 🖼️ **Background Images Support**: Added chatListBackground ImageView to NotificationActivity and SuperAdminActivity for custom theme backgrounds
-- 🎨 **Welcome Text Contrast**: ChatListActivity welcome screen now uses theme colors (textPrimaryColor, onSurfaceColor) for better readability on custom backgrounds
+### Version 1.0.4.0 - Major Refactoring & Fixes
+- 🛠️ **Theme System Cleanup**: Completely removed legacy `ThemeManager`. Switched to modern `ThemeStore` throughout the app.
+- 🎨 **NotificationActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeStore integration.
+- 🎨 **SuperAdminActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeStore integration.
+- 🖼️ **Background Images Support**: Added chatListBackground support to Notification and SuperAdmin screens.
+- 🐞 **Bug Fix**: Fixed update available icon in ChatListActivity not triggering the update dialog.
+- 🎨 **Welcome Text Contrast**: ChatListActivity welcome screen now uses theme colors for better readability.
 - ➕ **FAB Theme Colors**: Floating Action Buttons (addChatFab, addContactFab, addThemeFab) now use primaryColor for background and onPrimaryColor for icons
 
 ### Version 1.0.3.10 - Language Default Update

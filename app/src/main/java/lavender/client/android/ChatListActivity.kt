@@ -130,6 +130,7 @@ class ChatListActivity : AppCompatActivity() {
         binding.actionDelete.setOnClickListener { showDeleteChatsDialog() }
         binding.actionMute.setOnClickListener { showMuteChatsDialog() }
         binding.actionSearch.setOnClickListener { showSearchBar() }
+        binding.updateAvailableIcon.setOnClickListener { showUpdateConfirmationDialog(true) }
 
         loadMutedChats()
 
