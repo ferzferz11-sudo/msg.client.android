@@ -20,6 +20,8 @@ object ThemeStore {
 
     @Volatile private var refreshJob: Job? = null
 
+    fun currentTheme(): Theme = _theme.value
+
     fun refresh(context: Context, username: String): Job {
         val running = refreshJob
         if (running?.isActive == true) return running
