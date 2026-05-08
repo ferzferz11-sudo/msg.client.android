@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
+import lavender.client.android.theme.ThemeStore
 
 class UserAdapter(
     private val onUserClick: (String) -> Unit,
@@ -98,10 +99,10 @@ class UserAdapter(
             checkBox.isChecked = isSelected
             checkBox.isVisible = selectedUsers.isNotEmpty()
 
-            val currentTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-            val primaryColor = currentTheme?.primaryColor?.toColorInt() ?: Color.BLUE
-            val onSurface = currentTheme?.onSurfaceColor?.toColorInt() ?: Color.GRAY
-            val textPrimary = currentTheme?.textPrimaryColor?.toColorInt() ?: Color.BLACK
+            val currentTheme = ThemeStore.currentTheme()
+            val primaryColor = currentTheme.primaryColor.toColorInt()
+            val onSurface = currentTheme.onSurfaceColor.toColorInt()
+            val textPrimary = currentTheme.textPrimaryColor.toColorInt()
             
             usernameText.setTextColor(textPrimary)
             

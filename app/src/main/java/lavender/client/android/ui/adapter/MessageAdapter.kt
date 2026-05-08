@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.models.Message
+import lavender.client.android.theme.ThemeStore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -147,7 +148,7 @@ class MessageAdapter(
         fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
-            val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+            val theme = ThemeStore.currentTheme()
             
             // Cancel any pending image load from previous bind
             if (currentImageUrl != message.imageUrl) {
@@ -219,8 +220,8 @@ class MessageAdapter(
                 messageContainer.layoutParams = lp
             }
 
-            // --- 3. ПОЛУЧАЕМ ЦВЕТА ИЗ МЕНЕДЖЕРА ТЕМ (С ЗАЩИТОЙ) ---
-            val msgColors = lavender.client.android.ui.ThemeManager.getMessageColors(context)
+            // --- 3. ПОЛУЧАЕМ ЦВЕТА ИЗ ТЕМЫ ---
+            val msgColors = getMessageColorsFromTheme(theme)
 
             // Определяем набор цветов в зависимости от стороны
             val (sColor, pTextColor, sTextColor) = if (isOutgoing) {
@@ -546,40 +547,20 @@ class MessageAdapter(
                 replyQuoteUser.text = message.repliedToUser
                 replyQuoteText.text = message.repliedToText
 
-                if (theme != null) {
-                    try {
-                        val onPrimary = theme.onPrimaryColor.toColorInt()
-                        val onSurface = theme.onSurfaceColor.toColorInt()
-                        val textPrimary = theme.textPrimaryColor.toColorInt()
-                        if (isOutgoing) {
-                            replyQuoteUser.setTextColor(onPrimary)
-                            replyQuoteText.setTextColor(withAlpha(onPrimary, 200))
-                            replyQuoteContainer.setBackgroundColor(withAlpha(onPrimary, 30))
-                        } else {
-                            replyQuoteUser.setTextColor(onSurface)
-                            replyQuoteText.setTextColor(withAlpha(textPrimary, 200))
-                            replyQuoteContainer.setBackgroundColor(withAlpha(onSurface, 30))
-                        }
-                    } catch (_: Exception) {}
-                } else {
-                    val onPrimary = android.util.TypedValue()
-                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, onPrimary, true)
-                    val onPrimaryColor = if (onPrimary.resourceId != 0) ContextCompat.getColor(context, onPrimary.resourceId) else onPrimary.data
-
-                    val textPrimary = android.util.TypedValue()
-                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, textPrimary, true)
-                    val textPrimaryColor = if (textPrimary.resourceId != 0) ContextCompat.getColor(context, textPrimary.resourceId) else textPrimary.data
-
+                try {
+                    val onPrimary = theme.onPrimaryColor.toColorInt()
+                    val onSurface = theme.onSurfaceColor.toColorInt()
+                    val textPrimary = theme.textPrimaryColor.toColorInt()
                     if (isOutgoing) {
-                        replyQuoteUser.setTextColor(onPrimaryColor)
-                        replyQuoteText.setTextColor(onPrimaryColor)
-                        replyQuoteContainer.setBackgroundColor(withAlpha(onPrimaryColor, 30))
+                        replyQuoteUser.setTextColor(onPrimary)
+                        replyQuoteText.setTextColor(withAlpha(onPrimary, 200))
+                        replyQuoteContainer.setBackgroundColor(withAlpha(onPrimary, 30))
                     } else {
-                        replyQuoteUser.setTextColor(ContextCompat.getColor(context, R.color.tg_blue))
-                        replyQuoteText.setTextColor(textPrimaryColor)
-                        replyQuoteContainer.setBackgroundColor(withAlpha(textPrimaryColor, 20))
+                        replyQuoteUser.setTextColor(onSurface)
+                        replyQuoteText.setTextColor(withAlpha(textPrimary, 200))
+                        replyQuoteContainer.setBackgroundColor(withAlpha(onSurface, 30))
                     }
-                }
+                } catch (_: Exception) {}
             }
 
             selectionIndicator.isVisible = isSelectionMode
@@ -602,6 +583,33 @@ class MessageAdapter(
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()
     }
+
+    private fun getMessageColorsFromTheme(theme: lavender.client.android.theme.Theme): MessageColors {
+        val defaultIncomingBg = Color.parseColor("#16173A")
+        val defaultOutgoingBg = Color.parseColor("#2A2C6D")
+        val defaultText = Color.WHITE
+        return MessageColors(
+            incomingBg = parseSafeColor(theme.incomingBubbleColor, defaultIncomingBg),
+            incomingText = parseSafeColor(theme.primaryColor, defaultText),
+            outgoingBg = parseSafeColor(theme.outgoingBubbleColor, defaultOutgoingBg),
+            outgoingText = parseSafeColor(theme.textPrimaryColor, defaultText)
+        )
+    }
+
+    private fun parseSafeColor(colorStr: String, defaultColor: Int): Int {
+        return try {
+            colorStr.toColorInt()
+        } catch (_: Exception) {
+            defaultColor
+        }
+    }
+
+    data class MessageColors(
+        val incomingBg: Int,
+        val incomingText: Int,
+        val outgoingBg: Int,
+        val outgoingText: Int
+    )
 
     class MessageDiffCallback : DiffUtil.ItemCallback<Message>() {
         override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean = oldItem.id == newItem.id

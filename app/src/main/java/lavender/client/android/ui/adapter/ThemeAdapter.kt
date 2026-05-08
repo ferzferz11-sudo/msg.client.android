@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import lavender.client.android.R
 import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.ThemeStore
 
 class ThemeAdapter(
     private val onThemeClick: (CustomThemeProto) -> Unit,
@@ -92,10 +93,10 @@ class ThemeAdapter(
             editIndicator.isVisible = false
             
             val context = itemView.context
-            val currentManagerTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
-            val textPrimary = currentManagerTheme?.textPrimaryColor?.toColorInt() ?: Color.BLACK
-            val onSurface = currentManagerTheme?.onSurfaceColor?.toColorInt() ?: Color.GRAY
-            val primaryColor = currentManagerTheme?.primaryColor?.toColorInt() ?: Color.BLUE
+            val currentTheme = ThemeStore.currentTheme()
+            val textPrimary = currentTheme.textPrimaryColor.toColorInt()
+            val onSurface = currentTheme.onSurfaceColor.toColorInt()
+            val primaryColor = currentTheme.primaryColor.toColorInt()
 
             themeName.setTextColor(textPrimary)
             themeColorsInfo.setTextColor(adjustAlpha(onSurface, 0.7f))

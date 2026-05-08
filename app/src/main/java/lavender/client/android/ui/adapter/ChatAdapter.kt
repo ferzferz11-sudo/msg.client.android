@@ -15,8 +15,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.ui.ThemeManager
+import lavender.client.android.theme.Theme
+import lavender.client.android.theme.ThemeStore
 import org.json.JSONArray
+import kotlin.math.roundToInt
 
 class ChatAdapter(
     private val onChatClick: (ChatInfo) -> Unit,
@@ -106,7 +108,7 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-        val theme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
+        val theme = ThemeStore.currentTheme()
         val isSelected = selectedPositions.contains(position)
         val chat = displayedChats[position]
 
@@ -148,7 +150,7 @@ class ChatAdapter(
             chat: ChatInfo,
             currentUsername: String,
             isSelected: Boolean,
-            theme: lavender.client.android.data.proto.CustomThemeProto?,
+            theme: Theme,
             onLongClick: () -> Unit
         ) {
             val context = itemView.context
@@ -158,13 +160,13 @@ class ChatAdapter(
             val defaultSecondary = "#E6E6FA".toColorInt()
             val defaultPrimary = "#B19CD9".toColorInt()
 
-            val primaryColor = parseSafeColor(theme?.primaryColor, defaultPrimary)
-            val textPrimary = parseSafeColor(theme?.textPrimaryColor, defaultText)
-            val textSecondary = parseSafeColor(theme?.onSurfaceColor, defaultSecondary)
-            val surfaceColor = parseSafeColor(theme?.surfaceColor, defaultCardBg)
+            val primaryColor = parseSafeColor(theme.primaryColor, defaultPrimary)
+            val textPrimary = parseSafeColor(theme.textPrimaryColor, defaultText)
+            val textSecondary = parseSafeColor(theme.onSurfaceColor, defaultSecondary)
+            val surfaceColor = parseSafeColor(theme.surfaceColor, defaultCardBg)
 
             if (isSelected) {
-                cardView.setCardBackgroundColor(ThemeManager.adjustAlpha(primaryColor, 0.3f))
+                cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.3f))
                 itemView.alpha = 0.8f
             } else {
                 cardView.setCardBackgroundColor(surfaceColor)
@@ -326,5 +328,13 @@ class ChatAdapter(
         }
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()
+
+        private fun adjustAlpha(color: Int, factor: Float): Int {
+            val alpha = (android.graphics.Color.alpha(color) * factor).roundToInt()
+            val red = android.graphics.Color.red(color)
+            val green = android.graphics.Color.green(color)
+            val blue = android.graphics.Color.blue(color)
+            return android.graphics.Color.argb(alpha, red, green, blue)
+        }
     }
 }
