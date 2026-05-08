@@ -125,7 +125,7 @@ class ThemePaletteActivity : AppCompatActivity(),
             )
             originalTheme = customTheme
         } else {
-            // Built-in theme - get from ThemeManager
+            // Built-in theme - get by ID
             originalTheme = getThemeById(themeId) ?: return finish()
         }
 

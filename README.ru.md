@@ -177,8 +177,8 @@ settings.gradle.kts                 # Настройки Gradle
 Текущая версия: **1.0.3.17**
 
 ### Версия 1.0.3.17 - Улучшения системы тем
-- 🎨 **Адаптация NotificationActivity к темам**: Добавлена поддержка edge-to-edge с обработкой WindowInsets и интеграцией ThemeManager
-- 🎨 **Адаптация SuperAdminActivity к темам**: Добавлена поддержка edge-to-edge с обработкой WindowInsets и интеграцией ThemeManager
+- 🎨 **Адаптация NotificationActivity к темам**: Добавлена поддержка edge-to-edge с обработкой WindowInsets и интеграцией ThemeStore
+- 🎨 **Адаптация SuperAdminActivity к темам**: Добавлена поддержка edge-to-edge с обработкой WindowInsets и интеграцией ThemeStore
 - 🖼️ **Поддержка фоновых изображений**: Добавлен ImageView chatListBackground в NotificationActivity и SuperAdminActivity для кастомных фонов тем
 - 🎨 **Контраст приветственного текста**: Экран приветления ChatListActivity теперь использует цвета темы (textPrimaryColor, onSurfaceColor) для лучшей читаемости на кастомных фонах
 - ➕ **Цвета FAB**: Кнопки с плавающим действием (addChatFab, addContactFab, addThemeFab) теперь используют primaryColor для фона и onPrimaryColor для иконок
