@@ -67,7 +67,6 @@
         <activity android:name=".ProfileActivity" android:exported="false" />
         <activity android:name=".EditProfileActivity" android:exported="false" />
         <activity android:name=".ContactsActivity" android:exported="false" />
-        <activity android:name=".EditThemeActivity" android:exported="false" />
         <activity android:name=".ThemePaletteActivity" android:exported="false" />
         <activity android:name=".SuperAdminActivity" android:exported="false" />
         <activity android:name=".NotificationActivity" android:exported="false" />
