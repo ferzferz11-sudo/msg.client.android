@@ -9,6 +9,8 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -19,11 +21,10 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.BuiltInThemes
+import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
-import lavender.client.android.ui.ThemeManager
 import java.util.Locale
-import androidx.core.content.edit
-import androidx.core.net.toUri
 
 data class ColorItem(
     val name: String,
@@ -190,7 +191,8 @@ class ThemePaletteActivity : AppCompatActivity(),
     }
 
     private fun getThemeById(id: String): CustomThemeProto? {
-        return ThemeManager.findBuiltInThemeById(id)
+        return BuiltInThemes.findById(id)?.let { ThemeMappers.toProto(it) }
+            ?: if (id == "dark") ThemeMappers.toProto(BuiltInThemes.dark) else null
     }
 
     private fun initDefaultColors(theme: CustomThemeProto) {

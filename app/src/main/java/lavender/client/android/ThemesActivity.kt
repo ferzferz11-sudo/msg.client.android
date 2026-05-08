@@ -13,9 +13,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
-import lavender.client.android.ui.ThemeManager
 import lavender.client.android.ui.adapter.ThemeAdapter
 import java.util.Locale
 
@@ -192,7 +193,7 @@ class ThemesActivity : AppCompatActivity() {
         val allThemes = mutableListOf<CustomThemeProto>()
         allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
 
-        ThemeManager.builtInThemes.forEach { theme ->
+        BuiltInThemes.all.map { ThemeMappers.toProto(it) }.forEach { theme ->
             val localizedName = when (theme.id) {
                 "builtin_green"    -> getString(R.string.theme_template_green)
                 "builtin_blue"     -> getString(R.string.theme_template_blue)

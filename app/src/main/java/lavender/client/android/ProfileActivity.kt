@@ -34,8 +34,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
-import lavender.client.android.ui.ThemeManager
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -344,17 +345,15 @@ class ProfileActivity : AppCompatActivity() {
                 participantsContainer?.addView(userView)
 
                 // Apply theme to the dynamically added participant item
-                ThemeManager.getCurrentTheme()?.let { theme ->
-                    ThemeManager.applyThemeToView(userView, theme)
-                }
+                applyThemeToView(userView, ThemeStore.currentTheme())
             }
 
             // Apply theme to participants card and add button
-            ThemeManager.getCurrentTheme()?.let { theme ->
+            ThemeStore.currentTheme().let { theme ->
                 val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
                 participantsCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
                     theme.surfaceColor.toColorInt()))
-                participantsCard?.strokeColor = ThemeManager.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
+                participantsCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
 
                 addParticipantLayout?.backgroundTintList = android.content.res.ColorStateList.valueOf(
                     theme.surfaceContainer.toColorInt())
@@ -459,11 +458,11 @@ class ProfileActivity : AppCompatActivity() {
 
         // Apply theme to bioCard for non-group profiles
         if (!isGroup) {
-            ThemeManager.getCurrentTheme()?.let { theme ->
+            ThemeStore.currentTheme().let { theme ->
                 val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
                 bioCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
                     theme.surfaceColor.toColorInt()))
-                bioCard?.strokeColor = ThemeManager.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
+                bioCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
             }
         }
     }
@@ -472,11 +471,9 @@ class ProfileActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
 
         // Apply theme to dialog background like in ChatListActivity
-        val customTheme = ThemeManager.getCurrentTheme()
-        val bgColor = if (customTheme != null) {
-            try {
-                customTheme.surfaceColor.toColorInt() } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
-        } else {
+        val bgColor = try {
+            ThemeStore.currentTheme().surfaceColor.toColorInt()
+        } catch (_: Exception) {
             getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer)
         }
         val shapeDrawable = android.graphics.drawable.ShapeDrawable(
@@ -771,5 +768,33 @@ class ProfileActivity : AppCompatActivity() {
         val typedValue = android.util.TypedValue()
         theme.resolveAttribute(attr, typedValue, true)
         return typedValue.data
+    }
+
+    private fun applyThemeToView(view: View, theme: lavender.client.android.theme.Theme) {
+        val textPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, android.graphics.Color.BLACK)
+        val onSurface = ThemeUtils.parseSafeColor(theme.onSurfaceColor, android.graphics.Color.GRAY)
+
+        when (view) {
+            is MaterialButton -> {
+                view.setTextColor(ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.BLUE))
+            }
+            is android.widget.CheckBox -> {
+                view.buttonTintList = android.content.res.ColorStateList.valueOf(
+                    ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.BLUE))
+            }
+            is TextView -> {
+                view.setTextColor(textPrimary)
+            }
+            is com.google.android.material.card.MaterialCardView -> {
+                view.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(
+                    ThemeUtils.parseSafeColor(theme.surfaceColor, android.graphics.Color.WHITE)))
+                view.strokeColor = ThemeUtils.adjustAlpha(onSurface, 0.2f)
+            }
+            is android.view.ViewGroup -> {
+                for (i in 0 until view.childCount) {
+                    applyThemeToView(view.getChildAt(i), theme)
+                }
+            }
+        }
     }
 }

@@ -23,6 +23,7 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
+import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.UserAdapter
 import org.json.JSONArray
@@ -238,14 +239,10 @@ class ContactsActivity : AppCompatActivity() {
         val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
 
-        val customTheme = lavender.client.android.ui.ThemeManager.getCurrentTheme()
         val typedValue = android.util.TypedValue()
-        val bgColor = if (customTheme != null) {
-            try { customTheme.primaryColor.toColorInt() } catch (_: Exception) {
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-                typedValue.data
-            }
-        } else {
+        val bgColor = try {
+            ThemeStore.currentTheme().primaryColor.toColorInt()
+        } catch (_: Exception) {
             theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
             typedValue.data
         }
@@ -256,6 +253,7 @@ class ContactsActivity : AppCompatActivity() {
         shapeDrawable.paint.color = bgColor
         dialogView.background = shapeDrawable
 
+        val customTheme = ThemeStore.currentTheme()
         if (customTheme == null) {
             val boxColor = ColorStateList.valueOf(bgColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
