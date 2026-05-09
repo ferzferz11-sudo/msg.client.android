@@ -302,7 +302,7 @@
     <string name="style_messaging">Мессенджер (как в Telegram)</string>
     <string name="style_big_text">Расширенный текст</string>
     <string name="voice_message">Голосовое сообщение</string>
-    <string name="start_chat">Начать чат</string>
+    <string name="start_chat">Создать чат</string>
     <string name="add_group">Создать группу</string>
     <string name="no_updates_available">Обновлений не найдено</string>
     <string name="version_latest_message">У вас установлена последняя версия приложения.</string>

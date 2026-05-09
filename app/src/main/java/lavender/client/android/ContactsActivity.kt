@@ -6,8 +6,10 @@ import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
@@ -17,7 +19,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
@@ -93,6 +94,16 @@ class ContactsActivity : AppCompatActivity() {
 
         setupRecyclerView()
         loadContacts()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    binding.searchCard.isVisible -> hideSearchBar()
+                    adapter.getSelectedUsers().isNotEmpty() -> adapter.clearSelection()
+                    else -> finish()
+                }
+            }
+        })
 
         binding.addContactFab.setOnClickListener {
             showAddContactDialog()
@@ -226,48 +237,44 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     private fun showAddContactDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
-        val searchEditText = dialogView.findViewById<TextInputEditText>(R.id.searchEditText)
-        val searchInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
-        val usersRecyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
-        val createChatCheckbox = dialogView.findViewById<MaterialCheckBox>(R.id.createChatCheckbox)
-        val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
-        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        // Ensure the dialog adjusts when keyboard appears
+        bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
-        val typedValue = android.util.TypedValue()
-        val bgColor = try {
-            ThemeStore.currentTheme().primaryColor.toColorInt()
-        } catch (_: Exception) {
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, typedValue, true)
-            typedValue.data
-        }
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_add_contacts, null)
+        
+        val searchEditText = view.findViewById<TextInputEditText>(R.id.searchEditText)
+        val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
+        val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
+        val btnAdd = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
 
-        val shapeDrawable = android.graphics.drawable.ShapeDrawable(
-            android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)
-        )
-        shapeDrawable.paint.color = bgColor
-        dialogView.background = shapeDrawable
-
+        val customTheme = ThemeStore.currentTheme()
         try {
-            val boxColor = ColorStateList.valueOf(bgColor)
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val primColor = customTheme.primaryColor.toColorInt()
+            view.setBackgroundColor(bgColor)
+            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
+            
+            val boxColor = ColorStateList.valueOf(primColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
         } catch (_: Exception) {}
 
         val allUsers = mutableListOf<String>()
         val filteredUsers = mutableListOf<String>()
-        val userAdapter = UserAdapter(
+        
+        lateinit var userAdapter: UserAdapter
+        userAdapter = UserAdapter(
             onUserClick = { selected ->
-                btnAdd.isEnabled = (selected != username) && !contacts.contains(selected)
+                userAdapter.toggleSelection(selected)
             },
-            avatarCache = grpcClient.getAvatarCache()
+            onSelectionChanged = { count ->
+                btnAdd.isEnabled = count > 0
+                btnAdd.text = if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)
+            },
+            avatarCache = grpcClient.getAvatarCache(),
+            onlineUsers = grpcClient.users.value
         )
-
-        lifecycleScope.launch {
-            grpcClient.users.collect { onlineUsers ->
-                runOnUiThread { userAdapter.setOnlineUsers(onlineUsers) }
-            }
-        }
 
         usersRecyclerView.adapter = userAdapter
         usersRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -287,35 +294,33 @@ class ContactsActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().lowercase()
                 filteredUsers.clear()
-                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) && !contacts.contains(it) })
+                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) })
                 userAdapter.setUsers(filteredUsers)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {
-            val selected = userAdapter.getSelectedUser() ?: return@setOnClickListener
-            grpcClient.addContact(username, selected) { success, message ->
-                runOnUiThread {
-                    if (success) {
-                        Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
-                        loadContacts()
-                        if (createChatCheckbox.isChecked) {
-                            startDirectChat(selected)
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isNotEmpty()) {
+                var completed = 0
+                selected.forEach { contact ->
+                    grpcClient.addContact(username, contact) { _, _ ->
+                        completed++
+                        if (completed == selected.size) {
+                            runOnUiThread {
+                                Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
+                                loadContacts()
+                                bottomSheet.dismiss()
+                            }
                         }
-                        dialog.dismiss()
-                    } else {
-                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
 
-        dialog.show()
+        bottomSheet.setContentView(view)
+        bottomSheet.show()
     }
 
     private fun startDirectChat(targetUser: String) {

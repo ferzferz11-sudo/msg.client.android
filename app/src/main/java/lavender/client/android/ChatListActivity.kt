@@ -23,11 +23,13 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import lavender.client.android.ui.adapter.UserAdapter
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
@@ -778,7 +780,7 @@ class ChatListActivity : AppCompatActivity() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_chat_actions, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
-        val actionIds = listOf(R.id.actionAddContact)
+        val actionIds = listOf(R.id.actionCreateChat, R.id.actionAddContact)
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val txtColor = customTheme.textPrimaryColor.toColorInt()
@@ -798,15 +800,214 @@ class ChatListActivity : AppCompatActivity() {
             Log.e("Theme", "Error tinting chat action sheet")
         }
 
+        sheetView.findViewById<View>(R.id.actionCreateChat).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showCreateChatDialog()
+        }
+
         sheetView.findViewById<View>(R.id.actionAddContact).setOnClickListener {
             bottomSheetDialog.dismiss()
-            val intent = Intent(this, ContactsActivity::class.java).apply {
-                putExtra("USERNAME", username)
-                putExtra("PASSWORD", password)
-            }
-            startActivity(intent)
+            showAddContactDialog()
         }
         bottomSheetDialog.setContentView(sheetView)
         bottomSheetDialog.show()
+    }
+
+    private fun showCreateChatDialog() {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        @Suppress("DEPRECATION")
+        bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_create_chat, null)
+        
+        val groupNameLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.groupNameLayout)
+        val groupNameEditText = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.groupNameEditText)
+        val searchEditText = view.findViewById<TextInputEditText>(R.id.searchEditText)
+        val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
+        val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
+        val btnCreate = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCreate)
+
+        val customTheme = ThemeStore.currentTheme()
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val primColor = customTheme.primaryColor.toColorInt()
+            view.setBackgroundColor(bgColor)
+            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
+            
+            val boxColor = ColorStateList.valueOf(primColor)
+            searchInputLayout.setBoxStrokeColorStateList(boxColor)
+            searchInputLayout.defaultHintTextColor = boxColor
+            groupNameLayout.setBoxStrokeColorStateList(boxColor)
+            groupNameLayout.defaultHintTextColor = boxColor
+        } catch (_: Exception) {}
+
+        val allContacts = mutableListOf<String>()
+        val filteredContacts = mutableListOf<String>()
+        
+        lateinit var userAdapter: UserAdapter
+        userAdapter = UserAdapter(
+            onUserClick = { selected ->
+                userAdapter.toggleSelection(selected)
+            },
+            onSelectionChanged = { count ->
+                btnCreate.isEnabled = count > 0
+                btnCreate.text = if (count > 1) "${getString(R.string.create)} ($count)" else getString(R.string.create)
+                groupNameLayout.isVisible = count > 1
+            },
+            avatarCache = grpcClient.getAvatarCache(),
+            onlineUsers = grpcClient.users.value
+        )
+
+        usersRecyclerView.adapter = userAdapter
+        usersRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        grpcClient.getContacts(username) { list ->
+            allContacts.clear()
+            allContacts.addAll(list)
+            filteredContacts.clear()
+            filteredContacts.addAll(allContacts)
+            runOnUiThread { userAdapter.setUsers(filteredContacts) }
+        }
+
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().lowercase()
+                filteredContacts.clear()
+                filteredContacts.addAll(allContacts.filter { it.lowercase().contains(query) })
+                userAdapter.setUsers(filteredContacts)
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        btnCreate.setOnClickListener {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@setOnClickListener
+
+            if (selected.size == 1) {
+                val targetUser = selected.first()
+                grpcClient.createDirectChat(username, targetUser) { chatId ->
+                    if (chatId != null) runOnUiThread {
+                        val intent = Intent(this, NewChatActivity::class.java).apply {
+                            putExtra("USERNAME", username); putExtra("PASSWORD", password)
+                            putExtra("ROOM_ID", chatId); putExtra("CHAT_NAME", targetUser)
+                            putExtra("IS_DIRECT", true); putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
+                        }
+                        startActivity(intent); bottomSheet.dismiss()
+                    }
+                }
+            } else {
+                val groupName = groupNameEditText.text.toString().trim().ifEmpty { getString(R.string.default_group_name) }
+                val participants = selected + username
+                grpcClient.createGroupChat(groupName, participants, username) { chatId ->
+                    if (chatId != null) runOnUiThread {
+                        val intent = Intent(this, NewChatActivity::class.java).apply {
+                            putExtra("USERNAME", username); putExtra("PASSWORD", password)
+                            putExtra("ROOM_ID", chatId); putExtra("CHAT_NAME", groupName)
+                            putExtra("IS_DIRECT", false); putExtra("PARTICIPANTS", org.json.JSONArray(participants).toString())
+                            putExtra("CREATOR", username)
+                        }
+                        startActivity(intent); bottomSheet.dismiss()
+                    }
+                }
+            }
+        }
+
+        bottomSheet.setContentView(view)
+        bottomSheet.show()
+    }
+
+    private fun showAddContactDialog() {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        @Suppress("DEPRECATION")
+        bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_add_contacts, null)
+        
+        val searchEditText = view.findViewById<TextInputEditText>(R.id.searchEditText)
+        val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
+        val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
+        val btnAdd = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
+
+        val customTheme = ThemeStore.currentTheme()
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val primColor = customTheme.primaryColor.toColorInt()
+            view.setBackgroundColor(bgColor)
+            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
+            
+            val boxColor = ColorStateList.valueOf(primColor)
+            searchInputLayout.setBoxStrokeColorStateList(boxColor)
+            searchInputLayout.defaultHintTextColor = boxColor
+        } catch (_: Exception) {}
+
+        val allUsers = mutableListOf<String>()
+        val filteredUsers = mutableListOf<String>()
+        val currentContacts = mutableSetOf<String>()
+        
+        lateinit var userAdapter: UserAdapter
+        userAdapter = UserAdapter(
+            onUserClick = { selected ->
+                userAdapter.toggleSelection(selected)
+            },
+            onSelectionChanged = { count ->
+                btnAdd.isEnabled = count > 0
+                btnAdd.text = if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)
+            },
+            avatarCache = grpcClient.getAvatarCache(),
+            onlineUsers = grpcClient.users.value
+        )
+
+        usersRecyclerView.adapter = userAdapter
+        usersRecyclerView.layoutManager = LinearLayoutManager(this)
+
+        grpcClient.getContacts(username) { list ->
+            currentContacts.addAll(list)
+            grpcClient.loadAllUsers()
+        }
+
+        lifecycleScope.launch {
+            grpcClient.allUsers.collect { users ->
+                if (users.isNotEmpty()) {
+                    allUsers.clear()
+                    allUsers.addAll(users.filter { it != username && !currentContacts.contains(it) })
+                    filteredUsers.clear()
+                    filteredUsers.addAll(allUsers)
+                    runOnUiThread { userAdapter.setUsers(filteredUsers) }
+                }
+            }
+        }
+
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().lowercase()
+                filteredUsers.clear()
+                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) })
+                userAdapter.setUsers(filteredUsers)
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        btnAdd.setOnClickListener {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isNotEmpty()) {
+                var completed = 0
+                selected.forEach { contact ->
+                    grpcClient.addContact(username, contact) { _, _ ->
+                        completed++
+                        if (completed == selected.size) {
+                            runOnUiThread {
+                                Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
+                                bottomSheet.dismiss()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        bottomSheet.setContentView(view)
+        bottomSheet.show()
     }
 }
