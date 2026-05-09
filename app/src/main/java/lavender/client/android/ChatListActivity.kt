@@ -106,8 +106,14 @@ class ChatListActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(
             onChatClick = { chat ->
                 if (chat.type == "favorites") {
-                    val intent = Intent(this, FavoritesActivity::class.java).apply {
+                    val intent = Intent(this, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
+                        putExtra("PASSWORD", password)
+                        putExtra("CHAT_NAME", getString(R.string.favorites))
+                        putExtra("ROOM_ID", "favorites_$username")
+                        putExtra("IS_DIRECT", false) // Treat as a special room
+                        putExtra("PARTICIPANTS", "[\"$username\"]")
+                        putExtra("CREATOR", username)
                     }
                     startActivity(intent)
                     return@ChatAdapter
@@ -131,6 +137,9 @@ class ChatListActivity : AppCompatActivity() {
                     putExtra("ROOM_ID", chat.id)
                     putExtra("IS_DIRECT", chat.type == "direct")
                     putExtra("PARTICIPANTS", chat.participants)
+                    putExtra("AVATAR_URL", chat.avatarUrl)
+                    putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
+                    putExtra("CREATOR", chat.creator)
                 }
                 startActivity(intent)
             },
@@ -456,12 +465,13 @@ class ChatListActivity : AppCompatActivity() {
                         chats.clear()
                         
                         if (favorites.isNotEmpty()) {
+                            val lastFav = favorites.last()
                             chats.add(ChatInfo(
                                 id = "favorites",
                                 name = getString(R.string.favorites),
                                 type = "favorites",
-                                lastMessageText = favorites.first().text,
-                                lastMessageTime = favorites.first().timestamp
+                                lastMessageText = lastFav.text,
+                                lastMessageTime = lastFav.timestamp
                             ))
                         }
                         
@@ -565,12 +575,13 @@ class ChatListActivity : AppCompatActivity() {
                         grpcClient.getFavorites(currentUserId) { favorites ->
                             val newFullList = mutableListOf<ChatInfo>()
                             if (favorites.isNotEmpty()) {
+                                val lastFav = favorites.last()
                                 newFullList.add(ChatInfo(
                                     id = "favorites",
                                     name = getString(R.string.favorites),
                                     type = "favorites",
-                                    lastMessageText = favorites.first().text,
-                                    lastMessageTime = favorites.first().timestamp
+                                    lastMessageText = lastFav.text,
+                                    lastMessageTime = lastFav.timestamp
                                 ))
                             }
                             newFullList.addAll(fetchedChats)

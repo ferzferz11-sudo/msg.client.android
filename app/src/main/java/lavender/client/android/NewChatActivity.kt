@@ -268,11 +268,19 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun fetchChatMetadataIfNeeded() {
-        if (participantsJson == "[]" || chatName == "Chat") {
+        if (roomId.startsWith("favorites_")) return
+
+        // Always refresh if it's a group, or if basic data is missing
+        if (!isDirect || participantsJson == "[]" || chatName == "Chat") {
             grpcClient.getChats(username) { chats ->
                 val chat = chats.find { it.id == roomId }
                 if (chat != null) runOnUiThread {
-                    chatName = chat.getDisplayName(username); isDirect = chat.type == "direct"; participantsJson = chat.participants; creator = chat.creator; chatAvatarUrl = chat.avatarUrl; chatFullAvatarUrl = chat.fullAvatarUrl
+                    chatName = chat.getDisplayName(username)
+                    isDirect = chat.type == "direct"
+                    participantsJson = chat.participants
+                    creator = chat.creator
+                    chatAvatarUrl = chat.avatarUrl
+                    chatFullAvatarUrl = chat.fullAvatarUrl
                     setupToolbar()
                     if (!isDirect) {
                         updateGroupSubtitle(grpcClient.users.value)
@@ -292,6 +300,7 @@ class NewChatActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            
             bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom }
             bottomPanelContent.updatePadding(bottom = 4.dpToPx()); insets
         }
@@ -369,7 +378,33 @@ class NewChatActivity : AppCompatActivity() {
             else if (searchBar.isVisible) hideSearchBar()
             else finish()
         }
-        toolbar.layoutParams.height = resources.getDimensionPixelSize(R.dimen.custom_toolbar_height)
+
+        if (roomId.startsWith("favorites_")) {
+            toolbarAvatar.isVisible = true; groupParticipantsContainer.isVisible = false
+            toolbarAvatar.setImageResource(R.drawable.ic_star)
+            val theme = ThemeStore.currentTheme()
+            val primColor = theme.primaryColor.toColorInt()
+            toolbarAvatar.imageTintList = ColorStateList.valueOf(theme.onPrimaryColor.toColorInt())
+            
+            val bg = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(primColor)
+            }
+            toolbarAvatar.background = bg
+            
+            // For CircleImageView to show background and padding properly we might need to adjust
+            // but standard ImageView with circular bg is often easier. 
+            // However, toolbarAvatar is already defined as CircleImageView.
+            // We'll just use a decent amount of padding.
+            val p = 8.dpToPx()
+            toolbarAvatar.setPadding(p, p, p, p)
+
+            toolbarTitle.text = getString(R.string.favorites)
+            toolbarSubtitle.isVisible = true
+            toolbarSubtitle.text = getString(R.string.favorites)
+            toolbarContent.setOnClickListener(null)
+            return
+        }
 
         val effectiveAvatarUrl = if (chatAvatarUrl.isNotEmpty()) chatAvatarUrl else if (isDirect) {
             try {
@@ -1552,6 +1587,7 @@ class NewChatActivity : AppCompatActivity() {
         super.onResume()
         ThemeStore.refresh(this, username)
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
+        fetchChatMetadataIfNeeded()
     }
 
     override fun onPause() {

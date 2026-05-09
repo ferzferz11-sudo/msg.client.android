@@ -585,6 +585,14 @@ data class SetMutedChatResponseProto(
     val success: Boolean = false
 )
 
+data class GetAllUsersRequestProto(
+    val dummy: Boolean = false
+)
+
+data class GetAllUsersResponseProto(
+    val users: List<String> = emptyList()
+)
+
 data class GetUserIdRequestProto(
     val username: String = ""
 )

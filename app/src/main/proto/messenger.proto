@@ -18,8 +18,11 @@ message Message {
   bool is_read = 11;
   string avatar_url = 12; // URL of the user's avatar
   string image_url = 13; // URL of the attached image
-  string voice_url = 14; // URL of the voice message audio file
-  int32 duration = 15; // Duration of voice message in seconds
+  bool edited = 14; // Whether the message has been edited
+  string client_version = 15; // Client application version
+  bool is_super_admin = 16; // Whether the user is a super admin
+  string voice_url = 17; // URL of the voice message audio file
+  int32 duration = 18; // Duration of voice message in seconds
 }
 
 message Reaction {
@@ -48,6 +51,12 @@ message GetAllUsersResponse {
   repeated string users = 1;
 }
 
+message GetAllChatsRequest {}
+
+message GetAllChatsResponse {
+  repeated ChatInfo chats = 1;
+}
+
 message CreateChatRequest {
   string target_client = 1;
 }
@@ -63,7 +72,7 @@ message GetHistoryResponse {
 
 message DeleteMessagesRequest {
   repeated Message messages = 1;
-  bool delete_for_everyone = 2;
+  string requester_username = 2;
 }
 
 message DeleteMessagesResponse {
@@ -73,6 +82,7 @@ message DeleteMessagesResponse {
 message TokenRequest {
   string user = 1;
   string token = 2;
+  bool push_enabled = 3; // Whether to send notifications to others FROM this user
 }
 
 message TokenResponse {
@@ -86,11 +96,16 @@ message ChatInfo {
   string participants = 4;
   google.protobuf.Timestamp created_at = 5;
   int32 unread_count = 6;
+  google.protobuf.Timestamp last_message_time = 7;
+  string creator = 8;
+  string last_message_text = 9;
+  string avatar_url = 10;
+  string last_message_username = 11;
 }
 
 message GetChatsRequest {
   string username = 1;
-  string user_id = 2; // For newer clients
+  string user_id = 2;
 }
 
 message GetChatsResponse {
@@ -103,6 +118,17 @@ message CreateDirectChatRequest {
 }
 
 message CreateDirectChatResponse {
+  string chat_id = 1;
+  bool success = 2;
+}
+
+message CreateGroupChatRequest {
+  string name = 1;
+  repeated string participants = 2;
+  string creator = 3;
+}
+
+message CreateGroupChatResponse {
   string chat_id = 1;
   bool success = 2;
 }
@@ -137,23 +163,37 @@ message MarkReadResponse {
   bool success = 1;
 }
 
-message DeleteChatRequest {
-  string chat_id = 1;
-}
-
-message DeleteChatResponse {
-  bool success = 1;
-  string message = 2;
-}
-
 message UpdateAvatarRequest {
   string username = 1;
   string avatar_url = 2;
+  string full_avatar_url = 3;
 }
 
 message UpdateAvatarResponse {
   bool success = 1;
   string message = 2;
+}
+
+message UpdateProfileRequest {
+  string username = 1;
+  string bio = 2;
+  string status = 3;
+}
+
+message UpdateProfileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetUserProfileRequest {
+  string username = 1;
+}
+
+message GetUserProfileResponse {
+  string username = 1;
+  string bio = 2;
+  string status = 3;
+  string avatar_url = 4;
 }
 
 message GetUserAvatarRequest {
@@ -162,27 +202,7 @@ message GetUserAvatarRequest {
 
 message GetUserAvatarResponse {
   string avatar_url = 1;
-}
-
-message DeleteProfileRequest {
-  string username = 1;
-}
-
-message DeleteProfileResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-message TypingRequest {
-  string room_id = 1;
-  string username = 2;
-  bool is_typing = 3;
-}
-
-message TypingSignal {
-  string room_id = 1;
-  string username = 2;
-  bool is_typing = 3;
+  string full_avatar_url = 2;
 }
 
 message AddParticipantRequest {
@@ -215,68 +235,58 @@ message EditMessageResponse {
   string message = 2;
 }
 
-message SaveDraftRequest {
-  string username = 1; // Used as user_id internally
-  string room_id = 2;
-  string draft_text = 3;
-  string replied_to_message_id = 4;
-  string replied_to_user = 5;
-  string replied_to_text = 6;
+message DeleteChatRequest {
+  string chat_id = 1;
 }
 
-message SaveDraftResponse {
+message DeleteChatResponse {
   bool success = 1;
   string message = 2;
 }
 
-message GetDraftRequest {
-  string username = 1; // Used as user_id internally
-  string room_id = 2;
-}
-
-message GetDraftResponse {
-  string draft_text = 1;
-  string replied_to_message_id = 2;
-  string replied_to_user = 3;
-  string replied_to_text = 4;
-  bool has_draft = 5;
-}
-
-message DeleteDraftRequest {
-  string username = 1; // Used as user_id internally
-  string room_id = 2;
-}
-
-message DeleteDraftResponse {
-  bool success = 1;
-}
-
-message GetMutedChatsRequest {
-  string username = 1; // Used as user_id internally
-}
-
-message GetMutedChatsResponse {
-  repeated string room_ids = 1;
-}
-
-message SetMutedChatRequest {
-  string username = 1; // Used as user_id internally
-  string room_id = 2;
-  bool muted = 3;
-}
-
-message SetMutedChatResponse {
-  bool success = 1;
-}
-
-message GetThemesRequest {
+message DeleteProfileRequest {
   string username = 1;
-  string user_id = 2;
 }
 
-message GetThemesResponse {
-  string current_theme_id = 1;
-  repeated CustomTheme custom_themes = 2;
+message DeleteProfileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AddContactRequest {
+  string username = 1;
+  string contact_username = 2;
+}
+
+message AddContactResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RemoveContactRequest {
+  string username = 1;
+  string contact_username = 2;
+}
+
+message RemoveContactResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetContactsRequest {
+  string username = 1;
+}
+
+message GetContactsResponse {
+  repeated string contacts = 1;
+}
+
+message GetChatListVersionRequest {
+  string username = 1;
+}
+
+message GetChatListVersionResponse {
+  int64 version = 1;
 }
 
 message CustomTheme {
@@ -289,11 +299,23 @@ message CustomTheme {
   string background_color = 7;
   string text_primary_color = 8;
   string text_secondary_color = 9;
-  string background_image_url = 11;
+  bool is_dark = 10;
+  string chat_background_image_url = 11;
   string chat_list_background_image_url = 12;
   string bottom_panel_color = 13;
   string on_bottom_panel_color = 14;
   string surface_container = 15;
+  string outgoing_bubble_color = 16;
+  string incoming_bubble_color = 17;
+}
+
+message GetThemesRequest {
+  string username = 1;
+}
+
+message GetThemesResponse {
+  string current_theme_id = 1;
+  repeated CustomTheme custom_themes = 2;
 }
 
 message SaveThemeRequest {
@@ -324,6 +346,94 @@ message DeleteThemeResponse {
   bool success = 1;
 }
 
+message UpdateChatNameRequest {
+  string chat_id = 1;
+  string new_name = 2;
+}
+
+message UpdateChatNameResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UpdateChatAvatarRequest {
+  string chat_id = 1;
+  string avatar_url = 2;
+  string username = 3; // For admin verification
+  string full_avatar_url = 4;
+}
+
+message UpdateChatAvatarResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetFCMLogsRequest {}
+
+message FCMLogEntry {
+  string timestamp = 1;
+  string level = 2;
+  string message = 3;
+}
+
+message GetFCMLogsResponse {
+  repeated FCMLogEntry logs = 1;
+}
+
+message SaveDraftRequest {
+  string user_id = 1;
+  string room_id = 2;
+  string draft_text = 3;
+  string replied_to_message_id = 4;
+  string replied_to_user = 5;
+  string replied_to_text = 6;
+}
+
+message SaveDraftResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetDraftRequest {
+  string user_id = 1;
+  string room_id = 2;
+}
+
+message GetDraftResponse {
+  string draft_text = 1;
+  string replied_to_message_id = 2;
+  string replied_to_user = 3;
+  string replied_to_text = 4;
+  bool has_draft = 5;
+}
+
+message DeleteDraftRequest {
+  string user_id = 1;
+  string room_id = 2;
+}
+
+message DeleteDraftResponse {
+  bool success = 1;
+}
+
+message GetMutedChatsRequest {
+  string user_id = 1;
+}
+
+message GetMutedChatsResponse {
+  repeated string room_ids = 1;
+}
+
+message SetMutedChatRequest {
+  string user_id = 1;
+  string room_id = 2;
+  bool muted = 3;
+}
+
+message SetMutedChatResponse {
+  bool success = 1;
+}
+
 message GetUserIdRequest {
   string username = 1;
 }
@@ -333,35 +443,76 @@ message GetUserIdResponse {
   bool found = 2;
 }
 
+message AddFavoriteRequest {
+  string user_id = 1;
+  string message_id = 2;
+}
+
+message AddFavoriteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RemoveFavoriteRequest {
+  string user_id = 1;
+  string message_id = 2;
+}
+
+message RemoveFavoriteResponse {
+  bool success = 1;
+}
+
+message GetFavoritesRequest {
+  string user_id = 1;
+}
+
+message GetFavoritesResponse {
+  repeated Message messages = 1;
+}
+
 service ChatService {
   rpc Chat(stream Message) returns (stream Message);
-  rpc Typing(stream TypingRequest) returns (stream TypingSignal);
   rpc GetClients(ClientListRequest) returns (ClientListResponse);
   rpc GetAllUsers(GetAllUsersRequest) returns (GetAllUsersResponse);
+  rpc GetAllChats(GetAllChatsRequest) returns (GetAllChatsResponse);
   rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse);
   rpc SetReaction(ReactionRequest) returns (ReactionResponse);
   rpc DeleteMessages(DeleteMessagesRequest) returns (DeleteMessagesResponse);
   rpc RegisterToken(TokenRequest) returns (TokenResponse);
   rpc GetChats(GetChatsRequest) returns (GetChatsResponse);
+  rpc GetChatListVersion(GetChatListVersionRequest) returns (GetChatListVersionResponse);
   rpc CreateDirectChat(CreateDirectChatRequest) returns (CreateDirectChatResponse);
+  rpc CreateGroupChat(CreateGroupChatRequest) returns (CreateGroupChatResponse);
   rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse);
   rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
   rpc MarkRead(MarkReadRequest) returns (MarkReadResponse);
   rpc UpdateAvatar(UpdateAvatarRequest) returns (UpdateAvatarResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
   rpc GetUserAvatar(GetUserAvatarRequest) returns (GetUserAvatarResponse);
-  rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
-  rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse);
   rpc AddParticipant(AddParticipantRequest) returns (AddParticipantResponse);
   rpc RemoveParticipant(RemoveParticipantRequest) returns (RemoveParticipantResponse);
   rpc EditMessage(EditMessageRequest) returns (EditMessageResponse);
+  rpc UpdateChatName(UpdateChatNameRequest) returns (UpdateChatNameResponse);
+  rpc UpdateChatAvatar(UpdateChatAvatarRequest) returns (UpdateChatAvatarResponse);
+  rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
+  rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse);
+  rpc AddContact(AddContactRequest) returns (AddContactResponse);
+  rpc RemoveContact(RemoveContactRequest) returns (RemoveContactResponse);
+  rpc GetContacts(GetContactsRequest) returns (GetContactsResponse);
+  rpc GetThemes(GetThemesRequest) returns (GetThemesResponse);
+  rpc SaveTheme(SaveThemeRequest) returns (SaveThemeResponse);
+  rpc SetCurrentTheme(SetCurrentThemeRequest) returns (SetCurrentThemeResponse);
+  rpc DeleteTheme(DeleteThemeRequest) returns (DeleteThemeResponse);
+  rpc GetFCMLogs(GetFCMLogsRequest) returns (GetFCMLogsResponse);
   rpc SaveDraft(SaveDraftRequest) returns (SaveDraftResponse);
   rpc GetDraft(GetDraftRequest) returns (GetDraftResponse);
   rpc DeleteDraft(DeleteDraftRequest) returns (DeleteDraftResponse);
   rpc GetMutedChats(GetMutedChatsRequest) returns (GetMutedChatsResponse);
   rpc SetMutedChat(SetMutedChatRequest) returns (SetMutedChatResponse);
-  rpc GetThemes(GetThemesRequest) returns (GetThemesResponse);
-  rpc SaveTheme(SaveThemeRequest) returns (SaveThemeResponse);
-  rpc SetCurrentTheme(SetCurrentThemeRequest) returns (SetCurrentThemeResponse);
-  rpc DeleteTheme(DeleteThemeRequest) returns (DeleteThemeResponse);
   rpc GetUserId(GetUserIdRequest) returns (GetUserIdResponse);
+  rpc AddFavorite(AddFavoriteRequest) returns (AddFavoriteResponse);
+  rpc RemoveFavorite(RemoveFavoriteRequest) returns (RemoveFavoriteResponse);
+  rpc GetFavorites(GetFavoritesRequest) returns (GetFavoritesResponse);
+  rpc SaveFavoriteMessage(Message) returns (AddFavoriteResponse);
 }

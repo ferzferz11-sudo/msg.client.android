@@ -41,6 +41,10 @@ object GrpcClient {
         get() = realGrpcClient.hasCheckedForUpdates
         set(value) { realGrpcClient.hasCheckedForUpdates = value }
 
+    var isAppInBackground: Boolean
+        get() = realGrpcClient.isAppInBackground
+        set(value) { realGrpcClient.isAppInBackground = value }
+
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null) {
         realGrpcClient.connect(serverAddress, useTls, port, context)
     }

@@ -86,4 +86,16 @@ class ChatViewModel : ViewModel() {
     fun sendTypingSignal(username: String, isTyping: Boolean) {
         grpcClient.sendTypingSignal(username, isTyping)
     }
+
+    fun saveDraft(draftText: String, repliedToMessageId: String = "", repliedToUser: String = "", repliedToText: String = "", callback: (Boolean, String) -> Unit = { _, _ -> }) {
+        grpcClient.saveDraft(currentRoomId, draftText, repliedToMessageId, repliedToUser, repliedToText, callback)
+    }
+
+    fun getDraft(callback: (String, String, String, String, Boolean) -> Unit) {
+        grpcClient.getDraft(currentRoomId, callback)
+    }
+
+    fun deleteDraft(callback: (Boolean) -> Unit = {}) {
+        grpcClient.deleteDraft(currentRoomId, callback)
+    }
 }
