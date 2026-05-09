@@ -471,17 +471,18 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setLocale(languageCode: String) {
-        val locale = Locale(languageCode)
+        val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         val config = Configuration()
         config.setLocale(locale)
+        @Suppress("DEPRECATION")
         baseContext.resources.updateConfiguration(config, baseContext.resources.displayMetrics)
     }
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
         val lang = prefs.getString("language", "en") ?: "en"
-        val locale = Locale(lang)
+        val locale = Locale.forLanguageTag(lang)
         Locale.setDefault(locale)
         val config = Configuration(newBase.resources.configuration)
         config.setLocale(locale)

@@ -101,11 +101,10 @@
         app:layout_constraintBottom_toBottomOf="parent"
         tools:listitem="@layout/item_theme" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <lavender.client.android.ui.widget.LavenderFab
         android:id="@+id/addThemeFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         android:src="@android:drawable/ic_input_add"
         app:tint="?attr/colorOnPrimary"
         app:backgroundTint="?attr/colorPrimary"

@@ -110,10 +110,6 @@ class ThemesActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             toolbar.updatePadding(top = systemBars.top)
             themesRecyclerView.updatePadding(bottom = systemBars.bottom)
-            addThemeFab.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
-                bottomMargin = (28 * resources.displayMetrics.density).toInt() + systemBars.bottom
-                marginEnd = (16 * resources.displayMetrics.density).toInt()
-            }
             insets
         }
 

@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
@@ -57,10 +58,9 @@ class ThemePaletteActivity : AppCompatActivity(),
         val languageCode = prefs.getString("language", "ru") ?: "ru"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
-        val config = newBase.resources.configuration
+        val config = Configuration(newBase.resources.configuration)
         config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -252,6 +252,13 @@ class ThemePaletteActivity : AppCompatActivity(),
     }
 
     private fun showSaveThemeDialog() {
+        // If we are editing an existing custom theme, we update it directly without changing the name
+        // Unless we want to support "Save As", but the user requested to keep the same theme.
+        if (themeId.startsWith("custom_") && !themeId.startsWith("custom_new_")) {
+            saveCustomTheme(originalTheme.name)
+            return
+        }
+
         val defaultName = "$username's ${originalTheme.name}"
 
         val input = EditText(this).apply {
@@ -277,8 +284,15 @@ class ThemePaletteActivity : AppCompatActivity(),
     }
 
     private fun saveCustomTheme(themeName: String) {
+        // Use existing ID if it's already a custom theme (editing mode), otherwise generate new one
+        val finalId = if (themeId.startsWith("custom_") && !themeId.startsWith("custom_new_")) {
+            themeId
+        } else {
+            "custom_${System.currentTimeMillis()}"
+        }
+
         val newTheme = CustomThemeProto(
-            id = "custom_${System.currentTimeMillis()}",
+            id = finalId,
             name = themeName,
             primaryColor = currentColors["primaryColor"]!!,
             backgroundColor = currentColors["backgroundColor"]!!,
@@ -302,6 +316,9 @@ class ThemePaletteActivity : AppCompatActivity(),
                     Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
                     hasChanges = false
                     saveButton.isVisible = false
+                    
+                    // If we saved it as a new theme, update our themeId so subsequent saves update the same theme
+                    themeId = finalId
                     setResult(RESULT_OK)
                 } else {
                     Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
