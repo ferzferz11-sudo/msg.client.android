@@ -180,6 +180,21 @@ object RealGrpcClient {
                     if (targetUser == currentUsername) disconnect()
                     return
                 }
+
+                if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
+                    try {
+                        val usersJson = value.text.removePrefix("ONLINE_USERS_UPDATE:")
+                        val jsonArray = org.json.JSONArray(usersJson)
+                        val userList = mutableListOf<String>()
+                        for (i in 0 until jsonArray.length()) {
+                            userList.add(jsonArray.getString(i))
+                        }
+                        _users.value = userList
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing online users update", e)
+                    }
+                    return
+                }
                 
                 val message = ProtoUtils.createMessageFromProto(value)
                 if (deletedMessageHashes.contains(getMessageHash(message))) return
@@ -1096,8 +1111,8 @@ object RealGrpcClient {
     fun loadUsers() { loadAllUsers {} }
     fun updateMessage(m: Message) {} // Local update mostly
 
-    fun getAvatarCache(): Map<String, String> = avatarCache
-    fun getFullAvatarCache(): Map<String, String> = fullAvatarCache
+    fun getAvatarCache(): Map<String, String> = avatarCache.toMap()
+    fun getFullAvatarCache(): Map<String, String> = fullAvatarCache.toMap()
     fun getFullAvatarUrl(u: String): String? = fullAvatarCache[u]
     fun updateAvatarCache(u: String, a: String, fa: String) {
         avatarCache[u] = a

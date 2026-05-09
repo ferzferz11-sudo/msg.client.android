@@ -86,8 +86,10 @@ class ChatAdapter(
     }
 
     fun updateAvatarCache(newCache: Map<String, String>) {
-        if (avatarCache == newCache) return
-        avatarCache = newCache
+        // Create a thread-safe copy to avoid ConcurrentModificationException during comparison or binding
+        val snapshot = newCache.toMap()
+        if (avatarCache == snapshot) return
+        avatarCache = snapshot
         notifyDataSetChanged()
     }
 
@@ -97,12 +99,17 @@ class ChatAdapter(
     ) : DiffUtil.Callback() {
         override fun getOldListSize(): Int = oldList.size
         override fun getNewListSize(): Int = newList.size
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean = oldList[oldItemPosition].id == newList[newItemPosition].id
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            if (oldItemPosition >= oldList.size || newItemPosition >= newList.size) return false
+            return oldList[oldItemPosition].id == newList[newItemPosition].id
+        }
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            if (oldItemPosition >= oldList.size || newItemPosition >= newList.size) return false
             val oldChat = oldList[oldItemPosition]
             val newChat = newList[newItemPosition]
             return (oldChat.name == newChat.name && oldChat.type == newChat.type &&
-                    oldChat.unreadCount == newChat.unreadCount && oldChat.lastMessageTime == newChat.lastMessageTime)
+                    oldChat.unreadCount == newChat.unreadCount && oldChat.lastMessageTime == newChat.lastMessageTime &&
+                    oldChat.isMuted == newChat.isMuted)
         }
     }
 

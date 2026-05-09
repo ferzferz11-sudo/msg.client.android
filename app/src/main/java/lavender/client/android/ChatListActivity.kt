@@ -400,12 +400,30 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun toggleMuteSelectedChats(selected: List<ChatInfo>) {
         val anyUnmuted = selected.any { !it.isMuted }
-        selected.forEach { chat ->
-            grpcClient.setMutedChat(chat.id, anyUnmuted)
+        
+        // Optimistic UI update: update local list immediately
+        selected.forEach { selectedChat ->
+            val index = chats.indexOfFirst { it.id == selectedChat.id }
+            if (index != -1) {
+                chats[index] = chats[index].copy(isMuted = anyUnmuted)
+            }
         }
+        chatAdapter.setChats(chats.toList())
         chatAdapter.clearSelection()
-        loadChats()
-        Toast.makeText(this, if (anyUnmuted) R.string.muted_count else R.string.unmuted_count, Toast.LENGTH_SHORT).show()
+
+        // Background server update
+        selected.forEach { chat ->
+            grpcClient.setMutedChat(chat.id, anyUnmuted) { success ->
+                if (!success) {
+                    // If failed, we might want to reload to sync back with server
+                    // but for now just log it
+                    Log.e("ChatList", "Failed to update mute status for ${chat.id}")
+                }
+            }
+        }
+
+        val text = getString(if (anyUnmuted) R.string.muted_count else R.string.unmuted_count, selected.size)
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
     }
 
     private fun updateToolbarAvatar() {
@@ -459,45 +477,54 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.getChats(username) { fetchedChats ->
             val userId = grpcClient.getUserId() ?: ""
             if (userId.isNotEmpty()) {
-                grpcClient.getFavorites(userId) { favorites ->
-                    runOnUiThread {
-                        binding.swipeRefreshLayout.isRefreshing = false
-                        chats.clear()
-                        
-                        if (favorites.isNotEmpty()) {
-                            val lastFav = favorites.last()
-                            chats.add(ChatInfo(
-                                id = "favorites",
-                                name = getString(R.string.favorites),
-                                type = "favorites",
-                                lastMessageText = lastFav.text,
-                                lastMessageTime = lastFav.timestamp
-                            ))
-                        }
-                        
-                        chats.addAll(fetchedChats)
-                        chatAdapter.setChats(chats.toList())
+                grpcClient.getMutedChats { mutedChatIds ->
+                    grpcClient.getFavorites(userId) { favorites ->
+                        runOnUiThread {
+                            binding.swipeRefreshLayout.isRefreshing = false
+                            chats.clear()
 
-                        val totalUnread = chats.sumOf { it.unreadCount }
-                        updateAppIconBadge(totalUnread)
+                            if (favorites.isNotEmpty()) {
+                                val lastFav = favorites.last()
+                                chats.add(
+                                    ChatInfo(
+                                        id = "favorites",
+                                        name = getString(R.string.favorites),
+                                        type = "favorites",
+                                        lastMessageText = lastFav.text,
+                                        lastMessageTime = lastFav.timestamp
+                                    )
+                                )
+                            }
 
-                        Log.d("ChatListActivity", "Loaded ${chats.size} chats")
+                            val chatsWithMute = fetchedChats.map { chat ->
+                                chat.copy(isMuted = mutedChatIds.contains(chat.id))
+                            }
 
-                        // Clear searching filter or force refresh to ensure Favorites stay
-                        updateUpdateIndicatorVisibility()
-                        checkForUpdatesSilently()
+                            chats.addAll(chatsWithMute)
+                            chatAdapter.setChats(chats.toList())
 
-                        // Pre-fetch avatars for all participants
-                        fetchedChats.forEach { chat ->
-                            try {
-                                val arr = org.json.JSONArray(chat.participants)
-                                for (i in 0 until arr.length()) {
-                                    val p = arr.getString(i)
-                                    if (!grpcClient.getAvatarCache().containsKey(p)) {
-                                        grpcClient.getUserAvatar(p) { }
+                            val totalUnread = chats.sumOf { it.unreadCount }
+                            updateAppIconBadge(totalUnread)
+
+                            Log.d("ChatListActivity", "Loaded ${chats.size} chats")
+
+                            // Clear searching filter or force refresh to ensure Favorites stay
+                            updateUpdateIndicatorVisibility()
+                            checkForUpdatesSilently()
+
+                            // Pre-fetch avatars for all participants
+                            fetchedChats.forEach { chat ->
+                                try {
+                                    val arr = org.json.JSONArray(chat.participants)
+                                    for (i in 0 until arr.length()) {
+                                        val p = arr.getString(i)
+                                        if (!grpcClient.getAvatarCache().containsKey(p)) {
+                                            grpcClient.getUserAvatar(p) { }
+                                        }
                                     }
+                                } catch (_: Exception) {
                                 }
-                            } catch (_: Exception) {}
+                            }
                         }
                     }
                 }
@@ -572,34 +599,43 @@ class ChatListActivity : AppCompatActivity() {
                 
                 grpcClient.getChats(username) { fetchedChats ->
                     if (currentUserId.isNotEmpty()) {
-                        grpcClient.getFavorites(currentUserId) { favorites ->
-                            val newFullList = mutableListOf<ChatInfo>()
-                            if (favorites.isNotEmpty()) {
-                                val lastFav = favorites.last()
-                                newFullList.add(ChatInfo(
-                                    id = "favorites",
-                                    name = getString(R.string.favorites),
-                                    type = "favorites",
-                                    lastMessageText = lastFav.text,
-                                    lastMessageTime = lastFav.timestamp
-                                ))
-                            }
-                            newFullList.addAll(fetchedChats)
-                            
-                            // Check for actual changes including Favorites
-                            val hasChanges = newFullList.size != chats.size || 
-                                           newFullList.indices.any { i -> 
-                                               val n = newFullList[i]
-                                               val c = chats.getOrNull(i)
-                                               c == null || n.id != c.id || n.lastMessageTime != c.lastMessageTime || n.unreadCount != c.unreadCount
-                                           }
+                        grpcClient.getMutedChats { mutedChatIds ->
+                            grpcClient.getFavorites(currentUserId) { favorites ->
+                                val newFullList = mutableListOf<ChatInfo>()
+                                if (favorites.isNotEmpty()) {
+                                    val lastFav = favorites.last()
+                                    newFullList.add(
+                                        ChatInfo(
+                                            id = "favorites",
+                                            name = getString(R.string.favorites),
+                                            type = "favorites",
+                                            lastMessageText = lastFav.text,
+                                            lastMessageTime = lastFav.timestamp
+                                        )
+                                    )
+                                }
 
-                            if (hasChanges) {
-                                runOnUiThread {
-                                    chats.clear()
-                                    chats.addAll(newFullList)
-                                    chatAdapter.setChats(chats.toList())
-                                    updateAppIconBadge(chats.sumOf { it.unreadCount })
+                                val chatsWithMute = fetchedChats.map { chat ->
+                                    chat.copy(isMuted = mutedChatIds.contains(chat.id))
+                                }
+                                newFullList.addAll(chatsWithMute)
+
+                                // Check for actual changes including Favorites and Mute status
+                                val hasChanges = newFullList.size != chats.size ||
+                                        newFullList.indices.any { i ->
+                                            val n = newFullList[i]
+                                            val c = chats.getOrNull(i)
+                                            c == null || n.id != c.id || n.lastMessageTime != c.lastMessageTime ||
+                                                    n.unreadCount != c.unreadCount || n.isMuted != c.isMuted
+                                        }
+
+                                if (hasChanges) {
+                                    runOnUiThread {
+                                        chats.clear()
+                                        chats.addAll(newFullList)
+                                        chatAdapter.setChats(chats.toList())
+                                        updateAppIconBadge(chats.sumOf { it.unreadCount })
+                                    }
                                 }
                             }
                         }

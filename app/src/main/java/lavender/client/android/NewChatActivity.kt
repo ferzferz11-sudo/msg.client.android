@@ -52,6 +52,7 @@ import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.adapter.MessageAdapter
@@ -973,18 +974,52 @@ class NewChatActivity : AppCompatActivity() {
         
         grpcClient.getChats(username) { chats ->
             runOnUiThread {
-                val otherChats = chats.filter { it.id != roomId }
-                if (otherChats.isEmpty()) {
+                val otherChats = chats.toMutableList()
+                
+                // Add favorites as an option for forwarding
+                if (!roomId.startsWith("favorites_")) {
+                    otherChats.add(0, ChatInfo(
+                        id = "favorites_$username",
+                        name = getString(R.string.favorites),
+                        type = "favorites"
+                    ))
+                }
+                
+                // Filter out current room
+                val filteredChats = otherChats.filter { it.id != roomId }
+                
+                if (filteredChats.isEmpty()) {
                     showToast(getString(R.string.no_other_chats))
                     return@runOnUiThread
                 }
+
+                val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+                val dialogView = layoutInflater.inflate(R.layout.bottom_sheet_forward, null)
+                bottomSheet.setContentView(dialogView)
                 
-                val chatNames = otherChats.map { it.getDisplayName(username) }.toTypedArray()
-                val customTheme = ThemeStore.currentTheme()
-                val builder = AlertDialog.Builder(this)
-                    .setTitle(R.string.forward_to)
-                    .setItems(chatNames) { _, which ->
-                        val targetChat = otherChats[which]
+                val recyclerView = dialogView.findViewById<RecyclerView>(R.id.forwardChatsRecyclerView)
+                val titleView = dialogView.findViewById<TextView>(R.id.forwardTitle)
+                val dragHandle = dialogView.findViewById<View>(R.id.dragHandle)
+                
+                // Theme colors
+                val theme = ThemeStore.currentTheme()
+                try {
+                    val surfaceColor = theme.surfaceColor.toColorInt()
+                    val textPrimary = theme.textPrimaryColor.toColorInt()
+                    val primColor = theme.primaryColor.toColorInt()
+                    
+                    dialogView.setBackgroundColor(surfaceColor)
+                    titleView.setTextColor(textPrimary)
+                    dragHandle.backgroundTintList = ColorStateList.valueOf(primColor)
+                } catch (_: Exception) {}
+
+                recyclerView.layoutManager = LinearLayoutManager(this)
+                recyclerView.adapter = lavender.client.android.ui.adapter.ForwardChatAdapter(
+                    chats = filteredChats,
+                    currentUsername = username,
+                    avatarCache = grpcClient.getAvatarCache(),
+                    onChatSelected = { targetChat ->
+                        bottomSheet.dismiss()
                         selectedMessages.forEach { message ->
                             val forwardedMessage = Message(
                                 user = username,
@@ -1000,17 +1035,9 @@ class NewChatActivity : AppCompatActivity() {
                         showToast(getString(R.string.messages_forwarded))
                         hideSelectionToolbar()
                     }
-                    .setNegativeButton(R.string.cancel, null)
+                )
                 
-                try {
-                    val textColor = customTheme.textPrimaryColor.toColorInt()
-                    val dialog = builder.show()
-                    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-                    val titleView = dialog.findViewById<TextView>(android.R.id.title)
-                    titleView?.setTextColor(textColor)
-                } catch (_: Exception) {
-                    builder.show()
-                }
+                bottomSheet.show()
             }
         }
     }
