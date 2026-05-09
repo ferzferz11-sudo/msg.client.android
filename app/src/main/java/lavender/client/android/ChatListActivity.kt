@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -458,7 +459,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun updateAppIconBadge(count: Int) {
         try {
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = notificationManager.getNotificationChannel("messages")
                 if (channel != null) {
                     channel.setShowBadge(count > 0)
@@ -545,7 +546,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showUpdateDialog(current: String, latest: String) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val messageText = dialogView.findViewById<TextView>(R.id.messageText)
@@ -658,7 +659,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAboutDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
         val titleText = dialogView.findViewById<TextView>(R.id.titleText)
         val messageText = dialogView.findViewById<TextView>(R.id.messageText)
@@ -871,7 +872,7 @@ class ChatListActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_create_chat, null)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_create_chat, binding.root, false)
         
         val groupNameLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.groupNameLayout)
         val groupNameEditText = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.groupNameEditText)
@@ -884,6 +885,8 @@ class ChatListActivity : AppCompatActivity() {
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()
+            val txtColor = customTheme.textPrimaryColor.toColorInt()
+            
             view.setBackgroundColor(bgColor)
             view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
             
@@ -892,15 +895,18 @@ class ChatListActivity : AppCompatActivity() {
             searchInputLayout.defaultHintTextColor = boxColor
             groupNameLayout.setBoxStrokeColorStateList(boxColor)
             groupNameLayout.defaultHintTextColor = boxColor
+            
+            searchEditText.setTextColor(txtColor)
+            groupNameEditText.setTextColor(txtColor)
         } catch (_: Exception) {}
 
         val allContacts = mutableListOf<String>()
         val filteredContacts = mutableListOf<String>()
         
-        lateinit var userAdapter: UserAdapter
-        userAdapter = UserAdapter(
+        val userAdapter = UserAdapter(
             onUserClick = { selected ->
-                userAdapter.toggleSelection(selected)
+                val adapter = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView).adapter as? UserAdapter
+                adapter?.toggleSelection(selected)
             },
             onSelectionChanged = { count ->
                 btnCreate.isEnabled = count > 0
@@ -975,7 +981,7 @@ class ChatListActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_add_contacts, null)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_add_contacts, binding.root, false)
         
         val searchEditText = view.findViewById<TextInputEditText>(R.id.searchEditText)
         val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
@@ -986,22 +992,25 @@ class ChatListActivity : AppCompatActivity() {
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()
+            val txtColor = customTheme.textPrimaryColor.toColorInt()
+            
             view.setBackgroundColor(bgColor)
             view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
             
             val boxColor = ColorStateList.valueOf(primColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
+            searchEditText.setTextColor(txtColor)
         } catch (_: Exception) {}
 
         val allUsers = mutableListOf<String>()
         val filteredUsers = mutableListOf<String>()
         val currentContacts = mutableSetOf<String>()
         
-        lateinit var userAdapter: UserAdapter
-        userAdapter = UserAdapter(
+        val userAdapter = UserAdapter(
             onUserClick = { selected ->
-                userAdapter.toggleSelection(selected)
+                val adapter = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView).adapter as? UserAdapter
+                adapter?.toggleSelection(selected)
             },
             onSelectionChanged = { count ->
                 btnAdd.isEnabled = count > 0
