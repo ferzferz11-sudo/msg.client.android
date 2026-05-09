@@ -53,8 +53,8 @@ class ContactsActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
-        username = intent.getStringExtra("username") ?: ""
-        password = intent.getStringExtra("password") ?: ""
+        username = intent.getStringExtra("USERNAME") ?: ""
+        password = intent.getStringExtra("PASSWORD") ?: ""
 
         binding = ActivityContactsBinding.inflate(layoutInflater)
         setContentView(binding.root)

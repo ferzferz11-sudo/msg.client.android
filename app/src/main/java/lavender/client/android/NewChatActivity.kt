@@ -381,8 +381,20 @@ class NewChatActivity : AppCompatActivity() {
 
         toolbarTitle.text = chatName
         toolbarContent.setOnClickListener {
+            val profileUsername = if (isDirect) {
+                try {
+                    val arr = JSONArray(participantsJson)
+                    var other = chatName
+                    for (i in 0 until arr.length()) {
+                        val p = arr.getString(i)
+                        if (p != username) { other = p; break }
+                    }
+                    other
+                } catch (_: Exception) { chatName }
+            } else chatName
+
             val intent = Intent(this, ProfileActivity::class.java).apply {
-                putExtra("username", chatName)
+                putExtra("username", profileUsername)
                 putExtra("is_group", !isDirect)
                 putExtra("room_id", roomId)
                 putExtra("avatar_url", if (isDirect) effectiveAvatarUrl else chatAvatarUrl)

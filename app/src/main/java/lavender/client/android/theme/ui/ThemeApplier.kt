@@ -50,6 +50,12 @@ object ThemeApplier {
             backgroundTintList = ColorStateList.valueOf(customPrimary)
             setTitleTextColor(customOnPrimary)
             setNavigationIconTint(customOnPrimary)
+            
+            // Tint action icons
+            val actions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionSettings, R.id.updateAvailableIcon)
+            actions.forEach { id ->
+                findViewById<ImageView>(id)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
+            }
         }
 
         activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {

@@ -16,33 +16,6 @@
         android:background="?attr/colorOnSurfaceVariant" />
 
     <LinearLayout
-        android:id="@+id/actionStartChat"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_play_arrow"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/start_chat" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/start_chat"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionAddContact"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -58,40 +31,13 @@
             android:layout_height="24dp"
             android:src="@drawable/ic_contacts"
             app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/add_contact" />
+            android:contentDescription="@string/contacts" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:text="@string/add_contact"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/actionAddGroup"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/chat_add_on_24"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="@string/add_group" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/add_group"
+            android:text="@string/contacts"
             android:textSize="16sp"
             android:textColor="?attr/colorOnSurface" />
     </LinearLayout>

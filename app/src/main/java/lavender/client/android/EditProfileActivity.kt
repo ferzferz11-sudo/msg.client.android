@@ -73,7 +73,8 @@ class EditProfileActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
-        username = intent.getStringExtra("username") ?: ""
+        username = intent.getStringExtra("USERNAME") ?: ""
+        password = intent.getStringExtra("PASSWORD") ?: ""
 
         setContentView(R.layout.activity_edit_profile)
         ThemeUi.bind(this, username)
