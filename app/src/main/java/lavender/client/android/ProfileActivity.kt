@@ -159,6 +159,7 @@ class ProfileActivity : AppCompatActivity() {
                     }
                     runOnUiThread {
                         creator = chat.creator
+                        username = chat.name
                         avatarUrl = chat.avatarUrl
                         fullAvatarUrl = chat.fullAvatarUrl
                         currentParticipants.clear()

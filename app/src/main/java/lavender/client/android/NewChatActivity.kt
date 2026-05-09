@@ -322,6 +322,7 @@ class NewChatActivity : AppCompatActivity() {
         searchNext = findViewById(R.id.searchNext); searchPrev = findViewById(R.id.searchPrev); searchResultsCount = findViewById(R.id.searchResultsCount)
         imagePreviewScroll = findViewById(R.id.imagePreviewScroll); imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
         audioButton.isVisible = true
+        sendButton.isVisible = false
     }
 
     private fun loadDataFromIntent() {
@@ -624,7 +625,12 @@ class NewChatActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 handleMention(s)
-                if (!isTypingSignalSent) {
+                
+                val hasText = s?.toString()?.trim()?.isNotEmpty() ?: false
+                sendButton.isVisible = hasText
+                audioButton.isVisible = !hasText
+
+                if (!isTypingSignalSent && !roomId.startsWith("favorites_")) {
                     isTypingSignalSent = true; grpcClient.sendTypingSignal(username, true)
                     lifecycleScope.launch { delay(3000); isTypingSignalSent = false }
                 }
@@ -1039,7 +1045,12 @@ class NewChatActivity : AppCompatActivity() {
         }
         val msg = Message(user = username, text = effectiveText, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
         grpcClient.sendMessage(msg)
-        viewModel.markRead(username, this)
+        
+        // For favorites, we might want to update UI immediately if stream is slow
+        if (roomId.startsWith("favorites_")) {
+            viewModel.markRead(username, this)
+        }
+
         // Delete draft after successful send
         grpcClient.deleteDraft(roomId)
     }
@@ -1372,6 +1383,14 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>) {
+        if (roomId.startsWith("favorites_")) {
+            toolbarSubtitle.isVisible = true
+            toolbarSubtitle.text = getString(R.string.favorites)
+            val colorOnPrimary = getThemeColor(com.google.android.material.R.attr.colorOnPrimary)
+            toolbarSubtitle.setTextColor(colorOnPrimary)
+            return
+        }
+
         val colorOnPrimary = getThemeColor(com.google.android.material.R.attr.colorOnPrimary)
         val colorGreen = getColor(android.R.color.holo_green_light)
 
