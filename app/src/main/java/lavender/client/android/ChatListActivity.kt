@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -539,6 +540,7 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ThemeStore.refresh(this, username) // Force theme refresh from store when returning
         chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
         updateUpdateIndicatorVisibility()
         if (grpcClient.connectionStatus.value == lavender.client.android.data.grpc.ConnectionStatus.READY) {
@@ -824,13 +826,22 @@ class ChatListActivity : AppCompatActivity() {
             // Show SuperAdmin action if user has permissions
             sheetView.findViewById<View>(R.id.actionAdmin).isVisible = SessionManager.session.value.isSuperAdmin
 
-            actionIds.forEach { id ->
-                sheetView.findViewById<LinearLayout>(id)?.let { layout ->
-                    for (i in 0 until layout.childCount) {
-                        val child = layout.getChildAt(i)
-                        if (child is TextView) child.setTextColor(txtColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primColor)
+            fun applyThemeToMenu(view: View, isShare: Boolean, isLogout: Boolean) {
+                if (view is TextView) {
+                    if (isShare) view.setTextColor(primColor)
+                    else if (!isLogout) view.setTextColor(txtColor)
+                } else if (view is ImageView) {
+                    if (!isLogout) view.imageTintList = ColorStateList.valueOf(primColor)
+                } else if (view is ViewGroup) {
+                    for (i in 0 until view.childCount) {
+                        applyThemeToMenu(view.getChildAt(i), isShare, isLogout)
                     }
+                }
+            }
+
+            actionIds.forEach { id ->
+                sheetView.findViewById<View>(id)?.let { view ->
+                    applyThemeToMenu(view, id == R.id.actionShareHeader, id == R.id.actionLogout)
                 }
             }
         } catch (_: Exception) {
@@ -901,13 +912,22 @@ class ChatListActivity : AppCompatActivity() {
             val primColor = customTheme.primaryColor.toColorInt()
             sheetView.setBackgroundColor(bgColor)
             sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
-            actionIds.forEach { id ->
-                sheetView.findViewById<LinearLayout>(id)?.let { layout ->
-                    for (i in 0 until layout.childCount) {
-                        val child = layout.getChildAt(i)
-                        if (child is TextView) child.setTextColor(txtColor)
-                        if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primColor)
+            fun applyThemeToMenu(view: View, isShare: Boolean, isLogout: Boolean) {
+                if (view is TextView) {
+                    if (isShare) view.setTextColor(primColor)
+                    else if (!isLogout) view.setTextColor(txtColor)
+                } else if (view is ImageView) {
+                    if (!isLogout) view.imageTintList = ColorStateList.valueOf(primColor)
+                } else if (view is ViewGroup) {
+                    for (i in 0 until view.childCount) {
+                        applyThemeToMenu(view.getChildAt(i), isShare, isLogout)
                     }
+                }
+            }
+
+            actionIds.forEach { id ->
+                sheetView.findViewById<View>(id)?.let { view ->
+                    applyThemeToMenu(view, id == R.id.actionShareHeader, id == R.id.actionLogout)
                 }
             }
         } catch (_: Exception) {

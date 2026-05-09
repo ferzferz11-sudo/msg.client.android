@@ -57,6 +57,7 @@
                 android:layout_marginBottom="4dp">
 
                 <View
+                    android:id="@+id/replyQuoteBar"
                     android:layout_width="3dp"
                     android:layout_height="match_parent"
                     android:background="@color/lavender_mist"

@@ -46,7 +46,30 @@ object ThemeApplier {
         val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
         val customOnPrimary = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
         toolbar?.apply {
-            backgroundTintList = ColorStateList.valueOf(customPrimary)
+            // Set elevation to 0 if toolbar is transparent to avoid shadow/surface overlay
+            elevation = if (Color.alpha(customPrimary) < 255) 0f else 4f * context.resources.displayMetrics.density
+            
+            // To support transparency and rounded corners centrally, 
+            // we create a fresh background if the color has transparency.
+            if (Color.alpha(customPrimary) < 255) {
+                backgroundTintList = null // Crucial: remove tint so it doesn't block transparency
+                val cornerRadius = 24f * context.resources.displayMetrics.density
+                val shape = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setColor(customPrimary)
+                    // Bottom corners rounded (0,0,0,0, R,R,R,R)
+                    cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, cornerRadius, cornerRadius, cornerRadius, cornerRadius)
+                }
+                background = shape
+            } else {
+                // For solid colors, we can try to reuse/tint the existing background (to keep strokes/layers)
+                background?.let { bg ->
+                    val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(bg.mutate())
+                    androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, customPrimary)
+                    background = wrapped
+                } ?: setBackgroundColor(customPrimary)
+            }
+
             setTitleTextColor(customOnPrimary)
             setNavigationIconTint(customOnPrimary)
             
@@ -107,6 +130,23 @@ object ThemeApplier {
             panel.findViewById<ImageButton>(R.id.attachButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
             panel.findViewById<ImageButton>(R.id.audioButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
             panel.findViewById<ImageButton>(R.id.sendButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
+        }
+
+        // Apply text colors to inputs globally in the activity
+        val inputTextColor = parseSafeColor(theme.textPrimaryColor, if (isLightMode) Color.BLACK else Color.WHITE)
+        val hintTextColor = ThemeUtils.adjustAlpha(inputTextColor, 0.6f)
+        
+        // Find and theme common input fields
+        val commonInputs = listOf(
+            R.id.messageInput, R.id.searchInput, R.id.editMessageInput, 
+            R.id.editTextBio, R.id.editTextUsername, R.id.editTextPassword,
+            R.id.editNewUsername, R.id.editTextOldPassword, R.id.editTextNewPassword
+        )
+        commonInputs.forEach { id ->
+            activity.findViewById<android.widget.EditText>(id)?.apply {
+                setTextColor(inputTextColor)
+                setHintTextColor(hintTextColor)
+            }
         }
 
         // FABs

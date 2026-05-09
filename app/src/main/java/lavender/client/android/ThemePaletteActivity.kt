@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.theme.BuiltInThemes
+import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -441,8 +442,8 @@ class ThemePaletteActivity : AppCompatActivity(),
                                 chatListBackgroundUri = originalChatListBackgroundUri
                                 chatBackgroundUri = originalChatBackgroundUri
                                 
-                                // Refresh current theme in app
-                                ThemeUi.bind(this, username)
+                                // Refresh current theme in app with force bypass
+                                ThemeStore.refresh(this@ThemePaletteActivity, username, force = true)
                                 setResult(RESULT_OK)
                             } else {
                                 saveButton.isVisible = true

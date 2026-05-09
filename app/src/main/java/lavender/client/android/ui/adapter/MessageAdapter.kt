@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.models.Message
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -135,6 +136,7 @@ class MessageAdapter(
         private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
+        private val replyQuoteBar: View = itemView.findViewById(R.id.replyQuoteBar)
         private val messageImageView: ImageView = itemView.findViewById(R.id.messageImageView)
         private val imageLoadingSpinner: ImageView = itemView.findViewById(R.id.imageLoadingSpinner)
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
@@ -378,8 +380,14 @@ class MessageAdapter(
                         val start = text.lowercase().indexOf(highlight.lowercase())
                         if (start != -1) {
                             val end = start + highlight.length
+                            val highlightColor = try {
+                                val theme = ThemeStore.currentTheme()
+                                ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.5f)
+                            } catch (_: Exception) {
+                                ContextCompat.getColor(context, R.color.lavender_mist_alpha)
+                            }
                             spannable.setSpan(
-                                android.text.style.BackgroundColorSpan(ContextCompat.getColor(context, R.color.lavender_mist_alpha)),
+                                android.text.style.BackgroundColorSpan(highlightColor),
                                 start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
                         }
@@ -555,10 +563,12 @@ class MessageAdapter(
                         replyQuoteUser.setTextColor(onPrimary)
                         replyQuoteText.setTextColor(withAlpha(onPrimary, 200))
                         replyQuoteContainer.setBackgroundColor(withAlpha(onPrimary, 30))
+                        replyQuoteBar.setBackgroundColor(onPrimary)
                     } else {
                         replyQuoteUser.setTextColor(onSurface)
                         replyQuoteText.setTextColor(withAlpha(textPrimary, 200))
                         replyQuoteContainer.setBackgroundColor(withAlpha(onSurface, 30))
+                        replyQuoteBar.setBackgroundColor(onSurface)
                     }
                 } catch (_: Exception) {}
             }
@@ -566,7 +576,14 @@ class MessageAdapter(
             selectionIndicator.isVisible = isSelectionMode
             selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
-            itemView.setBackgroundColor(if (isSelected) ContextCompat.getColor(context, R.color.lavender_mist_alpha) else Color.TRANSPARENT)
+            
+            val selectionColor = try {
+                val theme = ThemeStore.currentTheme()
+                ThemeUtils.adjustAlpha(theme.primaryColor.toColorInt(), 0.25f)
+            } catch (_: Exception) {
+                ContextCompat.getColor(context, R.color.lavender_mist_alpha)
+            }
+            itemView.setBackgroundColor(if (isSelected) selectionColor else Color.TRANSPARENT)
 
             val genericOnClick = { onClick() }
             val genericOnLongClick = { onLongClick(); true }

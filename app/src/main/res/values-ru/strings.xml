@@ -362,6 +362,7 @@
     <string name="no">Нет</string>
     <string name="preset_colors">Готовые цвета</string>
     <string name="custom_color">Свой цвет</string>
+    <string name="transparency">Прозрачность</string>
     <string name="invalid_hex">Неверный формат HEX</string>
     <string name="tab_palette">Палитра</string>
     <string name="tab_backgrounds">Фоны</string>

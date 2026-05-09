@@ -72,6 +72,7 @@ class PaletteFragment : Fragment() {
         val colorGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.colorGrid)
         val hexInput = dialogView.findViewById<android.widget.EditText>(R.id.hexInput)
         val colorPreview = dialogView.findViewById<View>(R.id.colorPreview)
+        val transparencySlider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.transparencySlider)
 
         val presetColors = listOf(
             "#FF0000", "#FF5722", "#FF9800", "#FFC107", "#FFEB3B", "#CDDC39",
@@ -89,28 +90,67 @@ class PaletteFragment : Fragment() {
                 }
                 setBackgroundColor(Color.parseColor(colorHex))
                 setOnClickListener {
-                    hexInput.setText(colorHex)
-                    colorPreview.setBackgroundColor(Color.parseColor(colorHex))
+                    val currentAlpha = transparencySlider.value.toInt()
+                    val newHex = if (currentAlpha < 255) {
+                        String.format("#%02X%s", currentAlpha, colorHex.removePrefix("#"))
+                    } else {
+                        colorHex
+                    }
+                    hexInput.setText(newHex.uppercase())
                 }
             }
             colorGrid.addView(colorView)
         }
 
         hexInput.setText(currentColor.uppercase())
-        colorPreview.setBackgroundColor(Color.parseColor(currentColor))
+        
+        // Initial alpha from currentColor
+        val initialAlpha = try {
+            val c = Color.parseColor(currentColor)
+            Color.alpha(c)
+        } catch (_: Exception) { 255 }
+        transparencySlider.value = initialAlpha.toFloat()
+
+        fun updatePreviewFromInput() {
+            val hex = hexInput.text.toString().trim()
+            if (isValidHexColor(hex)) {
+                try {
+                    val color = Color.parseColor(hex)
+                    colorPreview.setBackgroundColor(color)
+                    // Update slider if not currently dragging
+                    val alpha = Color.alpha(color)
+                    if (transparencySlider.value.toInt() != alpha) {
+                        transparencySlider.value = alpha.toFloat()
+                    }
+                } catch (_: Exception) {}
+            }
+        }
 
         hexInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
-                val hex = s?.toString()?.trim() ?: return
-                if (isValidHexColor(hex)) {
-                    try {
-                        colorPreview.setBackgroundColor(Color.parseColor(hex))
-                    } catch (_: Exception) {}
-                }
+                updatePreviewFromInput()
             }
         })
+
+        transparencySlider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                val hex = hexInput.text.toString().trim()
+                if (isValidHexColor(hex)) {
+                    val alpha = value.toInt()
+                    val color = Color.parseColor(hex)
+                    val r = Color.red(color)
+                    val g = Color.green(color)
+                    val b = Color.blue(color)
+                    val newHex = String.format("#%02X%02X%02X%02X", alpha, r, g, b)
+                    hexInput.setText(newHex)
+                }
+            }
+        }
+
+        // Initialize preview immediately
+        updatePreviewFromInput()
 
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.edit_color))
@@ -133,7 +173,7 @@ class PaletteFragment : Fragment() {
     }
 
     private fun isValidHexColor(hex: String): Boolean {
-        return hex.matches(Regex("^#[0-9A-Fa-f]{6}$"))
+        return hex.matches(Regex("^#[0-9A-Fa-f]{6}$")) || hex.matches(Regex("^#[0-9A-Fa-f]{8}$"))
     }
 
     inner class ColorAdapter : RecyclerView.Adapter<ColorAdapter.ColorViewHolder>() {

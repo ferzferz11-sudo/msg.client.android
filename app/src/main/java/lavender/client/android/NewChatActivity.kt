@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -435,7 +436,9 @@ class NewChatActivity : AppCompatActivity() {
             val u = arr.getString(i)
             val iv = CircleImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(34.dpToPx(), 34.dpToPx()).apply { marginStart = if (i > 0) (-10).dpToPx() else 0 }
-                borderWidth = 1.dpToPx(); borderColor = ContextCompat.getColor(this@NewChatActivity, R.color.lavender_mist)
+                borderWidth = 1.dpToPx()
+                val theme = ThemeStore.currentTheme()
+                borderColor = try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this@NewChatActivity, R.color.white) }
             }
             val cache = grpcClient.getAvatarCache(); val url = cache[u]
             if (!url.isNullOrEmpty()) com.bumptech.glide.Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).circleCrop().into(iv)
@@ -677,7 +680,9 @@ class NewChatActivity : AppCompatActivity() {
                     for (i in 0 until layout.childCount) {
                         val child = layout.getChildAt(i)
                         if (child is TextView) child.setTextColor(textColor)
-                        if (child is ImageView) child.imageTintList = android.content.res.ColorStateList.valueOf(primColor)
+                        if (child is ImageView) {
+                            child.imageTintList = ColorStateList.valueOf(primColor)
+                        }
                     }
                 }
             }
@@ -1513,6 +1518,12 @@ class NewChatActivity : AppCompatActivity() {
     private fun saveUserId(userId: String) {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit { putString("user_id", userId) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ThemeStore.refresh(this, username)
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
     }
 
     override fun onPause() {

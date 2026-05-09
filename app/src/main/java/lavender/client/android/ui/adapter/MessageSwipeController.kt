@@ -17,7 +17,12 @@ class MessageSwipeController(
     private val replyIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_reply_swipe)
     private val backIcon: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_back_arrow)
     private val paint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.lavender_mist)
+        try {
+            val theme = lavender.client.android.theme.ThemeStore.currentTheme()
+            color = android.graphics.Color.parseColor(theme.primaryColor)
+        } catch (_: Exception) {
+            color = ContextCompat.getColor(context, R.color.lavender_mist)
+        }
         isAntiAlias = true
     }
     

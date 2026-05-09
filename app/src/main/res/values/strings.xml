@@ -360,6 +360,7 @@
     <string name="no">No</string>
     <string name="preset_colors">Preset Colors</string>
     <string name="custom_color">Custom Color</string>
+    <string name="transparency">Transparency</string>
     <string name="invalid_hex">Invalid HEX format</string>
     <string name="tab_palette">Palette</string>
     <string name="tab_backgrounds">Backgrounds</string>

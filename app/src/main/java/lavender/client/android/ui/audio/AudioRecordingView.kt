@@ -185,7 +185,7 @@ class AudioRecordingView @JvmOverloads constructor(
 
         if (isRecording) {
             recordButton.setImageResource(R.drawable.ic_stop)
-            recordButton.backgroundTintList = ContextCompat.getColorStateList(context, R.color.red)
+            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
             cancelButton.visibility = VISIBLE
             recordingIndicator.visibility = VISIBLE
             waveformView.visibility = VISIBLE
@@ -197,7 +197,12 @@ class AudioRecordingView @JvmOverloads constructor(
             pulse.start()
         } else {
             recordButton.setImageResource(R.drawable.ic_mic)
-            recordButton.backgroundTintList = ContextCompat.getColorStateList(context, R.color.lavender_mist)
+            val primColor = try {
+                currentTheme?.primaryColor?.let { android.graphics.Color.parseColor(it) } ?: ContextCompat.getColor(context, R.color.lavender_mist)
+            } catch (_: Exception) {
+                ContextCompat.getColor(context, R.color.lavender_mist)
+            }
+            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
             cancelButton.visibility = GONE
             recordingIndicator.visibility = GONE
             waveformView.visibility = GONE

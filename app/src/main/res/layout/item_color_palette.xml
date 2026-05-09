@@ -13,26 +13,36 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/colorPreview"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            app:cardCornerRadius="0dp"
-            app:cardElevation="0dp"
-            tools:cardBackgroundColor="#967BB6">
+            android:layout_height="80dp">
 
-            <TextView
-                android:id="@+id/colorValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|end"
-                android:layout_margin="8dp"
-                android:textSize="12sp"
-                android:fontFamily="monospace"
-                tools:text="#967BB6"
-                tools:textColor="#FFFFFF" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_transparency_checker" />
 
-        </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/colorPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                tools:cardBackgroundColor="#967BB6">
+
+                <TextView
+                    android:id="@+id/colorValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="8dp"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    tools:text="#967BB6"
+                    tools:textColor="#FFFFFF" />
+
+            </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

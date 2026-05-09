@@ -44,23 +44,49 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <View
-            android:id="@+id/colorPreview"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="#FF0000"
-            android:layout_marginEnd="12dp" />
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp">
+            <!-- Checkerboard background for transparency preview -->
+            <View
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_transparency_checker" />
+            <View
+                android:id="@+id/colorPreview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="#FF0000" />
+        </FrameLayout>
 
         <EditText
             android:id="@+id/hexInput"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="#RRGGBB"
+            android:hint="#AARRGGBB"
             android:inputType="textCapCharacters"
-            android:maxLength="7"
+            android:maxLength="9"
             android:fontFamily="monospace" />
 
     </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/transparency"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/transparencySlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="0"
+        android:valueTo="255"
+        android:stepSize="1" />
 
 </LinearLayout>

@@ -22,9 +22,11 @@ object ThemeStore {
 
     fun currentTheme(): Theme = _theme.value
 
-    fun refresh(context: Context, username: String): Job {
+    fun refresh(context: Context, username: String, force: Boolean = false): Job {
         val running = refreshJob
-        if (running?.isActive == true) return running
+        if (!force && running?.isActive == true) return running
+        running?.cancel()
+
         return scope.launch {
             val t = repo.loadCurrentTheme(context, username)
             _theme.value = t
