@@ -242,6 +242,9 @@ class NewChatActivity : AppCompatActivity() {
         viewModel.startChat(username, password, "") { _ ->
             viewModel.markRead(username, this)
         }
+        
+        // Mark as read immediately upon entry
+        viewModel.markRead(username, this)
 
         // Load draft message when entering chat (after ensuring userId is set)
         ensureUserIdSet { loadDraft() }

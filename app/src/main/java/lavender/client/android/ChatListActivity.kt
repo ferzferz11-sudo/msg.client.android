@@ -100,6 +100,13 @@ class ChatListActivity : AppCompatActivity() {
             onChatClick = { chat ->
                 if (chat.unreadCount > 0) {
                     grpcClient.markRead(chat.id, username)
+                    // Locally update for immediate visual feedback
+                    val index = chats.indexOfFirst { it.id == chat.id }
+                    if (index != -1) {
+                        chats[index] = chats[index].copy(unreadCount = 0)
+                        chatAdapter.setChats(chats.toList())
+                        updateAppIconBadge(chats.sumOf { it.unreadCount })
+                    }
                 }
 
                 val intent = Intent(this, NewChatActivity::class.java).apply {
