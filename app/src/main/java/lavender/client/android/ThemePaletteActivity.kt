@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -16,15 +17,24 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 
 data class ColorItem(
@@ -45,9 +55,12 @@ class ThemePaletteActivity : AppCompatActivity(),
     private var username: String = ""
     private var hasChanges = false
     private lateinit var saveButton: Button
+    private lateinit var uploadProgress: ProgressBar
 
     private var chatListBackgroundUri: Uri? = null
     private var chatBackgroundUri: Uri? = null
+    private var originalChatListBackgroundUri: Uri? = null
+    private var originalChatBackgroundUri: Uri? = null
 
     private lateinit var viewPager: ViewPager2
     private lateinit var paletteFragment: PaletteFragment
@@ -60,7 +73,8 @@ class ThemePaletteActivity : AppCompatActivity(),
         Locale.setDefault(locale)
         val config = Configuration(newBase.resources.configuration)
         config.setLocale(locale)
-        super.attachBaseContext(newBase.createConfigurationContext(config))
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,7 +94,6 @@ class ThemePaletteActivity : AppCompatActivity(),
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            // Make toolbar physically taller so the next view (tabs) starts below it.
             val baseHeight = android.util.TypedValue().let { tv ->
                 theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)
                 android.util.TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
@@ -93,7 +106,6 @@ class ThemePaletteActivity : AppCompatActivity(),
             insets
         }
 
-        // Ensure selected theme is applied when opening this screen.
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val currentThemeId = prefs.getString("current_theme_id", "dark") ?: "dark"
         if (currentThemeId != themeId) {
@@ -101,11 +113,9 @@ class ThemePaletteActivity : AppCompatActivity(),
         }
         ThemeUi.bind(this, username)
 
-        // Check if this is a custom theme with full data passed via extras
         val isCustomThemeWithExtras = intent.hasExtra("primary_color")
 
         if (isCustomThemeWithExtras) {
-            // Custom theme - use passed colors as defaults
             val customTheme = CustomThemeProto(
                 id = themeId,
                 name = intent.getStringExtra("theme_name") ?: themeId,
@@ -125,12 +135,9 @@ class ThemePaletteActivity : AppCompatActivity(),
             )
             originalTheme = customTheme
         } else {
-            // Built-in theme - get by ID
             originalTheme = getThemeById(themeId) ?: return finish()
         }
 
-        supportActionBar?.title = originalTheme.name
-        // Localize built-in theme names (same mapping as ThemesActivity).
         supportActionBar?.title = when (originalTheme.id) {
             "builtin_green" -> getString(R.string.theme_template_green)
             "builtin_blue" -> getString(R.string.theme_template_blue)
@@ -148,10 +155,13 @@ class ThemePaletteActivity : AppCompatActivity(),
         initDefaultColors(originalTheme)
         currentColors.putAll(defaultColors)
 
-        chatListBackgroundUri = intent.getStringExtra("chat_list_background")?.toUri()
-        chatBackgroundUri = intent.getStringExtra("chat_background")?.toUri()
+        chatListBackgroundUri = originalTheme.chatListBackgroundImageUrl.takeIf { it.isNotEmpty() }?.toUri()
+        chatBackgroundUri = originalTheme.chatBackgroundImageUrl.takeIf { it.isNotEmpty() }?.toUri()
+        originalChatListBackgroundUri = chatListBackgroundUri
+        originalChatBackgroundUri = chatBackgroundUri
 
         saveButton = findViewById(R.id.saveButton)
+        uploadProgress = findViewById(R.id.uploadProgress)
         saveButton.setOnClickListener { showSaveThemeDialog() }
         saveButton.isVisible = false
 
@@ -201,6 +211,7 @@ class ThemePaletteActivity : AppCompatActivity(),
         defaultColors["surfaceColor"] = theme.surfaceColor
         defaultColors["surfaceContainer"] = theme.surfaceContainer
         defaultColors["textPrimaryColor"] = theme.textPrimaryColor
+        defaultColors["textSecondaryColor"] = theme.textSecondaryColor
         defaultColors["onPrimaryColor"] = theme.onPrimaryColor
         defaultColors["onSurfaceColor"] = theme.onSurfaceColor
         defaultColors["bottomPanelColor"] = theme.bottomPanelColor
@@ -213,6 +224,7 @@ class ThemePaletteActivity : AppCompatActivity(),
         currentColors[fieldName] = color
         checkChanges()
         paletteFragment.refresh()
+        previewTheme()
     }
 
     override fun getCurrentColors(): Map<String, String> = currentColors
@@ -221,11 +233,35 @@ class ThemePaletteActivity : AppCompatActivity(),
     override fun onChatListBackgroundChanged(uri: Uri?) {
         chatListBackgroundUri = uri
         checkChanges()
+        previewTheme()
     }
 
     override fun onChatBackgroundChanged(uri: Uri?) {
         chatBackgroundUri = uri
         checkChanges()
+        previewTheme()
+    }
+
+    private fun previewTheme() {
+        val theme = lavender.client.android.theme.Theme(
+            id = "preview",
+            name = "Preview",
+            primaryColor = currentColors["primaryColor"]!!,
+            onPrimaryColor = currentColors["onPrimaryColor"]!!,
+            surfaceColor = currentColors["surfaceColor"]!!,
+            onSurfaceColor = currentColors["onSurfaceColor"]!!,
+            backgroundColor = currentColors["backgroundColor"]!!,
+            textPrimaryColor = currentColors["textPrimaryColor"]!!,
+            textSecondaryColor = currentColors["textSecondaryColor"]!!,
+            surfaceContainer = currentColors["surfaceContainer"]!!,
+            bottomPanelColor = currentColors["bottomPanelColor"]!!,
+            onBottomPanelColor = currentColors["onBottomPanelColor"]!!,
+            outgoingBubbleColor = currentColors["outgoingBubbleColor"]!!,
+            incomingBubbleColor = currentColors["incomingBubbleColor"]!!,
+            chatListBackgroundImageUrl = chatListBackgroundUri?.toString() ?: "",
+            chatBackgroundImageUrl = chatBackgroundUri?.toString() ?: ""
+        )
+        lavender.client.android.theme.ui.ThemeApplier.apply(this, theme)
     }
 
     override fun getChatListBackgroundUri(): Uri? = chatListBackgroundUri
@@ -233,7 +269,7 @@ class ThemePaletteActivity : AppCompatActivity(),
 
     private fun checkChanges() {
         val colorChanges = currentColors.any { (key, value) -> value != defaultColors[key] }
-        val backgroundChanges = chatListBackgroundUri != null || chatBackgroundUri != null
+        val backgroundChanges = chatListBackgroundUri != originalChatListBackgroundUri || chatBackgroundUri != originalChatBackgroundUri
         hasChanges = colorChanges || backgroundChanges
         saveButton.isVisible = hasChanges
     }
@@ -253,14 +289,12 @@ class ThemePaletteActivity : AppCompatActivity(),
 
     private fun showSaveThemeDialog() {
         // If we are editing an existing custom theme, we update it directly without changing the name
-        // Unless we want to support "Save As", but the user requested to keep the same theme.
         if (themeId.startsWith("custom_") && !themeId.startsWith("custom_new_")) {
-            saveCustomTheme(originalTheme.name)
+            saveCustomThemeWithUploads(originalTheme.name)
             return
         }
 
         val defaultName = "$username's ${originalTheme.name}"
-
         val input = EditText(this).apply {
             setText(defaultName)
             setSelection(defaultName.length)
@@ -276,15 +310,94 @@ class ThemePaletteActivity : AppCompatActivity(),
             .setPositiveButton(R.string.yes) { _, _ ->
                 val themeName = input.text.toString().trim()
                 if (themeName.isNotEmpty()) {
-                    saveCustomTheme(themeName)
+                    saveCustomThemeWithUploads(themeName)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun saveCustomTheme(themeName: String) {
-        // Use existing ID if it's already a custom theme (editing mode), otherwise generate new one
+    private fun saveCustomThemeWithUploads(themeName: String) {
+        saveButton.isVisible = false
+        uploadProgress.isVisible = true
+
+        lifecycleScope.launch {
+            try {
+                val listBgUrl = uploadIfLocal(chatListBackgroundUri)
+                val chatBgUrl = uploadIfLocal(chatBackgroundUri)
+                
+                withContext(Dispatchers.Main) {
+                    saveCustomTheme(themeName, listBgUrl, chatBgUrl)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    uploadProgress.isVisible = false
+                    saveButton.isVisible = true
+                    Toast.makeText(this@ThemePaletteActivity, "Error uploading backgrounds: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private suspend fun uploadIfLocal(uri: Uri?): String {
+        if (uri == null) return ""
+        val uriString = uri.toString()
+        if (uriString.startsWith("http")) return uriString
+        
+        return withContext(Dispatchers.IO) {
+            val stream = contentResolver.openInputStream(uri)
+            val bytes = stream?.readBytes()
+            stream?.close()
+            
+            if (bytes == null) return@withContext ""
+            
+            val fileName = getFileName(uri) ?: "background.jpg"
+            val body = MultipartBody.Part.createFormData("image", fileName, bytes.toRequestBody("image/jpeg".toMediaTypeOrNull()))
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addPart(body)
+                .build()
+                
+            val request = Request.Builder()
+                .url("http://159.195.38.145:8082/upload-image")
+                .post(requestBody)
+                .build()
+                
+            val response = OkHttpClient().newCall(request).execute()
+            val responseBody = response.body.string()
+            
+            if (response.isSuccessful && !responseBody.contains("404")) {
+                if (responseBody.contains("\"url\":")) {
+                    try { org.json.JSONObject(responseBody).getString("url") } catch (_: Exception) { "" }
+                } else if (responseBody.startsWith("http")) responseBody else ""
+            } else {
+                throw Exception("Upload failed: ${response.code}")
+            }
+        }
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) result = cursor.getString(index)
+                }
+            } finally {
+                cursor?.close()
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/') ?: -1
+            if (cut != -1) result = result?.substring(cut + 1)
+        }
+        return result
+    }
+
+    private fun saveCustomTheme(themeName: String, listBgUrl: String, chatBgUrl: String) {
         val finalId = if (themeId.startsWith("custom_") && !themeId.startsWith("custom_new_")) {
             themeId
         } else {
@@ -305,22 +418,25 @@ class ThemePaletteActivity : AppCompatActivity(),
             onBottomPanelColor = currentColors["onBottomPanelColor"]!!,
             outgoingBubbleColor = currentColors["outgoingBubbleColor"]!!,
             incomingBubbleColor = currentColors["incomingBubbleColor"]!!,
-            chatListBackgroundImageUrl = chatListBackgroundUri?.toString() ?: "",
-            chatBackgroundImageUrl = chatBackgroundUri?.toString() ?: ""
+            chatListBackgroundImageUrl = listBgUrl,
+            chatBackgroundImageUrl = chatBgUrl
         )
 
         val queryId = GrpcClient.getUserId() ?: username
         GrpcClient.saveTheme(queryId, newTheme) { success, error ->
             runOnUiThread {
+                uploadProgress.isVisible = false
                 if (success) {
                     Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
                     hasChanges = false
-                    saveButton.isVisible = false
-                    
-                    // If we saved it as a new theme, update our themeId so subsequent saves update the same theme
                     themeId = finalId
+                    originalChatListBackgroundUri = listBgUrl.takeIf { it.isNotEmpty() }?.toUri()
+                    originalChatBackgroundUri = chatBgUrl.takeIf { it.isNotEmpty() }?.toUri()
+                    chatListBackgroundUri = originalChatListBackgroundUri
+                    chatBackgroundUri = originalChatBackgroundUri
                     setResult(RESULT_OK)
                 } else {
+                    saveButton.isVisible = true
                     Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
                 }
             }

@@ -57,6 +57,7 @@ class PaletteFragment : Fragment() {
             ColorItem(getString(R.string.color_surface), currentColors["surfaceColor"]!!, getString(R.string.color_surface_desc), "surfaceColor"),
             ColorItem(getString(R.string.color_surface_container), currentColors["surfaceContainer"]!!, getString(R.string.color_surface_container_desc), "surfaceContainer"),
             ColorItem(getString(R.string.color_text_primary), currentColors["textPrimaryColor"]!!, getString(R.string.color_text_primary_desc), "textPrimaryColor"),
+            ColorItem(getString(R.string.color_text_secondary), currentColors["textSecondaryColor"]!!, getString(R.string.color_text_secondary_desc), "textSecondaryColor"),
             ColorItem(getString(R.string.color_on_primary), currentColors["onPrimaryColor"]!!, getString(R.string.color_on_primary_desc), "onPrimaryColor"),
             ColorItem(getString(R.string.color_on_surface), currentColors["onSurfaceColor"]!!, getString(R.string.color_on_surface_desc), "onSurfaceColor"),
             ColorItem(getString(R.string.color_bottom_panel), currentColors["bottomPanelColor"]!!, getString(R.string.color_bottom_panel_desc), "bottomPanelColor"),
@@ -169,7 +170,7 @@ class PaletteFragment : Fragment() {
             }
         }
 
-        override fun getItemCount(): Int = 11
+        override fun getItemCount(): Int = 12
 
         private fun isColorLight(color: Int): Boolean {
             val r = Color.red(color)

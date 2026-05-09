@@ -51,10 +51,10 @@ class ProfileActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru" // Default to Russian for first launch
+        val languageCode = prefs.getString("language", "ru") ?: "ru"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
-        val config = newBase.resources.configuration
+        val config = android.content.res.Configuration(newBase.resources.configuration)
         config.setLocale(locale)
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
@@ -84,12 +84,11 @@ class ProfileActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val currentUsername = prefs.getString("username", "") ?: ""
-        ThemeUi.bind(this, currentUsername)
+        val currentMe = prefs.getString("username", "") ?: ""
+        ThemeUi.bind(this, currentMe)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         
-        // Handle window insets for edge-to-edge
         ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(top = systemBars.top)
@@ -128,7 +127,6 @@ class ProfileActivity : AppCompatActivity() {
             finish()
         }
 
-        // Initialize UI data immediately
         loadProfileData()
 
         lifecycleScope.launch {
@@ -177,10 +175,8 @@ class ProfileActivity : AppCompatActivity() {
                     runOnUiThread { onComplete?.invoke() }
                 }
             } else {
-                // Room no longer exists (deleted)
                 runOnUiThread {
                     if (isGroup && !isFinishing) {
-                        Toast.makeText(this@ProfileActivity, R.string.failed_to_delete_chats, Toast.LENGTH_SHORT).show()
                         finish()
                     }
                     onComplete?.invoke()
@@ -197,7 +193,7 @@ class ProfileActivity : AppCompatActivity() {
         val profileName = findViewById<TextView>(R.id.profileName) ?: return
         val profileBio = findViewById<TextView>(R.id.profileBio) ?: return
         val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
-        val bioCard = findViewById<View>(R.id.bioCard)
+        val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
         val changeAvatarButton = findViewById<View>(R.id.changeAvatarButton)
 
         currentProfileAvatar = profileAvatar
@@ -230,7 +226,6 @@ class ProfileActivity : AppCompatActivity() {
                                         if (success) {
                                             username = newName
                                             profileName.text = newName
-                                            Toast.makeText(this@ProfileActivity, R.string.message_edited, Toast.LENGTH_SHORT).show()
                                         } else {
                                             Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
                                         }
@@ -252,7 +247,7 @@ class ProfileActivity : AppCompatActivity() {
                 changeAvatarButton?.isVisible = false
             }
 
-            val participantsCard = findViewById<View>(R.id.participantsCard)
+            val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
             val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)
             val addParticipantLayout = findViewById<LinearLayout>(R.id.addParticipantLayout)
             val addParticipantProgress = findViewById<ProgressBar>(R.id.addParticipantProgress)
@@ -318,9 +313,8 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             ThemeStore.currentTheme().let { theme ->
-                val card = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
-                card?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
-                card?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
+                participantsCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
+                participantsCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
                 addParticipantLayout?.backgroundTintList = android.content.res.ColorStateList.valueOf(theme.surfaceContainer.toColorInt())
                 findViewById<TextView>(R.id.addParticipantButton)?.setTextColor(theme.primaryColor.toColorInt())
             }
@@ -365,7 +359,6 @@ class ProfileActivity : AppCompatActivity() {
                 }
             }
         } else {
-            // User profile logic
             grpcClient.getUserProfile(username) { profile ->
                 runOnUiThread {
                     if (!isFinishing && profile != null) {
@@ -403,9 +396,8 @@ class ProfileActivity : AppCompatActivity() {
 
         if (!isGroup) {
             ThemeStore.currentTheme().let { theme ->
-                val card = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
-                card?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
-                card?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
+                bioCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
+                bioCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
             }
         }
     }
@@ -494,7 +486,6 @@ class ProfileActivity : AppCompatActivity() {
                                 runOnUiThread {
                                     progressOverlay?.isVisible = false
                                     if (success) {
-                                        Toast.makeText(this@ProfileActivity, "Групповой аватар обновлен", Toast.LENGTH_SHORT).show()
                                         currentProfileAvatar?.let { Glide.with(this@ProfileActivity).load(thumbUrl).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).skipMemoryCache(true).diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE).into(it) }
                                         avatarUrl = thumbUrl; fullAvatarUrl = fullUrl
                                     } else Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()

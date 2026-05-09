@@ -337,6 +337,8 @@
     <string name="color_surface_container_desc">Menu and panels</string>
     <string name="color_text_primary">Text Primary</string>
     <string name="color_text_primary_desc">Main text color</string>
+    <string name="color_text_secondary">Text Secondary</string>
+    <string name="color_text_secondary_desc">Secondary text color</string>
     <string name="color_on_primary">On Primary</string>
     <string name="color_on_primary_desc">Text on buttons</string>
     <string name="color_on_surface">On Surface</string>

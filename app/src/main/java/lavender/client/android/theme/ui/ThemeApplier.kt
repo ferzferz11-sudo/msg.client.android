@@ -68,7 +68,7 @@ object ThemeApplier {
 
         // Chat background image
         activity.findViewById<ImageView>(R.id.chatBackground)?.let { bgImageView ->
-            val url = theme.chatListBackgroundImageUrl
+            val url = theme.chatBackgroundImageUrl
             if (url.isNotEmpty()) {
                 bgImageView.visibility = View.VISIBLE
                 Glide.with(activity)

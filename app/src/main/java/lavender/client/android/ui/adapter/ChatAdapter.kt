@@ -52,10 +52,6 @@ class ChatAdapter(
         onSelectionChanged(0)
     }
 
-    fun getChats(): List<ChatInfo> {
-        return displayedChats
-    }
-
     fun setChats(newChats: List<ChatInfo>) {
         allChats = newChats
         applyFilter()

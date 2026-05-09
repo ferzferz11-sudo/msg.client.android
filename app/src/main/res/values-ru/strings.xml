@@ -339,6 +339,8 @@
     <string name="color_surface_container_desc">Меню и панели</string>
     <string name="color_text_primary">Текст основной</string>
     <string name="color_text_primary_desc">Главный цвет текста</string>
+    <string name="color_text_secondary">Текст вторичный</string>
+    <string name="color_text_secondary_desc">Вторичный цвет текста</string>
     <string name="color_on_primary">На основном</string>
     <string name="color_on_primary_desc">Текст на кнопках</string>
     <string name="color_on_surface">На поверхности</string>
