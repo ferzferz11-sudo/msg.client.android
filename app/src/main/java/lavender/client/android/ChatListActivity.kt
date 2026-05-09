@@ -11,8 +11,11 @@ import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -31,11 +34,15 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -113,6 +120,12 @@ class ChatListActivity : AppCompatActivity() {
                 
                 binding.actionDelete.isVisible = hasSelection
                 binding.actionMute.isVisible = hasSelection
+                
+                // Show edit icon only if ONE group chat is selected and user is creator
+                val selected = chatAdapter.getSelectedChats()
+                val canEdit = selected.size == 1 && (selected[0].type == "group" || selected[0].type == "general") && selected[0].creator == username
+                binding.actionEdit.isVisible = canEdit
+
                 binding.actionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
                 binding.toolbarUserAvatar.isVisible = !hasSelection && !binding.searchCard.isVisible
             },
@@ -168,6 +181,23 @@ class ChatListActivity : AppCompatActivity() {
             val selected = chatAdapter.getSelectedChats()
             if (selected.isNotEmpty()) {
                 toggleMuteSelectedChats(selected)
+            }
+        }
+
+        binding.actionEdit.setOnClickListener {
+            val selected = chatAdapter.getSelectedChats()
+            if (selected.size == 1) {
+                val chat = selected[0]
+                val intent = Intent(this, ProfileActivity::class.java).apply {
+                    putExtra("username", chat.name)
+                    putExtra("is_group", true)
+                    putExtra("room_id", chat.id)
+                    putExtra("avatar_url", chat.avatarUrl)
+                    putExtra("full_avatar_url", chat.fullAvatarUrl)
+                    putExtra("participants", chat.participants)
+                    putExtra("creator", chat.creator)
+                }
+                startActivity(intent)
             }
         }
 
@@ -432,6 +462,141 @@ class ChatListActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun checkManualUpdate() {
+        val currentVersion = BuildConfig.VERSION_NAME
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("http://159.195.38.145:8081/version.txt")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 5000
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    withContext(Dispatchers.Main) {
+                        showUpdateDialog(currentVersion, latestVersion)
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ChatListActivity, "Failed to check updates: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun showUpdateDialog(current: String, latest: String) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
+        val customTheme = ThemeStore.currentTheme()
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnAction = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete)
+
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val txtColor = customTheme.textPrimaryColor.toColorInt()
+            dialogView.setBackgroundColor(bgColor)
+            titleText.setTextColor(txtColor)
+            messageText.setTextColor(txtColor)
+        } catch (_: Exception) {}
+
+        val isAvailable = isUpdateAvailable(current, latest)
+        titleText.text = getString(if (isAvailable) R.string.update_available else R.string.ok)
+        messageText.text = "${getString(R.string.version_current, current)}\n${getString(R.string.version_available, latest)}"
+        
+        btnCancel.text = getString(R.string.cancel_dialog)
+        btnAction.text = if (isAvailable) getString(R.string.update_now) else getString(R.string.force_download)
+        
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnAction.setOnClickListener {
+            dialog.dismiss()
+            downloadAndInstallApk()
+        }
+        dialog.show()
+    }
+
+    private fun isUpdateAvailable(current: String, latest: String): Boolean {
+        val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }
+        val latestParts = latest.split(".").mapNotNull { it.toIntOrNull() }
+        for (i in 0 until maxOf(currentParts.size, latestParts.size)) {
+            val c = currentParts.getOrNull(i) ?: 0
+            val l = latestParts.getOrNull(i) ?: 0
+            if (l > c) return true
+            if (l < c) return false
+        }
+        return false
+    }
+
+    private fun downloadAndInstallApk() {
+        val overlay = binding.progressOverlay
+        val progressBar = binding.downloadProgressBar
+        val progressText = binding.downloadProgressText
+        val cancelBtn = binding.cancelDownloadButton
+
+        overlay.isVisible = true
+        progressBar.progress = 0
+        progressBar.isIndeterminate = true
+        
+        val job = lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("http://159.195.38.145:8081/lavender.apk")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connect()
+                
+                val fileLength = connection.contentLength
+                val input = connection.inputStream
+                val file = File(getExternalFilesDir(null), "lavender_update.apk")
+                val output = FileOutputStream(file)
+                
+                val data = ByteArray(4096)
+                var total: Long = 0
+                var count: Int
+                while (input.read(data).also { count = it } != -1) {
+                    total += count.toLong()
+                    withContext(Dispatchers.Main) {
+                        progressBar.isIndeterminate = false
+                        if (fileLength > 0) {
+                            val progress = (total * 100 / fileLength).toInt()
+                            progressBar.progress = progress
+                            progressText.text = String.format(Locale.US, "%.2f / %.2f MB", total / 1048576.0, fileLength / 1048576.0)
+                        }
+                    }
+                    output.write(data, 0, count)
+                }
+                output.close()
+                input.close()
+                
+                withContext(Dispatchers.Main) {
+                    overlay.isVisible = false
+                    installApk(file)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    overlay.isVisible = false
+                    Toast.makeText(this@ChatListActivity, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        
+        cancelBtn.setOnClickListener {
+            job.cancel()
+            overlay.isVisible = false
+        }
+    }
+
+    private fun installApk(file: File) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.provider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, null)
         val customTheme = ThemeStore.currentTheme()
@@ -496,7 +661,7 @@ class ChatListActivity : AppCompatActivity() {
         val actionIds = listOf(
             R.id.actionShareHeader, R.id.actionEditProfile, R.id.actionThemes,
             R.id.actionNotifications, R.id.actionContacts, R.id.actionToggleLanguage,
-            R.id.actionAbout, R.id.actionUpdate, R.id.actionLogout
+            R.id.actionAbout, R.id.actionUpdate, R.id.actionLogout, R.id.actionAdmin
         )
 
         try {
@@ -512,17 +677,31 @@ class ChatListActivity : AppCompatActivity() {
             menuUsername.setTextColor(txtColor)
 
             val menuUserAvatar = sheetView.findViewById<ImageView>(R.id.menuUserAvatar)
-            val avatarFile = File(filesDir, "avatars/$username.jpg")
-            if (avatarFile.exists()) {
-                val bitmap = BitmapFactory.decodeFile(avatarFile.absolutePath)
-                if (bitmap != null) {
-                    menuUserAvatar.setImageBitmap(bitmap)
-                    menuUserAvatar.clipToOutline = true
-                }
+            val avatarCache = grpcClient.getAvatarCache()
+            val myAvatarUrl = avatarCache[username]
+            
+            if (!myAvatarUrl.isNullOrEmpty()) {
+                com.bumptech.glide.Glide.with(this)
+                    .load(myAvatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .circleCrop()
+                    .into(menuUserAvatar)
             } else {
-                menuUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
-                menuUserAvatar.setColorFilter(primColor)
+                val avatarFile = File(filesDir, "avatars/$username.jpg")
+                if (avatarFile.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(avatarFile.absolutePath)
+                    if (bitmap != null) {
+                        menuUserAvatar.setImageBitmap(bitmap)
+                        menuUserAvatar.clipToOutline = true
+                    }
+                } else {
+                    menuUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+                    menuUserAvatar.setColorFilter(primColor)
+                }
             }
+
+            // Show SuperAdmin action if user has permissions
+            sheetView.findViewById<View>(R.id.actionAdmin).isVisible = grpcClient.isSuperAdmin.value
 
             actionIds.forEach { id ->
                 sheetView.findViewById<LinearLayout>(id)?.let { layout ->
@@ -572,11 +751,15 @@ class ChatListActivity : AppCompatActivity() {
         }
         sheetView.findViewById<View>(R.id.actionUpdate).setOnClickListener {
             bottomSheetDialog.dismiss()
-            Toast.makeText(this, getString(R.string.checking_for_updates), Toast.LENGTH_SHORT).show()
+            checkManualUpdate()
         }
         sheetView.findViewById<View>(R.id.actionAbout).setOnClickListener {
             bottomSheetDialog.dismiss()
             showAboutDialog()
+        }
+        sheetView.findViewById<View>(R.id.actionAdmin).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            startActivity(Intent(this, SuperAdminActivity::class.java))
         }
         sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {
             bottomSheetDialog.dismiss()

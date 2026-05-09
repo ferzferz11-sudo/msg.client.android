@@ -94,6 +94,18 @@
                 android:contentDescription="@string/mute" />
 
             <ImageView
+                android:id="@+id/actionEdit"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_edit"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone"
+                app:tint="?attr/colorOnPrimary"
+                android:contentDescription="@string/edit" />
+
+            <ImageView
                 android:id="@+id/actionSettings"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
