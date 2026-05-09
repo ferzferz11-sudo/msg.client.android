@@ -51,6 +51,7 @@ import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.MentionAdapter
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.ui.adapter.MessageSwipeController
@@ -331,11 +332,17 @@ class NewChatActivity : AppCompatActivity() {
             password = incomingPass
         }
 
-        // если после интента данных всё еще нет, тянем из префов
+        // если после интента данных всё еще нет, тянем из префов или сессии
         if (username.isEmpty() || password.isEmpty()) {
-            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-            username = prefs.getString("username", "") ?: ""
-            password = prefs.getString("password", "") ?: ""
+            val session = SessionManager.session.value
+            if (session.isLoggedIn) {
+                username = session.username
+                password = session.password
+            } else {
+                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                username = prefs.getString("username", "") ?: ""
+                password = prefs.getString("password", "") ?: ""
+            }
         }
 
         // 3. Остальные поля (обновляем только если они переданы)

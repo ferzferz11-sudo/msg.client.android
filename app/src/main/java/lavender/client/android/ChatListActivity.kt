@@ -29,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
@@ -73,6 +74,8 @@ class ChatListActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        SessionManager.initFromPrefs(this)
+
         applyTheme()
 
         binding = ActivityChatListBinding.inflate(layoutInflater)
@@ -81,6 +84,11 @@ class ChatListActivity : AppCompatActivity() {
         username = intent.getStringExtra("USERNAME") ?: ""
         password = intent.getStringExtra("PASSWORD") ?: ""
         val serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: ""
+
+        if (SessionManager.session.value.username != username) {
+            val savedUserId = getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE).getString("user_id", "") ?: ""
+            SessionManager.updateSession(username = username, password = password, userId = savedUserId)
+        }
 
         if (serverAddress.isNotEmpty()) {
             val parts = serverAddress.split(":")
@@ -458,10 +466,13 @@ class ChatListActivity : AppCompatActivity() {
         sharedPrefs.edit {
             remove("saved_username")
             remove("saved_password")
+            remove("username")
+            remove("password")
+            remove("user_id")
         }
 
         syncJob?.cancel()
-        grpcClient.disconnect()
+        SessionManager.logout()
 
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -708,7 +719,7 @@ class ChatListActivity : AppCompatActivity() {
             }
 
             // Show SuperAdmin action if user has permissions
-            sheetView.findViewById<View>(R.id.actionAdmin).isVisible = grpcClient.isSuperAdmin.value
+            sheetView.findViewById<View>(R.id.actionAdmin).isVisible = SessionManager.session.value.isSuperAdmin
 
             actionIds.forEach { id ->
                 sheetView.findViewById<LinearLayout>(id)?.let { layout ->

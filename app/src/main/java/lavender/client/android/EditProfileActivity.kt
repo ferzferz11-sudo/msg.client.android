@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -451,6 +452,7 @@ class EditProfileActivity : AppCompatActivity() {
                             putString("username", newUsername)
                         }
                         
+                        SessionManager.updateSession(username = newUsername)
                         username = newUsername
                         dialog.dismiss()
                         

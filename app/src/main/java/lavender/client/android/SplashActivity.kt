@@ -4,11 +4,14 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import lavender.client.android.data.session.SessionManager
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        SessionManager.initFromPrefs(this)
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val savedUsername = prefs.getString("username", null)

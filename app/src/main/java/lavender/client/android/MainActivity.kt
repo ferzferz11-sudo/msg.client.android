@@ -36,6 +36,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.ServerConnectivityTest
+import lavender.client.android.data.session.SessionManager
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -189,35 +190,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null) {
-        val parts = serverAddress.split(":")
-        val host = if (parts.isNotEmpty()) parts[0] else "159.195.38.145"
-        val port = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
-
-        val savedUserId = getSavedUserId()
-        if (savedUserId != null) {
-            lavender.client.android.data.grpc.GrpcClient.setUserId(savedUserId)
-            if (fromNotification && !roomId.isNullOrEmpty()) {
-                navigateToChat(username, password, serverAddress, roomId)
-            } else {
-                navigateToChatList(username, password, serverAddress)
-            }
-            dialog?.dismiss()
-            return
-        }
-
-        // We don't have the user ID, fetch it before continuing
-        lavender.client.android.data.grpc.GrpcClient.connect(host, false, port, this)
-        lavender.client.android.data.grpc.GrpcClient.fetchUserId(username) { userId, found ->
+        SessionManager.login(this, username, password, serverAddress) { success ->
             runOnUiThread {
-                if (found && userId != null) {
-                    saveUserId(userId)
-                    lavender.client.android.data.grpc.GrpcClient.setUserId(userId)
-                }
+                if (success) {
+                    val savedUserId = getSavedUserId()
+                    if (savedUserId == null) {
+                        SessionManager.session.value.userId.takeIf { it.isNotEmpty() }?.let { saveUserId(it) }
+                    }
 
-                if (fromNotification && !roomId.isNullOrEmpty()) {
-                    navigateToChat(username, password, serverAddress, roomId)
+                    if (fromNotification && !roomId.isNullOrEmpty()) {
+                        navigateToChat(username, password, serverAddress, roomId)
+                    } else {
+                        navigateToChatList(username, password, serverAddress)
+                    }
                 } else {
-                    navigateToChatList(username, password, serverAddress)
+                    showToast(getString(R.string.connection_failed))
                 }
                 dialog?.dismiss()
             }
