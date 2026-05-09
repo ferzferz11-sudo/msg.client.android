@@ -3585,9 +3585,14 @@ private fun writeTheme(cos: com.google.protobuf.CodedOutputStream, theme: Custom
     if (theme.backgroundColor.isNotEmpty()) cos.writeString(7, theme.backgroundColor)
     if (theme.textPrimaryColor.isNotEmpty()) cos.writeString(8, theme.textPrimaryColor)
     if (theme.textSecondaryColor.isNotEmpty()) cos.writeString(9, theme.textSecondaryColor)
+    // tag 10 is is_dark (bool)
+    if (theme.chatBackgroundImageUrl.isNotEmpty()) cos.writeString(11, theme.chatBackgroundImageUrl)
     if (theme.chatListBackgroundImageUrl.isNotEmpty()) cos.writeString(12, theme.chatListBackgroundImageUrl)
     if (theme.bottomPanelColor.isNotEmpty()) cos.writeString(13, theme.bottomPanelColor)
     if (theme.onBottomPanelColor.isNotEmpty()) cos.writeString(14, theme.onBottomPanelColor)
+    if (theme.surfaceContainer.isNotEmpty()) cos.writeString(15, theme.surfaceContainer)
+    if (theme.outgoingBubbleColor.isNotEmpty()) cos.writeString(16, theme.outgoingBubbleColor)
+    if (theme.incomingBubbleColor.isNotEmpty()) cos.writeString(17, theme.incomingBubbleColor)
 }
 
 private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
@@ -3601,10 +3606,13 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
     var backgroundColor = ""
     var textPrimaryColor = ""
     var textSecondaryColor = ""
+    var chatBackgroundImageUrl = ""
     var chatListBackgroundImageUrl = ""
-    var legacyBackgroundImageUrl = ""
     var bottomPanelColor = ""
     var onBottomPanelColor = ""
+    var surfaceContainer = ""
+    var outgoingBubbleColor = ""
+    var incomingBubbleColor = ""
     while (!cis.isAtEnd) {
         val tag = cis.readTag()
         if (tag == 0) break
@@ -3618,27 +3626,34 @@ private fun parseTheme(stream: java.io.InputStream): CustomThemeProto {
             7 -> backgroundColor = cis.readString()
             8 -> textPrimaryColor = cis.readString()
             9 -> textSecondaryColor = cis.readString()
-            11 -> legacyBackgroundImageUrl = cis.readString() // legacy background_image_url
+            // 10 -> is_dark
+            11 -> chatBackgroundImageUrl = cis.readString()
             12 -> chatListBackgroundImageUrl = cis.readString()
             13 -> bottomPanelColor = cis.readString()
             14 -> onBottomPanelColor = cis.readString()
+            15 -> surfaceContainer = cis.readString()
+            16 -> outgoingBubbleColor = cis.readString()
+            17 -> incomingBubbleColor = cis.readString()
             else -> cis.skipField(tag)
         }
     }
-    if (chatListBackgroundImageUrl.isEmpty()) chatListBackgroundImageUrl = legacyBackgroundImageUrl
     return CustomThemeProto(
-        id,
-        name,
-        primaryColor,
-        onPrimaryColor,
-        surfaceColor,
-        onSurfaceColor,
-        backgroundColor,
-        textPrimaryColor,
-        textSecondaryColor,
-        chatListBackgroundImageUrl,
-        bottomPanelColor,
-        onBottomPanelColor
+        id = id,
+        name = name,
+        primaryColor = primaryColor,
+        onPrimaryColor = onPrimaryColor,
+        surfaceColor = surfaceColor,
+        onSurfaceColor = onSurfaceColor,
+        backgroundColor = backgroundColor,
+        textPrimaryColor = textPrimaryColor,
+        textSecondaryColor = textSecondaryColor,
+        chatListBackgroundImageUrl = chatListBackgroundImageUrl,
+        chatBackgroundImageUrl = chatBackgroundImageUrl,
+        bottomPanelColor = bottomPanelColor,
+        onBottomPanelColor = onBottomPanelColor,
+        surfaceContainer = surfaceContainer,
+        outgoingBubbleColor = outgoingBubbleColor,
+        incomingBubbleColor = incomingBubbleColor
     )
 }
 
@@ -3988,7 +4003,7 @@ class GetUserIdRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.
     }
 }
 
-class GetUserIdResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetUserIdResponseProto> {
+class GetUserIdResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserIdResponseProto> {
     override fun stream(value: GetUserIdResponseProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)

@@ -124,6 +124,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                 surfaceColor = intent.getStringExtra("surface_color") ?: "#1A1B46",
                 surfaceContainer = intent.getStringExtra("surface_container") ?: "#1A1B46",
                 textPrimaryColor = intent.getStringExtra("text_primary_color") ?: "#FFFFFF",
+                textSecondaryColor = intent.getStringExtra("text_secondary_color") ?: "#E0E0E0",
                 onPrimaryColor = intent.getStringExtra("on_primary_color") ?: "#FFFFFF",
                 onSurfaceColor = intent.getStringExtra("on_surface_color") ?: "#E0E0E0",
                 bottomPanelColor = intent.getStringExtra("bottom_panel_color") ?: "#1A1B46",
@@ -269,7 +270,8 @@ class ThemePaletteActivity : AppCompatActivity(),
 
     private fun checkChanges() {
         val colorChanges = currentColors.any { (key, value) -> value != defaultColors[key] }
-        val backgroundChanges = chatListBackgroundUri != originalChatListBackgroundUri || chatBackgroundUri != originalChatBackgroundUri
+        val backgroundChanges = chatListBackgroundUri?.toString() != originalChatListBackgroundUri?.toString() || 
+                                chatBackgroundUri?.toString() != originalChatBackgroundUri?.toString()
         hasChanges = colorChanges || backgroundChanges
         saveButton.isVisible = hasChanges
     }
@@ -288,7 +290,6 @@ class ThemePaletteActivity : AppCompatActivity(),
     }
 
     private fun showSaveThemeDialog() {
-        // If we are editing an existing custom theme, we update it directly without changing the name
         if (themeId.startsWith("custom_") && !themeId.startsWith("custom_new_")) {
             saveCustomThemeWithUploads(originalTheme.name)
             return
@@ -412,6 +413,7 @@ class ThemePaletteActivity : AppCompatActivity(),
             surfaceColor = currentColors["surfaceColor"]!!,
             surfaceContainer = currentColors["surfaceContainer"]!!,
             textPrimaryColor = currentColors["textPrimaryColor"]!!,
+            textSecondaryColor = currentColors["textSecondaryColor"]!!,
             onPrimaryColor = currentColors["onPrimaryColor"]!!,
             onSurfaceColor = currentColors["onSurfaceColor"]!!,
             bottomPanelColor = currentColors["bottomPanelColor"]!!,
@@ -425,17 +427,34 @@ class ThemePaletteActivity : AppCompatActivity(),
         val queryId = GrpcClient.getUserId() ?: username
         GrpcClient.saveTheme(queryId, newTheme) { success, error ->
             runOnUiThread {
-                uploadProgress.isVisible = false
                 if (success) {
-                    Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                    hasChanges = false
-                    themeId = finalId
-                    originalChatListBackgroundUri = listBgUrl.takeIf { it.isNotEmpty() }?.toUri()
-                    originalChatBackgroundUri = chatBgUrl.takeIf { it.isNotEmpty() }?.toUri()
-                    chatListBackgroundUri = originalChatListBackgroundUri
-                    chatBackgroundUri = originalChatBackgroundUri
-                    setResult(RESULT_OK)
+                    // Switch to the new theme on the server
+                    GrpcClient.setCurrentTheme(queryId, finalId) { setSuccess ->
+                        runOnUiThread {
+                            uploadProgress.isVisible = false
+                            if (setSuccess) {
+                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                                prefs.edit { putString("current_theme_id", finalId) }
+                                
+                                Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                                hasChanges = false
+                                themeId = finalId
+                                originalChatListBackgroundUri = listBgUrl.takeIf { it.isNotEmpty() }?.toUri()
+                                originalChatBackgroundUri = chatBgUrl.takeIf { it.isNotEmpty() }?.toUri()
+                                chatListBackgroundUri = originalChatListBackgroundUri
+                                chatBackgroundUri = originalChatBackgroundUri
+                                
+                                // Refresh current theme in app
+                                ThemeUi.bind(this, username)
+                                setResult(RESULT_OK)
+                            } else {
+                                saveButton.isVisible = true
+                                Toast.makeText(this, "Theme saved but failed to set as current", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 } else {
+                    uploadProgress.isVisible = false
                     saveButton.isVisible = true
                     Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
                 }
