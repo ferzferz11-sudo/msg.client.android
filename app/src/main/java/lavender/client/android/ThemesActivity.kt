@@ -109,7 +109,6 @@ class ThemesActivity : AppCompatActivity() {
         
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            toolbar.updatePadding(top = systemBars.top)
             themesRecyclerView.updatePadding(bottom = systemBars.bottom)
             insets
         }

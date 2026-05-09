@@ -259,6 +259,18 @@ object GrpcClient {
         realGrpcClient.fetchUserId(username, callback)
     }
 
+    fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.addFavorite(userId, messageId, callback)
+    }
+
+    fun removeFavorite(userId: String, messageId: String, callback: (Boolean) -> Unit) {
+        realGrpcClient.removeFavorite(userId, messageId, callback)
+    }
+
+    fun getFavorites(userId: String, callback: (List<Message>) -> Unit) {
+        realGrpcClient.getFavorites(userId, callback)
+    }
+
     fun clearMessages() {
         realGrpcClient.clearMessages()
     }

@@ -95,14 +95,6 @@ class ThemePaletteActivity : AppCompatActivity(),
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            val baseHeight = android.util.TypedValue().let { tv ->
-                theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)
-                android.util.TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
-            }
-            toolbar.layoutParams = toolbar.layoutParams.apply {
-                height = baseHeight + systemBars.top
-            }
-            toolbar.setPadding(0, systemBars.top, 0, 0)
             view.setPadding(0, 0, 0, systemBars.bottom)
             insets
         }

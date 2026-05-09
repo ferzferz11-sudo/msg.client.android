@@ -593,3 +593,30 @@ data class GetUserIdResponseProto(
     val userId: String = "",
     val found: Boolean = false
 )
+
+data class AddFavoriteRequestProto(
+    val userId: String = "",
+    val messageId: String = ""
+)
+
+data class AddFavoriteResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class RemoveFavoriteRequestProto(
+    val userId: String = "",
+    val messageId: String = ""
+)
+
+data class RemoveFavoriteResponseProto(
+    val success: Boolean = false
+)
+
+data class GetFavoritesRequestProto(
+    val userId: String = ""
+)
+
+data class GetFavoritesResponseProto(
+    val messages: List<MessageProto> = emptyList()
+)

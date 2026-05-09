@@ -105,6 +105,14 @@ class ChatListActivity : AppCompatActivity() {
 
         chatAdapter = ChatAdapter(
             onChatClick = { chat ->
+                if (chat.type == "favorites") {
+                    val intent = Intent(this, FavoritesActivity::class.java).apply {
+                        putExtra("USERNAME", username)
+                    }
+                    startActivity(intent)
+                    return@ChatAdapter
+                }
+
                 if (chat.unreadCount > 0) {
                     grpcClient.markRead(chat.id, username)
                     // Locally update for immediate visual feedback
@@ -440,32 +448,59 @@ class ChatListActivity : AppCompatActivity() {
         binding.swipeRefreshLayout.isRefreshing = true
 
         grpcClient.getChats(username) { fetchedChats ->
-            runOnUiThread {
-                binding.swipeRefreshLayout.isRefreshing = false
-                chats.clear()
-                chats.addAll(fetchedChats)
-
-                chatAdapter.setChats(chats.toList())
-
-                val totalUnread = chats.sumOf { it.unreadCount }
-                updateAppIconBadge(totalUnread)
-
-                Log.d("ChatListActivity", "Loaded ${chats.size} chats")
-
-                updateUpdateIndicatorVisibility()
-                checkForUpdatesSilently()
-
-                // Pre-fetch avatars for all participants
-                fetchedChats.forEach { chat ->
-                    try {
-                        val arr = org.json.JSONArray(chat.participants)
-                        for (i in 0 until arr.length()) {
-                            val p = arr.getString(i)
-                            if (!grpcClient.getAvatarCache().containsKey(p)) {
-                                grpcClient.getUserAvatar(p) { }
-                            }
+            val userId = grpcClient.getUserId() ?: ""
+            if (userId.isNotEmpty()) {
+                grpcClient.getFavorites(userId) { favorites ->
+                    runOnUiThread {
+                        binding.swipeRefreshLayout.isRefreshing = false
+                        chats.clear()
+                        
+                        if (favorites.isNotEmpty()) {
+                            chats.add(ChatInfo(
+                                id = "favorites",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = favorites.first().text,
+                                lastMessageTime = favorites.first().timestamp
+                            ))
                         }
-                    } catch (_: Exception) {}
+                        
+                        chats.addAll(fetchedChats)
+                        chatAdapter.setChats(chats.toList())
+
+                        val totalUnread = chats.sumOf { it.unreadCount }
+                        updateAppIconBadge(totalUnread)
+
+                        Log.d("ChatListActivity", "Loaded ${chats.size} chats")
+
+                        // Clear searching filter or force refresh to ensure Favorites stay
+                        updateUpdateIndicatorVisibility()
+                        checkForUpdatesSilently()
+
+                        // Pre-fetch avatars for all participants
+                        fetchedChats.forEach { chat ->
+                            try {
+                                val arr = org.json.JSONArray(chat.participants)
+                                for (i in 0 until arr.length()) {
+                                    val p = arr.getString(i)
+                                    if (!grpcClient.getAvatarCache().containsKey(p)) {
+                                        grpcClient.getUserAvatar(p) { }
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+            } else {
+                runOnUiThread {
+                    binding.swipeRefreshLayout.isRefreshing = false
+                    chats.clear()
+                    chats.addAll(fetchedChats)
+                    chatAdapter.setChats(chats.toList())
+                    updateAppIconBadge(chats.sumOf { it.unreadCount })
+                    Log.d("ChatListActivity", "Loaded ${chats.size} chats (no userId)")
+                    updateUpdateIndicatorVisibility()
+                    checkForUpdatesSilently()
                 }
             }
         }
@@ -523,13 +558,49 @@ class ChatListActivity : AppCompatActivity() {
             while (true) {
                 delay(5000) // Poll every 5 seconds
 
+                val currentUserId = GrpcClient.getUserId() ?: ""
+                
                 grpcClient.getChats(username) { fetchedChats ->
-                    if (fetchedChats.size != chats.size || fetchedChats.any { fc -> chats.none { it.id == fc.id && it.lastMessageTime == fc.lastMessageTime && it.unreadCount == fc.unreadCount } }) {
-                        runOnUiThread {
-                            chats.clear()
-                            chats.addAll(fetchedChats)
-                            chatAdapter.setChats(chats.toList())
-                            updateAppIconBadge(chats.sumOf { it.unreadCount })
+                    if (currentUserId.isNotEmpty()) {
+                        grpcClient.getFavorites(currentUserId) { favorites ->
+                            val newFullList = mutableListOf<ChatInfo>()
+                            if (favorites.isNotEmpty()) {
+                                newFullList.add(ChatInfo(
+                                    id = "favorites",
+                                    name = getString(R.string.favorites),
+                                    type = "favorites",
+                                    lastMessageText = favorites.first().text,
+                                    lastMessageTime = favorites.first().timestamp
+                                ))
+                            }
+                            newFullList.addAll(fetchedChats)
+                            
+                            // Check for actual changes including Favorites
+                            val hasChanges = newFullList.size != chats.size || 
+                                           newFullList.indices.any { i -> 
+                                               val n = newFullList[i]
+                                               val c = chats.getOrNull(i)
+                                               c == null || n.id != c.id || n.lastMessageTime != c.lastMessageTime || n.unreadCount != c.unreadCount
+                                           }
+
+                            if (hasChanges) {
+                                runOnUiThread {
+                                    chats.clear()
+                                    chats.addAll(newFullList)
+                                    chatAdapter.setChats(chats.toList())
+                                    updateAppIconBadge(chats.sumOf { it.unreadCount })
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback if no userId
+                        if (fetchedChats.size != chats.size || fetchedChats.any { fc -> chats.none { it.id == fc.id && it.lastMessageTime == fc.lastMessageTime && it.unreadCount == fc.unreadCount } }) {
+                            runOnUiThread {
+                                chats.clear()
+                                chats.addAll(fetchedChats)
+                                chatAdapter.setChats(chats.toList())
+                                updateAppIconBadge(chats.sumOf { it.unreadCount })
+                            }
                         }
                     }
                 }

@@ -38,7 +38,30 @@ object ThemeApplier {
         toolbar?.let { tb ->
             ViewCompat.setOnApplyWindowInsetsListener(tb) { view, windowInsets ->
                 val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                
+                // Set padding for status bar
                 view.setPadding(0, insets.top, 0, 0)
+                
+                // Also adjust height if it's a fixed height from XML
+                // This prevents squeezing the content (title/icons)
+                val lp = view.layoutParams
+                if (lp != null && lp.height > 0) {
+                    // We use the view's ID as a key to store the original height 
+                    // before status bar padding was added.
+                    var originalHeight = view.getTag(R.id.toolbar) as? Int
+                    if (originalHeight == null) {
+                        // Use the standard dimension from resources as base height
+                        originalHeight = activity.resources.getDimensionPixelSize(R.dimen.custom_toolbar_height)
+                        view.setTag(R.id.toolbar, originalHeight)
+                    }
+                    
+                    val targetHeight = originalHeight + insets.top
+                    if (lp.height != targetHeight) {
+                        lp.height = targetHeight
+                        view.layoutParams = lp
+                    }
+                }
+
                 windowInsets
             }
         }

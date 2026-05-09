@@ -2079,6 +2079,93 @@ object RealGrpcClient {
             lastMessageUsername = this.lastMessageUsername
         )
     }
+
+    fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = lavender.client.android.data.proto.AddFavoriteRequestProto(userId, messageId)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.AddFavoriteRequestProto, lavender.client.android.data.proto.AddFavoriteResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/AddFavorite")
+            .setRequestMarshaller(AddFavoriteRequestMarshaller())
+            .setResponseMarshaller(AddFavoriteResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.AddFavoriteResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.AddFavoriteResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("GrpcClient", "AddFavorite failed: ${status.code} - ${status.description}")
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun removeFavorite(userId: String, messageId: String, callback: (Boolean) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = lavender.client.android.data.proto.RemoveFavoriteRequestProto(userId, messageId)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.RemoveFavoriteRequestProto, lavender.client.android.data.proto.RemoveFavoriteResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RemoveFavorite")
+            .setRequestMarshaller(RemoveFavoriteRequestMarshaller())
+            .setResponseMarshaller(RemoveFavoriteResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.RemoveFavoriteResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.RemoveFavoriteResponseProto) {
+                callback(message.success)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("GrpcClient", "RemoveFavorite failed: ${status.code} - ${status.description}")
+                    callback(false)
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getFavorites(userId: String, callback: (List<Message>) -> Unit) {
+        val currentChannel = channel ?: return
+        val request = lavender.client.android.data.proto.GetFavoritesRequestProto(userId)
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetFavoritesRequestProto, lavender.client.android.data.proto.GetFavoritesResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetFavorites")
+            .setRequestMarshaller(GetFavoritesRequestMarshaller())
+            .setResponseMarshaller(GetFavoritesResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.GetFavoritesResponseProto>() {
+            override fun onMessage(message: lavender.client.android.data.proto.GetFavoritesResponseProto) {
+                callback(message.messages.map { ProtoUtils.createMessageFromProto(it) })
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    android.util.Log.e("GrpcClient", "GetFavorites failed: ${status.code} - ${status.description}")
+                    callback(emptyList())
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
 }
 
 class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto> {
@@ -4398,5 +4485,152 @@ class RemoveParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
             }
         }
         return RemoveParticipantResponseProto(success, message)
+    }
+}
+
+class AddFavoriteRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.AddFavoriteRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.AddFavoriteRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
+        if (value.messageId.isNotEmpty()) cos.writeString(2, value.messageId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.AddFavoriteRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var uid = ""; var mid = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> uid = cis.readString()
+                2 -> mid = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.AddFavoriteRequestProto(uid, mid)
+    }
+}
+
+class AddFavoriteResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.AddFavoriteResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.AddFavoriteResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        if (value.message.isNotEmpty()) cos.writeString(2, value.message)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.AddFavoriteResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false; var msg = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> msg = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.AddFavoriteResponseProto(success, msg)
+    }
+}
+
+class RemoveFavoriteRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.RemoveFavoriteRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.RemoveFavoriteRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
+        if (value.messageId.isNotEmpty()) cos.writeString(2, value.messageId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.RemoveFavoriteRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var uid = ""; var mid = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> uid = cis.readString()
+                2 -> mid = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return lavender.client.android.data.proto.RemoveFavoriteRequestProto(uid, mid)
+    }
+}
+
+class RemoveFavoriteResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.RemoveFavoriteResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.RemoveFavoriteResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.success) cos.writeBool(1, value.success)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.RemoveFavoriteResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var success = false
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) success = cis.readBool()
+            else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.RemoveFavoriteResponseProto(success)
+    }
+}
+
+class GetFavoritesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetFavoritesRequestProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetFavoritesRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetFavoritesRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        var uid = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) uid = cis.readString()
+            else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.GetFavoritesRequestProto(uid)
+    }
+}
+
+class GetFavoritesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetFavoritesResponseProto> {
+    override fun stream(value: lavender.client.android.data.proto.GetFavoritesResponseProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        val msgMarshaller = MessageProtoMarshaller()
+        for (msg in value.messages) {
+            val mBytes = msgMarshaller.stream(msg).readBytes()
+            cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+            cos.writeUInt32NoTag(mBytes.size)
+            cos.writeRawBytes(mBytes)
+        }
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(stream: java.io.InputStream): lavender.client.android.data.proto.GetFavoritesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
+        val messages = mutableListOf<lavender.client.android.data.proto.MessageProto>()
+        val msgMarshaller = MessageProtoMarshaller()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val length = cis.readUInt32()
+                messages.add(msgMarshaller.parse(java.io.ByteArrayInputStream(cis.readRawBytes(length))))
+            } else cis.skipField(tag)
+        }
+        return lavender.client.android.data.proto.GetFavoritesResponseProto(messages)
     }
 }

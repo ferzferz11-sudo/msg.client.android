@@ -114,6 +114,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var groupParticipantsContainer: LinearLayout
     private lateinit var selectionToolbar: LinearLayout
     private lateinit var selectionCountText: TextView
+    private lateinit var starMessages: ImageButton
     private lateinit var copyMessages: ImageButton
     private lateinit var replyMessage: ImageButton
     private lateinit var deleteMessages: ImageButton
@@ -290,7 +291,6 @@ class NewChatActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-            toolbar.updatePadding(top = systemBars.top)
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
             bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> { bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom }
             bottomPanelContent.updatePadding(bottom = 4.dpToPx()); insets
@@ -301,7 +301,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbar = findViewById(R.id.toolbar); toolbarTitle = findViewById(R.id.toolbarTitle); toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
         toolbarAvatar = findViewById(R.id.toolbarAvatar); toolbarLoadingIcon = findViewById(R.id.toolbarLoadingIcon)
         groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer); selectionToolbar = findViewById(R.id.selectionToolbar)
-        selectionCountText = findViewById(R.id.selectionCountText); copyMessages = findViewById(R.id.copyMessages)
+        selectionCountText = findViewById(R.id.selectionCountText); starMessages = findViewById(R.id.starMessages); copyMessages = findViewById(R.id.copyMessages)
         replyMessage = findViewById(R.id.replyMessage); deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent); messagesRecyclerView = findViewById(R.id.messagesRecyclerView); swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         messageInput = findViewById(R.id.messageInput); sendButton = findViewById(R.id.sendButton); attachButton = findViewById(R.id.attachButton); audioButton = findViewById(R.id.audioButton)
@@ -597,6 +597,7 @@ class NewChatActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
         cancelReply.setOnClickListener { hideReplyPreview() }
+        starMessages.setOnClickListener { starSelectedMessages() }
         audioButton.setOnClickListener { showAudioRecordingView() }
         emojiButton.setOnClickListener { showEmojiPicker() }
 
@@ -967,6 +968,28 @@ class NewChatActivity : AppCompatActivity() {
                     titleView?.setTextColor(textColor)
                 } catch (_: Exception) {
                     builder.show()
+                }
+            }
+        }
+    }
+
+    private fun starSelectedMessages() {
+        val selected = adapter.getSelectedMessages()
+        val userId = grpcClient.getUserId() ?: ""
+        if (userId.isEmpty()) {
+            showToast("User ID not loaded. Please wait.")
+            return
+        }
+
+        var completed = 0
+        selected.forEach { msg ->
+            grpcClient.addFavorite(userId, msg.id) { success, _ ->
+                completed++
+                if (completed == selected.size) {
+                    runOnUiThread {
+                        showToast(getString(R.string.added_to_favorites))
+                        hideSelectionToolbar()
+                    }
                 }
             }
         }

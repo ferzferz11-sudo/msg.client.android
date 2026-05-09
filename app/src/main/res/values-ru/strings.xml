@@ -322,6 +322,8 @@
     <string name="action_update">Проверка обновлений</string>
     <string name="action_about">О программе</string>
     <string name="action_super_admin">Админ панель</string>
+    <string name="favorites">Избранное</string>
+    <string name="added_to_favorites">Добавлено в Избранное</string>
     <string name="remove_multiple_contacts_confirm">Удалить выбранные контакты (%d)?</string>
 
     <!-- Theme Palette -->

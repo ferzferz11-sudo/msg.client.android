@@ -81,6 +81,10 @@
             android:name=".FullScreenImageActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".FavoritesActivity"
+            android:exported="false" />
+
         <service
             android:name=".data.fcm.LavenderMessagingService"
             android:exported="false">

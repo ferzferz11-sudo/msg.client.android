@@ -232,10 +232,31 @@ class ChatAdapter(
 
         fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {
             participantAvatars.removeAllViews()
-            if (participantsJson.isEmpty()) return
+            
             try {
                 val context = itemView.context
                 val currentTheme = ThemeStore.currentTheme()
+                val primaryColor = parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+
+                if (chatType == "favorites") {
+                    val avatarSize = 52.dpToPx()
+                    val avatar = ImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
+                        scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        setImageResource(R.drawable.ic_star)
+                        imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                        val p = 12.dpToPx()
+                        setPadding(p, p, p, p)
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(adjustAlpha(primaryColor, 0.15f))
+                        }
+                    }
+                    participantAvatars.addView(avatar)
+                    return
+                }
+
+                if (participantsJson.isEmpty() && chatAvatarUrl.isEmpty()) return
                 
                 if (chatAvatarUrl.isNotEmpty()) {
                     val avatarSize = 52.dpToPx(); val avatar = ImageView(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
