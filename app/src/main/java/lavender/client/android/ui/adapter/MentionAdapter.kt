@@ -8,6 +8,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 class MentionAdapter(
     private val onUserClick: (String) -> Unit
@@ -46,8 +48,9 @@ class MentionAdapter(
                     .placeholder(R.drawable.ic_default_avatar)
                     .circleCrop()
                     .into(avatarView)
+                avatarView.clearColorFilter()
             } else {
-                avatarView.setImageResource(R.drawable.ic_default_avatar)
+                ThemeUtils.applyDefaultAvatar(avatarView, ThemeStore.currentTheme())
             }
             itemView.setOnClickListener { onUserClick(username) }
         }

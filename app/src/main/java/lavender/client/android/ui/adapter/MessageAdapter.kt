@@ -190,7 +190,10 @@ class MessageAdapter(
                 if (message.avatarUrl.isNotEmpty()) {
                     com.bumptech.glide.Glide.with(context).load(message.avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar).into(avatarImageView)
-                } else avatarImageView.setImageResource(R.drawable.ic_default_avatar)
+                    avatarImageView.imageTintList = null
+                } else {
+                    ThemeUtils.applyDefaultAvatar(avatarImageView, theme)
+                }
             } else {
                 avatarImageView.visibility = if (isOutgoing) View.GONE else View.INVISIBLE
             }
@@ -350,7 +353,7 @@ class MessageAdapter(
                     messageText.text = fileName
                     messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
                     messageText.compoundDrawablePadding = 8.dpToPx()
-                    messageText.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    messageText.setBackgroundColor(Color.TRANSPARENT)
                     val typedValue = android.util.TypedValue()
                     context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
                     val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
@@ -602,8 +605,8 @@ class MessageAdapter(
     }
 
     private fun getMessageColorsFromTheme(theme: lavender.client.android.theme.Theme): MessageColors {
-        val defaultIncomingBg = Color.parseColor("#16173A")
-        val defaultOutgoingBg = Color.parseColor("#2A2C6D")
+        val defaultIncomingBg = "#16173A".toColorInt()
+        val defaultOutgoingBg = "#2A2C6D".toColorInt()
         val defaultText = Color.WHITE
         return MessageColors(
             incomingBg = parseSafeColor(theme.incomingBubbleColor, defaultIncomingBg),

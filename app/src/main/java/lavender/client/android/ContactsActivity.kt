@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.UserAdapter
 import org.json.JSONArray
@@ -125,11 +126,14 @@ class ContactsActivity : AppCompatActivity() {
     private fun updateToolbarAvatar() {
         val avatarCache = grpcClient.getAvatarCache()
         val myAvatarUrl = avatarCache[username]
+        val currentTheme = ThemeStore.currentTheme()
+        
         binding.toolbarUserAvatar.isVisible = true
         if (!myAvatarUrl.isNullOrEmpty()) {
             com.bumptech.glide.Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(binding.toolbarUserAvatar)
+            binding.toolbarUserAvatar.clearColorFilter()
         } else {
-            binding.toolbarUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+            ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
         }
     }
 

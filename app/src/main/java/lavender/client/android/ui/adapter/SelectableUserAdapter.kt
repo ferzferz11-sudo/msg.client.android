@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 class SelectableUserAdapter(
     private val avatarCache: Map<String, String> = emptyMap(),
@@ -70,8 +72,9 @@ class SelectableUserAdapter(
                     .placeholder(R.drawable.ic_default_avatar)
                     .circleCrop()
                     .into(userAvatar)
+                userAvatar.clearColorFilter()
             } else {
-                userAvatar.setImageResource(R.drawable.ic_default_avatar)
+                ThemeUtils.applyDefaultAvatar(userAvatar, ThemeStore.currentTheme())
             }
             
             statusIndicator.setBackgroundResource(

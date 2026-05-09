@@ -32,6 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -135,17 +137,18 @@ class EditProfileActivity : AppCompatActivity() {
         // Load current avatar and full avatar URL
         grpcClient.getUserAvatar(username) { avatarUrl ->
             runOnUiThread {
+                val currentTheme = ThemeStore.currentTheme()
                 if (avatarUrl.isNotEmpty()) {
                     Glide.with(this)
                         .load(avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar_white)
                         .error(R.drawable.ic_default_avatar_white)
                         .into(avatarImageView)
+                    avatarImageView.imageTintList = null
                     // Get full avatar URL from cache
                     currentFullAvatarUrl = grpcClient.getFullAvatarUrl(username) ?: avatarUrl
                 } else {
-                    // Use white default avatar when no avatar URL
-                    avatarImageView.setImageResource(R.drawable.ic_default_avatar_white)
+                    ThemeUtils.applyDefaultAvatar(avatarImageView, currentTheme)
                 }
             }
         }

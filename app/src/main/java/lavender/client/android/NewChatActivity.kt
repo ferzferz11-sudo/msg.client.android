@@ -60,6 +60,7 @@ import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -441,8 +442,12 @@ class NewChatActivity : AppCompatActivity() {
                 borderColor = try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this@NewChatActivity, R.color.white) }
             }
             val cache = grpcClient.getAvatarCache(); val url = cache[u]
-            if (!url.isNullOrEmpty()) com.bumptech.glide.Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).circleCrop().into(iv)
-            else iv.setImageResource(R.drawable.ic_default_avatar)
+            if (!url.isNullOrEmpty()) {
+                com.bumptech.glide.Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).circleCrop().into(iv)
+                iv.clearColorFilter()
+            } else {
+                ThemeUtils.applyDefaultAvatar(iv, ThemeStore.currentTheme())
+            }
             groupParticipantsContainer.addView(iv)
         }
     }
@@ -540,7 +545,7 @@ class NewChatActivity : AppCompatActivity() {
             }
         }
         
-        menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_search)?.iconTintList = ColorStateList.valueOf(iconColor)
         
         // Style menu items with custom theme
         val customTheme = ThemeStore.currentTheme()
@@ -671,7 +676,7 @@ class NewChatActivity : AppCompatActivity() {
             view.setBackgroundColor(bgColor)
 
             // Color the top handle with primaryColor
-            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
 
             // Theme all items - icons with primaryColor, text with textPrimaryColor
             val itemIds = listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation)
@@ -699,7 +704,7 @@ class NewChatActivity : AppCompatActivity() {
                 // Use colorPrimary for handle and icons
                 theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
                 val primaryColor = typedValue.data
-                view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primaryColor)
 
                 // Color icons with primaryColor
                 val itemIds = listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation)
@@ -707,7 +712,7 @@ class NewChatActivity : AppCompatActivity() {
                     view.findViewById<LinearLayout>(id)?.let { layout ->
                         for (i in 0 until layout.childCount) {
                             val child = layout.getChildAt(i)
-                            if (child is ImageView) child.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                            if (child is ImageView) child.imageTintList = ColorStateList.valueOf(primaryColor)
                         }
                     }
                 }

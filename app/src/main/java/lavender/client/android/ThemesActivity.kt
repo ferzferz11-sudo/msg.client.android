@@ -15,6 +15,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ThemeAdapter
@@ -146,11 +147,14 @@ class ThemesActivity : AppCompatActivity() {
         val avatarView = findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.toolbarUserAvatar) ?: return
         val avatarCache = grpcClient.getAvatarCache()
         val myAvatarUrl = avatarCache[username]
+        val currentTheme = ThemeStore.currentTheme()
+        
         avatarView.visibility = android.view.View.VISIBLE
         if (!myAvatarUrl.isNullOrEmpty()) {
             com.bumptech.glide.Glide.with(this).load(myAvatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(avatarView)
+            avatarView.clearColorFilter()
         } else {
-            avatarView.setImageResource(R.drawable.ic_default_avatar_white)
+            ThemeUtils.applyDefaultAvatar(avatarView, currentTheme)
         }
     }
 

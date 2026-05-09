@@ -15,6 +15,7 @@ import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 class UserAdapter(
     private val onUserClick: (String) -> Unit,
@@ -121,8 +122,9 @@ class UserAdapter(
             val avatarUrl = avatarCache[username]
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(userAvatar)
+                userAvatar.clearColorFilter()
             } else {
-                userAvatar.setImageResource(R.drawable.ic_default_avatar)
+                ThemeUtils.applyDefaultAvatar(userAvatar, currentTheme)
             }
 
             itemView.setOnClickListener {

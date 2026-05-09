@@ -383,14 +383,17 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
 
+        val currentTheme = ThemeStore.currentTheme()
+
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+            profileAvatar.imageTintList = null
             profileAvatar.setOnClickListener {
                 val fullImageUrl = if (!isGroup) grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl } else fullAvatarUrl.ifEmpty { avatarUrl }
                 if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
             }
         } else {
-            profileAvatar.setImageResource(R.drawable.ic_default_avatar)
+            ThemeUtils.applyDefaultAvatar(profileAvatar, currentTheme)
             profileAvatar.setOnClickListener(null)
         }
 

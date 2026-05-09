@@ -23,6 +23,8 @@ import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
@@ -97,7 +99,7 @@ class SuperAdminActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.super_admin_menu, menu)
         
         // Get icon color from custom theme or Material Design attributes
-        val themeObj = lavender.client.android.theme.ThemeStore.currentTheme()
+        val themeObj = ThemeStore.currentTheme()
         val iconColor = try {
             themeObj.onPrimaryColor.toColorInt()
         } catch (_: Exception) {
@@ -169,7 +171,12 @@ class SuperAdminActivity : AppCompatActivity() {
 
                 grpcClient.getUserAvatar(user) { url ->
                     runOnUiThread {
-                        Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                        if (!url.isNullOrEmpty()) {
+                            Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                            avatarView.clearColorFilter()
+                        } else {
+                            ThemeUtils.applyDefaultAvatar(avatarView, ThemeStore.currentTheme())
+                        }
                     }
                 }
 

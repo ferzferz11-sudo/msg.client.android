@@ -12,7 +12,6 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -35,6 +34,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
@@ -394,12 +394,15 @@ class ChatListActivity : AppCompatActivity() {
     private fun updateToolbarAvatar() {
         val avatarCache = grpcClient.getAvatarCache()
         val myAvatarUrl = avatarCache[username]
+        val currentTheme = ThemeStore.currentTheme()
+        
         if (!myAvatarUrl.isNullOrEmpty()) {
             com.bumptech.glide.Glide.with(this)
                 .load(myAvatarUrl)
                 .placeholder(R.drawable.ic_default_avatar)
                 .circleCrop()
                 .into(binding.toolbarUserAvatar)
+            binding.toolbarUserAvatar.clearColorFilter()
         } else {
             val avatarFile = File(filesDir, "avatars/$username.jpg")
             if (avatarFile.exists()) {
@@ -407,15 +410,16 @@ class ChatListActivity : AppCompatActivity() {
                     val bitmap = BitmapFactory.decodeFile(avatarFile.absolutePath)
                     if (bitmap != null) {
                         binding.toolbarUserAvatar.setImageBitmap(bitmap)
+                        binding.toolbarUserAvatar.clearColorFilter()
                     } else {
-                        binding.toolbarUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+                        ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
                     }
                 } catch (e: Exception) {
                     Log.e("ChatListActivity", "Error loading avatar for toolbar", e)
-                    binding.toolbarUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+                    ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
                 }
             } else {
-                binding.toolbarUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
+                ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
             }
         }
     }
@@ -791,6 +795,7 @@ class ChatListActivity : AppCompatActivity() {
                     .placeholder(R.drawable.ic_default_avatar)
                     .circleCrop()
                     .into(menuUserAvatar)
+                menuUserAvatar.clearColorFilter()
             } else {
                 val avatarFile = File(filesDir, "avatars/$username.jpg")
                 if (avatarFile.exists()) {
@@ -798,10 +803,10 @@ class ChatListActivity : AppCompatActivity() {
                     if (bitmap != null) {
                         menuUserAvatar.setImageBitmap(bitmap)
                         menuUserAvatar.clipToOutline = true
+                        menuUserAvatar.clearColorFilter()
                     }
                 } else {
-                    menuUserAvatar.setImageResource(R.drawable.ic_default_avatar_white)
-                    menuUserAvatar.setColorFilter(primColor)
+                    ThemeUtils.applyDefaultAvatar(menuUserAvatar, customTheme)
                 }
             }
 

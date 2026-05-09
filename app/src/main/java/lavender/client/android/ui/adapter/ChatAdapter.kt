@@ -17,6 +17,7 @@ import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import org.json.JSONArray
 import kotlin.math.roundToInt
 
@@ -234,9 +235,12 @@ class ChatAdapter(
             if (participantsJson.isEmpty()) return
             try {
                 val context = itemView.context
+                val currentTheme = ThemeStore.currentTheme()
+                
                 if (chatAvatarUrl.isNotEmpty()) {
                     val avatarSize = 52.dpToPx(); val avatar = ImageView(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
                     Glide.with(context).load(chatAvatarUrl).thumbnail(Glide.with(context).load(chatAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                    avatar.imageTintList = null
                     participantAvatars.addView(avatar); return
                 }
                 val participantsArray = JSONArray(participantsJson); val participantsList = mutableListOf<String>()
@@ -247,8 +251,12 @@ class ChatAdapter(
                     val container = FrameLayout(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize) }
                     val avatar = ImageView(context).apply { layoutParams = FrameLayout.LayoutParams(avatarSize, avatarSize); scaleType = ImageView.ScaleType.CENTER_CROP }
                     val cachedAvatarUrl = avatarCache[otherPerson]
-                    if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(Glide.with(context).load(cachedAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
-                    else avatar.setImageResource(R.drawable.ic_default_avatar)
+                    if (!cachedAvatarUrl.isNullOrBlank()) {
+                        Glide.with(context).load(cachedAvatarUrl).thumbnail(Glide.with(context).load(cachedAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                        avatar.imageTintList = null
+                    } else {
+                        ThemeUtils.applyDefaultAvatar(avatar, currentTheme)
+                    }
                     container.addView(avatar)
                     if (isOnline) {
                         val dotSize = 14.dpToPx()
@@ -279,8 +287,12 @@ class ChatAdapter(
                             scaleType = ImageView.ScaleType.CENTER_CROP
                         }
                         val cachedAvatarUrl = avatarCache[uName]
-                        if (!cachedAvatarUrl.isNullOrBlank()) Glide.with(context).load(cachedAvatarUrl).thumbnail(Glide.with(context).load(cachedAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
-                        else avatar.setImageResource(R.drawable.ic_default_avatar)
+                        if (!cachedAvatarUrl.isNullOrBlank()) {
+                            Glide.with(context).load(cachedAvatarUrl).thumbnail(Glide.with(context).load(cachedAvatarUrl).sizeMultiplier(0.1f)).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).circleCrop().into(avatar)
+                            avatar.imageTintList = null
+                        } else {
+                            ThemeUtils.applyDefaultAvatar(avatar, currentTheme)
+                        }
                         container.addView(avatar)
                         if (isOnline) {
                             val dot = View(context).apply {
