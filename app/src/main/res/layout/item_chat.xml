@@ -95,6 +95,15 @@
             android:textStyle="bold"
             android:visibility="gone" />
 
+        <ProgressBar
+            android:id="@+id/deleteProgressBar"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

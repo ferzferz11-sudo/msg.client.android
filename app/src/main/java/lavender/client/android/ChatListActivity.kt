@@ -252,6 +252,11 @@ class ChatListActivity : AppCompatActivity() {
         
         startSync()
 
+        intent.getStringExtra("START_DELETION_ID")?.let { performDirectDeletion(it) }
+        intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
+            chatAdapter.setChatDeleting(chatId, true)
+        }
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (binding.searchCard.isVisible) {
@@ -263,6 +268,32 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("START_DELETION_ID")?.let { performDirectDeletion(it) }
+        intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
+            chatAdapter.setChatDeleting(chatId, true)
+        }
+        loadChats()
+    }
+
+    private fun performDirectDeletion(chatId: String) {
+        chatAdapter.setChatDeleting(chatId, true)
+        grpcClient.deleteChat(chatId) { _, _ ->
+            runOnUiThread { 
+                chats.removeAll { it.id == chatId }
+                chatAdapter.setChats(chats.toList())
+                updateAppIconBadge(chats.sumOf { it.unreadCount })
+                
+                lifecycleScope.launch {
+                    delay(1000)
+                    loadChats() 
+                }
+            }
+        }
     }
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
@@ -309,11 +340,33 @@ class ChatListActivity : AppCompatActivity() {
             .setTitle(R.string.delete_chats)
             .setMessage(getString(R.string.delete_chats_confirmation, selected.size))
             .setPositiveButton(R.string.delete) { _, _ ->
+                var completedCount = 0
+                val totalToDelete = selected.size
+                
                 selected.forEach { chat ->
-                    grpcClient.deleteChat(chat.id) { _, _ -> }
+                    // Show immediate feedback
+                    chatAdapter.setChatDeleting(chat.id, true)
+                    
+                    grpcClient.deleteChat(chat.id) { _, _ ->
+                        runOnUiThread {
+                            completedCount++
+                            // Optimistically remove from local list
+                            chats.removeAll { it.id == chat.id }
+                            
+                            if (completedCount == totalToDelete) {
+                                chatAdapter.clearSelection()
+                                chatAdapter.setChats(chats.toList())
+                                updateAppIconBadge(chats.sumOf { it.unreadCount })
+                                
+                                // Delayed full refresh to ensure server is in sync
+                                lifecycleScope.launch {
+                                    delay(1000)
+                                    loadChats()
+                                }
+                            }
+                        }
+                    }
                 }
-                chatAdapter.clearSelection()
-                loadChats()
             }
             .setNegativeButton(R.string.cancel_dialog, null)
             .show()
@@ -379,7 +432,7 @@ class ChatListActivity : AppCompatActivity() {
                 chats.clear()
                 chats.addAll(fetchedChats)
 
-                chatAdapter.setChats(chats)
+                chatAdapter.setChats(chats.toList())
 
                 val totalUnread = chats.sumOf { it.unreadCount }
                 updateAppIconBadge(totalUnread)
@@ -428,7 +481,7 @@ class ChatListActivity : AppCompatActivity() {
                         runOnUiThread {
                             chats.clear()
                             chats.addAll(fetchedChats)
-                            chatAdapter.setChats(chats)
+                            chatAdapter.setChats(chats.toList())
                             updateAppIconBadge(chats.sumOf { it.unreadCount })
                         }
                     }

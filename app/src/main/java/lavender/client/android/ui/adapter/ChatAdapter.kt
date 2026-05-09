@@ -32,10 +32,17 @@ class ChatAdapter(
     private var displayedChats = listOf<ChatInfo>()
     var avatarCache: Map<String, String> = initialAvatarCache
     private val selectedPositions = mutableSetOf<Int>()
+    private val deletingChatIds = mutableSetOf<String>()
     private var currentFilter: String = ""
 
     fun getSelectedChats(): List<ChatInfo> {
         return selectedPositions.map { displayedChats[it] }
+    }
+
+    fun setChatDeleting(chatId: String, deleting: Boolean) {
+        if (deleting) deletingChatIds.add(chatId) else deletingChatIds.remove(chatId)
+        val index = displayedChats.indexOfFirst { it.id == chatId }
+        if (index != -1) notifyItemChanged(index)
     }
 
     fun clearSelection() {
@@ -116,6 +123,7 @@ class ChatAdapter(
             chat,
             currentUsername,
             isSelected,
+            deletingChatIds.contains(chat.id),
             theme
         ) {
             val currentPos = holder.bindingAdapterPosition
@@ -143,6 +151,7 @@ class ChatAdapter(
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
         private val adminIndicator: ImageView = itemView.findViewById(R.id.adminIndicator)
         private val muteIndicator: ImageView = itemView.findViewById(R.id.muteIndicator)
+        private val deleteProgressBar: android.widget.ProgressBar = itemView.findViewById(R.id.deleteProgressBar)
         val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
@@ -150,6 +159,7 @@ class ChatAdapter(
             chat: ChatInfo,
             currentUsername: String,
             isSelected: Boolean,
+            isDeleting: Boolean,
             theme: Theme,
             onLongClick: () -> Unit
         ) {
@@ -200,9 +210,16 @@ class ChatAdapter(
             adminIndicator.isVisible = false
             adminIndicator.setOnClickListener(null)
 
-            muteIndicator.isVisible = chat.isMuted
+            muteIndicator.isVisible = chat.isMuted && !isDeleting
+
+            deleteProgressBar.isVisible = isDeleting
+            if (isDeleting) {
+                deleteProgressBar.indeterminateTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                unreadCount.isVisible = false
+            }
 
             itemView.setOnClickListener {
+                if (isDeleting) return@setOnClickListener
                 if (selectedPositions.isNotEmpty()) {
                     onLongClick()
                 } else {
