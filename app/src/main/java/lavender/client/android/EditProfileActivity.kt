@@ -283,7 +283,7 @@ class EditProfileActivity : AppCompatActivity() {
                         .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
 
                     // Добавляем полную версию если есть
-                    if (fullBytes != null && fullBytes.isNotEmpty()) {
+                    if ((fullBytes != null) && fullBytes.isNotEmpty()) {
                         requestBodyBuilder.addFormDataPart("avatar_full", "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull()))
                     }
 

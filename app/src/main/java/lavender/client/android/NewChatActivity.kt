@@ -528,15 +528,9 @@ class NewChatActivity : AppCompatActivity() {
         // Apply custom theme color to search icon
         val iconColor = run {
             val customTheme = ThemeStore.currentTheme()
-            if (customTheme != null) {
-                try {
-                    customTheme.onPrimaryColor.toColorInt()
-                } catch (_: Exception) {
-                    val typedValue = TypedValue()
-                    theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                    typedValue.data
-                }
-            } else {
+            try {
+                customTheme.onPrimaryColor.toColorInt()
+            } catch (_: Exception) {
                 val typedValue = TypedValue()
                 theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
                 typedValue.data
@@ -547,18 +541,16 @@ class NewChatActivity : AppCompatActivity() {
         
         // Style menu items with custom theme
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                val textColor = customTheme.onPrimaryColor.toColorInt()
-                
-                for (i in 0 until menu.size) {
-                    val item = menu[i]
-                    val span = android.text.SpannableString(item.title)
-                    span.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, span.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    item.title = span
-                }
-            } catch (_: Exception) {}
-        }
+        try {
+            val textColor = customTheme.onPrimaryColor.toColorInt()
+            
+            for (i in 0 until menu.size) {
+                val item = menu[i]
+                val span = android.text.SpannableString(item.title)
+                span.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, span.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                item.title = span
+            }
+        } catch (_: Exception) {}
         
         return super.onPrepareOptionsMenu(menu)
     }
@@ -612,15 +604,13 @@ class NewChatActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
 
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
-                ))
-                shapeDrawable.paint.color = customTheme.backgroundColor.toColorInt()
-                dialogView.background = shapeDrawable
-            } catch (_: Exception) {}
-        }
+        try {
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+            ))
+            shapeDrawable.paint.color = customTheme.backgroundColor.toColorInt()
+            dialogView.background = shapeDrawable
+        } catch (_: Exception) {}
 
         val emojis = listOf(
             "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
@@ -671,30 +661,28 @@ class NewChatActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
 
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                val bgColor = customTheme.backgroundColor.toColorInt()
-                val textColor = customTheme.textPrimaryColor.toColorInt()
-                val primColor = customTheme.primaryColor.toColorInt()
-                view.setBackgroundColor(bgColor)
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val textColor = customTheme.textPrimaryColor.toColorInt()
+            val primColor = customTheme.primaryColor.toColorInt()
+            view.setBackgroundColor(bgColor)
 
-                // Color the top handle with primaryColor
-                view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+            // Color the top handle with primaryColor
+            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
 
-                // Theme all items - icons with primaryColor, text with textPrimaryColor
-                val itemIds = listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation)
-                itemIds.forEach { id ->
-                    view.findViewById<LinearLayout>(id)?.let { layout ->
-                        for (i in 0 until layout.childCount) {
-                            val child = layout.getChildAt(i)
-                            if (child is TextView) child.setTextColor(textColor)
-                            if (child is ImageView) child.imageTintList = android.content.res.ColorStateList.valueOf(primColor)
-                        }
+            // Theme all items - icons with primaryColor, text with textPrimaryColor
+            val itemIds = listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation)
+            itemIds.forEach { id ->
+                view.findViewById<LinearLayout>(id)?.let { layout ->
+                    for (i in 0 until layout.childCount) {
+                        val child = layout.getChildAt(i)
+                        if (child is TextView) child.setTextColor(textColor)
+                        if (child is ImageView) child.imageTintList = android.content.res.ColorStateList.valueOf(primColor)
                     }
                 }
-            } catch (_: Exception) {}
-        } else {
-            // For built-in themes: match ChatListActivity sheet styling
+            }
+        } catch (_: Exception) {
+            // Fallback for built-in themes: match ChatListActivity sheet styling
             try {
                 val typedValue = TypedValue()
 
@@ -761,27 +749,15 @@ class NewChatActivity : AppCompatActivity() {
 
         // Apply custom theme colors to search bar
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                // Set background to transparent for custom themes
-                searchBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                val textColor = customTheme.textPrimaryColor.toColorInt()
-                searchInput.setTextColor(textColor)
-                searchInput.setHintTextColor(textColor)
-                searchResultsCount.setTextColor(textColor)
-            } catch (_: Exception) {
-                // Fallback to default behavior if custom theme colors fail
-                val typedValue = TypedValue()
-                theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)
-                searchBar.setBackgroundColor(typedValue.data)
-                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
-                val textColor = typedValue.data
-                searchInput.setTextColor(textColor)
-                searchInput.setHintTextColor(textColor)
-                searchResultsCount.setTextColor(textColor)
-            }
-        } else {
-            // Default theme behavior
+        try {
+            // Set background to transparent for custom themes
+            searchBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            val textColor = customTheme.textPrimaryColor.toColorInt()
+            searchInput.setTextColor(textColor)
+            searchInput.setHintTextColor(textColor)
+            searchResultsCount.setTextColor(textColor)
+        } catch (_: Exception) {
+            // Fallback to default behavior if custom theme colors fail
             val typedValue = TypedValue()
             theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)
             searchBar.setBackgroundColor(typedValue.data)
@@ -836,12 +812,10 @@ class NewChatActivity : AppCompatActivity() {
         
         // Apply theme color to selection toolbar
         val theme = ThemeStore.currentTheme()
-        if (theme != null) {
-            try {
-                val primaryColor = theme.primaryColor.toColorInt()
-                selectionToolbar.setBackgroundColor(primaryColor)
-            } catch (_: Exception) {}
-        }
+        try {
+            val primaryColor = theme.primaryColor.toColorInt()
+            selectionToolbar.setBackgroundColor(primaryColor)
+        } catch (_: Exception) {}
     }
     private fun hideSelectionToolbar() {
         if (!selectionMode) return
@@ -892,20 +866,18 @@ class NewChatActivity : AppCompatActivity() {
         
         // Apply theme colors - custom theme or built-in theme
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
-                titleText.setTextColor(onPrimaryContainerColor)
-                messageText.setTextColor(onPrimaryContainerColor)
-                btnCancel.setTextColor(onPrimaryContainerColor)
-                // Create a shape drawable with custom color for rounded background
-                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
-                ))
-                shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
-                dialogView.background = shapeDrawable
-            } catch (_: Exception) {}
-        } else {
+        try {
+            val onPrimaryContainerColor = customTheme.textPrimaryColor.toColorInt()
+            titleText.setTextColor(onPrimaryContainerColor)
+            messageText.setTextColor(onPrimaryContainerColor)
+            btnCancel.setTextColor(onPrimaryContainerColor)
+            // Create a shape drawable with custom color for rounded background
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+            ))
+            shapeDrawable.paint.color = customTheme.surfaceColor.toColorInt()
+            dialogView.background = shapeDrawable
+        } catch (_: Exception) {
             // Use Material Design attributes for built-in themes
             val typedValue = TypedValue()
             theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)
@@ -977,17 +949,13 @@ class NewChatActivity : AppCompatActivity() {
                     }
                     .setNegativeButton(R.string.cancel, null)
                 
-                if (customTheme != null) {
-                    try {
-                        val textColor = customTheme.textPrimaryColor.toColorInt()
-                        val dialog = builder.show()
-                        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-                        val titleView = dialog.findViewById<TextView>(android.R.id.title)
-                        titleView?.setTextColor(textColor)
-                    } catch (_: Exception) {
-                        builder.show()
-                    }
-                } else {
+                try {
+                    val textColor = customTheme.textPrimaryColor.toColorInt()
+                    val dialog = builder.show()
+                    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                    val titleView = dialog.findViewById<TextView>(android.R.id.title)
+                    titleView?.setTextColor(textColor)
+                } catch (_: Exception) {
                     builder.show()
                 }
             }
@@ -1013,28 +981,26 @@ class NewChatActivity : AppCompatActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                val bgColor = customTheme.backgroundColor.toColorInt()
-                val textColor = customTheme.textPrimaryColor.toColorInt()
-                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
-                ))
-                shapeDrawable.paint.color = bgColor
-                dialogView.background = shapeDrawable
-                val childCount = (dialogView as? LinearLayout)?.childCount ?: 0
-                for (i in 0 until childCount) {
-                    val child = (dialogView as LinearLayout).getChildAt(i)
-                    if (child is LinearLayout) {
-                        for (j in 0 until child.childCount) {
-                            val subChild = child.getChildAt(j)
-                            if (subChild is TextView) subChild.setTextColor(textColor)
-                            if (subChild is ImageView) subChild.setColorFilter(textColor)
-                        }
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val textColor = customTheme.textPrimaryColor.toColorInt()
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+            ))
+            shapeDrawable.paint.color = bgColor
+            dialogView.background = shapeDrawable
+            val childCount = (dialogView as? LinearLayout)?.childCount ?: 0
+            for (i in 0 until childCount) {
+                val child = (dialogView as LinearLayout).getChildAt(i)
+                if (child is LinearLayout) {
+                    for (j in 0 until child.childCount) {
+                        val subChild = child.getChildAt(j)
+                        if (subChild is TextView) subChild.setTextColor(textColor)
+                        if (subChild is ImageView) subChild.setColorFilter(textColor)
                     }
                 }
-            } catch (_: Exception) {}
-        }
+            }
+        } catch (_: Exception) {}
         
         val reactionsContainer = dialogView.findViewById<LinearLayout>(R.id.reactionsContainer)
         val emojis = listOf("👍", "❤️", "🔥", "😂", "😮", "😢", "🙏", "✅")
@@ -1093,19 +1059,17 @@ class NewChatActivity : AppCompatActivity() {
         editText.setSelection(message.text.length)
         
         val customTheme = ThemeStore.currentTheme()
-        if (customTheme != null) {
-            try {
-                val textColor = customTheme.textPrimaryColor.toColorInt()
-                val bgColor = customTheme.backgroundColor.toColorInt()
-                editText.setTextColor(textColor)
-                editText.setBackgroundColor(bgColor)
-                val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                    floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
-                ))
-                shapeDrawable.paint.color = bgColor
-                dialogView.background = shapeDrawable
-            } catch (_: Exception) {}
-        }
+        try {
+            val textColor = customTheme.textPrimaryColor.toColorInt()
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            editText.setTextColor(textColor)
+            editText.setBackgroundColor(bgColor)
+            val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+            ))
+            shapeDrawable.paint.color = bgColor
+            dialogView.background = shapeDrawable
+        } catch (_: Exception) {}
         
         AlertDialog.Builder(this)
             .setTitle(R.string.edit_message)

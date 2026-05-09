@@ -270,6 +270,7 @@
     <string name="version_label">Version: %s</string>
     <string name="version_current">Current version: %s</string>
     <string name="version_available">Available version: %s</string>
+    <string name="version_info_format">Current: %1$s\nAvailable: %2$s</string>
     <string name="update_confirmation_message">A new version of Lavender Messenger is available. Do you want to update now?</string>
     <string name="developer_label">Developer</string>
     <string name="send_feedback">Send Feedback</string>

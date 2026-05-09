@@ -158,9 +158,10 @@ object RealGrpcClient {
             loadDeletedMessages()
         }
 
-        // Проверяем: если мы уже READY и адрес тот же — ничего не делаем
-        if (_connectionStatus.value == ConnectionStatus.READY && currentServerAddress == serverAddress) {
-            android.util.Log.d("GrpcClient", "Already connected to $serverAddress:$port")
+        // Проверяем: если мы уже READY или CONNECTING к тому же адресу — не перезапускаем
+        val currentStatus = _connectionStatus.value
+        if ((currentStatus == ConnectionStatus.READY || currentStatus == ConnectionStatus.CONNECTING) && currentServerAddress == serverAddress) {
+            android.util.Log.d("GrpcClient", "Already connecting/connected to $serverAddress (status: $currentStatus)")
             return
         }
 
@@ -209,7 +210,8 @@ object RealGrpcClient {
         isMonitoring = true
 
         fun checkState() {
-            val grpcState = monitoredChannel.getState(false)
+            // Force connection if IDLE
+            val grpcState = monitoredChannel.getState(true)
 
             // Маппим состояние gRPC на наш понятный UI-статус
             val newStatus = when (grpcState) {
@@ -685,7 +687,7 @@ object RealGrpcClient {
                 .setPassword(password)
                 .setRoomId(currentRoomId)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
-                .setClientVersion(lavender.client.android.BuildConfig.VERSION_NAME)
+                .setClientVersion(BuildConfig.VERSION_NAME)
                 .build())
 
             // 2. Запускаем стрим статуса печати
@@ -1732,11 +1734,15 @@ object RealGrpcClient {
     fun getUserId(): String? = lastUserId
 
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null) {
+            callback(null, false)
+            return
+        }
 
         val request = lavender.client.android.data.proto.GetUserIdRequestProto(username)
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetUserIdRequestProto, lavender.client.android.data.proto.GetUserIdResponseProto>()
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<lavender.client.android.data.proto.GetUserIdRequestProto, GetUserIdResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetUserId")
             .setRequestMarshaller(GetUserIdRequestMarshaller())
@@ -1744,8 +1750,8 @@ object RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<lavender.client.android.data.proto.GetUserIdResponseProto>() {
-            override fun onMessage(message: lavender.client.android.data.proto.GetUserIdResponseProto) {
+        call.start(object : io.grpc.ClientCall.Listener<GetUserIdResponseProto>() {
+            override fun onMessage(message: GetUserIdResponseProto) {
                 callback(message.userId, message.found)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -3983,7 +3989,7 @@ class GetUserIdRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.
 }
 
 class GetUserIdResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender.client.android.data.proto.GetUserIdResponseProto> {
-    override fun stream(value: lavender.client.android.data.proto.GetUserIdResponseProto): java.io.InputStream {
+    override fun stream(value: GetUserIdResponseProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.userId.isNotEmpty()) cos.writeString(1, value.userId)
@@ -4005,7 +4011,7 @@ class GetUserIdResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<lavender
                 else -> cis.skipField(tag)
             }
         }
-        return lavender.client.android.data.proto.GetUserIdResponseProto(userId, found)
+        return GetUserIdResponseProto(userId, found)
     }
 }
 

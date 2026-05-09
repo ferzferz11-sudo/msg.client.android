@@ -41,14 +41,17 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
 
     private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
-        val toast = Toast.makeText(this, message, duration)
-        toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
-        toast.show()
+        runOnUiThread {
+            val toast = Toast.makeText(this, message, duration)
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+                toast.setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 100)
+            }
+            toast.show()
+        }
     }
 
     private fun isDarkTheme(): Boolean {
@@ -75,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
     private val serverList = listOf(
         "159.195.38.145:50051",
-        "192.168.1.135:50051"
+        "192.168.1.135:50051",
     )
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -123,7 +126,7 @@ class MainActivity : AppCompatActivity() {
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
         val notificationRoomId = intent.getStringExtra("room_id")
 
-        if (!skipAutoLogin && savedUsername != null && savedPassword != null && savedServerAddress != null) {
+        if (!skipAutoLogin && (savedUsername != null) && (savedPassword != null) && (savedServerAddress != null)) {
             // Credentials exist - fetch ID if missing and navigate
             processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
             // Still check for updates in background
@@ -189,24 +192,42 @@ class MainActivity : AppCompatActivity() {
         // Download will continue in the background
     }
 
-    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null) {
+    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null, joinBtn: Button? = null, progress: ProgressBar? = null) {
+        android.util.Log.d("MainActivity", "processLogin started for $username")
+        
+        // Show loading state
+        runOnUiThread {
+            joinBtn?.text = ""
+            joinBtn?.isEnabled = false
+            progress?.isVisible = true
+        }
+
         SessionManager.login(this, username, password, serverAddress) { success ->
+            android.util.Log.d("MainActivity", "SessionManager.login result: $success")
             runOnUiThread {
                 if (success) {
-                    val savedUserId = getSavedUserId()
-                    if (savedUserId == null) {
-                        SessionManager.session.value.userId.takeIf { it.isNotEmpty() }?.let { saveUserId(it) }
-                    }
+                    // Update local storage for next auto-login
+                    saveUsername(username)
+                    savePassword(password)
+                    saveServerAddress(serverAddress)
+                    
+                    val userId = SessionManager.session.value.userId
+                    if (userId.isNotEmpty()) saveUserId(userId)
 
+                    android.util.Log.d("MainActivity", "Triggering navigation. fromNotification=$fromNotification")
                     if (fromNotification && !roomId.isNullOrEmpty()) {
                         navigateToChat(username, password, serverAddress, roomId)
                     } else {
                         navigateToChatList(username, password, serverAddress)
                     }
+                    dialog?.dismiss()
                 } else {
+                    // Reset UI on failure
+                    joinBtn?.text = getString(R.string.join)
+                    joinBtn?.isEnabled = true
+                    progress?.isVisible = false
                     showToast(getString(R.string.connection_failed))
                 }
-                dialog?.dismiss()
             }
         }
     }
@@ -361,6 +382,7 @@ class MainActivity : AppCompatActivity() {
         val serverStatusIndicator = dialogView.findViewById<View>(R.id.serverStatusIndicator)
         val serverStatusText = dialogView.findViewById<TextView>(R.id.serverStatusText)
         val refreshServerButton = dialogView.findViewById<TextView>(R.id.refreshServerButton)
+        val joinProgressBar = dialogView.findViewById<ProgressBar>(R.id.joinProgressBar)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
         val btnJoin = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
 
@@ -444,7 +466,7 @@ class MainActivity : AppCompatActivity() {
                 saveServerAddress(serverAddress)
                 android.util.Log.d("MainActivity", "Connecting to server: $serverAddress")
 
-                processLogin(username, password, serverAddress, null, false, dialog)
+                processLogin(username, password, serverAddress, null, false, dialog, btnJoin, joinProgressBar)
             } else if (username.isEmpty()) {
                 showToast(getString(R.string.username_empty), Toast.LENGTH_LONG)
             } else {
@@ -498,11 +520,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getSavedUserId(): String? {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        return prefs.getString("user_id", null)
-    }
-
     private fun saveUserId(userId: String) {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         prefs.edit {
@@ -511,28 +528,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
+        SessionManager.logout(this)
         finishAffinity()
-        exitProcess(0)
+        System.exit(0)
     }
 
     private fun navigateToChatList(username: String, password: String, serverAddress: String) {
-        android.util.Log.d("MainActivity", "Navigating to main chat hub")
+        android.util.Log.d("MainActivity", "Navigating to main chat hub. User: $username")
 
-        val intent = Intent(this, ChatListActivity::class.java).apply {
-            // 1. КЛЮЧИ В ВЕРХНЕМ РЕГИСТРЕ — теперь всё синхронизировано со Splash и NewChat
-            putExtra("USERNAME", username)
-            putExtra("PASSWORD", password)
-            putExtra("SERVER_ADDRESS", serverAddress)
-
-            // 2. ROOM_ID НЕ НУЖЕН для списка чатов.
-            // Список сам запросит данные у сервера после авторизации.
-
-            // 3. Очищаем стек, чтобы нельзя было вернуться назад на экран логина
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        try {
+            val intent = Intent(this, ChatListActivity::class.java).apply {
+                putExtra("USERNAME", username)
+                putExtra("PASSWORD", password)
+                putExtra("SERVER_ADDRESS", serverAddress)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Navigation error: ${e.message}", e)
+            showToast("Navigation failed")
         }
-
-        startActivity(intent)
-        finish() // Закрываем MainActivity окончательно
     }
 
     private fun navigateToChat(username: String, password: String, serverAddress: String, roomId: String?) {
@@ -652,7 +668,8 @@ class MainActivity : AppCompatActivity() {
         
         serverStatusText.text = getString(R.string.checking_server)
         serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.darker_gray))
-        btnJoin.isEnabled = false
+        // Don't disable button, just show status
+        btnJoin.isEnabled = true
         
         connectivityJob?.cancel()
         connectivityJob = lifecycleScope.launch {
@@ -668,7 +685,7 @@ class MainActivity : AppCompatActivity() {
                     result.contains("FAILED") -> {
                         serverStatusText.text = getString(R.string.server_unavailable)
                         serverStatusIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(android.R.color.holo_red_dark))
-                        btnJoin.isEnabled = false
+                        // Optional: we can still let them try if they are sure
                     }
                     else -> {
                         serverStatusText.text = result
@@ -699,7 +716,7 @@ class MainActivity : AppCompatActivity() {
                         putString("latest_version", latestVersion)
                     }
 
-                    withContext<Unit>(Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         updateAvailableIndicator.isVisible = isAvailable
                     }
                 }

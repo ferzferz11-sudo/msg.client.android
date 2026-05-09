@@ -272,6 +272,7 @@
     <string name="version_label">Версия: %s</string>
     <string name="version_current">Текущая версия: %s</string>
     <string name="version_available">Доступная версия: %s</string>
+    <string name="version_info_format">Текущая: %1$s\nДоступная: %2$s</string>
     <string name="update_confirmation_message">Доступна новая версия Lavender Messenger. Обновить сейчас?</string>
     <string name="developer_label">Разработчик</string>
     <string name="send_feedback">Отправить отзыв</string>

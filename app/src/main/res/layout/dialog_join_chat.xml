@@ -130,13 +130,27 @@
             android:textColor="?attr/colorOnSecondary"
             android:backgroundTint="?attr/colorSecondary" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnJoin"
-            style="@style/PrimaryButton"
+        <FrameLayout
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="@string/join" />
+            android:layout_marginStart="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnJoin"
+                style="@style/PrimaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="@string/join" />
+
+            <ProgressBar
+                android:id="@+id/joinProgressBar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:indeterminateTint="?attr/colorOnPrimary" />
+        </FrameLayout>
 
     </LinearLayout>
 

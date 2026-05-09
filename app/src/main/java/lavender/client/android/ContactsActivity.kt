@@ -14,7 +14,6 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -249,18 +248,17 @@ class ContactsActivity : AppCompatActivity() {
         shapeDrawable.paint.color = bgColor
         dialogView.background = shapeDrawable
 
-        val customTheme = ThemeStore.currentTheme()
-        if (customTheme == null) {
+        try {
             val boxColor = ColorStateList.valueOf(bgColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
-        }
+        } catch (_: Exception) {}
 
         val allUsers = mutableListOf<String>()
         val filteredUsers = mutableListOf<String>()
         val userAdapter = UserAdapter(
             onUserClick = { selected ->
-                btnAdd.isEnabled = selected != username && !contacts.contains(selected)
+                btnAdd.isEnabled = (selected != username) && !contacts.contains(selected)
             },
             avatarCache = grpcClient.getAvatarCache()
         )
@@ -297,17 +295,6 @@ class ContactsActivity : AppCompatActivity() {
 
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        if (customTheme == null) {
-            val btnBgColor = ColorStateList.valueOf(
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true).let { typedValue.data }
-            )
-            val btnTextColor = theme.resolveAttribute(com.google.android.material.R.attr.colorOnSecondaryContainer, typedValue, true).let { typedValue.data }
-            btnCancel.backgroundTintList = btnBgColor
-            btnCancel.setTextColor(btnTextColor)
-            btnAdd.backgroundTintList = btnBgColor
-            btnAdd.setTextColor(btnTextColor)
-        }
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnAdd.setOnClickListener {

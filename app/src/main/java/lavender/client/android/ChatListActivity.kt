@@ -9,13 +9,9 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
-import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -27,6 +23,11 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
@@ -39,11 +40,6 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -86,7 +82,7 @@ class ChatListActivity : AppCompatActivity() {
         val serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: ""
 
         if (SessionManager.session.value.username != username) {
-            val savedUserId = getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE).getString("user_id", "") ?: ""
+            val savedUserId = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("user_id", "") ?: ""
             SessionManager.updateSession(username = username, password = password, userId = savedUserId)
         }
 
@@ -282,7 +278,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun showSearchBar() {
         binding.searchCard.isVisible = true
         binding.searchEditText.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(binding.searchEditText, 0)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
@@ -295,7 +291,7 @@ class ChatListActivity : AppCompatActivity() {
         binding.searchCard.isVisible = false
         binding.searchEditText.text?.clear()
         chatAdapter.filter("")
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
         
         val hasSelection = chatAdapter.getSelectedChats().isNotEmpty()
@@ -361,7 +357,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun applyTheme() {
-        val sharedPrefs = getSharedPreferences("ThemePrefs", Context.MODE_PRIVATE)
+        val sharedPrefs = getSharedPreferences("ThemePrefs", MODE_PRIVATE)
         val isDarkMode = sharedPrefs.getBoolean("dark_mode", false)
         if (isDarkMode) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -406,7 +402,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun updateAppIconBadge(count: Int) {
         try {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 val channel = notificationManager.getNotificationChannel("messages")
                 if (channel != null) {
@@ -415,7 +411,7 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("ChatList", "Error updating badge", e)
+            Log.e("ChatSync", "Error updating badge", e)
         }
     }
 
@@ -462,17 +458,8 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        val sharedPrefs = getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        sharedPrefs.edit {
-            remove("saved_username")
-            remove("saved_password")
-            remove("username")
-            remove("password")
-            remove("user_id")
-        }
-
         syncJob?.cancel()
-        SessionManager.logout()
+        SessionManager.logout(this)
 
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -520,7 +507,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val isAvailable = isUpdateAvailable(current, latest)
         titleText.text = getString(if (isAvailable) R.string.update_available else R.string.ok)
-        messageText.text = "${getString(R.string.version_current, current)}\n${getString(R.string.version_available, latest)}"
+        messageText.text = getString(R.string.version_info_format, current, latest)
         
         btnCancel.text = getString(R.string.cancel_dialog)
         btnAction.text = if (isAvailable) getString(R.string.update_now) else getString(R.string.force_download)
@@ -643,11 +630,11 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun toggleLanguage() {
-        val prefs = getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val currentLang = prefs.getString("language", "en")
         val newLang = if (currentLang == "en") "ru" else "en"
 
-        prefs.edit().putString("language", newLang).apply()
+        prefs.edit { putString("language", newLang) }
         setLocale(newLang)
 
         recreate()
@@ -663,7 +650,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val lang = prefs.getString("language", "en") ?: "en"
         val locale = Locale.forLanguageTag(lang)
         Locale.setDefault(locale)
