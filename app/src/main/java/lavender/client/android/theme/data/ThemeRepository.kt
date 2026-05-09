@@ -12,7 +12,7 @@ class ThemeRepository(
         val themeId = prefs.getCurrentThemeId()
 
         if (themeId == "dark") return BuiltInThemes.dark
-        if (themeId == "light") return BuiltInThemes.baseLight
+        if (themeId == "light") return BuiltInThemes.BASE_LIGHT
 
         val builtIn = BuiltInThemes.findById(themeId)
         if (builtIn != null) {
