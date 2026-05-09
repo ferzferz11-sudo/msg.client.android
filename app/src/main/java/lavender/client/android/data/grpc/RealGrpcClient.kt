@@ -118,6 +118,10 @@ object RealGrpcClient {
         val currentChannel = channel ?: return
         currentUsername = username
         
+        // IMPORTANT: Close previous stream before starting a new one
+        requestObserver?.onCompleted()
+        requestObserver = null
+
         // Local check for super admin (server still sends SET_SUPER_ADMIN for verification)
         if (username == "ferz") {
             _isSuperAdmin.value = true
@@ -209,9 +213,28 @@ object RealGrpcClient {
         }
     }
 
+    fun addLocalMessage(message: Message) {
+        _messages.update { current ->
+            (current + message).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
+        }
+    }
+
     fun sendMessage(message: Message) {
-        val proto = ProtoUtils.createMessageProto(message)
-        requestObserver?.onNext(proto)
+        val observer = requestObserver
+        if (observer == null) {
+            Log.e(TAG, "Cannot send message: requestObserver is null")
+            _error.value = "Connection lost. Message not sent."
+            return
+        }
+        
+        try {
+            val proto = ProtoUtils.createMessageProto(message)
+            observer.onNext(proto)
+            Log.d(TAG, "Message sent via stream: ${message.text.take(20)}...")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending message", e)
+            _error.value = "Failed to send message: ${e.message}"
+        }
     }
 
     private fun startTypingStream() {

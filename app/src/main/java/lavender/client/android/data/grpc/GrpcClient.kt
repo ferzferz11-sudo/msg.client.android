@@ -60,6 +60,10 @@ object GrpcClient {
     fun sendMessage(message: Message) {
         realGrpcClient.sendMessage(message)
     }
+
+    fun addLocalMessage(message: Message) {
+        realGrpcClient.addLocalMessage(message)
+    }
     
     fun deleteMessage(message: Message) {
         realGrpcClient.deleteMessage(message)

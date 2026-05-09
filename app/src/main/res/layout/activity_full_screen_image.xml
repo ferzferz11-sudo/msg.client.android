@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF000000">
+    android:background="?attr/colorSurfaceContainer">
 
     <ImageView
         android:id="@+id/fullScreenImageView"
@@ -11,6 +11,13 @@
         android:layout_height="match_parent"
         android:scaleType="centerInside"
         android:contentDescription="@null" />
+
+    <ProgressBar
+        android:id="@+id/loadingProgress"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
     <ImageButton
         android:id="@+id/btnClose"

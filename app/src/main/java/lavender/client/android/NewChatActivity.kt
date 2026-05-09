@@ -527,7 +527,8 @@ class NewChatActivity : AppCompatActivity() {
                     val hasNewMessages = roomMessages.size > lastMessageCount
 
                     adapter.submitList(roomMessages) {
-                        if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && wasAtBottom))) {
+                        val isFromMe = roomMessages.lastOrNull()?.user == username
+                        if (roomMessages.isNotEmpty() && (isFirstLoad || isFromMe || (hasNewMessages && wasAtBottom))) {
                             messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
                         }
                     }
@@ -1043,7 +1044,21 @@ class NewChatActivity : AppCompatActivity() {
             imageUrl.isNotEmpty() && text.isEmpty() -> "" // Empty text for image-only messages
             else -> text
         }
-        val msg = Message(user = username, text = effectiveText, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "")
+        
+        // Optimistic UI: Create and add message locally first
+        val msg = Message(
+            id = java.util.UUID.randomUUID().toString(), // Client-side UUID
+            user = username, 
+            text = effectiveText, 
+            timestamp = System.currentTimeMillis(), 
+            roomId = roomId, 
+            imageUrl = imageUrl, 
+            repliedToMessageId = replyingTo?.id ?: "", 
+            repliedToUser = replyingTo?.user ?: "", 
+            repliedToText = replyingTo?.text ?: ""
+        )
+        
+        grpcClient.addLocalMessage(msg)
         grpcClient.sendMessage(msg)
         
         // For favorites, we might want to update UI immediately if stream is slow
