@@ -213,6 +213,12 @@ class ThemesActivity : AppCompatActivity() {
     private fun applyThemeImmediate(themeId: String) {
         currentThemeId = themeId
         val queryId = grpcClient.getUserId() ?: username
+        
+        if (queryId.isEmpty()) {
+            Toast.makeText(this, "Error: User ID not found. Please wait or log in again.", Toast.LENGTH_LONG).show()
+            return
+        }
+
         grpcClient.setCurrentTheme(queryId, themeId) { success ->
             runOnUiThread {
                 if (success) {
