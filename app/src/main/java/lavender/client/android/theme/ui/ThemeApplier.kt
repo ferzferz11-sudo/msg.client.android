@@ -7,7 +7,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -18,12 +17,12 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.tabs.TabLayout
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
-import kotlin.math.roundToInt
+import lavender.client.android.theme.ThemeUtils
 
 object ThemeApplier {
     fun apply(activity: AppCompatActivity, theme: Theme) {
         val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
-        val isLightMode = bgColor.isLight()
+        val isLightMode = ThemeUtils.isLight(bgColor)
 
         activity.enableEdgeToEdge()
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
@@ -120,27 +119,11 @@ object ThemeApplier {
     }
 
     private fun parseSafeColor(colorStr: String?, defaultColor: Int): Int {
-        if (colorStr.isNullOrEmpty()) return defaultColor
-        return try {
-            colorStr.toColorInt()
-        } catch (_: Exception) {
-            defaultColor
-        }
+        return ThemeUtils.parseSafeColor(colorStr, defaultColor)
     }
 
-    fun adjustAlpha(color: Int, factor: Float): Int {
-        val alpha = (Color.alpha(color) * factor).roundToInt()
-        val red = Color.red(color)
-        val green = Color.green(color)
-        val blue = Color.blue(color)
-        return Color.argb(alpha, red, green, blue)
-    }
-
-    private fun Int.isLight(): Boolean {
-        val darkness = 1 - (0.299 * Color.red(this) +
-            0.587 * Color.green(this) +
-            0.114 * Color.blue(this)) / 255
-        return darkness < 0.5
+    private fun adjustAlpha(color: Int, factor: Float): Int {
+        return ThemeUtils.adjustAlpha(color, factor)
     }
 }
 

@@ -60,6 +60,15 @@
         </LinearLayout>
 
         <ImageView
+            android:id="@+id/modeIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_light_mode"
+            app:tint="?attr/colorOnSurfaceVariant"
+            android:contentDescription="@null" />
+
+        <ImageView
             android:id="@+id/editIndicator"
             android:layout_width="32dp"
             android:layout_height="32dp"

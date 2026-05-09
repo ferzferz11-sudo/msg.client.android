@@ -1,5 +1,6 @@
 package lavender.client.android.ui.adapter
 
+import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
@@ -7,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
@@ -16,6 +16,7 @@ import com.google.android.material.card.MaterialCardView
 import lavender.client.android.R
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 class ThemeAdapter(
     private val onThemeClick: (CustomThemeProto) -> Unit,
@@ -32,6 +33,7 @@ class ThemeAdapter(
         diffResult.dispatchUpdatesTo(this)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun setCurrentThemeId(id: String) {
         if (currentThemeId == id) return
         currentThemeId = id
@@ -40,12 +42,14 @@ class ThemeAdapter(
 
     fun getSelectedThemes(): List<CustomThemeProto> = selectedThemes.toList()
 
+    @SuppressLint("NotifyDataSetChanged")
     fun clearSelection() {
         selectedThemes.clear()
         notifyDataSetChanged()
         onSelectionChanged(0)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun toggleSelection(theme: CustomThemeProto) {
         if (selectedThemes.contains(theme)) {
             selectedThemes.remove(theme)
@@ -56,6 +60,7 @@ class ThemeAdapter(
         onSelectionChanged(selectedThemes.size)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun selectSingle(theme: CustomThemeProto) {
         if (selectedThemes.size == 1 && selectedThemes.contains(theme)) {
             selectedThemes.clear()
@@ -85,7 +90,9 @@ class ThemeAdapter(
         private val themeColorsInfo: TextView = itemView.findViewById(R.id.themeColorsInfo)
         private val themeColorPreview: View = itemView.findViewById(R.id.themeColorPreview)
         private val editIndicator: ImageView = itemView.findViewById(R.id.editIndicator)
+        private val modeIndicator: ImageView = itemView.findViewById(R.id.modeIndicator)
 
+        @SuppressLint("SetTextI18n")
         fun bind(theme: CustomThemeProto, currentId: String, isSelected: Boolean) {
             themeName.text = theme.name
             val isCurrent = theme.id == currentId
@@ -100,6 +107,7 @@ class ThemeAdapter(
 
             themeName.setTextColor(textPrimary)
             themeColorsInfo.setTextColor(adjustAlpha(onSurface, 0.7f))
+            modeIndicator.imageTintList = ColorStateList.valueOf(adjustAlpha(onSurface, 0.7f))
 
             itemView.alpha = 1.0f
             if (isSelected) {
@@ -113,7 +121,7 @@ class ThemeAdapter(
                 cardView.cardElevation = 0f
                 
                 try {
-                    val surfaceColor = Color.parseColor(theme.surfaceColor)
+                    val surfaceColor = theme.surfaceColor.toColorInt()
                     cardView.setCardBackgroundColor(adjustAlpha(surfaceColor, 0.15f))
                 } catch (_: Exception) {
                     cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.1f))
@@ -126,16 +134,23 @@ class ThemeAdapter(
 
             // Preview colors
             try {
+                val bgColorStr = if (theme.id == "dark") "#1E1E2E" else theme.backgroundColor
+                val bgColor = bgColorStr.toColorInt()
+                val isLight = ThemeUtils.isLight(bgColor)
+                
+                modeIndicator.setImageResource(if (isLight) R.drawable.ic_light_mode else R.drawable.ic_theme_dark)
+
                 if (theme.id == "dark") {
-                    themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#1E1E2E"))
+                    themeColorPreview.backgroundTintList = ColorStateList.valueOf("#1E1E2E".toColorInt())
                     themeColorsInfo.text = context.getString(R.string.dark_theme)
                 } else {
-                    val pColor = Color.parseColor(theme.primaryColor)
+                    val pColor = theme.primaryColor.toColorInt()
                     themeColorPreview.backgroundTintList = ColorStateList.valueOf(pColor)
                     themeColorsInfo.text = "${theme.primaryColor} / ${theme.surfaceColor}"
                 }
             } catch (_: Exception) {
                 themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
+                modeIndicator.setImageResource(R.drawable.ic_theme_dark)
             }
 
             itemView.setOnClickListener {

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -30,7 +29,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import lavender.client.android.ui.adapter.UserAdapter
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
@@ -38,6 +36,7 @@ import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
+import lavender.client.android.ui.adapter.UserAdapter
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -142,6 +141,8 @@ class ChatListActivity : AppCompatActivity() {
 
                 binding.actionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
                 binding.toolbarUserAvatar.isVisible = !hasSelection && !binding.searchCard.isVisible
+
+                updateUpdateIndicatorVisibility()
             },
             currentUsername = username,
             initialAvatarCache = grpcClient.getAvatarCache(),
@@ -174,6 +175,10 @@ class ChatListActivity : AppCompatActivity() {
         
         binding.actionSearch.setOnClickListener {
             showSearchBar()
+        }
+
+        binding.updateAvailableIcon.setOnClickListener {
+            checkManualUpdate()
         }
 
         binding.toolbar.setNavigationOnClickListener {
@@ -319,6 +324,7 @@ class ChatListActivity : AppCompatActivity() {
         
         binding.actionSearch.isVisible = false
         binding.toolbarUserAvatar.isVisible = false
+        updateUpdateIndicatorVisibility()
     }
 
     private fun hideSearchBar() {
@@ -334,6 +340,7 @@ class ChatListActivity : AppCompatActivity() {
         binding.actionSearch.isVisible = !hasSelection
         binding.toolbarUserAvatar.isVisible = !hasSelection
         binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, chatAdapter.getSelectedChats().size) else getString(R.string.chats)
+        updateUpdateIndicatorVisibility()
     }
 
     private fun confirmDeleteSelectedChats(selected: List<ChatInfo>) {
@@ -440,6 +447,9 @@ class ChatListActivity : AppCompatActivity() {
 
                 Log.d("ChatListActivity", "Loaded ${chats.size} chats")
 
+                updateUpdateIndicatorVisibility()
+                checkForUpdatesSilently()
+
                 // Pre-fetch avatars for all participants
                 fetchedChats.forEach { chat ->
                     try {
@@ -459,15 +469,46 @@ class ChatListActivity : AppCompatActivity() {
     private fun updateAppIconBadge(count: Int) {
         try {
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = notificationManager.getNotificationChannel("messages")
-                if (channel != null) {
-                    channel.setShowBadge(count > 0)
-                    notificationManager.createNotificationChannel(channel)
-                }
+            val channel = notificationManager.getNotificationChannel("messages")
+            if (channel != null) {
+                channel.setShowBadge(count > 0)
+                notificationManager.createNotificationChannel(channel)
             }
         } catch (e: Exception) {
             Log.e("ChatSync", "Error updating badge", e)
+        }
+    }
+
+    private fun updateUpdateIndicatorVisibility() {
+        val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+        val isAvailable = prefs.getBoolean("update_available", false)
+        val hasSelection = chatAdapter.getSelectedChats().isNotEmpty()
+        val isSearching = binding.searchCard.isVisible
+        
+        binding.updateAvailableIcon.isVisible = isAvailable && !hasSelection && !isSearching
+    }
+
+    private fun checkForUpdatesSilently() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("http://159.195.38.145:8081/version.txt")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 5000
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    val isAvailable = isUpdateAvailable(BuildConfig.VERSION_NAME, latestVersion)
+                    
+                    getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
+                        putBoolean("update_available", isAvailable)
+                        putString("latest_version", latestVersion)
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        updateUpdateIndicatorVisibility()
+                    }
+                }
+                connection.disconnect()
+            } catch (_: Exception) {}
         }
     }
 
@@ -499,6 +540,7 @@ class ChatListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
+        updateUpdateIndicatorVisibility()
         if (grpcClient.connectionStatus.value == lavender.client.android.data.grpc.ConnectionStatus.READY) {
             loadChats()
         }
@@ -761,6 +803,24 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
 
+            menuUserAvatar.setOnClickListener {
+                val fullUrl = grpcClient.getFullAvatarUrl(username) ?: myAvatarUrl
+                if (!fullUrl.isNullOrEmpty()) {
+                    val intent = Intent(this, FullScreenImageActivity::class.java).apply {
+                        putExtra("image_url", fullUrl)
+                    }
+                    startActivity(intent)
+                } else {
+                    val avatarFile = File(filesDir, "avatars/$username.jpg")
+                    if (avatarFile.exists()) {
+                        val intent = Intent(this, FullScreenImageActivity::class.java).apply {
+                            putExtra("image_url", avatarFile.absolutePath)
+                        }
+                        startActivity(intent)
+                    }
+                }
+            }
+
             // Show SuperAdmin action if user has permissions
             sheetView.findViewById<View>(R.id.actionAdmin).isVisible = SessionManager.session.value.isSuperAdmin
 
@@ -875,7 +935,7 @@ class ChatListActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_create_chat, binding.root, false)
         
         val groupNameLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.groupNameLayout)
-        val groupNameEditText = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.groupNameEditText)
+        val groupNameEditText = view.findViewById<TextInputEditText>(R.id.groupNameEditText)
         val searchEditText = view.findViewById<TextInputEditText>(R.id.searchEditText)
         val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)

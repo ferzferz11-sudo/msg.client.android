@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
@@ -21,6 +22,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
@@ -54,7 +56,7 @@ class SuperAdminActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_super_admin)
 
-        val username = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_username", "") ?: ""
+        val username = SessionManager.session.value.username
         ThemeUi.bind(this, username)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
@@ -160,7 +162,7 @@ class SuperAdminActivity : AppCompatActivity() {
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
                 
-                nameText.text = user
+                nameText.text = user.ifEmpty { "Unnamed ($user)" }
                 val isOnline = grpcClient.users.value.contains(user)
                 statusDot.isVisible = true
                 statusDot.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
@@ -231,10 +233,19 @@ class SuperAdminActivity : AppCompatActivity() {
         if (targetUser == "ferz") return
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_profile)
-            .setMessage("Delete user $targetUser?")
+            .setMessage("${getString(R.string.delete_profile)}: $targetUser?")
             .setPositiveButton(R.string.delete) { _, _ ->
                 progressOverlay.isVisible = true
-                grpcClient.deleteProfile(targetUser) { _, _ -> loadData() }
+                grpcClient.deleteProfile(targetUser) { success, message ->
+                    runOnUiThread {
+                        if (success) {
+                            loadData()
+                        } else {
+                            progressOverlay.isVisible = false
+                            Toast.makeText(this, "${getString(R.string.connection_failed)}: $message", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             }
             .setNegativeButton(android.R.string.cancel, null).show()
     }
@@ -242,10 +253,19 @@ class SuperAdminActivity : AppCompatActivity() {
     private fun confirmDeleteChat(chat: ChatInfo) {
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_group)
-            .setMessage("Delete chat ${chat.name}?")
+            .setMessage("${getString(R.string.delete_group)}: ${chat.name}?")
             .setPositiveButton(R.string.delete) { _, _ ->
                 progressOverlay.isVisible = true
-                grpcClient.deleteChat(chat.id) { _, _ -> loadData() }
+                grpcClient.deleteChat(chat.id) { success, message ->
+                    runOnUiThread {
+                        if (success) {
+                            loadData()
+                        } else {
+                            progressOverlay.isVisible = false
+                            Toast.makeText(this, "${getString(R.string.connection_failed)}: $message", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             }
             .setNegativeButton(android.R.string.cancel, null).show()
     }
