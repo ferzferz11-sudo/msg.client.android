@@ -257,10 +257,7 @@
     <string name="delete_theme_confirm">Are you sure you want to delete this theme?</string>
     <string name="theme_template_green">Green Forest</string>
     <string name="theme_template_blue">Modern Blue</string>
-    <string name="theme_template_purple">Royal Purple</string>
-    <string name="theme_template_sunset">Sunset Orange</string>
     <string name="theme_template_graphite">Graphite &amp; Gold</string>
-    <string name="theme_template_rose">Nordic Rose</string>
     <string name="theme_template_mint">Cyber Mint</string>
     <string name="admin_label">(Admin)</string>
     <string name="muted_label">Muted</string>

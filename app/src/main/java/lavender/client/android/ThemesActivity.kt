@@ -193,10 +193,7 @@ class ThemesActivity : AppCompatActivity() {
             val localizedName = when (theme.id) {
                 "builtin_green"    -> getString(R.string.theme_template_green)
                 "builtin_blue"     -> getString(R.string.theme_template_blue)
-                "builtin_purple"   -> getString(R.string.theme_template_purple)
-                "builtin_sunset"   -> getString(R.string.theme_template_sunset)
                 "builtin_graphite" -> getString(R.string.theme_template_graphite)
-                "builtin_rose"     -> getString(R.string.theme_template_rose)
                 "builtin_mint"     -> getString(R.string.theme_template_mint)
                 else -> theme.name
             }

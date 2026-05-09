@@ -259,10 +259,7 @@
     <string name="delete_theme_confirm">Вы уверены, что хотите удалить эту тему?</string>
     <string name="theme_template_green">Зеленый лес</string>
     <string name="theme_template_blue">Современный синий</string>
-    <string name="theme_template_purple">Королевский пурпур</string>
-    <string name="theme_template_sunset">Закатный оранжевый</string>
     <string name="theme_template_graphite">Графит и золото</string>
-    <string name="theme_template_rose">Северная роза</string>
     <string name="theme_template_mint">Кибер Мята</string>
     <string name="admin_label">(Админ)</string>
     <string name="muted_label">Без звука</string>
