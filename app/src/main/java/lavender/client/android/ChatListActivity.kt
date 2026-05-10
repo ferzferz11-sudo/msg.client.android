@@ -133,6 +133,7 @@ class ChatListActivity : AppCompatActivity() {
                 val intent = Intent(this, NewChatActivity::class.java).apply {
                     putExtra("USERNAME", username)
                     putExtra("PASSWORD", password)
+                    putExtra("SERVER_ADDRESS", intent.getStringExtra("SERVER_ADDRESS") ?: "")
                     putExtra("CHAT_NAME", chat.name)
                     putExtra("ROOM_ID", chat.id)
                     putExtra("IS_DIRECT", chat.type == "direct")
@@ -250,6 +251,13 @@ class ChatListActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             grpcClient.connectionStatus.collect { status ->
+                val isConnecting = status == lavender.client.android.data.grpc.ConnectionStatus.CONNECTING
+                if (isConnecting) {
+                    binding.toolbarTitle.text = getString(R.string.connecting)
+                } else if (chatAdapter.getSelectedChats().isEmpty()) {
+                    binding.toolbarTitle.text = getString(R.string.chats)
+                }
+
                 if (status == lavender.client.android.data.grpc.ConnectionStatus.READY) {
                     if (username.isNotEmpty() && password.isNotEmpty()) {
                         grpcClient.startChat(username, password, "") { /* onMessageReceived */ }
@@ -665,9 +673,21 @@ class ChatListActivity : AppCompatActivity() {
         ThemeStore.refresh(this, username) // Force theme refresh from store when returning
         chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
         updateUpdateIndicatorVisibility()
-        if (grpcClient.connectionStatus.value == lavender.client.android.data.grpc.ConnectionStatus.READY) {
-            loadChats()
+        
+        // Ensure connection is active if we have a server address
+        if (grpcClient.connectionStatus.value != lavender.client.android.data.grpc.ConnectionStatus.READY) {
+            val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
+                ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
+            
+            if (!serverAddress.isNullOrEmpty()) {
+                val parts = serverAddress.split(":")
+                val host = parts[0]
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                grpcClient.connect(host, false, port, this)
+            }
         }
+        
+        loadChats()
     }
 
     private fun shareApp() {

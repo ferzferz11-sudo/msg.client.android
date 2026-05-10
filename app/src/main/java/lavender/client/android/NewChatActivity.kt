@@ -218,6 +218,19 @@ class NewChatActivity : AppCompatActivity() {
         // 2. Извлекаем данные. Убедись, что loadDataFromIntent() проверяет "roomId" из extras!
         loadDataFromIntent()
 
+        // Ensure connection is active
+        if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+            val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
+                ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
+            
+            if (!serverAddress.isNullOrEmpty()) {
+                val parts = serverAddress.split(":")
+                val host = parts[0]
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                grpcClient.connect(host, false, port, this)
+            }
+        }
+
         // 3. СИНХРОНИЗАЦИЯ: Говорим клиенту, где мы сейчас.
         // Очищаем старые сообщения, чтобы не было "фантомных" текстов из другого чата.
         grpcClient.setRoomId(roomId)
@@ -379,6 +392,16 @@ class NewChatActivity : AppCompatActivity() {
             if (selectionMode) hideSelectionToolbar()
             else if (searchBar.isVisible) hideSearchBar()
             else finish()
+        }
+        
+        // Manual reconnect logic
+        toolbarSubtitle.setOnClickListener {
+            if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                showToast(getString(R.string.connecting))
+                viewModel.startChat(username, password, "") { _ ->
+                    viewModel.markRead(username, this)
+                }
+            }
         }
 
         if (roomId.startsWith("favorites_")) {
@@ -561,6 +584,10 @@ class NewChatActivity : AppCompatActivity() {
 
                     if (isConnected) {
                         syncChatListIfNeeded()
+                        // Ensure history is loaded if we just reconnected
+                        if (adapter.currentList.isEmpty()) {
+                            viewModel.loadHistory()
+                        }
                     }
                 }
             }

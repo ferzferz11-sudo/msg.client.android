@@ -51,8 +51,18 @@ object SessionManager {
         val username = prefs.getString("username", "") ?: ""
         val password = prefs.getString("password", "") ?: ""
         val userId = prefs.getString("user_id", "") ?: ""
+        val serverAddress = prefs.getString("server_address", "") ?: ""
+        
         if (username.isNotEmpty()) {
             updateSession(username = username, password = password, userId = userId)
+            
+            // Reconnect if needed
+            if (serverAddress.isNotEmpty() && GrpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED) {
+                val parts = serverAddress.split(":")
+                val host = parts[0]
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                GrpcClient.connect(host, useTls = false, port = port, context = context)
+            }
         }
     }
 

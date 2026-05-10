@@ -6,6 +6,7 @@ import com.google.protobuf.Timestamp
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -25,6 +26,7 @@ enum class ConnectionStatus {
 
 object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var channel: ManagedChannel? = null
     private var requestObserver: StreamObserver<MessageProto>? = null
     private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
@@ -73,7 +75,7 @@ object RealGrpcClient {
     private val deletedMessageHashes = mutableSetOf<String>()
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null) {
-        if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY) return
+        if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null) return
         
         appContext = context
         currentServerAddress = serverAddress
@@ -96,13 +98,30 @@ object RealGrpcClient {
             builder.keepAliveWithoutCalls(true)
 
             channel?.shutdownNow()
-            channel = builder.build()
+            val newChannel = builder.build()
+            channel = newChannel
+            
+            // Note: In gRPC READY doesn't mean server is reached yet,
+            // but for our UI we'll use it to mean "Channel is active"
             _connectionStatus.value = ConnectionStatus.READY
-            Log.d(TAG, "Channel built successfully")
+            Log.d(TAG, "Channel built successfully to $serverAddress")
+            
+            // Auto-resume last chat if it exists
+            lastChatRequest?.let { 
+                Log.d(TAG, "Resuming last chat for ${it.u}")
+                startChat(it.u, it.p, it.j, it.cb) 
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
             _connectionStatus.value = ConnectionStatus.FAILED
             _error.value = e.message
+            
+            // Retry connection after delay
+            scope.launch {
+                delay(10000)
+                Log.d(TAG, "Retrying connection to $serverAddress...")
+                connect(serverAddress, useTls, port, context)
+            }
         }
     }
 
@@ -114,11 +133,37 @@ object RealGrpcClient {
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
 
+    private var lastChatRequest: LastChatRequest? = null
+    private data class LastChatRequest(val u: String, val p: String, val j: String, val cb: (Message) -> Unit)
+
     fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
-        val currentChannel = channel ?: return
+        val last = lastChatRequest
+        if (last != null && last.u == username && currentRoomId == currentRoomId && requestObserver != null) {
+            Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
+            return
+        }
+
+        lastChatRequest = LastChatRequest(username, password, joinMessage, onMessageReceived)
+        
+        if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
+            _connectionStatus.value = ConnectionStatus.CONNECTING
+        }
+
+        val currentChannel = channel
+        if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
+            val addr = currentServerAddress
+            if (!addr.isNullOrEmpty()) {
+                Log.w(TAG, "Channel is not available, attempting reconnect to $addr")
+                connect(addr)
+            } else {
+                Log.e(TAG, "Cannot start chat: channel and server address are null")
+            }
+            return
+        }
+
         currentUsername = username
         
-        // IMPORTANT: Close previous stream before starting a new one
+        // IMPORTANT: Close previous stream only if it's different or explicitly requested
         requestObserver?.onCompleted()
         requestObserver = null
 
@@ -230,6 +275,16 @@ object RealGrpcClient {
             override fun onError(t: Throwable) {
                 Log.e(TAG, "Chat stream error", t)
                 _connectionStatus.value = ConnectionStatus.FAILED
+                
+                val currentObserver = requestObserver
+                scope.launch {
+                    delay(5000)
+                    // Only reconnect if no new stream was started in the meantime
+                    if (requestObserver == null || requestObserver == currentObserver) {
+                        Log.d(TAG, "Attempting stream reconnect...")
+                        lastChatRequest?.let { startChat(it.u, it.p, it.j, it.cb) }
+                    }
+                }
             }
 
             override fun onCompleted() {
@@ -239,7 +294,13 @@ object RealGrpcClient {
         }
 
         this.start(object : io.grpc.ClientCall.Listener<MessageProto>() {
-            override fun onMessage(message: MessageProto) = responseObserver.onNext(message)
+            override fun onMessage(message: MessageProto) {
+                // If we receive ANY message, we are definitely READY
+                if (_connectionStatus.value != ConnectionStatus.READY) {
+                    _connectionStatus.value = ConnectionStatus.READY
+                }
+                responseObserver.onNext(message)
+            }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
@@ -299,7 +360,13 @@ object RealGrpcClient {
                     current + (value.roomId to roomTyping)
                 }
             }
-            override fun onError(t: Throwable) { Log.e(TAG, "Typing stream error", t) }
+            override fun onError(t: Throwable) { 
+                Log.e(TAG, "Typing stream error", t) 
+                scope.launch {
+                    delay(5000)
+                    startTypingStream()
+                }
+            }
             override fun onCompleted() {}
         }
 
