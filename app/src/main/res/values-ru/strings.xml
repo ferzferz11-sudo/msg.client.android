@@ -199,7 +199,7 @@
     <string name="remove">Удалить</string>
     <string name="remove_participant_confirm">Вы уверены, что хотите удалить %s из группы?</string>
     <string name="preview">Просмотр</string>
-    <string name="edit">Изменить</string>
+    <string name="edit">Изменить профиль</string>
     <string name="edit_theme_button">Редактировать</string>
 
     <string name="welcome_new_user_title">Добро пожаловать в Lavender!</string>
@@ -373,4 +373,9 @@
     <string name="select_image">Выбрать изображение</string>
     <string name="remove_image">Удалить</string>
     <string name="error_loading_image">Ошибка загрузки изображения</string>
+    <string name="additional_settings">Дополнительные настройки</string>
+    <string name="clear_cache">Очистка локального кэша</string>
+    <string name="cache_cleared">Кэш успешно очищен</string>
+    <string name="servers">Серверы</string>
+    <string name="under_development">В разработке</string>
 </resources>

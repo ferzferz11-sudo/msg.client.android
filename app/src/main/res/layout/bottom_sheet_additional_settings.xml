@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="?attr/colorSurfaceContainer">
+
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="?attr/colorOnSurfaceVariant" />
+
+    <TextView
+        android:id="@+id/settingsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/additional_settings"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:id="@+id/actionNotifications"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_notification_history" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/notifications" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionClearCache"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_delete" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/clear_cache" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionAbout"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/about"
+            android:src="@android:drawable/ic_dialog_info" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/action_about" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionAdmin"
+        style="@style/MenuActionItemStyle"
+        android:visibility="gone">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/action_super_admin"
+            android:src="@android:drawable/ic_lock_lock" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/action_super_admin" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionServers"
+        style="@style/MenuActionItemStyle"
+        android:visibility="gone">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_settings" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/servers" />
+    </LinearLayout>
+
+    <View style="@style/MenuDividerStyle" />
+
+    <LinearLayout
+        android:id="@+id/actionLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@string/exit"
+            android:src="@drawable/exit_to_app_24"
+            app:tint="#FF5252" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/logout_profile"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FF5252" />
+    </LinearLayout>
+
+</LinearLayout>

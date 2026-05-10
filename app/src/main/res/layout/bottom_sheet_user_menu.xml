@@ -131,14 +131,25 @@
     <View style="@style/MenuDividerStyle" />
 
     <LinearLayout
-        android:id="@+id/actionNotifications"
+        android:id="@+id/actionUpdate"
         style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_notification_history" />
+            android:src="@drawable/deployed_code_update_24" />
         <TextView
             style="@style/MenuActionTextStyle"
-            android:text="@string/notifications" />
+            android:text="@string/action_update" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionAdditionalSettings"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_settings" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/additional_settings" />
     </LinearLayout>
 
     <LinearLayout
@@ -151,74 +162,6 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/toggle_language" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/actionUpdate"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/deployed_code_update_24" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/action_update" />
-    </LinearLayout>
-
-    <View style="@style/MenuDividerStyle" />
-
-    <LinearLayout
-        android:id="@+id/actionAbout"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/about"
-            android:src="@android:drawable/ic_dialog_info" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/action_about" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/actionAdmin"
-        style="@style/MenuActionItemStyle"
-        android:visibility="gone">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/action_super_admin"
-            android:src="@android:drawable/ic_lock_lock" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/action_super_admin" />
-    </LinearLayout>
-
-    <View style="@style/MenuDividerStyle" />
-
-    <LinearLayout
-        android:id="@+id/actionLogout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:contentDescription="@string/exit"
-            android:src="@drawable/exit_to_app_24"
-            app:tint="#FF5252" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/logout_profile"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#FF5252" />
     </LinearLayout>
 
 </LinearLayout>

@@ -907,8 +907,8 @@ class ChatListActivity : AppCompatActivity() {
         val customTheme = ThemeStore.currentTheme()
         val actionIds = listOf(
             R.id.actionShareHeader, R.id.actionEditProfile, R.id.actionThemes,
-            R.id.actionNotifications, R.id.actionContacts, R.id.actionToggleLanguage,
-            R.id.actionAbout, R.id.actionUpdate, R.id.actionLogout, R.id.actionAdmin
+            R.id.actionContacts, R.id.actionAdditionalSettings,
+            R.id.actionToggleLanguage, R.id.actionUpdate
         )
 
         try {
@@ -966,25 +966,22 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
 
-            // Show SuperAdmin action if user has permissions
-            sheetView.findViewById<View>(R.id.actionAdmin).isVisible = SessionManager.session.value.isSuperAdmin
-
-            fun applyThemeToMenu(view: View, isShare: Boolean, isLogout: Boolean) {
+            fun applyThemeToMenu(view: View, isShare: Boolean) {
                 if (view is TextView) {
                     if (isShare) view.setTextColor(primColor)
-                    else if (!isLogout) view.setTextColor(txtColor)
+                    else view.setTextColor(txtColor)
                 } else if (view is ImageView) {
-                    if (!isLogout) view.imageTintList = ColorStateList.valueOf(primColor)
+                    view.imageTintList = ColorStateList.valueOf(primColor)
                 } else if (view is ViewGroup) {
                     for (i in 0 until view.childCount) {
-                        applyThemeToMenu(view.getChildAt(i), isShare, isLogout)
+                        applyThemeToMenu(view.getChildAt(i), isShare)
                     }
                 }
             }
 
             actionIds.forEach { id ->
                 sheetView.findViewById<View>(id)?.let { view ->
-                    applyThemeToMenu(view, id == R.id.actionShareHeader, id == R.id.actionLogout)
+                    applyThemeToMenu(view, id == R.id.actionShareHeader)
                 }
             }
         } catch (_: Exception) {
@@ -1008,10 +1005,6 @@ class ChatListActivity : AppCompatActivity() {
             val intent = Intent(this, ThemesActivity::class.java).apply { putExtra("username", username) }
             startActivity(intent)
         }
-        sheetView.findViewById<View>(R.id.actionNotifications).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            startActivity(Intent(this, NotificationActivity::class.java))
-        }
         sheetView.findViewById<View>(R.id.actionContacts).setOnClickListener {
             bottomSheetDialog.dismiss()
             val intent = Intent(this, ContactsActivity::class.java).apply {
@@ -1019,6 +1012,10 @@ class ChatListActivity : AppCompatActivity() {
                 putExtra("PASSWORD", password)
             }
             startActivity(intent)
+        }
+        sheetView.findViewById<View>(R.id.actionAdditionalSettings).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showAdditionalSettingsSheet()
         }
         sheetView.findViewById<View>(R.id.actionToggleLanguage).setOnClickListener {
             bottomSheetDialog.dismiss()
@@ -1028,6 +1025,64 @@ class ChatListActivity : AppCompatActivity() {
             bottomSheetDialog.dismiss()
             checkManualUpdate()
         }
+        bottomSheetDialog.setContentView(sheetView)
+        bottomSheetDialog.show()
+    }
+
+    private fun showAdditionalSettingsSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_additional_settings, binding.root, false)
+        val customTheme = ThemeStore.currentTheme()
+        val actionIds = listOf(
+            R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionLogout
+        )
+
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val txtColor = customTheme.textPrimaryColor.toColorInt()
+            val primColor = customTheme.primaryColor.toColorInt()
+
+            sheetView.setBackgroundColor(bgColor)
+            sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
+
+            sheetView.findViewById<TextView>(R.id.settingsTitle)?.let { 
+                it.setTextColor(txtColor)
+            }
+
+            // Show Admin Panel and Servers only for super admins
+            val isSuperAdmin = SessionManager.session.value.isSuperAdmin
+            sheetView.findViewById<View>(R.id.actionAdmin).isVisible = isSuperAdmin
+            sheetView.findViewById<View>(R.id.actionServers).isVisible = isSuperAdmin
+
+            fun applyThemeToMenu(view: View, isLogout: Boolean) {
+                if (view is TextView) {
+                    if (!isLogout) view.setTextColor(txtColor)
+                } else if (view is ImageView) {
+                    if (!isLogout) view.imageTintList = ColorStateList.valueOf(primColor)
+                } else if (view is ViewGroup) {
+                    for (i in 0 until view.childCount) {
+                        applyThemeToMenu(view.getChildAt(i), isLogout)
+                    }
+                }
+            }
+
+            actionIds.forEach { id ->
+                sheetView.findViewById<View>(id)?.let { view ->
+                    applyThemeToMenu(view, id == R.id.actionLogout)
+                }
+            }
+        } catch (_: Exception) {
+            Log.e("Theme", "Error tinting additional settings sheet")
+        }
+
+        sheetView.findViewById<View>(R.id.actionNotifications).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            startActivity(Intent(this, NotificationActivity::class.java))
+        }
+        sheetView.findViewById<View>(R.id.actionClearCache).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            clearLocalCache()
+        }
         sheetView.findViewById<View>(R.id.actionAbout).setOnClickListener {
             bottomSheetDialog.dismiss()
             showAboutDialog()
@@ -1036,12 +1091,48 @@ class ChatListActivity : AppCompatActivity() {
             bottomSheetDialog.dismiss()
             startActivity(Intent(this, SuperAdminActivity::class.java))
         }
+        sheetView.findViewById<View>(R.id.actionServers).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val currentServer = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "Unknown")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.servers)
+                .setMessage("${getString(R.string.under_development)}\n\nConnected to: $currentServer")
+                .setPositiveButton("OK", null)
+                .show()
+        }
         sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {
             bottomSheetDialog.dismiss()
             logout()
         }
+
         bottomSheetDialog.setContentView(sheetView)
         bottomSheetDialog.show()
+    }
+
+    private fun clearLocalCache() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 1. Clear Room database using DAOs
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                db.messageDao().clearAll()
+                db.chatDao().clearAll()
+
+                // 2. Clear Glide disk cache
+                com.bumptech.glide.Glide.get(this@ChatListActivity).clearDiskCache()
+                
+                withContext(Dispatchers.Main) {
+                    // 3. Clear Glide memory cache
+                    com.bumptech.glide.Glide.get(this@ChatListActivity).clearMemory()
+                    
+                    Toast.makeText(this@ChatListActivity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
+                    
+                    // Reload chats to refresh from server
+                    loadChats()
+                }
+            } catch (e: Exception) {
+                Log.e("Cache", "Error clearing cache", e)
+            }
+        }
     }
 
     private fun showChatActionSheet() {
