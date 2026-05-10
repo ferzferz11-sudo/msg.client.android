@@ -1,6 +1,8 @@
 plugins {
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -63,6 +65,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
     buildFeatures {
         viewBinding = true
         buildConfig = true
@@ -100,8 +105,15 @@ dependencies {
     // CircleImageView for avatars
     implementation(libs.circleimageview)
     
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    
     // Glide for image loading
     implementation(libs.glide)
+    implementation(libs.glide.okhttp)
+    ksp(libs.glide.compiler)
     
     // ExoPlayer for audio playback
     implementation("androidx.media3:media3-exoplayer:1.10.0")

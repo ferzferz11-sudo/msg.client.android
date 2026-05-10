@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import lavender.client.android.BuildConfig
+import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.models.ChatInfo
@@ -28,6 +29,13 @@ object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var channel: ManagedChannel? = null
+    
+    private var database: AppDatabase? = null
+    private fun db() = database ?: appContext?.let { 
+        val d = AppDatabase.getDatabase(it)
+        database = d
+        d
+    }
     private var requestObserver: StreamObserver<MessageProto>? = null
     private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
     
@@ -134,16 +142,16 @@ object RealGrpcClient {
     }
 
     private var lastChatRequest: LastChatRequest? = null
-    private data class LastChatRequest(val u: String, val p: String, val j: String, val cb: (Message) -> Unit)
+    private data class LastChatRequest(val u: String, val p: String, val j: String, val roomId: String, val cb: (Message) -> Unit)
 
     fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
         val last = lastChatRequest
-        if (last != null && last.u == username && currentRoomId == currentRoomId && requestObserver != null) {
+        if (last != null && last.u == username && last.roomId == currentRoomId && requestObserver != null) {
             Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
             return
         }
 
-        lastChatRequest = LastChatRequest(username, password, joinMessage, onMessageReceived)
+        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, onMessageReceived)
         
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
             _connectionStatus.value = ConnectionStatus.CONNECTING
@@ -231,6 +239,11 @@ object RealGrpcClient {
                     if (value.roomId.isEmpty() || value.roomId == currentRoomId) {
                         deletedMessageHashes.add("id:$deletedId")
                         _messages.update { current -> current.filterNot { it.id == deletedId } }
+                        
+                        // Remove from persistent cache
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.deleteMessage(deletedId)
+                        }
                     }
                     return
                 }
@@ -254,7 +267,15 @@ object RealGrpcClient {
                 if (deletedMessageHashes.contains(getMessageHash(message))) return
                 
                 // Only process messages for the current room
-                if (message.roomId != currentRoomId) {
+                // For Favorites virtual room, we also accept any message that the server explicitly sent to us
+                // during this session (server broadcasts starred messages).
+                val isFavoriteSession = currentRoomId.startsWith("favorites_")
+                
+                if (message.roomId != currentRoomId && !isFavoriteSession) {
+                    // Still cache background messages
+                    scope.launch(Dispatchers.IO) {
+                        db()?.messageDao()?.insertMessages(listOf(message.toEntity()))
+                    }
                     return
                 }
 
@@ -269,6 +290,11 @@ object RealGrpcClient {
                     } else {
                         (list + message).sortedBy { it.timestamp }
                     }
+                }
+                
+                // Save to cache
+                scope.launch(Dispatchers.IO) {
+                    db()?.messageDao()?.insertMessages(listOf(message.toEntity()))
                 }
             }
 
@@ -388,6 +414,15 @@ object RealGrpcClient {
     }
 
     fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
+        // First, load from cache
+        scope.launch(Dispatchers.IO) {
+            val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
+            if (cached.isNotEmpty() && _messages.value.isEmpty()) {
+                _messages.update { cached }
+                Log.d(TAG, "Loaded ${cached.size} messages from cache for $roomId")
+            }
+        }
+
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetHistoryRequestProto, GetHistoryResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -402,6 +437,11 @@ object RealGrpcClient {
                 val history = message.messages.map { ProtoUtils.createMessageFromProto(it) }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
                 _messages.update { current -> (current + history).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp } }
+                
+                // Save to cache
+                scope.launch(Dispatchers.IO) {
+                    db()?.messageDao()?.insertMessages(history.map { it.toEntity() })
+                }
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { onCompletion() }
         }, io.grpc.Metadata())
@@ -411,6 +451,14 @@ object RealGrpcClient {
     }
 
     fun getChats(username: String, callback: (List<ChatInfo>) -> Unit) {
+        // Load from cache first
+        scope.launch(Dispatchers.IO) {
+            val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
+            if (cached.isNotEmpty()) {
+                withContext(Dispatchers.Main) { callback(cached) }
+            }
+        }
+
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -422,13 +470,20 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
             override fun onMessage(message: GetChatsResponseProto) {
-                callback(message.chats.map { proto ->
+                val chats = message.chats.map { proto ->
                     ChatInfo(proto.id, proto.name, proto.type, proto.participants, 
                              proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L, 
                              proto.unreadCount, 
                              proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                              proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername)
-                })
+                }
+                
+                // Save to cache
+                scope.launch(Dispatchers.IO) {
+                    db()?.chatDao()?.insertChats(chats.map { it.toEntity() })
+                }
+                
+                callback(chats)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
@@ -594,6 +649,16 @@ object RealGrpcClient {
     }
 
     fun getFavorites(userId: String, callback: (List<Message>) -> Unit) {
+        // Load from cache first
+        scope.launch(Dispatchers.IO) {
+            // Find messages belonging to favorites virtual room or starred
+            val favoritesRoomId = "favorites_" + (currentUsername ?: "")
+            val cached = db()?.messageDao()?.getFavorites(favoritesRoomId)?.map { it.toDomain() } ?: emptyList()
+            if (cached.isNotEmpty()) {
+                withContext(Dispatchers.Main) { callback(cached) }
+            }
+        }
+
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetFavoritesRequestProto, GetFavoritesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -604,7 +669,16 @@ object RealGrpcClient {
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetFavoritesResponseProto>() {
-            override fun onMessage(message: GetFavoritesResponseProto) { callback(message.messages.map { ProtoUtils.createMessageFromProto(it) }) }
+            override fun onMessage(message: GetFavoritesResponseProto) {
+                val msgs = message.messages.map { ProtoUtils.createMessageFromProto(it) }
+                
+                // Save to persistent cache
+                scope.launch(Dispatchers.IO) {
+                    db()?.messageDao()?.insertMessages(msgs.map { it.toEntity() })
+                }
+                
+                callback(msgs)
+            }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
         call.sendMessage(GetFavoritesRequestProto(userId))
@@ -761,6 +835,11 @@ object RealGrpcClient {
         // Optimistic UI: remove locally first
         deletedMessageHashes.add(getMessageHash(m))
         _messages.update { current -> current.filterNot { it.id == m.id } }
+        
+        // Remove from persistent cache
+        scope.launch(Dispatchers.IO) {
+            db()?.messageDao()?.deleteMessage(m.id)
+        }
 
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)

@@ -1,16 +1,21 @@
 package lavender.client.android
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -19,11 +24,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
-import lavender.client.android.theme.ui.ThemeUi
 import kotlin.math.abs
-import android.graphics.Color
-import android.content.res.ColorStateList
-import androidx.core.graphics.toColorInt
 
 class FullScreenImageActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
@@ -57,19 +58,34 @@ class FullScreenImageActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_full_screen_image)
 
+        // Настраиваем контраст иконок (белые иконки на черном фоне)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+
         imageView = findViewById(R.id.fullScreenImageView)
         btnClose = findViewById(R.id.btnClose)
         loadingProgress = findViewById(R.id.loadingProgress)
 
-        // Apply theme colors
-        val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
-        val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.WHITE)
-        val onSurface = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.WHITE)
+        // For image viewer, we use classic deep dark background for better focus
+        val bgColor = Color.BLACK
+        val primaryColor = Color.WHITE
+        val iconColor = Color.WHITE
         
         findViewById<View>(android.R.id.content).setBackgroundColor(bgColor)
         loadingProgress.indeterminateTintList = ColorStateList.valueOf(primaryColor)
-        btnClose.imageTintList = ColorStateList.valueOf(onSurface)
+        btnClose.imageTintList = ColorStateList.valueOf(iconColor)
+
+        // Handle Window Insets for the close button (fix overlap with status bar)
+        ViewCompat.setOnApplyWindowInsetsListener(btnClose) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val lp = view.layoutParams as ViewGroup.MarginLayoutParams
+            // Margin from top = status bar height + 16dp
+            lp.topMargin = systemBars.top + (16 * resources.displayMetrics.density).toInt()
+            view.layoutParams = lp
+            insets
+        }
 
         // Get data from intent
         val imageUrl = intent.getStringExtra("image_url") ?: ""
@@ -101,6 +117,9 @@ class FullScreenImageActivity : AppCompatActivity() {
 
     private fun loadImage(imageUrl: String) {
         if (imageUrl.isNotEmpty()) {
+            val finalUrl = if (imageUrl.startsWith("http")) imageUrl.trim() 
+                          else "http://159.195.38.145:8082" + imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+
             // Reset zoom and pan when loading new image
             currentScale = MIN_SCALE
             offsetX = 0f
@@ -111,8 +130,20 @@ class FullScreenImageActivity : AppCompatActivity() {
             imageView.translationY = offsetY
 
             loadingProgress.isVisible = true
+            
+            val theme = ThemeStore.currentTheme()
+            val progressDrawable = androidx.swiperefreshlayout.widget.CircularProgressDrawable(this).apply {
+                strokeWidth = 5f
+                centerRadius = 40f
+                val pColor = ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.WHITE)
+                setColorSchemeColors(pColor)
+                start()
+            }
+
             Glide.with(this)
-                .load(imageUrl)
+                .load(finalUrl)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                .placeholder(progressDrawable)
                 .centerInside()
                 .listener(object : RequestListener<android.graphics.drawable.Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {

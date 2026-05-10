@@ -16,6 +16,12 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import lavender.client.android.R
 import lavender.client.android.data.models.Message
 import lavender.client.android.theme.ThemeStore
@@ -37,9 +43,6 @@ class MessageAdapter(
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
     private var searchHighlight: String? = null
-    
-    // Image cache to prevent reloading images during scrolling
-    private val imageCache = mutableMapOf<String, ByteArray>()
 
     fun setSearchHighlight(query: String?) {
         searchHighlight = query
@@ -137,8 +140,15 @@ class MessageAdapter(
         private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
         private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
         private val replyQuoteBar: View = itemView.findViewById(R.id.replyQuoteBar)
-        private val messageImageView: ImageView = itemView.findViewById(R.id.messageImageView)
-        private val imageLoadingSpinner: ImageView = itemView.findViewById(R.id.imageLoadingSpinner)
+        private val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.messageImageView).apply {
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    val radius = 16.dpToPx().toFloat()
+                    outline.setRoundRect(0, 0, view.width, view.height, radius)
+                }
+            }
+        }
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
@@ -188,7 +198,7 @@ class MessageAdapter(
             if (canShowSenderInfo) {
                 avatarImageView.isVisible = true
                 if (message.avatarUrl.isNotEmpty()) {
-                    com.bumptech.glide.Glide.with(context).load(message.avatarUrl)
+                    Glide.with(context).load(message.avatarUrl)
                         .placeholder(R.drawable.ic_default_avatar).into(avatarImageView)
                     avatarImageView.imageTintList = null
                 } else {
@@ -417,8 +427,8 @@ class MessageAdapter(
             val isFile = message.text.startsWith("File: ")
             val shouldShowImage = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty() && !isFile
             messageImageView.isVisible = shouldShowImage
+            
             if (shouldShowImage) {
-                android.util.Log.d("MessageAdapter", "Loading image via OkHttp: ${message.imageUrl}")
                 // Cancel any pending image load for this ViewHolder
                 if (currentImageUrl != message.imageUrl) {
                     pendingImageCall?.cancel()
@@ -426,90 +436,38 @@ class MessageAdapter(
                     currentImageUrl = message.imageUrl
                 }
                 
-                val imageUrl = message.imageUrl
-                
-                // Check if image is already cached
-                val cachedBytes = imageCache[imageUrl]
-                if (cachedBytes != null) {
-                    android.util.Log.d("MessageAdapter", "Loading image from cache: $imageUrl")
-                    // Load from cache immediately
-                    com.bumptech.glide.Glide.with(context)
-                        .load(cachedBytes)
-                        .fitCenter()
-                        .into(messageImageView)
-                    imageLoadingSpinner.isVisible = false
-                    messageImageView.isVisible = true
-                    if (message.text.isEmpty()) {
-                        messageText.isVisible = false
-                    }
+                val imageUrl = if (message.imageUrl.startsWith("http")) {
+                    message.imageUrl.trim()
                 } else {
-                    // Show loading spinner initially
-                    imageLoadingSpinner.isVisible = true
-                    if (message.text.isEmpty()) {
-                        messageText.isVisible = false
-                    }
-                    // Use OkHttp to fetch image bytes, then load into Glide as ByteArray
-                    // This bypasses Glide's default HttpUrlConnection which may not handle HTTP cleartext
-                    val okHttpClient = okhttp3.OkHttpClient.Builder()
-                        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                        .build()
-                    val request = okhttp3.Request.Builder().url(imageUrl).build()
-                    val call = okHttpClient.newCall(request)
-                    pendingImageCall = call
-                    call.enqueue(object : okhttp3.Callback {
-                        override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                            // Only update UI if this is still the current image for this ViewHolder
-                            if (currentImageUrl != imageUrl) return
-                            android.util.Log.e("MessageAdapter", "OkHttp failed to load image: $imageUrl", e)
-                            messageImageView.post {
-                                // Double-check that we're still loading the same image
-                                if (currentImageUrl != imageUrl) return@post
-                                imageLoadingSpinner.isVisible = false
-                                messageImageView.isVisible = false
-                                if (message.text.isEmpty()) {
-                                    messageText.text = "🖼 $imageUrl"
-                                    messageText.isVisible = true
-                                }
+                    "http://159.195.38.145:8082" + message.imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                }
+                
+                Glide.with(context)
+                    .load(imageUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.ic_image_placeholder)
+                    .error(R.drawable.ic_image_placeholder)
+                    .timeout(60000)
+                    .dontAnimate()
+                    .centerCrop()
+                    .override(Target.SIZE_ORIGINAL)
+                    .listener(object : RequestListener<android.graphics.drawable.Drawable> {
+                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
+                            android.util.Log.e("MessageAdapter", "Glide failed for [$imageUrl] - Error: ${e?.message}")
+                            if (message.text.isEmpty()) {
+                                messageText.text = "🖼 ${context.getString(R.string.error_loading_image)}"
+                                messageText.isVisible = true
                             }
+                            return false
                         }
-                        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                            // Only update UI if this is still the current image for this ViewHolder
-                            if (currentImageUrl != imageUrl) return
-                            val bytes = response.body?.bytes()
-                            if (bytes != null && response.isSuccessful) {
-                                android.util.Log.d("MessageAdapter", "OkHttp loaded image bytes: ${bytes.size} for $imageUrl")
-                                // Cache the bytes
-                                imageCache[imageUrl] = bytes
-                                messageImageView.post {
-                                    // Triple-check that we're still loading the same image
-                                    if (currentImageUrl != imageUrl) return@post
-                                    com.bumptech.glide.Glide.with(context)
-                                        .load(bytes)
-                                        .fitCenter()
-                                        .into(messageImageView)
-                                    imageLoadingSpinner.isVisible = false
-                                    messageImageView.isVisible = true
-                                    if (message.text.isEmpty()) {
-                                        messageText.isVisible = false
-                                    }
-                                }
-                            } else {
-                                android.util.Log.e("MessageAdapter", "OkHttp bad response ${response.code} for $imageUrl")
-                                messageImageView.post {
-                                    // Triple-check that we're still loading the same image
-                                    if (currentImageUrl != imageUrl) return@post
-                                    imageLoadingSpinner.isVisible = false
-                                    messageImageView.isVisible = false
-                                    if (message.text.isEmpty()) {
-                                        messageText.text = "🖼 $imageUrl"
-                                        messageText.isVisible = true
-                                    }
-                                }
-                            }
+                        override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: Target<android.graphics.drawable.Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                            android.util.Log.d("MessageAdapter", "Glide success for [$imageUrl] from $dataSource")
+                            if (message.text.isEmpty()) messageText.isVisible = false
+                            return false
                         }
                     })
-                }
+                    .into(messageImageView)
+                
                 messageImageView.setOnClickListener {
                     if (isSelectionMode) {
                         onClick()
@@ -533,15 +491,8 @@ class MessageAdapter(
                     true
                 }
             } else {
-                // Cancel any pending image load when image should not be shown
-                if (pendingImageCall != null) {
-                    pendingImageCall?.cancel()
-                    pendingImageCall = null
-                    currentImageUrl = null
-                }
                 messageImageView.setOnClickListener(null)
                 messageImageView.setOnLongClickListener(null)
-                imageLoadingSpinner.isVisible = false
             }
 
             reactionsText.isVisible = message.reactions.isNotEmpty()

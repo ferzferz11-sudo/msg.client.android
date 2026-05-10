@@ -237,6 +237,7 @@ class ContactsActivity : AppCompatActivity() {
     private fun showAddContactDialog() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         // Ensure the dialog adjusts when keyboard appears
+        @Suppress("DEPRECATION")
         bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val view = layoutInflater.inflate(R.layout.bottom_sheet_add_contacts, null)

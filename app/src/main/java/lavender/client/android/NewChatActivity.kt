@@ -136,6 +136,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var replyText: TextView
     private lateinit var cancelReply: ImageButton
     private lateinit var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    private lateinit var historyLoadingProgress: ProgressBar
 
     private lateinit var mentionContainer: View
     private lateinit var mentionList: RecyclerView
@@ -241,6 +242,12 @@ class NewChatActivity : AppCompatActivity() {
 
         // 4. Темизация
         ThemeUi.bind(this, username)
+        val customTheme = ThemeStore.currentTheme()
+        try {
+            val pColor = customTheme.primaryColor.toColorInt()
+            historyLoadingProgress.indeterminateTintList = ColorStateList.valueOf(pColor)
+            swipeRefreshLayout.setColorSchemeColors(pColor)
+        } catch (_: Exception) {}
 
         // 5. Инициализация компонентов
         setupToolbar()
@@ -336,6 +343,7 @@ class NewChatActivity : AppCompatActivity() {
         searchBar = findViewById(R.id.searchBar); searchInput = findViewById(R.id.searchInput)
         searchNext = findViewById(R.id.searchNext); searchPrev = findViewById(R.id.searchPrev); searchResultsCount = findViewById(R.id.searchResultsCount)
         imagePreviewScroll = findViewById(R.id.imagePreviewScroll); imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
+        historyLoadingProgress = findViewById(R.id.historyLoadingProgress)
         audioButton.isVisible = true
         sendButton.isVisible = false
     }
@@ -550,10 +558,16 @@ class NewChatActivity : AppCompatActivity() {
 
                     val isFirstLoad = lastMessageCount == 0
                     val hasNewMessages = roomMessages.size > lastMessageCount
+                    
+                    if (isFirstLoad && roomMessages.isEmpty()) {
+                        historyLoadingProgress.isVisible = true
+                    } else {
+                        historyLoadingProgress.isVisible = false
+                    }
 
                     adapter.submitList(roomMessages) {
                         val isFromMe = roomMessages.lastOrNull()?.user == username
-                        if (roomMessages.isNotEmpty() && (isFirstLoad || isFromMe || (hasNewMessages && wasAtBottom))) {
+                        if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && isFromMe) || (hasNewMessages && wasAtBottom))) {
                             messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
                         }
                     }

@@ -1,0 +1,114 @@
+package lavender.client.android.data.db
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.Reaction
+
+@Entity(tableName = "messages")
+data class MessageEntity(
+    @PrimaryKey val id: String,
+    val user: String,
+    val text: String,
+    val timestamp: Long,
+    val roomId: String,
+    val repliedToMessageId: String,
+    val repliedToUser: String,
+    val repliedToText: String,
+    val read: Boolean,
+    val avatarUrl: String,
+    val imageUrl: String,
+    val edited: Boolean,
+    val superAdmin: Boolean,
+    val voiceUrl: String,
+    val duration: Int,
+    val reactionsJson: String // Serialized List<Reaction>
+)
+
+@Entity(tableName = "chats")
+data class ChatEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val type: String,
+    val participants: String,
+    val createdAt: Long,
+    val unreadCount: Int,
+    val lastMessageTime: Long,
+    val creator: String,
+    val lastMessageText: String,
+    val avatarUrl: String,
+    val fullAvatarUrl: String,
+    val lastMessageUsername: String,
+    val muted: Boolean
+)
+
+fun Message.toEntity(): MessageEntity {
+    val reactionsJson = org.json.JSONArray().apply {
+        reactions.forEach { r ->
+            put(org.json.JSONObject().apply {
+                put("user", r.user)
+                put("emoji", r.emoji)
+            })
+        }
+    }.toString()
+
+    return MessageEntity(
+        id = id,
+        user = user,
+        text = text,
+        timestamp = timestamp,
+        roomId = roomId,
+        repliedToMessageId = repliedToMessageId,
+        repliedToUser = repliedToUser,
+        repliedToText = repliedToText,
+        read = isRead,
+        avatarUrl = avatarUrl,
+        imageUrl = imageUrl,
+        edited = edited,
+        superAdmin = isSuperAdmin,
+        voiceUrl = voiceUrl,
+        duration = duration,
+        reactionsJson = reactionsJson
+    )
+}
+
+fun MessageEntity.toDomain(): Message {
+    val reactions = mutableListOf<Reaction>()
+    try {
+        val arr = org.json.JSONArray(reactionsJson)
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            reactions.add(Reaction(obj.getString("user"), obj.getString("emoji")))
+        }
+    } catch (_: Exception) {}
+
+    return Message(
+        id = id,
+        user = user,
+        text = text,
+        timestamp = timestamp,
+        reactions = reactions,
+        repliedToMessageId = repliedToMessageId,
+        repliedToUser = repliedToUser,
+        repliedToText = repliedToText,
+        roomId = roomId,
+        isRead = read,
+        avatarUrl = avatarUrl,
+        imageUrl = imageUrl,
+        edited = edited,
+        isSuperAdmin = superAdmin,
+        voiceUrl = voiceUrl,
+        duration = duration
+    )
+}
+
+fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
+    id, name, type, participants, createdAt, unreadCount, lastMessageTime,
+    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted
+)
+
+fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
+    id, name, type, participants, createdAt, unreadCount, lastMessageTime,
+    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted
+)
