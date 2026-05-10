@@ -45,6 +45,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -655,13 +656,34 @@ class NewChatActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 handleMention(s)
                 
-                val hasText = s?.toString()?.trim()?.isNotEmpty() ?: false
+                val text = s?.toString() ?: ""
+                val hasText = text.trim().isNotEmpty()
                 sendButton.isVisible = hasText
                 audioButton.isVisible = !hasText
 
-                if (!isTypingSignalSent && !roomId.startsWith("favorites_")) {
-                    isTypingSignalSent = true; grpcClient.sendTypingSignal(username, true)
-                    lifecycleScope.launch { delay(3000); isTypingSignalSent = false }
+                if (roomId.startsWith("favorites_")) return
+
+                // Typing signal logic
+                if (!isTypingSignalSent && hasText) {
+                    isTypingSignalSent = true
+                    grpcClient.sendTypingSignal(username, true)
+                }
+
+                // Reset inactivity timer
+                typingJob?.cancel()
+                typingJob = lifecycleScope.launch {
+                    delay(3000)
+                    if (isTypingSignalSent) {
+                        grpcClient.sendTypingSignal(username, false)
+                        isTypingSignalSent = false
+                    }
+                }
+                
+                // If text is cleared immediately
+                if (!hasText && isTypingSignalSent) {
+                    typingJob?.cancel()
+                    grpcClient.sendTypingSignal(username, false)
+                    isTypingSignalSent = false
                 }
             }
             override fun afterTextChanged(s: Editable?) {}
@@ -1092,7 +1114,16 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
+    private var typingJob: Job? = null
+
     private fun sendMessage(text: String, imageUrl: String) {
+        // Clear typing status when sending message
+        typingJob?.cancel()
+        if (isTypingSignalSent) {
+            isTypingSignalSent = false
+            grpcClient.sendTypingSignal(username, false)
+        }
+
         val effectiveText = when {
             text.isEmpty() && imageUrl.isEmpty() -> "Message"
             imageUrl.isNotEmpty() && text.isEmpty() -> "" // Empty text for image-only messages
@@ -1680,6 +1711,12 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        // Clear typing status
+        if (isTypingSignalSent) {
+            isTypingSignalSent = false
+            grpcClient.sendTypingSignal(username, false)
+        }
+
         // Save draft when leaving the chat (but not when sending)
         saveDraft()
     }
