@@ -52,8 +52,8 @@ object RealGrpcClient {
     private val _users = MutableStateFlow<List<String>>(emptyList())
     val users: StateFlow<List<String>> = _users
 
-    private val _allUsers = MutableStateFlow<List<String>>(emptyList())
-    val allUsers: StateFlow<List<String>> = _allUsers
+    private val _allUsers = MutableStateFlow<List<UserInfoProto>>(emptyList())
+    val allUsers: StateFlow<List<UserInfoProto>> = _allUsers
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -1133,7 +1133,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun loadAllUsers(cb: (List<String>) -> Unit) {
+    fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllUsersRequestProto, GetAllUsersResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1830,11 +1830,34 @@ class GetAllUsersRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAllU
     override fun parse(s: java.io.InputStream): GetAllUsersRequestProto = GetAllUsersRequestProto()
 }
 
+class UserInfoProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<UserInfoProto> {
+    override fun stream(v: UserInfoProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.avatarUrl.isNotEmpty()) cos.writeString(2, v.avatarUrl)
+        if (v.lastClientVersion.isNotEmpty()) cos.writeString(3, v.lastClientVersion)
+        v.lastSeenAt?.let { cos.writeTag(4, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UserInfoProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var a = ""; var v = ""; var ls: Timestamp? = null
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> u = cis.readString(); 2 -> a = cis.readString(); 3 -> v = cis.readString()
+                4 -> { val l = cis.readUInt32(); ls = Timestamp.parseFrom(cis.readRawBytes(l)) }
+                else -> cis.skipField(tag)
+            }
+        }
+        return UserInfoProto(u, a, v, ls)
+    }
+}
+
 class GetAllUsersResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAllUsersResponseProto> {
     override fun stream(v: GetAllUsersResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetAllUsersResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val users = mutableListOf<String>()
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) users.add(cis.readString()) else cis.skipField(tag) }
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val users = mutableListOf<UserInfoProto>(); val um = UserInfoProtoMarshaller()
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); users.add(um.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
         return GetAllUsersResponseProto(users)
     }
 }

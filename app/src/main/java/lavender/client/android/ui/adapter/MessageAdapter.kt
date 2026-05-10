@@ -268,10 +268,11 @@ class MessageAdapter(
             // 4. Status (Галочки)
             readStatusIcon.isVisible = isOutgoing
             if (isOutgoing) {
-                val icon = if (message.isRead) R.drawable.ic_message_read else R.drawable.ic_message_sent
+                val isRead = message.isRead || chatId.startsWith("favorites_")
+                val icon = if (isRead) R.drawable.ic_message_read else R.drawable.ic_message_sent
                 readStatusIcon.setImageResource(icon)
 
-                val iconColor = if (message.isRead) {
+                val iconColor = if (isRead) {
                     ContextCompat.getColor(context, R.color.tg_read_check)
                 } else {
                     secondaryColorWithAlpha

@@ -482,6 +482,18 @@ class ChatListActivity : AppCompatActivity() {
 
         binding.swipeRefreshLayout.isRefreshing = true
 
+        // 1. Immediately ensure Favorites is in the list to avoid flickering
+        if (chats.none { it.id == "favorites" }) {
+            chats.add(0, ChatInfo(
+                id = "favorites",
+                name = getString(R.string.favorites),
+                type = "favorites",
+                lastMessageText = "",
+                lastMessageTime = 0L
+            ))
+            chatAdapter.setChats(chats.toList())
+        }
+
         grpcClient.getChats(username) { fetchedChats ->
             val userId = grpcClient.getUserId() ?: ""
             if (userId.isNotEmpty()) {
@@ -491,18 +503,17 @@ class ChatListActivity : AppCompatActivity() {
                             binding.swipeRefreshLayout.isRefreshing = false
                             chats.clear()
 
-                            if (favorites.isNotEmpty()) {
-                                val lastFav = favorites.last()
-                                chats.add(
-                                    ChatInfo(
-                                        id = "favorites",
-                                        name = getString(R.string.favorites),
-                                        type = "favorites",
-                                        lastMessageText = lastFav.text,
-                                        lastMessageTime = lastFav.timestamp
-                                    )
+                            // Always add Favorites at the top
+                            val lastFav = favorites.lastOrNull()
+                            chats.add(
+                                ChatInfo(
+                                    id = "favorites",
+                                    name = getString(R.string.favorites),
+                                    type = "favorites",
+                                    lastMessageText = getString(R.string.favorites_description),
+                                    lastMessageTime = lastFav?.timestamp ?: 0L
                                 )
-                            }
+                            )
 
                             val chatsWithMute = fetchedChats.map { chat ->
                                 chat.copy(isMuted = mutedChatIds.contains(chat.id))
@@ -540,6 +551,18 @@ class ChatListActivity : AppCompatActivity() {
                 runOnUiThread {
                     binding.swipeRefreshLayout.isRefreshing = false
                     chats.clear()
+                    
+                    // Add Favorites even if no userId (fallback)
+                    chats.add(
+                        ChatInfo(
+                            id = "favorites",
+                            name = getString(R.string.favorites),
+                            type = "favorites",
+                            lastMessageText = getString(R.string.favorites_description),
+                            lastMessageTime = 0L
+                        )
+                    )
+
                     chats.addAll(fetchedChats)
                     chatAdapter.setChats(chats.toList())
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
@@ -610,18 +633,18 @@ class ChatListActivity : AppCompatActivity() {
                         grpcClient.getMutedChats { mutedChatIds ->
                             grpcClient.getFavorites(currentUserId) { favorites ->
                                 val newFullList = mutableListOf<ChatInfo>()
-                                if (favorites.isNotEmpty()) {
-                                    val lastFav = favorites.last()
-                                    newFullList.add(
-                                        ChatInfo(
-                                            id = "favorites",
-                                            name = getString(R.string.favorites),
-                                            type = "favorites",
-                                            lastMessageText = lastFav.text,
-                                            lastMessageTime = lastFav.timestamp
-                                        )
+                                
+                                // Always add Favorites
+                                val lastFav = favorites.lastOrNull()
+                                newFullList.add(
+                                    ChatInfo(
+                                        id = "favorites",
+                                        name = getString(R.string.favorites),
+                                        type = "favorites",
+                                        lastMessageText = getString(R.string.favorites_description),
+                                        lastMessageTime = lastFav?.timestamp ?: 0L
                                     )
-                                }
+                                )
 
                                 val chatsWithMute = fetchedChats.map { chat ->
                                     chat.copy(isMuted = mutedChatIds.contains(chat.id))
@@ -649,10 +672,22 @@ class ChatListActivity : AppCompatActivity() {
                         }
                     } else {
                         // Fallback if no userId
-                        if (fetchedChats.size != chats.size || fetchedChats.any { fc -> chats.none { it.id == fc.id && it.lastMessageTime == fc.lastMessageTime && it.unreadCount == fc.unreadCount } }) {
+                        val newFullList = mutableListOf<ChatInfo>()
+                        newFullList.add(
+                            ChatInfo(
+                                id = "favorites",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = getString(R.string.favorites_description),
+                                lastMessageTime = 0L
+                            )
+                        )
+                        newFullList.addAll(fetchedChats)
+
+                        if (newFullList.size != chats.size || newFullList.indices.any { i -> chats.getOrNull(i)?.id != newFullList[i].id }) {
                             runOnUiThread {
                                 chats.clear()
-                                chats.addAll(fetchedChats)
+                                chats.addAll(newFullList)
                                 chatAdapter.setChats(chats.toList())
                                 updateAppIconBadge(chats.sumOf { it.unreadCount })
                             }
@@ -732,37 +767,50 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showUpdateDialog(current: String, latest: String) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, binding.root, false)
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val dialogView = layoutInflater.inflate(R.layout.bottom_sheet_update, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
-        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
-        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
+        
+        val titleView = dialogView.findViewById<TextView>(R.id.updateTitle)
+        val messageView = dialogView.findViewById<TextView>(R.id.updateMessage)
+        val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnAction = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete)
+        val dragHandle = dialogView.findViewById<View>(R.id.dragHandle)
+        val updateIcon = dialogView.findViewById<ImageView>(R.id.updateIcon)
 
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val txtColor = customTheme.textPrimaryColor.toColorInt()
+            val secTxtColor = customTheme.textSecondaryColor.toColorInt()
+            val primColor = customTheme.primaryColor.toColorInt()
+            
             dialogView.setBackgroundColor(bgColor)
-            titleText.setTextColor(txtColor)
-            messageText.setTextColor(txtColor)
+            titleView.setTextColor(txtColor)
+            messageView.setTextColor(secTxtColor)
+            dragHandle.backgroundTintList = ColorStateList.valueOf(primColor)
+            updateIcon.imageTintList = ColorStateList.valueOf(primColor)
+            btnUpdate.backgroundTintList = ColorStateList.valueOf(primColor)
+            btnUpdate.setTextColor(customTheme.onPrimaryColor.toColorInt())
+            btnCancel.setTextColor(secTxtColor)
         } catch (_: Exception) {}
 
         val isAvailable = isUpdateAvailable(current, latest)
-        titleText.text = getString(if (isAvailable) R.string.update_available else R.string.ok)
-        messageText.text = getString(R.string.version_info_format, current, latest)
+        if (!isAvailable) {
+            titleView.text = getString(R.string.ok)
+            updateIcon.setImageResource(R.drawable.ic_checked) // Use checkmark if already up to date
+            btnUpdate.text = getString(R.string.force_download)
+        }
         
-        btnCancel.text = getString(R.string.cancel_dialog)
-        btnAction.text = if (isAvailable) getString(R.string.update_now) else getString(R.string.force_download)
+        messageView.text = getString(R.string.version_info_format, current, latest)
         
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnAction.setOnClickListener {
-            dialog.dismiss()
+        btnCancel.setOnClickListener { bottomSheet.dismiss() }
+        btnUpdate.setOnClickListener {
+            bottomSheet.dismiss()
             downloadAndInstallApk()
         }
-        dialog.show()
+        
+        bottomSheet.setContentView(dialogView)
+        bottomSheet.show()
     }
 
     private fun isUpdateAvailable(current: String, latest: String): Boolean {
@@ -1346,7 +1394,7 @@ class ChatListActivity : AppCompatActivity() {
             grpcClient.allUsers.collect { users ->
                 if (users.isNotEmpty()) {
                     allUsers.clear()
-                    allUsers.addAll(users.filter { it != username && !currentContacts.contains(it) })
+                    allUsers.addAll(users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username })
                     filteredUsers.clear()
                     filteredUsers.addAll(allUsers)
                     runOnUiThread { userAdapter.setUsers(filteredUsers) }

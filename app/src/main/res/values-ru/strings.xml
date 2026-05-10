@@ -263,7 +263,7 @@
     <string name="theme_template_mint">Кибер Мята</string>
     <string name="admin_label">(Админ)</string>
     <string name="muted_label">Без звука</string>
-    <string name="super_admin">Суперадмин</string>
+    <string name="super_admin">Админ панель</string>
     <string name="about">О программе</string>
     <string name="about_program">О программе</string>
     <string name="version_label">Версия: %s</string>
@@ -378,4 +378,6 @@
     <string name="cache_cleared">Кэш успешно очищен</string>
     <string name="servers">Серверы</string>
     <string name="under_development">В разработке</string>
+    <string name="image_placeholder">Фото</string>
+    <string name="favorites_description">Личное хранилище</string>
 </resources>

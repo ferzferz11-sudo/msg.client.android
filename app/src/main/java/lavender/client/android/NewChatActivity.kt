@@ -528,7 +528,8 @@ class NewChatActivity : AppCompatActivity() {
             adminUsername = creator,
             onMessageClick = { showReactionsDialog(it) },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
-            onMessageLongClick = { enterSelectionMode(it) }
+            onMessageLongClick = { enterSelectionMode(it) },
+            chatId = roomId
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.*
 import lavender.client.android.data.models.Message // 🛠️ ВАЖНЫЙ ИМПОРТ
 import lavender.client.android.data.models.ChatInfo // 🛠️ ВАЖНЫЙ ИМПОРТ
 import lavender.client.android.data.proto.ChatInfoProto
+import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
@@ -30,7 +31,7 @@ object GrpcClient {
     val messages: StateFlow<List<Message>> = realGrpcClient.messages
     val users: StateFlow<List<String>> = realGrpcClient.users
 
-    val allUsers: StateFlow<List<String>> = realGrpcClient.allUsers
+    val allUsers: StateFlow<List<UserInfoProto>> = realGrpcClient.allUsers
     val error: StateFlow<String?> = realGrpcClient.error
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
     val isSuperAdmin: StateFlow<Boolean> = realGrpcClient.isSuperAdmin
@@ -141,7 +142,7 @@ object GrpcClient {
         realGrpcClient.loadUsers()
     }
 
-    fun loadAllUsers(callback: ((List<String>) -> Unit)? = null) {
+    fun loadAllUsers(callback: ((List<UserInfoProto>) -> Unit)? = null) {
         realGrpcClient.loadAllUsers(callback ?: {})
     }
 

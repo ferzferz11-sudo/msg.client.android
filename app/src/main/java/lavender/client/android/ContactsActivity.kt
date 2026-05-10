@@ -282,7 +282,7 @@ class ContactsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             kotlinx.coroutines.delay(500)
             allUsers.clear()
-            allUsers.addAll(grpcClient.allUsers.value.filter { it != username && !contacts.contains(it) })
+            allUsers.addAll(grpcClient.allUsers.value.filter { it.username != username && !contacts.contains(it.username) }.map { it.username })
             filteredUsers.clear()
             filteredUsers.addAll(allUsers)
             runOnUiThread { userAdapter.setUsers(filteredUsers) }

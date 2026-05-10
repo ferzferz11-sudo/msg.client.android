@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.proto.UserInfoProto
 
 class ChatViewModel : ViewModel() {
     val grpcClient = GrpcClient
@@ -16,7 +17,7 @@ class ChatViewModel : ViewModel() {
     val error: StateFlow<String?> = grpcClient.error
     val messages: StateFlow<List<Message>> = grpcClient.messages
     val users: StateFlow<List<String>> = grpcClient.users
-    val allUsers: StateFlow<List<String>> = grpcClient.allUsers
+    val allUsers: StateFlow<List<UserInfoProto>> = grpcClient.allUsers
     val systemNotification: StateFlow<String?> = grpcClient.systemNotification
     val typingUsers: StateFlow<Map<String, Set<String>>> = grpcClient.typingUsers
     

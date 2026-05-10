@@ -589,8 +589,15 @@ data class GetAllUsersRequestProto(
     val dummy: Boolean = false
 )
 
+data class UserInfoProto(
+    val username: String = "",
+    val avatarUrl: String = "",
+    val lastClientVersion: String = "",
+    val lastSeenAt: Timestamp? = null
+)
+
 data class GetAllUsersResponseProto(
-    val users: List<String> = emptyList()
+    val users: List<UserInfoProto> = emptyList()
 )
 
 data class GetUserIdRequestProto(

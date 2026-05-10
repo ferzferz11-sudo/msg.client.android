@@ -3,13 +3,17 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -19,13 +23,16 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
+import java.io.File
 import java.util.Locale
 
 class SuperAdminActivity : AppCompatActivity() {
@@ -36,7 +43,7 @@ class SuperAdminActivity : AppCompatActivity() {
     private lateinit var searchLayout: View
     private lateinit var searchEditText: EditText
     
-    private var allUsers = listOf<String>()
+    private var allUsers = listOf<UserInfoProto>()
     private var allChats = listOf<ChatInfo>()
     private var currentMode = Mode.USERS
     
@@ -44,7 +51,7 @@ class SuperAdminActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru" // Default to Russian for first launch
+        val languageCode = prefs.getString("language", "ru") ?: "ru"
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         val config = newBase.resources.configuration
@@ -92,7 +99,6 @@ class SuperAdminActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.super_admin_menu, menu)
         
-        // Get icon color from custom theme or Material Design attributes
         val themeObj = ThemeStore.currentTheme()
         val iconColor = try {
             themeObj.onPrimaryColor.toColorInt()
@@ -149,41 +155,61 @@ class SuperAdminActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetTextI18n")
-    private fun updateUI(users: List<String>, chats: List<ChatInfo>) {
+    private fun updateUI(users: List<UserInfoProto>, chats: List<ChatInfo>) {
         usersContainer.removeAllViews()
+        val theme = ThemeStore.currentTheme()
+        val surfaceColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.DKGRAY }
+        val textPrimary = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
+        val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.LTGRAY }
+
         if (currentMode == Mode.USERS) {
             for (user in users) {
                 val userView = layoutInflater.inflate(R.layout.item_user_super_admin, usersContainer, false)
+                val card = userView as MaterialCardView
                 val nameText = userView.findViewById<TextView>(R.id.participantName)
+                val versionText = userView.findViewById<TextView>(R.id.clientVersion)
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
                 
-                nameText.text = user.ifEmpty { "Unnamed ($user)" }
-                val isOnline = grpcClient.users.value.contains(user)
+                card.setCardBackgroundColor(surfaceColor)
+                nameText.text = user.username
+                nameText.setTextColor(textPrimary)
+                
+                val versionStr = if (user.lastClientVersion.isNotEmpty()) "v${user.lastClientVersion}" else ""
+                val lastSeenStr = user.lastSeenAt?.let {
+                    val date = java.util.Date(it.seconds * 1000)
+                    val sdf = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
+                    sdf.format(date)
+                } ?: ""
+                
+                versionText.text = if (versionStr.isNotEmpty() && lastSeenStr.isNotEmpty()) {
+                    "$versionStr • $lastSeenStr"
+                } else {
+                    versionStr + lastSeenStr
+                }
+                versionText.setTextColor(textSecondary)
+                
+                val isOnline = grpcClient.users.value.contains(user.username)
                 statusDot.isVisible = true
                 statusDot.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
 
-                grpcClient.getUserAvatar(user) { url ->
-                    runOnUiThread {
-                        if (!url.isNullOrEmpty()) {
-                            Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
-                            avatarView.clearColorFilter()
-                        } else {
-                            ThemeUtils.applyDefaultAvatar(avatarView, ThemeStore.currentTheme())
-                        }
-                    }
+                if (user.avatarUrl.isNotEmpty()) {
+                    Glide.with(this).load(user.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarView)
+                    avatarView.clearColorFilter()
+                } else {
+                    ThemeUtils.applyDefaultAvatar(avatarView, theme)
                 }
 
                 userView.setOnClickListener {
                     val intent = Intent(this, ProfileActivity::class.java).apply {
-                        putExtra("username", user)
+                        putExtra("username", user.username)
                         putExtra("is_group", false)
                     }
                     startActivity(intent)
                 }
 
                 userView.setOnLongClickListener {
-                    confirmDeleteUser(user)
+                    confirmDeleteUser(user.username)
                     true
                 }
                 usersContainer.addView(userView)
@@ -191,11 +217,31 @@ class SuperAdminActivity : AppCompatActivity() {
         } else {
             for (chat in chats) {
                 val chatView = layoutInflater.inflate(R.layout.item_chat, usersContainer, false)
+                val card = chatView as MaterialCardView
                 val nameText = chatView.findViewById<TextView>(R.id.chatName)
                 val typeText = chatView.findViewById<TextView>(R.id.chatType)
+                val participantAvatars = chatView.findViewById<LinearLayout>(R.id.participantAvatars)
                 
+                card.setCardBackgroundColor(surfaceColor)
                 nameText.text = chat.name
+                nameText.setTextColor(textPrimary)
                 typeText.text = "${chat.type} - ID: ${chat.id}"
+                typeText.setTextColor(textSecondary)
+
+                // Load avatars for the group
+                participantAvatars.removeAllViews()
+                if (chat.avatarUrl.isNotEmpty()) {
+                    val iv = CircleImageView(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(52.dpToPx(), 52.dpToPx())
+                    }
+                    Glide.with(this).load(chat.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(iv)
+                    participantAvatars.addView(iv)
+                } else {
+                    ThemeUtils.applyDefaultAvatar(CircleImageView(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(52.dpToPx(), 52.dpToPx())
+                        participantAvatars.addView(this)
+                    }, theme)
+                }
                 
                 chatView.setOnClickListener {
                     val intent = Intent(this, ProfileActivity::class.java).apply {
@@ -222,7 +268,7 @@ class SuperAdminActivity : AppCompatActivity() {
     private fun filterCurrentList(query: String) {
         val q = query.lowercase()
         if (currentMode == Mode.USERS) {
-            val filtered = allUsers.filter { it.lowercase().contains(q) }
+            val filtered = allUsers.filter { it.username.lowercase().contains(q) }
             updateUI(filtered, emptyList())
         } else {
             val filtered = allChats.filter { it.name.lowercase().contains(q) || it.id.lowercase().contains(q) }
@@ -270,4 +316,6 @@ class SuperAdminActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null).show()
     }
+
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 }

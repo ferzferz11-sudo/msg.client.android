@@ -261,7 +261,7 @@
     <string name="theme_template_mint">Cyber Mint</string>
     <string name="admin_label">(Admin)</string>
     <string name="muted_label">Muted</string>
-    <string name="super_admin">Super Admin</string>
+    <string name="super_admin">Admin Panel</string>
     <string name="about">About</string>
     <string name="about_program">About Program</string>
     <string name="version_label">Version: %s</string>
@@ -376,4 +376,6 @@
     <string name="cache_cleared">Cache cleared successfully</string>
     <string name="servers">Servers</string>
     <string name="under_development">In development</string>
+    <string name="image_placeholder">Photo</string>
+    <string name="favorites_description">Personal storage</string>
 </resources>
