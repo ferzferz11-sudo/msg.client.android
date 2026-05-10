@@ -248,6 +248,21 @@ object RealGrpcClient {
                     return
                 }
 
+                if (value.text.startsWith("READ_ALL:")) {
+                    val reader = value.text.removePrefix("READ_ALL:")
+                    if (value.roomId == currentRoomId) {
+                        _messages.update { current -> 
+                            current.map { if (it.user != reader) it.copy(isRead = true) else it }
+                        }
+                        
+                        // Sync to local cache
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.markRoomAsRead(currentRoomId, reader)
+                        }
+                    }
+                    return
+                }
+
                 if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
                     try {
                         val usersJson = value.text.removePrefix("ONLINE_USERS_UPDATE:")
