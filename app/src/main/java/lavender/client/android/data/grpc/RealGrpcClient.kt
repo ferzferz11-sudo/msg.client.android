@@ -181,6 +181,15 @@ object RealGrpcClient {
                     return
                 }
 
+                if (value.text.startsWith("DELETE_MESSAGE:")) {
+                    val deletedId = value.text.removePrefix("DELETE_MESSAGE:")
+                    if (value.roomId.isEmpty() || value.roomId == currentRoomId) {
+                        deletedMessageHashes.add("id:$deletedId")
+                        _messages.update { current -> current.filterNot { it.id == deletedId } }
+                    }
+                    return
+                }
+
                 if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
                     try {
                         val usersJson = value.text.removePrefix("ONLINE_USERS_UPDATE:")
@@ -199,8 +208,23 @@ object RealGrpcClient {
                 val message = ProtoUtils.createMessageFromProto(value)
                 if (deletedMessageHashes.contains(getMessageHash(message))) return
                 
+                // Only process messages for the current room
+                if (message.roomId != currentRoomId) {
+                    return
+                }
+
                 onMessageReceived(message)
-                _messages.update { (it + message).distinctBy { m -> getMessageHash(m) }.sortedBy { m -> m.timestamp } }
+                _messages.update { current ->
+                    val hash = getMessageHash(message)
+                    val list = current.toMutableList()
+                    val index = list.indexOfFirst { getMessageHash(it) == hash }
+                    if (index != -1) {
+                        list[index] = message
+                        list
+                    } else {
+                        (list + message).sortedBy { it.timestamp }
+                    }
+                }
             }
 
             override fun onError(t: Throwable) {
@@ -220,6 +244,7 @@ object RealGrpcClient {
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
         }, io.grpc.Metadata())
+        this.request(Int.MAX_VALUE)
 
         return object : StreamObserver<MessageProto> {
             override fun onNext(value: MessageProto) = this@startChatStream.sendMessage(value)
@@ -282,6 +307,7 @@ object RealGrpcClient {
             override fun onMessage(message: TypingSignalProto) = responseObserver.onNext(message)
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
+        this.request(Int.MAX_VALUE)
 
         return object : StreamObserver<TypingRequestProto> {
             override fun onNext(value: TypingRequestProto) = this@startTypingStream.sendMessage(value)
@@ -664,6 +690,11 @@ object RealGrpcClient {
 
     fun deleteMessage(m: Message) {
         val currentChannel = channel ?: return
+        
+        // Optimistic UI: remove locally first
+        deletedMessageHashes.add(getMessageHash(m))
+        _messages.update { current -> current.filterNot { it.id == m.id } }
+
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteMessages")
@@ -1093,8 +1124,23 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun setReaction(mid: String, u: String, e: String) {
+    fun setReaction(messageId: String, username: String, emoji: String) {
         val currentChannel = channel ?: return
+        
+        // Optimistic UI: update locally first
+        _messages.update { current ->
+            val list = current.toMutableList()
+            val index = list.indexOfFirst { it.id == messageId }
+            if (index != -1) {
+                val msg = list[index]
+                val newReactions = msg.reactions.toMutableList()
+                newReactions.removeAll { it.user == username }
+                newReactions.add(Reaction(username, emoji))
+                list[index] = msg.copy(reactions = newReactions)
+                list
+            } else current
+        }
+
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ReactionRequestProto, ReactionResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SetReaction")
@@ -1103,7 +1149,7 @@ object RealGrpcClient {
             .build()
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<ReactionResponseProto>() {}, io.grpc.Metadata())
-        call.sendMessage(ReactionRequestProto(mid, ReactionProto(u, e)))
+        call.sendMessage(ReactionRequestProto(messageId, ReactionProto(username, emoji)))
         call.halfClose()
         call.request(1)
     }
