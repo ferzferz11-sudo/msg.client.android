@@ -37,14 +37,12 @@ class LavenderMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         Log.d("FCM", "Refreshed token: $token")
 
-        // 🛠️ ИСПРАВЛЕНО: Используем lavender_prefs для получения имени пользователя
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val username = prefs.getString("username", "")
 
         if (!username.isNullOrEmpty()) {
-            // Регистрируем новый токен на сервере
-            lavender.client.android.data.grpc.GrpcClient.registerToken(username, token)
-            Log.d("FCM", "New token registered for user: $username")
+            // Use common sync logic from SessionManager
+            lavender.client.android.data.session.SessionManager.syncFcmToken(this, username)
         }
     }
 

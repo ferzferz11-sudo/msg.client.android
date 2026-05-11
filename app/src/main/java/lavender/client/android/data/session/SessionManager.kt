@@ -3,6 +3,7 @@ package lavender.client.android.data.session
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +63,25 @@ object SessionManager {
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                 GrpcClient.connect(host, useTls = false, port = port, context = context)
+                
+                // Sync FCM token on start
+                syncFcmToken(context, username)
+            }
+        }
+    }
+
+    fun syncFcmToken(context: Context, username: String) {
+        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+        val sendEnabled = prefs.getBoolean("push_send_enabled", true)
+        val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = if (receiveEnabled) task.result else "DISABLED"
+                Log.d("SessionManager", "Syncing FCM token for $username: $token")
+                GrpcClient.registerToken(username, token, sendEnabled)
+            } else {
+                Log.e("SessionManager", "Failed to get FCM token", task.exception)
             }
         }
     }
@@ -130,6 +150,9 @@ object SessionManager {
                         Log.w("SessionManager", "fetchUserId failed or timed out, using fallback session")
                         updateSession(username = username, password = pass)
                     }
+
+                    // Sync FCM token after login
+                    syncFcmToken(context, username)
 
                     onComplete(true)
                 } else {
