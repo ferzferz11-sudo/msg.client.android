@@ -3,6 +3,9 @@ package lavender.client.android
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.app.DownloadManager
+import android.content.Context
 import android.util.Patterns
 import android.view.LayoutInflater
 import android.view.View
@@ -86,6 +89,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             if (type == "text/plain") {
                 sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
                 binding.sharedTextView.text = sharedText
+                binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
 
                 // Check for video links
                 videoInfo = extractVideoInfo(sharedText)
@@ -94,9 +98,9 @@ class ShareReceiverActivity : AppCompatActivity() {
                 }
             } else if (type != null && (type.startsWith("image/") || type.startsWith("video/"))) {
                 sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-                if (sharedText.isNotEmpty()) {
-                    binding.sharedTextView.text = sharedText
-                }
+                binding.sharedTextView.text = sharedText
+                binding.sharedContentCard.isVisible = sharedText.isNotEmpty()
+                
                 sharedUri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
                 if (sharedUri != null) {
                     showFilePreview(sharedUri!!, type)
@@ -110,6 +114,7 @@ class ShareReceiverActivity : AppCompatActivity() {
         val isVideo = mimeType.startsWith("video/")
         binding.videoTitleText.text = if (isVideo) getString(R.string.video_preview) else getString(R.string.image_placeholder)
         binding.videoPlatformText.text = mimeType
+        binding.playIcon.isVisible = isVideo
         
         Glide.with(this)
             .load(uri)
@@ -118,8 +123,10 @@ class ShareReceiverActivity : AppCompatActivity() {
             
         binding.watchVideoButton.isVisible = isVideo
         binding.watchVideoButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, uri)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val intent = Intent(this, VideoPlayerActivity::class.java).apply {
+                putExtra("VIDEO_URL", uri.toString())
+                putExtra("IS_LOCAL", true)
+            }
             startActivity(intent)
         }
     }
@@ -142,9 +149,26 @@ class ShareReceiverActivity : AppCompatActivity() {
                 return VideoInfo(
                     title = "YouTube Video",
                     thumbnailUrl = thumbnailUrl,
-                    videoUrl = videoUrl,
+                    videoUrl = videoUrl ?: "",
                     platform = "YouTube"
                 )
+            }
+        }
+
+        // Direct video link patterns
+        val videoExtensions = listOf(".mp4", ".webm", ".mkv", ".mov")
+        val words = text.split("\\s+".toRegex())
+        for (word in words) {
+            if (Patterns.WEB_URL.matcher(word).matches()) {
+                val lowerWord = word.lowercase()
+                if (videoExtensions.any { lowerWord.endsWith(it) || lowerWord.contains("$it?") }) {
+                    return VideoInfo(
+                        title = "Video File",
+                        thumbnailUrl = word, // Glide can try to load thumbnail from video URL
+                        videoUrl = word,
+                        platform = "Direct Link"
+                    )
+                }
             }
         }
         
@@ -155,15 +179,48 @@ class ShareReceiverActivity : AppCompatActivity() {
         binding.videoPreviewCard.isVisible = true
         binding.videoTitleText.text = info.title
         binding.videoPlatformText.text = info.platform
+        binding.playIcon.isVisible = true
         
         Glide.with(this)
             .load(info.thumbnailUrl)
             .placeholder(R.drawable.ic_default_avatar)
             .into(binding.videoThumbnail)
         
+        val isYouTube = info.platform == "YouTube"
+        binding.downloadPreviewButton.isVisible = !isYouTube && info.platform == "Direct Link"
+        binding.downloadPreviewButton.setOnClickListener {
+            downloadVideo(info.videoUrl)
+        }
+
         binding.watchVideoButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.videoUrl))
-            startActivity(intent)
+            if (isYouTube) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.videoUrl))
+                startActivity(intent)
+            } else {
+                val intent = Intent(this, VideoPlayerActivity::class.java).apply {
+                    putExtra("VIDEO_URL", info.videoUrl)
+                    putExtra("IS_LOCAL", false)
+                }
+                startActivity(intent)
+            }
+        }
+    }
+
+    private fun downloadVideo(url: String) {
+        try {
+            val request = DownloadManager.Request(Uri.parse(url))
+                .setTitle("Downloading Video")
+                .setDescription("Lavender Messenger")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "video_${System.currentTimeMillis()}.mp4")
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true)
+
+            val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            downloadManager.enqueue(request)
+            Toast.makeText(this, getString(R.string.loading), Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -183,6 +240,8 @@ class ShareReceiverActivity : AppCompatActivity() {
         chatAdapter = ShareChatAdapter { chat ->
             selectedChat = chat
             chatAdapter.setSelectedChat(chat)
+            binding.selectedChatLabel.isVisible = true
+            binding.selectedChatText.isVisible = true
             binding.selectedChatText.text = chat.name
         }
         

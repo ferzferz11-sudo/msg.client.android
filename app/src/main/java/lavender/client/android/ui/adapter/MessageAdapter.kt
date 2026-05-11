@@ -473,14 +473,30 @@ class MessageAdapter(
                     if (isSelectionMode) {
                         onClick()
                     } else {
-                        val allImageUrls = currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }
-                        val intent = android.content.Intent(context, lavender.client.android.FullScreenImageActivity::class.java).apply {
-                            putExtra("image_url", message.imageUrl)
-                            putExtra("chat_id", chatId)
-                            putStringArrayListExtra("image_urls", ArrayList(allImageUrls))
-                            putExtra("current_index", allImageUrls.indexOf(message.imageUrl))
+                        val url = message.imageUrl.lowercase()
+                        val isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mkv") || url.endsWith(".mov")
+                        
+                        if (isVideo) {
+                            val intent = android.content.Intent(context, lavender.client.android.VideoPlayerActivity::class.java).apply {
+                                val absoluteUrl = if (message.imageUrl.startsWith("http")) {
+                                    message.imageUrl.trim()
+                                } else {
+                                    "http://159.195.38.145:8082" + message.imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                                }
+                                putExtra("VIDEO_URL", absoluteUrl)
+                                putExtra("IS_LOCAL", false)
+                            }
+                            context.startActivity(intent)
+                        } else {
+                            val allImageUrls = currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }
+                            val intent = android.content.Intent(context, lavender.client.android.FullScreenImageActivity::class.java).apply {
+                                putExtra("image_url", message.imageUrl)
+                                putExtra("chat_id", chatId)
+                                putStringArrayListExtra("image_urls", ArrayList(allImageUrls))
+                                putExtra("current_index", allImageUrls.indexOf(message.imageUrl))
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
                     }
                 }
                 messageImageView.setOnLongClickListener {

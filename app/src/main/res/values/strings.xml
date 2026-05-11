@@ -387,6 +387,7 @@
     <string name="video_preview">Video preview</string>
     <string name="watch_video">Watch video</string>
     <string name="send">Send</string>
+    <string name="download">Download</string>
     <string name="no_chats_available">No chats available. Create a chat first.</string>
     <string name="link_preview">Link preview</string>
 </resources>

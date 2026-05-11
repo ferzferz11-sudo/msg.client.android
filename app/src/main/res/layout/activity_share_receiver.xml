@@ -29,6 +29,7 @@
 
             <!-- Shared Content Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/sharedContentCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -91,6 +92,7 @@
                             android:scaleType="centerCrop" />
 
                         <ImageView
+                            android:id="@+id/playIcon"
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:layout_gravity="center"
@@ -122,12 +124,31 @@
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:layout_marginBottom="12dp" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/watchVideoButton"
+                        <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
-                            android:text="@string/watch_video"
-                            app:cornerRadius="24dp" />
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/watchVideoButton"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="8dp"
+                                android:text="@string/watch_video"
+                                app:cornerRadius="24dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/downloadPreviewButton"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:text="@string/download"
+                                android:visibility="gone"
+                                app:cornerRadius="24dp" />
+
+                        </LinearLayout>
 
                     </LinearLayout>
 
@@ -137,13 +158,15 @@
 
             <!-- Selected Chat -->
             <TextView
+                android:id="@+id/selectedChatLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/select_chat_to_send"
                 android:textSize="14sp"
                 android:textColor="?attr/colorPrimary"
                 android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="8dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/selectedChatText"
@@ -154,7 +177,8 @@
                 android:textStyle="bold"
                 android:padding="12dp"
                 android:background="?attr/colorSurfaceContainer"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="8dp"
+                android:visibility="gone" />
 
             <!-- No chats text -->
             <TextView

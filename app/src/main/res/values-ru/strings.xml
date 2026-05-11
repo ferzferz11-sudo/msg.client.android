@@ -389,6 +389,7 @@
     <string name="video_preview">Превью видео</string>
     <string name="watch_video">Смотреть видео</string>
     <string name="send">Отправить</string>
+    <string name="download">Скачать</string>
     <string name="no_chats_available">Нет доступных чатов. Создайте чат сначала.</string>
     <string name="link_preview">Превью ссылки</string>
 </resources>
