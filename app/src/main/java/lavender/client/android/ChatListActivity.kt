@@ -21,7 +21,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.textfield.TextInputEditText
@@ -197,6 +201,25 @@ class ChatListActivity : AppCompatActivity() {
         binding.chatsRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ChatListActivity)
             adapter = chatAdapter
+        }
+
+        // Handle bottom navigation bar insets
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            // Add padding to the bottom of the RecyclerView so the last item is visible
+            // We add extra padding to account for the FAB
+            binding.chatsRecyclerView.updatePadding(
+                bottom = systemBars.bottom + (80 * resources.displayMetrics.density).toInt()
+            )
+            
+            // Adjust FAB margin to be above the navigation bar
+            binding.addChatFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = systemBars.bottom + (16 * resources.displayMetrics.density).toInt()
+                marginEnd = (16 * resources.displayMetrics.density).toInt()
+            }
+            
+            insets
         }
 
         binding.addChatFab.setOnClickListener {
@@ -565,6 +588,15 @@ class ChatListActivity : AppCompatActivity() {
 
                             chats.addAll(chatsWithMute)
                             chatAdapter.setChats(chats.toList())
+
+                            // If user has real chats (more than just favorites), mark onboarding as completed
+                            if (fetchedChats.isNotEmpty()) {
+                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                                if (!prefs.getBoolean("onboarding_completed_$username", false)) {
+                                    prefs.edit { putBoolean("onboarding_completed_$username", true) }
+                                    hideOnboardingTips()
+                                }
+                            }
 
                             val totalUnread = chats.sumOf { it.unreadCount }
                             updateAppIconBadge(totalUnread)

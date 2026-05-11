@@ -27,7 +27,8 @@ data class MessageProto(
     val clientVersion: String = "",
     val isSuperAdmin: Boolean = false,
     val voiceUrl: String = "",
-    val duration: Int = 0
+    val duration: Int = 0,
+    val register: Boolean = false
 ) {
     class Builder {
         private var user: String = ""
@@ -47,6 +48,7 @@ data class MessageProto(
         private var isSuperAdmin: Boolean = false
         private var voiceUrl: String = ""
         private var duration: Int = 0
+        private var register: Boolean = false
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -134,6 +136,11 @@ data class MessageProto(
             return this
         }
 
+        fun setRegister(register: Boolean): Builder {
+            this.register = register
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -141,7 +148,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin, voiceUrl, duration)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register)
         }
     }
     

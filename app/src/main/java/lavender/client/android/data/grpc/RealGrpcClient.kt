@@ -67,6 +67,9 @@ object RealGrpcClient {
     private val _serverVersion = MutableStateFlow("")
     val serverVersion: StateFlow<String> = _serverVersion
 
+    private val _authStatus = MutableStateFlow<String?>(null)
+    val authStatus: StateFlow<String?> = _authStatus
+
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
 
@@ -118,7 +121,7 @@ object RealGrpcClient {
             // Auto-resume last chat if it exists
             lastChatRequest?.let { 
                 Log.d(TAG, "Resuming last chat for ${it.u}")
-                startChat(it.u, it.p, it.j, it.cb) 
+                startChat(it.u, it.p, it.j, it.r, it.cb) 
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
@@ -143,12 +146,14 @@ object RealGrpcClient {
     }
 
     private var lastChatRequest: LastChatRequest? = null
-    private data class LastChatRequest(val u: String, val p: String, val j: String, val roomId: String, val cb: (Message) -> Unit)
+    private data class LastChatRequest(val u: String, val p: String, val j: String, val roomId: String, val r: Boolean, val cb: (Message) -> Unit)
 
-    fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, onMessageReceived: (Message) -> Unit) {
         val last = lastChatRequest
-        if (last != null && last.u == username && last.roomId == currentRoomId && requestObserver != null) {
+        if (last != null && last.u == username && last.roomId == currentRoomId && requestObserver != null && last.r == register) {
             Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
+            
+            // ... (keep switchMessage logic)
 
             // Just send auth signal to existing stream to notify server we switched rooms
             val switchMessage = MessageProto.newBuilder()
@@ -162,12 +167,12 @@ object RealGrpcClient {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send switch room signal, will restart stream", e)
                 requestObserver = null
-                startChat(username, password, joinMessage, onMessageReceived)
+                startChat(username, password, joinMessage, register, onMessageReceived)
             }
             return
         }
 
-        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, onMessageReceived)
+        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, onMessageReceived)
         
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
             _connectionStatus.value = ConnectionStatus.CONNECTING
@@ -214,7 +219,10 @@ object RealGrpcClient {
             .setRoomId(currentRoomId) // Set current room on start
             .setCreatedAt(ProtoUtils.getCurrentTimestamp())
             .setClientVersion(BuildConfig.VERSION_NAME)
+            .setRegister(register)
             .build()
+        
+        _authStatus.value = null // Reset auth status on new stream
         
         requestObserver?.onNext(firstMessage)
         startTypingStream()
@@ -238,6 +246,12 @@ object RealGrpcClient {
 
                 // 2. Handle system signals
                 if (value.text == "SET_SUPER_ADMIN") return
+
+                if (value.text == "AUTH_FAILED" || value.text == "USER_NOT_FOUND" || value.text == "REGISTRATION_SUCCESS") {
+                    _authStatus.value = value.text
+                    if (value.text == "AUTH_FAILED") disconnect()
+                    return
+                }
                 
                 if (value.text.startsWith("SYSTEM_NOTIFICATION:")) {
                     _systemNotification.value = value.text.removePrefix("SYSTEM_NOTIFICATION:")
@@ -351,7 +365,7 @@ object RealGrpcClient {
                     // Only reconnect if no new stream was started in the meantime
                     if (requestObserver == null || requestObserver == currentObserver) {
                         Log.d(TAG, "Attempting stream reconnect...")
-                        lastChatRequest?.let { startChat(it.u, it.p, it.j, it.cb) }
+                        lastChatRequest?.let { startChat(it.u, it.p, it.j, it.r, it.cb) }
                     }
                 }
             }
@@ -1420,6 +1434,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.isSuperAdmin) cos.writeBool(16, value.isSuperAdmin)
         if (value.voiceUrl.isNotEmpty()) cos.writeString(17, value.voiceUrl)
         if (value.duration != 0) cos.writeInt32(18, value.duration)
+        if (value.register) cos.writeBool(19, value.register)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): MessageProto {
@@ -1450,6 +1465,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 6 -> builder.setPassword(cis.readString()); 7 -> builder.setRepliedToMessageId(cis.readString()); 8 -> builder.setRepliedToUser(cis.readString()); 9 -> builder.setRepliedToText(cis.readString())
                 10 -> builder.setRoomId(cis.readString()); 11 -> builder.setIsRead(cis.readBool()); 12 -> builder.setAvatarUrl(cis.readString()); 13 -> builder.setImageUrl(cis.readString())
                 14 -> builder.setEdited(cis.readBool()); 15 -> builder.setClientVersion(cis.readString()); 16 -> builder.setIsSuperAdmin(cis.readBool()); 17 -> builder.setVoiceUrl(cis.readString()); 18 -> builder.setDuration(cis.readInt32())
+                19 -> builder.setRegister(cis.readBool())
                 else -> cis.skipField(tag)
             }
         }

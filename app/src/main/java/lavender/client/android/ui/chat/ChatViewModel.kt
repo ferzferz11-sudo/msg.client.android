@@ -2,7 +2,9 @@ package lavender.client.android.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
@@ -21,6 +23,9 @@ class ChatViewModel : ViewModel() {
     val systemNotification: StateFlow<String?> = grpcClient.systemNotification
     val typingUsers: StateFlow<Map<String, Set<String>>> = grpcClient.typingUsers
     
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: android.content.Context? = null) {
         viewModelScope.launch {
             grpcClient.connect(serverAddress, useTls, port, context)
@@ -33,8 +38,8 @@ class ChatViewModel : ViewModel() {
         }
     }
     
-    fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
-        grpcClient.startChat(username, password, joinMessage, onMessageReceived)
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, onMessageReceived: (Message) -> Unit) {
+        grpcClient.startChat(username, password, joinMessage, register, onMessageReceived)
     }
     
     fun sendMessage(message: Message) {
@@ -70,8 +75,11 @@ class ChatViewModel : ViewModel() {
     }
 
     fun loadHistory() {
+        _isLoading.value = true
         viewModelScope.launch {
-            grpcClient.loadHistory(currentRoomId)
+            grpcClient.loadHistory(currentRoomId) {
+                _isLoading.value = false
+            }
         }
     }
 

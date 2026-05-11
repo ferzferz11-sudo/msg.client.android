@@ -361,6 +361,8 @@
     <string name="discard_changes">Discard changes?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="user_not_found">User not found</string>
+    <string name="register_confirm">User \"%s\" is not registered. Do you want to create a new account?</string>
     <string name="preset_colors">Preset Colors</string>
     <string name="custom_color">Custom Color</string>
     <string name="transparency">Transparency</string>

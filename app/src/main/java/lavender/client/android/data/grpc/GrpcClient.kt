@@ -36,6 +36,7 @@ object GrpcClient {
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
     val isSuperAdmin: StateFlow<Boolean> = realGrpcClient.isSuperAdmin
     val serverVersion: StateFlow<String> = realGrpcClient.serverVersion
+    val authStatus: StateFlow<String?> = realGrpcClient.authStatus
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     
     var hasCheckedForUpdates: Boolean
@@ -54,8 +55,8 @@ object GrpcClient {
         realGrpcClient.disconnect()
     }
     
-    fun startChat(username: String, password: String, joinMessage: String, onMessageReceived: (Message) -> Unit) {
-        realGrpcClient.startChat(username, password, joinMessage, onMessageReceived)
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, onMessageReceived: (Message) -> Unit) {
+        realGrpcClient.startChat(username, password, joinMessage, register, onMessageReceived)
     }
     
     fun sendMessage(message: Message) {

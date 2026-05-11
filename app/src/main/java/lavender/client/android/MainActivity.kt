@@ -192,8 +192,8 @@ class MainActivity : AppCompatActivity() {
         // Download will continue in the background
     }
 
-    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null, joinBtn: Button? = null, progress: ProgressBar? = null) {
-        android.util.Log.d("MainActivity", "processLogin started for $username")
+    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null, joinBtn: Button? = null, progress: ProgressBar? = null, register: Boolean = false) {
+        android.util.Log.d("MainActivity", "processLogin started for $username (reg=$register)")
         
         // Show loading state
         runOnUiThread {
@@ -202,34 +202,78 @@ class MainActivity : AppCompatActivity() {
             progress?.isVisible = true
         }
 
-        SessionManager.login(this, username, password, serverAddress) { success ->
-            android.util.Log.d("MainActivity", "SessionManager.login result: $success")
+        SessionManager.login(this, username, password, serverAddress, register) { result ->
+            android.util.Log.d("MainActivity", "SessionManager.login result: $result")
             runOnUiThread {
-                if (success) {
-                    // Update local storage for next auto-login
-                    saveUsername(username)
-                    savePassword(password)
-                    saveServerAddress(serverAddress)
-                    
-                    val userId = SessionManager.session.value.userId
-                    if (userId.isNotEmpty()) saveUserId(userId)
+                when (result) {
+                    "SUCCESS", "REGISTRATION_SUCCESS" -> {
+                        // Update local storage
+                        saveUsername(username)
+                        savePassword(password)
+                        saveServerAddress(serverAddress)
+                        
+                        val userId = SessionManager.session.value.userId
+                        if (userId.isNotEmpty()) saveUserId(userId)
 
-                    android.util.Log.d("MainActivity", "Triggering navigation. fromNotification=$fromNotification")
-                    if (fromNotification && !roomId.isNullOrEmpty()) {
-                        navigateToChat(username, password, serverAddress, roomId)
-                    } else {
-                        navigateToChatList(username, password, serverAddress)
+                        if (result == "REGISTRATION_SUCCESS") {
+                            // Clear local cache for new user
+                            clearLocalCacheSync()
+                            // Set onboarding flag
+                            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                            prefs.edit { 
+                                putBoolean("onboarding_completed_$username", false)
+                                putLong("first_login_$username", System.currentTimeMillis())
+                            }
+                        }
+
+                        if (fromNotification && !roomId.isNullOrEmpty()) {
+                            navigateToChat(username, password, serverAddress, roomId)
+                        } else {
+                            navigateToChatList(username, password, serverAddress)
+                        }
+                        dialog?.dismiss()
                     }
-                    dialog?.dismiss()
-                } else {
-                    // Reset UI on failure
-                    joinBtn?.text = getString(R.string.join)
-                    joinBtn?.isEnabled = true
-                    progress?.isVisible = false
-                    showToast(getString(R.string.connection_failed))
+                    "USER_NOT_FOUND" -> {
+                        // Show registration dialog
+                        progress?.isVisible = false
+                        joinBtn?.text = getString(R.string.join)
+                        joinBtn?.isEnabled = true
+                        
+                        AlertDialog.Builder(this)
+                            .setTitle(R.string.user_not_found)
+                            .setMessage(getString(R.string.register_confirm, username))
+                            .setPositiveButton(R.string.yes) { dialogInterface, _ ->
+                                processLogin(username, password, serverAddress, roomId, fromNotification, dialog, joinBtn, progress, register = true)
+                            }
+                            .setNegativeButton(R.string.no, null)
+                            .show()
+                    }
+                    "AUTH_FAILED" -> {
+                        joinBtn?.text = getString(R.string.join)
+                        joinBtn?.isEnabled = true
+                        progress?.isVisible = false
+                        showToast(getString(R.string.auth_failed))
+                    }
+                    else -> {
+                        // Reset UI on failure
+                        joinBtn?.text = getString(R.string.join)
+                        joinBtn?.isEnabled = true
+                        progress?.isVisible = false
+                        showToast(getString(R.string.connection_failed))
+                    }
                 }
             }
         }
+    }
+
+    private fun clearLocalCacheSync() {
+        try {
+            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this)
+            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                db.messageDao().clearAll()
+                db.chatDao().clearAll()
+            }
+        } catch (_: Exception) {}
     }
 
     // Show join chat button

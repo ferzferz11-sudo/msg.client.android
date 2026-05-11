@@ -105,8 +105,8 @@ object SessionManager {
         userId?.let { GrpcClient.setUserId(it) }
     }
 
-    fun login(context: Context, username: String, pass: String, serverAddress: String, onComplete: (Boolean) -> Unit) {
-        Log.d("SessionManager", "Login attempt for $username at $serverAddress")
+    fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, onComplete: (String?) -> Unit) {
+        Log.d("SessionManager", "Login attempt for $username at $serverAddress (register=$register)")
         val parts = serverAddress.split(":")
         val host = parts[0]
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
@@ -115,53 +115,55 @@ object SessionManager {
         
         scope.launch {
             try {
-                // Wait for READY or FAILED status with a longer timeout
-                Log.d("SessionManager", "Waiting for connection status (current: ${GrpcClient.connectionStatus.value})")
-                val status = withTimeoutOrNull(15000) {
+                // Wait for READY or FAILED status
+                val status = withTimeoutOrNull(10000) {
                     GrpcClient.connectionStatus.filter { 
-                        Log.d("SessionManager", "Status update observed: $it")
                         (it == ConnectionStatus.READY) || (it == ConnectionStatus.FAILED)
                     }.first()
                 }
 
                 if (status == ConnectionStatus.READY) {
-                    Log.d("SessionManager", "Connection established, performing auth handshake")
-                    
-                    // Start chat immediately to establish auth signal
-                    GrpcClient.startChat(username, pass, "") {
-                        // Auth successful or message received
+                    // Start chat with auth signal
+                    GrpcClient.startChat(username, pass, "", register) { }
+
+                    // Wait for auth status from server
+                    val authResult = withTimeoutOrNull(5000) {
+                        GrpcClient.authStatus.filter { it != null }.first()
                     }
 
-                    // Try to fetch User ID using a Deferred
-                    val userIdDeferred = CompletableDeferred<String?>()
-                    GrpcClient.fetchUserId(username) { id, success ->
-                        if (success) userIdDeferred.complete(id)
-                        else userIdDeferred.complete(null)
-                    }
+                    Log.d("SessionManager", "Auth result received: $authResult")
 
-                    val fetchedId = withTimeoutOrNull(3000) {
-                        userIdDeferred.await()
-                    }
+                    if (authResult == "REGISTRATION_SUCCESS" || authResult == null || authResult == "SUCCESS") {
+                        // Note: null might happen if server doesn't explicitly send SUCCESS for existing users yet, 
+                        // but we can assume success if no error was received within timeout and connection is READY.
+                        // Actually, for existing users server currently doesn't send "SUCCESS" system message, it just starts sending data.
+                        
+                        // Try to fetch User ID
+                        val userIdDeferred = CompletableDeferred<String?>()
+                        GrpcClient.fetchUserId(username) { id, success ->
+                            if (success) userIdDeferred.complete(id)
+                            else userIdDeferred.complete(null)
+                        }
 
-                    if (fetchedId != null) {
-                        updateSession(username = username, password = pass, userId = fetchedId)
-                        Log.d("SessionManager", "UserID fetched and session updated: $fetchedId")
+                        val fetchedId = withTimeoutOrNull(3000) { userIdDeferred.await() }
+                        if (fetchedId != null) {
+                            updateSession(username = username, password = pass, userId = fetchedId)
+                        } else {
+                            updateSession(username = username, password = pass)
+                        }
+
+                        syncFcmToken(context, username)
+                        onComplete("SUCCESS")
                     } else {
-                        Log.w("SessionManager", "fetchUserId failed or timed out, using fallback session")
-                        updateSession(username = username, password = pass)
+                        // Return the actual error signal: AUTH_FAILED or USER_NOT_FOUND
+                        onComplete(authResult)
                     }
-
-                    // Sync FCM token after login
-                    syncFcmToken(context, username)
-
-                    onComplete(true)
                 } else {
-                    Log.e("SessionManager", "Login failed - Status: $status (null means timeout)")
-                    onComplete(false)
+                    onComplete("CONNECTION_FAILED")
                 }
             } catch (e: Exception) {
                 Log.e("SessionManager", "Critical login error: ${e.message}", e)
-                onComplete(false)
+                onComplete("ERROR")
             }
         }
     }

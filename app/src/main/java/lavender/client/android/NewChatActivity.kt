@@ -560,12 +560,6 @@ class NewChatActivity : AppCompatActivity() {
                     val isFirstLoad = lastMessageCount == 0
                     val hasNewMessages = roomMessages.size > lastMessageCount
                     
-                    if (isFirstLoad && roomMessages.isEmpty()) {
-                        historyLoadingProgress.isVisible = true
-                    } else {
-                        historyLoadingProgress.isVisible = false
-                    }
-
                     adapter.submitList(roomMessages) {
                         val isFromMe = roomMessages.lastOrNull()?.user == username
                         if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && isFromMe) || (hasNewMessages && wasAtBottom))) {
@@ -582,6 +576,14 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         // 2. Объединенный наблюдатель: Сеть + Юзеры + Тайпинг
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isLoading.collect { loading ->
+                    historyLoadingProgress.isVisible = loading && adapter.currentList.isEmpty()
+                }
+            }
+        }
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(

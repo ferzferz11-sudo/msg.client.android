@@ -363,6 +363,8 @@
     <string name="discard_changes">Отменить изменения?</string>
     <string name="yes">Да</string>
     <string name="no">Нет</string>
+    <string name="user_not_found">Пользователь не найден</string>
+    <string name="register_confirm">Пользователь \"%s\" не зарегистрирован. Хотите создать новую учетную запись?</string>
     <string name="preset_colors">Готовые цвета</string>
     <string name="custom_color">Свой цвет</string>
     <string name="transparency">Прозрачность</string>
