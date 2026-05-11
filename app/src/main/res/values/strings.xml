@@ -259,6 +259,7 @@
     <string name="theme_template_blue">Modern Blue</string>
     <string name="theme_template_graphite">Graphite &amp; Gold</string>
     <string name="theme_template_mint">Cyber Mint</string>
+    <string name="theme_dark_graphite">Graphite Night</string>
     <string name="admin_label">(Admin)</string>
     <string name="muted_label">Muted</string>
     <string name="super_admin">Admin Panel</string>

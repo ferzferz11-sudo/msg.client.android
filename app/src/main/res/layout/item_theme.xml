@@ -29,6 +29,16 @@
                 android:layout_height="52dp"
                 android:background="@drawable/unread_count_background" />
 
+            <ImageView
+                android:id="@+id/appliedIndicator"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_checked"
+                app:tint="@android:color/white"
+                android:contentDescription="@null"
+                android:visibility="gone" />
+
         </FrameLayout>
 
         <LinearLayout

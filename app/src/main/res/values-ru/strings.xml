@@ -261,6 +261,7 @@
     <string name="theme_template_blue">Современный синий</string>
     <string name="theme_template_graphite">Графит и золото</string>
     <string name="theme_template_mint">Кибер Мята</string>
+    <string name="theme_dark_graphite">Графитовый ночной</string>
     <string name="admin_label">(Админ)</string>
     <string name="muted_label">Без звука</string>
     <string name="super_admin">Админ панель</string>

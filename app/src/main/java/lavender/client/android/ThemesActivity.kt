@@ -190,14 +190,15 @@ class ThemesActivity : AppCompatActivity() {
 
     private fun updateUI() {
         val allThemes = mutableListOf<CustomThemeProto>()
-        allThemes.add(CustomThemeProto(id = "dark", name = getString(R.string.dark_theme)))
 
         BuiltInThemes.all.map { ThemeMappers.toProto(it) }.forEach { theme ->
             val localizedName = when (theme.id) {
-                "builtin_green"    -> getString(R.string.theme_template_green)
-                "builtin_blue"     -> getString(R.string.theme_template_blue)
-                "builtin_graphite" -> getString(R.string.theme_template_graphite)
-                "builtin_mint"     -> getString(R.string.theme_template_mint)
+                "dark"                  -> getString(R.string.dark_theme)
+                "builtin_dark_graphite" -> getString(R.string.theme_dark_graphite)
+                "builtin_green"         -> getString(R.string.theme_template_green)
+                "builtin_blue"          -> getString(R.string.theme_template_blue)
+                "builtin_graphite"      -> getString(R.string.theme_template_graphite)
+                "builtin_mint"          -> getString(R.string.theme_template_mint)
                 else -> theme.name
             }
             allThemes.add(theme.copy(name = localizedName))

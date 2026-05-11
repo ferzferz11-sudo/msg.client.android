@@ -89,6 +89,7 @@ class ThemeAdapter(
         private val themeName: TextView = itemView.findViewById(R.id.themeName)
         private val themeColorsInfo: TextView = itemView.findViewById(R.id.themeColorsInfo)
         private val themeColorPreview: View = itemView.findViewById(R.id.themeColorPreview)
+        private val appliedIndicator: ImageView = itemView.findViewById(R.id.appliedIndicator)
         private val editIndicator: ImageView = itemView.findViewById(R.id.editIndicator)
         private val modeIndicator: ImageView = itemView.findViewById(R.id.modeIndicator)
 
@@ -96,6 +97,7 @@ class ThemeAdapter(
         fun bind(theme: CustomThemeProto, currentId: String, isSelected: Boolean) {
             themeName.text = theme.name
             val isCurrent = theme.id == currentId
+            appliedIndicator.isVisible = isCurrent
             
             editIndicator.isVisible = false
             
@@ -141,12 +143,19 @@ class ThemeAdapter(
                 modeIndicator.setImageResource(if (isLight) R.drawable.ic_light_mode else R.drawable.ic_theme_dark)
 
                 if (theme.id == "dark") {
-                    themeColorPreview.backgroundTintList = ColorStateList.valueOf("#1E1E2E".toColorInt())
+                    val pColor = "#1E1E2E".toColorInt()
+                    themeColorPreview.backgroundTintList = ColorStateList.valueOf(pColor)
                     themeColorsInfo.text = context.getString(R.string.dark_theme)
+                    if (isCurrent) {
+                        appliedIndicator.imageTintList = ColorStateList.valueOf(if (ThemeUtils.isLight(pColor)) Color.BLACK else Color.WHITE)
+                    }
                 } else {
                     val pColor = theme.primaryColor.toColorInt()
                     themeColorPreview.backgroundTintList = ColorStateList.valueOf(pColor)
                     themeColorsInfo.text = "${theme.primaryColor} / ${theme.surfaceColor}"
+                    if (isCurrent) {
+                        appliedIndicator.imageTintList = ColorStateList.valueOf(if (ThemeUtils.isLight(pColor)) Color.BLACK else Color.WHITE)
+                    }
                 }
             } catch (_: Exception) {
                 themeColorPreview.backgroundTintList = ColorStateList.valueOf(Color.GRAY)

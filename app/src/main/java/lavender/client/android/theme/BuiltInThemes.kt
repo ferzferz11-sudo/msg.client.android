@@ -52,11 +52,37 @@ object BuiltInThemes {
     val dark = BASE_DARK
 
     /**
+     * Альтернативная темная тема - Графитовый ночной
+     * Темная тема с графитовыми оттенками и приглушенным бирюзовым акцентом
+     */
+    val DARK_GRAPHITE: Theme = Theme(
+        id = "builtin_dark_graphite",
+        name = "Графитовый ночной",
+        primaryColor = "#5F9EA0", // Cadet Blue - приглушенный акцент
+        onPrimaryColor = "#1A1A1A",
+        surfaceColor = "#2D2D2D",
+        onSurfaceColor = "#B8B8B8",
+        backgroundColor = "#1E1E1E",
+        textPrimaryColor = "#E8E8E8",
+        textSecondaryColor = "#909090",
+        surfaceContainer = "#252525",
+        bottomPanelColor = "#2D2D2D",
+        onBottomPanelColor = "#5F9EA0",
+        outgoingBubbleColor = "#3D6B6C",
+        incomingBubbleColor = "#363636",
+        chatListBackgroundImageUrl = "",
+        chatBackgroundImageUrl = "",
+    )
+
+    /**
      * Список всех встроенных тем
      */
     val all: List<Theme> = listOf(
         // Стандартная темная
         BASE_DARK,
+
+        // Альтернативная темная тема
+        DARK_GRAPHITE,
 
         // Светлые темы на базе шаблона
         BASE_LIGHT.copy(
