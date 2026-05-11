@@ -1249,36 +1249,64 @@ class NewChatActivity : AppCompatActivity() {
     private fun showEditMessageDialog(message: Message) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_message, null)
         val editText = dialogView.findViewById<EditText>(R.id.editMessageInput)
+        val inputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.editMessageInputLayout)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnSave = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave)
+        
         editText.setText(message.text)
         editText.setSelection(message.text.length)
         
         val customTheme = ThemeStore.currentTheme()
+        val isLight = ThemeUtils.isLight(customTheme.backgroundColor.toColorInt())
+        
         try {
             val textColor = customTheme.textPrimaryColor.toColorInt()
             val bgColor = customTheme.backgroundColor.toColorInt()
+            val primaryColor = customTheme.primaryColor.toColorInt()
+            val onPrimary = customTheme.onPrimaryColor.toColorInt()
+            
             editText.setTextColor(textColor)
-            editText.setBackgroundColor(bgColor)
+            editText.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+            
+            inputLayout.boxBackgroundColor = bgColor
+            inputLayout.setBoxStrokeColor(primaryColor)
+            inputLayout.hintTextColor = ColorStateList.valueOf(primaryColor)
+            inputLayout.defaultHintTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(textColor, 0.7f))
+            
+            btnCancel.setTextColor(primaryColor)
+            btnSave.setBackgroundColor(primaryColor)
+            btnSave.setTextColor(onPrimary)
+            
             val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-                floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null
+                floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null
             ))
             shapeDrawable.paint.color = bgColor
             dialogView.background = shapeDrawable
         } catch (_: Exception) {}
         
-        AlertDialog.Builder(this)
-            .setTitle(R.string.edit_message)
+        val builder = if (isLight) {
+            AlertDialog.Builder(this)
+        } else {
+            AlertDialog.Builder(this, com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert)
+        }
+        
+        val dialog = builder
             .setView(dialogView)
-            .setPositiveButton(R.string.change_bio) { d, _ ->
-                val newText = editText.text.toString().trim()
-                if (newText.isNotEmpty() && newText != message.text) {
-                    grpcClient.editMessage(message.id, newText) { success, msg ->
-                        if (!success) runOnUiThread { showToast(msg) }
-                    }
+            .create()
+            
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnSave.setOnClickListener {
+            val newText = editText.text.toString().trim()
+            if (newText.isNotEmpty() && newText != message.text) {
+                grpcClient.editMessage(message.id, newText) { success, msg ->
+                    if (!success) runOnUiThread { showToast(msg) }
                 }
-                d.dismiss()
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+            dialog.dismiss()
+        }
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
     }
 
     private fun showAudioRecordingView() {
@@ -1631,10 +1659,12 @@ class NewChatActivity : AppCompatActivity() {
 
         grpcClient.getDraft(roomId) { draftText, repliedToMessageId, repliedToUser, repliedToText, hasDraft ->
             runOnUiThread {
-                if (hasDraft && draftText.isNotEmpty()) {
+                if (hasDraft && (draftText.isNotEmpty() || repliedToMessageId.isNotEmpty())) {
                     // Restore draft text
-                    messageInput.setText(draftText)
-                    messageInput.setSelection(draftText.length)
+                    if (draftText.isNotEmpty()) {
+                        messageInput.setText(draftText)
+                        messageInput.setSelection(draftText.length)
+                    }
 
                     // Restore reply if present
                     if (repliedToMessageId.isNotEmpty()) {

@@ -1536,7 +1536,12 @@ class TokenResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<TokenRespons
 class SaveDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveDraftRequestProto> {
     override fun stream(v: SaveDraftRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.roomId.isNotEmpty()) cos.writeString(2, v.roomId); if (v.draftText.isNotEmpty()) cos.writeString(3, v.draftText); if (v.repliedToMessageId.isNotEmpty()) cos.writeString(4, v.repliedToMessageId); if (v.repliedToUser.isNotEmpty()) cos.writeString(5, v.repliedToUser); if (v.repliedToText.isNotEmpty()) cos.writeString(6, v.repliedToText)
+        cos.writeString(1, v.userId)
+        cos.writeString(2, v.roomId)
+        cos.writeString(3, v.draftText)
+        cos.writeString(4, v.repliedToMessageId)
+        cos.writeString(5, v.repliedToUser)
+        cos.writeString(6, v.repliedToText)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): SaveDraftRequestProto = SaveDraftRequestProto()
@@ -1554,7 +1559,8 @@ class SaveDraftResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveDraf
 class GetDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetDraftRequestProto> {
     override fun stream(v: GetDraftRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.roomId.isNotEmpty()) cos.writeString(2, v.roomId)
+        cos.writeString(1, v.userId)
+        cos.writeString(2, v.roomId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetDraftRequestProto = GetDraftRequestProto()
@@ -1572,7 +1578,8 @@ class GetDraftResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetDraftR
 class DeleteDraftRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteDraftRequestProto> {
     override fun stream(v: DeleteDraftRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.roomId.isNotEmpty()) cos.writeString(2, v.roomId)
+        cos.writeString(1, v.userId)
+        cos.writeString(2, v.roomId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): DeleteDraftRequestProto = DeleteDraftRequestProto()
