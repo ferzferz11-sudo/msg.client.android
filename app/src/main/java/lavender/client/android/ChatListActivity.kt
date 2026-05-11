@@ -1178,14 +1178,12 @@ class ChatListActivity : AppCompatActivity() {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val txtColor = customTheme.textPrimaryColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()
-            val errorColor = android.graphics.Color.parseColor("#FF5252")
+            val errorColor = "#FF5252".toColorInt()
 
             sheetView.setBackgroundColor(bgColor)
             sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
 
-            sheetView.findViewById<TextView>(R.id.settingsTitle)?.let { 
-                it.setTextColor(txtColor)
-            }
+            sheetView.findViewById<TextView>(R.id.settingsTitle)?.setTextColor(txtColor)
 
             // Show Admin Panel and Servers only for super admins
             val isSuperAdmin = SessionManager.session.value.isSuperAdmin
