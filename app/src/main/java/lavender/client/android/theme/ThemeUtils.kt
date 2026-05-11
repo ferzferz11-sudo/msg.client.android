@@ -1,5 +1,6 @@
 package lavender.client.android.theme
 
+import android.app.Activity
 import android.graphics.Color
 import android.util.Log
 import android.widget.ImageView
@@ -67,6 +68,15 @@ object ThemeUtils {
                 setStroke(2, primaryColor)
             }
             imageView.background = bg
+        }
+    }
+
+    fun applyThemeToActivity(activity: Activity, theme: Theme) {
+        try {
+            val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
+            activity.window.decorView.setBackgroundColor(bgColor)
+        } catch (_: Exception) {
+            Log.e("ThemeUtils", "Error applying theme to activity")
         }
     }
 }

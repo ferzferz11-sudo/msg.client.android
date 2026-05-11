@@ -379,4 +379,14 @@
     <string name="under_development">In development</string>
     <string name="image_placeholder">Photo</string>
     <string name="favorites_description">Personal storage</string>
+    <string name="direct_chat_type">Direct Chat</string>
+    <string name="group_chat_type">Group Chat</string>
+    <string name="share_to_lavender">Share to Lavender</string>
+    <string name="select_chat_to_send">Select chat to send</string>
+    <string name="shared_content">Shared content</string>
+    <string name="video_preview">Video preview</string>
+    <string name="watch_video">Watch video</string>
+    <string name="send">Send</string>
+    <string name="no_chats_available">No chats available. Create a chat first.</string>
+    <string name="link_preview">Link preview</string>
 </resources>

@@ -234,9 +234,8 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         // 3. СИНХРОНИЗАЦИЯ: Говорим клиенту, где мы сейчас.
-        // Очищаем старые сообщения, чтобы не было "фантомных" текстов из другого чата.
+        // switchRoom() очистит сообщения и загрузит историю.
         grpcClient.setRoomId(roomId)
-        grpcClient.clearMessages()
 
         initViews()
 
@@ -258,12 +257,8 @@ class NewChatActivity : AppCompatActivity() {
         fetchChatMetadataIfNeeded()
 
         // 6. Запуск логики ViewModel
+        // switchRoom() очистит сообщения и загрузит историю из кэша/сервера
         viewModel.switchRoom(roomId)
-
-        // Если мы уже READY (например, вернулись из фона), принудительно грузим историю
-        if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
-            grpcClient.loadHistory(roomId)
-        }
 
         viewModel.startChat(username, password, "") { _ ->
             viewModel.markRead(username, this)

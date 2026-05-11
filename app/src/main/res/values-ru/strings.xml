@@ -381,4 +381,14 @@
     <string name="under_development">В разработке</string>
     <string name="image_placeholder">Фото</string>
     <string name="favorites_description">Личное хранилище</string>
+    <string name="direct_chat_type">Личный чат</string>
+    <string name="group_chat_type">Групповой чат</string>
+    <string name="share_to_lavender">Поделиться в Lavender</string>
+    <string name="select_chat_to_send">Выберите чат для отправки</string>
+    <string name="shared_content">Содержимое</string>
+    <string name="video_preview">Превью видео</string>
+    <string name="watch_video">Смотреть видео</string>
+    <string name="send">Отправить</string>
+    <string name="no_chats_available">Нет доступных чатов. Создайте чат сначала.</string>
+    <string name="link_preview">Превью ссылки</string>
 </resources>
