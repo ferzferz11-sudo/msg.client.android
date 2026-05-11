@@ -149,6 +149,21 @@ object RealGrpcClient {
         val last = lastChatRequest
         if (last != null && last.u == username && last.roomId == currentRoomId && requestObserver != null) {
             Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
+
+            // Just send auth signal to existing stream to notify server we switched rooms
+            val switchMessage = MessageProto.newBuilder()
+                .setUser(username)
+                .setRoomId(currentRoomId)
+                .setCreatedAt(ProtoUtils.getCurrentTimestamp())
+                .setClientVersion(BuildConfig.VERSION_NAME)
+                .build()
+            try {
+                requestObserver?.onNext(switchMessage)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send switch room signal, will restart stream", e)
+                requestObserver = null
+                startChat(username, password, joinMessage, onMessageReceived)
+            }
             return
         }
 
@@ -172,7 +187,7 @@ object RealGrpcClient {
 
         currentUsername = username
         
-        // IMPORTANT: Close previous stream only if it's different or explicitly requested
+        // IMPORTANT: We only complete the previous stream if we are actually replacing it
         requestObserver?.onCompleted()
         requestObserver = null
 
@@ -208,6 +223,11 @@ object RealGrpcClient {
     private fun io.grpc.ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
         val responseObserver = object : StreamObserver<MessageProto> {
             override fun onNext(value: MessageProto) {
+                // Any message from server acts as a keepalive signal
+                if (_connectionStatus.value != ConnectionStatus.READY) {
+                    _connectionStatus.value = ConnectionStatus.READY
+                }
+
                 // 1. Check Admin status from any message or specific signal
                 if (value.isSuperAdmin || value.text == "SET_SUPER_ADMIN") {
                     if (!_isSuperAdmin.value) {
@@ -1367,6 +1387,24 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.user.isNotEmpty()) cos.writeString(2, value.user)
         if (value.text.isNotEmpty()) cos.writeString(3, value.text)
         value.createdAt?.let { cos.writeTag(4, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+
+        // Serialize reactions if they exist
+        if (value.reactions.isNotEmpty()) {
+            val rbaos = java.io.ByteArrayOutputStream()
+            val rcos = com.google.protobuf.CodedOutputStream.newInstance(rbaos)
+            for (reaction in value.reactions) {
+                val singleRbaos = java.io.ByteArrayOutputStream()
+                val singleRcos = com.google.protobuf.CodedOutputStream.newInstance(singleRbaos)
+                if (reaction.user.isNotEmpty()) singleRcos.writeString(1, reaction.user)
+                if (reaction.emoji.isNotEmpty()) singleRcos.writeString(2, reaction.emoji)
+                singleRcos.flush()
+                val rb = singleRbaos.toByteArray()
+                cos.writeTag(5, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+                cos.writeUInt32NoTag(rb.size)
+                cos.writeRawBytes(rb)
+            }
+        }
+
         if (value.password.isNotEmpty()) cos.writeString(6, value.password)
         if (value.repliedToMessageId.isNotEmpty()) cos.writeString(7, value.repliedToMessageId)
         if (value.repliedToUser.isNotEmpty()) cos.writeString(8, value.repliedToUser)
@@ -1389,6 +1427,24 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> builder.setId(cis.readString()); 2 -> builder.setUser(cis.readString()); 3 -> builder.setText(cis.readString())
                 4 -> { val l = cis.readUInt32(); builder.setCreatedAt(Timestamp.parseFrom(cis.readRawBytes(l))) }
+                5 -> {
+                    val l = cis.readUInt32()
+                    val reactionCis = com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(l))
+                    var rUser = ""
+                    var rEmoji = ""
+                    while (!reactionCis.isAtEnd) {
+                        val rTag = reactionCis.readTag()
+                        if (rTag == 0) break
+                        when (com.google.protobuf.WireFormat.getTagFieldNumber(rTag)) {
+                            1 -> rUser = reactionCis.readString()
+                            2 -> rEmoji = reactionCis.readString()
+                            else -> reactionCis.skipField(rTag)
+                        }
+                    }
+                    if (rUser.isNotEmpty() && rEmoji.isNotEmpty()) {
+                        builder.addReaction(ReactionProto(rUser, rEmoji))
+                    }
+                }
                 6 -> builder.setPassword(cis.readString()); 7 -> builder.setRepliedToMessageId(cis.readString()); 8 -> builder.setRepliedToUser(cis.readString()); 9 -> builder.setRepliedToText(cis.readString())
                 10 -> builder.setRoomId(cis.readString()); 11 -> builder.setIsRead(cis.readBool()); 12 -> builder.setAvatarUrl(cis.readString()); 13 -> builder.setImageUrl(cis.readString())
                 14 -> builder.setEdited(cis.readBool()); 15 -> builder.setClientVersion(cis.readString()); 16 -> builder.setIsSuperAdmin(cis.readBool()); 17 -> builder.setVoiceUrl(cis.readString()); 18 -> builder.setDuration(cis.readInt32())
