@@ -151,6 +151,9 @@ class NewChatActivity : AppCompatActivity() {
 
     private lateinit var adapter: MessageAdapter
     
+    private var searchResults = listOf<Int>()
+    private var currentSearchIndex = -1
+
     private lateinit var imagePreviewScroll: HorizontalScrollView
     private lateinit var imagePreviewContainer: LinearLayout
     private val selectedImageUris = mutableListOf<Uri>()
@@ -714,6 +717,54 @@ class NewChatActivity : AppCompatActivity() {
         replyMessage.setOnClickListener { replyToSelectedMessage() }
         deleteMessages.setOnClickListener { deleteSelectedMessages() }
         forwardMessages.setOnClickListener { forwardSelectedMessages() }
+
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                performSearch(s.toString())
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        searchNext.setOnClickListener { navigateSearch(1) }
+        searchPrev.setOnClickListener { navigateSearch(-1) }
+    }
+
+    private fun performSearch(query: String) {
+        adapter.setSearchHighlight(query)
+        if (query.isEmpty()) {
+            searchResults = emptyList()
+            currentSearchIndex = -1
+            searchResultsCount.text = ""
+            return
+        }
+
+        val results = mutableListOf<Int>()
+        val messages = adapter.currentList
+        for (i in messages.indices) {
+            if (messages[i].text.contains(query, ignoreCase = true)) {
+                results.add(i)
+            }
+        }
+        searchResults = results
+        if (searchResults.isNotEmpty()) {
+            currentSearchIndex = searchResults.size - 1 // Start from most recent
+            navigateSearch(0)
+        } else {
+            currentSearchIndex = -1
+            searchResultsCount.text = "0/0"
+        }
+    }
+
+    private fun navigateSearch(direction: Int) {
+        if (searchResults.isEmpty()) return
+
+        currentSearchIndex += direction
+        if (currentSearchIndex < 0) currentSearchIndex = searchResults.size - 1
+        if (currentSearchIndex >= searchResults.size) currentSearchIndex = 0
+
+        val position = searchResults[currentSearchIndex]
+        messagesRecyclerView.scrollToPosition(position)
+        searchResultsCount.text = getString(R.string.search_results_format, currentSearchIndex + 1, searchResults.size)
     }
 
     private fun showEmojiPicker() {
@@ -895,6 +946,9 @@ class NewChatActivity : AppCompatActivity() {
         searchBar.isVisible = false
         toolbarContent.isVisible = true
         searchInput.text.clear()
+        searchResults = emptyList()
+        currentSearchIndex = -1
+        searchResultsCount.text = ""
         adapter.setSearchHighlight(null)
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(searchInput.windowToken, 0)
         setToolbarNavigationIcon(R.drawable.ic_back_arrow) // Restore back icon
