@@ -238,16 +238,25 @@ class ChatAdapter(
         }
 
         fun loadParticipantAvatars(participantsJson: String, chatType: String, currentUsername: String, avatarCache: Map<String, String>, onlineUsers: List<String>, chatAvatarUrl: String = "") {
-            participantAvatars.removeAllViews()
-            
             try {
                 val context = itemView.context
                 val currentTheme = ThemeStore.currentTheme()
                 val primaryColor = parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
 
                 if (chatType == "favorites") {
+                    if (participantAvatars.childCount == 1 && participantAvatars.getChildAt(0).tag == "favorites") {
+                        val avatar = participantAvatars.getChildAt(0) as ImageView
+                        avatar.imageTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+                        avatar.background = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(adjustAlpha(primaryColor, 0.15f))
+                        }
+                        return
+                    }
+                    participantAvatars.removeAllViews()
                     val avatarSize = 52.dpToPx()
                     val avatar = ImageView(context).apply {
+                        tag = "favorites"
                         layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
                         scaleType = ImageView.ScaleType.CENTER_INSIDE
                         setImageResource(R.drawable.ic_star)
@@ -262,6 +271,8 @@ class ChatAdapter(
                     participantAvatars.addView(avatar)
                     return
                 }
+
+                participantAvatars.removeAllViews()
 
                 if (participantsJson.isEmpty() && chatAvatarUrl.isEmpty()) return
                 

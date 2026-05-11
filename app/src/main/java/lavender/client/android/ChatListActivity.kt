@@ -34,8 +34,10 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.databinding.ActivityChatListBinding
+import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
+import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
@@ -512,7 +514,7 @@ class ChatListActivity : AppCompatActivity() {
                 id = "favorites",
                 name = getString(R.string.favorites),
                 type = "favorites",
-                lastMessageText = "",
+                lastMessageText = getString(R.string.favorites_description),
                 lastMessageTime = 0L
             ))
             chatAdapter.setChats(chats.toList())
@@ -522,20 +524,19 @@ class ChatListActivity : AppCompatActivity() {
             val userId = grpcClient.getUserId() ?: ""
             if (userId.isNotEmpty()) {
                 grpcClient.getMutedChats { mutedChatIds ->
-                    grpcClient.getFavorites(userId) { favorites ->
+                    grpcClient.getFavorites(userId) { _ ->
                         runOnUiThread {
                             binding.swipeRefreshLayout.isRefreshing = false
                             chats.clear()
 
                             // Always add Favorites at the top
-                            val lastFav = favorites.lastOrNull()
                             chats.add(
                                 ChatInfo(
                                     id = "favorites",
                                     name = getString(R.string.favorites),
                                     type = "favorites",
                                     lastMessageText = getString(R.string.favorites_description),
-                                    lastMessageTime = lastFav?.timestamp ?: 0L
+                                    lastMessageTime = 0L
                                 )
                             )
 
@@ -624,9 +625,10 @@ class ChatListActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val firstLoginKey = "first_login_$username"
         val registrationTime = prefs.getLong(firstLoginKey, 0)
+        val completed = prefs.getBoolean("onboarding_completed_$username", false)
 
-        // Only show tips within 24 hours of registration
-        if (registrationTime > 0) {
+        // Only show tips within 24 hours of registration and if not completed
+        if (!completed && registrationTime > 0) {
             val hoursSinceRegistration = (System.currentTimeMillis() - registrationTime) / (1000 * 60 * 60)
             if (hoursSinceRegistration < 24) {
                 showOnboardingTips()
@@ -669,9 +671,22 @@ class ChatListActivity : AppCompatActivity() {
                         // Dismiss FAB hint on click
                         binding.onboardingFabBubble.setOnClickListener {
                             binding.onboardingFabBubble.isVisible = false
+                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
                         }
+                    } else {
+                        prefs.edit { putBoolean("onboarding_completed_$username", true) }
                     }
                 }
+            } else if (!fabHintShown) {
+                binding.onboardingFabBubble.isVisible = true
+                prefs.edit { putBoolean("onboarding_fab_shown_$username", true) }
+
+                binding.onboardingFabBubble.setOnClickListener {
+                    binding.onboardingFabBubble.isVisible = false
+                    prefs.edit { putBoolean("onboarding_completed_$username", true) }
+                }
+            } else {
+                prefs.edit { putBoolean("onboarding_completed_$username", true) }
             }
         }
     }
@@ -718,18 +733,17 @@ class ChatListActivity : AppCompatActivity() {
                 grpcClient.getChats(username) { fetchedChats ->
                     if (currentUserId.isNotEmpty()) {
                         grpcClient.getMutedChats { mutedChatIds ->
-                            grpcClient.getFavorites(currentUserId) { favorites ->
+                            grpcClient.getFavorites(currentUserId) { _ ->
                                 val newFullList = mutableListOf<ChatInfo>()
                                 
                                 // Always add Favorites
-                                val lastFav = favorites.lastOrNull()
                                 newFullList.add(
                                     ChatInfo(
                                         id = "favorites",
                                         name = getString(R.string.favorites),
                                         type = "favorites",
                                         lastMessageText = getString(R.string.favorites_description),
-                                        lastMessageTime = lastFav?.timestamp ?: 0L
+                                        lastMessageTime = 0L
                                     )
                                 )
 
@@ -766,7 +780,7 @@ class ChatListActivity : AppCompatActivity() {
                                 name = getString(R.string.favorites),
                                 type = "favorites",
                                 lastMessageText = getString(R.string.favorites_description),
-                                lastMessageTime = 0L
+                                        lastMessageTime = 0L
                             )
                         )
                         newFullList.addAll(fetchedChats)
@@ -857,8 +871,9 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showUpdateDialog(current: String, latest: String) {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val dialogView = layoutInflater.inflate(R.layout.bottom_sheet_update, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheet, customTheme)
+        val dialogView = layoutInflater.inflate(R.layout.bottom_sheet_update, binding.root, false)
         
         val titleView = dialogView.findViewById<TextView>(R.id.updateTitle)
         val messageView = dialogView.findViewById<TextView>(R.id.updateMessage)
@@ -1040,8 +1055,9 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showSettingsSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_user_menu, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_user_menu, binding.root, false)
         val actionIds = listOf(
             R.id.actionShareHeader, R.id.actionEditProfile, R.id.actionThemes,
             R.id.actionContacts, R.id.actionAdditionalSettings,
@@ -1168,8 +1184,9 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showAdditionalSettingsSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_additional_settings, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_additional_settings, binding.root, false)
         val actionIds = listOf(
             R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionDeleteProfile, R.id.actionLogout
         )
@@ -1318,8 +1335,9 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showChatActionSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_chat_actions, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_chat_actions, binding.root, false)
         val actionIds = listOf(R.id.actionCreateChat, R.id.actionAddContact)
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
@@ -1364,6 +1382,8 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showCreateChatDialog() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheet, customTheme)
         @Suppress("DEPRECATION")
         bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
@@ -1375,8 +1395,6 @@ class ChatListActivity : AppCompatActivity() {
         val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
         val btnCreate = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCreate)
-
-        val customTheme = ThemeStore.currentTheme()
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()
@@ -1475,6 +1493,8 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showAddContactDialog() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheet, customTheme)
         @Suppress("DEPRECATION")
         bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
@@ -1484,8 +1504,6 @@ class ChatListActivity : AppCompatActivity() {
         val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
         val btnAdd = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
-
-        val customTheme = ThemeStore.currentTheme()
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()

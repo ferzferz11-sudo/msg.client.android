@@ -64,6 +64,7 @@ import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.data.ThemeMappers
+import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -773,9 +774,9 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun showAttachmentSheet() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
-
         val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheet, customTheme)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val textColor = customTheme.textPrimaryColor.toColorInt()
@@ -1057,15 +1058,14 @@ class NewChatActivity : AppCompatActivity() {
                 }
 
                 val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+                val theme = ThemeStore.currentTheme()
+                ThemeApplier.applyToDialog(bottomSheet, theme)
                 val dialogView = layoutInflater.inflate(R.layout.bottom_sheet_forward, null)
                 bottomSheet.setContentView(dialogView)
                 
                 val recyclerView = dialogView.findViewById<RecyclerView>(R.id.forwardChatsRecyclerView)
                 val titleView = dialogView.findViewById<TextView>(R.id.forwardTitle)
                 val dragHandle = dialogView.findViewById<View>(R.id.dragHandle)
-                
-                // Theme colors
-                val theme = ThemeStore.currentTheme()
                 try {
                     val surfaceColor = theme.surfaceColor.toColorInt()
                     val textPrimary = theme.textPrimaryColor.toColorInt()

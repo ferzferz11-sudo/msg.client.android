@@ -25,6 +25,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.databinding.ActivityContactsBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
+import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.UserAdapter
 import org.json.JSONArray
@@ -236,6 +237,8 @@ class ContactsActivity : AppCompatActivity() {
 
     private fun showAddContactDialog() {
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheet, customTheme)
         // Ensure the dialog adjusts when keyboard appears
         @Suppress("DEPRECATION")
         bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -246,8 +249,6 @@ class ContactsActivity : AppCompatActivity() {
         val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
         val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
         val btnAdd = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
-
-        val customTheme = ThemeStore.currentTheme()
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()

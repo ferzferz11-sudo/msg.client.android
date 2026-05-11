@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -178,6 +179,41 @@ object ThemeApplier {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)
             }
+        }
+
+        // Onboarding and Welcome
+        val textPrimary = parseSafeColor(theme.textPrimaryColor, if (isLightMode) Color.BLACK else Color.WHITE)
+        val textSecondary = parseSafeColor(theme.textSecondaryColor, if (isLightMode) Color.GRAY else Color.LTGRAY)
+        val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
+        val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, textPrimary)
+
+        activity.findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
+        activity.findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(textSecondary)
+        
+        listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble).forEach { id ->
+            activity.findViewById<View>(id)?.apply {
+                backgroundTintList = ColorStateList.valueOf(surfaceColor)
+            }
+        }
+        activity.findViewById<TextView>(R.id.onboardingProfileText)?.setTextColor(onSurfaceColor)
+        activity.findViewById<TextView>(R.id.onboardingFabText)?.setTextColor(onSurfaceColor)
+    }
+
+    fun applyToDialog(dialog: com.google.android.material.bottomsheet.BottomSheetDialog, theme: Theme) {
+        val window = dialog.window ?: return
+        val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
+        val isLightMode = ThemeUtils.isLight(bgColor)
+
+        // Ensure the navigation bar matches the theme
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = bgColor
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightNavigationBars = isLightMode
+        }
+
+        // The actual sheet background (Material 3 default has a surface color)
+        dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.apply {
+            backgroundTintList = ColorStateList.valueOf(bgColor)
         }
     }
 
