@@ -101,8 +101,9 @@ object RealGrpcClient {
                 builder.usePlaintext()
             }
             
-            builder.keepAliveTime(30, TimeUnit.SECONDS)
-            builder.keepAliveTimeout(10, TimeUnit.SECONDS)
+            // Adjust keep-alive to be more robust on mobile networks and match server params
+            builder.keepAliveTime(15, TimeUnit.SECONDS) // Send ping every 15s (server permits min 5s)
+            builder.keepAliveTimeout(10, TimeUnit.SECONDS) // Wait 10s for ping ack
             builder.keepAliveWithoutCalls(true)
 
             channel?.shutdownNow()
@@ -251,11 +252,12 @@ object RealGrpcClient {
                 if (value.text.startsWith("READ_ALL:")) {
                     val reader = value.text.removePrefix("READ_ALL:")
                     if (value.roomId == currentRoomId) {
-                        _messages.update { current -> 
+                        // Optimistically update memory state
+                        _messages.update { current ->
                             current.map { if (it.user != reader) it.copy(isRead = true) else it }
                         }
                         
-                        // Sync to local cache
+                        // Sync memory state to local cache
                         scope.launch(Dispatchers.IO) {
                             db()?.messageDao()?.markRoomAsRead(currentRoomId, reader)
                         }
@@ -295,12 +297,18 @@ object RealGrpcClient {
                 }
 
                 onMessageReceived(message)
+                var msgToCache = message
                 _messages.update { current ->
                     val hash = getMessageHash(message)
                     val list = current.toMutableList()
                     val index = list.indexOfFirst { getMessageHash(it) == hash }
                     if (index != -1) {
-                        list[index] = message
+                        // Merge local state with incoming from server
+                        // For example, if we marked it as read locally, don't revert it
+                        val existing = list[index]
+                        val merged = message.copy(isRead = existing.isRead || message.isRead)
+                        list[index] = merged
+                        msgToCache = merged
                         list
                     } else {
                         (list + message).sortedBy { it.timestamp }
@@ -309,7 +317,7 @@ object RealGrpcClient {
                 
                 // Save to cache
                 scope.launch(Dispatchers.IO) {
-                    db()?.messageDao()?.insertMessages(listOf(message.toEntity()))
+                    db()?.messageDao()?.insertMessages(listOf(msgToCache.toEntity()))
                 }
             }
 
@@ -451,11 +459,27 @@ object RealGrpcClient {
             override fun onMessage(message: GetHistoryResponseProto) {
                 val history = message.messages.map { ProtoUtils.createMessageFromProto(it) }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
-                _messages.update { current -> (current + history).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp } }
+
+                _messages.update { current ->
+                    // Merge incoming history with current state to preserve optimistic UI updates
+                    val currentMap = current.associateBy { getMessageHash(it) }
+                    val mergedHistory = history.map { serverMsg ->
+                        val localMsg = currentMap[getMessageHash(serverMsg)]
+                        if (localMsg != null) {
+                            serverMsg.copy(isRead = localMsg.isRead || serverMsg.isRead)
+                        } else {
+                            serverMsg
+                        }
+                    }
+                    (current + mergedHistory).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
+                }
                 
                 // Save to cache
                 scope.launch(Dispatchers.IO) {
-                    db()?.messageDao()?.insertMessages(history.map { it.toEntity() })
+                    val toCache = _messages.value.filter { it.roomId == roomId || (roomId.startsWith("favorites_") && it.roomId.startsWith("favorites_")) }
+                    if (toCache.isNotEmpty()) {
+                        db()?.messageDao()?.insertMessages(toCache.map { it.toEntity() })
+                    }
                 }
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { onCompletion() }
@@ -1297,7 +1321,14 @@ object RealGrpcClient {
                 val newReactions = msg.reactions.toMutableList()
                 newReactions.removeAll { it.user == username }
                 newReactions.add(Reaction(username, emoji))
-                list[index] = msg.copy(reactions = newReactions)
+                val newMsg = msg.copy(reactions = newReactions)
+                list[index] = newMsg
+
+                // Save optimistic update to local cache
+                scope.launch(Dispatchers.IO) {
+                    db()?.messageDao()?.insertMessages(listOf(newMsg.toEntity()))
+                }
+
                 list
             } else current
         }
@@ -2167,4 +2198,3 @@ class UpdateChatNameResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upd
         return UpdateChatNameResponseProto(ok, msg)
     }
 }
-
