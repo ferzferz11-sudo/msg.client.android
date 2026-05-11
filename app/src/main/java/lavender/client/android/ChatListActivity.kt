@@ -55,6 +55,7 @@ class ChatListActivity : AppCompatActivity() {
     private lateinit var username: String
     private lateinit var password: String
     private val chats = mutableListOf<ChatInfo>()
+    private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     private var syncJob: Job? = null
 
@@ -339,16 +340,22 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun performDirectDeletion(chatId: String) {
+        pendingDeletions.add(chatId)
         chatAdapter.setChatDeleting(chatId, true)
-        grpcClient.deleteChat(chatId) { _, _ ->
+        grpcClient.deleteChat(chatId) { success, _ ->
             runOnUiThread { 
-                chats.removeAll { it.id == chatId }
-                chatAdapter.setChats(chats.toList())
-                updateAppIconBadge(chats.sumOf { it.unreadCount })
-                
-                lifecycleScope.launch {
-                    delay(1000)
-                    loadChats() 
+                if (success) {
+                    chats.removeAll { it.id == chatId }
+                    chatAdapter.setChats(chats.toList())
+                    updateAppIconBadge(chats.sumOf { it.unreadCount })
+                    
+                    lifecycleScope.launch {
+                        delay(1000)
+                        loadChats() 
+                    }
+                } else {
+                    pendingDeletions.remove(chatId)
+                    chatAdapter.setChatDeleting(chatId, false)
                 }
             }
         }
@@ -405,13 +412,19 @@ class ChatListActivity : AppCompatActivity() {
                 
                 selected.forEach { chat ->
                     // Show immediate feedback
+                    pendingDeletions.add(chat.id)
                     chatAdapter.setChatDeleting(chat.id, true)
                     
-                    grpcClient.deleteChat(chat.id) { _, _ ->
+                    grpcClient.deleteChat(chat.id) { success, _ ->
                         runOnUiThread {
                             completedCount++
-                            // Optimistically remove from local list
-                            chats.removeAll { it.id == chat.id }
+                            if (success) {
+                                // Optimistically remove from local list
+                                chats.removeAll { it.id == chat.id }
+                            } else {
+                                pendingDeletions.remove(chat.id)
+                                chatAdapter.setChatDeleting(chat.id, false)
+                            }
                             
                             if (completedCount == totalToDelete) {
                                 chatAdapter.clearSelection()
@@ -540,9 +553,15 @@ class ChatListActivity : AppCompatActivity() {
                                 )
                             )
 
-                            val chatsWithMute = fetchedChats.map { chat ->
-                                chat.copy(isMuted = mutedChatIds.contains(chat.id))
-                            }
+                            val chatsWithMute = fetchedChats
+                                .filter { !pendingDeletions.contains(it.id) }
+                                .map { chat ->
+                                    chat.copy(isMuted = mutedChatIds.contains(chat.id))
+                                }
+
+                            // Clean up pendingDeletions that are no longer on server
+                            val serverIds = fetchedChats.map { it.id }.toSet()
+                            pendingDeletions.removeAll { !serverIds.contains(it) }
 
                             chats.addAll(chatsWithMute)
                             chatAdapter.setChats(chats.toList())
@@ -730,7 +749,7 @@ class ChatListActivity : AppCompatActivity() {
 
                 val currentUserId = GrpcClient.getUserId() ?: ""
                 
-                grpcClient.getChats(username) { fetchedChats ->
+                grpcClient.getChats(username, skipCache = true) { fetchedChats ->
                     if (currentUserId.isNotEmpty()) {
                         grpcClient.getMutedChats { mutedChatIds ->
                             grpcClient.getFavorites(currentUserId) { _ ->
@@ -747,9 +766,16 @@ class ChatListActivity : AppCompatActivity() {
                                     )
                                 )
 
-                                val chatsWithMute = fetchedChats.map { chat ->
-                                    chat.copy(isMuted = mutedChatIds.contains(chat.id))
-                                }
+                                val chatsWithMute = fetchedChats
+                                    .filter { !pendingDeletions.contains(it.id) }
+                                    .map { chat ->
+                                        chat.copy(isMuted = mutedChatIds.contains(chat.id))
+                                    }
+                                
+                                // Clean up pendingDeletions
+                                val serverIds = fetchedChats.map { it.id }.toSet()
+                                pendingDeletions.removeAll { !serverIds.contains(it) }
+                                
                                 newFullList.addAll(chatsWithMute)
 
                                 // Check for actual changes including Favorites and Mute status
@@ -783,7 +809,9 @@ class ChatListActivity : AppCompatActivity() {
                                         lastMessageTime = 0L
                             )
                         )
-                        newFullList.addAll(fetchedChats)
+                        
+                        val filteredFetched = fetchedChats.filter { !pendingDeletions.contains(it.id) }
+                        newFullList.addAll(filteredFetched)
 
                         if (newFullList.size != chats.size || newFullList.indices.any { i -> chats.getOrNull(i)?.id != newFullList[i].id }) {
                             runOnUiThread {

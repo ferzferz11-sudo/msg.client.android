@@ -37,6 +37,23 @@ interface ChatDao {
     @Query("DELETE FROM chats WHERE id = :chatId")
     suspend fun deleteChat(chatId: String)
 
+    @Query("DELETE FROM chats WHERE id NOT IN (:ids) AND id != 'favorites' AND type != 'favorites'")
+    suspend fun deleteExcept(ids: List<String>)
+
+    @Transaction
+    suspend fun syncChats(chats: List<ChatEntity>) {
+        val ids = chats.map { it.id }
+        if (ids.isEmpty()) {
+            clearAllExceptFavorites()
+        } else {
+            deleteExcept(ids)
+        }
+        insertChats(chats)
+    }
+
+    @Query("DELETE FROM chats WHERE id != 'favorites' AND type != 'favorites'")
+    suspend fun clearAllExceptFavorites()
+
     @Query("DELETE FROM chats")
     suspend fun clearAll()
 }

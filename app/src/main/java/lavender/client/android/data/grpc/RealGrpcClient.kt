@@ -509,12 +509,14 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun getChats(username: String, callback: (List<ChatInfo>) -> Unit) {
-        // Load from cache first
-        scope.launch(Dispatchers.IO) {
-            val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
-            if (cached.isNotEmpty()) {
-                withContext(Dispatchers.Main) { callback(cached) }
+    fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
+        // Load from cache first (if not skipped)
+        if (!skipCache) {
+            scope.launch(Dispatchers.IO) {
+                val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
+                if (cached.isNotEmpty()) {
+                    withContext(Dispatchers.Main) { callback(cached) }
+                }
             }
         }
 
@@ -537,9 +539,9 @@ object RealGrpcClient {
                              proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername)
                 }
                 
-                // Save to cache
+                // Save to cache and sync (delete local chats that are gone from server)
                 scope.launch(Dispatchers.IO) {
-                    db()?.chatDao()?.insertChats(chats.map { it.toEntity() })
+                    db()?.chatDao()?.syncChats(chats.map { it.toEntity() })
                 }
                 
                 callback(chats)

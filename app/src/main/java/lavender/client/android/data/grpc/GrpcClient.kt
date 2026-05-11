@@ -98,8 +98,8 @@ object GrpcClient {
         realGrpcClient.setRoomId(roomId)
     }
 
-    fun getChats(username: String, callback: (List<ChatInfo>) -> Unit) {
-        realGrpcClient.getChats(username, callback)
+    fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
+        realGrpcClient.getChats(username, skipCache, callback)
     }
 
     fun getChatListVersion(username: String, callback: (Long) -> Unit) {
