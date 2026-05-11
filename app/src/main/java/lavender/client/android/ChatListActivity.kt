@@ -85,8 +85,28 @@ class ChatListActivity : AppCompatActivity() {
         password = intent.getStringExtra("PASSWORD") ?: ""
         val serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: ""
 
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val previousUsername = prefs.getString("last_logged_username", "")
+        val isNewUser = previousUsername != username
+
+        if (isNewUser) {
+            // Clear cache for new user to prevent showing previous user's chats
+            clearLocalCacheSync()
+            // Save current username as last logged
+            prefs.edit { putString("last_logged_username", username) }
+            // Check if this is first time for this username
+            val firstLoginKey = "first_login_$username"
+            val isFirstLogin = !prefs.contains(firstLoginKey)
+            if (isFirstLogin) {
+                // Mark as registered with timestamp
+                prefs.edit { putLong(firstLoginKey, System.currentTimeMillis()) }
+                // Show registration success message
+                Toast.makeText(this, getString(R.string.registration_success), Toast.LENGTH_LONG).show()
+            }
+        }
+
         if (SessionManager.session.value.username != username) {
-            val savedUserId = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("user_id", "") ?: ""
+            val savedUserId = prefs.getString("user_id", "") ?: ""
             SessionManager.updateSession(username = username, password = password, userId = savedUserId)
         }
 
@@ -103,6 +123,9 @@ class ChatListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
         Log.d("ChatListActivity", "Logged in as $username")
+
+        // Show onboarding tips for new users (within 24 hours of registration)
+        setupOnboardingTips()
 
         chatAdapter = ChatAdapter(
             onChatClick = { chat ->
@@ -597,6 +620,69 @@ class ChatListActivity : AppCompatActivity() {
         binding.updateAvailableIcon.isVisible = isAvailable && !hasSelection && !isSearching
     }
 
+    private fun setupOnboardingTips() {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val firstLoginKey = "first_login_$username"
+        val registrationTime = prefs.getLong(firstLoginKey, 0)
+
+        // Only show tips within 24 hours of registration
+        if (registrationTime > 0) {
+            val hoursSinceRegistration = (System.currentTimeMillis() - registrationTime) / (1000 * 60 * 60)
+            if (hoursSinceRegistration < 24) {
+                showOnboardingTips()
+            } else {
+                hideOnboardingTips()
+            }
+        } else {
+            hideOnboardingTips()
+        }
+    }
+
+    private fun showOnboardingTips() {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val profileHintShown = prefs.getBoolean("onboarding_profile_shown_$username", false)
+        val fabHintShown = prefs.getBoolean("onboarding_fab_shown_$username", false)
+
+        // Show welcome container for new users
+        binding.welcomeContainer.isVisible = true
+        binding.chatsRecyclerView.isVisible = false
+
+        // Dismiss welcome when user clicks anywhere
+        binding.welcomeContainer.setOnClickListener {
+            binding.welcomeContainer.isVisible = false
+            binding.chatsRecyclerView.isVisible = true
+
+            // Show profile hint after welcome dismissed
+            if (!profileHintShown) {
+                binding.onboardingProfileBubble.isVisible = true
+                prefs.edit { putBoolean("onboarding_profile_shown_$username", true) }
+
+                // Dismiss profile hint on click
+                binding.onboardingProfileBubble.setOnClickListener {
+                    binding.onboardingProfileBubble.isVisible = false
+
+                    // Show FAB hint after profile hint dismissed
+                    if (!fabHintShown) {
+                        binding.onboardingFabBubble.isVisible = true
+                        prefs.edit { putBoolean("onboarding_fab_shown_$username", true) }
+
+                        // Dismiss FAB hint on click
+                        binding.onboardingFabBubble.setOnClickListener {
+                            binding.onboardingFabBubble.isVisible = false
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun hideOnboardingTips() {
+        binding.welcomeContainer.isVisible = false
+        binding.onboardingProfileBubble.isVisible = false
+        binding.onboardingFabBubble.isVisible = false
+        binding.chatsRecyclerView.isVisible = true
+    }
+
     private fun checkForUpdatesSilently() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -1085,13 +1171,14 @@ class ChatListActivity : AppCompatActivity() {
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_additional_settings, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
         val actionIds = listOf(
-            R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionLogout
+            R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionDeleteProfile, R.id.actionLogout
         )
 
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val txtColor = customTheme.textPrimaryColor.toColorInt()
             val primColor = customTheme.primaryColor.toColorInt()
+            val errorColor = android.graphics.Color.parseColor("#FF5252")
 
             sheetView.setBackgroundColor(bgColor)
             sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
@@ -1105,21 +1192,23 @@ class ChatListActivity : AppCompatActivity() {
             sheetView.findViewById<View>(R.id.actionAdmin).isVisible = isSuperAdmin
             sheetView.findViewById<View>(R.id.actionServers).isVisible = isSuperAdmin
 
-            fun applyThemeToMenu(view: View, isLogout: Boolean) {
+            fun applyThemeToMenu(view: View, isLogout: Boolean, isDelete: Boolean) {
                 if (view is TextView) {
-                    if (!isLogout) view.setTextColor(txtColor)
+                    if (isDelete || isLogout) view.setTextColor(errorColor)
+                    else view.setTextColor(txtColor)
                 } else if (view is ImageView) {
-                    if (!isLogout) view.imageTintList = ColorStateList.valueOf(primColor)
+                    if (isDelete || isLogout) view.imageTintList = ColorStateList.valueOf(errorColor)
+                    else view.imageTintList = ColorStateList.valueOf(primColor)
                 } else if (view is ViewGroup) {
                     for (i in 0 until view.childCount) {
-                        applyThemeToMenu(view.getChildAt(i), isLogout)
+                        applyThemeToMenu(view.getChildAt(i), isLogout, isDelete)
                     }
                 }
             }
 
             actionIds.forEach { id ->
                 sheetView.findViewById<View>(id)?.let { view ->
-                    applyThemeToMenu(view, id == R.id.actionLogout)
+                    applyThemeToMenu(view, id == R.id.actionLogout, id == R.id.actionDeleteProfile)
                 }
             }
         } catch (_: Exception) {
@@ -1151,6 +1240,10 @@ class ChatListActivity : AppCompatActivity() {
                 .setPositiveButton("OK", null)
                 .show()
         }
+        sheetView.findViewById<View>(R.id.actionDeleteProfile).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            confirmDeleteProfile()
+        }
         sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {
             bottomSheetDialog.dismiss()
             logout()
@@ -1158,6 +1251,45 @@ class ChatListActivity : AppCompatActivity() {
 
         bottomSheetDialog.setContentView(sheetView)
         bottomSheetDialog.show()
+    }
+
+    private fun confirmDeleteProfile() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.delete_profile)
+            .setMessage(R.string.delete_profile_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                deleteProfile()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun deleteProfile() {
+        grpcClient.deleteProfile(username) { success, _ ->
+            runOnUiThread {
+                if (success) {
+                    Toast.makeText(this, R.string.profile_deleted, Toast.LENGTH_LONG).show()
+                    logout()
+                } else {
+                    Toast.makeText(this, R.string.failed_to_delete_profile, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun clearLocalCacheSync() {
+        // Synchronous cache clearing for use during user switch in onCreate
+        try {
+            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this)
+            // Run DB operations on IO thread synchronously
+            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                db.messageDao().clearAll()
+                db.chatDao().clearAll()
+            }
+            Log.d("Cache", "Cleared database for new user")
+        } catch (e: Exception) {
+            Log.e("Cache", "Error clearing cache", e)
+        }
     }
 
     private fun clearLocalCache() {

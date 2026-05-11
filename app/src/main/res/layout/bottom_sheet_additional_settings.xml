@@ -84,6 +84,19 @@
             android:text="@string/servers" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/actionDeleteProfile"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_delete"
+            app:tint="#FF5252" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/delete_profile"
+            android:textColor="#FF5252" />
+    </LinearLayout>
+
     <View style="@style/MenuDividerStyle" />
 
     <LinearLayout
