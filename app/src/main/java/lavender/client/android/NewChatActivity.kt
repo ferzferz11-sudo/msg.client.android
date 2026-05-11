@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
@@ -62,7 +63,6 @@ import lavender.client.android.ui.audio.AudioRecordingView
 import lavender.client.android.ui.chat.ChatViewModel
 import lavender.client.android.ui.chat.ChatViewModelFactory
 import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -454,8 +454,12 @@ class NewChatActivity : AppCompatActivity() {
 
         if (isDirect || chatAvatarUrl.isNotEmpty()) {
             toolbarAvatar.isVisible = true; groupParticipantsContainer.isVisible = false
-            com.bumptech.glide.Glide.with(this).load(effectiveAvatarUrl ?: R.drawable.ic_default_avatar)
-                .placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
+            if (!effectiveAvatarUrl.isNullOrEmpty()) {
+                com.bumptech.glide.Glide.with(this).load(effectiveAvatarUrl)
+                    .placeholder(R.drawable.ic_default_avatar).circleCrop().into(toolbarAvatar)
+            } else {
+                ThemeUtils.applyDefaultAvatar(toolbarAvatar, ThemeStore.currentTheme())
+            }
         } else {
             toolbarAvatar.isVisible = false; groupParticipantsContainer.isVisible = true; setupGroupAvatars()
         }

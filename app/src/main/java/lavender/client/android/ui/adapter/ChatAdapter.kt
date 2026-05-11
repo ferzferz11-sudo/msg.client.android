@@ -284,6 +284,7 @@ class ChatAdapter(
                         avatar.imageTintList = null
                     } else {
                         ThemeUtils.applyDefaultAvatar(avatar, currentTheme)
+                        avatar.setPadding(4, 0, 4, 8) // Shift icon up by 4px
                     }
                     container.addView(avatar)
                     if (isOnline) {
@@ -320,6 +321,7 @@ class ChatAdapter(
                             avatar.imageTintList = null
                         } else {
                             ThemeUtils.applyDefaultAvatar(avatar, currentTheme)
+                            avatar.setPadding(4, 0, 4, 8) // Shift icon up by 4px
                         }
                         container.addView(avatar)
                         if (isOnline) {

@@ -22,7 +22,7 @@
         android:text="@string/start_chat"
         android:textSize="22sp"
         android:textStyle="bold"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="?attr/colorPrimary"
         android:layout_marginBottom="16dp" />
 
     <com.google.android.material.textfield.TextInputLayout
@@ -39,7 +39,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/enter_group_name"
-            android:inputType="textCapSentences" />
+            android:inputType="textCapSentences"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -57,7 +59,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/search"
-            android:inputType="text" />
+            android:inputType="text"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

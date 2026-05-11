@@ -202,7 +202,7 @@ class MessageAdapter(
                         .placeholder(R.drawable.ic_default_avatar).into(avatarImageView)
                     avatarImageView.imageTintList = null
                 } else {
-                    ThemeUtils.applyDefaultAvatar(avatarImageView, theme)
+                    ThemeUtils.applyDefaultAvatar(avatarImageView, theme, theme.incomingBubbleColor)
                 }
             } else {
                 avatarImageView.visibility = if (isOutgoing) View.GONE else View.INVISIBLE

@@ -34,28 +34,39 @@ object ThemeUtils {
         return darkness < 0.5
     }
 
-    fun applyDefaultAvatar(imageView: ImageView, theme: Theme) {
+    fun applyDefaultAvatar(imageView: ImageView, theme: Theme, bubbleColor: String? = null) {
         val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
         val isLight = isLight(bgColor)
         val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
         val surfaceContainer = parseSafeColor(theme.surfaceContainer, Color.LTGRAY)
+        // Use bubble color if provided (for chat avatars), otherwise use surfaceContainer
+        val avatarBgColor = if (!bubbleColor.isNullOrEmpty()) {
+            parseSafeColor(bubbleColor, surfaceContainer)
+        } else surfaceContainer
 
         if (isLight) {
             imageView.setImageResource(R.drawable.ic_default_avatar_white)
             // Use setColorFilter instead of imageTintList for CircleImageView compatibility
             imageView.setColorFilter(primaryColor)
 
-            // Add a subtle circular background to prevent blending with white backgrounds
+            // Add a circular background with primary color border
             val bg = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(surfaceContainer)
-                setStroke(1, adjustAlpha(primaryColor, 0.2f))
+                setColor(avatarBgColor)
+                setStroke(3, primaryColor)
             }
             imageView.background = bg
         } else {
             imageView.setImageResource(R.drawable.ic_default_avatar)
-            imageView.clearColorFilter()
-            imageView.background = null
+            // Apply primary color tint for dark themes too
+            imageView.setColorFilter(primaryColor)
+            // For dark themes, also add background using incoming bubble color
+            val bg = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(avatarBgColor)
+                setStroke(2, primaryColor)
+            }
+            imageView.background = bg
         }
     }
 }

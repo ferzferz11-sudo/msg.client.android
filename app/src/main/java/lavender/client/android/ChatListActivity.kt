@@ -1,5 +1,6 @@
 package lavender.client.android
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
@@ -703,10 +704,12 @@ class ChatListActivity : AppCompatActivity() {
         syncJob?.cancel()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onResume() {
         super.onResume()
         ThemeStore.refresh(this, username) // Force theme refresh from store when returning
         chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
+        chatAdapter.notifyDataSetChanged() // Force redraw all visible items with new theme
         updateUpdateIndicatorVisibility()
         
         // Ensure connection is active if we have a server address
@@ -1255,11 +1258,13 @@ class ChatListActivity : AppCompatActivity() {
             val boxColor = ColorStateList.valueOf(primColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
+            searchInputLayout.setStartIconTintList(boxColor)
             groupNameLayout.setBoxStrokeColorStateList(boxColor)
             groupNameLayout.defaultHintTextColor = boxColor
             
             searchEditText.setTextColor(txtColor)
             groupNameEditText.setTextColor(txtColor)
+            view.findViewById<TextView>(R.id.dialogTitle)?.setTextColor(primColor)
         } catch (_: Exception) {}
 
         val allContacts = mutableListOf<String>()
@@ -1362,7 +1367,9 @@ class ChatListActivity : AppCompatActivity() {
             val boxColor = ColorStateList.valueOf(primColor)
             searchInputLayout.setBoxStrokeColorStateList(boxColor)
             searchInputLayout.defaultHintTextColor = boxColor
+            searchInputLayout.setStartIconTintList(boxColor)
             searchEditText.setTextColor(txtColor)
+            view.findViewById<TextView>(R.id.dialogTitle)?.setTextColor(primColor)
         } catch (_: Exception) {}
 
         val allUsers = mutableListOf<String>()
