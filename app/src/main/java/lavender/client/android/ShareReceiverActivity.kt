@@ -50,6 +50,7 @@ class ShareReceiverActivity : AppCompatActivity() {
     private var sharedText: String = ""
     private var sharedUri: Uri? = null
     private var videoInfo: VideoInfo? = null
+    private var linkPreview: LinkPreview? = null
     private var selectedChat: ChatInfo? = null
     private var username: String = ""
 
@@ -58,6 +59,13 @@ class ShareReceiverActivity : AppCompatActivity() {
         val thumbnailUrl: String,
         val videoUrl: String,
         val platform: String
+    )
+
+    data class LinkPreview(
+        val url: String,
+        val title: String,
+        val description: String,
+        val imageUrl: String
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,6 +103,12 @@ class ShareReceiverActivity : AppCompatActivity() {
                 videoInfo = extractVideoInfo(sharedText)
                 if (videoInfo != null) {
                     showVideoPreview(videoInfo!!)
+                } else {
+                    // Check for regular URL to fetch link preview
+                    val url = extractUrl(sharedText)
+                    if (url != null) {
+                        fetchLinkPreview(url)
+                    }
                 }
             } else if (type != null && (type.startsWith("image/") || type.startsWith("video/"))) {
                 sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
@@ -107,6 +121,114 @@ class ShareReceiverActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun extractUrl(text: String): String? {
+        val words = text.split("\\s+".toRegex())
+        for (word in words) {
+            if (Patterns.WEB_URL.matcher(word).matches()) {
+                return word
+            }
+        }
+        return null
+    }
+
+    private fun fetchLinkPreview(url: String) {
+        lifecycleScope.launch {
+            val preview = withContext(Dispatchers.IO) {
+                try {
+                    val client = OkHttpClient()
+                    val request = Request.Builder()
+                        .url(url)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    val html = response.body.string()
+                    
+                    // Extract Open Graph metadata
+                    val title = extractMetaTag(html, "og:title") 
+                        ?: extractMetaTag(html, "title") 
+                        ?: url
+                    val description = extractMetaTag(html, "og:description") 
+                        ?: extractMetaTag(html, "description") 
+                        ?: ""
+                    val imageUrl = extractMetaTag(html, "og:image") ?: ""
+                    
+                    if (imageUrl.isNotEmpty()) {
+                        LinkPreview(url, title, description, resolveUrl(url, imageUrl))
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            }
+            
+            if (preview != null) {
+                linkPreview = preview
+                showLinkPreview(preview)
+            }
+        }
+    }
+
+    private fun extractMetaTag(html: String, property: String): String? {
+        // Try property first (Open Graph)
+        val propPattern = Pattern.compile("<meta[^>]+property=\"$property\"[^>]+content=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE)
+        val propMatcher = propPattern.matcher(html)
+        if (propMatcher.find()) {
+            return propMatcher.group(1)
+        }
+        
+        // Try name attribute
+        val namePattern = Pattern.compile("<meta[^>]+name=\"$property\"[^>]+content=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE)
+        val nameMatcher = namePattern.matcher(html)
+        if (nameMatcher.find()) {
+            return nameMatcher.group(1)
+        }
+        
+        // Try title tag for title
+        if (property == "title") {
+            val titlePattern = Pattern.compile("<title[^>]*>([^<]+)</title>", Pattern.CASE_INSENSITIVE)
+            val titleMatcher = titlePattern.matcher(html)
+            if (titleMatcher.find()) {
+                return titleMatcher.group(1)?.trim()
+            }
+        }
+        
+        return null
+    }
+
+    private fun resolveUrl(baseUrl: String, relativeUrl: String): String {
+        return when {
+            relativeUrl.startsWith("http") -> relativeUrl
+            relativeUrl.startsWith("//") -> "https:$relativeUrl"
+            relativeUrl.startsWith("/") -> {
+                val base = URL(baseUrl)
+                "${base.protocol}://${base.host}$relativeUrl"
+            }
+            else -> {
+                val base = URL(baseUrl)
+                val path = base.path.substringBeforeLast("/")
+                "${base.protocol}://${base.host}$path/$relativeUrl"
+            }
+        }
+    }
+
+    private fun showLinkPreview(preview: LinkPreview) {
+        binding.videoPreviewCard.isVisible = true
+        binding.videoTitleText.text = preview.title
+        binding.videoPlatformText.text = preview.url
+        binding.playIcon.isVisible = false
+        binding.watchVideoButton.isVisible = false
+        binding.downloadPreviewButton.isVisible = false
+        
+        Glide.with(this)
+            .load(preview.imageUrl)
+            .placeholder(R.drawable.ic_image_placeholder)
+            .error(R.drawable.ic_image_placeholder)
+            .into(binding.videoThumbnail)
     }
 
     private fun showFilePreview(uri: Uri, mimeType: String) {
@@ -311,6 +433,12 @@ class ShareReceiverActivity : AppCompatActivity() {
                 }
             }
 
+            // If we have link preview image and no other image, download and upload it
+            if (imageUrl.isEmpty() && linkPreview?.imageUrl?.isNotEmpty() == true) {
+                Toast.makeText(this@ShareReceiverActivity, R.string.loading, Toast.LENGTH_SHORT).show()
+                imageUrl = downloadAndUploadImage(linkPreview!!.imageUrl) ?: ""
+            }
+
             // Build message text with video link if present
             val messageText = if (videoInfo != null) {
                 if (sharedText.isNotEmpty()) {
@@ -414,6 +542,48 @@ class ShareReceiverActivity : AppCompatActivity() {
             }
         }
         return result
+    }
+
+    private suspend fun downloadAndUploadImage(imageUrl: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val client = OkHttpClient()
+            val request = Request.Builder().url(imageUrl).build()
+            val response = client.newCall(request).execute()
+            
+            if (!response.isSuccessful) return@withContext null
+            
+            val bytes = response.body.bytes()
+            val contentType = response.header("Content-Type") ?: "image/jpeg"
+            
+            val body = MultipartBody.Part.createFormData(
+                "image",
+                "preview.jpg",
+                bytes.toRequestBody(contentType.toMediaTypeOrNull())
+            )
+            
+            val uploadRequest = Request.Builder()
+                .url("http://159.195.38.145:8082/upload-image")
+                .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build())
+                .build()
+            
+            val uploadResponse = client.newCall(uploadRequest).execute()
+            val responseBody = uploadResponse.body.string()
+            
+            if (uploadResponse.isSuccessful && !responseBody.contains("404")) {
+                if (responseBody.contains("\"url\":")) {
+                    JSONObject(responseBody).getString("url")
+                } else if (responseBody.startsWith("http")) {
+                    responseBody
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     // Adapter for chat selection

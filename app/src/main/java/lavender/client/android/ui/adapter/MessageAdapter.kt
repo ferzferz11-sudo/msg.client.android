@@ -259,6 +259,7 @@ class MessageAdapter(
 
             // 3. Красим тексты
             messageText.setTextColor(pTextColor)
+            messageText.setLinkTextColor(pTextColor)
 
             // Для времени и статуса делаем чуть прозрачнее (80% непрозрачности), чтобы не сливалось
             val secondaryColorWithAlpha = (sTextColor and 0x00FFFFFF) or (0xCC shl 24)
@@ -410,6 +411,7 @@ class MessageAdapter(
                         messageText.text = message.text
                     }
                     messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                    messageText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
                     messageText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
                     messageText.isClickable = true
                     messageText.isFocusable = true

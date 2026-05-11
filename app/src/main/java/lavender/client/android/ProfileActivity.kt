@@ -196,6 +196,12 @@ class ProfileActivity : AppCompatActivity() {
         currentProfileAvatar = profileAvatar
         profileName.text = username
 
+        // Apply theme colors to profile text views
+        val currentTheme = ThemeStore.currentTheme()
+        val textPrimaryColor = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+        profileName.setTextColor(textPrimaryColor)
+        profileBio.setTextColor(textPrimaryColor)
+
         if (isGroup) {
             profileStatus.isVisible = false
             bioCard?.isVisible = false
@@ -379,8 +385,6 @@ class ProfileActivity : AppCompatActivity() {
                 }
             }
         }
-
-        val currentTheme = ThemeStore.currentTheme()
 
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
