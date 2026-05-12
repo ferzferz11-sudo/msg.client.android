@@ -19,6 +19,7 @@ data class MessageEntity(
     val read: Boolean,
     val avatarUrl: String,
     val imageUrl: String,
+    val imageUrlsJson: String = "[]", // Serialized List<String> for gallery support
     val edited: Boolean,
     val superAdmin: Boolean,
     val voiceUrl: String,
@@ -53,6 +54,8 @@ fun Message.toEntity(): MessageEntity {
         }
     }.toString()
 
+    val imageUrlsJson = org.json.JSONArray(imageUrls).toString()
+
     return MessageEntity(
         id = id,
         user = user,
@@ -65,6 +68,7 @@ fun Message.toEntity(): MessageEntity {
         read = isRead,
         avatarUrl = avatarUrl,
         imageUrl = imageUrl,
+        imageUrlsJson = imageUrlsJson,
         edited = edited,
         superAdmin = isSuperAdmin,
         voiceUrl = voiceUrl,
@@ -83,6 +87,14 @@ fun MessageEntity.toDomain(): Message {
         }
     } catch (_: Exception) {}
 
+    val imageUrls = mutableListOf<String>()
+    try {
+        val arr = org.json.JSONArray(imageUrlsJson)
+        for (i in 0 until arr.length()) {
+            imageUrls.add(arr.getString(i))
+        }
+    } catch (_: Exception) {}
+
     return Message(
         id = id,
         user = user,
@@ -96,6 +108,7 @@ fun MessageEntity.toDomain(): Message {
         isRead = read,
         avatarUrl = avatarUrl,
         imageUrl = imageUrl,
+        imageUrls = imageUrls,
         edited = edited,
         isSuperAdmin = superAdmin,
         voiceUrl = voiceUrl,

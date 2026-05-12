@@ -45,6 +45,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import de.hdodenhof.circleimageview.CircleImageView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -130,6 +131,8 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var attachButton: ImageButton
     private lateinit var audioButton: ImageButton
     private lateinit var uploadProgressBar: ProgressBar
+    private lateinit var uploadProgressContainer: com.google.android.material.card.MaterialCardView
+    private lateinit var uploadProgressText: TextView
     private lateinit var audioRecordingView: AudioRecordingView
 
     private lateinit var replyPreview: View
@@ -179,7 +182,22 @@ class NewChatActivity : AppCompatActivity() {
             result.data?.clipData?.let { clipData ->
                 for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
             }
-            if (uris.isNotEmpty()) uploadFiles(uris.toList(), isImage = false)
+            if (uris.isNotEmpty()) {
+                // Check if selected files are images
+                val imageUris = uris.filter { uri ->
+                    val mimeType = contentResolver.getType(uri)
+                    mimeType?.startsWith("image/") == true
+                }
+                
+                if (imageUris.isNotEmpty()) {
+                    // Use gallery logic for images
+                    selectedImageUris.addAll(imageUris)
+                    showImagePreview()
+                } else {
+                    // Use old logic for non-image files
+                    uploadFiles(uris.toList(), isImage = false)
+                }
+            }
         }
     }
 
@@ -335,7 +353,7 @@ class NewChatActivity : AppCompatActivity() {
         replyMessage = findViewById(R.id.replyMessage); deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent); messagesRecyclerView = findViewById(R.id.messagesRecyclerView); swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         messageInput = findViewById(R.id.messageInput); sendButton = findViewById(R.id.sendButton); attachButton = findViewById(R.id.attachButton); audioButton = findViewById(R.id.audioButton)
-        uploadProgressBar = findViewById(R.id.uploadProgressBar); audioRecordingView = findViewById(R.id.audioRecordingView); replyPreview = findViewById(R.id.replyPreview)
+        uploadProgressBar = findViewById(R.id.uploadProgressBar); uploadProgressContainer = findViewById(R.id.uploadProgressContainer); uploadProgressText = findViewById(R.id.uploadProgressText); audioRecordingView = findViewById(R.id.audioRecordingView); replyPreview = findViewById(R.id.replyPreview)
         replyUser = findViewById(R.id.replyUser); replyText = findViewById(R.id.replyText); cancelReply = findViewById(R.id.cancelReply); emojiButton = findViewById(R.id.emojiButton)
         mentionContainer = findViewById(R.id.mentionContainer); mentionList = findViewById(R.id.mentionList); mentionAdapter = MentionAdapter { insertMention(it) }
         mentionList.layoutManager = LinearLayoutManager(this); mentionList.adapter = mentionAdapter
@@ -415,6 +433,8 @@ class NewChatActivity : AppCompatActivity() {
         if (roomId.startsWith("favorites_")) {
             toolbarAvatar.isVisible = true; groupParticipantsContainer.isVisible = false
             toolbarAvatar.setImageResource(R.drawable.ic_star)
+            // Clear cache for favorites to avoid old format interference
+            clearCacheForCurrentRoom()
             val theme = ThemeStore.currentTheme()
             val primColor = theme.primaryColor.toColorInt()
             toolbarAvatar.imageTintList = ColorStateList.valueOf(theme.onPrimaryColor.toColorInt())
@@ -678,8 +698,9 @@ class NewChatActivity : AppCompatActivity() {
                 
                 val text = s?.toString() ?: ""
                 val hasText = text.trim().isNotEmpty()
-                sendButton.isVisible = hasText
-                audioButton.isVisible = !hasText
+                val hasImages = selectedImageUris.isNotEmpty()
+                sendButton.isVisible = hasText || hasImages
+                audioButton.isVisible = !hasText && !hasImages
 
                 if (roomId.startsWith("favorites_")) return
 
@@ -1184,6 +1205,18 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
+    
+    private fun clearCacheForCurrentRoom() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                db.messageDao().clearRoom(roomId)
+                android.util.Log.d("NewChatActivity", "Cleared cache for room: $roomId")
+            } catch (e: Exception) {
+                android.util.Log.e("NewChatActivity", "Failed to clear cache", e)
+            }
+        }
+    }
     private var typingJob: Job? = null
 
     private fun sendMessage(text: String, imageUrl: String) {
@@ -1223,6 +1256,14 @@ class NewChatActivity : AppCompatActivity() {
 
         // Delete draft after successful send
         grpcClient.deleteDraft(roomId)
+        
+        // Clear UI
+        messageInput.text.clear()
+        hideReplyPreview()
+        
+        // Reset send button visibility
+        sendButton.isVisible = false
+        audioButton.isVisible = true
     }
     private fun showReactionsDialog(message: Message) {
         val root = findViewById<ViewGroup>(android.R.id.content)
@@ -1436,14 +1477,25 @@ class NewChatActivity : AppCompatActivity() {
         }
         
         imagePreviewScroll.isVisible = selectedImageUris.isNotEmpty()
+        
+        // Update send button visibility based on images
+        val hasText = messageInput.text.trim().isNotEmpty()
+        val hasImages = selectedImageUris.isNotEmpty()
+        sendButton.isVisible = hasText || hasImages
+        audioButton.isVisible = !hasText && !hasImages
     }
     
     private fun sendSelectedImages() {
         val messageText = messageInput.text.toString().trim()
-        var isFirstImage = true
+        val uploadedUrls = mutableListOf<String>()
+        var uploadCount = 0
+        val totalImages = selectedImageUris.size
         
-        selectedImageUris.forEach { uri ->
-            uploadProgressBar.isVisible = true
+        uploadProgressContainer.isVisible = true
+        uploadProgressText.text = "Загрузка изображений... (0/$totalImages)"
+        uploadProgressBar.progress = 0
+        
+        selectedImageUris.forEachIndexed { index, uri ->
             val stream = contentResolver.openInputStream(uri)
             val bytes = stream?.readBytes()
             stream?.close()
@@ -1455,13 +1507,21 @@ class NewChatActivity : AppCompatActivity() {
                 
                 OkHttpClient().newCall(request).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
+                        runOnUiThread {
+                            uploadProgressContainer.isVisible = false
+                            uploadProgressBar.progress = 0
+                            showToast("Upload failed")
+                        }
                     }
                     
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val responseBody = response.body.string()
                         if (!response.isSuccessful || responseBody.contains("404")) {
-                            runOnUiThread { uploadProgressBar.isVisible = false; showToast("Server error: 404 or ${response.code}") }
+                            runOnUiThread {
+                                uploadProgressContainer.isVisible = false
+                                uploadProgressBar.progress = 0
+                                showToast("Server error: 404 or ${response.code}")
+                            }
                             return
                         }
                         
@@ -1469,33 +1529,96 @@ class NewChatActivity : AppCompatActivity() {
                             try { org.json.JSONObject(responseBody).getString("url") } catch (_: Exception) { "" }
                         } else if (responseBody.startsWith("http")) responseBody else ""
                         
+                        if (url.isNotEmpty() && !url.contains("404")) {
+                            uploadedUrls.add(url)
+                        }
+                        
+                        uploadCount++
+                        
+                        // Update progress bar and text
                         runOnUiThread {
-                            uploadProgressBar.isVisible = false
-                            if (url.isNotEmpty() && !url.contains("404")) {
-                                val textToSend = if (isFirstImage && messageText.isNotEmpty()) messageText else ""
-                                // Ensure connection is active before sending message
-                                if (grpcClient.connectionState.value) {
-                                    sendMessage(textToSend, url)
-                                    isFirstImage = false
-                                    hideReplyPreview()
+                            val progress = ((uploadCount.toFloat() / totalImages) * 100).toInt()
+                            uploadProgressBar.progress = progress
+                            uploadProgressText.text = "Загрузка изображений... ($uploadCount/$totalImages)"
+                        }
+                        
+                        // When all images are uploaded, send a single message with all URLs
+                        if (uploadCount == totalImages) {
+                            runOnUiThread {
+                                uploadProgressContainer.isVisible = false
+                                uploadProgressBar.progress = 0
+                                if (uploadedUrls.isNotEmpty()) {
+                                    // Send single message with all image URLs
+                                    sendGalleryMessage(messageText, uploadedUrls)
                                 } else {
-                                    android.util.Log.w("NewChatActivity", "Connection lost after image upload, will retry on reconnect")
-                                    // Message will be sent when connection is restored
-                                    sendMessage(textToSend, url)
+                                    showToast("Upload failed: Invalid server response")
                                 }
-                            } else showToast("Upload failed: Invalid server response")
+                            }
                         }
                     }
                 })
             }
         }
+    }
+    
+    private fun sendGalleryMessage(text: String, imageUrls: List<String>) {
+        // Clear typing status when sending message
+        typingJob?.cancel()
+        if (isTypingSignalSent) {
+            isTypingSignalSent = false
+            grpcClient.sendTypingSignal(username, false)
+        }
+
+        val effectiveText = when {
+            text.isEmpty() && imageUrls.isEmpty() -> "Message"
+            imageUrls.isNotEmpty() && text.isEmpty() -> "" // Empty text for image-only messages
+            else -> text
+        }
         
+        // Optimistic UI: Create and add message locally first
+        val msg = Message(
+            id = java.util.UUID.randomUUID().toString(), // Client-side UUID
+            user = username, 
+            text = effectiveText, 
+            timestamp = System.currentTimeMillis(), 
+            roomId = roomId, 
+            imageUrl = imageUrls.firstOrNull() ?: "", // Legacy field - use first image
+            imageUrls = imageUrls, // New field for gallery support
+            repliedToMessageId = replyingTo?.id ?: "", 
+            repliedToUser = replyingTo?.user ?: "", 
+            repliedToText = replyingTo?.text ?: ""
+        )
+        
+        grpcClient.addLocalMessage(msg)
+        grpcClient.sendMessage(msg)
+        
+        // For favorites, we might want to update UI immediately if stream is slow
+        if (roomId.startsWith("favorites_")) {
+            viewModel.markRead(username, this)
+        }
+
+        // Delete draft after successful send
+        grpcClient.deleteDraft(roomId)
+        
+        // Clear UI
         messageInput.text.clear()
         selectedImageUris.clear()
         imagePreviewScroll.isVisible = false
+        hideReplyPreview()
+        
+        // Reset send button visibility
+        sendButton.isVisible = false
+        audioButton.isVisible = true
     }
 
     private fun uploadFiles(uris: List<Uri>, isImage: Boolean) {
+        if (isImage && uris.size > 1) {
+            // Use gallery logic for multiple images
+            selectedImageUris.addAll(uris)
+            showImagePreview()
+            return
+        }
+        
         uris.forEach { uri ->
             uploadProgressBar.isVisible = true; val stream = contentResolver.openInputStream(uri); val bytes = stream?.readBytes(); stream?.close()
             if (bytes != null) {
@@ -1524,13 +1647,8 @@ class NewChatActivity : AppCompatActivity() {
                             uploadProgressBar.isVisible = false
                             if (url.isNotEmpty() && !url.contains("404")) {
                                 if (isImage) {
-                                    // Ensure connection is active before sending message
-                                    if (grpcClient.connectionState.value) {
-                                        sendMessage("", url)
-                                    } else {
-                                        android.util.Log.w("NewChatActivity", "Connection lost after image upload, will retry on reconnect")
-                                        sendMessage("", url)
-                                    }
+                                    // For single image, use gallery logic
+                                    sendGalleryMessage("", listOf(url))
                                 } else {
                                     if (grpcClient.connectionState.value) {
                                         sendMessage("File: $fileName\n$url", "")

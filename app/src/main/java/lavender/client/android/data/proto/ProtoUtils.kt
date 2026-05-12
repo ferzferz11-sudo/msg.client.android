@@ -34,6 +34,11 @@ object ProtoUtils {
             builder.addReaction(ReactionProto(user = reaction.user, emoji = reaction.emoji))
         }
 
+        // Add image URLs for gallery support
+        message.imageUrls.forEach { imageUrl ->
+            builder.addImageUrls(imageUrl)
+        }
+
         return builder.build()
     }
 
@@ -60,6 +65,9 @@ object ProtoUtils {
             }
         }
 
+        // Handle imageUrls for gallery support
+        val imageUrls = proto.imageUrls.toList()
+
         return Message(
             id = proto.id,
             user = proto.user,
@@ -73,6 +81,7 @@ object ProtoUtils {
             isRead = proto.isRead,
             avatarUrl = proto.avatarUrl,
             imageUrl = imageUrl,
+            imageUrls = imageUrls,
             edited = proto.edited,
             isSuperAdmin = proto.isSuperAdmin,
             voiceUrl = proto.voiceUrl,

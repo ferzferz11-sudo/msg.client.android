@@ -892,7 +892,7 @@ class ChatListActivity : AppCompatActivity() {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger")
-            putExtra(Intent.EXTRA_TEXT, getString(R.string.share_app))
+            putExtra(Intent.EXTRA_TEXT, "http://159.195.38.145:8081/lavender.apk")
         }
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
     }

@@ -334,8 +334,17 @@ object RealGrpcClient {
                 var msgToCache = message
                 _messages.update { current ->
                     val hash = getMessageHash(message)
+                    val dedupHash = getMessageHashForDedup(message)
                     val list = current.toMutableList()
-                    val index = list.indexOfFirst { getMessageHash(it) == hash }
+                    
+                    // First check by ID hash
+                    var index = list.indexOfFirst { getMessageHash(it) == hash }
+                    
+                    // If not found by ID, check by content hash (for deduplication of echoed messages)
+                    if (index == -1) {
+                        index = list.indexOfFirst { getMessageHashForDedup(it) == dedupHash }
+                    }
+                    
                     if (index != -1) {
                         // Merge local state with incoming from server
                         // For example, if we marked it as read locally, don't revert it
@@ -345,7 +354,14 @@ object RealGrpcClient {
                         msgToCache = merged
                         list
                     } else {
-                        (list + message).sortedBy { it.timestamp }
+                        // Insert new message in correct position without re-sorting entire list
+                        val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
+                        if (insertIndex == -1) {
+                            list.add(message) // Message is newest, add to end
+                        } else {
+                            list.add(insertIndex, message) // Insert at correct position
+                        }
+                        list
                     }
                 }
                 
@@ -361,11 +377,31 @@ object RealGrpcClient {
                 
                 val currentObserver = requestObserver
                 scope.launch {
-                    delay(5000)
-                    // Only reconnect if no new stream was started in the meantime
-                    if (requestObserver == null || requestObserver == currentObserver) {
-                        Log.d(TAG, "Attempting stream reconnect...")
-                        lastChatRequest?.let { startChat(it.u, it.p, it.j, it.r, it.cb) }
+                    var retryDelay = 1000L // Start with 1 second
+                    val maxRetryDelay = 30000L // Max 30 seconds
+                    var retryCount = 0
+                    val maxRetries = 10
+                    
+                    while (retryCount < maxRetries && (requestObserver == null || requestObserver == currentObserver)) {
+                        delay(retryDelay)
+                        Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
+                        
+                        lastChatRequest?.let { 
+                            startChat(it.u, it.p, it.j, it.r, it.cb) 
+                            // If connection was successful, break out of retry loop
+                            if (_connectionStatus.value == ConnectionStatus.READY) {
+                                Log.d(TAG, "Stream reconnection successful")
+                                return@launch
+                            }
+                        }
+                        
+                        retryCount++
+                        retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay) // Exponential backoff
+                    }
+                    
+                    if (retryCount >= maxRetries) {
+                        Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
+                        _error.value = "Connection failed. Please check your internet connection."
                     }
                 }
             }
@@ -399,15 +435,47 @@ object RealGrpcClient {
 
     fun addLocalMessage(message: Message) {
         _messages.update { current ->
-            (current + message).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
+            val list = current.toMutableList()
+            // Remove any existing message with same hash to avoid duplicates
+            val existingIndex = list.indexOfFirst { getMessageHash(it) == getMessageHash(message) }
+            if (existingIndex != -1) {
+                list.removeAt(existingIndex)
+            }
+            // Insert new message in correct position without re-sorting entire list
+            val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
+            if (insertIndex == -1) {
+                list.add(message) // Message is newest, add to end
+            } else {
+                list.add(insertIndex, message) // Insert at correct position
+            }
+            list
         }
     }
 
     fun sendMessage(message: Message) {
         val observer = requestObserver
         if (observer == null) {
-            Log.e(TAG, "Cannot send message: requestObserver is null")
-            _error.value = "Connection lost. Message not sent."
+            Log.e(TAG, "Cannot send message: requestObserver is null, queuing for retry")
+            _error.value = "Connection lost. Retrying..."
+            
+            // Queue message for retry when connection is restored
+            scope.launch {
+                var retryCount = 0
+                val maxRetries = 5
+                while (retryCount < maxRetries && requestObserver == null) {
+                    delay(2000) // Wait 2 seconds
+                    if (requestObserver != null) {
+                        sendMessage(message) // Retry sending
+                        return@launch
+                    }
+                    retryCount++
+                    Log.d(TAG, "Retry attempt $retryCount for message: ${message.text.take(20)}...")
+                }
+                if (retryCount >= maxRetries) {
+                    Log.e(TAG, "Failed to send message after $maxRetries attempts")
+                    _error.value = "Failed to send message after multiple attempts."
+                }
+            }
             return
         }
         
@@ -804,6 +872,8 @@ object RealGrpcClient {
     fun getCurrentUsername(): String? = currentUsername
 
     private fun getMessageHash(message: Message): String = if (message.id.isNotEmpty()) "id:${message.id}" else "${message.user}:${message.text}:${message.timestamp / 1000}"
+
+    private fun getMessageHashForDedup(message: Message): String = "${message.user}:${message.text}:${message.timestamp / 1000}"
 
     private fun loadDeletedMessages() {
         appContext?.getSharedPreferences("deleted_messages", Context.MODE_PRIVATE)?.let { prefs ->
@@ -1435,6 +1505,12 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.voiceUrl.isNotEmpty()) cos.writeString(17, value.voiceUrl)
         if (value.duration != 0) cos.writeInt32(18, value.duration)
         if (value.register) cos.writeBool(19, value.register)
+        // Serialize imageUrls for gallery support (field 20)
+        if (value.imageUrls.isNotEmpty()) {
+            for (imageUrl in value.imageUrls) {
+                cos.writeString(20, imageUrl)
+            }
+        }
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): MessageProto {
@@ -1466,6 +1542,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 10 -> builder.setRoomId(cis.readString()); 11 -> builder.setIsRead(cis.readBool()); 12 -> builder.setAvatarUrl(cis.readString()); 13 -> builder.setImageUrl(cis.readString())
                 14 -> builder.setEdited(cis.readBool()); 15 -> builder.setClientVersion(cis.readString()); 16 -> builder.setIsSuperAdmin(cis.readBool()); 17 -> builder.setVoiceUrl(cis.readString()); 18 -> builder.setDuration(cis.readInt32())
                 19 -> builder.setRegister(cis.readBool())
+                20 -> builder.addImageUrls(cis.readString()) // Parse imageUrls for gallery support
                 else -> cis.skipField(tag)
             }
         }

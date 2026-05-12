@@ -112,6 +112,24 @@
                     android:scaleType="centerCrop"
                     android:visibility="gone"
                     android:contentDescription="@string/app_name" />
+
+                <TextView
+                    android:id="@+id/galleryCountIndicator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="8dp"
+                    android:background="@drawable/bg_gallery_count"
+                    android:minWidth="24dp"
+                    android:minHeight="24dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:textColor="@android:color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="+3" />
             </FrameLayout>
 
             <lavender.client.android.ui.audio.AudioMessageView

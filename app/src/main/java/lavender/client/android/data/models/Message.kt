@@ -18,6 +18,7 @@ data class Message(
     val isRead: Boolean = false,
     val avatarUrl: String = "",
     val imageUrl: String = "",
+    val imageUrls: List<String> = emptyList(), // For gallery support
     val edited: Boolean = false,
     val isSuperAdmin: Boolean = false,
     val voiceUrl: String = "",

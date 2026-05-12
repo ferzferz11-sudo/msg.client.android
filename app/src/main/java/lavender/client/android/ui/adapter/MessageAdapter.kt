@@ -149,6 +149,7 @@ class MessageAdapter(
                 }
             }
         }
+        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.galleryCountIndicator)
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
@@ -426,23 +427,32 @@ class MessageAdapter(
                 }
             }
 
-            // Show image if imageUrl is not empty (but not if it's a file)
+            // Show image if imageUrl or imageUrls is not empty (but not if it's a file)
             val isFile = message.text.startsWith("File: ")
-            val shouldShowImage = message.imageUrl.isNotEmpty() && message.voiceUrl.isEmpty() && !isFile
+            val hasSingleImage = message.imageUrl.isNotEmpty()
+            val hasGallery = message.imageUrls.isNotEmpty()
+            val shouldShowImage = (hasSingleImage || hasGallery) && message.voiceUrl.isEmpty() && !isFile
             messageImageView.isVisible = shouldShowImage
             
             if (shouldShowImage) {
-                // Cancel any pending image load for this ViewHolder
-                if (currentImageUrl != message.imageUrl) {
-                    pendingImageCall?.cancel()
-                    pendingImageCall = null
-                    currentImageUrl = message.imageUrl
+                // Use first image from gallery or single image
+                val displayImageUrl = if (hasGallery) {
+                    message.imageUrls.first()
+                } else {
+                    message.imageUrl
                 }
                 
-                val imageUrl = if (message.imageUrl.startsWith("http")) {
-                    message.imageUrl.trim()
+                // Cancel any pending image load for this ViewHolder
+                if (currentImageUrl != displayImageUrl) {
+                    pendingImageCall?.cancel()
+                    pendingImageCall = null
+                    currentImageUrl = displayImageUrl
+                }
+                
+                val imageUrl = if (displayImageUrl.startsWith("http")) {
+                    displayImageUrl.trim()
                 } else {
-                    "http://159.195.38.145:8082" + message.imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                    "http://159.195.38.145:8082" + displayImageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
                 }
                 
                 Glide.with(context)
@@ -471,31 +481,45 @@ class MessageAdapter(
                     })
                     .into(messageImageView)
                 
+                // Show gallery count indicator if multiple images
+                if (hasGallery && message.imageUrls.size > 1) {
+                    galleryCountIndicator.isVisible = true
+                    galleryCountIndicator.text = "+${message.imageUrls.size - 1}"
+                    messageImageView.contentDescription = "Gallery with ${message.imageUrls.size} images"
+                } else {
+                    galleryCountIndicator.isVisible = false
+                }
+                
                 messageImageView.setOnClickListener {
                     if (isSelectionMode) {
                         onClick()
                     } else {
-                        val url = message.imageUrl.lowercase()
+                        val url = displayImageUrl.lowercase()
                         val isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mkv") || url.endsWith(".mov")
                         
                         if (isVideo) {
                             val intent = android.content.Intent(context, lavender.client.android.VideoPlayerActivity::class.java).apply {
-                                val absoluteUrl = if (message.imageUrl.startsWith("http")) {
-                                    message.imageUrl.trim()
+                                val absoluteUrl = if (displayImageUrl.startsWith("http")) {
+                                    displayImageUrl.trim()
                                 } else {
-                                    "http://159.195.38.145:8082" + message.imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                                    "http://159.195.38.145:8082" + displayImageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
                                 }
                                 putExtra("VIDEO_URL", absoluteUrl)
                                 putExtra("IS_LOCAL", false)
                             }
                             context.startActivity(intent)
                         } else {
-                            val allImageUrls = currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }
+                            // Use gallery images if available, otherwise fall back to single images from chat
+                            val allImageUrls = if (hasGallery) {
+                                message.imageUrls
+                            } else {
+                                currentList.filter { it.imageUrl.isNotEmpty() }.map { it.imageUrl }
+                            }
                             val intent = android.content.Intent(context, lavender.client.android.FullScreenImageActivity::class.java).apply {
-                                putExtra("image_url", message.imageUrl)
+                                putExtra("image_url", displayImageUrl)
                                 putExtra("chat_id", chatId)
                                 putStringArrayListExtra("image_urls", ArrayList(allImageUrls))
-                                putExtra("current_index", allImageUrls.indexOf(message.imageUrl))
+                                putExtra("current_index", allImageUrls.indexOf(displayImageUrl))
                             }
                             context.startActivity(intent)
                         }
@@ -512,6 +536,7 @@ class MessageAdapter(
             } else {
                 messageImageView.setOnClickListener(null)
                 messageImageView.setOnLongClickListener(null)
+                galleryCountIndicator.isVisible = false
             }
 
             reactionsText.isVisible = message.reactions.isNotEmpty()

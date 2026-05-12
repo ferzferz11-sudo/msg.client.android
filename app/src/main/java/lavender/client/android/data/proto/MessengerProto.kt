@@ -23,6 +23,7 @@ data class MessageProto(
     val isRead: Boolean = false,
     val avatarUrl: String = "",
     val imageUrl: String = "",
+    val imageUrls: List<String> = emptyList(),
     val edited: Boolean = false,
     val clientVersion: String = "",
     val isSuperAdmin: Boolean = false,
@@ -44,6 +45,7 @@ data class MessageProto(
         private var isRead: Boolean = false
         private var avatarUrl: String = ""
         private var imageUrl: String = ""
+        private var imageUrls = mutableListOf<String>()
         private var clientVersion: String = ""
         private var isSuperAdmin: Boolean = false
         private var voiceUrl: String = ""
@@ -147,8 +149,14 @@ data class MessageProto(
             return this
         }
 
+        @Suppress("unused")
+        fun addImageUrls(imageUrl: String): Builder {
+            this.imageUrls.add(imageUrl)
+            return this
+        }
+
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register)
         }
     }
     
