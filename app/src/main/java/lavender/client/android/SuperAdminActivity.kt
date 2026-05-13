@@ -27,6 +27,7 @@ import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
@@ -163,7 +164,9 @@ class SuperAdminActivity : AppCompatActivity() {
         val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.LTGRAY }
 
         if (currentMode == Mode.USERS) {
-            for (user in users) {
+            // Sort users by last seen time (most recent first)
+            val sortedUsers = users.sortedByDescending { it.lastSeenAt?.seconds ?: 0 }
+            for (user in sortedUsers) {
                 val userView = layoutInflater.inflate(R.layout.item_user_super_admin, usersContainer, false)
                 val card = userView as MaterialCardView
                 val nameText = userView.findViewById<TextView>(R.id.participantName)

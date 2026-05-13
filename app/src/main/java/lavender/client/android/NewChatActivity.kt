@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
@@ -1737,8 +1738,20 @@ class NewChatActivity : AppCompatActivity() {
                 val otherUser = getOtherParticipant()
                 val isOnline = onlineUsers.contains(otherUser)
 
-                toolbarSubtitle.text = if (isOnline) getString(R.string.connected) else getString(R.string.offline)
-                toolbarSubtitle.setTextColor(if (isOnline) colorGreen else colorOnPrimary)
+                if (isOnline) {
+                    toolbarSubtitle.text = getString(R.string.connected)
+                    toolbarSubtitle.setTextColor(colorGreen)
+                } else {
+                    // Try to get last seen time from allUsers
+                    val userInfo = grpcClient.allUsers.value.find { it.username == otherUser }
+                    val lastSeenText = if (userInfo?.lastSeenAt != null) {
+                        ProtoUtils.formatLastSeen(userInfo.lastSeenAt, this)
+                    } else {
+                        getString(R.string.offline)
+                    }
+                    toolbarSubtitle.text = lastSeenText
+                    toolbarSubtitle.setTextColor(colorOnPrimary)
+                }
             }
 
             // Приоритет 4: Групповой чат

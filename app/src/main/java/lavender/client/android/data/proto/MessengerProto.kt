@@ -612,7 +612,8 @@ data class UserInfoProto(
 )
 
 data class GetAllUsersResponseProto(
-    val users: List<UserInfoProto> = emptyList()
+    val users: List<UserInfoProto> = emptyList(),
+    val serverTime: Timestamp? = null
 )
 
 data class GetUserIdRequestProto(

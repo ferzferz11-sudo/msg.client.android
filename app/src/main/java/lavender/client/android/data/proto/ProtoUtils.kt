@@ -122,4 +122,27 @@ object ProtoUtils {
         }
         return Timestamp.newBuilder().setSeconds(seconds).setNanos(nanos).build()
     }
+
+    fun formatLastSeen(timestamp: Timestamp?, context: android.content.Context): String {
+        if (timestamp == null) return ""
+        
+        val lastSeenMillis = timestamp.seconds * 1000 + timestamp.nanos / 1000000
+        val now = System.currentTimeMillis()
+        val diffMillis = now - lastSeenMillis
+        val diffMinutes = diffMillis / (1000 * 60)
+        val diffHours = diffMillis / (1000 * 60 * 60)
+        val diffDays = diffMillis / (1000 * 60 * 60 * 24)
+        
+        return when {
+            diffMinutes < 1 -> "был(а) в сети только что"
+            diffMinutes < 60 -> "был(а) в сети $diffMinutes мин назад"
+            diffHours < 24 -> "был(а) в сети $diffHours ч назад"
+            diffDays < 7 -> "был(а) в сети $diffDays дн назад"
+            else -> {
+                val date = java.util.Date(lastSeenMillis)
+                val format = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("ru"))
+                "был(а) в сети ${format.format(date)}"
+            }
+        }
+    }
 }

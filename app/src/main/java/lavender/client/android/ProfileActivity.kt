@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
@@ -371,7 +372,14 @@ class ProfileActivity : AppCompatActivity() {
                             profileStatus.text = getString(R.string.connected)
                             profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
                         } else {
-                            profileStatus.text = profile.status.ifEmpty { getString(R.string.offline) }
+                            // Try to get last seen time from allUsers
+                            val userInfo = grpcClient.allUsers.value.find { it.username == username }
+                            val lastSeenText = if (userInfo?.lastSeenAt != null) {
+                                ProtoUtils.formatLastSeen(userInfo.lastSeenAt, this)
+                            } else {
+                                profile.status.ifEmpty { getString(R.string.offline) }
+                            }
+                            profileStatus.text = lastSeenText
                             val typedValue = android.util.TypedValue()
                             theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
                             profileStatus.setTextColor(typedValue.data)
