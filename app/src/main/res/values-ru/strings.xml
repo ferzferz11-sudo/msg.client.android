@@ -394,4 +394,19 @@
     <string name="download">Скачать</string>
     <string name="no_chats_available">Нет доступных чатов. Создайте чат сначала.</string>
     <string name="link_preview">Превью ссылки</string>
+
+    <!-- Biometric Login -->
+    <string name="biometric_login_title">Вход по отпечатку</string>
+    <string name="biometric_login_subtitle">Войдите, используя отпечаток пальца</string>
+    <string name="biometric_login_description">Приложите палец к сенсору для входа.</string>
+    <string name="biometric_login_negative_button">Использовать пароль</string>
+    <string name="biometric_login_error_sdk_not_supported">Биометрическая аутентификация не поддерживается на этом устройстве.</string>
+    <string name="biometric_login_error_no_hardware">На этом устройстве нет биометрических функций.</string>
+    <string name="biometric_login_error_no_fingerprints">Нет зарегистрированных отпечатков. Пожалуйста, добавьте хотя бы один отпечаток в настройках устройства.</string>
+    <string name="biometric_login_error_lockout">Слишком много попыток. Пожалуйста, повторите попытку позже.</string>
+    <string name="biometric_login_error_unknown">Произошла неизвестная ошибка.</string>
+    <string name="biometric_login_succeeded">Вход выполнен успешно</string>
+    <string name="biometric_login_failed">Ошибка входа</string>
+    <string name="biometric_settings_title">Вход по отпечатку</string>
+    <string name="biometric_settings_description">Требовать биометрию при входе</string>
 </resources>

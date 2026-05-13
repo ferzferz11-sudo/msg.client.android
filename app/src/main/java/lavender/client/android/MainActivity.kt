@@ -41,6 +41,11 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : AppCompatActivity() {
 
@@ -127,13 +132,85 @@ class MainActivity : AppCompatActivity() {
         val notificationRoomId = intent.getStringExtra("room_id")
 
         if (!skipAutoLogin && (savedUsername != null) && (savedPassword != null) && (savedServerAddress != null)) {
-            // Credentials exist - fetch ID if missing and navigate
-            processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            val isBiometricEnabled = prefs.getBoolean("biometric_enabled_$savedUsername", false)
+
+            if (isBiometricEnabled) {
+                // Ensure UI is ready before showing prompt
+                Handler(Looper.getMainLooper()).postDelayed({
+                    showBiometricPrompt(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+                }, 100)
+            } else {
+                processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+            }
             // Still check for updates in background
             checkForUpdates()
         } else {
             // No credentials or explicit skip
             checkForUpdates()
+        }
+    }
+
+    private fun showBiometricPrompt(
+        savedUsername: String,
+        savedPassword: String,
+        savedServerAddress: String,
+        notificationRoomId: String?,
+        fromNotification: Boolean
+    ) {
+        val biometricManager = BiometricManager.from(this)
+        when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> {
+                val executor = ContextCompat.getMainExecutor(this)
+                val biometricPrompt = BiometricPrompt(this, executor,
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                            super.onAuthenticationError(errorCode, errString)
+                            // If user cancels or error occurs, show normal login or just let them stay on main screen
+                            if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON || errorCode == BiometricPrompt.ERROR_USER_CANCELED) {
+                                // Do nothing, let them click Join manually
+                                showToast(getString(R.string.biometric_login_failed) + ": " + errString)
+                            } else {
+                                showToast("${getString(R.string.biometric_login_failed)}: $errString")
+                            }
+                        }
+
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+                        }
+
+                        override fun onAuthenticationFailed() {
+                            super.onAuthenticationFailed()
+                            // showToast is optional here as the OS usually provides its own feedback
+                        }
+                    })
+
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(getString(R.string.biometric_login_title))
+                    .setSubtitle(getString(R.string.biometric_login_subtitle))
+                    .setDescription(getString(R.string.biometric_login_description))
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build()
+
+                biometricPrompt.authenticate(promptInfo)
+            }
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
+                // Device doesn't have biometric hardware. Fall back to normal login.
+                processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+            }
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
+                // Biometric hardware is currently unavailable. Fall back to normal login.
+                processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+            }
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                // User hasn't enrolled any biometric credentials. Fall back to normal login.
+                processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+            }
+            else -> {
+                // Fall back to normal login
+                processLogin(savedUsername, savedPassword, savedServerAddress, notificationRoomId, fromNotification)
+            }
         }
     }
 

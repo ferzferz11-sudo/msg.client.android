@@ -24,24 +24,32 @@ class SplashActivity : AppCompatActivity() {
         // Проверяем, пришел ли ID комнаты из уведомления
         val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
 
-        val targetIntent = if (isLoggedIn) {
-            val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
+        val isBiometricEnabled = savedUsername != null && prefs.getBoolean("biometric_enabled_$savedUsername", false)
 
-            if (roomIdFromPush != null) {
-                // А. Если нажали на пуш — летим сразу в чат
-                Intent(this, NewChatActivity::class.java).apply {
-                    putExtra("USERNAME", savedUsername)
-                    putExtra("PASSWORD", savedPassword)
-                    putExtra("SERVER_ADDRESS", savedServerAddress)
-                    putExtra("ROOM_ID", roomIdFromPush)
-                    putExtra("from_notification", true)
+        val targetIntent = if (isLoggedIn) {
+            if (isBiometricEnabled) {
+                // Если биометрия включена, отправляем на MainActivity для проверки
+                Intent(this, MainActivity::class.java).apply {
+                    putExtra("from_notification", roomIdFromPush != null)
+                    putExtra("room_id", roomIdFromPush)
                 }
             } else {
-                // Б. Если просто открыли приложение — идем в СПИСОК ЧАТОВ
-                Intent(this, ChatListActivity::class.java).apply {
-                    putExtra("USERNAME", savedUsername)
-                    putExtra("PASSWORD", savedPassword)
-                    putExtra("SERVER_ADDRESS", savedServerAddress)
+                if (roomIdFromPush != null) {
+                    // А. Если нажали на пуш — летим сразу в чат
+                    Intent(this, NewChatActivity::class.java).apply {
+                        putExtra("USERNAME", savedUsername)
+                        putExtra("PASSWORD", savedPassword)
+                        putExtra("SERVER_ADDRESS", savedServerAddress)
+                        putExtra("ROOM_ID", roomIdFromPush)
+                        putExtra("from_notification", true)
+                    }
+                } else {
+                    // Б. Если просто открыли приложение — идем в СПИСОК ЧАТОВ
+                    Intent(this, ChatListActivity::class.java).apply {
+                        putExtra("USERNAME", savedUsername)
+                        putExtra("PASSWORD", savedPassword)
+                        putExtra("SERVER_ADDRESS", savedServerAddress)
+                    }
                 }
             }
         } else {

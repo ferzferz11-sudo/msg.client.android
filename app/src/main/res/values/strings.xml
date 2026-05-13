@@ -392,4 +392,19 @@
     <string name="download">Download</string>
     <string name="no_chats_available">No chats available. Create a chat first.</string>
     <string name="link_preview">Link preview</string>
+
+    <!-- Biometric Login -->
+    <string name="biometric_login_title">Biometric Login</string>
+    <string name="biometric_login_subtitle">Log in using your fingerprint</string>
+    <string name="biometric_login_description">Place your finger on the sensor to log in.</string>
+    <string name="biometric_login_negative_button">Use Password</string>
+    <string name="biometric_login_error_sdk_not_supported">Biometric authentication is not supported on this device.</string>
+    <string name="biometric_login_error_no_hardware">No biometric features are available on this device.</string>
+    <string name="biometric_login_error_no_fingerprints">No fingerprints are enrolled. Please add at least one fingerprint in your device settings.</string>
+    <string name="biometric_login_error_lockout">Too many attempts. Please try again later.</string>
+    <string name="biometric_login_error_unknown">An unknown error occurred.</string>
+    <string name="biometric_login_succeeded">Login successful</string>
+    <string name="biometric_login_failed">Login failed</string>
+    <string name="biometric_settings_title">Biometric Authentication</string>
+    <string name="biometric_settings_description">Require fingerprint to log in</string>
 </resources>
