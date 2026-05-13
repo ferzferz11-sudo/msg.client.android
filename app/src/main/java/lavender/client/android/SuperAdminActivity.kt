@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
@@ -43,6 +44,7 @@ class SuperAdminActivity : AppCompatActivity() {
     private lateinit var progressOverlay: View
     private lateinit var searchLayout: View
     private lateinit var searchEditText: EditText
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     
     private var allUsers = listOf<UserInfoProto>()
     private var allChats = listOf<ChatInfo>()
@@ -85,6 +87,11 @@ class SuperAdminActivity : AppCompatActivity() {
         progressOverlay = findViewById(R.id.progressOverlay)
         searchLayout = findViewById(R.id.searchLayout)
         searchEditText = findViewById(R.id.searchEditText)
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
+
+        swipeRefreshLayout.setOnRefreshListener {
+            loadData()
+        }
 
         searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -142,12 +149,13 @@ class SuperAdminActivity : AppCompatActivity() {
     }
 
     private fun loadData() {
-        progressOverlay.isVisible = true
+        swipeRefreshLayout.isRefreshing = true
         grpcClient.loadAllUsers { users ->
             allUsers = users
             grpcClient.getAllChats { chats ->
                 allChats = chats
                 runOnUiThread {
+                    swipeRefreshLayout.isRefreshing = false
                     progressOverlay.isVisible = false
                     updateUI(allUsers, allChats)
                 }
@@ -171,6 +179,7 @@ class SuperAdminActivity : AppCompatActivity() {
                 val card = userView as MaterialCardView
                 val nameText = userView.findViewById<TextView>(R.id.participantName)
                 val versionText = userView.findViewById<TextView>(R.id.clientVersion)
+                val timeAgoText = userView.findViewById<TextView>(R.id.timeAgoText)
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
                 
@@ -179,18 +188,15 @@ class SuperAdminActivity : AppCompatActivity() {
                 nameText.setTextColor(textPrimary)
                 
                 val versionStr = if (user.lastClientVersion.isNotEmpty()) "v${user.lastClientVersion}" else ""
-                val lastSeenStr = user.lastSeenAt?.let {
-                    val date = java.util.Date(it.seconds * 1000)
-                    val sdf = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
-                    sdf.format(date)
-                } ?: ""
-                
-                versionText.text = if (versionStr.isNotEmpty() && lastSeenStr.isNotEmpty()) {
-                    "$versionStr • $lastSeenStr"
-                } else {
-                    versionStr + lastSeenStr
-                }
+                versionText.text = versionStr
                 versionText.setTextColor(textSecondary)
+                
+                // Calculate and show time ago
+                val timeAgoStr = user.lastSeenAt?.let {
+                    getTimeAgo(it.seconds * 1000)
+                } ?: ""
+                timeAgoText.text = timeAgoStr
+                timeAgoText.setTextColor(textSecondary)
                 
                 val isOnline = grpcClient.users.value.contains(user.username)
                 statusDot.isVisible = true
@@ -321,4 +327,26 @@ class SuperAdminActivity : AppCompatActivity() {
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+    private fun getTimeAgo(timestampMillis: Long): String {
+        val now = System.currentTimeMillis()
+        val diff = now - timestampMillis
+
+        val seconds = diff / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
+
+        return when {
+            seconds < 60 -> getString(R.string.just_now)
+            minutes < 60 -> resources.getQuantityString(R.plurals.minutes_ago, minutes.toInt(), minutes.toInt())
+            hours < 24 -> resources.getQuantityString(R.plurals.hours_ago, hours.toInt(), hours.toInt())
+            days < 7 -> resources.getQuantityString(R.plurals.days_ago, days.toInt(), days.toInt())
+            else -> {
+                val date = java.util.Date(timestampMillis)
+                val sdf = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
+                sdf.format(date)
+            }
+        }
+    }
 }

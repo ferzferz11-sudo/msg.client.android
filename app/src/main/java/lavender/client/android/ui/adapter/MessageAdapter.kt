@@ -585,8 +585,23 @@ class MessageAdapter(
 
             val genericOnClick = { onClick() }
             val genericOnLongClick = { onLongClick(); true }
-            messageBubble.setOnClickListener { genericOnClick() }
-            messageBubble.setOnLongClickListener { genericOnLongClick() }
+            
+            // Make entire message container clickable in selection mode
+            if (isSelectionMode) {
+                messageContainer.setOnClickListener { genericOnClick() }
+                messageContainer.setOnLongClickListener { genericOnLongClick() }
+                messageContainer.isClickable = true
+                selectionIndicator.setOnClickListener { genericOnClick() }
+                selectionIndicator.isClickable = true
+            } else {
+                messageContainer.setOnClickListener(null)
+                messageContainer.setOnLongClickListener(null)
+                messageContainer.isClickable = false
+                selectionIndicator.setOnClickListener(null)
+                selectionIndicator.isClickable = false
+                messageBubble.setOnClickListener { genericOnClick() }
+                messageBubble.setOnLongClickListener { genericOnLongClick() }
+            }
             
             // reactionsText should also be clickable to show the dialog
             reactionsText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
