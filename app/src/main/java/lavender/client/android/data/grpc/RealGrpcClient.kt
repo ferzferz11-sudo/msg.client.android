@@ -350,7 +350,19 @@ object RealGrpcClient {
                         // For example, if we marked it as read locally, don't revert it
                         val existing = list[index]
                         val merged = message.copy(isRead = existing.isRead || message.isRead)
-                        list[index] = merged
+                        
+                        // If timestamp changed (e.g., due to server correction), reposition the message
+                        if (existing.timestamp != merged.timestamp) {
+                            list.removeAt(index)
+                            val insertIndex = list.indexOfFirst { it.timestamp > merged.timestamp }
+                            if (insertIndex == -1) {
+                                list.add(merged) // Message is newest, add to end
+                            } else {
+                                list.add(insertIndex, merged) // Insert at correct position
+                            }
+                        } else {
+                            list[index] = merged
+                        }
                         msgToCache = merged
                         list
                     } else {
@@ -439,14 +451,27 @@ object RealGrpcClient {
             // Remove any existing message with same hash to avoid duplicates
             val existingIndex = list.indexOfFirst { getMessageHash(it) == getMessageHash(message) }
             if (existingIndex != -1) {
-                list.removeAt(existingIndex)
-            }
-            // Insert new message in correct position without re-sorting entire list
-            val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
-            if (insertIndex == -1) {
-                list.add(message) // Message is newest, add to end
+                val existing = list[existingIndex]
+                // If timestamp changed (e.g., due to server correction), reposition the message
+                if (existing.timestamp != message.timestamp) {
+                    list.removeAt(existingIndex)
+                    val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
+                    if (insertIndex == -1) {
+                        list.add(message) // Message is newest, add to end
+                    } else {
+                        list.add(insertIndex, message) // Insert at correct position
+                    }
+                } else {
+                    list[existingIndex] = message
+                }
             } else {
-                list.add(insertIndex, message) // Insert at correct position
+                // Insert new message in correct position without re-sorting entire list
+                val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
+                if (insertIndex == -1) {
+                    list.add(message) // Message is newest, add to end
+                } else {
+                    list.add(insertIndex, message) // Insert at correct position
+                }
             }
             list
         }
