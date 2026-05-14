@@ -229,7 +229,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
-            loadChats()
+            loadChats(skipCache = true)
         }
 
         binding.toolbarUserAvatar.setOnClickListener {
@@ -541,10 +541,18 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadChats() {
-        Log.d("ChatListActivity", "Loading chats for $username")
+    private fun loadChats(skipCache: Boolean = false) {
+        Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
         binding.swipeRefreshLayout.isRefreshing = true
+
+        // Clear local cache on full refresh
+        if (skipCache) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                db.chatDao().clearAll()
+            }
+        }
 
         // 1. Immediately ensure Favorites is in the list to avoid flickering
         if (chats.none { it.id == "favorites" }) {
@@ -558,7 +566,7 @@ class ChatListActivity : AppCompatActivity() {
             chatAdapter.setChats(chats.toList())
         }
 
-        grpcClient.getChats(username) { fetchedChats ->
+        grpcClient.getChats(username, skipCache = skipCache) { fetchedChats ->
             val userId = grpcClient.getUserId() ?: ""
             if (userId.isNotEmpty()) {
                 grpcClient.getMutedChats { mutedChatIds ->
@@ -1595,6 +1603,8 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("IS_DIRECT", true); putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
                         }
                         startActivity(intent); bottomSheet.dismiss()
+                        // Refresh chat list to include the new chat
+                        loadChats(skipCache = true)
                     }
                 }
             } else {
@@ -1609,6 +1619,8 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("CREATOR", username)
                         }
                         startActivity(intent); bottomSheet.dismiss()
+                        // Refresh chat list to include the new chat
+                        loadChats(skipCache = true)
                     }
                 }
             }

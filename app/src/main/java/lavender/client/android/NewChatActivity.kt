@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
@@ -50,6 +51,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
@@ -364,6 +366,26 @@ class NewChatActivity : AppCompatActivity() {
         historyLoadingProgress = findViewById(R.id.historyLoadingProgress)
         audioButton.isVisible = true
         sendButton.isVisible = false
+
+        // Setup swipe-to-refresh for full chat reload
+        swipeRefreshLayout.setOnRefreshListener {
+            // Clear local cache and reload from server
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                    db.messageDao().clearRoom(roomId)
+                    Log.d("ChatRefresh", "Cleared local cache for room: $roomId")
+                } catch (e: Exception) {
+                    Log.e("ChatRefresh", "Error clearing cache", e)
+                }
+
+                withContext(Dispatchers.Main) {
+                    // Reload messages from server
+                    viewModel.switchRoom(roomId)
+                    swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
     }
 
     private fun loadDataFromIntent() {
@@ -630,6 +652,17 @@ class NewChatActivity : AppCompatActivity() {
                         if (adapter.currentList.isEmpty()) {
                             viewModel.loadHistory()
                         }
+                    }
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
                     }
                 }
             }

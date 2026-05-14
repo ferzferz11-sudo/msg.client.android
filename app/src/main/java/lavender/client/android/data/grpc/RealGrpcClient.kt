@@ -76,6 +76,9 @@ object RealGrpcClient {
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
 
+    private val _chatDeletedEvent = MutableStateFlow<String?>(null)
+    val chatDeletedEvent: StateFlow<String?> = _chatDeletedEvent
+
     var hasCheckedForUpdates = false
     var isAppInBackground = false
     private var appContext: Context? = null
@@ -274,14 +277,16 @@ object RealGrpcClient {
 
                 if (value.text.startsWith("DELETE_MESSAGE:")) {
                     val deletedId = value.text.removePrefix("DELETE_MESSAGE:")
+                    deletedMessageHashes.add("id:$deletedId")
+
+                    // Always remove from persistent cache regardless of current room
+                    scope.launch(Dispatchers.IO) {
+                        db()?.messageDao()?.deleteMessage(deletedId)
+                    }
+
+                    // If this is the current room, also remove from memory state
                     if (value.roomId.isEmpty() || value.roomId == currentRoomId) {
-                        deletedMessageHashes.add("id:$deletedId")
                         _messages.update { current -> current.filterNot { it.id == deletedId } }
-                        
-                        // Remove from persistent cache
-                        scope.launch(Dispatchers.IO) {
-                            db()?.messageDao()?.deleteMessage(deletedId)
-                        }
                     }
                     return
                 }
@@ -307,11 +312,19 @@ object RealGrpcClient {
                     // Clear local cache for this chat
                     scope.launch(Dispatchers.IO) {
                         db()?.messageDao()?.clearRoom(chatId)
+                        db()?.chatDao()?.deleteChat(chatId)
                         // If this is the current room, also clear memory state
                         if (chatId == currentRoomId) {
                             _messages.update { emptyList() }
                         }
                     }
+                    return
+                }
+
+                if (value.text.startsWith("CHAT_DELETED:")) {
+                    val chatId = value.text.removePrefix("CHAT_DELETED:")
+                    // Notify that the chat was deleted
+                    _chatDeletedEvent.value = chatId
                     return
                 }
 
