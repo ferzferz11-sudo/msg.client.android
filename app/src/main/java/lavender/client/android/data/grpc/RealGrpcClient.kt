@@ -293,10 +293,23 @@ object RealGrpcClient {
                         _messages.update { current ->
                             current.map { it.copy(isRead = true) }
                         }
-                        
+
                         // Sync memory state to local cache
                         scope.launch(Dispatchers.IO) {
                             db()?.messageDao()?.markRoomAsRead(currentRoomId)
+                        }
+                    }
+                    return
+                }
+
+                if (value.text.startsWith("CLEAR_CACHE:")) {
+                    val chatId = value.text.removePrefix("CLEAR_CACHE:")
+                    // Clear local cache for this chat
+                    scope.launch(Dispatchers.IO) {
+                        db()?.messageDao()?.clearRoom(chatId)
+                        // If this is the current room, also clear memory state
+                        if (chatId == currentRoomId) {
+                            _messages.update { emptyList() }
                         }
                     }
                     return

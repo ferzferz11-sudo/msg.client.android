@@ -17,7 +17,8 @@
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/custom_toolbar_height"
+        android:layout_height="wrap_content"
+        android:minHeight="@dimen/custom_toolbar_height"
         android:background="@drawable/toolbar_background"
         android:elevation="4dp"
         app:title="@string/notifications"
@@ -41,7 +42,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="16dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="30dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
