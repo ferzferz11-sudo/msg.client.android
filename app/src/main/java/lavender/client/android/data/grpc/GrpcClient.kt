@@ -188,8 +188,8 @@ object GrpcClient {
         realGrpcClient.addParticipants(chatId, usernames, callback)
     }
 
-    fun deleteChat(chatId: String, callback: (Boolean, String) -> Unit) {
-        realGrpcClient.deleteChat(chatId, callback)
+    fun deleteChat(chatId: String, requesterUsername: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteChat(chatId, requesterUsername, callback)
     }
 
     fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {

@@ -193,7 +193,8 @@ data class MarkReadResponseProto(
 
 // Delete Chat Request/Response
 data class DeleteChatRequestProto(
-    val chatId: String = ""
+    val chatId: String = "",
+    val requesterUsername: String = ""
 )
 
 data class DeleteChatResponseProto(

@@ -367,7 +367,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun performDirectDeletion(chatId: String) {
         pendingDeletions.add(chatId)
         chatAdapter.setChatDeleting(chatId, true)
-        grpcClient.deleteChat(chatId) { success, _ ->
+        grpcClient.deleteChat(chatId, username) { success, _ ->
             runOnUiThread { 
                 if (success) {
                     chats.removeAll { it.id == chatId }
@@ -440,7 +440,7 @@ class ChatListActivity : AppCompatActivity() {
                     pendingDeletions.add(chat.id)
                     chatAdapter.setChatDeleting(chat.id, true)
                     
-                    grpcClient.deleteChat(chat.id) { success, _ ->
+                    grpcClient.deleteChat(chat.id, username) { success, _ ->
                         runOnUiThread {
                             completedCount++
                             if (success) {

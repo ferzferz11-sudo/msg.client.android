@@ -1126,7 +1126,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun deleteChat(cid: String, cb: (Boolean, String) -> Unit) {
+    fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1149,7 +1149,7 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(DeleteChatRequestProto(cid))
+        call.sendMessage(DeleteChatRequestProto(cid, requesterUsername))
         call.halfClose()
         call.request(1)
     }
@@ -1901,6 +1901,7 @@ class DeleteChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteCh
     override fun stream(v: DeleteChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+        if (v.requesterUsername.isNotEmpty()) cos.writeString(2, v.requesterUsername)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): DeleteChatRequestProto = DeleteChatRequestProto()

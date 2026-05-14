@@ -40,6 +40,7 @@ import java.util.Locale
 class SuperAdminActivity : AppCompatActivity() {
 
     private val grpcClient = GrpcClient
+    private lateinit var username: String
     private lateinit var usersContainer: LinearLayout
     private lateinit var progressOverlay: View
     private lateinit var searchLayout: View
@@ -68,7 +69,7 @@ class SuperAdminActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_super_admin)
 
-        val username = SessionManager.session.value.username
+        username = SessionManager.session.value.username
         ThemeUi.bind(this, username)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
@@ -312,7 +313,7 @@ class SuperAdminActivity : AppCompatActivity() {
             .setMessage("${getString(R.string.delete_group)}: ${chat.name}?")
             .setPositiveButton(R.string.delete) { _, _ ->
                 progressOverlay.isVisible = true
-                grpcClient.deleteChat(chat.id) { success, message ->
+                grpcClient.deleteChat(chat.id, username) { success, message ->
                     runOnUiThread {
                         if (success) {
                             loadData()
