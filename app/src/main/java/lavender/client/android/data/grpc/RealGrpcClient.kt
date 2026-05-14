@@ -291,12 +291,12 @@ object RealGrpcClient {
                     if (value.roomId == currentRoomId) {
                         // Optimistically update memory state
                         _messages.update { current ->
-                            current.map { if (it.user != reader) it.copy(isRead = true) else it }
+                            current.map { it.copy(isRead = true) }
                         }
                         
                         // Sync memory state to local cache
                         scope.launch(Dispatchers.IO) {
-                            db()?.messageDao()?.markRoomAsRead(currentRoomId, reader)
+                            db()?.messageDao()?.markRoomAsRead(currentRoomId)
                         }
                     }
                     return
@@ -1110,7 +1110,17 @@ object RealGrpcClient {
             .build()
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
-            override fun onMessage(message: DeleteChatResponseProto) { cb(message.success, message.message) }
+            override fun onMessage(message: DeleteChatResponseProto) {
+                if (message.success) {
+                    // Clear local messages when chat is successfully deleted
+                    // Don't delete chat entry to avoid sync conflicts when chat is recreated with same ID
+                    scope.launch(Dispatchers.IO) {
+                        db()?.messageDao()?.clearRoom(cid)
+                        Log.d(TAG, "Cleared local messages for deleted chat: $cid")
+                    }
+                }
+                cb(message.success, message.message)
+            }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
         call.sendMessage(DeleteChatRequestProto(cid))
