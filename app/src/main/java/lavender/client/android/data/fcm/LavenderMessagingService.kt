@@ -95,7 +95,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         )
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_logo)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

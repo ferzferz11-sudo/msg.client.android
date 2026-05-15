@@ -351,6 +351,10 @@
     <string name="color_outgoing_bubble_desc">Your messages</string>
     <string name="color_incoming_bubble">Incoming Bubble</string>
     <string name="color_incoming_bubble_desc">Received messages</string>
+    <string name="color_outgoing_text">Outgoing Text</string>
+    <string name="color_outgoing_text_desc">Text in your messages</string>
+    <string name="color_incoming_text">Incoming Text</string>
+    <string name="color_incoming_text_desc">Text in received messages</string>
     <string name="edit_color">Edit Color</string>
     <string name="reset_color">Reset to Default</string>
     <string name="save_theme">Save Theme</string>

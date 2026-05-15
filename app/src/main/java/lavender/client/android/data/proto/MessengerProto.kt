@@ -492,7 +492,9 @@ data class CustomThemeProto(
     val onBottomPanelColor: String = "",
     val surfaceContainer: String = "",
     val outgoingBubbleColor: String = "",
-    val incomingBubbleColor: String = ""
+    val incomingBubbleColor: String = "",
+    val outgoingTextColor: String = "",
+    val incomingTextColor: String = ""
 )
 
 data class GetThemesRequestProto(

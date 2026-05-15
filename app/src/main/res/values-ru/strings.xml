@@ -353,6 +353,10 @@
     <string name="color_outgoing_bubble_desc">Ваши сообщения</string>
     <string name="color_incoming_bubble">Входящие</string>
     <string name="color_incoming_bubble_desc">Полученные сообщения</string>
+    <string name="color_outgoing_text">Текст исходящих</string>
+    <string name="color_outgoing_text_desc">Текст в ваших сообщениях</string>
+    <string name="color_incoming_text">Текст входящих</string>
+    <string name="color_incoming_text_desc">Текст в полученных сообщениях</string>
     <string name="edit_color">Изменить цвет</string>
     <string name="reset_color">Сбросить на стандартный</string>
     <string name="save_theme">Сохранить тему</string>

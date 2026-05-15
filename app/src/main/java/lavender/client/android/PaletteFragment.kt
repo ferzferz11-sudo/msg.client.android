@@ -63,7 +63,9 @@ class PaletteFragment : Fragment() {
             ColorItem(getString(R.string.color_bottom_panel), currentColors["bottomPanelColor"]!!, getString(R.string.color_bottom_panel_desc), "bottomPanelColor"),
             ColorItem(getString(R.string.color_on_bottom_panel), currentColors["onBottomPanelColor"]!!, getString(R.string.color_on_bottom_panel_desc), "onBottomPanelColor"),
             ColorItem(getString(R.string.color_outgoing_bubble), currentColors["outgoingBubbleColor"]!!, getString(R.string.color_outgoing_bubble_desc), "outgoingBubbleColor"),
-            ColorItem(getString(R.string.color_incoming_bubble), currentColors["incomingBubbleColor"]!!, getString(R.string.color_incoming_bubble_desc), "incomingBubbleColor")
+            ColorItem(getString(R.string.color_incoming_bubble), currentColors["incomingBubbleColor"]!!, getString(R.string.color_incoming_bubble_desc), "incomingBubbleColor"),
+            ColorItem(getString(R.string.color_outgoing_text), currentColors["outgoingTextColor"]!!, getString(R.string.color_outgoing_text_desc), "outgoingTextColor"),
+            ColorItem(getString(R.string.color_incoming_text), currentColors["incomingTextColor"]!!, getString(R.string.color_incoming_text_desc), "incomingTextColor")
         )
     }
 
@@ -210,7 +212,7 @@ class PaletteFragment : Fragment() {
             }
         }
 
-        override fun getItemCount(): Int = 12
+        override fun getItemCount(): Int = 14
 
         private fun isColorLight(color: Int): Boolean {
             val r = Color.red(color)

@@ -620,9 +620,9 @@ class MessageAdapter(
         val defaultText = Color.WHITE
         return MessageColors(
             incomingBg = parseSafeColor(theme.incomingBubbleColor, defaultIncomingBg),
-            incomingText = parseSafeColor(theme.primaryColor, defaultText),
+            incomingText = parseSafeColor(theme.incomingTextColor, defaultText),
             outgoingBg = parseSafeColor(theme.outgoingBubbleColor, defaultOutgoingBg),
-            outgoingText = parseSafeColor(theme.textPrimaryColor, defaultText)
+            outgoingText = parseSafeColor(theme.outgoingTextColor, defaultText)
         )
     }
 

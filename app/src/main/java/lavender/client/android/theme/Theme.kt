@@ -15,6 +15,8 @@ data class Theme(
     val onBottomPanelColor: String,
     val outgoingBubbleColor: String,
     val incomingBubbleColor: String,
+    val outgoingTextColor: String,
+    val incomingTextColor: String,
     val chatListBackgroundImageUrl: String,
     val chatBackgroundImageUrl: String,
 )

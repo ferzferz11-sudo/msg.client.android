@@ -1,6 +1,7 @@
 package lavender.client.android.theme.data
 
 import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.Theme
 
 object ThemeMappers {
@@ -22,6 +23,12 @@ object ThemeMappers {
             onBottomPanelColor = proto.onBottomPanelColor,
             outgoingBubbleColor = proto.outgoingBubbleColor,
             incomingBubbleColor = proto.incomingBubbleColor,
+            outgoingTextColor = proto.outgoingTextColor.ifEmpty { 
+                BuiltInThemes.getContrastTextColor(proto.outgoingBubbleColor) 
+            },
+            incomingTextColor = proto.incomingTextColor.ifEmpty { 
+                BuiltInThemes.getContrastTextColor(proto.incomingBubbleColor) 
+            },
             chatListBackgroundImageUrl = chatListBg,
             chatBackgroundImageUrl = proto.chatBackgroundImageUrl,
         )
@@ -45,6 +52,8 @@ object ThemeMappers {
             surfaceContainer = theme.surfaceContainer,
             outgoingBubbleColor = theme.outgoingBubbleColor,
             incomingBubbleColor = theme.incomingBubbleColor,
+            outgoingTextColor = theme.outgoingTextColor,
+            incomingTextColor = theme.incomingTextColor,
         )
 }
 

@@ -124,6 +124,8 @@ class ThemePaletteActivity : AppCompatActivity(),
                 onBottomPanelColor = intent.getStringExtra("on_bottom_panel_color") ?: "#967BB6",
                 outgoingBubbleColor = intent.getStringExtra("outgoing_bubble_color") ?: "#2A2C6D",
                 incomingBubbleColor = intent.getStringExtra("incoming_bubble_color") ?: "#16173A",
+                outgoingTextColor = intent.getStringExtra("outgoing_text_color") ?: "",
+                incomingTextColor = intent.getStringExtra("incoming_text_color") ?: "",
                 chatListBackgroundImageUrl = intent.getStringExtra("chat_list_background") ?: "",
                 chatBackgroundImageUrl = intent.getStringExtra("chat_background") ?: ""
             )
@@ -209,6 +211,8 @@ class ThemePaletteActivity : AppCompatActivity(),
         defaultColors["onBottomPanelColor"] = theme.onBottomPanelColor
         defaultColors["outgoingBubbleColor"] = theme.outgoingBubbleColor
         defaultColors["incomingBubbleColor"] = theme.incomingBubbleColor
+        defaultColors["outgoingTextColor"] = theme.outgoingTextColor
+        defaultColors["incomingTextColor"] = theme.incomingTextColor
     }
 
     override fun onColorChanged(fieldName: String, color: String) {
@@ -249,6 +253,8 @@ class ThemePaletteActivity : AppCompatActivity(),
             onBottomPanelColor = currentColors["onBottomPanelColor"]!!,
             outgoingBubbleColor = currentColors["outgoingBubbleColor"]!!,
             incomingBubbleColor = currentColors["incomingBubbleColor"]!!,
+            outgoingTextColor = currentColors["outgoingTextColor"]!!,
+            incomingTextColor = currentColors["incomingTextColor"]!!,
             chatListBackgroundImageUrl = chatListBackgroundUri?.toString() ?: "",
             chatBackgroundImageUrl = chatBackgroundUri?.toString() ?: ""
         )
@@ -410,6 +416,8 @@ class ThemePaletteActivity : AppCompatActivity(),
             onBottomPanelColor = currentColors["onBottomPanelColor"]!!,
             outgoingBubbleColor = currentColors["outgoingBubbleColor"]!!,
             incomingBubbleColor = currentColors["incomingBubbleColor"]!!,
+            outgoingTextColor = currentColors["outgoingTextColor"]!!,
+            incomingTextColor = currentColors["incomingTextColor"]!!,
             chatListBackgroundImageUrl = listBgUrl,
             chatBackgroundImageUrl = chatBgUrl
         )

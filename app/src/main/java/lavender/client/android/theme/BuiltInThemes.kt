@@ -1,8 +1,26 @@
 package lavender.client.android.theme
 
+import androidx.core.graphics.toColorInt
+
 object BuiltInThemes {
     private const val LAVENDER_PRIMARY = "#967BB6"
     private const val GOLD_PRIMARY = "#85754E"
+
+    /**
+     * Calculate a contrasting text color for a given background color
+     */
+    fun getContrastTextColor(backgroundColor: String): String {
+        return try {
+            val color = backgroundColor.toColorInt()
+            val luminance = (0.299 * android.graphics.Color.red(color) +
+                           0.587 * android.graphics.Color.green(color) +
+                           0.114 * android.graphics.Color.blue(color)) / 255
+            // Return white for dark backgrounds, black for light backgrounds
+            if (luminance < 0.5) "#FFFFFF" else "#000000"
+        } catch (e: Exception) {
+            "#FFFFFF"
+        }
+    }
 
     /**
      * Базовый шаблон для всех светлых тем
@@ -22,6 +40,8 @@ object BuiltInThemes {
         onBottomPanelColor = GOLD_PRIMARY,
         outgoingBubbleColor = GOLD_PRIMARY,
         incomingBubbleColor = "#E0E0E0",
+        outgoingTextColor = getContrastTextColor(GOLD_PRIMARY),
+        incomingTextColor = getContrastTextColor("#E0E0E0"),
         chatListBackgroundImageUrl = "",
         chatBackgroundImageUrl = "",
     )
@@ -44,6 +64,8 @@ object BuiltInThemes {
         onBottomPanelColor = LAVENDER_PRIMARY,
         outgoingBubbleColor = "#2A2C6D",
         incomingBubbleColor = "#16173A",
+        outgoingTextColor = getContrastTextColor("#2A2C6D"),
+        incomingTextColor = getContrastTextColor("#16173A"),
         chatListBackgroundImageUrl = "",
         chatBackgroundImageUrl = "",
     )
@@ -70,6 +92,8 @@ object BuiltInThemes {
         onBottomPanelColor = "#5F9EA0",
         outgoingBubbleColor = "#3D6B6C",
         incomingBubbleColor = "#363636",
+        outgoingTextColor = getContrastTextColor("#3D6B6C"),
+        incomingTextColor = getContrastTextColor("#363636"),
         chatListBackgroundImageUrl = "",
         chatBackgroundImageUrl = "",
     )
@@ -90,6 +114,8 @@ object BuiltInThemes {
             name = "Графит и золото",
             outgoingBubbleColor = GOLD_PRIMARY,
             incomingBubbleColor = "#E0E0E0",
+            outgoingTextColor = getContrastTextColor(GOLD_PRIMARY),
+            incomingTextColor = getContrastTextColor("#E0E0E0"),
         ),
         BASE_LIGHT.copy(
             id = "builtin_blue",
@@ -104,6 +130,8 @@ object BuiltInThemes {
             onBottomPanelColor = "#1565C0",
             outgoingBubbleColor = "#007AFF",
             incomingBubbleColor = "#D1E9FF",
+            outgoingTextColor = getContrastTextColor("#007AFF"),
+            incomingTextColor = getContrastTextColor("#D1E9FF"),
         ),
         BASE_LIGHT.copy(
             id = "builtin_green",
@@ -117,6 +145,8 @@ object BuiltInThemes {
             onBottomPanelColor = "#2E7D32",
             outgoingBubbleColor = "#2E7D32",
             incomingBubbleColor = "#E1EDD1",
+            outgoingTextColor = getContrastTextColor("#2E7D32"),
+            incomingTextColor = getContrastTextColor("#E1EDD1"),
         ),
         BASE_LIGHT.copy(
             id = "builtin_mint",
@@ -130,6 +160,8 @@ object BuiltInThemes {
             onBottomPanelColor = "#00BFA5",
             outgoingBubbleColor = "#00BFA5",
             incomingBubbleColor = "#D7F2ED",
+            outgoingTextColor = getContrastTextColor("#00BFA5"),
+            incomingTextColor = getContrastTextColor("#D7F2ED"),
         ),
     )
 
