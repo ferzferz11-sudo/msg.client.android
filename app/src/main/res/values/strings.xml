@@ -411,6 +411,9 @@
     <string name="biometric_login_failed">Login failed</string>
     <string name="biometric_settings_title">Biometric Authentication</string>
     <string name="biometric_settings_description">Require fingerprint to log in</string>
+    <string name="biometric_login_enabled">Biometric login enabled</string>
+    <string name="biometric_login_disabled">Biometric login disabled</string>
+    <string name="security">Security</string>
     <string name="just_now">just now</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d minute ago</item>

@@ -1281,50 +1281,8 @@ class ChatListActivity : AppCompatActivity() {
         ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_additional_settings, binding.root, false)
         val actionIds = listOf(
-            R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionDeleteProfile, R.id.actionLogout
+            R.id.actionSecurity, R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionDeleteProfile, R.id.actionLogout
         )
-
-        val switchBiometric = sheetView.findViewById<MaterialSwitch>(R.id.switchBiometric)
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        // Биометрия по умолчанию ВЫКЛЮЧЕНА
-        switchBiometric.isChecked = prefs.getBoolean("biometric_enabled_$username", false)
-
-        val biometricManager = androidx.biometric.BiometricManager.from(this)
-        val canAuthenticate = biometricManager.canAuthenticate(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-
-        if (canAuthenticate != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-            // Отключаем тумблер если биометрия недоступна
-            switchBiometric.isEnabled = false
-
-            // Если была включена, но стала недоступна (например, удалили все отпечатки) - выключаем
-            if (switchBiometric.isChecked) {
-                switchBiometric.isChecked = false
-                prefs.edit { putBoolean("biometric_enabled_$username", false) }
-            }
-
-            // По клику на весь пункт показываем почему недоступно
-            sheetView.findViewById<View>(R.id.actionBiometric).setOnClickListener {
-                val reason = when (canAuthenticate) {
-                    androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> getString(R.string.biometric_login_error_no_hardware)
-                    androidx.biometric.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> getString(R.string.biometric_login_error_unknown)
-                    androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> getString(R.string.biometric_login_error_no_fingerprints)
-                    androidx.biometric.BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> "Требуется обновление безопасности"
-                    androidx.biometric.BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED -> getString(R.string.biometric_login_error_sdk_not_supported)
-                    androidx.biometric.BiometricManager.BIOMETRIC_STATUS_UNKNOWN -> getString(R.string.biometric_login_error_unknown)
-                    else -> getString(R.string.biometric_login_error_unknown)
-                }
-                Toast.makeText(this, reason, Toast.LENGTH_LONG).show()
-            }
-        } else {
-            // Биометрия доступна, разрешаем переключать
-            sheetView.findViewById<View>(R.id.actionBiometric).setOnClickListener {
-                switchBiometric.isChecked = !switchBiometric.isChecked
-            }
-
-            switchBiometric.setOnCheckedChangeListener { _, isChecked ->
-                prefs.edit { putBoolean("biometric_enabled_$username", isChecked) }
-            }
-        }
 
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
@@ -1336,24 +1294,6 @@ class ChatListActivity : AppCompatActivity() {
             sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
 
             sheetView.findViewById<TextView>(R.id.settingsTitle)?.setTextColor(txtColor)
-
-            // Применяем стили для секции биометрии
-            val actionBiometric = sheetView.findViewById<View>(R.id.actionBiometric)
-            val biometricTitle = sheetView.findViewById<TextView>(R.id.biometricTitle)
-            val biometricDesc = sheetView.findViewById<TextView>(R.id.biometricDesc)
-            val biometricIcon = sheetView.findViewById<ImageView>(R.id.biometricIcon)
-
-            if (canAuthenticate == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                biometricTitle?.setTextColor(txtColor)
-                biometricIcon?.imageTintList = ColorStateList.valueOf(primColor)
-            } else {
-                // Если заблокировано, делаем текст и иконку полупрозрачными
-                val disabledColor = ThemeUtils.adjustAlpha(txtColor, 0.5f)
-                val disabledIconColor = ThemeUtils.adjustAlpha(primColor, 0.5f)
-                biometricTitle?.setTextColor(disabledColor)
-                biometricDesc?.setTextColor(disabledColor)
-                biometricIcon?.imageTintList = ColorStateList.valueOf(disabledIconColor)
-            }
 
             // Show Admin Panel and Servers only for super admins
             val isSuperAdmin = SessionManager.session.value.isSuperAdmin
@@ -1380,14 +1320,16 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
 
-            // Раскрашиваем тумблер
-            switchBiometric.thumbTintList = ColorStateList.valueOf(primColor)
-            switchBiometric.trackTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primColor, 0.5f))
-
         } catch (_: Exception) {
             Log.e("Theme", "Error tinting additional settings sheet")
         }
 
+        sheetView.findViewById<View>(R.id.actionSecurity).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            startActivity(Intent(this, SecurityActivity::class.java).apply {
+                putExtra("username", username)
+            })
+        }
         sheetView.findViewById<View>(R.id.actionNotifications).setOnClickListener {
             bottomSheetDialog.dismiss()
             startActivity(Intent(this, NotificationActivity::class.java))

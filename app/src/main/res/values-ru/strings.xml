@@ -413,6 +413,9 @@
     <string name="biometric_login_failed">Ошибка входа</string>
     <string name="biometric_settings_title">Вход по отпечатку</string>
     <string name="biometric_settings_description">Требовать биометрию при входе</string>
+    <string name="biometric_login_enabled">Вход по отпечатку включен</string>
+    <string name="biometric_login_disabled">Вход по отпечатку отключен</string>
+    <string name="security">Безопасность</string>
     <string name="just_now">только что</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d минуту назад</item>

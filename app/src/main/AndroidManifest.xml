@@ -86,6 +86,7 @@
         <activity android:name=".NotificationActivity" android:exported="false" />
         <activity android:name=".NotificationLogActivity" android:exported="false" />
         <activity android:name=".FCMLogsActivity" android:exported="false" />
+        <activity android:name=".SecurityActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"
