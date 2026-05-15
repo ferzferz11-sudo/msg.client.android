@@ -41,7 +41,8 @@ data class ChatEntity(
     val avatarUrl: String,
     val fullAvatarUrl: String,
     val lastMessageUsername: String,
-    val muted: Boolean
+    val muted: Boolean,
+    val lastMessageHasImage: Boolean = false
 )
 
 fun Message.toEntity(): MessageEntity {
@@ -118,10 +119,10 @@ fun MessageEntity.toDomain(): Message {
 
 fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
-    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted
+    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage
 )
 
 fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
-    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted
+    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage
 )

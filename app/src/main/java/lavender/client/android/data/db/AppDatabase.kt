@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class], version = 2, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
@@ -42,21 +42,32 @@ abstract class AppDatabase : RoomDatabase() {
                             reactionsJson TEXT NOT NULL
                         )
                     """.trimIndent())
-                    
+
                     // Copy data from old table to new table
                     database.execSQL("""
                         INSERT INTO messages_new (id, user, text, timestamp, roomId, repliedToMessageId, repliedToUser, repliedToText, read, avatarUrl, imageUrl, imageUrlsJson, edited, superAdmin, voiceUrl, duration, reactionsJson)
                         SELECT id, user, text, timestamp, roomId, repliedToMessageId, repliedToUser, repliedToText, read, avatarUrl, imageUrl, '[]', edited, superAdmin, voiceUrl, duration, reactionsJson
                         FROM messages
                     """.trimIndent())
-                    
+
                     // Drop old table
                     database.execSQL("DROP TABLE messages")
-                    
+
                     // Rename new table to old table name
                     database.execSQL("ALTER TABLE messages_new RENAME TO messages")
                 } catch (e: Exception) {
                     android.util.Log.e("AppDatabase", "Migration failed", e)
+                }
+            }
+        }
+
+        // Migration from version 2 to 3: Add lastMessageHasImage column to chats table
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                try {
+                    database.execSQL("ALTER TABLE chats ADD COLUMN lastMessageHasImage INTEGER NOT NULL DEFAULT 0")
+                } catch (e: Exception) {
+                    android.util.Log.e("AppDatabase", "Migration 2-3 failed", e)
                 }
             }
         }
@@ -68,7 +79,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigration() // For development - will clear DB on migration failure
                 .build()
                 INSTANCE = instance

@@ -48,8 +48,12 @@ object GrpcClient {
         get() = realGrpcClient.isAppInBackground
         set(value) { realGrpcClient.isAppInBackground = value }
 
-    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null) {
-        realGrpcClient.connect(serverAddress, useTls, port, context)
+    fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
+        realGrpcClient.connect(serverAddress, useTls, port, context, forceReconnect)
+    }
+
+    fun shouldForceReconnect(): Boolean {
+        return realGrpcClient.shouldForceReconnect()
     }
     
     fun disconnect() {

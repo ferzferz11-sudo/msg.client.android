@@ -642,9 +642,16 @@ class NewChatActivity : AppCompatActivity() {
                     Triple(onlineUsers, status, currentTypists)
                 }.collect { (onlineUsers, status, currentTypists) ->
                     val isConnected = status == ConnectionStatus.READY
+                    val isConnecting = status == ConnectionStatus.CONNECTING
 
                     // Обновляем весь заголовок одной функцией
                     updateSubtitle(onlineUsers, isConnected, currentTypists)
+
+                    // Disable message input when connecting to prevent sending messages before connection
+                    messageInput.isEnabled = !isConnecting
+                    sendButton.isEnabled = !isConnecting
+                    attachButton.isEnabled = !isConnecting
+                    audioButton.isEnabled = !isConnecting
 
                     if (isConnected) {
                         syncChatListIfNeeded()
@@ -1238,7 +1245,28 @@ class NewChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun fullReloadHistory() { swipeRefreshLayout.isRefreshing = true; grpcClient.clearMessages(); grpcClient.loadHistory(roomId) { runOnUiThread { swipeRefreshLayout.isRefreshing = false } } }
+    private fun fullReloadHistory() {
+        swipeRefreshLayout.isRefreshing = true
+        grpcClient.clearMessages()
+
+        // Add timeout to prevent infinite loading
+        val loadTimeout = lifecycleScope.launch {
+            delay(15000) // 15 second timeout
+            if (swipeRefreshLayout.isRefreshing) {
+                Log.w("NewChatActivity", "Load history timeout, stopping refresh")
+                runOnUiThread {
+                    swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
+
+        grpcClient.loadHistory(roomId) {
+            loadTimeout.cancel()
+            runOnUiThread {
+                swipeRefreshLayout.isRefreshing = false
+            }
+        }
+    }
     
     private fun clearCacheForCurrentRoom() {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -1970,11 +1998,25 @@ class NewChatActivity : AppCompatActivity() {
         super.onResume()
         ThemeStore.refresh(this, username)
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
+
+        // Force reconnect if app was in background for a long time
+        if (grpcClient.shouldForceReconnect()) {
+            val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
+                ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
+            if (!serverAddress.isNullOrEmpty()) {
+                val parts = serverAddress.split(":")
+                val host = parts[0]
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                grpcClient.connect(host, false, port, this, forceReconnect = true)
+            }
+        }
+
         fetchChatMetadataIfNeeded()
     }
 
     override fun onPause() {
         super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
         // Clear typing status
         if (isTypingSignalSent) {
             isTypingSignalSent = false

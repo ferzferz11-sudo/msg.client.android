@@ -546,6 +546,17 @@ class ChatListActivity : AppCompatActivity() {
 
         binding.swipeRefreshLayout.isRefreshing = true
 
+        // Add timeout to prevent infinite loading
+        val loadTimeout = lifecycleScope.launch {
+            delay(15000) // 15 second timeout
+            if (binding.swipeRefreshLayout.isRefreshing) {
+                Log.w("ChatListActivity", "Load chats timeout, stopping refresh")
+                runOnUiThread {
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
+
         // Clear local cache on full refresh
         if (skipCache) {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -567,6 +578,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         grpcClient.getChats(username, skipCache = skipCache) { fetchedChats ->
+            loadTimeout.cancel()
             val userId = grpcClient.getUserId() ?: ""
             if (userId.isNotEmpty()) {
                 grpcClient.getMutedChats { mutedChatIds ->
@@ -881,21 +893,32 @@ class ChatListActivity : AppCompatActivity() {
         chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
         chatAdapter.notifyDataSetChanged() // Force redraw all visible items with new theme
         updateUpdateIndicatorVisibility()
-        
+
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
+
         // Ensure connection is active if we have a server address
-        if (grpcClient.connectionStatus.value != lavender.client.android.data.grpc.ConnectionStatus.READY) {
+        val needsReconnect = grpcClient.connectionStatus.value != lavender.client.android.data.grpc.ConnectionStatus.READY ||
+                           grpcClient.shouldForceReconnect()
+
+        if (needsReconnect) {
             val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
                 ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-            
+
             if (!serverAddress.isNullOrEmpty()) {
                 val parts = serverAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                grpcClient.connect(host, false, port, this)
+                val forceReconnect = grpcClient.shouldForceReconnect()
+                grpcClient.connect(host, false, port, this, forceReconnect)
             }
         }
-        
+
         loadChats()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
     }
 
     private fun shareApp() {

@@ -191,7 +191,15 @@ class ChatAdapter(
             chatType.setTextColor(textSecondary)
             chatName.text = chat.getDisplayName(currentUsername)
 
-            if (chat.lastMessageText.isNotEmpty()) {
+            if (chat.lastMessageHasImage) {
+                val prefix = if (chat.type == "group" || chat.type == "general") {
+                    if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
+                } else ""
+                val photoText = if (context.resources.configuration.locales[0].language == "ru") "📷 Фото" else "📷 Photo"
+                chatType.text = context.getString(R.string.chat_last_message_format, prefix, photoText)
+                chatType.maxLines = 1
+                chatType.ellipsize = android.text.TextUtils.TruncateAt.END
+            } else if (chat.lastMessageText.isNotEmpty()) {
                 val prefix = if (chat.type == "group" || chat.type == "general") {
                     if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 } else ""

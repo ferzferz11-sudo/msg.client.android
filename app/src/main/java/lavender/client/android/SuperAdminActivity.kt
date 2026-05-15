@@ -21,7 +21,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
@@ -151,10 +154,24 @@ class SuperAdminActivity : AppCompatActivity() {
 
     private fun loadData() {
         swipeRefreshLayout.isRefreshing = true
+
+        // Add timeout to prevent infinite loading
+        val loadTimeout = lifecycleScope.launch {
+            delay(15000) // 15 second timeout
+            if (swipeRefreshLayout.isRefreshing) {
+                Log.w("SuperAdminActivity", "Load data timeout, stopping refresh")
+                runOnUiThread {
+                    swipeRefreshLayout.isRefreshing = false
+                    progressOverlay.isVisible = false
+                }
+            }
+        }
+
         grpcClient.loadAllUsers { users ->
             allUsers = users
             grpcClient.getAllChats { chats ->
                 allChats = chats
+                loadTimeout.cancel()
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
                     progressOverlay.isVisible = false
