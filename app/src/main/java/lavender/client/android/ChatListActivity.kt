@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
@@ -1090,29 +1091,58 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAboutDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_delete_chats, binding.root, false)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_about, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
-        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
-        val messageText = dialogView.findViewById<TextView>(R.id.messageText)
-        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnAction = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete)
+        
+        val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
+        val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
+        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        val btnFeedback = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnFeedback)
+        val btnShare = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnShare)
+        val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
 
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
             val txtColor = customTheme.textPrimaryColor.toColorInt()
             dialogView.setBackgroundColor(bgColor)
-            titleText.setTextColor(txtColor)
-            messageText.setTextColor(txtColor)
+            clientVersionText.setTextColor(txtColor)
+            serverVersionText.setTextColor(txtColor)
         } catch (_: Exception) {}
 
-        titleText.text = getString(R.string.about)
-        messageText.text = getString(R.string.app_description)
-        btnAction.visibility = View.GONE
-        btnCancel.text = getString(R.string.ok)
+        val versionName = packageManager.getPackageInfo(packageName, 0).versionName
+        clientVersionText.text = "Client Version: $versionName"
+        
+        val serverVersion = GrpcClient.serverVersion.value
+        if (serverVersion.isNotEmpty()) {
+            serverVersionText.text = "Server Version: $serverVersion"
+        } else {
+            serverVersionText.visibility = View.GONE
+        }
 
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        btnCancel.setOnClickListener { dialog.dismiss() }
+        
+        btnClose.setOnClickListener { dialog.dismiss() }
+        
+        btnFeedback.setOnClickListener {
+            dialog.dismiss()
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("support@lavender.com"))
+                putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
+            }
+            startActivity(Intent.createChooser(intent, "Send Feedback"))
+        }
+        
+        btnShare.setOnClickListener {
+            dialog.dismiss()
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, "Check out Lavender Messenger!")
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share App"))
+        }
+        
         dialog.show()
     }
 

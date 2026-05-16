@@ -11,8 +11,9 @@
     <ImageView
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:src="@mipmap/ic_launcher_round"
-        android:layout_marginBottom="16dp" />
+        android:src="@drawable/ic_notification_logo"
+        android:layout_marginBottom="16dp"
+        android:background="@android:color/transparent" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -27,11 +28,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginBottom="24dp">
+        android:layout_marginBottom="24dp"
+        android:gravity="center">
 
         <TextView
             android:id="@+id/clientVersionText"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Client Version: --"
             android:textSize="14sp"
@@ -41,7 +43,7 @@
 
         <TextView
             android:id="@+id/serverVersionText"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Server Version: --"
             android:textSize="14sp"
@@ -58,7 +60,7 @@
         android:layout_marginBottom="24dp" />
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/developer_label"
         android:textSize="12sp"
@@ -68,7 +70,7 @@
 
     <TextView
         android:id="@+id/developerNameText"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="ferz (Pavel Davydov)"
         android:textSize="16sp"
@@ -92,7 +94,9 @@
         android:layout_height="wrap_content"
         android:text="@string/send_feedback"
         android:layout_marginBottom="12dp"
-        app:cornerRadius="24dp" />
+        app:cornerRadius="24dp"
+        android:textColor="?attr/colorPrimary"
+        app:strokeColor="?attr/colorPrimary" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnShare"
@@ -103,7 +107,10 @@
         android:layout_marginBottom="12dp"
         app:cornerRadius="24dp"
         app:icon="@drawable/ic_share"
-        app:iconGravity="textStart" />
+        app:iconGravity="textStart"
+        android:textColor="?attr/colorPrimary"
+        app:strokeColor="?attr/colorPrimary"
+        app:iconTint="?attr/colorPrimary" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnClose"

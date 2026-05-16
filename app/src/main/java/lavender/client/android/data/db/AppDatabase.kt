@@ -18,10 +18,10 @@ abstract class AppDatabase : RoomDatabase() {
 
         // Migration from version 1 to 2: Add imageUrlsJson column
         val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 try {
                     // Create new table with imageUrlsJson column
-                    database.execSQL("""
+                    db.execSQL("""
                         CREATE TABLE messages_new (
                             id TEXT PRIMARY KEY NOT NULL,
                             user TEXT NOT NULL,
@@ -44,17 +44,17 @@ abstract class AppDatabase : RoomDatabase() {
                     """.trimIndent())
 
                     // Copy data from old table to new table
-                    database.execSQL("""
+                    db.execSQL("""
                         INSERT INTO messages_new (id, user, text, timestamp, roomId, repliedToMessageId, repliedToUser, repliedToText, read, avatarUrl, imageUrl, imageUrlsJson, edited, superAdmin, voiceUrl, duration, reactionsJson)
                         SELECT id, user, text, timestamp, roomId, repliedToMessageId, repliedToUser, repliedToText, read, avatarUrl, imageUrl, '[]', edited, superAdmin, voiceUrl, duration, reactionsJson
                         FROM messages
                     """.trimIndent())
 
                     // Drop old table
-                    database.execSQL("DROP TABLE messages")
+                    db.execSQL("DROP TABLE messages")
 
                     // Rename new table to old table name
-                    database.execSQL("ALTER TABLE messages_new RENAME TO messages")
+                    db.execSQL("ALTER TABLE messages_new RENAME TO messages")
                 } catch (e: Exception) {
                     android.util.Log.e("AppDatabase", "Migration failed", e)
                 }
@@ -63,9 +63,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         // Migration from version 2 to 3: Add lastMessageHasImage column to chats table
         val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 try {
-                    database.execSQL("ALTER TABLE chats ADD COLUMN lastMessageHasImage INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE chats ADD COLUMN lastMessageHasImage INTEGER NOT NULL DEFAULT 0")
                 } catch (e: Exception) {
                     android.util.Log.e("AppDatabase", "Migration 2-3 failed", e)
                 }
@@ -80,7 +80,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "lavender_cache"
                 )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                .fallbackToDestructiveMigration() // For development - will clear DB on migration failure
+                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true) // For development - will clear DB on migration failure
                 .build()
                 INSTANCE = instance
                 instance
