@@ -84,6 +84,15 @@
     
     <!-- Join Dialog -->
     <string name="join">Войти</string>
+    <string name="register">Зарегистрироваться</string>
+    <string name="confirm_password">Подтвердите пароль</string>
+    <string name="backup_email_hint">Резервная почта (необязательно)</string>
+    <string name="backup_email_description">Используется для восстановления пароля</string>
+    <string name="passwords_do_not_match">Пароли не совпадают</string>
+    <string name="forgot_password">Забыли пароль?</string>
+    <string name="forgot_password_description">Введите вашу почту для получения логина и пароля</string>
+    <string name="enter_email">Введите вашу почту</string>
+    <string name="send_password">Отправить пароль</string>
     <string name="welcome">Добро пожаловать</string>
     <string name="enter_username">Введите ваше имя</string>
     <string name="enter_password">Введите пароль</string>

@@ -648,6 +648,15 @@ data class RemoveFavoriteResponseProto(
     val success: Boolean = false
 )
 
+data class RecoverPasswordRequestProto(
+    val email: String = ""
+)
+
+data class RecoverPasswordResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
 data class GetFavoritesRequestProto(
     val userId: String = ""
 )

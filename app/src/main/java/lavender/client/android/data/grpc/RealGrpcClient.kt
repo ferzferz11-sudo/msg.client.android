@@ -1131,6 +1131,24 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun recoverPassword(email: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RecoverPasswordRequestProto, RecoverPasswordResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RecoverPassword")
+            .setRequestMarshaller(RecoverPasswordRequestMarshaller())
+            .setResponseMarshaller(RecoverPasswordResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RecoverPasswordResponseProto>() {
+            override fun onMessage(message: RecoverPasswordResponseProto) { cb(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(RecoverPasswordRequestProto(email))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
@@ -2441,5 +2459,23 @@ class UpdateChatNameResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upd
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
         return UpdateChatNameResponseProto(ok, msg)
+    }
+}
+
+class RecoverPasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RecoverPasswordRequestProto> {
+    override fun stream(v: RecoverPasswordRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.email.isNotEmpty()) cos.writeString(1, v.email)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RecoverPasswordRequestProto = RecoverPasswordRequestProto()
+}
+
+class RecoverPasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RecoverPasswordResponseProto> {
+    override fun stream(v: RecoverPasswordResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RecoverPasswordResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
+        return RecoverPasswordResponseProto(ok, msg)
     }
 }

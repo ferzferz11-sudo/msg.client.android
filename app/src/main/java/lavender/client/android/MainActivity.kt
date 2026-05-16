@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var joinChatButton: Button
+    private lateinit var registerButton: Button
     private lateinit var downloadProgressBar: ProgressBar
     private lateinit var downloadProgressText: TextView
     private lateinit var updateAvailableIndicator: ImageView
@@ -110,6 +111,7 @@ class MainActivity : AppCompatActivity() {
         downloadProgressBar = findViewById(R.id.downloadProgressBar)
         downloadProgressText = findViewById(R.id.downloadProgressText)
         joinChatButton = findViewById(R.id.joinChatButton)
+        registerButton = findViewById(R.id.registerButton)
         languageButton = findViewById(R.id.languageButton)
         logoutButton = findViewById(R.id.logoutButton)
         copyLinkButton = findViewById(R.id.copyLinkButton)
@@ -117,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         downloadUpdateButton = findViewById(R.id.downloadUpdateButton)
 
         setupJoinChatButton()
+        setupRegisterButton()
         setupLogoutButton()
         setupLanguageButton()
         setupDownloadUpdateButton()
@@ -269,7 +272,7 @@ class MainActivity : AppCompatActivity() {
         // Download will continue in the background
     }
 
-    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null, joinBtn: Button? = null, progress: ProgressBar? = null, register: Boolean = false) {
+    private fun processLogin(username: String, password: String, serverAddress: String, roomId: String?, fromNotification: Boolean, dialog: AlertDialog? = null, joinBtn: Button? = null, progress: ProgressBar? = null, register: Boolean = false, backupEmail: String = "") {
         android.util.Log.d("MainActivity", "processLogin started for $username (reg=$register)")
         
         // Show loading state
@@ -359,6 +362,113 @@ class MainActivity : AppCompatActivity() {
         joinChatButton.setOnClickListener {
             showUsernameDialog()
         }
+    }
+
+    // Show register button
+    private fun setupRegisterButton() {
+        registerButton = findViewById(R.id.registerButton)
+        registerButton.setOnClickListener {
+            showRegistrationDialog()
+        }
+    }
+
+    private fun showRegistrationDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_register, null)
+        val titleText = dialogView.findViewById<TextView>(R.id.titleText)
+        val usernameInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val passwordInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
+        val confirmPasswordInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.confirmPasswordInputLayout)
+        val emailInputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
+        val editText = dialogView.findViewById<EditText>(R.id.editTextUsername)
+        val editTextPassword = dialogView.findViewById<EditText>(R.id.editTextPassword)
+        val editTextConfirmPassword = dialogView.findViewById<EditText>(R.id.editTextConfirmPassword)
+        val editTextEmail = dialogView.findViewById<EditText>(R.id.editTextEmail)
+        val serverAddressSpinner = dialogView.findViewById<Spinner>(R.id.serverAddressSpinner)
+        val serverStatusIndicator = dialogView.findViewById<View>(R.id.serverStatusIndicator)
+        val serverStatusText = dialogView.findViewById<TextView>(R.id.serverStatusText)
+        val refreshServerButton = dialogView.findViewById<TextView>(R.id.refreshServerButton)
+        val registerProgressBar = dialogView.findViewById<ProgressBar>(R.id.registerProgressBar)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val btnRegister = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
+
+        // Set TextInputLayout background and button strokes in dark theme
+        if (isDarkTheme()) {
+            val surfaceValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+            usernameInputLayout.boxBackgroundColor = surfaceValue.data
+            passwordInputLayout.boxBackgroundColor = surfaceValue.data
+            confirmPasswordInputLayout.boxBackgroundColor = surfaceValue.data
+            emailInputLayout.boxBackgroundColor = surfaceValue.data
+
+            // Add stroke to btnRegister using primary color
+            val primaryValue = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+            btnRegister.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+            btnRegister.strokeWidth = 2
+        }
+
+        // Setup server address spinner
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        serverAddressSpinner.adapter = adapter
+
+        // Initialize connectivity test
+        val connectivityTest = ServerConnectivityTest()
+
+        // Check server availability
+        checkServerAvailabilityInDialog(serverAddressSpinner, serverStatusIndicator, serverStatusText, btnRegister, connectivityTest)
+
+        // Recheck server when selection changes
+        serverAddressSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                checkServerAvailabilityInDialog(serverAddressSpinner, serverStatusIndicator, serverStatusText, btnRegister, connectivityTest)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        // Refresh button
+        refreshServerButton.setOnClickListener {
+            checkServerAvailabilityInDialog(serverAddressSpinner, serverStatusIndicator, serverStatusText, btnRegister, connectivityTest)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnRegister.setOnClickListener {
+            val username = editText.text.toString().trim()
+            val password = editTextPassword.text.toString().trim()
+            val confirmPassword = editTextConfirmPassword.text.toString().trim()
+            val email = editTextEmail.text.toString().trim()
+            val serverAddress = serverAddressSpinner.selectedItem.toString()
+
+            if (username.isEmpty()) {
+                showToast(getString(R.string.username_empty), Toast.LENGTH_LONG)
+            } else if (password.isEmpty()) {
+                showToast(getString(R.string.password_empty), Toast.LENGTH_LONG)
+            } else if (password != confirmPassword) {
+                showToast(getString(R.string.passwords_do_not_match), Toast.LENGTH_LONG)
+            } else {
+                saveUsername(username)
+                savePassword(password)
+                saveServerAddress(serverAddress)
+                android.util.Log.d("MainActivity", "Registering to server: $serverAddress")
+
+                processLogin(username, password, serverAddress, null, false, dialog, btnRegister, registerProgressBar, register = true, backupEmail = email)
+            }
+        }
+
+        dialog.show()
+
+        // Make dialog wider
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.9).toInt(),
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
     }
 
     // Add logout button
@@ -472,6 +582,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setButtonsEnabled(enabled: Boolean) {
         if (::joinChatButton.isInitialized) joinChatButton.isEnabled = enabled
+        if (::registerButton.isInitialized) registerButton.isEnabled = enabled
         if (::languageButton.isInitialized) languageButton.isEnabled = enabled
         if (::logoutButton.isInitialized) logoutButton.isEnabled = enabled
         if (::copyLinkButton.isInitialized) copyLinkButton.isEnabled = enabled
@@ -506,6 +617,7 @@ class MainActivity : AppCompatActivity() {
         val joinProgressBar = dialogView.findViewById<ProgressBar>(R.id.joinProgressBar)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
         val btnJoin = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
+        val forgotPasswordButton = dialogView.findViewById<TextView>(R.id.forgotPasswordButton)
 
         // Set TextInputLayout background and button strokes in dark theme
         if (isDarkTheme()) {
@@ -587,14 +699,19 @@ class MainActivity : AppCompatActivity() {
                 saveServerAddress(serverAddress)
                 android.util.Log.d("MainActivity", "Connecting to server: $serverAddress")
 
-                processLogin(username, password, serverAddress, null, false, dialog, btnJoin, joinProgressBar)
+                processLogin(username, password, serverAddress, null, false, dialog, btnJoin, joinProgressBar, register = false)
             } else if (username.isEmpty()) {
                 showToast(getString(R.string.username_empty), Toast.LENGTH_LONG)
             } else {
                 showToast(getString(R.string.password_empty), Toast.LENGTH_LONG)
             }
         }
-        
+
+        forgotPasswordButton.setOnClickListener {
+            dialog.dismiss()
+            showForgotPasswordBottomSheet()
+        }
+
         dialog.show()
         
         // Make dialog wider
@@ -604,7 +721,92 @@ class MainActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
     }
-    
+
+    private fun showForgotPasswordBottomSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_forgot_password, null)
+
+        val emailInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
+        val editTextEmail = sheetView.findViewById<EditText>(R.id.editTextEmail)
+        val sendProgressBar = sheetView.findViewById<ProgressBar>(R.id.sendProgressBar)
+        val btnSend = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
+        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+
+        // Set TextInputLayout background in dark theme
+        if (isDarkTheme()) {
+            val surfaceValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+            emailInputLayout.boxBackgroundColor = surfaceValue.data
+        }
+
+        bottomSheetDialog.setContentView(sheetView)
+
+        btnCancel.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+
+        var cooldownJob: kotlinx.coroutines.Job? = null
+
+        btnSend.setOnClickListener {
+            val email = editTextEmail.text.toString().trim()
+            if (email.isNotEmpty()) {
+                // Show loading state
+                btnSend.text = ""
+                btnSend.isEnabled = false
+                sendProgressBar.isVisible = true
+
+                // Get saved server address
+                val savedServerAddress = getSavedServerAddress() ?: serverList[0]
+                val parts = savedServerAddress.split(":")
+                val host = parts[0]
+                val port = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
+
+                // Connect to server and recover password
+                lavender.client.android.data.grpc.GrpcClient.connect(host, false, port, this)
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    lavender.client.android.data.grpc.GrpcClient.recoverPassword(email) { success, message ->
+                        runOnUiThread {
+                            sendProgressBar.isVisible = false
+
+                            if (success) {
+                                showToast(message, Toast.LENGTH_LONG)
+                                bottomSheetDialog.dismiss()
+                            } else {
+                                btnSend.text = getString(R.string.send_password)
+                                showToast(message, Toast.LENGTH_LONG)
+                            }
+
+                            // Start 30-second cooldown
+                            btnSend.isEnabled = false
+                            var remainingSeconds = 30
+                            btnSend.text = "$remainingSeconds"
+
+                            cooldownJob?.cancel()
+                            cooldownJob = lifecycleScope.launch(Dispatchers.Main) {
+                                while (remainingSeconds > 0) {
+                                    kotlinx.coroutines.delay(1000)
+                                    remainingSeconds--
+                                    btnSend.text = "$remainingSeconds"
+                                }
+                                btnSend.text = getString(R.string.send_password)
+                                btnSend.isEnabled = true
+                            }
+                        }
+                    }
+                }
+            } else {
+                showToast(getString(R.string.enter_email), Toast.LENGTH_LONG)
+            }
+        }
+
+        bottomSheetDialog.setOnDismissListener {
+            cooldownJob?.cancel()
+        }
+
+        bottomSheetDialog.show()
+    }
+
     private fun getSavedUsername(): String? {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         return prefs.getString("username", null)

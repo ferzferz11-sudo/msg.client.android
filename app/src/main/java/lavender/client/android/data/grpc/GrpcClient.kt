@@ -196,6 +196,10 @@ object GrpcClient {
         realGrpcClient.deleteChat(chatId, requesterUsername, callback)
     }
 
+    fun recoverPassword(email: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.recoverPassword(email, callback)
+    }
+
     fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.deleteProfile(username, callback)
     }
