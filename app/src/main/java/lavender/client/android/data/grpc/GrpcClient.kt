@@ -204,8 +204,8 @@ object GrpcClient {
         realGrpcClient.deleteProfile(username, callback)
     }
 
-    fun getUserProfile(username: String, callback: (GetUserProfileResponseProto?) -> Unit) {
-        realGrpcClient.getUserProfile(username, callback)
+    fun getUserProfile(userId: String, callback: (GetUserProfileResponseProto?) -> Unit) {
+        realGrpcClient.getUserProfile(userId, callback)
     }
 
     fun updateProfile(username: String, bio: String, status: String, callback: (Boolean, String) -> Unit) {

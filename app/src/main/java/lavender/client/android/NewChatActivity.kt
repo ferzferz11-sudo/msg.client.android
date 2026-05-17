@@ -1803,11 +1803,27 @@ class NewChatActivity : AppCompatActivity() {
                     toolbarSubtitle.text = getString(R.string.connected)
                     toolbarSubtitle.setTextColor(colorGreen)
                 } else {
-                    // Try to get last seen time from allUsers
-                    val userInfo = grpcClient.allUsers.value.find { it.username == otherUser }
-                    val lastSeenText = if (userInfo?.lastSeenAt != null) {
-                        ProtoUtils.formatLastSeen(userInfo.lastSeenAt, this)
+                    // Try to get last seen time from getUserProfile
+                    val lastSeenText = if (cachedLastSeenText != null) {
+                        cachedLastSeenText
                     } else {
+                        // Fetch userId and get profile
+                        val otherUserNonNull = otherUser ?: return@updateSubtitle
+                        grpcClient.fetchUserId(otherUserNonNull) { userId, success ->
+                            if (success && !userId.isNullOrEmpty()) {
+                                grpcClient.getUserProfile(userId) { profile ->
+                                    if (profile?.lastSeenAt != null) {
+                                        cachedLastSeenText = ProtoUtils.formatLastSeen(profile.lastSeenAt, this@NewChatActivity)
+                                        runOnUiThread {
+                                            if (!isOnline) {
+                                                toolbarSubtitle.text = cachedLastSeenText
+                                                toolbarSubtitle.setTextColor(colorOnPrimary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         getString(R.string.offline)
                     }
                     toolbarSubtitle.text = lastSeenText
@@ -1823,6 +1839,7 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private var cachedOtherUser: String? = null
+    private var cachedLastSeenText: String? = null
 
     private fun getOtherParticipant(): String? {
         if (cachedOtherUser != null) return cachedOtherUser

@@ -333,14 +333,16 @@ data class UpdateProfileResponseProto(
 )
 
 data class GetUserProfileRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class GetUserProfileResponseProto(
     val username: String = "",
     val bio: String = "",
     val status: String = "",
-    val avatarUrl: String = ""
+    val avatarUrl: String = "",
+    val lastSeenAt: Timestamp? = null
 )
 
 // Participants management

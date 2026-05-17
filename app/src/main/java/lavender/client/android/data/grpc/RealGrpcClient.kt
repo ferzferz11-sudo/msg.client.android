@@ -1033,7 +1033,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun getUserProfile(username: String, callback: (GetUserProfileResponseProto?) -> Unit) {
+    fun getUserProfile(userId: String, callback: (GetUserProfileResponseProto?) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserProfileRequestProto, GetUserProfileResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1046,7 +1046,7 @@ object RealGrpcClient {
             override fun onMessage(message: GetUserProfileResponseProto) { callback(message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(null) }
         }, io.grpc.Metadata())
-        call.sendMessage(GetUserProfileRequestProto(username))
+        call.sendMessage(GetUserProfileRequestProto(userId = userId))
         call.halfClose()
         call.request(1)
     }
@@ -2014,7 +2014,7 @@ class UpdateProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upda
 class GetUserProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserProfileRequestProto> {
     override fun stream(v: GetUserProfileRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetUserProfileRequestProto = GetUserProfileRequestProto()
@@ -2023,9 +2023,9 @@ class GetUserProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetU
 class GetUserProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserProfileResponseProto> {
     override fun stream(v: GetUserProfileResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetUserProfileResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> u = cis.readString(); 2 -> b = cis.readString(); 3 -> st = cis.readString(); 4 -> au = cis.readString(); else -> cis.skipField(tag) } }
-        return GetUserProfileResponseProto(u, b, st, au)
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""; var ls: com.google.protobuf.Timestamp? = null
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> u = cis.readString(); 2 -> b = cis.readString(); 3 -> st = cis.readString(); 4 -> au = cis.readString(); 5 -> { val len = cis.readUInt32(); ls = ProtoUtils.parseTimestampFromProto(java.io.ByteArrayInputStream(cis.readRawBytes(len))) } else -> cis.skipField(tag) } }
+        return GetUserProfileResponseProto(u, b, st, au, ls)
     }
 }
 

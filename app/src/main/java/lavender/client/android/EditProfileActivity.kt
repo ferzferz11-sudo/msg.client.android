@@ -118,11 +118,17 @@ class EditProfileActivity : AppCompatActivity() {
 
         // Load current profile (bio)
         Log.d("EditProfile", "Loading profile for user: $username")
-        grpcClient.getUserProfile(username) { profile ->
-            Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
-            runOnUiThread {
-                if (profile != null) {
-                    editTextBio.setText(profile.bio)
+        grpcClient.fetchUserId(username) { userId, success ->
+            if (!success || userId.isNullOrEmpty()) {
+                Log.e("EditProfile", "Failed to fetch userId for user: $username")
+                return@fetchUserId
+            }
+            grpcClient.getUserProfile(userId) { profile ->
+                Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
+                runOnUiThread {
+                    if (profile != null) {
+                        editTextBio.setText(profile.bio)
+                    }
                 }
             }
         }
@@ -201,8 +207,14 @@ class EditProfileActivity : AppCompatActivity() {
                     if (success) {
                         Toast.makeText(this, "Био сохранено", Toast.LENGTH_SHORT).show()
                         // Reload profile to verify
-                        grpcClient.getUserProfile(username) { profile ->
-                            Log.d("EditProfile", "Profile after update: bio='${profile?.bio}'")
+                        grpcClient.fetchUserId(username) { userId, success ->
+                            if (!success || userId.isNullOrEmpty()) {
+                                Log.e("EditProfile", "Failed to fetch userId for user: $username")
+                                return@fetchUserId
+                            }
+                            grpcClient.getUserProfile(userId) { profile ->
+                                Log.d("EditProfile", "Profile after update: bio='${profile?.bio}'")
+                            }
                         }
                     } else {
                         Toast.makeText(this, "Ошибка: $message", Toast.LENGTH_LONG).show()

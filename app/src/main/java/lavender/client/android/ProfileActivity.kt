@@ -103,7 +103,7 @@ class ProfileActivity : AppCompatActivity() {
         roomId = intent.getStringExtra("room_id") ?: ""
         creator = intent.getStringExtra("creator") ?: ""
         val participantsJson = intent.getStringExtra("participants") ?: "[]"
-        
+
         try {
             val jsonArray = JSONArray(participantsJson)
             currentParticipants.clear()
@@ -147,7 +147,7 @@ class ProfileActivity : AppCompatActivity() {
             onComplete?.invoke()
             return
         }
-        
+
         val currentMe = grpcClient.getCurrentUsername() ?: return
         grpcClient.getChats(currentMe) { chats ->
             val chat = chats.find { it.id == roomId }
@@ -206,7 +206,7 @@ class ProfileActivity : AppCompatActivity() {
         if (isGroup) {
             profileStatus.isVisible = false
             bioCard?.isVisible = false
-            
+
             val currentMe = grpcClient.getCurrentUsername() ?: ""
             val isMeAdmin = currentMe == creator && creator.isNotEmpty()
 
@@ -240,7 +240,7 @@ class ProfileActivity : AppCompatActivity() {
                         .setNegativeButton(R.string.cancel, null)
                         .show()
                 }
-                
+
                 changeAvatarButton?.isVisible = true
                 changeAvatarButton?.setOnClickListener {
                     val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -255,7 +255,7 @@ class ProfileActivity : AppCompatActivity() {
             val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)
             val addParticipantLayout = findViewById<LinearLayout>(R.id.addParticipantLayout)
             val addParticipantProgress = findViewById<ProgressBar>(R.id.addParticipantProgress)
-            
+
             participantsCard?.isVisible = true
             participantsContainer?.removeAllViews()
 
@@ -264,11 +264,11 @@ class ProfileActivity : AppCompatActivity() {
                 val nameText = userView.findViewById<TextView>(R.id.participantName)
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
-                
+
                 val trimmedUser = user.trim()
                 val isAdminLabel = if (trimmedUser == creator.trim() && creator.isNotEmpty()) " ${getString(R.string.admin_label)}" else ""
                 nameText?.text = "$trimmedUser$isAdminLabel"
-                
+
                 val isOnline = grpcClient.users.value.contains(user)
                 statusDot?.isVisible = true
                 statusDot?.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
@@ -363,28 +363,37 @@ class ProfileActivity : AppCompatActivity() {
                 }
             }
         } else {
-            grpcClient.getUserProfile(username) { profile ->
-                runOnUiThread {
-                    if (!isFinishing && profile != null) {
-                        profileBio.text = profile.bio.ifEmpty { getString(R.string.no_bio) }
-                        val isOnline = username == grpcClient.getCurrentUsername() || grpcClient.users.value.contains(username)
-                        if (isOnline) {
-                            profileStatus.text = getString(R.string.connected)
-                            profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
-                        } else {
-                            // Try to get last seen time from allUsers
-                            val userInfo = grpcClient.allUsers.value.find { it.username == username }
-                            val lastSeenText = if (userInfo?.lastSeenAt != null) {
-                                ProtoUtils.formatLastSeen(userInfo.lastSeenAt, this)
+            // Fetch userId first, then get profile
+            grpcClient.fetchUserId(username) { userId, success ->
+                if (!success || userId.isNullOrEmpty()) {
+                    runOnUiThread {
+                        profileBio.text = getString(R.string.no_bio)
+                        profileStatus.text = getString(R.string.offline)
+                    }
+                    return@fetchUserId
+                }
+                grpcClient.getUserProfile(userId) { profile ->
+                    runOnUiThread {
+                        if (!isFinishing && profile != null) {
+                            profileBio.text = profile.bio.ifEmpty { getString(R.string.no_bio) }
+                            val isOnline = username == grpcClient.getCurrentUsername() || grpcClient.users.value.contains(username)
+                            if (isOnline) {
+                                profileStatus.text = getString(R.string.connected)
+                                profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
                             } else {
-                                profile.status.ifEmpty { getString(R.string.offline) }
+                                // Use lastSeenAt from profile response
+                                val lastSeenText = if (profile.lastSeenAt != null) {
+                                    ProtoUtils.formatLastSeen(profile.lastSeenAt, this)
+                                } else {
+                                    profile.status.ifEmpty { getString(R.string.offline) }
+                                }
+                                profileStatus.text = lastSeenText
+                                val typedValue = android.util.TypedValue()
+                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                                profileStatus.setTextColor(typedValue.data)
                             }
-                            profileStatus.text = lastSeenText
-                            val typedValue = android.util.TypedValue()
-                            theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-                            profileStatus.setTextColor(typedValue.data)
                         }
-                        if (profile.avatarUrl.isNotEmpty()) {
+                        if (profile != null && profile.avatarUrl.isNotEmpty()) {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
                             grpcClient.getUserAvatar(username) { _ -> }

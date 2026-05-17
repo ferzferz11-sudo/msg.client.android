@@ -5,7 +5,6 @@ import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
@@ -13,7 +12,6 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -29,6 +27,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -37,7 +36,6 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -50,7 +48,6 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.databinding.ActivityChatListBinding
-import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeApplier
@@ -62,7 +59,6 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
-import androidx.biometric.BiometricManager
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -1193,6 +1189,7 @@ class ChatListActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    @SuppressLint("SetTextI18n")
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
@@ -1202,7 +1199,6 @@ class ChatListActivity : AppCompatActivity() {
         val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
         val btnFeedback = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnFeedback)
         val btnShare = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnShare)
-        val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
 
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
@@ -1230,7 +1226,7 @@ class ChatListActivity : AppCompatActivity() {
         btnFeedback.setOnClickListener {
             dialog.dismiss()
             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("mailto:")
+                data = "mailto:".toUri()
                 putExtra(Intent.EXTRA_EMAIL, arrayOf("support@lavender.com"))
                 putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
             }
@@ -1891,7 +1887,7 @@ class ChatListActivity : AppCompatActivity() {
             sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
             
             // Set server status indicator to green (online)
-            serverStatusIndicator?.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+            serverStatusIndicator?.setBackgroundColor("#4CAF50".toColorInt())
         } catch (_: Exception) {
             // Fallback to default theme handling
             if (isDarkTheme()) {
@@ -1902,7 +1898,7 @@ class ChatListActivity : AppCompatActivity() {
 
                 val primaryValue = android.util.TypedValue()
                 theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                btnJoin.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                btnJoin.strokeColor = ColorStateList.valueOf(primaryValue.data)
                 btnJoin.strokeWidth = 2
             }
         }
@@ -2083,7 +2079,7 @@ class ChatListActivity : AppCompatActivity() {
             sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
             
             // Set server status indicator to green (online)
-            serverStatusIndicator?.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+            serverStatusIndicator?.setBackgroundColor("#4CAF50".toColorInt())
         } catch (_: Exception) {
             // Fallback to default theme handling
             if (isDarkTheme()) {
@@ -2096,7 +2092,7 @@ class ChatListActivity : AppCompatActivity() {
 
                 val primaryValue = android.util.TypedValue()
                 theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                btnRegister.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                btnRegister.strokeColor = ColorStateList.valueOf(primaryValue.data)
                 btnRegister.strokeWidth = 2
             }
         }
@@ -2213,8 +2209,8 @@ class ChatListActivity : AppCompatActivity() {
             AppCompatDelegate.MODE_NIGHT_YES -> true
             AppCompatDelegate.MODE_NIGHT_NO -> false
             else -> {
-                val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-                currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                val currentNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                currentNightMode == Configuration.UI_MODE_NIGHT_YES
             }
         }
     }
@@ -2276,7 +2272,7 @@ class ChatListActivity : AppCompatActivity() {
                 
                 val primaryValue = android.util.TypedValue()
                 theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                btnSend.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                btnSend.strokeColor = ColorStateList.valueOf(primaryValue.data)
                 btnSend.strokeWidth = 2
             }
         }
