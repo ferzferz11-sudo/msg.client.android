@@ -102,6 +102,7 @@
     <string name="registration_success">Пользователь успешно зарегистрирован</string>
     <string name="auth_failed">Ошибка аутентификации</string>
     <string name="email_already_in_use">Этот email уже используется</string>
+    <string name="user_already_exists">Это имя пользователя уже занято</string>
     <string name="chats">Чаты</string>
     <string name="profile">Профиль</string>
     <string name="take_photo">Сделать фото</string>

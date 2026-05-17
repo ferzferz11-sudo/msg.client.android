@@ -1885,13 +1885,13 @@ class ChatListActivity : AppCompatActivity() {
             forgotPasswordButton.setTextColor(primaryColor)
             
             // Set spinner text color
-            serverStatusText.setTextColor(onSurfaceColor)
+            serverStatusText?.setTextColor(onSurfaceColor)
             
             // Set title color
             sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
             
             // Set server status indicator to green (online)
-            serverStatusIndicator.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+            serverStatusIndicator?.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
         } catch (_: Exception) {
             // Fallback to default theme handling
             if (isDarkTheme()) {
@@ -1911,11 +1911,11 @@ class ChatListActivity : AppCompatActivity() {
         val serverList = listOf("159.195.38.145:50051")
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        serverAddressSpinner.adapter = adapter
-        serverAddressSpinner.setSelection(0)
+        serverAddressSpinner?.adapter = adapter
+        serverAddressSpinner?.setSelection(0)
 
         if (serverList.size <= 1) {
-            serverAddressSpinner.visibility = View.GONE
+            serverAddressSpinner?.visibility = View.GONE
             serverStatusLayout?.visibility = View.GONE
             serverAddressLabel?.visibility = View.GONE
         }
@@ -1937,7 +1937,7 @@ class ChatListActivity : AppCompatActivity() {
         btnJoin.setOnClickListener {
             val username = editText.text.toString().trim()
             val password = editTextPassword.text.toString().trim()
-            val serverAddress = serverAddressSpinner.selectedItem.toString()
+            val serverAddress = serverAddressSpinner?.selectedItem?.toString() ?: "159.195.38.145:50051"
             if (username.isNotEmpty() && password.isNotEmpty()) {
                 // Show loading state
                 btnJoin.text = ""
@@ -2077,13 +2077,13 @@ class ChatListActivity : AppCompatActivity() {
             btnCancel.setTextColor(onSurfaceColor)
             
             // Set spinner text color
-            serverStatusText.setTextColor(onSurfaceColor)
+            serverStatusText?.setTextColor(onSurfaceColor)
             
             // Set title color
             sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
             
             // Set server status indicator to green (online)
-            serverStatusIndicator.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+            serverStatusIndicator?.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
         } catch (_: Exception) {
             // Fallback to default theme handling
             if (isDarkTheme()) {
@@ -2105,11 +2105,11 @@ class ChatListActivity : AppCompatActivity() {
         val serverList = listOf("159.195.38.145:50051")
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        serverAddressSpinner.adapter = adapter
-        serverAddressSpinner.setSelection(0)
+        serverAddressSpinner?.adapter = adapter
+        serverAddressSpinner?.setSelection(0)
 
         if (serverList.size <= 1) {
-            serverAddressSpinner.visibility = View.GONE
+            serverAddressSpinner?.visibility = View.GONE
             serverStatusLayout?.visibility = View.GONE
             serverAddressLabel?.visibility = View.GONE
         }
@@ -2133,7 +2133,7 @@ class ChatListActivity : AppCompatActivity() {
             val password = editTextPassword.text.toString().trim()
             val confirmPassword = editTextConfirmPassword.text.toString().trim()
             val email = editTextEmail.text.toString().trim()
-            val serverAddress = serverAddressSpinner.selectedItem.toString()
+            val serverAddress = serverAddressSpinner?.selectedItem?.toString() ?: "159.195.38.145:50051"
 
             if (username.isEmpty()) {
                 Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
@@ -2174,6 +2174,12 @@ class ChatListActivity : AppCompatActivity() {
 
                                 bottomSheetDialog.dismiss()
                                 recreate() // Reload activity with authenticated user
+                            }
+                            "USER_ALREADY_EXISTS" -> {
+                                registerProgressBar.isVisible = false
+                                btnRegister.text = getString(R.string.register)
+                                btnRegister.isEnabled = true
+                                Toast.makeText(this, R.string.user_already_exists, Toast.LENGTH_LONG).show()
                             }
                             "EMAIL_ALREADY_IN_USE" -> {
                                 registerProgressBar.isVisible = false

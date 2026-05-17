@@ -104,6 +104,7 @@
     <string name="registration_success">User registered successfully</string>
     <string name="auth_failed">Authentication failed</string>
     <string name="email_already_in_use">Email already in use</string>
+    <string name="user_already_exists">Username already exists</string>
     <string name="chats">Chats</string>
     <string name="preview">Preview</string>
     <string name="edit">Edit Profile</string>
