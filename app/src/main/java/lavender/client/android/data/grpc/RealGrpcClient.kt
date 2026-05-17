@@ -231,6 +231,7 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         
         requestObserver = call.startChatStream(onMessageReceived)
+        resendPendingMessages()
 
         val firstMessage = MessageProto.newBuilder()
             .setUser(username)
@@ -489,6 +490,11 @@ object RealGrpcClient {
     }
 
     fun addLocalMessage(message: Message) {
+        // Persist local message so it's not lost on app restart
+        scope.launch(Dispatchers.IO) {
+            db()?.messageDao()?.insertMessages(listOf(message.toEntity()))
+        }
+
         _messages.update { current ->
             val list = current.toMutableList()
             // Remove any existing message with same hash to avoid duplicates
@@ -523,27 +529,7 @@ object RealGrpcClient {
     fun sendMessage(message: Message) {
         val observer = requestObserver
         if (observer == null) {
-            Log.e(TAG, "Cannot send message: requestObserver is null, queuing for retry")
-            _error.value = "Connection lost. Retrying..."
-            
-            // Queue message for retry when connection is restored
-            scope.launch {
-                var retryCount = 0
-                val maxRetries = 5
-                while (retryCount < maxRetries && requestObserver == null) {
-                    delay(2000) // Wait 2 seconds
-                    if (requestObserver != null) {
-                        sendMessage(message) // Retry sending
-                        return@launch
-                    }
-                    retryCount++
-                    Log.d(TAG, "Retry attempt $retryCount for message: ${message.text.take(20)}...")
-                }
-                if (retryCount >= maxRetries) {
-                    Log.e(TAG, "Failed to send message after $maxRetries attempts")
-                    _error.value = "Failed to send message after multiple attempts."
-                }
-            }
+            Log.e(TAG, "Cannot send message: requestObserver is null. Message is already saved locally and will be resent on reconnection.")
             return
         }
         
@@ -554,6 +540,18 @@ object RealGrpcClient {
         } catch (e: Exception) {
             Log.e(TAG, "Error sending message", e)
             _error.value = "Failed to send message: ${e.message}"
+        }
+    }
+
+    private fun resendPendingMessages() {
+        scope.launch(Dispatchers.IO) {
+            val pending = db()?.messageDao()?.getPendingMessages() ?: emptyList()
+            if (pending.isNotEmpty()) {
+                Log.d(TAG, "Resending ${pending.size} pending messages")
+                pending.forEach { entity ->
+                    sendMessage(entity.toDomain())
+                }
+            }
         }
     }
 

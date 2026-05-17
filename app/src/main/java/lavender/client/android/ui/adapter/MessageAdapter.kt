@@ -271,11 +271,17 @@ class MessageAdapter(
             readStatusIcon.isVisible = isOutgoing
             if (isOutgoing) {
                 val isRead = message.isRead || chatId.startsWith("favorites_")
-                val icon = if (isRead) R.drawable.ic_message_read else R.drawable.ic_message_sent
+                val icon = when {
+                    isRead -> R.drawable.ic_message_read
+                    message.isSent -> R.drawable.ic_message_sent
+                    else -> R.drawable.ic_message_pending
+                }
                 readStatusIcon.setImageResource(icon)
 
                 val iconColor = if (isRead) {
                     ContextCompat.getColor(context, R.color.tg_read_check)
+                } else if (!message.isSent) {
+                    secondaryColorWithAlpha // Gray for pending
                 } else {
                     secondaryColorWithAlpha
                 }

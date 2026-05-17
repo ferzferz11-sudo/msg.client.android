@@ -28,6 +28,9 @@ interface MessageDao {
     @Query("UPDATE messages SET read = 1 WHERE roomId = :roomId")
     suspend fun markRoomAsRead(roomId: String)
 
+    @Query("SELECT * FROM messages WHERE isSent = 0")
+    suspend fun getPendingMessages(): List<MessageEntity>
+
     @Query("DELETE FROM messages")
     suspend fun clearAll()
 }

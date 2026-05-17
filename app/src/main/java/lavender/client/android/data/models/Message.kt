@@ -22,7 +22,8 @@ data class Message(
     val edited: Boolean = false,
     val isSuperAdmin: Boolean = false,
     val voiceUrl: String = "",
-    val duration: Int = 0
+    val duration: Int = 0,
+    val isSent: Boolean = true // Messages from server are always sent
 )
 
 data class ChatInfo(

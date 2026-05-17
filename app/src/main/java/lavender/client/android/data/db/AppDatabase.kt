@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class], version = 3, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
@@ -72,6 +72,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 3 to 4: Add isSent column to messages table
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE messages ADD COLUMN isSent INTEGER NOT NULL DEFAULT 1")
+                } catch (e: Exception) {
+                    android.util.Log.e("AppDatabase", "Migration 3-4 failed", e)
+                }
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -79,8 +90,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true) // For development - will clear DB on migration failure
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
                 instance

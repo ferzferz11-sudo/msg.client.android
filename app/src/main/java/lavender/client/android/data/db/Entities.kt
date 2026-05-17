@@ -24,6 +24,7 @@ data class MessageEntity(
     val superAdmin: Boolean,
     val voiceUrl: String,
     val duration: Int,
+    val isSent: Boolean = true,
     val reactionsJson: String // Serialized List<Reaction>
 )
 
@@ -74,6 +75,7 @@ fun Message.toEntity(): MessageEntity {
         superAdmin = isSuperAdmin,
         voiceUrl = voiceUrl,
         duration = duration,
+        isSent = isSent,
         reactionsJson = reactionsJson
     )
 }
@@ -113,7 +115,8 @@ fun MessageEntity.toDomain(): Message {
         edited = edited,
         isSuperAdmin = superAdmin,
         voiceUrl = voiceUrl,
-        duration = duration
+        duration = duration,
+        isSent = isSent
     )
 }
 

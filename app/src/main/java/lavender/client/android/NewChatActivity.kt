@@ -1305,7 +1305,8 @@ class NewChatActivity : AppCompatActivity() {
             imageUrl = imageUrl, 
             repliedToMessageId = replyingTo?.id ?: "", 
             repliedToUser = replyingTo?.user ?: "", 
-            repliedToText = replyingTo?.text ?: ""
+            repliedToText = replyingTo?.text ?: "",
+            isSent = false
         )
         
         grpcClient.addLocalMessage(msg)
@@ -1648,7 +1649,8 @@ class NewChatActivity : AppCompatActivity() {
             imageUrls = imageUrls, // New field for gallery support
             repliedToMessageId = replyingTo?.id ?: "", 
             repliedToUser = replyingTo?.user ?: "", 
-            repliedToText = replyingTo?.text ?: ""
+            repliedToText = replyingTo?.text ?: "",
+            isSent = false
         )
         
         grpcClient.addLocalMessage(msg)
