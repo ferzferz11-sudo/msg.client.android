@@ -84,7 +84,9 @@
     
     <!-- Join Dialog -->
     <string name="join">Войти</string>
+    <string name="login">Войти</string>
     <string name="register">Зарегистрироваться</string>
+    <string name="auth_choice_message">Выберите способ продолжения</string>
     <string name="confirm_password">Подтвердите пароль</string>
     <string name="backup_email_hint">Резервная почта (необязательно)</string>
     <string name="backup_email_description">Используется для восстановления пароля</string>
@@ -121,6 +123,7 @@
     <string name="toggle_color_scheme">Тема</string>
     <string name="server_address_label">Сервер</string>
     <string name="checking_server">Проверка сервера…</string>
+    <string name="server_online">Сервер онлайн</string>
     <string name="server_available">Сервер доступен</string>
     <string name="server_unavailable">Сервер недоступен</string>
     <string name="app_description">Безопасный обмен сообщениями</string>

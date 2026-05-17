@@ -7,6 +7,10 @@ class ThemePreferences(context: Context) {
 
     fun getCurrentThemeId(): String = prefs.getString(KEY_CURRENT_THEME_ID, DEFAULT_THEME_ID) ?: DEFAULT_THEME_ID
 
+    fun setCurrentThemeId(themeId: String) {
+        prefs.edit().putString(KEY_CURRENT_THEME_ID, themeId).apply()
+    }
+
     fun getBuiltInChatListBgOverride(themeId: String): String? =
         prefs.getString("bg_url_$themeId", null)
 

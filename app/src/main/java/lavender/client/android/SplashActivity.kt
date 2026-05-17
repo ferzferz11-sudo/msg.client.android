@@ -27,36 +27,26 @@ class SplashActivity : AppCompatActivity() {
         val isBiometricEnabled = savedUsername != null && prefs.getBoolean("biometric_enabled_$savedUsername", false)
 
         val targetIntent = if (isLoggedIn) {
-            if (isBiometricEnabled) {
-                // Если биометрия включена, отправляем на MainActivity для проверки
-                Intent(this, MainActivity::class.java).apply {
-                    putExtra("from_notification", roomIdFromPush != null)
-                    putExtra("room_id", roomIdFromPush)
+            if (roomIdFromPush != null) {
+                // Если нажали на пуш — летим сразу в чат
+                Intent(this, NewChatActivity::class.java).apply {
+                    putExtra("USERNAME", savedUsername)
+                    putExtra("PASSWORD", savedPassword)
+                    putExtra("SERVER_ADDRESS", savedServerAddress)
+                    putExtra("ROOM_ID", roomIdFromPush)
+                    putExtra("from_notification", true)
                 }
             } else {
-                if (roomIdFromPush != null) {
-                    // А. Если нажали на пуш — летим сразу в чат
-                    Intent(this, NewChatActivity::class.java).apply {
-                        putExtra("USERNAME", savedUsername)
-                        putExtra("PASSWORD", savedPassword)
-                        putExtra("SERVER_ADDRESS", savedServerAddress)
-                        putExtra("ROOM_ID", roomIdFromPush)
-                        putExtra("from_notification", true)
-                    }
-                } else {
-                    // Б. Если просто открыли приложение — идем в СПИСОК ЧАТОВ
-                    Intent(this, ChatListActivity::class.java).apply {
-                        putExtra("USERNAME", savedUsername)
-                        putExtra("PASSWORD", savedPassword)
-                        putExtra("SERVER_ADDRESS", savedServerAddress)
-                    }
+                // Если просто открыли приложение — идем в СПИСОК ЧАТОВ
+                Intent(this, ChatListActivity::class.java).apply {
+                    putExtra("USERNAME", savedUsername)
+                    putExtra("PASSWORD", savedPassword)
+                    putExtra("SERVER_ADDRESS", savedServerAddress)
                 }
             }
         } else {
-            // Если не залогинены — на экран входа
-            Intent(this, MainActivity::class.java).apply {
-                putExtra("extra_skip_autologin", skipAutoLogin)
-            }
+            // Если не залогинены — идем в ChatListActivity (покажет диалог выбора входа/регистрации)
+            Intent(this, ChatListActivity::class.java)
         }
 
         // Пробрасываем все остальные флаги и данные (flags, extras)

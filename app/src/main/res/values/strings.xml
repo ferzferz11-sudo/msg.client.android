@@ -84,7 +84,9 @@
     
     <!-- Join Dialog -->
     <string name="join">Join</string>
+    <string name="login">Login</string>
     <string name="register">Register</string>
+    <string name="auth_choice_message">Choose how you want to continue</string>
     <string name="confirm_password">Confirm Password</string>
     <string name="backup_email_hint">Backup Email (optional)</string>
     <string name="backup_email_description">Used for password recovery</string>
@@ -124,6 +126,7 @@
     <string name="toggle_color_scheme">Theme</string>
     <string name="server_address_label">Server</string>
     <string name="checking_server">Checking server…</string>
+    <string name="server_online">Server online</string>
     <string name="server_available">Server available</string>
     <string name="server_unavailable">Server unavailable</string>
     <string name="app_description">Secure messaging</string>

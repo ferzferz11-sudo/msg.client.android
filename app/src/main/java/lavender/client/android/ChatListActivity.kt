@@ -13,7 +13,13 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.ProgressBar
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -91,11 +97,26 @@ class ChatListActivity : AppCompatActivity() {
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        username = intent.getStringExtra("USERNAME") ?: ""
-        password = intent.getStringExtra("PASSWORD") ?: ""
-        val serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: ""
-
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        
+        // Check if user is authenticated
+        val savedUsername = prefs.getString("saved_username", "")
+        val savedPassword = prefs.getString("saved_password", "")
+        
+        username = intent.getStringExtra("USERNAME") ?: savedUsername ?: ""
+        password = intent.getStringExtra("PASSWORD") ?: savedPassword ?: ""
+        val serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: prefs.getString("server_address", "159.195.38.145:50051") ?: "159.195.38.145:50051"
+
+        // Initialize basic UI components regardless of auth state
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+
+        // If not authenticated, show auth choice dialog and return early
+        if (username.isEmpty() || password.isEmpty()) {
+            showAuthChoiceDialog()
+            return
+        }
+
         val previousUsername = prefs.getString("last_logged_username", "")
         val isNewUser = previousUsername != username
 
@@ -128,9 +149,6 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         ThemeUi.bind(this, username)
-
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
 
         Log.d("ChatListActivity", "Logged in as $username")
 
@@ -540,9 +558,31 @@ class ChatListActivity : AppCompatActivity() {
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         }
+        
+        // Apply custom theme from SharedPreferences if user is not authenticated
+        // This ensures the theme is preserved after logout
+        if (!::username.isInitialized || username.isEmpty()) {
+            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+            val customTheme = if (themeId == "dark") {
+                lavender.client.android.theme.BuiltInThemes.dark
+            } else if (themeId == "light") {
+                lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
+            } else {
+                val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
+                if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
+            }
+            ThemeUi.bind(this, "")
+        }
     }
 
     private fun loadChats(skipCache: Boolean = false) {
+        // Only load chats if user is authenticated and chatAdapter is initialized
+        if (!::chatAdapter.isInitialized) {
+            Log.d("ChatListActivity", "chatAdapter not initialized, skipping loadChats")
+            return
+        }
+
         Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
         binding.swipeRefreshLayout.isRefreshing = true
@@ -647,27 +687,68 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                runOnUiThread {
-                    binding.swipeRefreshLayout.isRefreshing = false
-                    chats.clear()
-                    
-                    // Add Favorites even if no userId (fallback)
-                    chats.add(
-                        ChatInfo(
-                            id = "favorites",
-                            name = getString(R.string.favorites),
-                            type = "favorites",
-                            lastMessageText = getString(R.string.favorites_description),
-                            lastMessageTime = 0L
-                        )
-                    )
+                // No userId - likely offline, load from cache
+                loadChatsFromCache(fetchedChats)
+            }
+        }
+    }
 
-                    chats.addAll(fetchedChats)
-                    chatAdapter.setChats(chats.toList())
-                    updateAppIconBadge(chats.sumOf { it.unreadCount })
-                    Log.d("ChatListActivity", "Loaded ${chats.size} chats (no userId)")
-                    updateUpdateIndicatorVisibility()
-                    checkForUpdatesSilently()
+    private fun loadChatsFromCache(fetchedChats: List<ChatInfo>) {
+        runOnUiThread {
+            binding.swipeRefreshLayout.isRefreshing = false
+            chats.clear()
+            
+            // Always add Favorites at the top
+            chats.add(
+                ChatInfo(
+                    id = "favorites",
+                    name = getString(R.string.favorites),
+                    type = "favorites",
+                    lastMessageText = getString(R.string.favorites_description),
+                    lastMessageTime = 0L
+                )
+            )
+
+            // Load from local database if available
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                    val cachedChats = db.chatDao().getAllChats()
+                    
+                    runOnUiThread {
+                        if (cachedChats.isNotEmpty()) {
+                            chats.addAll(cachedChats.map { dbChat ->
+                                ChatInfo(
+                                    id = dbChat.id,
+                                    name = dbChat.name,
+                                    type = dbChat.type,
+                                    lastMessageText = dbChat.lastMessageText,
+                                    lastMessageTime = dbChat.lastMessageTime,
+                                    unreadCount = dbChat.unreadCount,
+                                    participants = dbChat.participants,
+                                    creator = dbChat.creator
+                                )
+                            })
+                        } else {
+                            // If no cache, use fetchedChats if available
+                            chats.addAll(fetchedChats)
+                        }
+                        
+                        chatAdapter.setChats(chats.toList())
+                        updateAppIconBadge(chats.sumOf { it.unreadCount })
+                        Log.d("ChatListActivity", "Loaded ${chats.size} chats from cache")
+                        updateUpdateIndicatorVisibility()
+                    }
+                } catch (e: Exception) {
+                    Log.e("ChatListActivity", "Error loading from cache", e)
+                    runOnUiThread {
+                        // Fallback to fetchedChats if cache fails
+                        chats.addAll(fetchedChats)
+                        chatAdapter.setChats(chats.toList())
+                        updateAppIconBadge(chats.sumOf { it.unreadCount })
+                        Log.d("ChatListActivity", "Loaded ${chats.size} chats (fallback)")
+                        updateUpdateIndicatorVisibility()
+                    }
                 }
             }
         }
@@ -689,7 +770,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun updateUpdateIndicatorVisibility() {
         val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         val isAvailable = prefs.getBoolean("update_available", false)
-        val hasSelection = chatAdapter.getSelectedChats().isNotEmpty()
+        val hasSelection = if (::chatAdapter.isInitialized) chatAdapter.getSelectedChats().isNotEmpty() else false
         val isSearching = binding.searchCard.isVisible
         
         binding.updateAvailableIcon.isVisible = isAvailable && !hasSelection && !isSearching
@@ -890,9 +971,18 @@ class ChatListActivity : AppCompatActivity() {
     @SuppressLint("NotifyDataSetChanged")
     override fun onResume() {
         super.onResume()
-        ThemeStore.refresh(this, username) // Force theme refresh from store when returning
-        chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
-        chatAdapter.notifyDataSetChanged() // Force redraw all visible items with new theme
+        // Only refresh theme from store if user is authenticated
+        // Otherwise, keep the theme from SharedPreferences (preserved after logout)
+        if (username.isNotEmpty()) {
+            ThemeStore.refresh(this, username) // Force theme refresh from store when returning
+        }
+        
+        // Only update chatAdapter if it's initialized (user is authenticated)
+        if (::chatAdapter.isInitialized) {
+            chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
+            chatAdapter.notifyDataSetChanged() // Force redraw all visible items with new theme
+        }
+        
         updateUpdateIndicatorVisibility()
 
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
@@ -935,10 +1025,19 @@ class ChatListActivity : AppCompatActivity() {
         syncJob?.cancel()
         SessionManager.logout(this)
 
-        val intent = Intent(this, MainActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
+        // Save current theme to SharedPreferences before logout
+        val currentTheme = ThemeStore.currentTheme()
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        prefs.edit {
+            putString("current_theme_id", currentTheme.id)
+        }
+
+        // Clear username and password
+        username = ""
+        password = ""
+
+        // Show auth choice dialog
+        showAuthChoiceDialog()
     }
 
     private fun checkManualUpdate() {
@@ -1722,5 +1821,440 @@ class ChatListActivity : AppCompatActivity() {
 
         bottomSheet.setContentView(view)
         bottomSheet.show()
+    }
+
+    private fun showLoginBottomSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        // Load theme from SharedPreferences instead of ThemeStore to preserve theme when logged out
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+        val customTheme = if (themeId == "dark") {
+            lavender.client.android.theme.BuiltInThemes.dark
+        } else if (themeId == "light") {
+            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
+        } else {
+            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
+            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
+        }
+        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_login, binding.root, false)
+
+        val usernameInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val passwordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
+        val editText = sheetView.findViewById<EditText>(R.id.editTextUsername)
+        val editTextPassword = sheetView.findViewById<EditText>(R.id.editTextPassword)
+        val serverAddressSpinner = sheetView.findViewById<Spinner>(R.id.serverAddressSpinner)
+        val serverStatusIndicator = sheetView.findViewById<View>(R.id.serverStatusIndicator)
+        val serverStatusText = sheetView.findViewById<TextView>(R.id.serverStatusText)
+        val joinProgressBar = sheetView.findViewById<ProgressBar>(R.id.joinProgressBar)
+        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+        val btnJoin = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
+        val forgotPasswordButton = sheetView.findViewById<TextView>(R.id.forgotPasswordButton)
+
+        // Apply custom theme colors to all views
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val surfaceColor = customTheme.surfaceColor.toColorInt()
+            val primaryColor = customTheme.primaryColor.toColorInt()
+            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
+            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
+            
+            // Set background color
+            sheetView.setBackgroundColor(bgColor)
+            
+            // Set TextInputLayout background
+            usernameInputLayout.boxBackgroundColor = surfaceColor
+            passwordInputLayout.boxBackgroundColor = surfaceColor
+            
+            // Set text colors
+            editText.setTextColor(onSurfaceColor)
+            editText.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            editTextPassword.setTextColor(onSurfaceColor)
+            editTextPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            
+            // Set button colors
+            btnJoin.setBackgroundColor(primaryColor)
+            btnJoin.setTextColor(onPrimaryColor)
+            btnCancel.setTextColor(onSurfaceColor)
+            forgotPasswordButton.setTextColor(primaryColor)
+            
+            // Set spinner text color
+            serverStatusText.setTextColor(onSurfaceColor)
+            
+            // Set server status indicator to green (online)
+            serverStatusIndicator.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+        } catch (_: Exception) {
+            // Fallback to default theme handling
+            if (isDarkTheme()) {
+                val surfaceValue = android.util.TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+                usernameInputLayout.boxBackgroundColor = surfaceValue.data
+                passwordInputLayout.boxBackgroundColor = surfaceValue.data
+
+                val primaryValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                btnJoin.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                btnJoin.strokeWidth = 2
+            }
+        }
+
+        // Setup server address spinner
+        val serverList = listOf("159.195.38.145:50051")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        serverAddressSpinner.adapter = adapter
+        serverAddressSpinner.setSelection(0)
+
+        bottomSheetDialog.setContentView(sheetView)
+
+        btnCancel.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            //showFavoritesFromCache()
+        }
+
+        // Handle dismiss without login
+        bottomSheetDialog.setOnDismissListener {
+            if (username.isEmpty() || password.isEmpty()) {
+                //showFavoritesFromCache()
+            }
+        }
+
+        btnJoin.setOnClickListener {
+            val username = editText.text.toString().trim()
+            val password = editTextPassword.text.toString().trim()
+            val serverAddress = serverAddressSpinner.selectedItem.toString()
+            if (username.isNotEmpty() && password.isNotEmpty()) {
+                // Show loading state
+                btnJoin.text = ""
+                btnJoin.isEnabled = false
+                joinProgressBar.isVisible = true
+
+                SessionManager.login(this, username, password, serverAddress, register = false) { result ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS" -> {
+                                // Save credentials
+                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                                prefs.edit {
+                                    putString("saved_username", username)
+                                    putString("saved_password", password)
+                                    putString("server_address", serverAddress)
+                                }
+
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    prefs.edit { putString("user_id", userId) }
+                                }
+
+                                bottomSheetDialog.dismiss()
+                                recreate() // Reload activity with authenticated user
+                            }
+                            "USER_NOT_FOUND" -> {
+                                joinProgressBar.isVisible = false
+                                btnJoin.text = getString(R.string.join)
+                                btnJoin.isEnabled = true
+                                
+                                AlertDialog.Builder(this)
+                                    .setTitle(R.string.user_not_found)
+                                    .setMessage(getString(R.string.register_confirm, username))
+                                    .setPositiveButton(R.string.yes) { _, _ ->
+                                        bottomSheetDialog.dismiss()
+                                        showRegisterBottomSheet()
+                                    }
+                                    .setNegativeButton(R.string.no) { _, _ ->
+                                        bottomSheetDialog.dismiss()
+                                    }
+                                    .show()
+                            }
+                            "AUTH_FAILED" -> {
+                                joinProgressBar.isVisible = false
+                                btnJoin.text = getString(R.string.join)
+                                btnJoin.isEnabled = true
+                                Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
+                            }
+                            else -> {
+                                joinProgressBar.isVisible = false
+                                btnJoin.text = getString(R.string.join)
+                                btnJoin.isEnabled = true
+                                Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            } else if (username.isEmpty()) {
+                Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, R.string.password_empty, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        forgotPasswordButton.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showForgotPasswordBottomSheet()
+        }
+
+        bottomSheetDialog.show()
+    }
+
+    private fun showRegisterBottomSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        // Load theme from SharedPreferences instead of ThemeStore to preserve theme when logged out
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+        val customTheme = if (themeId == "dark") {
+            lavender.client.android.theme.BuiltInThemes.dark
+        } else if (themeId == "light") {
+            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
+        } else {
+            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
+            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
+        }
+        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_register, binding.root, false)
+
+        val usernameInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val passwordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
+        val confirmPasswordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.confirmPasswordInputLayout)
+        val emailInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
+        val editText = sheetView.findViewById<EditText>(R.id.editTextUsername)
+        val editTextPassword = sheetView.findViewById<EditText>(R.id.editTextPassword)
+        val editTextConfirmPassword = sheetView.findViewById<EditText>(R.id.editTextConfirmPassword)
+        val editTextEmail = sheetView.findViewById<EditText>(R.id.editTextEmail)
+        val serverAddressSpinner = sheetView.findViewById<Spinner>(R.id.serverAddressSpinner)
+        val serverStatusIndicator = sheetView.findViewById<View>(R.id.serverStatusIndicator)
+        val serverStatusText = sheetView.findViewById<TextView>(R.id.serverStatusText)
+        val registerProgressBar = sheetView.findViewById<ProgressBar>(R.id.registerProgressBar)
+        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+        val btnRegister = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
+
+        // Apply custom theme colors to all views
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val surfaceColor = customTheme.surfaceColor.toColorInt()
+            val primaryColor = customTheme.primaryColor.toColorInt()
+            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
+            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
+            
+            // Set background color
+            sheetView.setBackgroundColor(bgColor)
+            
+            // Set TextInputLayout background
+            usernameInputLayout.boxBackgroundColor = surfaceColor
+            passwordInputLayout.boxBackgroundColor = surfaceColor
+            confirmPasswordInputLayout.boxBackgroundColor = surfaceColor
+            emailInputLayout.boxBackgroundColor = surfaceColor
+            
+            // Set text colors
+            editText.setTextColor(onSurfaceColor)
+            editText.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            editTextPassword.setTextColor(onSurfaceColor)
+            editTextPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            editTextConfirmPassword.setTextColor(onSurfaceColor)
+            editTextConfirmPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            editTextEmail.setTextColor(onSurfaceColor)
+            editTextEmail.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            
+            // Set button colors
+            btnRegister.setBackgroundColor(primaryColor)
+            btnRegister.setTextColor(onPrimaryColor)
+            btnCancel.setTextColor(onSurfaceColor)
+            
+            // Set spinner text color
+            serverStatusText.setTextColor(onSurfaceColor)
+            
+            // Set server status indicator to green (online)
+            serverStatusIndicator.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+        } catch (_: Exception) {
+            // Fallback to default theme handling
+            if (isDarkTheme()) {
+                val surfaceValue = android.util.TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+                usernameInputLayout.boxBackgroundColor = surfaceValue.data
+                passwordInputLayout.boxBackgroundColor = surfaceValue.data
+                confirmPasswordInputLayout.boxBackgroundColor = surfaceValue.data
+                emailInputLayout.boxBackgroundColor = surfaceValue.data
+
+                val primaryValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                btnRegister.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                btnRegister.strokeWidth = 2
+            }
+        }
+
+        // Setup server address spinner
+        val serverList = listOf("159.195.38.145:50051")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        serverAddressSpinner.adapter = adapter
+        serverAddressSpinner.setSelection(0)
+
+        bottomSheetDialog.setContentView(sheetView)
+
+        btnCancel.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            //showFavoritesFromCache()
+        }
+
+        // Handle dismiss without registration
+        bottomSheetDialog.setOnDismissListener {
+            if (username.isEmpty() || password.isEmpty()) {
+                //showFavoritesFromCache()
+            }
+        }
+
+        btnRegister.setOnClickListener {
+            val username = editText.text.toString().trim()
+            val password = editTextPassword.text.toString().trim()
+            val confirmPassword = editTextConfirmPassword.text.toString().trim()
+            val email = editTextEmail.text.toString().trim()
+            val serverAddress = serverAddressSpinner.selectedItem.toString()
+
+            if (username.isEmpty()) {
+                Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
+            } else if (password.isEmpty()) {
+                Toast.makeText(this, R.string.password_empty, Toast.LENGTH_LONG).show()
+            } else if (password != confirmPassword) {
+                Toast.makeText(this, R.string.passwords_do_not_match, Toast.LENGTH_LONG).show()
+            } else {
+                // Show loading state
+                btnRegister.text = ""
+                btnRegister.isEnabled = false
+                registerProgressBar.isVisible = true
+
+                SessionManager.login(this, username, password, serverAddress, register = true) { result ->
+                    runOnUiThread {
+                        when (result) {
+                            "REGISTRATION_SUCCESS" -> {
+                                // Save credentials
+                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                                prefs.edit {
+                                    putString("saved_username", username)
+                                    putString("saved_password", password)
+                                    putString("server_address", serverAddress)
+                                }
+
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    prefs.edit { putString("user_id", userId) }
+                                }
+
+                                // Clear local cache for new user
+                                clearLocalCacheSync()
+                                // Set onboarding flag
+                                prefs.edit {
+                                    putBoolean("onboarding_completed_$username", false)
+                                    putLong("first_login_$username", System.currentTimeMillis())
+                                }
+
+                                bottomSheetDialog.dismiss()
+                                recreate() // Reload activity with authenticated user
+                            }
+                            "AUTH_FAILED" -> {
+                                registerProgressBar.isVisible = false
+                                btnRegister.text = getString(R.string.register)
+                                btnRegister.isEnabled = true
+                                Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
+                            }
+                            else -> {
+                                registerProgressBar.isVisible = false
+                                btnRegister.text = getString(R.string.register)
+                                btnRegister.isEnabled = true
+                                Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        bottomSheetDialog.show()
+    }
+
+    private fun isDarkTheme(): Boolean {
+        return when (AppCompatDelegate.getDefaultNightMode()) {
+            AppCompatDelegate.MODE_NIGHT_YES -> true
+            AppCompatDelegate.MODE_NIGHT_NO -> false
+            else -> {
+                val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+    }
+
+    private fun showForgotPasswordBottomSheet() {
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val customTheme = ThemeStore.currentTheme()
+        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_forgot_password, binding.root, false)
+
+        val emailInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
+        val editTextEmail = sheetView.findViewById<EditText>(R.id.editTextEmail)
+        val sendProgressBar = sheetView.findViewById<ProgressBar>(R.id.sendProgressBar)
+        val btnSend = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
+        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+
+        // Set TextInputLayout background in dark theme
+        if (isDarkTheme()) {
+            val surfaceValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+            emailInputLayout.boxBackgroundColor = surfaceValue.data
+        }
+
+        bottomSheetDialog.setContentView(sheetView)
+
+        btnCancel.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+
+        btnSend.setOnClickListener {
+            val email = editTextEmail.text.toString().trim()
+            if (email.isNotEmpty()) {
+                // TODO: Implement password recovery logic
+                bottomSheetDialog.dismiss()
+            } else {
+                Toast.makeText(this, R.string.enter_email, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        bottomSheetDialog.show()
+    }
+
+    private fun showAuthChoiceDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_auth_choice, binding.root, false)
+        // Load theme from SharedPreferences instead of ThemeStore to preserve theme when logged out
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+        val customTheme = if (themeId == "dark") {
+            lavender.client.android.theme.BuiltInThemes.dark
+        } else if (themeId == "light") {
+            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
+        } else {
+            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
+            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
+        }
+        
+        val btnLogin = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnLogin)
+        val btnRegister = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
+
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            dialogView.setBackgroundColor(bgColor)
+        } catch (_: Exception) {}
+
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setCancelable(false)
+        
+        btnLogin.setOnClickListener {
+            dialog.dismiss()
+            showLoginBottomSheet()
+        }
+        
+        btnRegister.setOnClickListener {
+            dialog.dismiss()
+            showRegisterBottomSheet()
+        }
+        
+        dialog.show()
     }
 }

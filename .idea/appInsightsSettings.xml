@@ -6,14 +6,6 @@
         <entry key="Firebase Crashlytics">
           <value>
             <InsightsFilterSettings>
-              <option name="connection">
-                <ConnectionSetting>
-                  <option name="appId" value="lavender.client.android" />
-                  <option name="mobileSdkAppId" value="1:1025814489039:android:96c90a8727d1dbe291d4ba" />
-                  <option name="projectId" value="lavender-messenger" />
-                  <option name="projectNumber" value="1025814489039" />
-                </ConnectionSetting>
-              </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
               <option name="timeIntervalDays" value="THIRTY_DAYS" />
               <option name="visibilityType" value="ALL" />
