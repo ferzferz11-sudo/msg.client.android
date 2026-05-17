@@ -1,8 +1,11 @@
 package lavender.client.android
 
 import android.content.res.ColorStateList
-import android.graphics.Color
+import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -11,24 +14,31 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import kotlin.math.abs
+import android.content.ContentValues
 
 class FullScreenImageActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var btnClose: ImageButton
+    private lateinit var btnDownload: ImageButton
     private lateinit var loadingProgress: ProgressBar
     private lateinit var gestureDetector: GestureDetector
     private lateinit var scaleGestureDetector: ScaleGestureDetector
@@ -66,24 +76,33 @@ class FullScreenImageActivity : AppCompatActivity() {
 
         imageView = findViewById(R.id.fullScreenImageView)
         btnClose = findViewById(R.id.btnClose)
+        btnDownload = findViewById(R.id.btnDownload)
         loadingProgress = findViewById(R.id.loadingProgress)
 
         // For image viewer, we use classic deep dark background for better focus
-        val bgColor = Color.BLACK
-        val primaryColor = Color.WHITE
-        val iconColor = Color.WHITE
+        val bgColor = android.graphics.Color.BLACK
+        val primaryColor = android.graphics.Color.WHITE
+        val iconColor = android.graphics.Color.WHITE
         
         findViewById<View>(android.R.id.content).setBackgroundColor(bgColor)
         loadingProgress.indeterminateTintList = ColorStateList.valueOf(primaryColor)
         btnClose.imageTintList = ColorStateList.valueOf(iconColor)
+        btnDownload.imageTintList = ColorStateList.valueOf(iconColor)
 
-        // Handle Window Insets for the close button (fix overlap with status bar)
-        ViewCompat.setOnApplyWindowInsetsListener(btnClose) { view, insets ->
+        // Handle Window Insets for the top buttons
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.activityRoot) ?: btnClose) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val lp = view.layoutParams as ViewGroup.MarginLayoutParams
-            // Margin from top = status bar height + 16dp
-            lp.topMargin = systemBars.top + (16 * resources.displayMetrics.density).toInt()
-            view.layoutParams = lp
+            
+            // Adjust Close button
+            val closeLp = btnClose.layoutParams as ViewGroup.MarginLayoutParams
+            closeLp.topMargin = systemBars.top + (16 * resources.displayMetrics.density).toInt()
+            btnClose.layoutParams = closeLp
+            
+            // Adjust Download button
+            val downloadLp = btnDownload.layoutParams as ViewGroup.MarginLayoutParams
+            downloadLp.topMargin = systemBars.top + (16 * resources.displayMetrics.density).toInt()
+            btnDownload.layoutParams = downloadLp
+            
             insets
         }
 
@@ -112,6 +131,58 @@ class FullScreenImageActivity : AppCompatActivity() {
 
         btnClose.setOnClickListener {
             finish()
+        }
+
+        btnDownload.setOnClickListener {
+            downloadImage()
+        }
+    }
+
+    private fun downloadImage() {
+        val currentUrl = imageUrls.getOrNull(currentIndex) ?: return
+        val finalUrl = if (currentUrl.startsWith("http")) currentUrl.trim() 
+                      else "http://159.195.38.145:8082" + currentUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val bitmap = Glide.with(this@FullScreenImageActivity)
+                    .asBitmap()
+                    .load(finalUrl)
+                    .submit()
+                    .get()
+
+                saveImageToGallery(bitmap)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FullScreenImageActivity, "Изображение сохранено в галерею", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@FullScreenImageActivity, "Ошибка при сохранении: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun saveImageToGallery(bitmap: Bitmap) {
+        val filename = "Lavender_${System.currentTimeMillis()}.jpg"
+        var fos: java.io.OutputStream? = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            contentResolver?.also { resolver ->
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                }
+                val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                fos = imageUri?.let { resolver.openOutputStream(it) }
+            }
+        } else {
+            val imagesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            val image = java.io.File(imagesDir, filename)
+            fos = java.io.FileOutputStream(image)
+        }
+        fos?.use {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it)
         }
     }
 

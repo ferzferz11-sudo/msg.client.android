@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
@@ -153,6 +154,7 @@ class MessageAdapter(
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
         private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
+        private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
         
         // Track pending image load requests to cancel them when ViewHolder is reused
         private var pendingImageCall: okhttp3.Call? = null
@@ -178,6 +180,8 @@ class MessageAdapter(
             val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty()
             val isEmptyMessage = isEmptyImageMessage || isEmptyVoiceMessage || isCompletelyEmpty
             
+            btnDownloadFile.isVisible = false
+            
             // Hide entire message if it's empty — use GONE + zero height to avoid blank gaps
             if (isEmptyMessage) {
                 itemView.visibility = View.GONE
@@ -191,6 +195,7 @@ class MessageAdapter(
             
             messageText.text = message.text
             userText.text = message.user
+            messageText.movementMethod = null
 
             // 1. Visibility (Telegram Style)
             val canShowSenderInfo = isGroup && !isOutgoing && !isConsecutive && !isSelectionMode
@@ -319,6 +324,7 @@ class MessageAdapter(
                 messageText.alpha = 1.0f
                 
                 audioMessageView.isVisible = false
+                audioMessageView.setOnLongClickListener(null)
                 
                 val isLocation = message.text.startsWith("geo:")
                 editedText.text = context.getString(R.string.edited_label)
@@ -334,6 +340,8 @@ class MessageAdapter(
                     context.theme.resolveAttribute(iconColorAttr, typedValue, true)
                     val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
                     messageText.compoundDrawables[0]?.setTint(color)
+
+                    btnDownloadFile.isVisible = false // Location doesn't need download icon on the left yet
 
                     messageText.setOnClickListener {
                         if (isSelectionMode) {
@@ -352,6 +360,7 @@ class MessageAdapter(
                             }
                         }
                     }
+                    messageText.isLongClickable = true
                     messageText.setOnLongClickListener {
                         if (isSelectionMode) onLongClick() else {
                             if (adapterPosition != RecyclerView.NO_POSITION) {
@@ -370,13 +379,28 @@ class MessageAdapter(
                         else -> R.drawable.ic_file
                     }
                     messageText.text = fileName
-                    messageText.setCompoundDrawablesWithIntrinsicBounds(fileIcon, 0, 0, 0)
-                    messageText.compoundDrawablePadding = 8.dpToPx()
+                    messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
                     messageText.setBackgroundColor(Color.TRANSPARENT)
-                    val typedValue = android.util.TypedValue()
-                    context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
-                    val color = if (typedValue.resourceId != 0) ContextCompat.getColor(context, typedValue.resourceId) else typedValue.data
-                    messageText.compoundDrawables[0]?.setTint(color)
+                    
+                    btnDownloadFile.isVisible = !isSelectionMode
+                    btnDownloadFile.setImageResource(fileIcon)
+                    btnDownloadFile.imageTintList = ColorStateList.valueOf(pTextColor)
+                    btnDownloadFile.setOnClickListener {
+                        if (isSelectionMode) {
+                            onClick()
+                        } else if (fileUrl.isNotEmpty()) {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, fileUrl.toUri())
+                            context.startActivity(intent)
+                        }
+                    }
+                    btnDownloadFile.setOnLongClickListener {
+                        if (isSelectionMode) onLongClick() else {
+                            if (adapterPosition != RecyclerView.NO_POSITION) {
+                                onLongClick()
+                            }
+                        }
+                        true
+                    }
 
                     messageText.setOnClickListener {
                         if (isSelectionMode) {
@@ -386,6 +410,7 @@ class MessageAdapter(
                             context.startActivity(intent)
                         }
                     }
+                    messageText.isLongClickable = true
                     messageText.setOnLongClickListener {
                         if (isSelectionMode) onLongClick() else {
                             if (adapterPosition != RecyclerView.NO_POSITION) {
@@ -418,9 +443,30 @@ class MessageAdapter(
                         messageText.text = message.text
                     }
                     messageText.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                    messageText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                    
+                    if (isSelectionMode) {
+                        messageText.movementMethod = null
+                    } else {
+                        messageText.movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                    }
+
                     messageText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
+                    
+                    // Prevent LinkMovementMethod from executing on long click
+                    messageText.setOnTouchListener { v, event ->
+                        if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                            v.tag = System.currentTimeMillis()
+                        } else if (event.action == android.view.MotionEvent.ACTION_UP) {
+                            val duration = System.currentTimeMillis() - (v.tag as? Long ?: 0L)
+                            if (duration > android.view.ViewConfiguration.getLongPressTimeout()) {
+                                return@setOnTouchListener true // Consume the event if it was a long press
+                            }
+                        }
+                        false
+                    }
+
                     messageText.isClickable = true
+                    messageText.isLongClickable = true
                     messageText.isFocusable = true
                     messageText.setOnLongClickListener {
                         if (isSelectionMode) onLongClick() else {

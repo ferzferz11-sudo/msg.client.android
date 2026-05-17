@@ -143,14 +143,33 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/messageText"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="16sp"
-                    android:autoLink="web"
-                    android:linksClickable="true"
-                    tools:text="Hello world" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnDownloadFile"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_download"
+                        android:visibility="gone"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/messageText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:autoLink="web"
+                        android:linksClickable="true"
+                        tools:text="Hello world" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="wrap_content"

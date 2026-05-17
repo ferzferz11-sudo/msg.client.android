@@ -42,8 +42,14 @@ class ForwardChatAdapter(
         private val unreadCount: TextView = view.findViewById(R.id.unreadCount)
 
         fun bind(chat: ChatInfo) {
-            chatName.text = chat.getDisplayName(currentUsername)
-            chatType.text = chat.type.replaceFirstChar { it.uppercase() }
+            val context = itemView.context
+            chatName.text = if (chat.type == "favorites") context.getString(R.string.favorites) else chat.getDisplayName(currentUsername)
+            chatType.text = when (chat.type) {
+                "direct" -> context.getString(R.string.direct_chat_type)
+                "group" -> context.getString(R.string.group_chat_type)
+                "favorites" -> context.getString(R.string.favorites_description)
+                else -> chat.type.replaceFirstChar { it.uppercase() }
+            }
             unreadCount.visibility = View.GONE
             
             // Set colors from theme
