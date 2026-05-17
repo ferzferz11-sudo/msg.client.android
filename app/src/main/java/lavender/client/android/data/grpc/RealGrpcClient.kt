@@ -161,6 +161,7 @@ object RealGrpcClient {
         channel = null
         requestObserver = null
         typingRequestObserver = null
+        lastChatRequest = null
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
 

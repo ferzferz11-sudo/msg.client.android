@@ -95,12 +95,15 @@
     <string name="forgot_password_description">Enter your email to receive your login credentials</string>
     <string name="enter_email">Enter your email</string>
     <string name="send_password">Send Password</string>
+    <string name="password_recovery_sent">Password recovery instructions sent to your email.</string>
+    <string name="server_address_empty">Server address cannot be empty</string>
     <string name="welcome">Welcome</string>
     <string name="enter_username">Enter your name</string>
     <string name="enter_password">Enter password</string>
     <string name="password_empty">Password cannot be empty</string>
     <string name="registration_success">User registered successfully</string>
     <string name="auth_failed">Authentication failed</string>
+    <string name="email_already_in_use">Email already in use</string>
     <string name="chats">Chats</string>
     <string name="preview">Preview</string>
     <string name="edit">Edit Profile</string>

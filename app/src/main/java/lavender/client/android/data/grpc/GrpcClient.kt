@@ -60,7 +60,7 @@ object GrpcClient {
         realGrpcClient.disconnect()
     }
     
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, onMessageReceived: (Message) -> Unit) {
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", onMessageReceived: (Message) -> Unit) {
         realGrpcClient.startChat(username, password, joinMessage, register, onMessageReceived)
     }
     

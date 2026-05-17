@@ -18,6 +18,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TextView
@@ -40,8 +41,11 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
@@ -322,14 +326,14 @@ class ChatListActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             grpcClient.connectionStatus.collect { status ->
-                val isConnecting = status == lavender.client.android.data.grpc.ConnectionStatus.CONNECTING
+                val isConnecting = status == ConnectionStatus.CONNECTING
                 if (isConnecting) {
                     binding.toolbarTitle.text = getString(R.string.connecting)
                 } else if (chatAdapter.getSelectedChats().isEmpty()) {
                     binding.toolbarTitle.text = getString(R.string.chats)
                 }
 
-                if (status == lavender.client.android.data.grpc.ConnectionStatus.READY) {
+                if (status == ConnectionStatus.READY) {
                     if (username.isNotEmpty() && password.isNotEmpty()) {
                         grpcClient.startChat(username, password, "") { /* onMessageReceived */ }
                         loadChats()
@@ -988,7 +992,7 @@ class ChatListActivity : AppCompatActivity() {
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
 
         // Ensure connection is active if we have a server address
-        val needsReconnect = grpcClient.connectionStatus.value != lavender.client.android.data.grpc.ConnectionStatus.READY ||
+        val needsReconnect = grpcClient.connectionStatus.value != ConnectionStatus.READY ||
                            grpcClient.shouldForceReconnect()
 
         if (needsReconnect) {
@@ -1846,6 +1850,8 @@ class ChatListActivity : AppCompatActivity() {
         val serverAddressSpinner = sheetView.findViewById<Spinner>(R.id.serverAddressSpinner)
         val serverStatusIndicator = sheetView.findViewById<View>(R.id.serverStatusIndicator)
         val serverStatusText = sheetView.findViewById<TextView>(R.id.serverStatusText)
+        val serverAddressLabel = sheetView.findViewById<TextView>(R.id.serverAddressLabel)
+        val serverStatusLayout = sheetView.findViewById<LinearLayout>(R.id.serverStatusLayout)
         val joinProgressBar = sheetView.findViewById<ProgressBar>(R.id.joinProgressBar)
         val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
         val btnJoin = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
@@ -1881,6 +1887,9 @@ class ChatListActivity : AppCompatActivity() {
             // Set spinner text color
             serverStatusText.setTextColor(onSurfaceColor)
             
+            // Set title color
+            sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
+            
             // Set server status indicator to green (online)
             serverStatusIndicator.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
         } catch (_: Exception) {
@@ -1905,11 +1914,17 @@ class ChatListActivity : AppCompatActivity() {
         serverAddressSpinner.adapter = adapter
         serverAddressSpinner.setSelection(0)
 
+        if (serverList.size <= 1) {
+            serverAddressSpinner.visibility = View.GONE
+            serverStatusLayout?.visibility = View.GONE
+            serverAddressLabel?.visibility = View.GONE
+        }
+
         bottomSheetDialog.setContentView(sheetView)
 
         btnCancel.setOnClickListener {
             bottomSheetDialog.dismiss()
-            //showFavoritesFromCache()
+            showAuthChoiceDialog()
         }
 
         // Handle dismiss without login
@@ -1929,7 +1944,7 @@ class ChatListActivity : AppCompatActivity() {
                 btnJoin.isEnabled = false
                 joinProgressBar.isVisible = true
 
-                SessionManager.login(this, username, password, serverAddress, register = false) { result ->
+                SessionManager.login(this, username, password, serverAddress, register = false, email = "") { result ->
                     runOnUiThread {
                         when (result) {
                             "SUCCESS" -> {
@@ -2023,6 +2038,8 @@ class ChatListActivity : AppCompatActivity() {
         val serverAddressSpinner = sheetView.findViewById<Spinner>(R.id.serverAddressSpinner)
         val serverStatusIndicator = sheetView.findViewById<View>(R.id.serverStatusIndicator)
         val serverStatusText = sheetView.findViewById<TextView>(R.id.serverStatusText)
+        val serverAddressLabel = sheetView.findViewById<TextView>(R.id.serverAddressLabel)
+        val serverStatusLayout = sheetView.findViewById<LinearLayout>(R.id.serverStatusLayout)
         val registerProgressBar = sheetView.findViewById<ProgressBar>(R.id.registerProgressBar)
         val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
         val btnRegister = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
@@ -2062,6 +2079,9 @@ class ChatListActivity : AppCompatActivity() {
             // Set spinner text color
             serverStatusText.setTextColor(onSurfaceColor)
             
+            // Set title color
+            sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
+            
             // Set server status indicator to green (online)
             serverStatusIndicator.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
         } catch (_: Exception) {
@@ -2088,11 +2108,17 @@ class ChatListActivity : AppCompatActivity() {
         serverAddressSpinner.adapter = adapter
         serverAddressSpinner.setSelection(0)
 
+        if (serverList.size <= 1) {
+            serverAddressSpinner.visibility = View.GONE
+            serverStatusLayout?.visibility = View.GONE
+            serverAddressLabel?.visibility = View.GONE
+        }
+
         bottomSheetDialog.setContentView(sheetView)
 
         btnCancel.setOnClickListener {
             bottomSheetDialog.dismiss()
-            //showFavoritesFromCache()
+            showAuthChoiceDialog()
         }
 
         // Handle dismiss without registration
@@ -2121,7 +2147,7 @@ class ChatListActivity : AppCompatActivity() {
                 btnRegister.isEnabled = false
                 registerProgressBar.isVisible = true
 
-                SessionManager.login(this, username, password, serverAddress, register = true) { result ->
+                SessionManager.login(this, username, password, serverAddress, register = true, email = email) { result ->
                     runOnUiThread {
                         when (result) {
                             "REGISTRATION_SUCCESS" -> {
@@ -2148,6 +2174,12 @@ class ChatListActivity : AppCompatActivity() {
 
                                 bottomSheetDialog.dismiss()
                                 recreate() // Reload activity with authenticated user
+                            }
+                            "EMAIL_ALREADY_IN_USE" -> {
+                                registerProgressBar.isVisible = false
+                                btnRegister.text = getString(R.string.register)
+                                btnRegister.isEnabled = true
+                                Toast.makeText(this, R.string.email_already_in_use, Toast.LENGTH_LONG).show()
                             }
                             "AUTH_FAILED" -> {
                                 registerProgressBar.isVisible = false
@@ -2183,7 +2215,16 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showForgotPasswordBottomSheet() {
         val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val customTheme = ThemeStore.currentTheme()
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+        val customTheme = if (themeId == "dark") {
+            lavender.client.android.theme.BuiltInThemes.dark
+        } else if (themeId == "light") {
+            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
+        } else {
+            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
+            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
+        }
         ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_forgot_password, binding.root, false)
 
@@ -2193,24 +2234,106 @@ class ChatListActivity : AppCompatActivity() {
         val btnSend = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
         val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
 
-        // Set TextInputLayout background in dark theme
-        if (isDarkTheme()) {
-            val surfaceValue = android.util.TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
-            emailInputLayout.boxBackgroundColor = surfaceValue.data
+        // Apply custom theme colors to all views
+        try {
+            val bgColor = customTheme.backgroundColor.toColorInt()
+            val surfaceColor = customTheme.surfaceColor.toColorInt()
+            val primaryColor = customTheme.primaryColor.toColorInt()
+            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
+            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
+            
+            // Set background color
+            sheetView.setBackgroundColor(bgColor)
+            
+            // Set TextInputLayout background
+            emailInputLayout.boxBackgroundColor = surfaceColor
+            
+            // Set text colors
+            editTextEmail.setTextColor(onSurfaceColor)
+            editTextEmail.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            
+            // Set button colors
+            btnSend.setBackgroundColor(primaryColor)
+            btnSend.setTextColor(onPrimaryColor)
+            btnCancel.setTextColor(onSurfaceColor)
+            
+            // Set title color
+            sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
+            sheetView.findViewById<TextView>(R.id.descriptionText)?.setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 178))
+            
+        } catch (_: Exception) {
+            // Fallback to default theme handling
+            if (isDarkTheme()) {
+                val surfaceValue = android.util.TypedValue()
+                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
+                emailInputLayout.boxBackgroundColor = surfaceValue.data
+                
+                val primaryValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
+                btnSend.strokeColor = android.content.res.ColorStateList.valueOf(primaryValue.data)
+                btnSend.strokeWidth = 2
+            }
         }
 
         bottomSheetDialog.setContentView(sheetView)
 
         btnCancel.setOnClickListener {
             bottomSheetDialog.dismiss()
+            showAuthChoiceDialog()
         }
 
         btnSend.setOnClickListener {
             val email = editTextEmail.text.toString().trim()
             if (email.isNotEmpty()) {
-                // TODO: Implement password recovery logic
-                bottomSheetDialog.dismiss()
+                sendProgressBar.isVisible = true
+                btnSend.isEnabled = false
+                
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                    val serverAddress = prefs.getString("server_address", "159.195.38.145:50051") ?: "159.195.38.145:50051"
+                    
+                    if (serverAddress.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            sendProgressBar.isVisible = false
+                            btnSend.isEnabled = true
+                            Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+
+                    if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                        val parts = serverAddress.split(":")
+                        val host = parts[0]
+                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                        grpcClient.connect(host, false, port, this@ChatListActivity)
+                        
+                        // Wait up to 5 seconds for connection to be READY
+                        withTimeoutOrNull(5000) {
+                            grpcClient.connectionStatus.first { it == ConnectionStatus.READY || it == ConnectionStatus.FAILED }
+                        }
+                    }
+
+                    if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                        grpcClient.recoverPassword(email) { success, message ->
+                            runOnUiThread {
+                                sendProgressBar.isVisible = false
+                                btnSend.isEnabled = true
+                                if (success) {
+                                    Toast.makeText(this@ChatListActivity, R.string.password_recovery_sent, Toast.LENGTH_LONG).show()
+                                    bottomSheetDialog.dismiss()
+                                } else {
+                                    Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            sendProgressBar.isVisible = false
+                            btnSend.isEnabled = true
+                            Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             } else {
                 Toast.makeText(this, R.string.enter_email, Toast.LENGTH_LONG).show()
             }

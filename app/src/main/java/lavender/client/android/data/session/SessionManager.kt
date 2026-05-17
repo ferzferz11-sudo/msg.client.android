@@ -20,7 +20,7 @@ import lavender.client.android.data.grpc.GrpcClient
 
 object SessionManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    
+
     private val _session = MutableStateFlow(UserSession())
     val session: StateFlow<UserSession> = _session.asStateFlow()
 
@@ -31,7 +31,7 @@ object SessionManager {
                 _session.value = _session.value.copy(isSuperAdmin = isAdmin)
             }
         }
-        
+
         scope.launch {
             GrpcClient.avatarCacheFlow.collect { cache ->
                 val currentUsername = _session.value.username
@@ -56,14 +56,14 @@ object SessionManager {
         
         if (username.isNotEmpty()) {
             updateSession(username = username, password = password, userId = userId)
-            
+
             // Reconnect if needed
             if (serverAddress.isNotEmpty() && GrpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED) {
                 val parts = serverAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                 GrpcClient.connect(host, useTls = false, port = port, context = context)
-                
+
                 // Sync FCM token on start
                 syncFcmToken(context, username)
             }
@@ -100,12 +100,12 @@ object SessionManager {
             avatarUrl = avatarUrl ?: _session.value.avatarUrl,
             fullAvatarUrl = fullAvatarUrl ?: _session.value.fullAvatarUrl
         )
-        
+
         // Sync to GrpcClient internal state if needed
         userId?.let { GrpcClient.setUserId(it) }
     }
 
-    fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, onComplete: (String?) -> Unit) {
+    fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {
         Log.d("SessionManager", "Login attempt for $username at $serverAddress (register=$register)")
         val parts = serverAddress.split(":")
         val host = parts[0]
@@ -124,7 +124,7 @@ object SessionManager {
 
                 if (status == ConnectionStatus.READY) {
                     // Start chat with auth signal
-                    GrpcClient.startChat(username, pass, "", register) { }
+                    GrpcClient.startChat(username, pass, "", register, email) { }
 
                     // Wait for auth status from server
                     val authResult = withTimeoutOrNull(5000) {
@@ -153,7 +153,8 @@ object SessionManager {
                         }
 
                         syncFcmToken(context, username)
-                        onComplete("SUCCESS")
+                        // This is the bug fix - if it was REGISTRATION_SUCCESS, we must pass it back!
+                        onComplete(authResult ?: "SUCCESS")
                     } else {
                         // Return the actual error signal: AUTH_FAILED or USER_NOT_FOUND
                         onComplete(authResult)
