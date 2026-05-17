@@ -650,11 +650,21 @@ data class RemoveFavoriteResponseProto(
     val success: Boolean = false
 )
 
-data class RecoverPasswordRequestProto(
+data class RequestPasswordResetRequestProto(
     val email: String = ""
 )
 
-data class RecoverPasswordResponseProto(
+data class RequestPasswordResetResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class ResetPasswordRequestProto(
+    val token: String = "",
+    val newPassword: String = ""
+)
+
+data class ResetPasswordResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )

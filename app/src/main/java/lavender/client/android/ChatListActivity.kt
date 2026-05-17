@@ -2235,6 +2235,10 @@ class ChatListActivity : AppCompatActivity() {
         val sendProgressBar = sheetView.findViewById<ProgressBar>(R.id.sendProgressBar)
         val btnSend = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
         val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+        val tokenInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.tokenInputLayout)
+        val newPasswordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.newPasswordInputLayout)
+        val editTextToken = sheetView.findViewById<EditText>(R.id.editTextToken)
+        val editTextNewPassword = sheetView.findViewById<EditText>(R.id.editTextNewPassword)
 
         // Apply custom theme colors to all views
         try {
@@ -2249,10 +2253,16 @@ class ChatListActivity : AppCompatActivity() {
             
             // Set TextInputLayout background
             emailInputLayout.boxBackgroundColor = surfaceColor
+            tokenInputLayout.boxBackgroundColor = surfaceColor
+            newPasswordInputLayout.boxBackgroundColor = surfaceColor
             
             // Set text colors
             editTextEmail.setTextColor(onSurfaceColor)
             editTextEmail.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            editTextToken.setTextColor(onSurfaceColor)
+            editTextToken.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            editTextNewPassword.setTextColor(onSurfaceColor)
+            editTextNewPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
             
             // Set button colors
             btnSend.setBackgroundColor(primaryColor)
@@ -2284,60 +2294,97 @@ class ChatListActivity : AppCompatActivity() {
             showAuthChoiceDialog()
         }
 
+        var isStep2 = false
         btnSend.setOnClickListener {
-            val email = editTextEmail.text.toString().trim()
-            if (email.isNotEmpty()) {
-                sendProgressBar.isVisible = true
-                btnSend.isEnabled = false
-                
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                    val serverAddress = prefs.getString("server_address", "159.195.38.145:50051") ?: "159.195.38.145:50051"
+            if (!isStep2) {
+                val email = editTextEmail.text.toString().trim()
+                if (email.isNotEmpty()) {
+                    sendProgressBar.isVisible = true
+                    btnSend.isEnabled = false
                     
-                    if (serverAddress.isEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            sendProgressBar.isVisible = false
-                            btnSend.isEnabled = true
-                            Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_SHORT).show()
-                        }
-                        return@launch
-                    }
-
-                    if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                        val parts = serverAddress.split(":")
-                        val host = parts[0]
-                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                        grpcClient.connect(host, false, port, this@ChatListActivity)
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                        val serverAddress = prefs.getString("server_address", "159.195.38.145:50051") ?: "159.195.38.145:50051"
                         
-                        // Wait up to 5 seconds for connection to be READY
-                        withTimeoutOrNull(5000) {
-                            grpcClient.connectionStatus.first { it == ConnectionStatus.READY || it == ConnectionStatus.FAILED }
-                        }
-                    }
-
-                    if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
-                        grpcClient.recoverPassword(email) { success, message ->
-                            runOnUiThread {
+                        if (serverAddress.isEmpty()) {
+                            withContext(Dispatchers.Main) {
                                 sendProgressBar.isVisible = false
                                 btnSend.isEnabled = true
-                                if (success) {
-                                    Toast.makeText(this@ChatListActivity, R.string.password_recovery_sent, Toast.LENGTH_LONG).show()
-                                    bottomSheetDialog.dismiss()
-                                } else {
-                                    Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
-                                }
+                                Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_SHORT).show()
+                            }
+                            return@launch
+                        }
+
+                        if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                            val parts = serverAddress.split(":")
+                            val host = parts[0]
+                            val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                            grpcClient.connect(host, false, port, this@ChatListActivity)
+                            
+                            // Wait up to 5 seconds for connection to be READY
+                            withTimeoutOrNull(5000) {
+                                grpcClient.connectionStatus.first { it == ConnectionStatus.READY || it == ConnectionStatus.FAILED }
                             }
                         }
-                    } else {
-                        withContext(Dispatchers.Main) {
+
+                        if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                            grpcClient.requestPasswordReset(email) { success, message ->
+                                runOnUiThread {
+                                    sendProgressBar.isVisible = false
+                                    btnSend.isEnabled = true
+                                    if (success) {
+                                        isStep2 = true
+                                        emailInputLayout.isVisible = false
+                                        tokenInputLayout.isVisible = true
+                                        newPasswordInputLayout.isVisible = true
+                                        btnSend.text = "Сбросить пароль"
+                                        Toast.makeText(this@ChatListActivity, "Код отправлен на ваш email", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                sendProgressBar.isVisible = false
+                                btnSend.isEnabled = true
+                                Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, R.string.enter_email, Toast.LENGTH_LONG).show()
+                }
+            } else {
+                val token = editTextToken.text.toString().trim()
+                val newPw = editTextNewPassword.text.toString().trim()
+                
+                if (token.isEmpty()) {
+                    Toast.makeText(this, "Введите код", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (newPw.isEmpty()) {
+                    Toast.makeText(this, R.string.password_empty, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                sendProgressBar.isVisible = true
+                btnSend.isEnabled = false
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    grpcClient.resetPassword(token, newPw) { success, message ->
+                        runOnUiThread {
                             sendProgressBar.isVisible = false
                             btnSend.isEnabled = true
-                            Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            if (success) {
+                                Toast.makeText(this@ChatListActivity, "Пароль успешно изменен", Toast.LENGTH_LONG).show()
+                                bottomSheetDialog.dismiss()
+                            } else {
+                                Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }
-            } else {
-                Toast.makeText(this, R.string.enter_email, Toast.LENGTH_LONG).show()
             }
         }
 

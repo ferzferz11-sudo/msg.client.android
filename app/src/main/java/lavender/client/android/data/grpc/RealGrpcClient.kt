@@ -1132,20 +1132,38 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun recoverPassword(email: String, cb: (Boolean, String) -> Unit) {
+    fun requestPasswordReset(email: String, cb: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RecoverPasswordRequestProto, RecoverPasswordResponseProto>()
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RequestPasswordResetRequestProto, RequestPasswordResetResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RecoverPassword")
-            .setRequestMarshaller(RecoverPasswordRequestMarshaller())
-            .setResponseMarshaller(RecoverPasswordResponseMarshaller())
+            .setFullMethodName("messenger.ChatService/RequestPasswordReset")
+            .setRequestMarshaller(RequestPasswordResetRequestMarshaller())
+            .setResponseMarshaller(RequestPasswordResetResponseMarshaller())
             .build()
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RecoverPasswordResponseProto>() {
-            override fun onMessage(message: RecoverPasswordResponseProto) { cb(message.success, message.message) }
+        call.start(object : io.grpc.ClientCall.Listener<RequestPasswordResetResponseProto>() {
+            override fun onMessage(message: RequestPasswordResetResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(RecoverPasswordRequestProto(email))
+        call.sendMessage(RequestPasswordResetRequestProto(email))
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun resetPassword(token: String, newPw: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ResetPasswordRequestProto, ResetPasswordResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/ResetPassword")
+            .setRequestMarshaller(ResetPasswordRequestMarshaller())
+            .setResponseMarshaller(ResetPasswordResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<ResetPasswordResponseProto>() {
+            override fun onMessage(message: ResetPasswordResponseProto) { cb(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(ResetPasswordRequestProto(token, newPw))
         call.halfClose()
         call.request(1)
     }
@@ -2463,20 +2481,39 @@ class UpdateChatNameResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Upd
     }
 }
 
-class RecoverPasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RecoverPasswordRequestProto> {
-    override fun stream(v: RecoverPasswordRequestProto): java.io.InputStream {
+class RequestPasswordResetRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RequestPasswordResetRequestProto> {
+    override fun stream(v: RequestPasswordResetRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.email.isNotEmpty()) cos.writeString(1, v.email)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-    override fun parse(s: java.io.InputStream): RecoverPasswordRequestProto = RecoverPasswordRequestProto()
+    override fun parse(s: java.io.InputStream): RequestPasswordResetRequestProto = RequestPasswordResetRequestProto()
 }
 
-class RecoverPasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RecoverPasswordResponseProto> {
-    override fun stream(v: RecoverPasswordResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): RecoverPasswordResponseProto {
+class RequestPasswordResetResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RequestPasswordResetResponseProto> {
+    override fun stream(v: RequestPasswordResetResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RequestPasswordResetResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
-        return RecoverPasswordResponseProto(ok, msg)
+        return RequestPasswordResetResponseProto(ok, msg)
+    }
+}
+
+class ResetPasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ResetPasswordRequestProto> {
+    override fun stream(v: ResetPasswordRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.token.isNotEmpty()) cos.writeString(1, v.token)
+        if (v.newPassword.isNotEmpty()) cos.writeString(2, v.newPassword)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): ResetPasswordRequestProto = ResetPasswordRequestProto()
+}
+
+class ResetPasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ResetPasswordResponseProto> {
+    override fun stream(v: ResetPasswordResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ResetPasswordResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
+        return ResetPasswordResponseProto(ok, msg)
     }
 }
