@@ -163,9 +163,11 @@ class SecurityActivity : AppCompatActivity() {
         btnTerminateAll = findViewById(R.id.btnTerminateAll)
 
         val currentDeviceId = SessionManager.getDeviceId(this)
-        deviceAdapter = DeviceAdapter(currentDeviceId) { device ->
-            confirmTerminateSession(device)
-        }
+        deviceAdapter = DeviceAdapter(
+            currentDeviceId,
+            onItemClick = { device -> showDeviceInfoDialog(device) },
+            onDeleteClick = { device -> confirmTerminateSession(device) }
+        )
 
         devicesRecyclerView.layoutManager = LinearLayoutManager(this)
         devicesRecyclerView.adapter = deviceAdapter
@@ -235,6 +237,49 @@ class SecurityActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun showDeviceInfoDialog(device: lavender.client.android.data.proto.DeviceInfoProto) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_device_info, null)
+        val theme = ThemeStore.currentTheme()
+        val pColor = theme.primaryColor.toColorInt()
+        val bgColor = theme.backgroundColor.toColorInt()
+        val textColor = theme.textPrimaryColor.toColorInt()
+
+        // Theme the view manually for best look
+        dialogView.findViewById<TextView>(R.id.dialogTitle).setTextColor(pColor)
+        dialogView.findViewById<TextView>(R.id.tvDeviceId).apply {
+            text = device.deviceId
+            setTextColor(textColor)
+        }
+        dialogView.findViewById<TextView>(R.id.tvIpAddress).apply {
+            text = device.ipAddress.ifEmpty { "unknown" }
+            setTextColor(textColor)
+        }
+        dialogView.findViewById<TextView>(R.id.tvVersion).apply {
+            text = device.clientVersion.ifEmpty { "unknown" }
+            setTextColor(textColor)
+        }
+        dialogView.findViewById<TextView>(R.id.tvLastActive).apply {
+            text = lavender.client.android.data.proto.ProtoUtils.formatLastSeen(device.lastSeenAt, this@SecurityActivity)
+            setTextColor(textColor)
+        }
+
+        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        btnClose.backgroundTintList = android.content.res.ColorStateList.valueOf(pColor)
+        btnClose.setTextColor(theme.onPrimaryColor.toColorInt())
+
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        
+        // Custom rounded background for dialog
+        val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+            floatArrayOf(24f, 24f, 24f, 24f, 24f, 24f, 24f, 24f), null, null
+        ))
+        shape.paint.color = theme.surfaceColor.toColorInt()
+        dialog.window?.setBackgroundDrawable(shape)
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
     private fun terminateSession(deviceId: String) {

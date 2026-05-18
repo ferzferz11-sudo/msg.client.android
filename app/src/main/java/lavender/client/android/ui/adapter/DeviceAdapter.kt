@@ -14,6 +14,7 @@ import androidx.core.graphics.toColorInt
 
 class DeviceAdapter(
     private val currentDeviceId: String,
+    private val onItemClick: (DeviceInfoProto) -> Unit,
     private val onDeleteClick: (DeviceInfoProto) -> Unit
 ) : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
 
@@ -62,6 +63,8 @@ class DeviceAdapter(
             
             action.visibility = if (isCurrent) View.GONE else View.VISIBLE
             action.setOnClickListener { onDeleteClick(device) }
+            
+            itemView.setOnClickListener { onItemClick(device) }
         }
     }
 }
