@@ -140,7 +140,7 @@ object RealGrpcClient {
             // Auto-resume last chat if it exists
             lastChatRequest?.let { 
                 Log.d(TAG, "Resuming last chat for ${it.u}")
-                startChat(it.u, it.p, it.j, it.r, it.cb) 
+                startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
@@ -166,33 +166,33 @@ object RealGrpcClient {
     }
 
     private var lastChatRequest: LastChatRequest? = null
-    private data class LastChatRequest(val u: String, val p: String, val j: String, val roomId: String, val r: Boolean, val cb: (Message) -> Unit)
+    private data class LastChatRequest(val u: String, val p: String, val j: String, val roomId: String, val r: Boolean, val did: String, val dn: String, val cb: (Message) -> Unit)
 
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, onMessageReceived: (Message) -> Unit) {
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
         val last = lastChatRequest
         if (last != null && last.u == username && last.roomId == currentRoomId && requestObserver != null && last.r == register) {
             Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
             
-            // ... (keep switchMessage logic)
-
             // Just send auth signal to existing stream to notify server we switched rooms
             val switchMessage = MessageProto.newBuilder()
                 .setUser(username)
                 .setRoomId(currentRoomId)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
                 .setClientVersion(BuildConfig.VERSION_NAME)
+                .setDeviceId(deviceId)
+                .setDeviceName(deviceName)
                 .build()
             try {
                 requestObserver?.onNext(switchMessage)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send switch room signal, will restart stream", e)
                 requestObserver = null
-                startChat(username, password, joinMessage, register, onMessageReceived)
+                startChat(username, password, joinMessage, register, deviceId, deviceName, onMessageReceived)
             }
             return
         }
 
-        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, onMessageReceived)
+        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, deviceId, deviceName, onMessageReceived)
         
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
             _connectionStatus.value = ConnectionStatus.CONNECTING
@@ -241,12 +241,50 @@ object RealGrpcClient {
             .setCreatedAt(ProtoUtils.getCurrentTimestamp())
             .setClientVersion(BuildConfig.VERSION_NAME)
             .setRegister(register)
+            .setDeviceId(deviceId)
+            .setDeviceName(deviceName)
             .build()
         
         _authStatus.value = null // Reset auth status on new stream
         
         requestObserver?.onNext(firstMessage)
         startTypingStream()
+    }
+
+    fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDevicesRequestProto, GetDevicesResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetDevices")
+            .setRequestMarshaller(GetDevicesRequestMarshaller())
+            .setResponseMarshaller(GetDevicesResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetDevicesResponseProto>() {
+            override fun onMessage(message: GetDevicesResponseProto) { cb(message.devices) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(emptyList()) }
+        }, io.grpc.Metadata())
+        call.sendMessage(GetDevicesRequestProto(uid))
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun deleteDevice(uid: String, did: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteDevice")
+            .setRequestMarshaller(DeleteDeviceRequestMarshaller())
+            .setResponseMarshaller(DeleteDeviceResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
+            override fun onMessage(message: DeleteDeviceResponseProto) { cb(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(DeleteDeviceRequestProto(uid, did))
+        call.halfClose()
+        call.request(1)
     }
 
     private fun io.grpc.ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
@@ -443,7 +481,7 @@ object RealGrpcClient {
                         Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
                         
                         lastChatRequest?.let { 
-                            startChat(it.u, it.p, it.j, it.r, it.cb) 
+                            startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
                             // If connection was successful, break out of retry loop
                             if (_connectionStatus.value == ConnectionStatus.READY) {
                                 Log.d(TAG, "Stream reconnection successful")
@@ -1130,42 +1168,6 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
-        val currentChannel = channel ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDevicesRequestProto, GetDevicesResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetDevices")
-            .setRequestMarshaller(GetDevicesRequestMarshaller())
-            .setResponseMarshaller(GetDevicesResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetDevicesResponseProto>() {
-            override fun onMessage(message: GetDevicesResponseProto) { cb(message.devices) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(emptyList()) }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetDevicesRequestProto(uid))
-        call.halfClose()
-        call.request(1)
-    }
-
-    fun deleteDevice(uid: String, did: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteDevice")
-            .setRequestMarshaller(DeleteDeviceRequestMarshaller())
-            .setResponseMarshaller(DeleteDeviceResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
-            override fun onMessage(message: DeleteDeviceResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteDeviceRequestProto(uid, did))
-        call.halfClose()
-        call.request(1)
-    }
-
     fun requestPasswordReset(email: String, cb: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RequestPasswordResetRequestProto, RequestPasswordResetResponseProto>()
@@ -1668,6 +1670,8 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 cos.writeString(20, imageUrl)
             }
         }
+        if (value.deviceId.isNotEmpty()) cos.writeString(21, value.deviceId)
+        if (value.deviceName.isNotEmpty()) cos.writeString(22, value.deviceName)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): MessageProto {
@@ -1700,6 +1704,8 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 14 -> builder.setEdited(cis.readBool()); 15 -> builder.setClientVersion(cis.readString()); 16 -> builder.setIsSuperAdmin(cis.readBool()); 17 -> builder.setVoiceUrl(cis.readString()); 18 -> builder.setDuration(cis.readInt32())
                 19 -> builder.setRegister(cis.readBool())
                 20 -> builder.addImageUrls(cis.readString()) // Parse imageUrls for gallery support
+                21 -> builder.setDeviceId(cis.readString())
+                22 -> builder.setDeviceName(cis.readString())
                 else -> cis.skipField(tag)
             }
         }
