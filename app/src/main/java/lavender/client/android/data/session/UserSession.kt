@@ -6,7 +6,9 @@ data class UserSession(
     val password: String = "",
     val avatarUrl: String = "",
     val fullAvatarUrl: String = "",
-    val isSuperAdmin: Boolean = false
+    val isSuperAdmin: Boolean = false,
+    val deviceId: String = "",
+    val deviceName: String = ""
 ) {
     val isLoggedIn: Boolean get() = username.isNotEmpty() && password.isNotEmpty()
     

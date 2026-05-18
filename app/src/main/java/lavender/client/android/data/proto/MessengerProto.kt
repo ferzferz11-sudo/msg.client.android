@@ -29,7 +29,9 @@ data class MessageProto(
     val isSuperAdmin: Boolean = false,
     val voiceUrl: String = "",
     val duration: Int = 0,
-    val register: Boolean = false
+    val register: Boolean = false,
+    val deviceId: String = "",
+    val deviceName: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -51,6 +53,8 @@ data class MessageProto(
         private var voiceUrl: String = ""
         private var duration: Int = 0
         private var register: Boolean = false
+        private var deviceId: String = ""
+        private var deviceName: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -143,6 +147,16 @@ data class MessageProto(
             return this
         }
 
+        fun setDeviceId(deviceId: String): Builder {
+            this.deviceId = deviceId
+            return this
+        }
+
+        fun setDeviceName(deviceName: String): Builder {
+            this.deviceName = deviceName
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -156,7 +170,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName)
         }
     }
     
@@ -665,6 +679,32 @@ data class ResetPasswordRequestProto(
 )
 
 data class ResetPasswordResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeviceInfoProto(
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val clientVersion: String = "",
+    val lastSeenAt: Timestamp? = null,
+    val ipAddress: String = ""
+)
+
+data class GetDevicesRequestProto(
+    val userId: String = ""
+)
+
+data class GetDevicesResponseProto(
+    val devices: List<DeviceInfoProto> = emptyList()
+)
+
+data class DeleteDeviceRequestProto(
+    val userId: String = "",
+    val deviceId: String = ""
+)
+
+data class DeleteDeviceResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )

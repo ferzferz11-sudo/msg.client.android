@@ -1130,6 +1130,42 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDevicesRequestProto, GetDevicesResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetDevices")
+            .setRequestMarshaller(GetDevicesRequestMarshaller())
+            .setResponseMarshaller(GetDevicesResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetDevicesResponseProto>() {
+            override fun onMessage(message: GetDevicesResponseProto) { cb(message.devices) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(emptyList()) }
+        }, io.grpc.Metadata())
+        call.sendMessage(GetDevicesRequestProto(uid))
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun deleteDevice(uid: String, did: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteDevice")
+            .setRequestMarshaller(DeleteDeviceRequestMarshaller())
+            .setResponseMarshaller(DeleteDeviceResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
+            override fun onMessage(message: DeleteDeviceResponseProto) { cb(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(DeleteDeviceRequestProto(uid, did))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun requestPasswordReset(email: String, cb: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RequestPasswordResetRequestProto, RequestPasswordResetResponseProto>()
@@ -2505,6 +2541,62 @@ class ResetPasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Reset
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): ResetPasswordRequestProto = ResetPasswordRequestProto()
+}
+
+class GetDevicesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetDevicesRequestProto> {
+    override fun stream(v: GetDevicesRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetDevicesRequestProto = GetDevicesRequestProto()
+}
+
+class GetDevicesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetDevicesResponseProto> {
+    override fun stream(v: GetDevicesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetDevicesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val devices = mutableListOf<DeviceInfoProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
+                var id = ""; var name = ""; var cv = ""; var ts: com.google.protobuf.Timestamp? = null; var ip = ""
+                while (!cisis.isAtEnd) {
+                    val t2 = cisis.readTag(); if (t2 == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) {
+                        1 -> id = cisis.readString(); 2 -> name = cisis.readString(); 3 -> cv = cisis.readString()
+                        4 -> { val l2 = cisis.readUInt32(); ts = com.google.protobuf.Timestamp.parseFrom(cisis.readRawBytes(l2)) }
+                        5 -> ip = cisis.readString(); else -> cisis.skipField(t2)
+                    }
+                }
+                devices.add(DeviceInfoProto(id, name, cv, ts, ip))
+            } else cis.skipField(tag)
+        }
+        return GetDevicesResponseProto(devices)
+    }
+}
+
+class DeleteDeviceRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteDeviceRequestProto> {
+    override fun stream(v: DeleteDeviceRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.deviceId.isNotEmpty()) cos.writeString(2, v.deviceId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): DeleteDeviceRequestProto = DeleteDeviceRequestProto()
+}
+
+class DeleteDeviceResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteDeviceResponseProto> {
+    override fun stream(v: DeleteDeviceResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): DeleteDeviceResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag)
+            }
+        }
+        return DeleteDeviceResponseProto(ok, msg)
+    }
 }
 
 class ResetPasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ResetPasswordResponseProto> {

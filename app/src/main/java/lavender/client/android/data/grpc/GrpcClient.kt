@@ -7,11 +7,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import lavender.client.android.data.models.Message // 🛠️ ВАЖНЫЙ ИМПОРТ
 import lavender.client.android.data.models.ChatInfo // 🛠️ ВАЖНЫЙ ИМПОРТ
-import lavender.client.android.data.proto.ChatInfoProto
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
+import lavender.client.android.data.proto.DeviceInfoProto
 
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
@@ -202,6 +202,14 @@ object GrpcClient {
 
     fun resetPassword(token: String, newPw: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.resetPassword(token, newPw, callback)
+    }
+
+    fun getDevices(userId: String, callback: (List<DeviceInfoProto>) -> Unit) {
+        realGrpcClient.getDevices(userId, callback)
+    }
+
+    fun deleteDevice(userId: String, deviceId: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteDevice(userId, deviceId, callback)
     }
 
     fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {
