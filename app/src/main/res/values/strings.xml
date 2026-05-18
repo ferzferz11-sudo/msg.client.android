@@ -430,6 +430,12 @@
     <string name="biometric_login_enabled">Biometric login enabled</string>
     <string name="biometric_login_disabled">Biometric login disabled</string>
     <string name="security">Security</string>
+    <string name="active_sessions">Active Sessions</string>
+    <string name="this_device">This device</string>
+    <string name="last_active">Last active: %s</string>
+    <string name="terminate_session">Terminate Session</string>
+    <string name="terminate_all_sessions">Terminate all other sessions</string>
+    <string name="terminate_session_confirm">Are you sure you want to terminate this session?</string>
     <string name="just_now">just now</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d minute ago</item>

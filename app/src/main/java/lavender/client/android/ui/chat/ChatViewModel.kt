@@ -38,8 +38,8 @@ class ChatViewModel : ViewModel() {
         }
     }
     
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", onMessageReceived: (Message) -> Unit) {
-        grpcClient.startChat(username, password, joinMessage, register, email, onMessageReceived)
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
+        grpcClient.startChat(username, password, joinMessage, register, email, deviceId, deviceName, onMessageReceived)
     }
     
     fun sendMessage(message: Message) {

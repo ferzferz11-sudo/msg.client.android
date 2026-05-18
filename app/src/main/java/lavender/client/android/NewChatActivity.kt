@@ -285,7 +285,9 @@ class NewChatActivity : AppCompatActivity() {
         // switchRoom() очистит сообщения и загрузит историю из кэша/сервера
         viewModel.switchRoom(roomId)
 
-        viewModel.startChat(username, password, "") { _ ->
+        SessionManager.updateDeviceInfo(this)
+        val session = SessionManager.session.value
+        viewModel.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { _ ->
             viewModel.markRead(username, this)
         }
         
@@ -294,6 +296,12 @@ class NewChatActivity : AppCompatActivity() {
 
         // Load draft message when entering chat (after ensuring userId is set)
         ensureUserIdSet { loadDraft() }
+
+        lifecycleScope.launch {
+            SessionManager.logoutEvent.collect {
+                runOnUiThread { finish() }
+            }
+        }
 
         // 7. Обработка кнопки "Назад" через When (так чище)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

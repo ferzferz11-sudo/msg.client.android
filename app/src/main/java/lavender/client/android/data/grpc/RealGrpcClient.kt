@@ -328,6 +328,12 @@ object RealGrpcClient {
                     return
                 }
 
+                if (value.text == "FORCE_LOGOUT") {
+                    _authStatus.value = "FORCE_LOGOUT"
+                    disconnect()
+                    return
+                }
+
                 if (value.text.startsWith("DELETE_MESSAGE:")) {
                     val deletedId = value.text.removePrefix("DELETE_MESSAGE:")
                     deletedMessageHashes.add("id:$deletedId")

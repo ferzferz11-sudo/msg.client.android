@@ -430,6 +430,12 @@
     <string name="biometric_login_enabled">Вход по отпечатку включен</string>
     <string name="biometric_login_disabled">Вход по отпечатку отключен</string>
     <string name="security">Безопасность</string>
+    <string name="active_sessions">Активные сессии</string>
+    <string name="this_device">Это устройство</string>
+    <string name="last_active">Последняя активность: %s</string>
+    <string name="terminate_session">Завершить сеанс</string>
+    <string name="terminate_all_sessions">Завершить все остальные сеансы</string>
+    <string name="terminate_session_confirm">Вы уверены, что хотите завершить этот сеанс?</string>
     <string name="just_now">только что</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d минуту назад</item>

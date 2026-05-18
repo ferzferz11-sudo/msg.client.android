@@ -60,8 +60,8 @@ object GrpcClient {
         realGrpcClient.disconnect()
     }
     
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", onMessageReceived: (Message) -> Unit) {
-        realGrpcClient.startChat(username, password, joinMessage, register, deviceId="", deviceName="", onMessageReceived)
+    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
+        realGrpcClient.startChat(username, password, joinMessage, register, deviceId, deviceName, onMessageReceived)
     }
     
     fun sendMessage(message: Message) {

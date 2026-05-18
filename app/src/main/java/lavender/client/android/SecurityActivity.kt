@@ -4,11 +4,18 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.WindowCompat
 import androidx.biometric.BiometricManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
+import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.session.SessionManager
+import lavender.client.android.ui.adapter.DeviceAdapter
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
@@ -18,6 +25,9 @@ class SecurityActivity : AppCompatActivity() {
 
     private lateinit var username: String
     private lateinit var switchBiometric: MaterialSwitch
+    private lateinit var devicesRecyclerView: RecyclerView
+    private lateinit var deviceAdapter: DeviceAdapter
+    private lateinit var btnTerminateAll: MaterialButton
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
@@ -94,6 +104,74 @@ class SecurityActivity : AppCompatActivity() {
                     if (isChecked) getString(R.string.biometric_login_enabled) else getString(R.string.biometric_login_disabled),
                     Toast.LENGTH_SHORT
                 ).show()
+            }
+        }
+
+        setupDevices()
+    }
+
+    private fun setupDevices() {
+        devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
+        btnTerminateAll = findViewById(R.id.btnTerminateAll)
+
+        val currentDeviceId = SessionManager.getDeviceId(this)
+        deviceAdapter = DeviceAdapter(currentDeviceId) { device ->
+            confirmTerminateSession(device)
+        }
+
+        devicesRecyclerView.layoutManager = LinearLayoutManager(this)
+        devicesRecyclerView.adapter = deviceAdapter
+
+        loadDevices()
+
+        btnTerminateAll.setOnClickListener {
+            // TODO: Implement terminate all except current
+        }
+    }
+
+    private fun loadDevices() {
+        val userId = SessionManager.session.value.userId
+        if (userId.isEmpty()) {
+            // Try to fetch userId if missing
+            GrpcClient.fetchUserId(username) { id, success ->
+                if (success && id != null) {
+                    runOnUiThread { 
+                        SessionManager.updateSession(userId = id)
+                        loadDevices() 
+                    }
+                }
+            }
+            return
+        }
+
+        GrpcClient.getDevices(userId) { devices ->
+            runOnUiThread {
+                deviceAdapter.setDevices(devices)
+                btnTerminateAll.visibility = if (devices.size > 1) android.view.View.VISIBLE else android.view.View.GONE
+            }
+        }
+    }
+
+    private fun confirmTerminateSession(device: lavender.client.android.data.proto.DeviceInfoProto) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.terminate_session)
+            .setMessage(getString(R.string.terminate_session_confirm))
+            .setPositiveButton(R.string.delete) { _, _ ->
+                terminateSession(device.deviceId)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun terminateSession(deviceId: String) {
+        val userId = SessionManager.session.value.userId
+        GrpcClient.deleteDevice(userId, deviceId) { success, _ ->
+            runOnUiThread {
+                if (success) {
+                    loadDevices()
+                } else {
+                    Toast.makeText(this, "Failed to terminate session", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

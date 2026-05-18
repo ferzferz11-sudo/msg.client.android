@@ -331,7 +331,8 @@ class ChatListActivity : AppCompatActivity() {
 
                 if (status == ConnectionStatus.READY) {
                     if (username.isNotEmpty() && password.isNotEmpty()) {
-                        grpcClient.startChat(username, password, "") { /* onMessageReceived */ }
+                        val session = SessionManager.session.value
+                        grpcClient.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
                         loadChats()
                     }
                 }
@@ -355,6 +356,15 @@ class ChatListActivity : AppCompatActivity() {
         
         startSync()
 
+        lifecycleScope.launch {
+            SessionManager.logoutEvent.collect {
+                runOnUiThread {
+                    Toast.makeText(this@ChatListActivity, "Сессия завершена", Toast.LENGTH_LONG).show()
+                    logout()
+                }
+            }
+        }
+
         intent.getStringExtra("START_DELETION_ID")?.let { performDirectDeletion(it) }
         intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
             chatAdapter.setChatDeleting(chatId, true)
@@ -373,9 +383,28 @@ class ChatListActivity : AppCompatActivity() {
         })
     }
 
+    override fun onStart() {
+        super.onStart()
+        SessionManager.startPeriodicDeviceUpdate(this)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SessionManager.stopPeriodicDeviceUpdate()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        lifecycleScope.launch {
+            SessionManager.logoutEvent.collect {
+                runOnUiThread {
+                    Toast.makeText(this@ChatListActivity, "Сессия завершена", Toast.LENGTH_LONG).show()
+                    logout()
+                }
+            }
+        }
+
         intent.getStringExtra("START_DELETION_ID")?.let { performDirectDeletion(it) }
         intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
             chatAdapter.setChatDeleting(chatId, true)

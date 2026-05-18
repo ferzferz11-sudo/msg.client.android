@@ -2,27 +2,25 @@ package lavender.client.android.data.session
 
 import android.content.Context
 import android.util.Log
+import android.provider.Settings
 import androidx.core.content.edit
 import com.google.firebase.messaging.FirebaseMessaging
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
+import android.os.Build
 
 object SessionManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _session = MutableStateFlow(UserSession())
     val session: StateFlow<UserSession> = _session.asStateFlow()
+
+    private val _logoutEvent = MutableSharedFlow<Unit>(replay = 0)
+    val logoutEvent: SharedFlow<Unit> = _logoutEvent.asSharedFlow()
+
+    private var deviceUpdateJob: Job? = null
 
     init {
         // Sync isSuperAdmin and other global flags from GrpcClient to session
@@ -45,6 +43,73 @@ object SessionManager {
                 }
             }
         }
+
+        scope.launch {
+            GrpcClient.authStatus.collect { status ->
+                if (status == "FORCE_LOGOUT") {
+                    _session.value = UserSession() // Clear session state
+                    _logoutEvent.emit(Unit)
+                }
+            }
+        }
+    }
+
+    fun getDeviceId(context: Context): String {
+        return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown_device"
+    }
+
+    fun getDeviceName(): String {
+        val manufacturer = Build.MANUFACTURER
+        val model = Build.MODEL
+        return if (model.startsWith(manufacturer)) {
+            model.replaceFirstChar { it.uppercase() }
+        } else {
+            "${manufacturer.replaceFirstChar { it.uppercase() }} $model"
+        }
+    }
+
+    fun updateDeviceInfo(context: Context) {
+        val deviceId = getDeviceId(context)
+        val deviceName = getDeviceName()
+        _session.value = _session.value.copy(
+            deviceId = deviceId,
+            deviceName = deviceName
+        )
+    }
+
+    fun startPeriodicDeviceUpdate(context: Context) {
+        deviceUpdateJob?.cancel()
+        deviceUpdateJob = scope.launch {
+            while (isActive) {
+                syncDeviceToServer(context)
+                delay(3 * 60 * 1000) // 3 minutes
+            }
+        }
+    }
+
+    fun stopPeriodicDeviceUpdate() {
+        deviceUpdateJob?.cancel()
+        deviceUpdateJob = null
+    }
+
+    private fun syncDeviceToServer(context: Context) {
+        val currentSession = _session.value
+        if (currentSession.isLoggedIn) {
+            Log.d("SessionManager", "Syncing device info to server: ${currentSession.deviceName}")
+            // Re-send auth message with device info through startChat logic
+            // or a dedicated signal if we add it. 
+            // For now, GrpcClient.startChat handles sending the initial Message with device info.
+            GrpcClient.startChat(
+                currentSession.username,
+                currentSession.password,
+                "", // empty join message for updates
+                false,
+                "",
+                currentSession.deviceId,
+                currentSession.deviceName,
+                onMessageReceived = {}
+            )
+        }
     }
 
     fun initFromPrefs(context: Context) {
@@ -54,6 +119,8 @@ object SessionManager {
         val userId = prefs.getString("user_id", "") ?: ""
         val serverAddress = prefs.getString("server_address", "") ?: ""
         
+        updateDeviceInfo(context)
+
         if (username.isNotEmpty()) {
             updateSession(username = username, password = password, userId = userId)
 
@@ -124,7 +191,9 @@ object SessionManager {
 
                 if (status == ConnectionStatus.READY) {
                     // Start chat with auth signal
-                    GrpcClient.startChat(username, pass, "", register, email) { }
+                    val deviceId = getDeviceId(context)
+                    val deviceName = getDeviceName()
+                    GrpcClient.startChat(username, pass, "", register, email, deviceId, deviceName) { }
 
                     // Wait for auth status from server
                     val authResult = withTimeoutOrNull(5000) {
