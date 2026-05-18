@@ -271,6 +271,10 @@ class ChatListActivity : AppCompatActivity() {
             checkManualUpdate()
         }
 
+        binding.actionWhatsNew.setOnClickListener {
+            showWhatsNewDialog()
+        }
+
         binding.toolbar.setNavigationOnClickListener {
             if (binding.searchCard.isVisible) {
                 hideSearchBar()
@@ -803,6 +807,10 @@ class ChatListActivity : AppCompatActivity() {
         val isSearching = binding.searchCard.isVisible
         
         binding.updateAvailableIcon.isVisible = isAvailable && !hasSelection && !isSearching
+        
+        // Also update WhatsNew icon visibility
+        val showAnnouncement = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).getBoolean("show_icon", false)
+        binding.actionWhatsNew.isVisible = showAnnouncement && !hasSelection && !isSearching
     }
 
     private fun setupOnboardingTips() {
@@ -884,6 +892,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun checkForUpdatesSilently() {
         lifecycleScope.launch(Dispatchers.IO) {
+            checkAnnouncementsInternal()
             try {
                 val url = URL("http://159.195.38.145:8081/version.txt")
                 val connection = url.openConnection() as HttpURLConnection
@@ -1137,6 +1146,82 @@ class ChatListActivity : AppCompatActivity() {
         
         bottomSheet.setContentView(dialogView)
         bottomSheet.show()
+    }
+
+    private suspend fun checkAnnouncementsInternal() {
+        try {
+            val url = URL("http://159.195.38.145:8081/changelog.txt")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 5000
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                val text = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                if (text.isNotEmpty()) {
+                    val prefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
+                    val lastRead = prefs.getString("last_read_text", "")
+                    
+                    val isNew = text != lastRead
+                    prefs.edit { 
+                        putString("current_text", text)
+                        putBoolean("show_icon", isNew)
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        updateUpdateIndicatorVisibility()
+                    }
+                }
+            }
+            connection.disconnect()
+        } catch (_: Exception) {}
+    }
+
+    private fun showWhatsNewDialog() {
+        val prefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
+        val text = prefs.getString("current_text", "") ?: return
+        
+        val theme = ThemeStore.currentTheme()
+        val pColor = theme.primaryColor.toColorInt()
+        val textColor = theme.textPrimaryColor.toColorInt()
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_whats_new, null)
+        dialogView.findViewById<TextView>(R.id.tvContent).apply {
+            this.text = text
+            setTextColor(textColor)
+        }
+        dialogView.findViewById<TextView>(R.id.tvTitle).setTextColor(pColor)
+
+        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnMarkRead = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOk)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnMarkRead.apply {
+            backgroundTintList = ColorStateList.valueOf(pColor)
+            setTextColor(theme.onPrimaryColor.toColorInt())
+            setOnClickListener {
+                prefs.edit {
+                    putString("last_read_text", text)
+                    putBoolean("show_icon", false)
+                }
+                updateUpdateIndicatorVisibility()
+                dialog.dismiss()
+            }
+        }
+
+        btnClose.apply {
+            setTextColor(theme.textSecondaryColor.toColorInt())
+            setOnClickListener { dialog.dismiss() }
+        }
+
+        // Custom rounded background for dialog
+        val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+            floatArrayOf(24f, 24f, 24f, 24f, 24f, 24f, 24f, 24f), null, null
+        ))
+        shape.paint.color = theme.surfaceColor.toColorInt()
+        dialog.window?.setBackgroundDrawable(shape)
+
+        dialog.show()
     }
 
     private fun isUpdateAvailable(current: String, latest: String): Boolean {
