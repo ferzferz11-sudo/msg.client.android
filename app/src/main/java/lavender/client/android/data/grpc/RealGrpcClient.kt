@@ -287,6 +287,24 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun deleteOtherDevices(uid: String, currentDid: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteOtherDevices")
+            .setRequestMarshaller(DeleteDeviceRequestMarshaller())
+            .setResponseMarshaller(DeleteDeviceResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
+            override fun onMessage(message: DeleteDeviceResponseProto) { cb(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(DeleteDeviceRequestProto(uid, currentDid))
+        call.halfClose()
+        call.request(1)
+    }
+
     private fun io.grpc.ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
         val responseObserver = object : StreamObserver<MessageProto> {
             override fun onNext(value: MessageProto) {
@@ -331,6 +349,26 @@ object RealGrpcClient {
                 if (value.text == "FORCE_LOGOUT") {
                     _authStatus.value = "FORCE_LOGOUT"
                     disconnect()
+                    return
+                }
+
+                if (value.text.startsWith("FORCE_DISCONNECT_DEVICE:")) {
+                    val deviceToDisconnect = value.text.removePrefix("FORCE_DISCONNECT_DEVICE:")
+                    val currentDeviceId = lastChatRequest?.did ?: ""
+                    if (deviceToDisconnect == currentDeviceId) {
+                        _authStatus.value = "FORCE_LOGOUT"
+                        disconnect()
+                    }
+                    return
+                }
+
+                if (value.text.startsWith("FORCE_LOGOUT_EXCEPT:")) {
+                    val deviceToKeep = value.text.removePrefix("FORCE_LOGOUT_EXCEPT:")
+                    val currentDeviceId = lastChatRequest?.did ?: ""
+                    if (deviceToKeep != currentDeviceId) {
+                        _authStatus.value = "FORCE_LOGOUT"
+                        disconnect()
+                    }
                     return
                 }
 

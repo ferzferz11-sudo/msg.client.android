@@ -95,6 +95,8 @@
     <string name="forgot_password_description">Введите вашу почту для получения логина и пароля</string>
     <string name="enter_email">Введите вашу почту</string>
     <string name="send_password">Отправить пароль</string>
+    <string name="password_recovery_sent">Инструкции по восстановлению пароля отправлены на ваш email.</string>
+    <string name="server_address_empty">Адрес сервера не может быть пустым</string>
     <string name="welcome">Добро пожаловать</string>
     <string name="enter_username">Введите ваше имя</string>
     <string name="enter_password">Введите пароль</string>
@@ -436,6 +438,7 @@
     <string name="terminate_session">Завершить сеанс</string>
     <string name="terminate_all_sessions">Завершить все остальные сеансы</string>
     <string name="terminate_session_confirm">Вы уверены, что хотите завершить этот сеанс?</string>
+    <string name="terminate_all_sessions_description">Вы можете завершить все остальные сеансы на всех своих устройствах, кроме этого.</string>
     <string name="just_now">только что</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d минуту назад</item>

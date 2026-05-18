@@ -188,11 +188,16 @@ object ThemeApplier {
         val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, textPrimary)
 
         activity.findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
+        activity.findViewById<TextView>(R.id.toolbarTitle)?.setTextColor(customOnPrimary)
         activity.findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(textSecondary)
         
-        listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble).forEach { id ->
-            activity.findViewById<View>(id)?.apply {
-                backgroundTintList = ColorStateList.valueOf(surfaceColor)
+        listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble, R.id.biometricCard, R.id.devicesCard).forEach { id ->
+            activity.findViewById<View>(id)?.let { view ->
+                if (view is MaterialCardView) {
+                    view.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
+                } else {
+                    view.backgroundTintList = ColorStateList.valueOf(surfaceColor)
+                }
             }
         }
         activity.findViewById<TextView>(R.id.onboardingProfileText)?.setTextColor(onSurfaceColor)

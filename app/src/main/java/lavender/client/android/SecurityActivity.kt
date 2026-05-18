@@ -3,16 +3,26 @@ package lavender.client.android
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.biometric.BiometricManager
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
+import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.DeviceAdapter
@@ -45,7 +55,13 @@ class SecurityActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_security)
 
-        username = intent.getStringExtra("username") ?: return finish()
+        username = SessionManager.session.value.username
+        if (username.isEmpty()) {
+            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            username = prefs.getString("saved_username", "") ?: ""
+        }
+        
+        if (username.isEmpty()) return finish()
 
         ThemeUi.bind(this, username)
 
@@ -53,13 +69,16 @@ class SecurityActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
-            title = getString(R.string.security)
+            setDisplayShowTitleEnabled(false)
         }
         toolbar.setNavigationOnClickListener { finish() }
 
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            view.setPadding(0, 0, 0, systemBars.bottom)
+        // Handle system bars insets
+        val rootLayout = findViewById<View>(R.id.rootLayout)
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            toolbar.updatePadding(top = systemBars.top)
+            view.updatePadding(bottom = systemBars.bottom)
             insets
         }
 
@@ -67,35 +86,15 @@ class SecurityActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         switchBiometric.isChecked = prefs.getBoolean("biometric_enabled_$username", false)
 
-        // Apply theme colors to switch
-        val theme = ThemeStore.currentTheme()
-        val primaryColor = theme.primaryColor.toColorInt()
-        switchBiometric.thumbTintList = android.content.res.ColorStateList.valueOf(primaryColor)
-        switchBiometric.trackTintList = android.content.res.ColorStateList.valueOf(
-            lavender.client.android.theme.ThemeUtils.adjustAlpha(primaryColor, 0.5f)
-        )
-
         val biometricManager = BiometricManager.from(this)
         val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
 
         if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
             switchBiometric.isEnabled = false
-
             if (switchBiometric.isChecked) {
                 switchBiometric.isChecked = false
                 prefs.edit().putBoolean("biometric_enabled_$username", false).apply()
             }
-
-            val reason = when (canAuthenticate) {
-                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> getString(R.string.biometric_login_error_no_hardware)
-                BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> getString(R.string.biometric_login_error_unknown)
-                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> getString(R.string.biometric_login_error_no_fingerprints)
-                BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> "Требуется обновление безопасности"
-                BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED -> getString(R.string.biometric_login_error_sdk_not_supported)
-                BiometricManager.BIOMETRIC_STATUS_UNKNOWN -> getString(R.string.biometric_login_error_unknown)
-                else -> getString(R.string.biometric_login_error_unknown)
-            }
-            Toast.makeText(this, reason, Toast.LENGTH_LONG).show()
         } else {
             switchBiometric.setOnCheckedChangeListener { _, isChecked ->
                 prefs.edit().putBoolean("biometric_enabled_$username", isChecked).apply()
@@ -108,6 +107,55 @@ class SecurityActivity : AppCompatActivity() {
         }
 
         setupDevices()
+        
+        // Setup theme listener to update colors that ThemeApplier doesn't handle
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                ThemeStore.theme.collect { theme ->
+                    applyThemeToViews(theme)
+                }
+            }
+        }
+    }
+
+    private fun applyThemeToViews(theme: lavender.client.android.theme.Theme) {
+        val primaryColor = theme.primaryColor.toColorInt()
+        val surfaceColor = theme.surfaceColor.toColorInt()
+        val textPrimaryColor = theme.textPrimaryColor.toColorInt()
+        val textSecondaryColor = theme.textSecondaryColor.toColorInt()
+
+        findViewById<com.google.android.material.card.MaterialCardView>(R.id.biometricCard)?.setCardBackgroundColor(surfaceColor)
+        findViewById<com.google.android.material.card.MaterialCardView>(R.id.devicesCard)?.setCardBackgroundColor(surfaceColor)
+
+        // Theme biometric section elements
+        findViewById<android.widget.ImageView>(R.id.biometricIcon)?.imageTintList = 
+            android.content.res.ColorStateList.valueOf(primaryColor)
+        findViewById<TextView>(R.id.biometricTitle)?.setTextColor(textPrimaryColor)
+        findViewById<TextView>(R.id.biometricDescription)?.setTextColor(textSecondaryColor)
+
+        findViewById<TextView>(R.id.activeSessionsTitle)?.setTextColor(primaryColor)
+        btnTerminateAll = findViewById(R.id.btnTerminateAll)
+        btnTerminateAll.setTextColor("#FF5252".toColorInt())
+
+        // Update biometric switch colors
+        switchBiometric.thumbTintList = android.content.res.ColorStateList.valueOf(primaryColor)
+        switchBiometric.trackTintList = android.content.res.ColorStateList.valueOf(
+            lavender.client.android.theme.ThemeUtils.adjustAlpha(primaryColor, 0.5f)
+        )
+
+        // Handle background image like in ChatListActivity
+        findViewById<android.widget.ImageView>(R.id.securityBackground)?.let { bgView ->
+            val url = theme.chatListBackgroundImageUrl
+            if (url.isNotEmpty()) {
+                bgView.visibility = View.VISIBLE
+                com.bumptech.glide.Glide.with(this)
+                    .load(url)
+                    .centerCrop()
+                    .into(bgView)
+            } else {
+                bgView.visibility = View.GONE
+            }
+        }
     }
 
     private fun setupDevices() {
@@ -125,14 +173,40 @@ class SecurityActivity : AppCompatActivity() {
         loadDevices()
 
         btnTerminateAll.setOnClickListener {
-            // TODO: Implement terminate all except current
+            confirmTerminateOtherSessions()
+        }
+    }
+
+    private fun confirmTerminateOtherSessions() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.terminate_all_sessions)
+            .setMessage(R.string.terminate_session_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                terminateOtherSessions()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun terminateOtherSessions() {
+        val userId = SessionManager.session.value.userId
+        val currentDeviceId = SessionManager.getDeviceId(this)
+        
+        GrpcClient.deleteOtherDevices(userId, currentDeviceId) { success, _ ->
+            runOnUiThread {
+                if (success) {
+                    loadDevices()
+                    Toast.makeText(this, "Другие сеансы завершены", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Ошибка при завершении сеансов", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
     private fun loadDevices() {
         val userId = SessionManager.session.value.userId
         if (userId.isEmpty()) {
-            // Try to fetch userId if missing
             GrpcClient.fetchUserId(username) { id, success ->
                 if (success && id != null) {
                     runOnUiThread { 
@@ -147,7 +221,7 @@ class SecurityActivity : AppCompatActivity() {
         GrpcClient.getDevices(userId) { devices ->
             runOnUiThread {
                 deviceAdapter.setDevices(devices)
-                btnTerminateAll.visibility = if (devices.size > 1) android.view.View.VISIBLE else android.view.View.GONE
+                btnTerminateAll.visibility = if (devices.size > 1) View.VISIBLE else View.GONE
             }
         }
     }

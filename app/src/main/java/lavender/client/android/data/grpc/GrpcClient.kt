@@ -212,6 +212,10 @@ object GrpcClient {
         realGrpcClient.deleteDevice(userId, deviceId, callback)
     }
 
+    fun deleteOtherDevices(userId: String, currentDeviceId: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteOtherDevices(userId, currentDeviceId, callback)
+    }
+
     fun deleteProfile(username: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.deleteProfile(username, callback)
     }
