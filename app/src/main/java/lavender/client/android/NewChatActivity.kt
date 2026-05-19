@@ -621,7 +621,7 @@ class NewChatActivity : AppCompatActivity() {
                         }
                     }
 
-                    if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) {
+                    if ((isFirstLoad || hasNewMessages) && roomMessages.any { it.user != username && !it.isRead }) {
                         viewModel.markRead(username, this@NewChatActivity)
                     }
                     lastMessageCount = roomMessages.size

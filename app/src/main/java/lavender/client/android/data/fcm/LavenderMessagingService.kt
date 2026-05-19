@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.R
@@ -95,7 +96,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
         )
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_notification_logo)
+            .setSmallIcon(R.drawable.ic_notification_small)
+            .setColor(ContextCompat.getColor(this, R.color.lavender_mist))
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

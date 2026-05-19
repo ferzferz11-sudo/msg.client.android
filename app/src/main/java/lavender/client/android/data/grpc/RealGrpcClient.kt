@@ -103,6 +103,7 @@ object RealGrpcClient {
     val avatarCacheFlow = MutableStateFlow<Map<String, String>>(emptyMap())
     
     private val deletedMessageHashes = mutableSetOf<String>()
+    private val pendingReads = mutableSetOf<String>()
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null && !forceReconnect) return
@@ -232,6 +233,7 @@ object RealGrpcClient {
         
         requestObserver = call.startChatStream(onMessageReceived)
         resendPendingMessages()
+        resendPendingReads()
 
         val firstMessage = MessageProto.newBuilder()
             .setUser(username)
@@ -390,15 +392,21 @@ object RealGrpcClient {
 
                 if (value.text.startsWith("READ_ALL:")) {
                     val reader = value.text.removePrefix("READ_ALL:")
-                    if (value.roomId == currentRoomId) {
-                        // Optimistically update memory state
+                    val targetRoomId = if (value.roomId.isNotEmpty()) value.roomId else currentRoomId
+                    Log.d(TAG, "Received READ_ALL signal from $reader for room $targetRoomId (current: $currentRoomId)")
+                    
+                    if (targetRoomId == currentRoomId) {
+                        // Update memory state for the active room
                         _messages.update { current ->
-                            current.map { it.copy(isRead = true) }
+                            if (current.all { it.isRead }) current 
+                            else current.map { it.copy(isRead = true) }
                         }
+                    }
 
-                        // Sync memory state to local cache
+                    // Always sync to local cache regardless of current room
+                    if (targetRoomId.isNotEmpty()) {
                         scope.launch(Dispatchers.IO) {
-                            db()?.messageDao()?.markRoomAsRead(currentRoomId)
+                            db()?.messageDao()?.markRoomAsRead(targetRoomId)
                         }
                     }
                     return
@@ -716,12 +724,18 @@ object RealGrpcClient {
                     val mergedHistory = history.map { serverMsg ->
                         val localMsg = currentMap[getMessageHash(serverMsg)]
                         if (localMsg != null) {
+                            // Preserve local read status if it's already read, but also accept server's read status
                             serverMsg.copy(isRead = localMsg.isRead || serverMsg.isRead)
                         } else {
                             serverMsg
                         }
                     }
-                    (current + mergedHistory).distinctBy { getMessageHash(it) }.sortedBy { it.timestamp }
+                    
+                    // Use mergedHistory to update existing messages and keep current (optimistic) ones that aren't on server yet
+                    val historyHashes = mergedHistory.map { getMessageHash(it) }.toSet()
+                    val optimisticOnly = current.filterNot { getMessageHash(it) in historyHashes }
+                    
+                    (mergedHistory + optimisticOnly).sortedBy { it.timestamp }
                 }
                 
                 // Save to cache
@@ -1249,7 +1263,14 @@ object RealGrpcClient {
     }
 
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null || _connectionStatus.value != ConnectionStatus.READY) {
+            Log.d(TAG, "Queueing markRead for $rid because channel is not ready")
+            pendingReads.add(rid)
+            onComp?.invoke()
+            return
+        }
+
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/MarkRead")
@@ -1258,11 +1279,29 @@ object RealGrpcClient {
             .build()
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<MarkReadResponseProto>() {
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { onComp?.invoke() }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { 
+                if (status.isOk) {
+                    pendingReads.remove(rid)
+                } else {
+                    pendingReads.add(rid)
+                }
+                onComp?.invoke() 
+            }
         }, io.grpc.Metadata())
         call.sendMessage(MarkReadRequestProto(rid, u))
         call.halfClose()
         call.request(1)
+    }
+
+    private fun resendPendingReads() {
+        val username = currentUsername ?: return
+        val rooms = pendingReads.toList()
+        if (rooms.isEmpty()) return
+        
+        Log.d(TAG, "Resending ${rooms.size} pending read signals")
+        rooms.forEach { rid ->
+            markRead(rid, username, null)
+        }
     }
 
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) {
