@@ -7,6 +7,7 @@ import java.util.*
 
 class WebRtcClient(
     private val context: Context,
+    private val eglContext: EglBase.Context,
     private val observer: Observer
 ) {
     interface Observer {
@@ -17,7 +18,6 @@ class WebRtcClient(
         fun onAnswerCreated(description: SessionDescription)
     }
 
-    private val rootEglBase: EglBase = EglBase.create()
     private var peerConnectionFactory: PeerConnectionFactory
     private var peerConnection: PeerConnection? = null
     private var localAudioSource: AudioSource
@@ -35,8 +35,8 @@ class WebRtcClient(
         val factoryOptions = PeerConnectionFactory.Options()
         peerConnectionFactory = PeerConnectionFactory.builder()
             .setOptions(factoryOptions)
-            .setVideoEncoderFactory(DefaultVideoEncoderFactory(rootEglBase.eglBaseContext, true, true))
-            .setVideoDecoderFactory(DefaultVideoDecoderFactory(rootEglBase.eglBaseContext))
+            .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglContext, true, true))
+            .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglContext))
             .createPeerConnectionFactory()
 
         localAudioSource = peerConnectionFactory.createAudioSource(MediaConstraints())
@@ -44,10 +44,17 @@ class WebRtcClient(
     }
 
     fun initPeerConnection(iceServers: List<PeerConnection.IceServer>) {
-        val rtcConfig = PeerConnection.RTCConfiguration(iceServers)
+        val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
+            sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+        }
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
-            override fun onSignalingChange(state: PeerConnection.SignalingState?) {}
-            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {}
+            override fun onSignalingChange(state: PeerConnection.SignalingState?) {
+                Log.d("WebRtcClient", "Signaling state: $state")
+            }
+            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
+                Log.d("WebRtcClient", "Ice connection: $state")
+            }
             override fun onIceConnectionReceivingChange(p0: Boolean) {}
             override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
             override fun onIceCandidate(candidate: IceCandidate) {
@@ -55,22 +62,25 @@ class WebRtcClient(
             }
             override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
             override fun onAddStream(stream: MediaStream) {
+                Log.d("WebRtcClient", "Remote stream added")
                 observer.onRemoteStream(stream)
             }
             override fun onRemoveStream(stream: MediaStream) {}
             override fun onDataChannel(dataChannel: DataChannel?) {}
-            override fun onRenegotiationNeeded() {}
+            override fun onRenegotiationNeeded() {
+                Log.d("WebRtcClient", "Renegotiation needed")
+            }
             override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {}
         })
     }
 
     fun startLocalStream(localView: SurfaceViewRenderer) {
-        localView.init(rootEglBase.eglBaseContext, null)
-        localView.setEnableHardwareScaler(true)
-        localView.setMirror(true)
+        if (!localView.isActivated) { // Check if initialized indirectly
+             // localView initialization handled in CallActivity
+        }
 
         videoCapturer = createVideoCapturer()
-        videoCapturer?.initialize(SurfaceTextureHelper.create("CaptureThread", rootEglBase.eglBaseContext), context, localVideoSource.capturerObserver)
+        videoCapturer?.initialize(SurfaceTextureHelper.create("CaptureThread", eglContext), context, localVideoSource.capturerObserver)
         videoCapturer?.startCapture(1280, 720, 30)
 
         localVideoTrack = peerConnectionFactory.createVideoTrack("ARDAMSv0", localVideoSource)
@@ -160,6 +170,5 @@ class WebRtcClient(
         videoCapturer?.dispose()
         peerConnection?.close()
         peerConnectionFactory.dispose()
-        rootEglBase.release()
     }
 }

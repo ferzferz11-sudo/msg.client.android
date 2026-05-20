@@ -177,6 +177,7 @@ object RealGrpcClient {
         channel = null
         requestObserver = null
         typingRequestObserver = null
+        callRequestObserver = null
         lastChatRequest = null
         _connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
@@ -266,7 +267,6 @@ object RealGrpcClient {
         
         requestObserver?.onNext(firstMessage)
         startTypingStream()
-        startCallSession() // Auto-start call session on connection
     }
 
     fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
@@ -346,6 +346,11 @@ object RealGrpcClient {
                     _authStatus.value = value.text
                     if (value.text == "AUTH_FAILED") disconnect()
                     return
+                }
+
+                // If authenticated and no call session active, start it
+                if (callRequestObserver == null && currentUsername != null) {
+                    startCallSession()
                 }
                 
                 if (value.text.startsWith("SYSTEM_NOTIFICATION:")) {
@@ -728,6 +733,15 @@ object RealGrpcClient {
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         callRequestObserver = call.startCallStream()
+
+        // Send an identity signal to register with the hub on the server
+        currentUsername?.let { username ->
+            callRequestObserver?.onNext(CallMessageProto(
+                senderId = username,
+                type = CallMessageProto.Type.ICE_CANDIDATE, // Use as heartbeat/identity
+                payload = "IDENTITY"
+            ))
+        }
     }
 
     private fun io.grpc.ClientCall<CallMessageProto, CallMessageProto>.startCallStream(): StreamObserver<CallMessageProto> {
