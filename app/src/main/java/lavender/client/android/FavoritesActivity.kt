@@ -61,7 +61,8 @@ class FavoritesActivity : AppCompatActivity() {
             onSelectionChanged = {},
             onMessageLongClick = { message ->
                 showFavoritesActionDialog(message)
-            }
+            },
+            chatId = "favorites_$username"
         )
 
         recyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = false }

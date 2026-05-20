@@ -583,7 +583,8 @@ class NewChatActivity : AppCompatActivity() {
             onMessageClick = { showReactionsDialog(it) },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
             onMessageLongClick = { enterSelectionMode(it) },
-            chatId = roomId
+            chatId = roomId,
+            onRetrySendMessage = { retryMessage(it) }
         )
         messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         messagesRecyclerView.adapter = adapter
@@ -1886,6 +1887,24 @@ class NewChatActivity : AppCompatActivity() {
             toolbarSubtitle.setTextColor(typedValue.data)
         } catch (_: Exception) {
             toolbarSubtitle.isVisible = false
+        }
+    }
+
+    private fun retryMessage(message: lavender.client.android.data.models.Message) {
+        showToast(getString(R.string.checking_server))
+        // Refresh history to make sure we have latest server state
+        grpcClient.loadHistory(roomId) {
+            runOnUiThread {
+                // Check if message is now marked as sent in our source of truth
+                val updatedMessage = grpcClient.messages.value.find { it.id == message.id }
+                if (updatedMessage == null || !updatedMessage.isSent) {
+                    // Not found or still not sent, try resending
+                    showToast(getString(R.string.resending))
+                    grpcClient.sendMessage(message)
+                } else {
+                    showToast(getString(R.string.message_already_sent))
+                }
+            }
         }
     }
 

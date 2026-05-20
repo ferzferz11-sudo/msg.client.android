@@ -465,4 +465,6 @@
         <item quantity="many">%d дней назад</item>
         <item quantity="other">%d дней назад</item>
     </plurals>
+    <string name="resending">Повторная отправка…</string>
+    <string name="message_already_sent">Сообщение уже на сервере</string>
 </resources>

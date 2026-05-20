@@ -39,6 +39,7 @@ class MessageAdapter(
     private val onSelectionChanged: (Int) -> Unit,
     private val onMessageLongClick: ((Message) -> Unit)? = null,
     private val chatId: String = "",
+    private val onRetrySendMessage: ((Message) -> Unit)? = null,
 ) : ListAdapter<Message, MessageAdapter.MessageViewHolder>(MessageDiffCallback()) {
 
     private val selectedPositions = mutableSetOf<Int>()
@@ -276,21 +277,31 @@ class MessageAdapter(
             readStatusIcon.isVisible = isOutgoing
             if (isOutgoing) {
                 val isRead = message.isRead || chatId.startsWith("favorites_")
+                val isTimedOut = !message.isSent && (System.currentTimeMillis() - message.timestamp > 5 * 60 * 1000)
+                
                 val icon = when {
+                    isTimedOut -> R.drawable.ic_loading_renew
                     isRead -> R.drawable.ic_message_read
                     message.isSent -> R.drawable.ic_message_sent
                     else -> R.drawable.ic_message_pending
                 }
                 readStatusIcon.setImageResource(icon)
 
-                val iconColor = if (isRead) {
-                    ContextCompat.getColor(context, R.color.tg_read_check)
-                } else if (!message.isSent) {
-                    secondaryColorWithAlpha // Gray for pending
-                } else {
-                    secondaryColorWithAlpha
+                val iconColor = when {
+                    isTimedOut -> Color.RED
+                    isRead -> ContextCompat.getColor(context, R.color.tg_read_check)
+                    !message.isSent -> secondaryColorWithAlpha
+                    else -> secondaryColorWithAlpha
                 }
                 readStatusIcon.imageTintList = ColorStateList.valueOf(iconColor)
+
+                if (isTimedOut) {
+                    readStatusIcon.setOnClickListener { onRetrySendMessage?.invoke(message) }
+                    readStatusIcon.isClickable = true
+                } else {
+                    readStatusIcon.setOnClickListener(null)
+                    readStatusIcon.isClickable = false
+                }
             }
 
             // 5. Content

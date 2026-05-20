@@ -457,4 +457,6 @@
         <item quantity="one">%d day ago</item>
         <item quantity="other">%d days ago</item>
     </plurals>
+    <string name="resending">Resending…</string>
+    <string name="message_already_sent">Message already on server</string>
 </resources>
