@@ -34,6 +34,9 @@ object CallManager {
     }
 
     private fun handleIncomingSignal(signal: CallMessageProto) {
+        // Ignore internal identity signals
+        if (signal.payload == "IDENTITY") return
+
         Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId}")
         
         val currentUsername = GrpcClient.getCurrentUsername()
@@ -79,6 +82,10 @@ object CallManager {
 
     fun initiateCall(receiverId: String) {
         val senderId = GrpcClient.getCurrentUsername() ?: return
+        
+        // Clear state before starting new call
+        _currentCall.value = null
+
         GrpcClient.startCallSession()
         
         val signal = CallMessageProto(
