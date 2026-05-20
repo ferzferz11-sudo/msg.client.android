@@ -12,6 +12,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         SessionManager.initFromPrefs(this)
+        lavender.client.android.data.calls.CallManager.init(this)
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val savedUsername = prefs.getString("username", null)

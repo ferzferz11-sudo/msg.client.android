@@ -73,6 +73,14 @@ class LavenderMessagingService : FirebaseMessagingService() {
         val channelId = "lavender_calls"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
+        val intent = Intent(this, lavender.client.android.CallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("CALL_ID", callId)
+            putExtra("RECEIVER_ID", senderId)
+            putExtra("IS_INCOMING", true)
+        }
+        val pendingIntent = PendingIntent.getActivity(this, callId.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
@@ -93,7 +101,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(true)
             .setOngoing(true)
-            // .setFullScreenIntent(fullScreenPendingIntent, true) // Add this for real call UI
+            .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true)
 
         notificationManager.notify(callId.hashCode(), notificationBuilder.build())
     }

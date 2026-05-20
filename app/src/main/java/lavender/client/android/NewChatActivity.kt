@@ -688,6 +688,7 @@ class NewChatActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean { menuInflater.inflate(R.menu.chat_menu, menu); return true }
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search)?.isVisible = !selectionMode
+        menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_")
         
         // Apply custom theme color to search icon
         val iconColor = run {
@@ -721,8 +722,20 @@ class NewChatActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_search -> { showSearchBar(); true }
+            R.id.action_video_call -> { startVideoCall(); true }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun startVideoCall() {
+        val otherUser = getOtherParticipant() ?: return
+        lavender.client.android.data.calls.CallManager.initiateCall(otherUser)
+        
+        val intent = Intent(this, CallActivity::class.java).apply {
+            putExtra("RECEIVER_ID", otherUser)
+            putExtra("IS_INCOMING", false)
+        }
+        startActivity(intent)
     }
 
     private fun setupListeners() {

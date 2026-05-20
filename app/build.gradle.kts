@@ -125,6 +125,9 @@ dependencies {
     // Biometric authentication
     implementation(libs.androidx.biometric)
 
+    // WebRTC
+    implementation("io.github.webrtc-sdk:android:144.7559.05")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

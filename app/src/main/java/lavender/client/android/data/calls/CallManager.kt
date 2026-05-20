@@ -1,9 +1,14 @@
 package lavender.client.android.data.calls
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import lavender.client.android.CallActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 
@@ -14,7 +19,13 @@ object CallManager {
     private val _currentCall = MutableStateFlow<CallMessageProto?>(null)
     val currentCall: StateFlow<CallMessageProto?> = _currentCall
 
-    init {
+    private val _incomingSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
+    val incomingSignals: SharedFlow<CallMessageProto> = _incomingSignals
+
+    private var appContext: Context? = null
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
         scope.launch {
             GrpcClient.callSignals.collect { signal ->
                 handleIncomingSignal(signal)
@@ -24,26 +35,38 @@ object CallManager {
 
     private fun handleIncomingSignal(signal: CallMessageProto) {
         Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId}")
+        scope.launch { _incomingSignals.emit(signal) }
+
         when (signal.type) {
             CallMessageProto.Type.INITIATE -> {
                 _currentCall.value = signal
-                // TODO: Trigger incoming call UI
-            }
-            CallMessageProto.Type.ACCEPT -> {
-                // TODO: Start WebRTC session
+                launchCallActivity(signal.callId, signal.senderId, true)
             }
             CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP -> {
-                _currentCall.value = null
-                // TODO: Close WebRTC and UI
+                if (_currentCall.value?.callId == signal.callId) {
+                    _currentCall.value = null
+                }
             }
-            else -> {
-                // Handle WebRTC signals (OFFER, ANSWER, ICE_CANDIDATE)
+            else -> {}
+        }
+    }
+
+    private fun launchCallActivity(callId: String, receiverId: String, isIncoming: Boolean) {
+        appContext?.let { context ->
+            val intent = Intent(context, CallActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra("CALL_ID", callId)
+                putExtra("RECEIVER_ID", receiverId)
+                putExtra("IS_INCOMING", isIncoming)
             }
+            context.startActivity(intent)
         }
     }
 
     fun initiateCall(receiverId: String) {
         val senderId = GrpcClient.getCurrentUsername() ?: return
+        GrpcClient.startCallSession()
+        
         val signal = CallMessageProto(
             senderId = senderId,
             receiverId = receiverId,
@@ -51,6 +74,8 @@ object CallManager {
         )
         GrpcClient.sendCallSignal(signal)
         _currentCall.value = signal
+        
+        // Activity will be launched from the UI that calls this method
     }
 
     fun acceptCall() {
@@ -89,5 +114,18 @@ object CallManager {
         )
         GrpcClient.sendCallSignal(signal)
         _currentCall.value = null
+    }
+
+    fun sendWebRtcSignal(receiverId: String, type: CallMessageProto.Type, payload: String) {
+        val call = _currentCall.value ?: return
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val signal = CallMessageProto(
+            callId = call.callId,
+            senderId = senderId,
+            receiverId = receiverId,
+            type = type,
+            payload = payload
+        )
+        GrpcClient.sendCallSignal(signal)
     }
 }
