@@ -25,6 +25,14 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         Log.d("FCM", "onMessageReceived called from: ${remoteMessage.from}")
 
+        val type = remoteMessage.data["type"]
+        if (type == "VOIP_CALL") {
+            val callId = remoteMessage.data["call_id"] ?: ""
+            val senderId = remoteMessage.data["sender_id"] ?: ""
+            handleIncomingCall(callId, senderId)
+            return
+        }
+
         // Извлекаем данные (приоритет payload из data, затем notification)
         val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "Новое сообщение"
         val body = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: ""
@@ -45,6 +53,49 @@ class LavenderMessagingService : FirebaseMessagingService() {
             // Use common sync logic from SessionManager
             lavender.client.android.data.session.SessionManager.syncFcmToken(this, username)
         }
+    }
+
+    private fun handleIncomingCall(callId: String, senderId: String) {
+        Log.d("FCM", "Handling incoming VOIP call: $callId from $senderId")
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val serverAddress = prefs.getString("server_address", "82.146.43.235") ?: "82.146.43.235"
+
+        // Ensure we are connected to receive signaling
+        lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, context = applicationContext)
+        lavender.client.android.data.grpc.GrpcClient.startCallSession()
+
+        // Show a notification or launch a full-screen Intent for the call
+        // In a real app, you would start a Foreground Service here
+        showCallNotification(senderId, callId)
+    }
+
+    private fun showCallNotification(senderId: String, callId: String) {
+        val channelId = "lavender_calls"
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Звонки Lavender",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                setSound(null, null) // Use custom ringtone or handle in activity
+                enableVibration(true)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification_small)
+            .setContentTitle("Входящий звонок")
+            .setContentText("Звонит $senderId")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setAutoCancel(true)
+            .setOngoing(true)
+            // .setFullScreenIntent(fullScreenPendingIntent, true) // Add this for real call UI
+
+        notificationManager.notify(callId.hashCode(), notificationBuilder.build())
     }
 
     private fun showNotification(title: String, body: String, roomId: String) {

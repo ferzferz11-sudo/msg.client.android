@@ -12,6 +12,7 @@ import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
 import lavender.client.android.data.proto.DeviceInfoProto
+import lavender.client.android.data.proto.CallMessageProto
 
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
@@ -39,6 +40,7 @@ object GrpcClient {
     val authStatus: StateFlow<String?> = realGrpcClient.authStatus
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
+    val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
 
     var hasCheckedForUpdates: Boolean
         get() = realGrpcClient.hasCheckedForUpdates
@@ -170,6 +172,14 @@ object GrpcClient {
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {
         realGrpcClient.sendTypingSignal(username, isTyping)
+    }
+
+    fun startCallSession() {
+        realGrpcClient.startCallSession()
+    }
+
+    fun sendCallSignal(signal: CallMessageProto) {
+        realGrpcClient.sendCallSignal(signal)
     }
 
     fun updateAvatar(username: String, avatarUrl: String, fullAvatarUrl: String = "", callback: (Boolean, String) -> Unit) {

@@ -716,3 +716,25 @@ data class GetFavoritesRequestProto(
 data class GetFavoritesResponseProto(
     val messages: List<MessageProto> = emptyList()
 )
+
+data class CallMessageProto(
+    val callId: String = "",
+    val senderId: String = "",
+    val receiverId: String = "",
+    val type: Type = Type.INITIATE,
+    val payload: String = ""
+) {
+    enum class Type(val value: Int) {
+        INITIATE(0),
+        ACCEPT(1),
+        REJECT(2),
+        HANGUP(3),
+        OFFER(4),
+        ANSWER(5),
+        ICE_CANDIDATE(6);
+
+        companion object {
+            fun fromInt(value: Int) = values().firstOrNull { it.value == value } ?: INITIATE
+        }
+    }
+}

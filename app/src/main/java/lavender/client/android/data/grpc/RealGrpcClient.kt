@@ -7,7 +7,9 @@ import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import lavender.client.android.BuildConfig
@@ -38,6 +40,7 @@ object RealGrpcClient {
     }
     private var requestObserver: StreamObserver<MessageProto>? = null
     private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
+    private var callRequestObserver: StreamObserver<CallMessageProto>? = null
     
     var currentServerAddress: String? = null
     var currentRoomId = ""
@@ -78,6 +81,9 @@ object RealGrpcClient {
 
     private val _chatDeletedEvent = MutableStateFlow<String?>(null)
     val chatDeletedEvent: StateFlow<String?> = _chatDeletedEvent
+
+    private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
+    val callSignals: SharedFlow<CallMessageProto> = _callSignals
 
     var hasCheckedForUpdates = false
     var isAppInBackground = false
@@ -692,6 +698,63 @@ object RealGrpcClient {
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {
         typingRequestObserver?.onNext(TypingRequestProto(currentRoomId, username, isTyping))
+    }
+
+    fun startCallSession() {
+        val currentChannel = channel ?: return
+        if (callRequestObserver != null) return // Already started
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CallMessageProto, CallMessageProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+            .setFullMethodName("messenger.ChatService/CallSession")
+            .setRequestMarshaller(CallMessageProtoMarshaller())
+            .setResponseMarshaller(CallMessageProtoMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        callRequestObserver = call.startCallStream()
+    }
+
+    private fun io.grpc.ClientCall<CallMessageProto, CallMessageProto>.startCallStream(): StreamObserver<CallMessageProto> {
+        val responseObserver = object : StreamObserver<CallMessageProto> {
+            override fun onNext(value: CallMessageProto) {
+                scope.launch { _callSignals.emit(value) }
+            }
+            override fun onError(t: Throwable) {
+                Log.e(TAG, "Call session stream error", t)
+                callRequestObserver = null
+                scope.launch {
+                    delay(5000)
+                    startCallSession()
+                }
+            }
+            override fun onCompleted() {
+                Log.d(TAG, "Call session stream completed")
+                callRequestObserver = null
+            }
+        }
+
+        this.start(object : io.grpc.ClientCall.Listener<CallMessageProto>() {
+            override fun onMessage(message: CallMessageProto) = responseObserver.onNext(message)
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
+            }
+        }, io.grpc.Metadata())
+        this.request(Int.MAX_VALUE)
+
+        return object : StreamObserver<CallMessageProto> {
+            override fun onNext(value: CallMessageProto) = this@startCallStream.sendMessage(value)
+            override fun onError(t: Throwable) = this@startCallStream.cancel("Error", t)
+            override fun onCompleted() = this@startCallStream.halfClose()
+        }
+    }
+
+    fun sendCallSignal(signal: CallMessageProto) {
+        if (callRequestObserver == null) {
+            startCallSession()
+            // Give it a bit of time or queue it? For now just try to send
+        }
+        callRequestObserver?.onNext(signal)
     }
 
     fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
@@ -2694,5 +2757,33 @@ class ResetPasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Rese
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
         return ResetPasswordResponseProto(ok, msg)
+    }
+}
+
+class CallMessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<CallMessageProto> {
+    override fun stream(v: CallMessageProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.callId.isNotEmpty()) cos.writeString(1, v.callId)
+        if (v.senderId.isNotEmpty()) cos.writeString(2, v.senderId)
+        if (v.receiverId.isNotEmpty()) cos.writeString(3, v.receiverId)
+        cos.writeEnum(4, v.type.value)
+        if (v.payload.isNotEmpty()) cos.writeString(5, v.payload)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): CallMessageProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var cid = ""; var sid = ""; var rid = ""; var t = 0; var p = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> cid = cis.readString()
+                2 -> sid = cis.readString()
+                3 -> rid = cis.readString()
+                4 -> t = cis.readEnum()
+                5 -> p = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return CallMessageProto(cid, sid, rid, CallMessageProto.Type.fromInt(t), p)
     }
 }
