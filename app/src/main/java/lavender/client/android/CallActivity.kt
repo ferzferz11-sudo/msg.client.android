@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.databinding.ActivityCallBinding
 import lavender.client.android.data.calls.CallManager
 import lavender.client.android.data.calls.WebRtcClient
+import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 import org.webrtc.*
 import org.json.JSONObject
@@ -52,6 +53,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         Log.d(TAG, "Call details: ID=$callId, Other=$receiverId, Incoming=$isIncoming")
 
+        CallManager.init(applicationContext)
+        CallManager.syncCallState(callId, receiverId, isIncoming)
+        GrpcClient.startCallSession()
+
         binding.tvCallerName.text = receiverId
 
         if (isIncoming) {
@@ -73,6 +78,19 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         setupButtons()
         observeSignals()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val newCallId = intent.getStringExtra("CALL_ID") ?: ""
+        if (newCallId.isNotEmpty() && newCallId != callId) {
+            Log.d(TAG, "onNewIntent: updating callId from $callId to $newCallId")
+            callId = newCallId
+            receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
+            isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
+            CallManager.syncCallState(callId, receiverId, isIncoming)
+        }
     }
 
     private fun setupButtons() {

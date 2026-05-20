@@ -118,7 +118,7 @@ object RealGrpcClient {
         }
         
         // CRITICAL: Do not reset channel if a call is in progress
-        if (lavender.client.android.data.calls.CallManager.currentCall.value != null && !forceReconnect) {
+        if (lavender.client.android.data.calls.CallManager.currentCall.value != null) {
             Log.w(TAG, "Call in progress, preventing channel reset")
             return
         }

@@ -23,8 +23,11 @@ object CallManager {
     val incomingSignals: SharedFlow<CallMessageProto> = _incomingSignals
 
     private var appContext: Context? = null
+    private var isInitialized = false
 
     fun init(context: Context) {
+        if (isInitialized) return
+        isInitialized = true
         appContext = context.applicationContext
         scope.launch {
             GrpcClient.callSignals.collect { signal ->
@@ -97,6 +100,18 @@ object CallManager {
         _currentCall.value = signal
         
         // Activity will be launched from the UI that calls this method
+    }
+
+    fun syncCallState(callId: String, otherPartyId: String, isIncoming: Boolean) {
+        if (_currentCall.value == null) {
+            val currentUsername = GrpcClient.getCurrentUsername() ?: ""
+            _currentCall.value = CallMessageProto(
+                callId = callId,
+                senderId = if (isIncoming) otherPartyId else currentUsername,
+                receiverId = if (isIncoming) currentUsername else otherPartyId,
+                type = CallMessageProto.Type.INITIATE
+            )
+        }
     }
 
     fun acceptCall() {

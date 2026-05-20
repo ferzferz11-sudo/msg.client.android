@@ -62,6 +62,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         // Ensure we are connected to receive signaling
         lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, context = applicationContext)
+        lavender.client.android.data.calls.CallManager.init(applicationContext)
         lavender.client.android.data.grpc.GrpcClient.startCallSession()
 
         // Show a notification or launch a full-screen Intent for the call

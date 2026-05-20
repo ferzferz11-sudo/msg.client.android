@@ -70,7 +70,12 @@ class WebRtcClient(
             override fun onRenegotiationNeeded() {
                 Log.d("WebRtcClient", "Renegotiation needed")
             }
-            override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {}
+            override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {
+                Log.d("WebRtcClient", "onAddTrack: ${receiver?.track()?.kind()}")
+                streams?.getOrNull(0)?.let {
+                    observer.onRemoteStream(it)
+                }
+            }
         })
     }
 
@@ -90,7 +95,10 @@ class WebRtcClient(
         localStream.addTrack(localVideoTrack)
         localStream.addTrack(localAudioTrack)
         
-        peerConnection?.addStream(localStream)
+        val streamIds = listOf("ARDAMS")
+        localVideoTrack?.let { peerConnection?.addTrack(it, streamIds) }
+        localAudioTrack?.let { peerConnection?.addTrack(it, streamIds) }
+
         observer.onLocalStream(localStream)
     }
 
