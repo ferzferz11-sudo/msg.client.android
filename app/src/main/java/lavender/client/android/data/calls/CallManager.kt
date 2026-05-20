@@ -35,12 +35,26 @@ object CallManager {
 
     private fun handleIncomingSignal(signal: CallMessageProto) {
         Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId}")
+        
+        val currentUsername = GrpcClient.getCurrentUsername()
+        if (signal.senderId == currentUsername && signal.type == CallMessageProto.Type.INITIATE) {
+            Log.d(TAG, "Handling self-initiated INITIATE signal to update local call state")
+            _currentCall.value = signal
+            scope.launch { _incomingSignals.emit(signal) }
+            return
+        }
+
         scope.launch { _incomingSignals.emit(signal) }
 
         when (signal.type) {
             CallMessageProto.Type.INITIATE -> {
-                _currentCall.value = signal
-                launchCallActivity(signal.callId, signal.senderId, true)
+                if (_currentCall.value == null) {
+                    _currentCall.value = signal
+                    launchCallActivity(signal.callId, signal.senderId, true)
+                } else {
+                    Log.w(TAG, "Already in a call, ignoring INITIATE")
+                    // Optionally send BUSY signal back
+                }
             }
             CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP -> {
                 if (_currentCall.value?.callId == signal.callId) {

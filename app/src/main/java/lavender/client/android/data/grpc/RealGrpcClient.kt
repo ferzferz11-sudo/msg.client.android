@@ -112,8 +112,17 @@ object RealGrpcClient {
     private val pendingReads = mutableSetOf<String>()
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
-        if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null && !forceReconnect) return
+        if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null && !forceReconnect) {
+            Log.d(TAG, "Connection already ready, skipping connect")
+            return
+        }
         
+        // CRITICAL: Do not reset channel if a call is in progress
+        if (lavender.client.android.data.calls.CallManager.currentCall.value != null && !forceReconnect) {
+            Log.w(TAG, "Call in progress, preventing channel reset")
+            return
+        }
+
         appContext = context
         currentServerAddress = serverAddress
         _isSuperAdmin.value = false // Reset status for new connection
@@ -257,6 +266,7 @@ object RealGrpcClient {
         
         requestObserver?.onNext(firstMessage)
         startTypingStream()
+        startCallSession() // Auto-start call session on connection
     }
 
     fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
@@ -701,9 +711,14 @@ object RealGrpcClient {
     }
 
     fun startCallSession() {
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null || currentChannel.isShutdown) {
+            Log.e(TAG, "Cannot start call session: channel not ready")
+            return
+        }
         if (callRequestObserver != null) return // Already started
 
+        Log.d(TAG, "Starting CallSession stream")
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CallMessageProto, CallMessageProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
             .setFullMethodName("messenger.ChatService/CallSession")

@@ -3,6 +3,7 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import lavender.client.android.data.session.SessionManager
 
@@ -22,31 +23,44 @@ class SplashActivity : AppCompatActivity() {
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
         val isLoggedIn = !skipAutoLogin && savedUsername != null && savedPassword != null
 
-        // Проверяем, пришел ли ID комнаты из уведомления
+        // Проверяем, пришел ли ID комнаты или звонок из уведомления
         val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
-
-        val isBiometricEnabled = savedUsername != null && prefs.getBoolean("biometric_enabled_$savedUsername", false)
+        val callIdFromPush = intent.getStringExtra("CALL_ID") ?: intent.getStringExtra("call_id")
+        
+        Log.d("SplashActivity", "roomIdFromPush: $roomIdFromPush, callIdFromPush: $callIdFromPush")
 
         val targetIntent = if (isLoggedIn) {
-            if (roomIdFromPush != null) {
-                // Если нажали на пуш — летим сразу в чат
-                Intent(this, NewChatActivity::class.java).apply {
-                    putExtra("USERNAME", savedUsername)
-                    putExtra("PASSWORD", savedPassword)
-                    putExtra("SERVER_ADDRESS", savedServerAddress)
-                    putExtra("ROOM_ID", roomIdFromPush)
-                    putExtra("from_notification", true)
+            when {
+                callIdFromPush != null -> {
+                    Log.d("SplashActivity", "Directing to CallActivity")
+                    Intent(this, CallActivity::class.java).apply {
+                        putExtra("CALL_ID", callIdFromPush)
+                        putExtra("RECEIVER_ID", intent.getStringExtra("SENDER_ID") ?: intent.getStringExtra("sender_id"))
+                        putExtra("IS_INCOMING", true)
+                        putExtra("from_notification", true)
+                    }
                 }
-            } else {
-                // Если просто открыли приложение — идем в СПИСОК ЧАТОВ
-                Intent(this, ChatListActivity::class.java).apply {
-                    putExtra("USERNAME", savedUsername)
-                    putExtra("PASSWORD", savedPassword)
-                    putExtra("SERVER_ADDRESS", savedServerAddress)
+                roomIdFromPush != null -> {
+                    Log.d("SplashActivity", "Directing to NewChatActivity")
+                    Intent(this, NewChatActivity::class.java).apply {
+                        putExtra("USERNAME", savedUsername)
+                        putExtra("PASSWORD", savedPassword)
+                        putExtra("SERVER_ADDRESS", savedServerAddress)
+                        putExtra("ROOM_ID", roomIdFromPush)
+                        putExtra("from_notification", true)
+                    }
+                }
+                else -> {
+                    Log.d("SplashActivity", "Directing to ChatListActivity")
+                    Intent(this, ChatListActivity::class.java).apply {
+                        putExtra("USERNAME", savedUsername)
+                        putExtra("PASSWORD", savedPassword)
+                        putExtra("SERVER_ADDRESS", savedServerAddress)
+                    }
                 }
             }
         } else {
-            // Если не залогинены — идем в ChatListActivity (покажет диалог выбора входа/регистрации)
+            Log.d("SplashActivity", "Not logged in, directing to ChatListActivity")
             Intent(this, ChatListActivity::class.java)
         }
 
