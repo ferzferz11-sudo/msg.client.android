@@ -31,7 +31,8 @@ data class MessageProto(
     val duration: Int = 0,
     val register: Boolean = false,
     val deviceId: String = "",
-    val deviceName: String = ""
+    val deviceName: String = "",
+    val userId: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -55,6 +56,7 @@ data class MessageProto(
         private var register: Boolean = false
         private var deviceId: String = ""
         private var deviceName: String = ""
+        private var userId: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -157,6 +159,11 @@ data class MessageProto(
             return this
         }
 
+        fun setUserId(userId: String): Builder {
+            this.userId = userId
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -170,7 +177,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId)
         }
     }
     
@@ -199,7 +206,8 @@ data class ChatInfoProto(
 // Mark Read Request/Response
 data class MarkReadRequestProto(
     val roomId: String = "",
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class MarkReadResponseProto(
@@ -326,7 +334,8 @@ data class TokenResponseProto(
 data class UpdateAvatarRequestProto(
     val username: String = "",
     val avatarUrl: String = "",
-    val fullAvatarUrl: String = ""
+    val fullAvatarUrl: String = "",
+    val userId: String = ""
 )
 
 data class UpdateAvatarResponseProto(
@@ -338,7 +347,8 @@ data class UpdateAvatarResponseProto(
 data class UpdateProfileRequestProto(
     val username: String = "",
     val bio: String = "",
-    val status: String = ""
+    val status: String = "",
+    val userId: String = ""
 )
 
 data class UpdateProfileResponseProto(
@@ -433,7 +443,8 @@ data class GetUserAvatarResponseProto(
 
 // Delete Profile Request/Response
 data class DeleteProfileRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class DeleteProfileResponseProto(
@@ -457,7 +468,8 @@ data class TypingSignalProto(
 // Contacts management
 data class AddContactRequestProto(
     val username: String = "",
-    val contactUsername: String = ""
+    val contactUsername: String = "",
+    val userId: String = ""
 )
 
 data class AddContactResponseProto(
@@ -467,7 +479,8 @@ data class AddContactResponseProto(
 
 data class RemoveContactRequestProto(
     val username: String = "",
-    val contactUsername: String = ""
+    val contactUsername: String = "",
+    val userId: String = ""
 )
 
 data class RemoveContactResponseProto(
@@ -476,7 +489,8 @@ data class RemoveContactResponseProto(
 )
 
 data class GetContactsRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class GetContactsResponseProto(
@@ -484,7 +498,8 @@ data class GetContactsResponseProto(
 )
 
 data class GetChatListVersionRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class GetChatListVersionResponseProto(
@@ -525,7 +540,8 @@ data class GetThemesResponseProto(
 
 data class SaveThemeRequestProto(
     val username: String = "",
-    val theme: CustomThemeProto = CustomThemeProto()
+    val theme: CustomThemeProto = CustomThemeProto(),
+    val userId: String = ""
 )
 
 data class SaveThemeResponseProto(
@@ -535,7 +551,8 @@ data class SaveThemeResponseProto(
 
 data class SetCurrentThemeRequestProto(
     val username: String = "",
-    val themeId: String = ""
+    val themeId: String = "",
+    val userId: String = ""
 )
 
 data class SetCurrentThemeResponseProto(
@@ -544,7 +561,8 @@ data class SetCurrentThemeResponseProto(
 
 data class DeleteThemeRequestProto(
     val username: String = "",
-    val themeId: String = ""
+    val themeId: String = "",
+    val userId: String = ""
 )
 
 data class DeleteThemeResponseProto(

@@ -28,6 +28,7 @@ object ProtoUtils {
             .setIsSuperAdmin(message.isSuperAdmin)
             .setVoiceUrl(message.voiceUrl)
             .setDuration(message.duration)
+            .setUserId(message.userId)
 
         // Add reactions
         message.reactions.forEach { reaction ->
@@ -85,7 +86,8 @@ object ProtoUtils {
             edited = proto.edited,
             isSuperAdmin = proto.isSuperAdmin,
             voiceUrl = proto.voiceUrl,
-            duration = proto.duration
+            duration = proto.duration,
+            userId = proto.userId
         )
     }
     

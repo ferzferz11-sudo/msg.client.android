@@ -23,6 +23,7 @@ data class Message(
     val isSuperAdmin: Boolean = false,
     val voiceUrl: String = "",
     val duration: Int = 0,
+    val userId: String = "",
     val isSent: Boolean = true // Messages from server are always sent
 )
 

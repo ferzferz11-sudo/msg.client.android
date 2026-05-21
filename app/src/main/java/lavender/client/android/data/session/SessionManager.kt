@@ -114,8 +114,8 @@ object SessionManager {
 
     fun initFromPrefs(context: Context) {
         val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        val username = prefs.getString("username", "") ?: ""
-        val password = prefs.getString("password", "") ?: ""
+        val username = prefs.getString("saved_username", "") ?: ""
+        val password = prefs.getString("saved_password", "") ?: ""
         val userId = prefs.getString("user_id", "") ?: ""
         val serverAddress = prefs.getString("server_address", "") ?: ""
         

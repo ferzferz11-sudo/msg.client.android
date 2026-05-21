@@ -916,7 +916,7 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetChatsRequestProto(username = username))
+        call.sendMessage(GetChatsRequestProto(username = username, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1198,7 +1198,7 @@ object RealGrpcClient {
             override fun onMessage(message: UpdateAvatarResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(UpdateAvatarRequestProto(username, avatarUrl, fullAvatarUrl))
+        call.sendMessage(UpdateAvatarRequestProto(username = username, avatarUrl = avatarUrl, fullAvatarUrl = fullAvatarUrl, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1237,7 +1237,7 @@ object RealGrpcClient {
             override fun onMessage(message: UpdateProfileResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(UpdateProfileRequestProto(username, bio, status))
+        call.sendMessage(UpdateProfileRequestProto(username = username, bio = bio, status = status, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1298,7 +1298,7 @@ object RealGrpcClient {
             override fun onMessage(message: DeleteProfileResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(DeleteProfileRequestProto(u))
+        call.sendMessage(DeleteProfileRequestProto(username = u, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1403,7 +1403,7 @@ object RealGrpcClient {
                 onComp?.invoke() 
             }
         }, io.grpc.Metadata())
-        call.sendMessage(MarkReadRequestProto(rid, u))
+        call.sendMessage(MarkReadRequestProto(rid, u, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1579,7 +1579,7 @@ object RealGrpcClient {
             override fun onMessage(message: AddContactResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(AddContactRequestProto(u, cu))
+        call.sendMessage(AddContactRequestProto(username = u, contactUsername = cu, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1597,7 +1597,7 @@ object RealGrpcClient {
             override fun onMessage(message: RemoveContactResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(RemoveContactRequestProto(u, cu))
+        call.sendMessage(RemoveContactRequestProto(username = u, contactUsername = cu, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1615,7 +1615,7 @@ object RealGrpcClient {
             override fun onMessage(message: GetContactsResponseProto) { cb(message.contacts) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetContactsRequestProto(u))
+        call.sendMessage(GetContactsRequestProto(username = u, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1677,7 +1677,7 @@ object RealGrpcClient {
             override fun onMessage(message: GetChatListVersionResponseProto) { cb(message.version) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetChatListVersionRequestProto(u))
+        call.sendMessage(GetChatListVersionRequestProto(username = u, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1695,7 +1695,7 @@ object RealGrpcClient {
             override fun onMessage(message: GetThemesResponseProto) { cb(message.currentThemeId, message.customThemes) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetThemesRequestProto(u))
+        call.sendMessage(GetThemesRequestProto(username = u, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1713,7 +1713,7 @@ object RealGrpcClient {
             override fun onMessage(message: SaveThemeResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(SaveThemeRequestProto(u, t))
+        call.sendMessage(SaveThemeRequestProto(username = u, theme = t, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1731,7 +1731,7 @@ object RealGrpcClient {
             override fun onMessage(message: SetCurrentThemeResponseProto) { cb(message.success) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(SetCurrentThemeRequestProto(u, tid))
+        call.sendMessage(SetCurrentThemeRequestProto(username = u, themeId = tid, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1749,7 +1749,7 @@ object RealGrpcClient {
             override fun onMessage(message: DeleteThemeResponseProto) { cb(message.success) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(DeleteThemeRequestProto(u, tid))
+        call.sendMessage(DeleteThemeRequestProto(username = u, themeId = tid, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1870,6 +1870,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         }
         if (value.deviceId.isNotEmpty()) cos.writeString(21, value.deviceId)
         if (value.deviceName.isNotEmpty()) cos.writeString(22, value.deviceName)
+        if (value.userId.isNotEmpty()) cos.writeString(23, value.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): MessageProto {
@@ -1904,6 +1905,7 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 20 -> builder.addImageUrls(cis.readString()) // Parse imageUrls for gallery support
                 21 -> builder.setDeviceId(cis.readString())
                 22 -> builder.setDeviceName(cis.readString())
+                23 -> builder.setUserId(cis.readString())
                 else -> cis.skipField(tag)
             }
         }
@@ -2179,7 +2181,7 @@ class EditMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<EditMe
 class MarkReadRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<MarkReadRequestProto> {
     override fun stream(v: MarkReadRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId); if (v.username.isNotEmpty()) cos.writeString(2, v.username)
+        if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId); if (v.username.isNotEmpty()) cos.writeString(2, v.username); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): MarkReadRequestProto = MarkReadRequestProto()
@@ -2216,7 +2218,7 @@ class DeleteChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteC
 class UpdateAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateAvatarRequestProto> {
     override fun stream(v: UpdateAvatarRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.avatarUrl.isNotEmpty()) cos.writeString(2, v.avatarUrl); if (v.fullAvatarUrl.isNotEmpty()) cos.writeString(3, v.fullAvatarUrl)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.avatarUrl.isNotEmpty()) cos.writeString(2, v.avatarUrl); if (v.fullAvatarUrl.isNotEmpty()) cos.writeString(3, v.fullAvatarUrl); if (v.userId.isNotEmpty()) cos.writeString(4, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UpdateAvatarRequestProto = UpdateAvatarRequestProto()
@@ -2252,7 +2254,7 @@ class GetUserAvatarResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetU
 class UpdateProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateProfileRequestProto> {
     override fun stream(v: UpdateProfileRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.bio.isNotEmpty()) cos.writeString(2, v.bio); if (v.status.isNotEmpty()) cos.writeString(3, v.status)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.bio.isNotEmpty()) cos.writeString(2, v.bio); if (v.status.isNotEmpty()) cos.writeString(3, v.status); if (v.userId.isNotEmpty()) cos.writeString(4, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UpdateProfileRequestProto = UpdateProfileRequestProto()
@@ -2470,7 +2472,7 @@ class RemoveParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
 class AddContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddContactRequestProto> {
     override fun stream(v: AddContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): AddContactRequestProto = AddContactRequestProto()
@@ -2488,7 +2490,7 @@ class AddContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddCont
 class RemoveContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveContactRequestProto> {
     override fun stream(v: RemoveContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): RemoveContactRequestProto = RemoveContactRequestProto()
@@ -2506,7 +2508,7 @@ class RemoveContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Remo
 class GetContactsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetContactsRequestProto> {
     override fun stream(v: GetContactsRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetContactsRequestProto = GetContactsRequestProto()
@@ -2544,7 +2546,7 @@ class GetAllChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAll
 class GetChatListVersionRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatListVersionRequestProto> {
     override fun stream(v: GetChatListVersionRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetChatListVersionRequestProto = GetChatListVersionRequestProto()
@@ -2562,7 +2564,7 @@ class GetChatListVersionResponseMarshaller : io.grpc.MethodDescriptor.Marshaller
 class GetThemesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetThemesRequestProto> {
     override fun stream(v: GetThemesRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetThemesRequestProto = GetThemesRequestProto()
@@ -2593,6 +2595,7 @@ class SaveThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveTheme
         cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val tbaos = java.io.ByteArrayOutputStream(); val tcos = com.google.protobuf.CodedOutputStream.newInstance(tbaos); val th = v.theme
         if (th.id.isNotEmpty()) tcos.writeString(1, th.id); if (th.name.isNotEmpty()) tcos.writeString(2, th.name); if (th.primaryColor.isNotEmpty()) tcos.writeString(3, th.primaryColor); if (th.onPrimaryColor.isNotEmpty()) tcos.writeString(4, th.onPrimaryColor); if (th.surfaceColor.isNotEmpty()) tcos.writeString(5, th.surfaceColor); if (th.onSurfaceColor.isNotEmpty()) tcos.writeString(6, th.onSurfaceColor); if (th.backgroundColor.isNotEmpty()) tcos.writeString(7, th.backgroundColor); if (th.textPrimaryColor.isNotEmpty()) tcos.writeString(8, th.textPrimaryColor); if (th.textSecondaryColor.isNotEmpty()) tcos.writeString(9, th.textSecondaryColor); if (th.chatBackgroundImageUrl.isNotEmpty()) tcos.writeString(11, th.chatBackgroundImageUrl); if (th.chatListBackgroundImageUrl.isNotEmpty()) tcos.writeString(12, th.chatListBackgroundImageUrl); if (th.bottomPanelColor.isNotEmpty()) tcos.writeString(13, th.bottomPanelColor); if (th.onBottomPanelColor.isNotEmpty()) tcos.writeString(14, th.onBottomPanelColor); if (th.surfaceContainer.isNotEmpty()) tcos.writeString(15, th.surfaceContainer); if (th.outgoingBubbleColor.isNotEmpty()) tcos.writeString(16, th.outgoingBubbleColor); if (th.incomingBubbleColor.isNotEmpty()) tcos.writeString(17, th.incomingBubbleColor)
         tcos.flush(); val tb = tbaos.toByteArray(); cos.writeUInt32NoTag(tb.size); cos.writeRawBytes(tb)
+        if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): SaveThemeRequestProto = SaveThemeRequestProto()
@@ -2610,7 +2613,7 @@ class SaveThemeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SaveThem
 class SetCurrentThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SetCurrentThemeRequestProto> {
     override fun stream(v: SetCurrentThemeRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.themeId.isNotEmpty()) cos.writeString(2, v.themeId)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.themeId.isNotEmpty()) cos.writeString(2, v.themeId); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): SetCurrentThemeRequestProto = SetCurrentThemeRequestProto()
@@ -2628,7 +2631,7 @@ class SetCurrentThemeResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Se
 class DeleteThemeRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteThemeRequestProto> {
     override fun stream(v: DeleteThemeRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.themeId.isNotEmpty()) cos.writeString(2, v.themeId)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.themeId.isNotEmpty()) cos.writeString(2, v.themeId); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): DeleteThemeRequestProto = DeleteThemeRequestProto()
@@ -2686,7 +2689,7 @@ class ReactionResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionR
 class DeleteProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteProfileRequestProto> {
     override fun stream(v: DeleteProfileRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): DeleteProfileRequestProto = DeleteProfileRequestProto()

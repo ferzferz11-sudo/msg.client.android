@@ -457,7 +457,8 @@ class EditProfileActivity : AppCompatActivity() {
                         // Update local identity
                         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                         prefs.edit {
-                            putString("username", newUsername)
+                            putString("saved_username", newUsername)
+                            putString("last_logged_username", newUsername)
                         }
                         
                         SessionManager.updateSession(username = newUsername)
