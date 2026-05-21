@@ -12,6 +12,7 @@ APK_REMOTE_DIR="/home/ferz/LavenderMessengerAndroid"
 # Paths are now relative to the client/android directory
 APK_LOCAL="./app/build/outputs/apk/release/app-release.apk"
 VERSION_LOCAL="./version.txt"
+CHANGELOG_LOCAL="./changelog.txt"
 METADATA_LOCAL="./app/build/outputs/apk/release/output-metadata.json"
 
 echo "🚀 Starting Android deployment to $REMOTE_HOST..."
@@ -31,15 +32,15 @@ if [ ! -f "$APK_LOCAL" ]; then
 fi
 
 # 1. Sync individual files
-echo "📱 Uploading APK and version info..."
+echo "📱 Uploading APK, version info and changelog..."
 rsync -avz -e "ssh -p $REMOTE_PORT -i $REMOTE_KEY" \
-    "$APK_LOCAL" "$VERSION_LOCAL" "$METADATA_LOCAL" \
+    "$APK_LOCAL" "$VERSION_LOCAL" "$CHANGELOG_LOCAL" "$METADATA_LOCAL" \
     $REMOTE_USER@$REMOTE_HOST:$APK_REMOTE_DIR/
 
 # 2. Rename APK to standard name for download and set permissions
 echo "🔄 Finalizing on server..."
 ssh -p $REMOTE_PORT -i $REMOTE_KEY $REMOTE_USER@$REMOTE_HOST \
-    "mv $APK_REMOTE_DIR/app-release.apk $APK_REMOTE_DIR/lavender.apk && chmod 644 $APK_REMOTE_DIR/lavender.apk $APK_REMOTE_DIR/version.txt"
+    "mv $APK_REMOTE_DIR/app-release.apk $APK_REMOTE_DIR/lavender.apk && chmod 644 $APK_REMOTE_DIR/lavender.apk $APK_REMOTE_DIR/version.txt $APK_REMOTE_DIR/changelog.txt"
 
 # 3. Sync baseline profiles if they exist
 if [ -d "./app/src/main/baselineProfiles" ]; then

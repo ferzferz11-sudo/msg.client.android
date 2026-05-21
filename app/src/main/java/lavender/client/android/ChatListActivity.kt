@@ -1516,9 +1516,9 @@ class ChatListActivity : AppCompatActivity() {
         ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
         val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_user_menu, binding.root, false)
         val actionIds = listOf(
-            R.id.actionShareHeader, R.id.actionEditProfile, R.id.actionThemes,
-            R.id.actionContacts, R.id.actionAdditionalSettings,
-            R.id.actionToggleLanguage, R.id.actionUpdate
+            R.id.actionShareHeader, R.id.actionEditProfile, R.id.actionContacts,
+            R.id.actionThemes, R.id.actionUpdate, R.id.actionToggleLanguage,
+            R.id.actionAdditionalSettings
         )
 
         try {

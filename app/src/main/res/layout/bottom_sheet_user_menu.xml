@@ -106,17 +106,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/actionThemes"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_settings_brightness" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/themes" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionContacts"
         style="@style/MenuActionItemStyle">
         <ImageView
@@ -126,6 +115,17 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/contacts" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionThemes"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_settings_brightness" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/themes" />
     </LinearLayout>
 
     <View style="@style/MenuDividerStyle" />
@@ -142,17 +142,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/actionAdditionalSettings"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_settings" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/additional_settings" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionToggleLanguage"
         style="@style/MenuActionItemStyle">
         <ImageView
@@ -162,6 +151,17 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/toggle_language" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionAdditionalSettings"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_settings" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/additional_settings" />
     </LinearLayout>
 
 </LinearLayout>
