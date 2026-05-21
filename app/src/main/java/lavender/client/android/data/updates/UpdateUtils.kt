@@ -8,7 +8,6 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
-import lavender.client.android.BuildConfig
 import lavender.client.android.R
 import java.io.File
 

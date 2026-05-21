@@ -199,18 +199,6 @@
                 app:icon="@drawable/ic_delete"
                 app:iconTint="#FFFFFF" />
 
-            <!-- Hidden legacy toggle -->
-            <Button
-                android:id="@+id/btnToggleEdit"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone" />
-            <LinearLayout
-                android:id="@+id/editFieldsContainer"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:orientation="vertical"
-                android:visibility="gone" />
 
         </LinearLayout>
     </ScrollView>

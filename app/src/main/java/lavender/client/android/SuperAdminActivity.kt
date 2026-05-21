@@ -208,6 +208,7 @@ class SuperAdminActivity : AppCompatActivity() {
 
     private fun loadData() {
         swipeRefreshLayout.isRefreshing = true
+        progressOverlay.isVisible = true
 
         // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
@@ -223,8 +224,10 @@ class SuperAdminActivity : AppCompatActivity() {
 
         grpcClient.loadAllUsers { users ->
             allUsers = users
+            Log.d("SuperAdminActivity", "Loaded ${users.size} users")
             grpcClient.getAllChats { chats ->
                 allChats = chats
+                Log.d("SuperAdminActivity", "Loaded ${chats.size} chats")
                 loadTimeout.cancel()
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
@@ -238,12 +241,16 @@ class SuperAdminActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun updateUI(users: List<UserInfoProto>, chats: List<ChatInfo>) {
         usersContainer.removeAllViews()
+        val emptyStateText = findViewById<TextView>(R.id.emptyStateText)
+        
         val theme = ThemeStore.currentTheme()
         val surfaceColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.DKGRAY }
         val primaryColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
         val textPrimary = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
         val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.LTGRAY }
         
+        emptyStateText.setTextColor(textSecondary)
+
         val hasSelection = selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()
         if (hasSelection) {
             supportActionBar?.title = getString(R.string.selected_count, if (currentMode == Mode.USERS) selectedUsernames.size else selectedChatIds.size)
@@ -256,6 +263,7 @@ class SuperAdminActivity : AppCompatActivity() {
         invalidateOptionsMenu()
 
         if (currentMode == Mode.USERS) {
+            emptyStateText.isVisible = users.isEmpty()
             // Sort users by last seen time (most recent first)
             val sortedUsers = users.sortedByDescending { it.lastSeenAt?.seconds ?: 0 }
             for (user in sortedUsers) {
@@ -313,6 +321,7 @@ class SuperAdminActivity : AppCompatActivity() {
                 usersContainer.addView(userView)
             }
         } else {
+            emptyStateText.isVisible = chats.isEmpty()
             for (chat in chats) {
                 val chatView = layoutInflater.inflate(R.layout.item_chat, usersContainer, false)
                 val card = chatView as MaterialCardView

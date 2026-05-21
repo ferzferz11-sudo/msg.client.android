@@ -1667,7 +1667,7 @@ class NewChatActivity : AppCompatActivity() {
             text = effectiveText, 
             timestamp = System.currentTimeMillis(), 
             roomId = roomId, 
-            imageUrl = imageUrls.firstOrNull() ?: "", // Legacy field - use first image
+            imageUrl = imageUrls.firstOrNull() ?: "",
             imageUrls = imageUrls, // New field for gallery support
             repliedToMessageId = replyingTo?.id ?: "", 
             repliedToUser = replyingTo?.user ?: "", 

@@ -6,8 +6,6 @@ import lavender.client.android.theme.Theme
 
 object ThemeMappers {
     fun fromProto(proto: CustomThemeProto): Theme {
-        // legacy compat: some servers may still only populate older background field
-        val chatListBg = proto.chatListBackgroundImageUrl
         return Theme(
             id = proto.id,
             name = proto.name,
@@ -29,7 +27,7 @@ object ThemeMappers {
             incomingTextColor = proto.incomingTextColor.ifEmpty { 
                 BuiltInThemes.getContrastTextColor(proto.incomingBubbleColor) 
             },
-            chatListBackgroundImageUrl = chatListBg,
+            chatListBackgroundImageUrl = proto.chatListBackgroundImageUrl,
             chatBackgroundImageUrl = proto.chatBackgroundImageUrl,
         )
     }

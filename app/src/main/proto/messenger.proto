@@ -17,13 +17,17 @@ message Message {
   string room_id = 10; // Room/chat ID for the message
   bool is_read = 11;
   string avatar_url = 12; // URL of the user's avatar
-  string image_url = 13; // URL of the attached image (legacy, single image)
-  repeated string image_urls = 19; // URLs of attached images (for gallery support)
+  string image_url = 13; // URL of the attached image
+  repeated string image_urls = 20; // URLs of attached images (for gallery support)
   bool edited = 14; // Whether the message has been edited
   string client_version = 15; // Client application version
   bool is_super_admin = 16; // Whether the user is a super admin
   string voice_url = 17; // URL of the voice message audio file
   int32 duration = 18; // Duration of voice message in seconds
+  bool register = 19; // Flag to register a new user
+  string device_id = 21; // Device ID for tracking active sessions
+  string device_name = 22; // Device name for displaying in settings
+  string user_id = 23; // Stable user ID (UUID)
 }
 
 message Reaction {
@@ -53,10 +57,12 @@ message UserInfo {
   string avatar_url = 2;
   string last_client_version = 3;
   google.protobuf.Timestamp last_seen_at = 4;
+  string email = 5;
 }
 
 message GetAllUsersResponse {
   repeated UserInfo users = 1;
+  google.protobuf.Timestamp server_time = 2;
 }
 
 message GetAllChatsRequest {}
@@ -108,7 +114,9 @@ message ChatInfo {
   string creator = 8;
   string last_message_text = 9;
   string avatar_url = 10;
-  string last_message_username = 11;
+  string full_avatar_url = 11;
+  string last_message_username = 12;
+  bool last_message_has_image = 13;
 }
 
 message GetChatsRequest {
@@ -162,9 +170,21 @@ message UpdatePasswordResponse {
   string message = 2;
 }
 
+message AdminUpdatePasswordRequest {
+  string target_username = 1;
+  string new_password = 2;
+  string admin_username = 3;
+}
+
+message AdminUpdatePasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 message MarkReadRequest {
   string room_id = 1;
   string username = 2;
+  string user_id = 3;
 }
 
 message MarkReadResponse {
@@ -175,6 +195,7 @@ message UpdateAvatarRequest {
   string username = 1;
   string avatar_url = 2;
   string full_avatar_url = 3;
+  string user_id = 4;
 }
 
 message UpdateAvatarResponse {
@@ -186,6 +207,7 @@ message UpdateProfileRequest {
   string username = 1;
   string bio = 2;
   string status = 3;
+  string user_id = 4;
 }
 
 message UpdateProfileResponse {
@@ -195,6 +217,7 @@ message UpdateProfileResponse {
 
 message GetUserProfileRequest {
   string username = 1;
+  string user_id = 2;
 }
 
 message GetUserProfileResponse {
@@ -202,6 +225,7 @@ message GetUserProfileResponse {
   string bio = 2;
   string status = 3;
   string avatar_url = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
 }
 
 message GetUserAvatarRequest {
@@ -245,6 +269,7 @@ message EditMessageResponse {
 
 message DeleteChatRequest {
   string chat_id = 1;
+  string requester_username = 2;
 }
 
 message DeleteChatResponse {
@@ -254,6 +279,7 @@ message DeleteChatResponse {
 
 message DeleteProfileRequest {
   string username = 1;
+  string user_id = 2;
 }
 
 message DeleteProfileResponse {
@@ -264,6 +290,7 @@ message DeleteProfileResponse {
 message AddContactRequest {
   string username = 1;
   string contact_username = 2;
+  string user_id = 3;
 }
 
 message AddContactResponse {
@@ -274,6 +301,7 @@ message AddContactResponse {
 message RemoveContactRequest {
   string username = 1;
   string contact_username = 2;
+  string user_id = 3;
 }
 
 message RemoveContactResponse {
@@ -283,6 +311,7 @@ message RemoveContactResponse {
 
 message GetContactsRequest {
   string username = 1;
+  string user_id = 2;
 }
 
 message GetContactsResponse {
@@ -291,6 +320,7 @@ message GetContactsResponse {
 
 message GetChatListVersionRequest {
   string username = 1;
+  string user_id = 2;
 }
 
 message GetChatListVersionResponse {
@@ -315,10 +345,13 @@ message CustomTheme {
   string surface_container = 15;
   string outgoing_bubble_color = 16;
   string incoming_bubble_color = 17;
+  string outgoing_text_color = 18;
+  string incoming_text_color = 19;
 }
 
 message GetThemesRequest {
   string username = 1;
+  string user_id = 2;
 }
 
 message GetThemesResponse {
@@ -329,6 +362,7 @@ message GetThemesResponse {
 message SaveThemeRequest {
   string username = 1;
   CustomTheme theme = 2;
+  string user_id = 3;
 }
 
 message SaveThemeResponse {
@@ -339,6 +373,7 @@ message SaveThemeResponse {
 message SetCurrentThemeRequest {
   string username = 1;
   string theme_id = 2;
+  string user_id = 3;
 }
 
 message SetCurrentThemeResponse {
@@ -348,6 +383,7 @@ message SetCurrentThemeResponse {
 message DeleteThemeRequest {
   string username = 1;
   string theme_id = 2;
+  string user_id = 3;
 }
 
 message DeleteThemeResponse {
@@ -490,18 +526,74 @@ message TypingSignal {
   bool is_typing = 3;
 }
 
-message RecoverPasswordRequest {
+message DeviceInfo {
+  string device_id = 1;
+  string device_name = 2;
+  string client_version = 3;
+  google.protobuf.Timestamp last_seen_at = 4;
+  string ip_address = 5;
+}
+
+message GetDevicesRequest {
+  string user_id = 1;
+}
+
+message GetDevicesResponse {
+  repeated DeviceInfo devices = 1;
+}
+
+message DeleteDeviceRequest {
+  string user_id = 1;
+  string device_id = 2;
+}
+
+message DeleteDeviceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RequestPasswordResetRequest {
   string email = 1;
 }
 
-message RecoverPasswordResponse {
+message RequestPasswordResetResponse {
   bool success = 1;
   string message = 2;
+}
+
+message ResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+message ResetPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CallMessage {
+  string call_id = 1;
+  string sender_id = 2;
+  string receiver_id = 3;
+
+  enum Type {
+    INITIATE = 0;    // Абонент А звонит Абоненту Б
+    ACCEPT = 1;      // Абонент Б принял вызов
+    REJECT = 2;      // Абонент Б отклонил вызов
+    HANGUP = 3;      // Завершение звонка
+    OFFER = 4;       // WebRTC SDP Offer
+    ANSWER = 5;      // WebRTC SDP Answer
+    ICE_CANDIDATE = 6; // WebRTC ICE Candidate
+  }
+  Type type = 4;
+
+  string payload = 5; // JSON-строка с SDP или ICE данными
 }
 
 service ChatService {
   rpc Chat(stream Message) returns (stream Message);
   rpc Typing(stream TypingRequest) returns (stream TypingSignal);
+  rpc CallSession (stream CallMessage) returns (stream CallMessage);
   rpc GetClients(ClientListRequest) returns (ClientListResponse);
   rpc GetAllUsers(GetAllUsersRequest) returns (GetAllUsersResponse);
   rpc GetAllChats(GetAllChatsRequest) returns (GetAllChatsResponse);
@@ -515,6 +607,7 @@ service ChatService {
   rpc CreateGroupChat(CreateGroupChatRequest) returns (CreateGroupChatResponse);
   rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse);
   rpc UpdatePassword(UpdatePasswordRequest) returns (UpdatePasswordResponse);
+  rpc AdminUpdatePassword(AdminUpdatePasswordRequest) returns (AdminUpdatePasswordResponse);
   rpc MarkRead(MarkReadRequest) returns (MarkReadResponse);
   rpc UpdateAvatar(UpdateAvatarRequest) returns (UpdateAvatarResponse);
   rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
@@ -545,5 +638,9 @@ service ChatService {
   rpc RemoveFavorite(RemoveFavoriteRequest) returns (RemoveFavoriteResponse);
   rpc GetFavorites(GetFavoritesRequest) returns (GetFavoritesResponse);
   rpc SaveFavoriteMessage(Message) returns (AddFavoriteResponse);
-  rpc RecoverPassword(RecoverPasswordRequest) returns (RecoverPasswordResponse);
+  rpc GetDevices(GetDevicesRequest) returns (GetDevicesResponse);
+  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+  rpc DeleteOtherDevices(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
 }

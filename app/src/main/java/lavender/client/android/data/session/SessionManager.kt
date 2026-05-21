@@ -117,12 +117,13 @@ object SessionManager {
         val username = prefs.getString("saved_username", "") ?: ""
         val password = prefs.getString("saved_password", "") ?: ""
         val userId = prefs.getString("user_id", "") ?: ""
+        val email = prefs.getString("saved_email", "") ?: ""
         val serverAddress = prefs.getString("server_address", "") ?: ""
         
         updateDeviceInfo(context)
 
         if (username.isNotEmpty()) {
-            updateSession(username = username, password = password, userId = userId)
+            updateSession(username = username, password = password, userId = userId, email = email)
 
             // Reconnect if needed
             if (serverAddress.isNotEmpty() && GrpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED) {
@@ -158,14 +159,16 @@ object SessionManager {
         password: String? = null,
         userId: String? = null,
         avatarUrl: String? = null,
-        fullAvatarUrl: String? = null
+        fullAvatarUrl: String? = null,
+        email: String? = null
     ) {
         _session.value = _session.value.copy(
             username = username ?: _session.value.username,
             password = password ?: _session.value.password,
             userId = userId ?: _session.value.userId,
             avatarUrl = avatarUrl ?: _session.value.avatarUrl,
-            fullAvatarUrl = fullAvatarUrl ?: _session.value.fullAvatarUrl
+            fullAvatarUrl = fullAvatarUrl ?: _session.value.fullAvatarUrl,
+            email = email ?: _session.value.email
         )
 
         // Sync to GrpcClient internal state if needed
@@ -216,9 +219,9 @@ object SessionManager {
 
                         val fetchedId = withTimeoutOrNull(3000) { userIdDeferred.await() }
                         if (fetchedId != null) {
-                            updateSession(username = username, password = pass, userId = fetchedId)
+                            updateSession(username = username, password = pass, userId = fetchedId, email = email)
                         } else {
-                            updateSession(username = username, password = pass)
+                            updateSession(username = username, password = pass, email = email)
                         }
 
                         syncFcmToken(context, username)
@@ -249,6 +252,7 @@ object SessionManager {
             remove("user_id")
             remove("saved_username")
             remove("saved_password")
+            remove("saved_email")
             remove("chat_list_version")
         }
         

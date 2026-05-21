@@ -294,6 +294,9 @@
     <string name="version_info_format">Текущая: %1$s\nДоступная: %2$s</string>
     <string name="update_confirmation_message">Доступна новая версия Lavender Messenger. Обновить сейчас?</string>
     <string name="developer_label">Разработчик</string>
+    <string name="your_email">Ваш Email</string>
+    <string name="feedback_message">Сообщение</string>
+    <string name="enter_feedback">Пожалуйста, введите сообщение</string>
     <string name="send_feedback">Отправить отзыв</string>
     <string name="close">Закрыть</string>
     <string name="receive_push">Получать уведомления (для меня)</string>

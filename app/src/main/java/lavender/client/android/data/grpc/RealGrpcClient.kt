@@ -898,19 +898,12 @@ object RealGrpcClient {
                              proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, proto.lastMessageHasImage)
                 }
 
-                // Check local database for image messages since server doesn't send lastMessageHasImage yet
+                // Save to cache and sync (delete local chats that are gone from server)
                 scope.launch(Dispatchers.IO) {
-                    val chatsWithImageCheck = chats.map { chat ->
-                        val lastImageUrl = db()?.messageDao()?.getLastMessageImageUrl(chat.id)
-                        val hasImage = lastImageUrl?.isNotEmpty() == true
-                        chat.copy(lastMessageHasImage = hasImage)
-                    }
-
-                    // Save to cache and sync (delete local chats that are gone from server)
-                    db()?.chatDao()?.syncChats(chatsWithImageCheck.map { it.toEntity() })
+                    db()?.chatDao()?.syncChats(chats.map { it.toEntity() })
 
                     withContext(Dispatchers.Main) {
-                        callback(chatsWithImageCheck)
+                        callback(chats)
                     }
                 }
             }
@@ -1648,8 +1641,17 @@ object RealGrpcClient {
             .build()
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetAllUsersResponseProto>() {
-            override fun onMessage(message: GetAllUsersResponseProto) { _allUsers.value = message.users; _serverTime.value = message.serverTime; cb(message.users) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onMessage(message: GetAllUsersResponseProto) { 
+                Log.d(TAG, "GetAllUsers: received ${message.users.size} users")
+                _allUsers.value = message.users
+                _serverTime.value = message.serverTime
+                cb(message.users) 
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.e(TAG, "GetAllUsers failed: ${status.code} - ${status.description}")
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllUsersRequestProto())
         call.halfClose()
@@ -1667,15 +1669,30 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetAllChatsResponseProto>() {
             override fun onMessage(message: GetAllChatsResponseProto) {
+                Log.d(TAG, "GetAllChats: received ${message.chats.size} chats")
                 callback(message.chats.map { proto ->
-                    ChatInfo(proto.id, proto.name, proto.type, proto.participants,
-                             proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.unreadCount,
-                             proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, proto.lastMessageHasImage)
+                    ChatInfo(
+                        id = proto.id,
+                        name = proto.name,
+                        type = proto.type,
+                        participants = proto.participants,
+                        createdAt = proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                        unreadCount = proto.unreadCount,
+                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                        creator = proto.creator,
+                        lastMessageText = proto.lastMessageText,
+                        avatarUrl = proto.avatarUrl,
+                        fullAvatarUrl = proto.fullAvatarUrl,
+                        lastMessageUsername = proto.lastMessageUsername,
+                        lastMessageHasImage = proto.lastMessageHasImage
+                    )
                 })
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.e(TAG, "GetAllChats failed: ${status.code} - ${status.description}")
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllChatsRequestProto())
         call.halfClose()
@@ -2408,19 +2425,21 @@ class UserInfoProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<UserInfoProt
         if (v.avatarUrl.isNotEmpty()) cos.writeString(2, v.avatarUrl)
         if (v.lastClientVersion.isNotEmpty()) cos.writeString(3, v.lastClientVersion)
         v.lastSeenAt?.let { cos.writeTag(4, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
+        if (v.email.isNotEmpty()) cos.writeString(5, v.email)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UserInfoProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var a = ""; var v = ""; var ls: Timestamp? = null
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var a = ""; var v = ""; var ls: Timestamp? = null; var e = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> u = cis.readString(); 2 -> a = cis.readString(); 3 -> v = cis.readString()
                 4 -> { val l = cis.readUInt32(); ls = Timestamp.parseFrom(cis.readRawBytes(l)) }
+                5 -> e = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return UserInfoProto(u, a, v, ls)
+        return UserInfoProto(u, a, v, ls, e)
     }
 }
 

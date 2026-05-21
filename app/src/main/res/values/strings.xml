@@ -292,6 +292,9 @@
     <string name="version_info_format">Current: %1$s\nAvailable: %2$s</string>
     <string name="update_confirmation_message">A new version of Lavender Messenger is available. Do you want to update now?</string>
     <string name="developer_label">Developer</string>
+    <string name="your_email">Your Email</string>
+    <string name="feedback_message">Message</string>
+    <string name="enter_feedback">Please enter a message</string>
     <string name="send_feedback">Send Feedback</string>
     <string name="close">Close</string>
     <string name="receive_push">Receive notifications (for me)</string>

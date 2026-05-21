@@ -173,18 +173,13 @@ class MessageAdapter(
             }
             
             // Check if this is an empty/unrecoverable message:
-            // - Legacy "Image" placeholder with no stored imageUrl
-            // - Legacy "Voice message" placeholder with no stored voiceUrl
             // - Completely empty message (no text, no image, no voice)
-            val isEmptyImageMessage = message.text == "Image" && message.imageUrl.isEmpty()
-            val isEmptyVoiceMessage = message.text == "Voice message" && message.voiceUrl.isEmpty()
-            val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty()
-            val isEmptyMessage = isEmptyImageMessage || isEmptyVoiceMessage || isCompletelyEmpty
+            val isCompletelyEmpty = message.text.isEmpty() && message.imageUrl.isEmpty() && message.voiceUrl.isEmpty() && message.imageUrls.isEmpty()
             
             btnDownloadFile.isVisible = false
             
             // Hide entire message if it's empty — use GONE + zero height to avoid blank gaps
-            if (isEmptyMessage) {
+            if (isCompletelyEmpty) {
                 itemView.visibility = View.GONE
                 itemView.layoutParams = itemView.layoutParams.also { it.height = 0 }
                 return

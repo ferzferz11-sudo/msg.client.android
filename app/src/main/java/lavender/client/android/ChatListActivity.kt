@@ -1346,16 +1346,19 @@ class ChatListActivity : AppCompatActivity() {
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, binding.root, false)
         val customTheme = ThemeStore.currentTheme()
-        
+        val pColor = try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
+        val txtColor = try { customTheme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
+        val bgColor = try { customTheme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
+
         val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
         val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
         val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        val btnWhatsNew = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnWhatsNew)
         val btnFeedback = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnFeedback)
         val btnShare = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnShare)
+        val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
 
         try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val txtColor = customTheme.textPrimaryColor.toColorInt()
             dialogView.setBackgroundColor(bgColor)
             clientVersionText.setTextColor(txtColor)
             serverVersionText.setTextColor(txtColor)
@@ -1373,17 +1376,31 @@ class ChatListActivity : AppCompatActivity() {
 
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // Show update button if available
+        val updatePrefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+        if (updatePrefs.getBoolean("update_available", false)) {
+            btnUpdate.visibility = View.VISIBLE
+            btnUpdate.apply {
+                backgroundTintList = ColorStateList.valueOf(pColor)
+                setTextColor(customTheme.onPrimaryColor.toColorInt())
+                setOnClickListener {
+                    dialog.dismiss()
+                    startBackgroundDownload()
+                }
+            }
+        }
         
         btnClose.setOnClickListener { dialog.dismiss() }
         
+        btnWhatsNew.setOnClickListener {
+            dialog.dismiss()
+            showWhatsNewDialog()
+        }
+
         btnFeedback.setOnClickListener {
             dialog.dismiss()
-            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                data = "mailto:".toUri()
-                putExtra(Intent.EXTRA_EMAIL, arrayOf("support@lavender.com"))
-                putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
-            }
-            startActivity(Intent.createChooser(intent, "Send Feedback"))
+            showFeedbackDialog()
         }
         
         btnShare.setOnClickListener {
@@ -1395,6 +1412,71 @@ class ChatListActivity : AppCompatActivity() {
             startActivity(Intent.createChooser(shareIntent, "Share App"))
         }
         
+        dialog.show()
+    }
+
+    private fun showFeedbackDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_feedback, null)
+        val customTheme = ThemeStore.currentTheme()
+        val textColor = try { customTheme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
+        val bgColor = try { customTheme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
+        val pColor = try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
+
+        dialogView.setBackgroundColor(bgColor)
+        
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvTitle)
+        val editTextEmail = dialogView.findViewById<EditText>(R.id.editTextEmail)
+        val editTextMessage = dialogView.findViewById<EditText>(R.id.editTextMessage)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnSend = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
+
+        tvTitle.setTextColor(textColor)
+        editTextEmail.setTextColor(textColor)
+        editTextEmail.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+        editTextMessage.setTextColor(textColor)
+        editTextMessage.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+        
+        // Pre-fill email from session
+        val userEmail = SessionManager.session.value.email
+        if (userEmail.isNotEmpty()) {
+            editTextEmail.setText(userEmail)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.apply {
+            setTextColor(textColor)
+            setOnClickListener { dialog.dismiss() }
+        }
+
+        btnSend.apply {
+            backgroundTintList = ColorStateList.valueOf(pColor)
+            setTextColor(customTheme.onPrimaryColor.toColorInt())
+            setOnClickListener {
+                val fromEmail = editTextEmail.text.toString().trim()
+                val messageText = editTextMessage.text.toString().trim()
+                
+                if (messageText.isEmpty()) {
+                    Toast.makeText(this@ChatListActivity, R.string.enter_feedback, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                dialog.dismiss()
+                
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = "mailto:".toUri()
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf("ferzfrez11@gmsil.com"))
+                    putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
+                    putExtra(Intent.EXTRA_TEXT, "From: $fromEmail\n\n$messageText")
+                }
+                startActivity(Intent.createChooser(intent, "Send Feedback"))
+            }
+        }
+
         dialog.show()
     }
 
@@ -2305,6 +2387,7 @@ class ChatListActivity : AppCompatActivity() {
                                 prefs.edit {
                                     putString("saved_username", username)
                                     putString("saved_password", password)
+                                    putString("saved_email", email)
                                     putString("server_address", serverAddress)
                                 }
 

@@ -88,6 +88,17 @@
         android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnWhatsNew"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/whats_new"
+        android:layout_marginBottom="12dp"
+        app:cornerRadius="24dp"
+        android:textColor="?attr/colorPrimary"
+        app:strokeColor="?attr/colorPrimary" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnFeedback"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
