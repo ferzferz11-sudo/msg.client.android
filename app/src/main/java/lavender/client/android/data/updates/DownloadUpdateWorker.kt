@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import androidx.core.content.edit
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -79,6 +80,11 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
 
                 Log.d(TAG, "Download complete: ${file.absolutePath}")
                 
+                applicationContext.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE).edit {
+                    putBoolean("update_downloaded", true)
+                    putString("apk_path", file.absolutePath)
+                }
+
                 UpdateUtils.showUpdateReadyNotification(applicationContext, file)
                 
                 Result.success()
@@ -118,8 +124,9 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
             .setSmallIcon(R.drawable.ic_update_rotating)
             .setContentTitle(title)
             .setContentText(progressText)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
+            .setShowWhen(false)
             .setProgress(100, progress, false)
             .addAction(R.drawable.ic_star, applicationContext.getString(R.string.whats_new), whatsNewPendingIntent)
             .build()

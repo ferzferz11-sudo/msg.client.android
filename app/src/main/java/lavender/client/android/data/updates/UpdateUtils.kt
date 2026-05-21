@@ -63,12 +63,22 @@ object UpdateUtils {
             .setSmallIcon(R.drawable.ic_checked)
             .setContentTitle("Update Ready")
             .setContentText("A new version of Lavender is ready to install.")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .addAction(R.drawable.ic_star, context.getString(R.string.whats_new), whatsNewPendingIntent)
             .setAutoCancel(true)
             .build()
 
         notificationManager.notify(1001, notification)
+    }
+
+    fun installApk(context: Context, apkFile: File) {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", apkFile)
+        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(installIntent)
     }
 }

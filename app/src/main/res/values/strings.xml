@@ -167,6 +167,7 @@
     <string name="select_user">Select User</string>
     <string name="online_users">Online Users</string>
     <string name="update_available">Update available</string>
+    <string name="install_update">Install update</string>
     <string name="delete_chats">Delete Chats</string>
     <string name="delete_chats_confirmation">Are you sure you want to delete %d selected chats? This will permanently remove all messages and images.</string>
     <string name="delete">Delete</string>

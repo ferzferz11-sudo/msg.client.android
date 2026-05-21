@@ -277,7 +277,23 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         binding.updateAvailableIcon.setOnClickListener {
-            checkManualUpdate()
+            val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+            if (prefs.getBoolean("update_downloaded", false)) {
+                val apkPath = prefs.getString("apk_path", "")
+                if (!apkPath.isNullOrEmpty()) {
+                    prefs.edit {
+                        putBoolean("update_downloaded", false)
+                        remove("apk_path")
+                        putBoolean("update_available", false)
+                    }
+                    updateUpdateIndicatorVisibility()
+                    UpdateUtils.installApk(this, File(apkPath))
+                } else {
+                    checkManualUpdate()
+                }
+            } else {
+                checkManualUpdate()
+            }
         }
 
         binding.actionWhatsNew.setOnClickListener {
@@ -821,11 +837,20 @@ class ChatListActivity : AppCompatActivity() {
     private fun updateUpdateIndicatorVisibility() {
         val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         val isAvailable = prefs.getBoolean("update_available", false)
+        val isDownloaded = prefs.getBoolean("update_downloaded", false)
         val hasSelection = if (::chatAdapter.isInitialized) chatAdapter.getSelectedChats().isNotEmpty() else false
         val isSearching = binding.searchCard.isVisible
         
-        binding.updateAvailableIcon.isVisible = isAvailable && !hasSelection && !isSearching
+        binding.updateAvailableIcon.isVisible = (isAvailable || isDownloaded) && !hasSelection && !isSearching
         
+        if (isDownloaded) {
+            binding.updateAvailableIcon.setImageResource(R.drawable.ic_install_update)
+            binding.updateAvailableIcon.contentDescription = getString(R.string.install_update)
+        } else {
+            binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_available)
+            binding.updateAvailableIcon.contentDescription = getString(R.string.update_available)
+        }
+
         // Also update WhatsNew icon visibility
         val showAnnouncement = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).getBoolean("show_icon", false)
         binding.actionWhatsNew.isVisible = showAnnouncement && !hasSelection && !isSearching
@@ -965,10 +990,11 @@ class ChatListActivity : AppCompatActivity() {
             .setSmallIcon(R.drawable.ic_update_available)
             .setContentTitle(getString(R.string.update_available))
             .setContentText(getString(R.string.version_available, latestVersion))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .addAction(R.drawable.ic_star, getString(R.string.whats_new), whatsNewPendingIntent)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
             .build()
 
         notificationManager.notify(1007, notification)

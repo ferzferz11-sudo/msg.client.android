@@ -166,6 +166,7 @@
     <string name="select_user">Выберите пользователя</string>
     <string name="online_users">Пользователи онлайн</string>
     <string name="update_available">Доступно обновление</string>
+    <string name="install_update">Установить обновление</string>
     <string name="delete_chats">Удалить чаты</string>
     <string name="delete_chats_confirmation">Вы уверены, что хотите удалить %d выбранных чатов? Все сообщения и изображения будут удалены навсегда.</string>
     <string name="delete">Удалить</string>
