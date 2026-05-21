@@ -42,8 +42,8 @@ object CallManager {
 
         Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId}")
         
-        val currentUsername = GrpcClient.getCurrentUsername()
-        if (signal.senderId == currentUsername && signal.type == CallMessageProto.Type.INITIATE) {
+        val myUserId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+        if (signal.senderId == myUserId && signal.type == CallMessageProto.Type.INITIATE) {
             Log.d(TAG, "Handling self-initiated INITIATE signal to update local call state")
             _currentCall.value = signal
             scope.launch { _incomingSignals.emit(signal) }
@@ -103,7 +103,8 @@ object CallManager {
     }
 
     fun syncCallState(callId: String, otherPartyId: String, isIncoming: Boolean) {
-        if (_currentCall.value == null) {
+        if (_currentCall.value == null || (_currentCall.value?.callId != callId && callId.isNotEmpty())) {
+            Log.d(TAG, "Syncing call state for $callId (isIncoming: $isIncoming, other: $otherPartyId)")
             val currentUsername = GrpcClient.getCurrentUsername() ?: ""
             _currentCall.value = CallMessageProto(
                 callId = callId,
@@ -112,6 +113,11 @@ object CallManager {
                 type = CallMessageProto.Type.INITIATE
             )
         }
+    }
+
+    fun clearCurrentCall() {
+        Log.d(TAG, "Clearing current call state")
+        _currentCall.value = null
     }
 
     fun acceptCall() {

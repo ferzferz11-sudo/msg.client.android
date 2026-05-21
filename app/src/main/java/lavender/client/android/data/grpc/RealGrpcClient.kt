@@ -735,9 +735,10 @@ object RealGrpcClient {
         callRequestObserver = call.startCallStream()
 
         // Send an identity signal to register with the hub on the server
-        currentUsername?.let { username ->
+        val identityId = currentUserId ?: currentUsername
+        identityId?.let { id ->
             callRequestObserver?.onNext(CallMessageProto(
-                senderId = username,
+                senderId = id,
                 type = CallMessageProto.Type.ICE_CANDIDATE, // Use as heartbeat/identity
                 payload = "IDENTITY"
             ))
@@ -752,6 +753,7 @@ object RealGrpcClient {
             override fun onError(t: Throwable) {
                 Log.e(TAG, "Call session stream error", t)
                 callRequestObserver = null
+                lavender.client.android.data.calls.CallManager.clearCurrentCall()
                 scope.launch {
                     delay(5000)
                     startCallSession()
@@ -760,6 +762,7 @@ object RealGrpcClient {
             override fun onCompleted() {
                 Log.d(TAG, "Call session stream completed")
                 callRequestObserver = null
+                lavender.client.android.data.calls.CallManager.clearCurrentCall()
             }
         }
 

@@ -133,23 +133,36 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private fun observeSignals() {
         lifecycleScope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
-                Log.d(TAG, "Incoming signal: ${signal.type} (CallID: ${signal.callId})")
+                val myUserId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+                Log.d(TAG, "Incoming signal: ${signal.type} (CallID: ${signal.callId}) from ${signal.senderId}")
                 
                 // For outgoing calls, we pick up the callId from the first INITIATE echo from server
                 if (callId.isEmpty() && signal.type == CallMessageProto.Type.INITIATE && !isIncoming) {
-                    callId = signal.callId
-                    Log.d(TAG, "CallID assigned from server echo: $callId")
+                    if (signal.senderId == myUserId) {
+                        callId = signal.callId
+                        Log.d(TAG, "CallID assigned from server echo: $callId")
+                    }
                 }
 
                 if (signal.callId != callId && callId.isNotEmpty()) {
                     Log.w(TAG, "Ignored signal with mismatching CallID: expected $callId, got ${signal.callId}")
                     return@collectLatest
                 }
+
+                // Ignore self-echoed signals for most types to avoid "glare" and self-termination
+                if (signal.senderId == myUserId && signal.type != CallMessageProto.Type.INITIATE) {
+                    Log.d(TAG, "Ignored self-echoed signal: ${signal.type}")
+                    return@collectLatest
+                }
                 
                 when (signal.type) {
                     CallMessageProto.Type.ACCEPT -> {
-                        Log.d(TAG, "Peer accepted call, creating WebRTC Offer")
-                        webRtcClient?.createOffer()
+                        if (!isIncoming) {
+                            Log.d(TAG, "Peer accepted call, creating WebRTC Offer")
+                            webRtcClient?.createOffer()
+                        } else {
+                            Log.d(TAG, "Received ACCEPT signal as receiver, ignoring to avoid glare")
+                        }
                     }
                     CallMessageProto.Type.OFFER -> {
                         Log.d(TAG, "Received OFFER, creating WebRTC Answer")
@@ -264,6 +277,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: cleaning up")
+        CallManager.clearCurrentCall()
         webRtcClient?.close()
         eglBase.release()
     }
