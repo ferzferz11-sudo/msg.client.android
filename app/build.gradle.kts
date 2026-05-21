@@ -115,15 +115,15 @@ dependencies {
     ksp(libs.glide.compiler)
     
     // ExoPlayer for audio playback
-    implementation("androidx.media3:media3-exoplayer:1.10.1")
-    implementation("androidx.media3:media3-ui:1.10.1")
-    implementation("androidx.media3:media3-common:1.10.1")
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.common)
     
     // Biometric authentication
     implementation(libs.androidx.biometric)
 
     // WebRTC
-    implementation("io.github.webrtc-sdk:android:144.7559.05")
+    implementation(libs.webrtc)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

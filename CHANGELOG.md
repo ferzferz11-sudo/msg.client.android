@@ -5,6 +5,15 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.6.6
+### Background Updates & Reliability Fixes
+- 📥 **Background APK Downloading**: Updates are now downloaded in the background using `WorkManager`. A persistent notification shows real-time progress.
+- 🔔 **Install Notifications**: Once the download is complete, a notification allows for one-click installation.
+- 🛡️ **gRPC Reliability**: Fixed a critical race condition where messages sent while offline might not sync correctly upon reconnection.
+- ⚡ **Auto-Reconnection**: Improved gRPC stream recovery with up to 100 retry attempts and better state management.
+- 🛠️ **Modern Build System**: Migrated to AGP 9.0 with built-in Kotlin support and enabled KSP2 for faster builds.
+- 📱 **Android 14+ Support**: Added necessary permissions and foreground service declarations (`dataSync`) for seamless background tasks.
+
 ## 1.0.3.17
 ### Theme System Enhancements
 - 🎨 **NotificationActivity Theme Adaptation**: Added edge-to-edge support with WindowInsets handling and ThemeManager integration

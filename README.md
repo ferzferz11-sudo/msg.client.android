@@ -176,7 +176,15 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.4.0**
+Current version: **1.0.6.6**
+
+### Version 1.0.6.6 - Background Updates & Reliability
+- 📥 **Background APK Downloading**: Updates are now downloaded in the background using `WorkManager`. A persistent notification shows real-time progress.
+- 🔔 **Install Notifications**: Once the download is complete, a notification allows for one-click installation.
+- 🛡️ **gRPC Reliability**: Fixed a critical race condition where messages sent while offline might not sync correctly upon reconnection.
+- ⚡ **Auto-Reconnection**: Improved gRPC stream recovery with up to 100 retry attempts and better state management.
+- 🛠️ **Modern Build System**: Migrated to AGP 9.0 with built-in Kotlin support and enabled KSP2.
+- 📱 **Android 14+ Support**: Added necessary permissions and foreground service declarations (`dataSync`) for background tasks.
 
 ### Version 1.0.4.0 - Major Refactoring & Fixes
 - 🛠️ **Theme System Cleanup**: Completely removed legacy `ThemeManager`. Switched to modern `ThemeStore` throughout the app.

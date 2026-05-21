@@ -35,6 +35,9 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,6 +50,7 @@ import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.data.updates.DownloadUpdateWorker
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -1141,7 +1145,7 @@ class ChatListActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { bottomSheet.dismiss() }
         btnUpdate.setOnClickListener {
             bottomSheet.dismiss()
-            downloadAndInstallApk()
+            startBackgroundDownload()
         }
         
         bottomSheet.setContentView(dialogView)
@@ -1236,61 +1240,15 @@ class ChatListActivity : AppCompatActivity() {
         return false
     }
 
-    private fun downloadAndInstallApk() {
-        val overlay = binding.progressOverlay
-        val progressBar = binding.downloadProgressBar
-        val progressText = binding.downloadProgressText
-        val cancelBtn = binding.cancelDownloadButton
-
-        overlay.isVisible = true
-        progressBar.progress = 0
-        progressBar.isIndeterminate = true
-        
-        val job = lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val url = URL("http://159.195.38.145:8081/lavender.apk")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connect()
-                
-                val fileLength = connection.contentLength
-                val input = connection.inputStream
-                val file = File(getExternalFilesDir(null), "lavender_update.apk")
-                val output = FileOutputStream(file)
-                
-                val data = ByteArray(4096)
-                var total: Long = 0
-                var count: Int
-                while (input.read(data).also { count = it } != -1) {
-                    total += count.toLong()
-                    withContext(Dispatchers.Main) {
-                        progressBar.isIndeterminate = false
-                        if (fileLength > 0) {
-                            val progress = (total * 100 / fileLength).toInt()
-                            progressBar.progress = progress
-                            progressText.text = String.format(Locale.US, "%.2f / %.2f MB", total / 1048576.0, fileLength / 1048576.0)
-                        }
-                    }
-                    output.write(data, 0, count)
-                }
-                output.close()
-                input.close()
-                
-                withContext(Dispatchers.Main) {
-                    overlay.isVisible = false
-                    installApk(file)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    overlay.isVisible = false
-                    Toast.makeText(this@ChatListActivity, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-        
-        cancelBtn.setOnClickListener {
-            job.cancel()
-            overlay.isVisible = false
-        }
+    private fun startBackgroundDownload() {
+        val workRequest = OneTimeWorkRequestBuilder<DownloadUpdateWorker>()
+            .build()
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "update_download",
+            ExistingWorkPolicy.KEEP,
+            workRequest
+        )
+        Toast.makeText(this, "Загрузка обновления началась в фоне", Toast.LENGTH_LONG).show()
     }
 
     private fun installApk(file: File) {
