@@ -186,8 +186,13 @@ object RealGrpcClient {
     private data class LastChatRequest(val u: String, val p: String, val j: String, val roomId: String, val r: Boolean, val did: String, val dn: String, val cb: (Message) -> Unit)
 
     fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
-        val last = lastChatRequest
-        if (last != null && last.u == username && last.roomId == currentRoomId && requestObserver != null && last.r == register) {
+        val oldRequest = lastChatRequest
+        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, deviceId, deviceName, onMessageReceived)
+        
+        // If connection is FAILED or DISCONNECTED, we must allow restart regardless of current observer
+        val shouldRestart = _connectionStatus.value != ConnectionStatus.READY || requestObserver == null
+        
+        if (!shouldRestart && oldRequest != null && oldRequest.u == username && oldRequest.roomId == currentRoomId && oldRequest.r == register) {
             Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
             
             // Just send auth signal to existing stream to notify server we switched rooms
@@ -209,8 +214,6 @@ object RealGrpcClient {
             return
         }
 
-        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, deviceId, deviceName, onMessageReceived)
-        
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
             _connectionStatus.value = ConnectionStatus.CONNECTING
         }
@@ -230,7 +233,11 @@ object RealGrpcClient {
         currentUsername = username
         
         // IMPORTANT: We only complete the previous stream if we are actually replacing it
-        requestObserver?.onCompleted()
+        try {
+            requestObserver?.onCompleted()
+        } catch (_: Exception) {
+            // Ignore if stream was already closed
+        }
         requestObserver = null
 
         // Local check for super admin (server still sends SET_SUPER_ADMIN for verification)
@@ -248,9 +255,7 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         
         requestObserver = call.startChatStream(onMessageReceived)
-        resendPendingMessages()
-        resendPendingReads()
-
+        
         val firstMessage = MessageProto.newBuilder()
             .setUser(username)
             .setPassword(password)
@@ -266,6 +271,11 @@ object RealGrpcClient {
         _authStatus.value = null // Reset auth status on new stream
         
         requestObserver?.onNext(firstMessage)
+        
+        // Only resend pending data AFTER sending authentication signal
+        resendPendingMessages()
+        resendPendingReads()
+
         startTypingStream()
     }
 
@@ -542,19 +552,28 @@ object RealGrpcClient {
                 Log.e(TAG, "Chat stream error", t)
                 _connectionStatus.value = ConnectionStatus.FAILED
                 
-                val currentObserver = requestObserver
+                // Clear observer immediately to prevent broken stream reuse
+                requestObserver = null
+                
                 scope.launch {
-                    var retryDelay = 1000L // Start with 1 second
-                    val maxRetryDelay = 30000L // Max 30 seconds
+                    var retryDelay = 2000L // Start with 2 seconds
+                    val maxRetryDelay = 60000L // Max 60 seconds
                     var retryCount = 0
-                    val maxRetries = 10
+                    val maxRetries = 100 // Almost indefinite retries while app is active
                     
-                    while (retryCount < maxRetries && (requestObserver == null || requestObserver == currentObserver)) {
+                    while (retryCount < maxRetries && requestObserver == null) {
                         delay(retryDelay)
+                        
+                        // Don't retry if app is in background for too long or channel is gone
+                        if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
+                             Log.d(TAG, "App in background for too long, stopping retry loop")
+                             break
+                        }
+
                         Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
                         
-                        lastChatRequest?.let { 
-                            startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
+                        lastChatRequest?.let { req ->
+                            startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
                             // If connection was successful, break out of retry loop
                             if (_connectionStatus.value == ConnectionStatus.READY) {
                                 Log.d(TAG, "Stream reconnection successful")
@@ -563,12 +582,13 @@ object RealGrpcClient {
                         }
                         
                         retryCount++
-                        retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay) // Exponential backoff
+                        // Slower exponential backoff for long-running issues
+                        retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
                     }
                     
                     if (retryCount >= maxRetries) {
                         Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
-                        _error.value = "Connection failed. Please check your internet connection."
+                        _error.value = "Connection lost. Please check your internet connection."
                     }
                 }
             }
