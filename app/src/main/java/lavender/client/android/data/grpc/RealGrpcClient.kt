@@ -1341,6 +1341,24 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun adminUpdatePassword(tu: String, np: String, au: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AdminUpdatePasswordRequestProto, AdminUpdatePasswordResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/AdminUpdatePassword")
+            .setRequestMarshaller(AdminUpdatePasswordRequestMarshaller())
+            .setResponseMarshaller(AdminUpdatePasswordResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<AdminUpdatePasswordResponseProto>() {
+            override fun onMessage(message: AdminUpdatePasswordResponseProto) { cb(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(AdminUpdatePasswordRequestProto(tu, np, au))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun requestPasswordReset(email: String, cb: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RequestPasswordResetRequestProto, RequestPasswordResetResponseProto>()
@@ -2812,6 +2830,26 @@ class ResetPasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Rese
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
         return ResetPasswordResponseProto(ok, msg)
+    }
+}
+
+class AdminUpdatePasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AdminUpdatePasswordRequestProto> {
+    override fun stream(v: AdminUpdatePasswordRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.targetUsername.isNotEmpty()) cos.writeString(1, v.targetUsername)
+        if (v.newPassword.isNotEmpty()) cos.writeString(2, v.newPassword)
+        if (v.adminUsername.isNotEmpty()) cos.writeString(3, v.adminUsername)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): AdminUpdatePasswordRequestProto = AdminUpdatePasswordRequestProto()
+}
+
+class AdminUpdatePasswordResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AdminUpdatePasswordResponseProto> {
+    override fun stream(v: AdminUpdatePasswordResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): AdminUpdatePasswordResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
+        return AdminUpdatePasswordResponseProto(ok, msg)
     }
 }
 

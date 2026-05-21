@@ -107,6 +107,7 @@
     <string name="email_already_in_use">Этот email уже используется</string>
     <string name="user_already_exists">Это имя пользователя уже занято</string>
     <string name="chats">Чаты</string>
+    <string name="users">Пользователи</string>
     <string name="profile">Профиль</string>
     <string name="take_photo">Сделать фото</string>
     <string name="gallery">Галерея</string>
@@ -121,6 +122,7 @@
     <string name="change_username">Изменить имя пользователя</string>
     <string name="enter_new_username">Введите новое имя пользователя</string>
     <string name="change_password">Изменить пароль</string>
+    <string name="password_updated">Пароль успешно обновлен</string>
     <string name="change_avatar">Изменить аватар</string>
     <string name="select_avatar">Выбрать аватар</string>
     <string name="change">Изменить</string>

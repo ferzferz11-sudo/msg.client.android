@@ -29,6 +29,29 @@
         app:titleTextColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/toolbar_background"
+        app:tabTextColor="?attr/colorOnPrimary"
+        app:tabSelectedTextColor="?attr/colorOnPrimary"
+        app:tabIndicatorColor="?attr/colorOnPrimary"
+        app:tabBackground="@drawable/toolbar_background"
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/users" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rooms" />
+
+    </com.google.android.material.tabs.TabLayout>
+
     <TextView
         android:id="@+id/serverTimeText"
         android:layout_width="match_parent"
@@ -37,7 +60,7 @@
         android:textSize="12sp"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/tabLayout" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/searchLayout"

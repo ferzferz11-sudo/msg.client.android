@@ -281,6 +281,17 @@ data class UpdatePasswordResponseProto(
     val message: String = ""
 )
 
+data class AdminUpdatePasswordRequestProto(
+    val targetUsername: String = "",
+    val newPassword: String = "",
+    val adminUsername: String = ""
+)
+
+data class AdminUpdatePasswordResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
 // Reaction Request/Response
 data class ReactionRequestProto(
     val messageId: String = "",

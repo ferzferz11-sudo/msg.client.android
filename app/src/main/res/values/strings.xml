@@ -106,6 +106,7 @@
     <string name="auth_failed">Authentication failed</string>
     <string name="email_already_in_use">Email already in use</string>
     <string name="user_already_exists">Username already exists</string>
+    <string name="users">Users</string>
     <string name="chats">Chats</string>
     <string name="preview">Preview</string>
     <string name="edit">Edit Profile</string>
@@ -124,6 +125,7 @@
     <string name="change_username">Change Username</string>
     <string name="enter_new_username">Enter new username</string>
     <string name="change_password">Change Password</string>
+    <string name="password_updated">Password updated successfully</string>
     <string name="change_avatar">Change Avatar</string>
     <string name="select_avatar">Select Avatar</string>
     <string name="change">Change</string>

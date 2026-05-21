@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.tabs.TabLayout
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
@@ -53,6 +54,8 @@ class SuperAdminActivity : AppCompatActivity() {
     private var allUsers = listOf<UserInfoProto>()
     private var allChats = listOf<ChatInfo>()
     private var currentMode = Mode.USERS
+    private val selectedUsernames = mutableSetOf<String>()
+    private val selectedChatIds = mutableSetOf<String>()
     
     enum class Mode { USERS, GROUPS }
 
@@ -93,6 +96,19 @@ class SuperAdminActivity : AppCompatActivity() {
         searchEditText = findViewById(R.id.searchEditText)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
 
+        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                currentMode = if (tab?.position == 0) Mode.USERS else Mode.GROUPS
+                clearSelection()
+                updateUI(allUsers, allChats)
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+
+        applyThemeToTabs(tabLayout)
+
         swipeRefreshLayout.setOnRefreshListener {
             loadData()
         }
@@ -106,6 +122,12 @@ class SuperAdminActivity : AppCompatActivity() {
         })
 
         loadData()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
+        applyThemeToTabs(tabLayout)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -124,19 +146,51 @@ class SuperAdminActivity : AppCompatActivity() {
         menu.findItem(R.id.action_show_groups)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
         menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
         
+        // Hide tabs from menu, now using TabLayout
+        menu.findItem(R.id.action_show_users)?.isVisible = false
+        menu.findItem(R.id.action_show_groups)?.isVisible = false
+        
+        val hasSelection = selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()
+        if (hasSelection) {
+            menu.clear()
+            
+            if (currentMode == Mode.USERS && selectedUsernames.size == 1) {
+                menu.add(0, R.id.action_change_password, 0, R.string.change_password)
+                    .setIcon(R.drawable.ic_settings_account)
+                    .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            }
+
+            menu.add(0, R.id.action_delete, 0, R.string.delete)
+                .setIcon(R.drawable.ic_delete)
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            
+            menu.findItem(R.id.action_change_password)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            menu.findItem(R.id.action_delete)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        }
+        
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_show_users -> {
-                currentMode = Mode.USERS
-                updateUI(allUsers, emptyList())
+            android.R.id.home -> {
+                if (selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()) {
+                    clearSelection()
+                    updateUI(allUsers, allChats)
+                } else {
+                    finish()
+                }
                 return true
             }
-            R.id.action_show_groups -> {
-                currentMode = Mode.GROUPS
-                updateUI(emptyList(), allChats)
+            R.id.action_change_password -> {
+                if (selectedUsernames.size == 1) {
+                    showAdminChangePasswordDialog(selectedUsernames.first())
+                }
+                return true
+            }
+            R.id.action_delete -> {
+                if (currentMode == Mode.USERS) confirmDeleteSelectedUsers()
+                else confirmDeleteSelectedChats()
                 return true
             }
             R.id.action_search -> {
@@ -186,8 +240,20 @@ class SuperAdminActivity : AppCompatActivity() {
         usersContainer.removeAllViews()
         val theme = ThemeStore.currentTheme()
         val surfaceColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.DKGRAY }
+        val primaryColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
         val textPrimary = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
         val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.LTGRAY }
+        
+        val hasSelection = selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()
+        if (hasSelection) {
+            supportActionBar?.title = getString(R.string.selected_count, if (currentMode == Mode.USERS) selectedUsernames.size else selectedChatIds.size)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        } else {
+            supportActionBar?.title = getString(R.string.super_admin)
+            supportActionBar?.setHomeAsUpIndicator(null)
+        }
+        invalidateOptionsMenu()
 
         if (currentMode == Mode.USERS) {
             // Sort users by last seen time (most recent first)
@@ -201,23 +267,24 @@ class SuperAdminActivity : AppCompatActivity() {
                 val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
                 val statusDot = userView.findViewById<View>(R.id.statusIndicator)
                 
-                card.setCardBackgroundColor(surfaceColor)
+                val isSelected = selectedUsernames.contains(user.username)
+                card.setCardBackgroundColor(if (isSelected) primaryColor else surfaceColor)
                 nameText.text = user.username
-                nameText.setTextColor(textPrimary)
+                nameText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textPrimary)
                 
                 val versionStr = if (user.lastClientVersion.isNotEmpty()) "v${user.lastClientVersion}" else ""
                 versionText.text = versionStr
-                versionText.setTextColor(textSecondary)
+                versionText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textSecondary)
                 
                 // Calculate and show time ago
                 val timeAgoStr = user.lastSeenAt?.let {
                     getTimeAgo(it.seconds * 1000)
                 } ?: ""
                 timeAgoText.text = timeAgoStr
-                timeAgoText.setTextColor(textSecondary)
+                timeAgoText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textSecondary)
                 
                 val isOnline = grpcClient.users.value.contains(user.username)
-                statusDot.isVisible = true
+                statusDot.isVisible = !isSelected
                 statusDot.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
 
                 if (user.avatarUrl.isNotEmpty()) {
@@ -228,15 +295,19 @@ class SuperAdminActivity : AppCompatActivity() {
                 }
 
                 userView.setOnClickListener {
-                    val intent = Intent(this, ProfileActivity::class.java).apply {
-                        putExtra("username", user.username)
-                        putExtra("is_group", false)
+                    if (selectedUsernames.isNotEmpty()) {
+                        toggleUserSelection(user.username)
+                    } else {
+                        val intent = Intent(this, ProfileActivity::class.java).apply {
+                            putExtra("username", user.username)
+                            putExtra("is_group", false)
+                        }
+                        startActivity(intent)
                     }
-                    startActivity(intent)
                 }
 
                 userView.setOnLongClickListener {
-                    confirmDeleteUser(user.username)
+                    toggleUserSelection(user.username)
                     true
                 }
                 usersContainer.addView(userView)
@@ -249,11 +320,23 @@ class SuperAdminActivity : AppCompatActivity() {
                 val typeText = chatView.findViewById<TextView>(R.id.chatType)
                 val participantAvatars = chatView.findViewById<LinearLayout>(R.id.participantAvatars)
                 
-                card.setCardBackgroundColor(surfaceColor)
+                val isSelected = selectedChatIds.contains(chat.id)
+                card.setCardBackgroundColor(if (isSelected) primaryColor else surfaceColor)
                 nameText.text = chat.name
-                nameText.setTextColor(textPrimary)
-                typeText.text = "${chat.type} - ID: ${chat.id}"
-                typeText.setTextColor(textSecondary)
+                nameText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textPrimary)
+                
+                val sdf = java.text.SimpleDateFormat("dd.MM.yy HH:mm", Locale.getDefault())
+                val creationTime = sdf.format(java.util.Date(chat.createdAt))
+                
+                val description = if (chat.type.equals("direct", true)) {
+                    "${chat.type} - $creationTime\nID: ${chat.id}"
+                } else {
+                    val adminStr = if (chat.creator.isNotEmpty()) "Admin: ${chat.creator}" else ""
+                    "${chat.type} - $creationTime\n$adminStr\nID: ${chat.id}"
+                }
+                
+                typeText.text = description
+                typeText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textSecondary)
 
                 // Load avatars for the group
                 participantAvatars.removeAllViews()
@@ -271,20 +354,24 @@ class SuperAdminActivity : AppCompatActivity() {
                 }
                 
                 chatView.setOnClickListener {
-                    val intent = Intent(this, ProfileActivity::class.java).apply {
-                        putExtra("username", chat.name)
-                        putExtra("is_group", !chat.type.equals("direct", true))
-                        putExtra("room_id", chat.id)
-                        putExtra("avatar_url", chat.avatarUrl)
-                        putExtra("full_avatar_url", chat.fullAvatarUrl)
-                        putExtra("creator", chat.creator)
-                        putExtra("participants", chat.participants)
+                    if (selectedChatIds.isNotEmpty()) {
+                        toggleChatSelection(chat.id)
+                    } else {
+                        val intent = Intent(this, ProfileActivity::class.java).apply {
+                            putExtra("username", chat.name)
+                            putExtra("is_group", !chat.type.equals("direct", true))
+                            putExtra("room_id", chat.id)
+                            putExtra("avatar_url", chat.avatarUrl)
+                            putExtra("full_avatar_url", chat.fullAvatarUrl)
+                            putExtra("creator", chat.creator)
+                            putExtra("participants", chat.participants)
+                        }
+                        startActivity(intent)
                     }
-                    startActivity(intent)
                 }
 
                 chatView.setOnLongClickListener {
-                    confirmDeleteChat(chat)
+                    toggleChatSelection(chat.id)
                     true
                 }
                 usersContainer.addView(chatView)
@@ -303,20 +390,63 @@ class SuperAdminActivity : AppCompatActivity() {
         }
     }
 
-    private fun confirmDeleteUser(targetUser: String) {
-        if (targetUser == "ferz") return
+    private fun toggleUserSelection(username: String) {
+        if (selectedUsernames.contains(username)) {
+            selectedUsernames.remove(username)
+        } else {
+            selectedUsernames.add(username)
+        }
+        updateUI(allUsers, allChats)
+    }
+
+    private fun toggleChatSelection(chatId: String) {
+        if (selectedChatIds.contains(chatId)) {
+            selectedChatIds.remove(chatId)
+        } else {
+            selectedChatIds.add(chatId)
+        }
+        updateUI(allUsers, allChats)
+    }
+
+    private fun clearSelection() {
+        selectedUsernames.clear()
+        selectedChatIds.clear()
+    }
+
+    private fun applyThemeToTabs(tabLayout: TabLayout) {
+        val theme = ThemeStore.currentTheme()
+        try {
+            val pColor = theme.primaryColor.toColorInt()
+            val onPColor = theme.onPrimaryColor.toColorInt()
+            
+            tabLayout.setSelectedTabIndicatorColor(onPColor)
+            tabLayout.setTabTextColors(onPColor.withAlpha(150), onPColor)
+            tabLayout.backgroundTintList = android.content.res.ColorStateList.valueOf(pColor)
+        } catch (_: Exception) {}
+    }
+
+    private fun Int.withAlpha(alpha: Int): Int {
+        return (this and 0x00FFFFFF) or (alpha shl 24)
+    }
+
+    private fun confirmDeleteSelectedUsers() {
+        val count = selectedUsernames.size
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_profile)
-            .setMessage("${getString(R.string.delete_profile)}: $targetUser?")
+            .setMessage("${getString(R.string.delete_profile)}: $count ${getString(R.string.users)}?")
             .setPositiveButton(R.string.delete) { _, _ ->
+                val usernames = selectedUsernames.toList()
+                clearSelection()
                 progressOverlay.isVisible = true
-                grpcClient.deleteProfile(targetUser) { success, message ->
-                    runOnUiThread {
-                        if (success) {
-                            loadData()
-                        } else {
-                            progressOverlay.isVisible = false
-                            Toast.makeText(this, "${getString(R.string.connection_failed)}: $message", Toast.LENGTH_LONG).show()
+                
+                var deletedCount = 0
+                usernames.forEach { targetUser ->
+                    grpcClient.deleteProfile(targetUser) { _, _ ->
+                        runOnUiThread {
+                            deletedCount++
+                            if (deletedCount == usernames.size) {
+                                loadData()
+                            }
                         }
                     }
                 }
@@ -324,24 +454,88 @@ class SuperAdminActivity : AppCompatActivity() {
             .setNegativeButton(android.R.string.cancel, null).show()
     }
 
-    private fun confirmDeleteChat(chat: ChatInfo) {
+    private fun confirmDeleteSelectedChats() {
+        val count = selectedChatIds.size
         AlertDialog.Builder(this)
             .setTitle(R.string.delete_group)
-            .setMessage("${getString(R.string.delete_group)}: ${chat.name}?")
+            .setMessage("${getString(R.string.delete_group)}: $count ${getString(R.string.chats)}?")
             .setPositiveButton(R.string.delete) { _, _ ->
+                val chatIds = selectedChatIds.toList()
+                clearSelection()
                 progressOverlay.isVisible = true
-                grpcClient.deleteChat(chat.id, username) { success, message ->
-                    runOnUiThread {
-                        if (success) {
-                            loadData()
-                        } else {
-                            progressOverlay.isVisible = false
-                            Toast.makeText(this, "${getString(R.string.connection_failed)}: $message", Toast.LENGTH_LONG).show()
+                
+                var deletedCount = 0
+                chatIds.forEach { targetId ->
+                    grpcClient.deleteChat(targetId, username) { _, _ ->
+                        runOnUiThread {
+                            deletedCount++
+                            if (deletedCount == chatIds.size) {
+                                loadData()
+                            }
                         }
                     }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null).show()
+    }
+
+    private fun showAdminChangePasswordDialog(targetUser: String) {
+        val theme = ThemeStore.currentTheme()
+        val textColor = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
+        val bgColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
+        val pColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
+        dialogView.setBackgroundColor(bgColor)
+        
+        val titleView = dialogView.findViewById<TextView>(R.id.tvTitle)
+        titleView?.setTextColor(textColor)
+        
+        val editNewPw = dialogView.findViewById<EditText>(R.id.editTextNewPassword)
+        val editOldPw = dialogView.findViewById<EditText>(R.id.editTextOldPassword)
+        
+        // Find TextInputLayouts
+        val editOldPwLayout = editOldPw.parent.parent as? com.google.android.material.textfield.TextInputLayout
+        
+        editNewPw.setTextColor(textColor)
+        editNewPw.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+        editOldPw.setTextColor(textColor)
+        
+        // Hide old password field since admin doesn't need it
+        editOldPwLayout?.visibility = View.GONE
+        
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton(R.string.change) { _, _ ->
+                val newPw = editNewPw.text.toString()
+                if (newPw.isEmpty()) {
+                    Toast.makeText(this, R.string.password_empty, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                
+                progressOverlay.isVisible = true
+                grpcClient.adminUpdatePassword(targetUser, newPw, username) { success, message ->
+                    runOnUiThread {
+                        progressOverlay.isVisible = false
+                        if (success) {
+                            Toast.makeText(this, R.string.password_updated, Toast.LENGTH_SHORT).show()
+                            clearSelection()
+                            updateUI(allUsers, allChats)
+                        } else {
+                            Toast.makeText(this, "Error: $message", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(pColor)
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(textColor)
+            dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
+        }
+        dialog.show()
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()

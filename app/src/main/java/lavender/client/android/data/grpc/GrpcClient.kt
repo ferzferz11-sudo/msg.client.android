@@ -166,6 +166,10 @@ object GrpcClient {
         realGrpcClient.updatePassword(username, oldPassword, newPassword, callback)
     }
 
+    fun adminUpdatePassword(targetUsername: String, newPassword: String, adminUsername: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.adminUpdatePassword(targetUsername, newPassword, adminUsername, callback)
+    }
+
     fun markRead(roomId: String, username: String, onCompletion: (() -> Unit)? = null) {
         realGrpcClient.markRead(roomId, username, onCompletion)
     }
