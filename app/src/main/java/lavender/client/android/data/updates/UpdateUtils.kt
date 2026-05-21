@@ -49,12 +49,23 @@ object UpdateUtils {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Intent to show changelog
+        val whatsNewIntent = Intent(context, lavender.client.android.ChatListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("extra_show_whats_new", true)
+        }
+        val whatsNewPendingIntent = PendingIntent.getActivity(
+            context, 1004, whatsNewIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_small)
+            .setSmallIcon(R.drawable.ic_checked)
             .setContentTitle("Update Ready")
             .setContentText("A new version of Lavender is ready to install.")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
+            .addAction(R.drawable.ic_star, context.getString(R.string.whats_new), whatsNewPendingIntent)
             .setAutoCancel(true)
             .build()
 

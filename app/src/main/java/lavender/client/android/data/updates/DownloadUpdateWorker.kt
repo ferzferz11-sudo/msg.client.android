@@ -2,7 +2,9 @@ package lavender.client.android.data.updates
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
@@ -92,23 +94,34 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
             val channel = NotificationChannel(
                 UpdateUtils.CHANNEL_ID,
                 "Updates",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             )
             notificationManager.createNotificationChannel(channel)
         }
     }
 
     private fun createForegroundInfo(progress: Int): ForegroundInfo {
-        val title = "Downloading Lavender Update"
+        val title = applicationContext.getString(R.string.downloading_update)
         val progressText = "$progress%"
 
+        // Intent to show changelog
+        val whatsNewIntent = Intent(applicationContext, lavender.client.android.ChatListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("extra_show_whats_new", true)
+        }
+        val whatsNewPendingIntent = PendingIntent.getActivity(
+            applicationContext, 1003, whatsNewIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(applicationContext, UpdateUtils.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_small)
+            .setSmallIcon(R.drawable.ic_update_rotating)
             .setContentTitle(title)
             .setContentText(progressText)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setProgress(100, progress, false)
+            .addAction(R.drawable.ic_star, applicationContext.getString(R.string.whats_new), whatsNewPendingIntent)
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

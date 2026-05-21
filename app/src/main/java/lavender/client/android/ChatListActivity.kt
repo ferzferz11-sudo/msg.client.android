@@ -2,9 +2,14 @@ package lavender.client.android
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import lavender.client.android.data.updates.UpdateUtils
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
@@ -389,6 +394,10 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         })
+
+        if (intent.getBooleanExtra("extra_show_whats_new", false)) {
+            showWhatsNewDialog()
+        }
     }
 
     override fun onStart() {
@@ -404,6 +413,11 @@ class ChatListActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+
+        if (intent.getBooleanExtra("extra_show_whats_new", false)) {
+            showWhatsNewDialog()
+        }
+
         lifecycleScope.launch {
             SessionManager.logoutEvent.collect {
                 runOnUiThread {
@@ -912,11 +926,52 @@ class ChatListActivity : AppCompatActivity() {
                     
                     withContext(Dispatchers.Main) {
                         updateUpdateIndicatorVisibility()
+                        if (isAvailable) {
+                            showUpdateAvailableNotification(latestVersion)
+                        }
                     }
                 }
                 connection.disconnect()
             } catch (_: Exception) {}
         }
+    }
+
+    private fun showUpdateAvailableNotification(latestVersion: String) {
+        val intent = Intent(this, ChatListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 1005, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Intent to show changelog
+        val whatsNewIntent = Intent(this, ChatListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("extra_show_whats_new", true)
+        }
+        val whatsNewPendingIntent = PendingIntent.getActivity(
+            this, 1006, whatsNewIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(UpdateUtils.CHANNEL_ID, "Updates", NotificationManager.IMPORTANCE_DEFAULT)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(this, UpdateUtils.CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_update_available)
+            .setContentTitle(getString(R.string.update_available))
+            .setContentText(getString(R.string.version_available, latestVersion))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .addAction(R.drawable.ic_star, getString(R.string.whats_new), whatsNewPendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(1007, notification)
     }
 
     private fun startSync() {

@@ -26,6 +26,7 @@
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">update</string>
+    <string name="downloading_update">Downloading Lavender Update</string>
     <string name="update">Update</string>
     <string name="connection_logs">Connection logs:</string>
     <string name="connected_to_room">User %1$s joined the chat %2$s</string>
