@@ -1,5 +1,4 @@
 plugins {
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)
     alias(libs.plugins.ksp)
@@ -65,11 +64,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
     buildFeatures {
         viewBinding = true
         buildConfig = true
@@ -104,6 +98,9 @@ dependencies {
     // OkHttp for HTTP client
     implementation(libs.okhttp)
     
+    // WorkManager for background updates
+    implementation(libs.androidx.work.runtime.ktx)
+    
     // CircleImageView for avatars
     implementation(libs.circleimageview)
     
@@ -118,9 +115,9 @@ dependencies {
     ksp(libs.glide.compiler)
     
     // ExoPlayer for audio playback
-    implementation("androidx.media3:media3-exoplayer:1.10.0")
-    implementation("androidx.media3:media3-ui:1.10.0")
-    implementation("androidx.media3:media3-common:1.10.0")
+    implementation("androidx.media3:media3-exoplayer:1.10.1")
+    implementation("androidx.media3:media3-ui:1.10.1")
+    implementation("androidx.media3:media3-common:1.10.1")
     
     // Biometric authentication
     implementation(libs.androidx.biometric)
