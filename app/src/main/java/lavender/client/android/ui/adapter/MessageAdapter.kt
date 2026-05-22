@@ -98,6 +98,15 @@ class MessageAdapter(
         val isSameMinute = previousMessage != null &&
                 (currentMessage.timestamp / 60000 == previousMessage.timestamp / 60000)
 
+        // Date separator logic
+        val showDateSeparator = if (previousMessage == null) {
+            true
+        } else {
+            val currentDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(currentMessage.timestamp))
+            val previousDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(previousMessage.timestamp))
+            currentDay != previousDay
+        }
+
         holder.bind(
             message = currentMessage,
             isOutgoing = isOutgoing,
@@ -106,6 +115,7 @@ class MessageAdapter(
             isConsecutive = isConsecutive,
             isSelectionMode = selectionMode,
             adapterPosition = position,
+            showDateSeparator = showDateSeparator,
             onClick = {
                 if (selectionMode) {
                     if (selectedPositions.contains(position)) selectedPositions.remove(position)
@@ -131,6 +141,7 @@ class MessageAdapter(
     inner class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val messageContainer: LinearLayout = itemView.findViewById(R.id.messageContainer)
         val messageBubble: LinearLayout = itemView.findViewById(R.id.messageBubble)
+        private val dateText: TextView = itemView.findViewById(R.id.dateText)
         private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
         private val avatarImageView: de.hdodenhof.circleimageview.CircleImageView = itemView.findViewById(R.id.avatarImageView)
         private val userText: TextView = itemView.findViewById(R.id.userText)
@@ -161,7 +172,7 @@ class MessageAdapter(
         private var pendingImageCall: okhttp3.Call? = null
         private var currentImageUrl: String? = null
         
-        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
+        fun bind(message: Message, isOutgoing: Boolean, isSelected: Boolean, shouldHideTime: Boolean, isConsecutive: Boolean, isSelectionMode: Boolean, adapterPosition: Int, showDateSeparator: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onMessageLongClick: ((Message) -> Unit)? = null) {
             val context = itemView.context
             val isGroup = this@MessageAdapter.isGroupChat
             val theme = ThemeStore.currentTheme()
@@ -187,6 +198,14 @@ class MessageAdapter(
             itemView.visibility = View.VISIBLE
             itemView.layoutParams = itemView.layoutParams.also {
                 if (it.height == 0) it.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            }
+
+            // Date separator
+            if (showDateSeparator) {
+                dateText.isVisible = true
+                dateText.text = getFormattedDate(message.timestamp)
+            } else {
+                dateText.isVisible = false
             }
             
             messageText.text = message.text
@@ -667,6 +686,20 @@ class MessageAdapter(
 
         private fun withAlpha(color: Int, alpha: Int): Int {
             return (color and 0x00FFFFFF) or (alpha shl 24)
+        }
+
+        private fun getFormattedDate(timestamp: Long): String {
+            val now = System.currentTimeMillis()
+            val sdfDate = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val current = sdfDate.format(Date(timestamp))
+            val today = sdfDate.format(Date(now))
+            val yesterday = sdfDate.format(Date(now - 86400000))
+
+            return when (current) {
+                today -> itemView.context.getString(R.string.today)
+                yesterday -> itemView.context.getString(R.string.yesterday)
+                else -> SimpleDateFormat("d MMMM", Locale.getDefault()).format(Date(timestamp))
+            }
         }
 
         private fun Int.dpToPx(): Int = (this * itemView.resources.displayMetrics.density).toInt()

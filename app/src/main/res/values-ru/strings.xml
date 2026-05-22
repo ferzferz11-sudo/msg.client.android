@@ -453,7 +453,7 @@
     <string name="client_version_label">Версия приложения:</string>
     <string name="last_active_label">Последняя активность:</string>
     <string name="whats_new">Что нового</string>
-    <string name="mark_as_read">Понятно</string>
+    <string name="mark_as_read">Прочитано</string>
     <string name="just_now">только что</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d минуту назад</item>
@@ -475,4 +475,6 @@
     </plurals>
     <string name="resending">Повторная отправка…</string>
     <string name="message_already_sent">Сообщение уже на сервере</string>
+    <string name="today">Сегодня</string>
+    <string name="yesterday">Вчера</string>
 </resources>

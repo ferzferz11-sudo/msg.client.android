@@ -70,6 +70,7 @@
                 android:src="@drawable/deployed_code_update_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:visibility="gone"
+                app:tint="?attr/colorOnPrimary"
                 android:contentDescription="@string/update_available" />
 
             <ImageView

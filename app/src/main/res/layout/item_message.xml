@@ -6,12 +6,32 @@
     android:layout_height="wrap_content"
     android:padding="4dp">
 
-    <!-- Fixed selection indicator on the far left -->
+    <!-- Date separator -->
+    <TextView
+        android:id="@+id/dateText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:background="@drawable/bg_date_separator"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="22 мая" />
+
+    <!-- Fixed selection indicator -->
     <ImageView
         android:id="@+id/selectionIndicator"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:layout_centerVertical="true"
+        android:layout_alignTop="@id/messageContainer"
+        android:layout_alignBottom="@id/messageContainer"
         android:layout_alignParentStart="true"
         android:layout_marginStart="8dp"
         android:src="@drawable/ic_unchecked"
@@ -25,6 +45,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_toEndOf="@id/selectionIndicator"
+        android:layout_below="@id/dateText"
         android:layout_marginStart="0dp"
         android:gravity="bottom">
 

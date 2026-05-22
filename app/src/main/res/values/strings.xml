@@ -451,7 +451,7 @@
     <string name="client_version_label">App Version:</string>
     <string name="last_active_label">Last Active:</string>
     <string name="whats_new">What\'s New</string>
-    <string name="mark_as_read">Got it</string>
+    <string name="mark_as_read">Mark as Read</string>
     <string name="just_now">just now</string>
     <plurals name="minutes_ago">
         <item quantity="one">%d minute ago</item>
@@ -467,4 +467,6 @@
     </plurals>
     <string name="resending">Resending…</string>
     <string name="message_already_sent">Message already on server</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
 </resources>

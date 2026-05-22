@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import lavender.client.android.data.updates.UpdateUtils
@@ -80,6 +81,13 @@ class ChatListActivity : AppCompatActivity() {
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     private var syncJob: Job? = null
+    
+    private val updatePrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        runOnUiThread { updateUpdateIndicatorVisibility() }
+    }
+    private val announcementPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        runOnUiThread { updateUpdateIndicatorVisibility() }
+    }
 
     private val editProfileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -105,6 +113,8 @@ class ChatListActivity : AppCompatActivity() {
 
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        setupSystemNotificationObserver()
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         
@@ -298,6 +308,14 @@ class ChatListActivity : AppCompatActivity() {
 
         binding.actionWhatsNew.setOnClickListener {
             showWhatsNewDialog()
+        }
+        binding.actionWhatsNew.setOnLongClickListener {
+            getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).edit {
+                putBoolean("show_icon", false)
+            }
+            updateUpdateIndicatorVisibility()
+            Toast.makeText(this, "Скрыто до следующего обновления", Toast.LENGTH_SHORT).show()
+            true
         }
 
         binding.toolbar.setNavigationOnClickListener {
@@ -834,6 +852,66 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupSystemNotificationObserver() {
+        lifecycleScope.launch {
+            grpcClient.systemNotification.collect { notification ->
+                if (notification != null) {
+                    showSystemNotificationDialog(notification)
+                }
+            }
+        }
+    }
+
+    private fun showSystemNotificationDialog(message: String) {
+        val theme = ThemeStore.currentTheme()
+        val textColor = theme.textPrimaryColor.toColorInt()
+        val pColor = theme.primaryColor.toColorInt()
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_whats_new, null)
+        dialogView.findViewById<TextView>(R.id.tvTitle).apply {
+            text = "Системное уведомление"
+            setTextColor(pColor)
+        }
+        dialogView.findViewById<TextView>(R.id.tvContent).apply {
+            text = message
+            setTextColor(textColor)
+        }
+
+        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnOk = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOk)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        btnOk.apply {
+            text = getString(R.string.mark_as_read)
+            backgroundTintList = ColorStateList.valueOf(pColor)
+            setTextColor(theme.onPrimaryColor.toColorInt())
+            setOnClickListener {
+                grpcClient.clearSystemNotification()
+                dialog.dismiss()
+            }
+        }
+
+        btnClose.apply {
+            text = getString(R.string.close)
+            setTextColor(theme.textSecondaryColor.toColorInt())
+            setOnClickListener { 
+                grpcClient.clearSystemNotification()
+                dialog.dismiss() 
+            }
+        }
+
+        val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
+            floatArrayOf(24f, 24f, 24f, 24f, 24f, 24f, 24f, 24f), null, null
+        ))
+        shape.paint.color = theme.surfaceColor.toColorInt()
+        dialog.window?.setBackgroundDrawable(shape)
+
+        dialog.show()
+    }
+
     private fun updateUpdateIndicatorVisibility() {
         val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         val isAvailable = prefs.getBoolean("update_available", false)
@@ -1094,6 +1172,9 @@ class ChatListActivity : AppCompatActivity() {
     @SuppressLint("NotifyDataSetChanged")
     override fun onResume() {
         super.onResume()
+        
+        getSharedPreferences("UpdatePrefs", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(updatePrefsListener)
+        getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(announcementPrefsListener)
         // Only refresh theme from store if user is authenticated
         // Otherwise, keep the theme from SharedPreferences (preserved after logout)
         if (username.isNotEmpty()) {
@@ -1132,6 +1213,9 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        
+        getSharedPreferences("UpdatePrefs", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(updatePrefsListener)
+        getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(announcementPrefsListener)
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
     }
 
