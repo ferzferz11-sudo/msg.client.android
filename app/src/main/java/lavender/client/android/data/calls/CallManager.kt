@@ -56,7 +56,8 @@ object CallManager {
             CallMessageProto.Type.INITIATE -> {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
-                    launchCallActivity(signal.callId, signal.senderId, true)
+                    val displayName = signal.senderName.takeIf { it.isNotEmpty() } ?: signal.senderId
+                    launchCallActivity(signal.callId, displayName, true)
                 } else {
                     Log.w(TAG, "Already in a call, ignoring INITIATE")
                     // Optionally send BUSY signal back
@@ -134,10 +135,10 @@ object CallManager {
 
     fun rejectCall() {
         val call = _currentCall.value ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             callId = call.callId,
-            senderId = senderId,
+            senderId = myId,
             receiverId = call.senderId,
             type = CallMessageProto.Type.REJECT
         )
@@ -147,11 +148,15 @@ object CallManager {
 
     fun hangup() {
         val call = _currentCall.value ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
+        val targetId = if (call.senderId == myId) call.receiverId else call.senderId
+        
+        Log.d(TAG, "Hangup: myId=$myId, call.senderId=${call.senderId}, targetId=$targetId")
+        
         val signal = CallMessageProto(
             callId = call.callId,
-            senderId = senderId,
-            receiverId = if (call.senderId == senderId) call.receiverId else call.senderId,
+            senderId = myId,
+            receiverId = targetId,
             type = CallMessageProto.Type.HANGUP
         )
         GrpcClient.sendCallSignal(signal)

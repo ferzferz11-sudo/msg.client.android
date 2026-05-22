@@ -153,6 +153,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                     if (signal.senderId == myUserId) {
                         callId = signal.callId
                         Log.d(TAG, "CallID assigned from server echo: $callId")
+                        
+                        // Update display name if server provided one
+                        val otherDisplayName = signal.receiverName.takeIf { it.isNotEmpty() } ?: receiverId
+                        runOnUiThread {
+                            binding.tvCallerName.text = otherDisplayName
+                        }
                     }
                 }
 

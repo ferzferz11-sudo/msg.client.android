@@ -752,7 +752,9 @@ data class CallMessageProto(
     val senderId: String = "",
     val receiverId: String = "",
     val type: Type = Type.INITIATE,
-    val payload: String = ""
+    val payload: String = "",
+    val senderName: String = "",
+    val receiverName: String = ""
 ) {
     enum class Type(val value: Int) {
         INITIATE(0),

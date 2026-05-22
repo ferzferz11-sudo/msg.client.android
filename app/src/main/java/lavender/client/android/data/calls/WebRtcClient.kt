@@ -28,6 +28,9 @@ class WebRtcClient(
     private var localVideoTrack: VideoTrack? = null
     private var localAudioTrack: AudioTrack? = null
 
+    private val iceCandidateQueue = mutableListOf<IceCandidate>()
+    private var isRemoteDescriptionSet = false
+
     init {
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .createInitializationOptions()
@@ -159,14 +162,33 @@ class WebRtcClient(
     fun setRemoteDescription(description: SessionDescription) {
         peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onCreateSuccess(p0: SessionDescription?) {}
-            override fun onSetSuccess() {}
+            override fun onSetSuccess() {
+                Log.d("WebRtcClient", "Remote description set success")
+                isRemoteDescriptionSet = true
+                drainIceCandidateQueue()
+            }
             override fun onCreateFailure(p0: String?) {}
-            override fun onSetFailure(p0: String?) {}
+            override fun onSetFailure(p0: String?) {
+                Log.e("WebRtcClient", "Remote description set failure: $p0")
+            }
         }, description)
     }
 
     fun addIceCandidate(candidate: IceCandidate) {
-        peerConnection?.addIceCandidate(candidate)
+        if (isRemoteDescriptionSet) {
+            peerConnection?.addIceCandidate(candidate)
+        } else {
+            Log.d("WebRtcClient", "Queuing ICE candidate")
+            iceCandidateQueue.add(candidate)
+        }
+    }
+
+    private fun drainIceCandidateQueue() {
+        Log.d("WebRtcClient", "Draining ICE candidate queue: ${iceCandidateQueue.size}")
+        for (candidate in iceCandidateQueue) {
+            peerConnection?.addIceCandidate(candidate)
+        }
+        iceCandidateQueue.clear()
     }
 
     fun toggleMic(enabled: Boolean) {
