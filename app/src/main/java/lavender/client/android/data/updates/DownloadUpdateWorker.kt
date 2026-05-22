@@ -82,6 +82,7 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
                 
                 applicationContext.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE).edit {
                     putBoolean("update_downloaded", true)
+                    putBoolean("update_downloading", false)
                     putString("apk_path", file.absolutePath)
                 }
 
@@ -90,6 +91,9 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
                 Result.success()
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed", e)
+                applicationContext.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE).edit {
+                    putBoolean("update_downloading", false)
+                }
                 Result.failure()
             }
         }

@@ -183,10 +183,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                         }
                     }
                     CallMessageProto.Type.OFFER -> {
-                        Log.d(TAG, "Received OFFER, creating WebRTC Answer")
+                        Log.d(TAG, "Received OFFER, setting remote description")
                         val sdp = SessionDescription(SessionDescription.Type.OFFER, signal.payload)
                         webRtcClient?.setRemoteDescription(sdp)
-                        webRtcClient?.createAnswer()
                     }
                     CallMessageProto.Type.ANSWER -> {
                         Log.d(TAG, "Received ANSWER, setting remote description")
@@ -250,6 +249,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             binding.localView.init(eglBase.eglBaseContext, null)
             binding.localView.setEnableHardwareScaler(true)
             binding.localView.setMirror(true)
+            binding.localView.setZOrderMediaOverlay(true)
             isLocalViewInitialized = true
         }
         webRtcClient?.startLocalStream(binding.localView)
@@ -274,17 +274,24 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onRemoteTrack(track: MediaStreamTrack) {
-        Log.d(TAG, "onRemoteTrack: ${track.kind()}")
+        Log.d(TAG, "onRemoteTrack: kind=${track.kind()}, id=${track.id()}")
         if (track is VideoTrack) {
             runOnUiThread {
                 if (!isRemoteViewInitialized) {
+                    Log.d(TAG, "Initializing remote view for track")
                     binding.remoteView.init(eglBase.eglBaseContext, null)
                     binding.remoteView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
                     binding.remoteView.setEnableHardwareScaler(true)
                     isRemoteViewInitialized = true
                 }
+                Log.d(TAG, "Adding sink to remote view for video track")
                 track.addSink(binding.remoteView)
             }
+        } else if (track is AudioTrack) {
+            Log.d(TAG, "Remote audio track received and enabled: ${track.enabled()}")
+            // AudioTrack doesn't need a sink to play on Android WebRTC, 
+            // but we ensure it's enabled.
+            track.setEnabled(true)
         }
     }
 
@@ -305,6 +312,15 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     override fun onAnswerCreated(description: SessionDescription) {
         Log.d(TAG, "WebRTC Answer created")
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
+    }
+
+    override fun onRemoteDescriptionSet() {
+        Log.d(TAG, "onRemoteDescriptionSet: check signaling state")
+        // If we are the receiver and just set the OFFER remote description, create ANSWER
+        if (isIncoming && webRtcClient != null) {
+            Log.d(TAG, "Creating WebRTC Answer now that remote description is set")
+            webRtcClient?.createAnswer()
+        }
     }
 
     override fun onDestroy() {

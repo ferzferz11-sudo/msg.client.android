@@ -17,6 +17,7 @@ class WebRtcClient(
         fun onIceCandidate(candidate: IceCandidate)
         fun onOfferCreated(description: SessionDescription)
         fun onAnswerCreated(description: SessionDescription)
+        fun onRemoteDescriptionSet()
     }
 
     private var peerConnectionFactory: PeerConnectionFactory
@@ -148,6 +149,8 @@ class WebRtcClient(
 
     fun createAnswer() {
         val constraints = MediaConstraints()
+        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(description: SessionDescription) {
                 peerConnection?.setLocalDescription(this, description)
@@ -166,6 +169,7 @@ class WebRtcClient(
                 Log.d("WebRtcClient", "Remote description set success")
                 isRemoteDescriptionSet = true
                 drainIceCandidateQueue()
+                observer.onRemoteDescriptionSet()
             }
             override fun onCreateFailure(p0: String?) {}
             override fun onSetFailure(p0: String?) {

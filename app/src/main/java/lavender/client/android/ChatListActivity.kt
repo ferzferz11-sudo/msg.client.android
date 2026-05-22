@@ -28,6 +28,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import android.view.animation.AnimationUtils
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -916,22 +917,43 @@ class ChatListActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         val isAvailable = prefs.getBoolean("update_available", false)
         val isDownloaded = prefs.getBoolean("update_downloaded", false)
+        val isDownloading = prefs.getBoolean("update_downloading", false)
+        
         val hasSelection = if (::chatAdapter.isInitialized) chatAdapter.getSelectedChats().isNotEmpty() else false
         val isSearching = binding.searchCard.isVisible
         
-        binding.updateAvailableIcon.isVisible = (isAvailable || isDownloaded) && !hasSelection && !isSearching
+        binding.updateAvailableIcon.isVisible = (isAvailable || isDownloaded || isDownloading) && !hasSelection && !isSearching
         
-        if (isDownloaded) {
-            binding.updateAvailableIcon.setImageResource(R.drawable.ic_install_update)
-            binding.updateAvailableIcon.contentDescription = getString(R.string.install_update)
+        if (isDownloading) {
+            binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_rotating)
+            val rotation = AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
+            binding.updateAvailableIcon.startAnimation(rotation)
+            binding.updateAvailableIcon.contentDescription = "Downloading..."
         } else {
-            binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_available)
-            binding.updateAvailableIcon.contentDescription = getString(R.string.update_available)
+            binding.updateAvailableIcon.clearAnimation()
+            if (isDownloaded) {
+                binding.updateAvailableIcon.setImageResource(R.drawable.ic_install_update)
+                binding.updateAvailableIcon.contentDescription = getString(R.string.install_update)
+            } else {
+                binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_available)
+                binding.updateAvailableIcon.contentDescription = getString(R.string.update_available)
+            }
         }
 
         // Also update WhatsNew icon visibility
-        val showAnnouncement = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).getBoolean("show_icon", false)
+        val announcementPrefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
+        val currentText = (announcementPrefs.getString("current_text", "") ?: "").trim()
+        val lastReadText = (announcementPrefs.getString("last_read_text", "") ?: "").trim()
+        
+        var showAnnouncement = announcementPrefs.getBoolean("show_icon", false)
+        if (showAnnouncement && currentText.isNotEmpty() && currentText == lastReadText) {
+            announcementPrefs.edit { putBoolean("show_icon", false) }
+            showAnnouncement = false
+        }
+        
         binding.actionWhatsNew.isVisible = showAnnouncement && !hasSelection && !isSearching
+        
+        Log.d("ChatListActivity", "Update visibility: avail=$isAvailable, down=$isDownloaded, downloading=$isDownloading, star=$showAnnouncement")
     }
 
     private fun setupOnboardingTips() {
@@ -1323,10 +1345,13 @@ class ChatListActivity : AppCompatActivity() {
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 5000
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                val text = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                var text = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                text = text.replace("\r\n", "\n").replace("\r", "\n")
+                
                 if (text.isNotEmpty()) {
                     val prefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
-                    val lastRead = prefs.getString("last_read_text", "")
+                    var lastRead = prefs.getString("last_read_text", "") ?: ""
+                    lastRead = lastRead.trim().replace("\r\n", "\n").replace("\r", "\n")
                     
                     val isNew = text != lastRead
                     prefs.edit { 
@@ -1350,13 +1375,18 @@ class ChatListActivity : AppCompatActivity() {
         val theme = ThemeStore.currentTheme()
         val pColor = theme.primaryColor.toColorInt()
         val textColor = theme.textPrimaryColor.toColorInt()
+        val bgColor = theme.surfaceColor.toColorInt()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_whats_new, null)
+        dialogView.setBackgroundColor(bgColor)
+        
         dialogView.findViewById<TextView>(R.id.tvContent).apply {
             this.text = text
             setTextColor(textColor)
         }
-        dialogView.findViewById<TextView>(R.id.tvTitle).setTextColor(pColor)
+        dialogView.findViewById<TextView>(R.id.tvTitle).apply {
+            setTextColor(pColor)
+        }
 
         val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnMarkRead = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOk)
@@ -1369,11 +1399,14 @@ class ChatListActivity : AppCompatActivity() {
             backgroundTintList = ColorStateList.valueOf(pColor)
             setTextColor(theme.onPrimaryColor.toColorInt())
             setOnClickListener {
+                Log.d("ChatListActivity", "Mark as read clicked")
+                val cleanText = text.trim().replace("\r\n", "\n").replace("\r", "\n")
                 prefs.edit {
-                    putString("last_read_text", text)
+                    putString("last_read_text", cleanText)
                     putBoolean("show_icon", false)
                 }
                 updateUpdateIndicatorVisibility()
+                Toast.makeText(this@ChatListActivity, R.string.mark_as_read, Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
         }
@@ -1383,13 +1416,7 @@ class ChatListActivity : AppCompatActivity() {
             setOnClickListener { dialog.dismiss() }
         }
 
-        // Custom rounded background for dialog
-        val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-            floatArrayOf(24f, 24f, 24f, 24f, 24f, 24f, 24f, 24f), null, null
-        ))
-        shape.paint.color = theme.surfaceColor.toColorInt()
-        dialog.window?.setBackgroundDrawable(shape)
-
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         dialog.show()
     }
 
@@ -1406,6 +1433,11 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun startBackgroundDownload() {
+        getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
+            putBoolean("update_downloading", true)
+        }
+        updateUpdateIndicatorVisibility()
+
         val workRequest = OneTimeWorkRequestBuilder<DownloadUpdateWorker>()
             .build()
         WorkManager.getInstance(this).enqueueUniqueWork(
