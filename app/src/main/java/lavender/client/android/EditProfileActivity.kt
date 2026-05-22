@@ -12,12 +12,14 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.graphics.scale
+import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -99,12 +101,7 @@ class EditProfileActivity : AppCompatActivity() {
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
         val btnChangeAvatar = findViewById<Button>(R.id.btnChangeAvatar)
         val avatarProgressBar = findViewById<ProgressBar>(R.id.avatarProgressBar)
-        val btnToggleEdit = findViewById<Button>(R.id.btnToggleEdit)
-        val editFieldsContainer = findViewById<View>(R.id.editFieldsContainer)
         val btnDeleteProfile = findViewById<Button>(R.id.btnDeleteProfile)
-
-        // username already set in onCreate
-        password = intent.getStringExtra("password") ?: ""
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -163,9 +160,6 @@ class EditProfileActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        btnToggleEdit.setOnClickListener {
-            editFieldsContainer.isVisible = !editFieldsContainer.isVisible
-        }
 
         btnDeleteProfile.setOnClickListener {
             AlertDialog.Builder(this)
@@ -478,36 +472,55 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangePasswordDialog() {
+        val theme = ThemeStore.currentTheme()
+        val textColor = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
+        val bgColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
+        val pColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
+
         val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
+        dialogView.setBackgroundColor(bgColor)
+        
+        val titleView = dialogView.findViewById<TextView>(R.id.tvTitle)
+        titleView?.setTextColor(textColor)
         
         val oldPassword = dialogView.findViewById<EditText>(R.id.editTextOldPassword)
         val newPassword = dialogView.findViewById<EditText>(R.id.editTextNewPassword)
-        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
-        val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSave)
+
+        oldPassword.setTextColor(textColor)
+        oldPassword.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+        newPassword.setTextColor(textColor)
+        newPassword.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
+            .setPositiveButton(R.string.change, null) // Listener set later to prevent auto-dismiss on error
+            .setNegativeButton(R.string.cancel_dialog, null)
             .create()
 
-        btnCancel.setOnClickListener { dialog.dismiss() }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(pColor)
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(textColor)
+            dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
 
-        btnSave.setOnClickListener {
-            val oldPass = oldPassword.text.toString().trim()
-            val newPass = newPassword.text.toString().trim()
-            if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
-                grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
-                    runOnUiThread {
-                        if (success) {
-                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                            password = newPass
-                            dialog.dismiss()
-                        } else {
-                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val oldPass = oldPassword.text.toString().trim()
+                val newPass = newPassword.text.toString().trim()
+                
+                if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
+                    grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
+                        runOnUiThread {
+                            if (success) {
+                                Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_SHORT).show()
+                                password = newPass
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
+                } else {
+                    Toast.makeText(this@EditProfileActivity, "Введите оба пароля", Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                Toast.makeText(this, "Введите оба пароля", Toast.LENGTH_SHORT).show()
             }
         }
 

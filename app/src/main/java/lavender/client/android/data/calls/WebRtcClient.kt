@@ -13,6 +13,7 @@ class WebRtcClient(
     interface Observer {
         fun onLocalStream(stream: MediaStream)
         fun onRemoteStream(stream: MediaStream)
+        fun onRemoteTrack(track: MediaStreamTrack)
         fun onIceCandidate(candidate: IceCandidate)
         fun onOfferCreated(description: SessionDescription)
         fun onAnswerCreated(description: SessionDescription)
@@ -72,6 +73,9 @@ class WebRtcClient(
             }
             override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {
                 Log.d("WebRtcClient", "onAddTrack: ${receiver?.track()?.kind()}")
+                receiver?.track()?.let { track ->
+                    observer.onRemoteTrack(track)
+                }
                 streams?.getOrNull(0)?.let {
                     observer.onRemoteStream(it)
                 }
@@ -174,9 +178,29 @@ class WebRtcClient(
     }
 
     fun close() {
-        videoCapturer?.stopCapture()
-        videoCapturer?.dispose()
-        peerConnection?.close()
-        peerConnectionFactory.dispose()
+        try {
+            videoCapturer?.stopCapture()
+            videoCapturer?.dispose()
+            videoCapturer = null
+            
+            localVideoTrack?.setEnabled(false)
+            localVideoTrack?.dispose()
+            localVideoTrack = null
+            
+            localAudioTrack?.setEnabled(false)
+            localAudioTrack?.dispose()
+            localAudioTrack = null
+            
+            localVideoSource.dispose()
+            localAudioSource.dispose()
+            
+            peerConnection?.close()
+            peerConnection?.dispose()
+            peerConnection = null
+            
+            peerConnectionFactory.dispose()
+        } catch (e: Exception) {
+            Log.e("WebRtcClient", "Error during close", e)
+        }
     }
 }

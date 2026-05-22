@@ -2,6 +2,8 @@ package lavender.client.android
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -30,6 +32,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var isMicEnabled = true
     private var isCameraEnabled = true
 
+    private lateinit var audioManager: AudioManager
+    private var oldAudioMode: Int = AudioManager.MODE_NORMAL
+
     // Shared EGL context for all renderers
     private val eglBase = EglBase.create()
     private var isRemoteViewInitialized = false
@@ -46,6 +51,13 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         Log.d(TAG, "onCreate: isIncoming=$isIncoming")
         binding = ActivityCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        oldAudioMode = audioManager.mode
+        
+        // Optimize for communication
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        setSpeakerphoneEnabled(true)
 
         callId = intent.getStringExtra("CALL_ID") ?: ""
         receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
@@ -255,6 +267,21 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
     }
 
+    override fun onRemoteTrack(track: MediaStreamTrack) {
+        Log.d(TAG, "onRemoteTrack: ${track.kind()}")
+        if (track is VideoTrack) {
+            runOnUiThread {
+                if (!isRemoteViewInitialized) {
+                    binding.remoteView.init(eglBase.eglBaseContext, null)
+                    binding.remoteView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
+                    binding.remoteView.setEnableHardwareScaler(true)
+                    isRemoteViewInitialized = true
+                }
+                track.addSink(binding.remoteView)
+            }
+        }
+    }
+
     override fun onIceCandidate(candidate: IceCandidate) {
         val payload = JSONObject().apply {
             put("sdpMid", candidate.sdpMid)
@@ -277,8 +304,33 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: cleaning up")
+        
+        // Restore audio settings
+        audioManager.mode = oldAudioMode
+        setSpeakerphoneEnabled(false)
+        
         CallManager.clearCurrentCall()
+        
+        // Properly release views and tracks
+        binding.localView.release()
+        binding.remoteView.release()
+
         webRtcClient?.close()
         eglBase.release()
+    }
+
+    private fun setSpeakerphoneEnabled(enabled: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (enabled) {
+                val devices = audioManager.availableCommunicationDevices
+                val speakerDevice = devices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                speakerDevice?.let { audioManager.setCommunicationDevice(it) }
+            } else {
+                audioManager.clearCommunicationDevice()
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = enabled
+        }
     }
 }
