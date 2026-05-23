@@ -481,4 +481,8 @@
     <string name="call_status_connected">Подключено</string>
     <string name="call_status_calling">Вызов…</string>
     <string name="call_status_incoming">Входящий вызов…</string>
+    <string name="conference">Конференция</string>
+    <string name="group_conference">Групповая конференция</string>
+    <string name="in_conference_format">В конференции: %s</string>
+    <string name="end_for_all">Завершить для всех</string>
 </resources>

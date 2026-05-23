@@ -192,7 +192,7 @@ class ChatAdapter(
             chatName.text = chat.getDisplayName(currentUsername)
 
             if (chat.lastMessageHasImage) {
-                val prefix = if (chat.type == "group" || chat.type == "general") {
+                val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM") {
                     if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 } else ""
                 val photoText = if (context.resources.configuration.locales[0].language == "ru") "📷 Фото" else "📷 Photo"
@@ -200,7 +200,7 @@ class ChatAdapter(
                 chatType.maxLines = 1
                 chatType.ellipsize = android.text.TextUtils.TruncateAt.END
             } else if (chat.lastMessageText.isNotEmpty()) {
-                val prefix = if (chat.type == "group" || chat.type == "general") {
+                val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM") {
                     if (chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 } else ""
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)

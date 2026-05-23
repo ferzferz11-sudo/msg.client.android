@@ -5,7 +5,15 @@
         android:id="@+id/action_video_call"
         android:icon="@drawable/ic_videocam_on"
         android:title="@string/video_call"
+        app:iconTint="?attr/colorOnPrimary"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_conference"
+        android:icon="@drawable/ic_videocam_on"
+        android:title="@string/conference"
+        app:iconTint="?attr/colorOnPrimary"
+        app:showAsAction="ifRoom"
+        android:visible="false" />
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_search_custom"

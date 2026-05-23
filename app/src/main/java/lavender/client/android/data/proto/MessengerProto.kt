@@ -754,7 +754,8 @@ data class CallMessageProto(
     val type: Type = Type.INITIATE,
     val payload: String = "",
     val senderName: String = "",
-    val receiverName: String = ""
+    val receiverName: String = "",
+    val roomId: String = ""
 ) {
     enum class Type(val value: Int) {
         INITIATE(0),
@@ -763,7 +764,11 @@ data class CallMessageProto(
         HANGUP(3),
         OFFER(4),
         ANSWER(5),
-        ICE_CANDIDATE(6);
+        ICE_CANDIDATE(6),
+        INITIATE_CONFERENCE(10),
+        JOIN_CONFERENCE(11),
+        LEAVE_CONFERENCE(12),
+        END_CONFERENCE(13);
 
         companion object {
             fun fromInt(value: Int) = values().firstOrNull { it.value == value } ?: INITIATE

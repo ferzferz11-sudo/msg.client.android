@@ -30,6 +30,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var callId: String = ""
     private var receiverId: String = ""
     private var isIncoming: Boolean = false
+    private var isConference: Boolean = false
+    private var roomId: String = ""
     
     private var isMicEnabled = true
     private var isCameraEnabled = false
@@ -64,16 +66,22 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         callId = intent.getStringExtra("CALL_ID") ?: ""
         receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
         isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
+        isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
+        roomId = intent.getStringExtra("ROOM_ID") ?: ""
 
-        Log.d(TAG, "Call details: ID=$callId, Other=$receiverId, Incoming=$isIncoming")
+        Log.d(TAG, "Call details: ID=$callId, Other=$receiverId, Incoming=$isIncoming, Conf=$isConference")
 
         CallManager.init(applicationContext)
-        CallManager.syncCallState(callId, receiverId, isIncoming)
+        if (isConference) {
+             CallManager.joinConference(roomId)
+        } else {
+             CallManager.syncCallState(callId, receiverId, isIncoming)
+        }
         GrpcClient.startCallSession()
 
-        binding.tvCallerName.text = receiverId
+        binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else receiverId
         binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
-        loadOtherParticipantAvatar()
+        if (!isConference) loadOtherParticipantAvatar()
 
         if (isIncoming) {
             binding.btnAccept.visibility = View.VISIBLE
@@ -112,7 +120,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private fun setupButtons() {
         binding.btnHangup.setOnClickListener {
             Log.d(TAG, "Hangup button clicked")
-            if (isIncoming && webRtcClient == null) {
+            if (isConference) {
+                CallManager.leaveConference()
+            } else if (isIncoming && webRtcClient == null) {
                 Log.d(TAG, "Rejecting incoming call")
                 CallManager.rejectCall()
             } else {
@@ -146,6 +156,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             
             // Update UI visibility
             updateVideoVisibility()
+        }
+
+        binding.btnEndForAll.setOnClickListener {
+            Log.d(TAG, "End for all clicked")
+            CallManager.endConference()
+            finish()
         }
     }
 
@@ -213,15 +229,47 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                             Log.e(TAG, "Failed to parse ICE candidate JSON", e)
                         }
                     }
-                    CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP -> {
+                    CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP, CallMessageProto.Type.END_CONFERENCE -> {
                         Log.d(TAG, "Call terminated by peer (${signal.type})")
                         runOnUiThread {
-                            Toast.makeText(this@CallActivity, "Звонок завершен", Toast.LENGTH_SHORT).show()
+                            val msg = if (signal.type == CallMessageProto.Type.END_CONFERENCE) "Конференция завершена организатором" else "Звонок завершен"
+                            Toast.makeText(this@CallActivity, msg, Toast.LENGTH_SHORT).show()
                             finish()
+                        }
+                    }
+                    CallMessageProto.Type.JOIN_CONFERENCE, CallMessageProto.Type.LEAVE_CONFERENCE -> {
+                        if (isConference) {
+                            handleConferencePresence(signal)
                         }
                     }
                     else -> {}
                 }
+            }
+        }
+    }
+
+    private fun handleConferencePresence(signal: CallMessageProto) {
+        if (signal.type == CallMessageProto.Type.JOIN_CONFERENCE) {
+            try {
+                val response = JSONObject(signal.payload)
+                val participants = response.getJSONObject("participants")
+                val creatorId = response.optString("creator_id", "")
+                
+                val names = mutableListOf<String>()
+                val keys = participants.keys()
+                while (keys.hasNext()) {
+                    names.add(participants.getString(keys.next()))
+                }
+                
+                val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+                val isCreator = myId == creatorId
+
+                runOnUiThread {
+                    binding.tvCallStatus.text = getString(R.string.in_conference_format, names.joinToString(", "))
+                    binding.btnEndForAll.visibility = if (isCreator) View.VISIBLE else View.GONE
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse participants", e)
             }
         }
     }
@@ -333,8 +381,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onRemoteDescriptionSet() {
         Log.d(TAG, "onRemoteDescriptionSet: check signaling state")
-        runOnUiThread {
-            binding.tvCallStatus.text = getString(R.string.call_status_connecting)
+        if (!isConference) {
+            runOnUiThread {
+                binding.tvCallStatus.text = getString(R.string.call_status_connecting)
+            }
         }
         // If we are the receiver and just set the OFFER remote description, create ANSWER
         if (isIncoming && webRtcClient != null) {

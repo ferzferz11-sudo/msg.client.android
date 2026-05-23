@@ -689,6 +689,7 @@ class NewChatActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search)?.isVisible = !selectionMode
         menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_")
+        menu.findItem(R.id.action_conference)?.isVisible = !selectionMode && !isDirect && !roomId.startsWith("favorites_")
         
         // Apply custom theme color to search icon
         val iconColor = run {
@@ -703,6 +704,8 @@ class NewChatActivity : AppCompatActivity() {
         }
         
         menu.findItem(R.id.action_search)?.iconTintList = ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_video_call)?.iconTintList = ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_conference)?.iconTintList = ColorStateList.valueOf(iconColor)
         
         // Style menu items with custom theme
         val customTheme = ThemeStore.currentTheme()
@@ -723,8 +726,21 @@ class NewChatActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_search -> { showSearchBar(); true }
             R.id.action_video_call -> { startVideoCall(); true }
+            R.id.action_conference -> { startConference(); true }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun startConference() {
+        if (roomId.isEmpty()) return
+        lavender.client.android.data.calls.CallManager.initiateConference(roomId)
+        
+        val intent = Intent(this, CallActivity::class.java).apply {
+            putExtra("ROOM_ID", roomId)
+            putExtra("IS_INCOMING", false)
+            putExtra("IS_CONFERENCE", true)
+        }
+        startActivity(intent)
     }
 
     private fun startVideoCall() {

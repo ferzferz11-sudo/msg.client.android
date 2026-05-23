@@ -63,8 +63,15 @@ object CallManager {
                     // Optionally send BUSY signal back
                 }
             }
-            CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP -> {
-                if (_currentCall.value?.callId == signal.callId) {
+            CallMessageProto.Type.INITIATE_CONFERENCE -> {
+                if (_currentCall.value == null) {
+                    _currentCall.value = signal
+                    // For conference, receiverId in UI might be the roomId or a special label
+                    launchCallActivity(signal.callId, "Group Conference", true, isConference = true, roomId = signal.roomId)
+                }
+            }
+            CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP, CallMessageProto.Type.END_CONFERENCE -> {
+                if (_currentCall.value?.callId == signal.callId || _currentCall.value?.roomId == signal.roomId) {
                     _currentCall.value = null
                 }
             }
@@ -72,13 +79,15 @@ object CallManager {
         }
     }
 
-    private fun launchCallActivity(callId: String, receiverId: String, isIncoming: Boolean) {
+    private fun launchCallActivity(callId: String, receiverId: String, isIncoming: Boolean, isConference: Boolean = false, roomId: String = "") {
         appContext?.let { context ->
             val intent = Intent(context, CallActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 putExtra("CALL_ID", callId)
                 putExtra("RECEIVER_ID", receiverId)
                 putExtra("IS_INCOMING", isIncoming)
+                putExtra("IS_CONFERENCE", isConference)
+                putExtra("ROOM_ID", roomId)
             }
             context.startActivity(intent)
         }
@@ -171,8 +180,57 @@ object CallManager {
             senderId = senderId,
             receiverId = receiverId,
             type = type,
-            payload = payload
+            payload = payload,
+            roomId = call.roomId
         )
         GrpcClient.sendCallSignal(signal)
+    }
+
+    fun initiateConference(roomId: String) {
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        GrpcClient.startCallSession()
+        val signal = CallMessageProto(
+            senderId = senderId,
+            roomId = roomId,
+            type = CallMessageProto.Type.INITIATE_CONFERENCE
+        )
+        GrpcClient.sendCallSignal(signal)
+        _currentCall.value = signal
+    }
+
+    fun joinConference(roomId: String) {
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        GrpcClient.startCallSession()
+        val signal = CallMessageProto(
+            senderId = senderId,
+            roomId = roomId,
+            type = CallMessageProto.Type.JOIN_CONFERENCE
+        )
+        GrpcClient.sendCallSignal(signal)
+        _currentCall.value = signal
+    }
+
+    fun leaveConference() {
+        val call = _currentCall.value ?: return
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val signal = CallMessageProto(
+            senderId = senderId,
+            roomId = call.roomId,
+            type = CallMessageProto.Type.LEAVE_CONFERENCE
+        )
+        GrpcClient.sendCallSignal(signal)
+        _currentCall.value = null
+    }
+
+    fun endConference() {
+        val call = _currentCall.value ?: return
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val signal = CallMessageProto(
+            senderId = senderId,
+            roomId = call.roomId,
+            type = CallMessageProto.Type.END_CONFERENCE
+        )
+        GrpcClient.sendCallSignal(signal)
+        _currentCall.value = null
     }
 }

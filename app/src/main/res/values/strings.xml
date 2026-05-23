@@ -473,4 +473,8 @@
     <string name="call_status_connected">Connected</string>
     <string name="call_status_calling">Calling…</string>
     <string name="call_status_incoming">Incoming…</string>
+    <string name="conference">Conference</string>
+    <string name="group_conference">Group Conference</string>
+    <string name="in_conference_format">In conference: %s</string>
+    <string name="end_for_all">End for all</string>
 </resources>

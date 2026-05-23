@@ -2882,11 +2882,12 @@ class CallMessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<CallMessa
         if (v.payload.isNotEmpty()) cos.writeString(5, v.payload)
         if (v.senderName.isNotEmpty()) cos.writeString(6, v.senderName)
         if (v.receiverName.isNotEmpty()) cos.writeString(7, v.receiverName)
+        if (v.roomId.isNotEmpty()) cos.writeString(8, v.roomId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): CallMessageProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-        var cid = ""; var sid = ""; var rid = ""; var t = 0; var p = ""; var sn = ""; var rn = ""
+        var cid = ""; var sid = ""; var rid = ""; var t = 0; var p = ""; var sn = ""; var rn = ""; var rm = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
@@ -2897,9 +2898,10 @@ class CallMessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<CallMessa
                 5 -> p = cis.readString()
                 6 -> sn = cis.readString()
                 7 -> rn = cis.readString()
+                8 -> rm = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return CallMessageProto(cid, sid, rid, CallMessageProto.Type.fromInt(t), p, sn, rn)
+        return CallMessageProto(cid, sid, rid, CallMessageProto.Type.fromInt(t), p, sn, rn, rm)
     }
 }
