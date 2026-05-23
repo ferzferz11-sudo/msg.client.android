@@ -307,18 +307,6 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        binding.actionWhatsNew.setOnClickListener {
-            showWhatsNewDialog()
-        }
-        binding.actionWhatsNew.setOnLongClickListener {
-            getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).edit {
-                putBoolean("show_icon", false)
-            }
-            updateUpdateIndicatorVisibility()
-            Toast.makeText(this, "Скрыто до следующего обновления", Toast.LENGTH_SHORT).show()
-            true
-        }
-
         binding.toolbar.setNavigationOnClickListener {
             if (binding.searchCard.isVisible) {
                 hideSearchBar()
@@ -922,7 +910,8 @@ class ChatListActivity : AppCompatActivity() {
         val hasSelection = if (::chatAdapter.isInitialized) chatAdapter.getSelectedChats().isNotEmpty() else false
         val isSearching = binding.searchCard.isVisible
         
-        binding.updateAvailableIcon.isVisible = (isAvailable || isDownloaded || isDownloading) && !hasSelection && !isSearching
+        // Only show if downloading or downloaded (ready to install)
+        binding.updateAvailableIcon.isVisible = (isDownloaded || isDownloading) && !hasSelection && !isSearching
         
         if (isDownloading) {
             binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_rotating)
@@ -940,20 +929,7 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Also update WhatsNew icon visibility
-        val announcementPrefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
-        val currentText = (announcementPrefs.getString("current_text", "") ?: "").trim()
-        val lastReadText = (announcementPrefs.getString("last_read_text", "") ?: "").trim()
-        
-        var showAnnouncement = announcementPrefs.getBoolean("show_icon", false)
-        if (showAnnouncement && currentText.isNotEmpty() && currentText == lastReadText) {
-            announcementPrefs.edit { putBoolean("show_icon", false) }
-            showAnnouncement = false
-        }
-        
-        binding.actionWhatsNew.isVisible = showAnnouncement && !hasSelection && !isSearching
-        
-        Log.d("ChatListActivity", "Update visibility: avail=$isAvailable, down=$isDownloaded, downloading=$isDownloading, star=$showAnnouncement")
+        Log.d("ChatListActivity", "Update visibility: avail=$isAvailable, down=$isDownloaded, downloading=$isDownloading")
     }
 
     private fun setupOnboardingTips() {
@@ -1042,17 +1018,33 @@ class ChatListActivity : AppCompatActivity() {
                 connection.connectTimeout = 5000
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                     val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
-                    val isAvailable = isUpdateAvailable(BuildConfig.VERSION_NAME, latestVersion)
+                    val currentVersion = BuildConfig.VERSION_NAME
+                    val isAvailable = isUpdateAvailable(currentVersion, latestVersion)
                     
-                    getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
+                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                    val isDownloaded = prefs.getBoolean("update_downloaded", false)
+                    val isDownloading = prefs.getBoolean("update_downloading", false)
+
+                    prefs.edit {
                         putBoolean("update_available", isAvailable)
                         putString("latest_version", latestVersion)
+                        
+                        // If we are already on latest version, clear download state
+                        if (!isAvailable) {
+                            putBoolean("update_downloaded", false)
+                            remove("apk_path")
+                        }
                     }
                     
                     withContext(Dispatchers.Main) {
                         updateUpdateIndicatorVisibility()
                         if (isAvailable) {
-                            showUpdateAvailableNotification(latestVersion)
+                            if (!isDownloaded && !isDownloading) {
+                                Log.d("ChatList", "Auto-starting background update download")
+                                startBackgroundDownload(isAuto = true)
+                            } else if (isDownloaded) {
+                                showUpdateAvailableNotification(latestVersion)
+                            }
                         }
                     }
                 }
@@ -1432,13 +1424,24 @@ class ChatListActivity : AppCompatActivity() {
         return false
     }
 
-    private fun startBackgroundDownload() {
+    private fun startBackgroundDownload(isAuto: Boolean = false) {
         getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
             putBoolean("update_downloading", true)
         }
         updateUpdateIndicatorVisibility()
 
+        val constraintsBuilder = androidx.work.Constraints.Builder()
+        
+        if (isAuto) {
+            // More strict for auto-downloads to avoid battery/data drain
+            constraintsBuilder.setRequiredNetworkType(androidx.work.NetworkType.UNMETERED)
+            constraintsBuilder.setRequiresBatteryNotLow(true)
+        } else {
+            constraintsBuilder.setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+        }
+
         val workRequest = OneTimeWorkRequestBuilder<DownloadUpdateWorker>()
+            .setConstraints(constraintsBuilder.build())
             .build()
         WorkManager.getInstance(this).enqueueUniqueWork(
             "update_download",

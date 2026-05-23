@@ -73,17 +73,6 @@
                 app:tint="?attr/colorOnPrimary"
                 android:contentDescription="@string/update_available" />
 
-            <ImageView
-                android:id="@+id/actionWhatsNew"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="4dp"
-                android:padding="8dp"
-                android:src="@drawable/ic_star"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:visibility="gone"
-                android:contentDescription="@string/whats_new"
-                app:tint="?attr/colorOnPrimary" />
 
             <ImageView
                 android:id="@+id/actionSearch"

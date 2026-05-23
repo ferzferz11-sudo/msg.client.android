@@ -59,7 +59,7 @@ object UpdateUtils {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_checked)
+            .setSmallIcon(R.drawable.ic_install_update)
             .setContentTitle("Update Ready")
             .setContentText("A new version of Lavender is ready to install.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)

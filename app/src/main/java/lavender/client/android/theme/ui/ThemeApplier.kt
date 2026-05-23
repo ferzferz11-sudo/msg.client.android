@@ -98,7 +98,7 @@ object ThemeApplier {
             setNavigationIconTint(customOnPrimary)
             
             // Tint action icons
-            val actions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionWhatsNew)
+            val actions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon)
             actions.forEach { id ->
                 findViewById<ImageView>(id)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
             }
