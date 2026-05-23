@@ -131,7 +131,7 @@ class EditProfileActivity : AppCompatActivity() {
         }
 
         // Load current avatar and full avatar URL
-        grpcClient.getUserAvatar(username) { avatarUrl ->
+        grpcClient.getUserAvatar(username, grpcClient.getUserId() ?: "") { avatarUrl ->
             runOnUiThread {
                 val currentTheme = ThemeStore.currentTheme()
                 if (avatarUrl.isNotEmpty()) {

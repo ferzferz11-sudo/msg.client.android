@@ -396,7 +396,7 @@ class ProfileActivity : AppCompatActivity() {
                         if (profile != null && profile.avatarUrl.isNotEmpty()) {
                             avatarUrl = profile.avatarUrl
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
-                            grpcClient.getUserAvatar(username) { _ -> }
+                            grpcClient.getUserAvatar(username, userId) { _ -> }
                         }
                     }
                 }

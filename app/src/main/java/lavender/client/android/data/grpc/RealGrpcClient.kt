@@ -732,7 +732,7 @@ object RealGrpcClient {
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {
-        typingRequestObserver?.onNext(TypingRequestProto(currentRoomId, username, isTyping))
+        typingRequestObserver?.onNext(TypingRequestProto(currentRoomId, username, isTyping, currentUserId ?: ""))
     }
 
     fun startCallSession() {
@@ -932,7 +932,7 @@ object RealGrpcClient {
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<TokenResponseProto>() {}, io.grpc.Metadata())
-        call.sendMessage(TokenRequestProto(user, token, pushEnabled))
+        call.sendMessage(TokenRequestProto(user, token, pushEnabled, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1196,7 +1196,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun getUserAvatar(username: String, callback: (String) -> Unit) {
+    fun getUserAvatar(username: String, userId: String = "", callback: (String) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserAvatarRequestProto, GetUserAvatarResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1212,7 +1212,7 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetUserAvatarRequestProto(username))
+        call.sendMessage(GetUserAvatarRequestProto(username, userId))
         call.halfClose()
         call.request(1)
     }
@@ -1311,7 +1311,7 @@ object RealGrpcClient {
             override fun onMessage(message: UpdateUsernameResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(UpdateUsernameRequestProto(ou, nu))
+        call.sendMessage(UpdateUsernameRequestProto(ou, nu, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1329,7 +1329,7 @@ object RealGrpcClient {
             override fun onMessage(message: UpdatePasswordResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(UpdatePasswordRequestProto(u, op, np))
+        call.sendMessage(UpdatePasswordRequestProto(u, op, np, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1347,7 +1347,7 @@ object RealGrpcClient {
             override fun onMessage(message: AdminUpdatePasswordResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(AdminUpdatePasswordRequestProto(tu, np, au))
+        call.sendMessage(AdminUpdatePasswordRequestProto(tu, np, au, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1453,7 +1453,7 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(DeleteChatRequestProto(cid, requesterUsername))
+        call.sendMessage(DeleteChatRequestProto(cid, requesterUsername, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1471,7 +1471,11 @@ object RealGrpcClient {
             override fun onMessage(message: CreateDirectChatResponseProto) { if (message.success) cb(message.chatId) else cb(null) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(null) }
         }, io.grpc.Metadata())
-        call.sendMessage(CreateDirectChatRequestProto(u1, u2))
+        
+        // We know u1 is the current user if called from most places, but let's be careful.
+        // Actually, usually user1 is the one who initiates.
+        val u1Id = if (u1 == currentUsername) currentUserId ?: "" else ""
+        call.sendMessage(CreateDirectChatRequestProto(u1, u2, u1Id, ""))
         call.halfClose()
         call.request(1)
     }
@@ -1489,7 +1493,7 @@ object RealGrpcClient {
             override fun onMessage(message: CreateGroupChatResponseProto) { if (message.success) cb(message.chatId) else cb(null) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(null) }
         }, io.grpc.Metadata())
-        call.sendMessage(CreateGroupChatRequestProto(n, ps, c))
+        call.sendMessage(CreateGroupChatRequestProto(n, ps, c, currentUserId ?: "", emptyList()))
         call.halfClose()
         call.request(1)
     }
@@ -1507,7 +1511,7 @@ object RealGrpcClient {
             override fun onMessage(message: UpdateChatAvatarResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(UpdateChatAvatarRequestProto(cid, a, u, fa))
+        call.sendMessage(UpdateChatAvatarRequestProto(cid, a, u, fa, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -1554,7 +1558,10 @@ object RealGrpcClient {
             override fun onMessage(message: AddParticipantResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(AddParticipantRequestProto(cid, u))
+        
+        // Check if u is current user (unlikely for addParticipant but good for consistency)
+        val uId = if (u == currentUsername) currentUserId ?: "" else ""
+        call.sendMessage(AddParticipantRequestProto(cid, u, uId))
         call.halfClose()
         call.request(1)
     }
@@ -1572,7 +1579,9 @@ object RealGrpcClient {
             override fun onMessage(message: RemoveParticipantResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
-        call.sendMessage(RemoveParticipantRequestProto(cid, u))
+        
+        val uId = if (u == currentUsername) currentUserId ?: "" else ""
+        call.sendMessage(RemoveParticipantRequestProto(cid, u, uId))
         call.halfClose()
         call.request(1)
     }
@@ -1952,6 +1961,7 @@ class TypingRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingReques
     override fun stream(v: TypingRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId); if (v.username.isNotEmpty()) cos.writeString(2, v.username); if (v.isTyping) cos.writeBool(3, v.isTyping)
+        if (v.userId.isNotEmpty()) cos.writeString(4, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): TypingRequestProto = TypingRequestProto()
@@ -2012,6 +2022,7 @@ class TokenRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TokenRequestP
     override fun stream(v: TokenRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.user.isNotEmpty()) cos.writeString(1, v.user); if (v.token.isNotEmpty()) cos.writeString(2, v.token); if (v.pushEnabled) cos.writeBool(3, v.pushEnabled)
+        if (v.userId.isNotEmpty()) cos.writeString(4, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): TokenRequestProto = TokenRequestProto()
@@ -2219,7 +2230,11 @@ class MarkReadRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<MarkReadRe
         if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId); if (v.username.isNotEmpty()) cos.writeString(2, v.username); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
-    override fun parse(s: java.io.InputStream): MarkReadRequestProto = MarkReadRequestProto()
+    override fun parse(s: java.io.InputStream): MarkReadRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var rid = ""; var u = ""; var uid = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> rid = cis.readString(); 2 -> u = cis.readString(); 3 -> uid = cis.readString(); else -> cis.skipField(tag) } }
+        return MarkReadRequestProto(rid, u, uid)
+    }
 }
 
 class MarkReadResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<MarkReadResponseProto> {
@@ -2236,6 +2251,7 @@ class DeleteChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteCh
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
         if (v.requesterUsername.isNotEmpty()) cos.writeString(2, v.requesterUsername)
+        if (v.requesterUserId.isNotEmpty()) cos.writeString(3, v.requesterUserId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): DeleteChatRequestProto = DeleteChatRequestProto()
@@ -2272,6 +2288,7 @@ class GetUserAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUs
     override fun stream(v: GetUserAvatarRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetUserAvatarRequestProto = GetUserAvatarRequestProto()
@@ -2345,6 +2362,7 @@ class UpdateUsernameRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Upda
     override fun stream(v: UpdateUsernameRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.oldUsername.isNotEmpty()) cos.writeString(1, v.oldUsername); if (v.newUsername.isNotEmpty()) cos.writeString(2, v.newUsername)
+        if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UpdateUsernameRequestProto = UpdateUsernameRequestProto()
@@ -2363,6 +2381,7 @@ class UpdatePasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Upda
     override fun stream(v: UpdatePasswordRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.oldPassword.isNotEmpty()) cos.writeString(2, v.oldPassword); if (v.newPassword.isNotEmpty()) cos.writeString(3, v.newPassword)
+        if (v.userId.isNotEmpty()) cos.writeString(4, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UpdatePasswordRequestProto = UpdatePasswordRequestProto()
@@ -2381,6 +2400,7 @@ class CreateDirectChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Cr
     override fun stream(v: CreateDirectChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.user1.isNotEmpty()) cos.writeString(1, v.user1); if (v.user2.isNotEmpty()) cos.writeString(2, v.user2)
+        if (v.user1Id.isNotEmpty()) cos.writeString(3, v.user1Id); if (v.user2Id.isNotEmpty()) cos.writeString(4, v.user2Id)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): CreateDirectChatRequestProto = CreateDirectChatRequestProto()
@@ -2399,6 +2419,7 @@ class CreateGroupChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Cre
     override fun stream(v: CreateGroupChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.name.isNotEmpty()) cos.writeString(1, v.name); for (p in v.participants) cos.writeString(2, p); if (v.creator.isNotEmpty()) cos.writeString(3, v.creator)
+        if (v.creatorId.isNotEmpty()) cos.writeString(4, v.creatorId); for (pid in v.participantIds) cos.writeString(5, pid)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): CreateGroupChatRequestProto = CreateGroupChatRequestProto()
@@ -2456,6 +2477,7 @@ class UpdateChatAvatarRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Up
     override fun stream(v: UpdateChatAvatarRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.avatarUrl.isNotEmpty()) cos.writeString(2, v.avatarUrl); if (v.username.isNotEmpty()) cos.writeString(3, v.username); if (v.fullAvatarUrl.isNotEmpty()) cos.writeString(4, v.fullAvatarUrl)
+        if (v.userId.isNotEmpty()) cos.writeString(5, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UpdateChatAvatarRequestProto = UpdateChatAvatarRequestProto()
@@ -2474,6 +2496,7 @@ class AddParticipantRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddP
     override fun stream(v: AddParticipantRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.username.isNotEmpty()) cos.writeString(2, v.username)
+        if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): AddParticipantRequestProto = AddParticipantRequestProto()
@@ -2492,6 +2515,7 @@ class RemoveParticipantRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<R
     override fun stream(v: RemoveParticipantRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.username.isNotEmpty()) cos.writeString(2, v.username)
+        if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): RemoveParticipantRequestProto = RemoveParticipantRequestProto()
@@ -2858,6 +2882,7 @@ class AdminUpdatePasswordRequestMarshaller : io.grpc.MethodDescriptor.Marshaller
         if (v.targetUsername.isNotEmpty()) cos.writeString(1, v.targetUsername)
         if (v.newPassword.isNotEmpty()) cos.writeString(2, v.newPassword)
         if (v.adminUsername.isNotEmpty()) cos.writeString(3, v.adminUsername)
+        if (v.adminUserId.isNotEmpty()) cos.writeString(4, v.adminUserId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): AdminUpdatePasswordRequestProto = AdminUpdatePasswordRequestProto()

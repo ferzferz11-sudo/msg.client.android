@@ -1240,15 +1240,16 @@ class NewChatActivity : AppCompatActivity() {
                     onChatSelected = { targetChat ->
                         bottomSheet.dismiss()
                         selectedMessages.forEach { message ->
-                            val forwardedMessage = Message(
-                                user = username,
-                                text = message.text,
-                                timestamp = System.currentTimeMillis(),
-                                roomId = targetChat.id,
-                                imageUrl = message.imageUrl,
-                                voiceUrl = message.voiceUrl,
-                                duration = message.duration
-                            )
+                                val forwardedMessage = Message(
+                                    user = username,
+                                    text = message.text,
+                                    timestamp = System.currentTimeMillis(),
+                                    roomId = targetChat.id,
+                                    imageUrl = message.imageUrl,
+                                    voiceUrl = message.voiceUrl,
+                                    duration = message.duration,
+                                    userId = grpcClient.getUserId() ?: ""
+                                )
                             grpcClient.sendMessage(forwardedMessage)
                         }
                         showToast(getString(R.string.messages_forwarded))
@@ -1344,6 +1345,7 @@ class NewChatActivity : AppCompatActivity() {
             repliedToMessageId = replyingTo?.id ?: "", 
             repliedToUser = replyingTo?.user ?: "", 
             repliedToText = replyingTo?.text ?: "",
+            userId = grpcClient.getUserId() ?: "",
             isSent = false
         )
         
@@ -1548,7 +1550,7 @@ class NewChatActivity : AppCompatActivity() {
             runOnUiThread {
                 uploadProgressBar.isVisible = false; audioButton.isVisible = true
                 if (result.success && result.url.isNotEmpty() && !result.url.contains("404")) {
-                    grpcClient.sendMessage(Message(user = username, text = "Voice message", timestamp = System.currentTimeMillis(), roomId = roomId, voiceUrl = result.url, duration = result.duration))
+                    grpcClient.sendMessage(Message(user = username, text = "Voice message", timestamp = System.currentTimeMillis(), roomId = roomId, voiceUrl = result.url, duration = result.duration, userId = grpcClient.getUserId() ?: ""))
                 } else {
                     showToast("Failed to upload audio: ${if (result.url.contains("404")) "Server error 404" else result.error}")
                 }
@@ -1688,6 +1690,7 @@ class NewChatActivity : AppCompatActivity() {
             repliedToMessageId = replyingTo?.id ?: "", 
             repliedToUser = replyingTo?.user ?: "", 
             repliedToText = replyingTo?.text ?: "",
+            userId = grpcClient.getUserId() ?: "",
             isSent = false
         )
         

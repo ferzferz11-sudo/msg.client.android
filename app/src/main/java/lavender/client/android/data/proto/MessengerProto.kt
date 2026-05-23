@@ -217,7 +217,8 @@ data class MarkReadResponseProto(
 // Delete Chat Request/Response
 data class DeleteChatRequestProto(
     val chatId: String = "",
-    val requesterUsername: String = ""
+    val requesterUsername: String = "",
+    val requesterUserId: String = ""
 )
 
 data class DeleteChatResponseProto(
@@ -238,7 +239,9 @@ data class GetChatsResponseProto(
 // Create Direct Chat Request/Response
 data class CreateDirectChatRequestProto(
     val user1: String = "",
-    val user2: String = ""
+    val user2: String = "",
+    val user1Id: String = "",
+    val user2Id: String = ""
 )
 
 data class CreateDirectChatResponseProto(
@@ -250,7 +253,9 @@ data class CreateDirectChatResponseProto(
 data class CreateGroupChatRequestProto(
     val name: String = "",
     val participants: List<String> = emptyList(),
-    val creator: String = ""
+    val creator: String = "",
+    val creatorId: String = "",
+    val participantIds: List<String> = emptyList()
 )
 
 data class CreateGroupChatResponseProto(
@@ -261,7 +266,8 @@ data class CreateGroupChatResponseProto(
 // Update Username Request/Response
 data class UpdateUsernameRequestProto(
     val oldUsername: String = "",
-    val newUsername: String = ""
+    val newUsername: String = "",
+    val userId: String = ""
 )
 
 data class UpdateUsernameResponseProto(
@@ -273,7 +279,8 @@ data class UpdateUsernameResponseProto(
 data class UpdatePasswordRequestProto(
     val username: String = "",
     val oldPassword: String = "",
-    val newPassword: String = ""
+    val newPassword: String = "",
+    val userId: String = ""
 )
 
 data class UpdatePasswordResponseProto(
@@ -284,7 +291,8 @@ data class UpdatePasswordResponseProto(
 data class AdminUpdatePasswordRequestProto(
     val targetUsername: String = "",
     val newPassword: String = "",
-    val adminUsername: String = ""
+    val adminUsername: String = "",
+    val adminUserId: String = ""
 )
 
 data class AdminUpdatePasswordResponseProto(
@@ -334,7 +342,8 @@ data class DeleteMessagesResponseProto(
 data class TokenRequestProto(
     val user: String = "",
     val token: String = "",
-    val pushEnabled: Boolean = true
+    val pushEnabled: Boolean = true,
+    val userId: String = ""
 )
 
 data class TokenResponseProto(
@@ -383,7 +392,8 @@ data class GetUserProfileResponseProto(
 // Participants management
 data class AddParticipantRequestProto(
     val chatId: String = "",
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class AddParticipantResponseProto(
@@ -393,7 +403,8 @@ data class AddParticipantResponseProto(
 
 data class RemoveParticipantRequestProto(
     val chatId: String = "",
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class RemoveParticipantResponseProto(
@@ -434,7 +445,8 @@ data class UpdateChatAvatarRequestProto(
     val chatId: String = "",
     val avatarUrl: String = "",
     val username: String = "",
-    val fullAvatarUrl: String = ""
+    val fullAvatarUrl: String = "",
+    val userId: String = ""
 )
 
 data class UpdateChatAvatarResponseProto(
@@ -444,7 +456,8 @@ data class UpdateChatAvatarResponseProto(
 
 // Get User Avatar Request/Response
 data class GetUserAvatarRequestProto(
-    val username: String = ""
+    val username: String = "",
+    val userId: String = ""
 )
 
 data class GetUserAvatarResponseProto(
@@ -467,7 +480,8 @@ data class DeleteProfileResponseProto(
 data class TypingRequestProto(
     val roomId: String = "",
     val username: String = "",
-    val isTyping: Boolean = false
+    val isTyping: Boolean = false,
+    val userId: String = ""
 )
 
 data class TypingSignalProto(
