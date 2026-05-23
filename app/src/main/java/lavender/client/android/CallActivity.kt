@@ -11,7 +11,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import lavender.client.android.databinding.ActivityCallBinding
@@ -30,7 +32,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var isIncoming: Boolean = false
     
     private var isMicEnabled = true
-    private var isCameraEnabled = true
+    private var isCameraEnabled = false
 
     private lateinit var audioManager: AudioManager
     private var oldAudioMode: Int = AudioManager.MODE_NORMAL
@@ -70,6 +72,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         GrpcClient.startCallSession()
 
         binding.tvCallerName.text = receiverId
+        binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
+        loadOtherParticipantAvatar()
 
         if (isIncoming) {
             binding.btnAccept.visibility = View.VISIBLE
@@ -139,6 +143,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             Log.d(TAG, "Camera toggle: $isCameraEnabled")
             webRtcClient?.toggleCamera(isCameraEnabled)
             binding.btnCamera.setImageResource(if (isCameraEnabled) R.drawable.ic_videocam_on else R.drawable.ic_videocam_off)
+            
+            // Update UI visibility
+            updateVideoVisibility()
         }
     }
 
@@ -253,6 +260,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             isLocalViewInitialized = true
         }
         webRtcClient?.startLocalStream(binding.localView)
+        
+        // Ensure initial camera state is applied
+        webRtcClient?.toggleCamera(isCameraEnabled)
+        updateVideoVisibility()
     }
 
     override fun onLocalStream(stream: MediaStream) {
@@ -307,19 +318,64 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     override fun onOfferCreated(description: SessionDescription) {
         Log.d(TAG, "WebRTC Offer created")
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.OFFER, description.description)
+        runOnUiThread {
+            binding.tvCallStatus.text = getString(R.string.call_status_connecting)
+        }
     }
 
     override fun onAnswerCreated(description: SessionDescription) {
         Log.d(TAG, "WebRTC Answer created")
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
+        runOnUiThread {
+            binding.tvCallStatus.text = getString(R.string.call_status_connected)
+        }
     }
 
     override fun onRemoteDescriptionSet() {
         Log.d(TAG, "onRemoteDescriptionSet: check signaling state")
+        runOnUiThread {
+            binding.tvCallStatus.text = getString(R.string.call_status_connecting)
+        }
         // If we are the receiver and just set the OFFER remote description, create ANSWER
         if (isIncoming && webRtcClient != null) {
             Log.d(TAG, "Creating WebRTC Answer now that remote description is set")
             webRtcClient?.createAnswer()
+        }
+    }
+
+    private fun loadOtherParticipantAvatar() {
+        val otherUser = receiverId
+        if (otherUser.isEmpty()) return
+
+        GrpcClient.getUserAvatar(otherUser) { avatarUrl ->
+            if (avatarUrl.isNotEmpty()) {
+                runOnUiThread {
+                    Glide.with(this@CallActivity)
+                        .load(avatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar)
+                        .into(binding.imgAvatar)
+
+                    // Also load into background for blur effect
+                    Glide.with(this@CallActivity)
+                        .load(avatarUrl)
+                        .centerCrop()
+                        .into(binding.imgBgBlur)
+                }
+            }
+        }
+    }
+
+    private fun updateVideoVisibility() {
+        runOnUiThread {
+            if (isCameraEnabled) {
+                binding.localView.visibility = View.VISIBLE
+                binding.remoteView.visibility = View.VISIBLE
+                binding.imgAvatar.visibility = View.GONE
+            } else {
+                binding.localView.visibility = View.GONE
+                binding.remoteView.visibility = View.GONE
+                binding.imgAvatar.visibility = View.VISIBLE
+            }
         }
     }
 

@@ -477,4 +477,8 @@
     <string name="message_already_sent">Сообщение уже на сервере</string>
     <string name="today">Сегодня</string>
     <string name="yesterday">Вчера</string>
+    <string name="call_status_connecting">Подключение…</string>
+    <string name="call_status_connected">Подключено</string>
+    <string name="call_status_calling">Вызов…</string>
+    <string name="call_status_incoming">Входящий вызов…</string>
 </resources>

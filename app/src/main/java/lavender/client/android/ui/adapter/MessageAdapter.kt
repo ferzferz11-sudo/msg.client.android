@@ -231,6 +231,8 @@ class MessageAdapter(
 
             // 2. Alignment
             val lp = messageContainer.layoutParams
+            val isSystem = message.user == "SYSTEM"
+            
             if (lp is RelativeLayout.LayoutParams) {
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_START)
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_END)
@@ -238,8 +240,13 @@ class MessageAdapter(
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_RIGHT)
                 lp.removeRule(RelativeLayout.END_OF)
                 lp.removeRule(RelativeLayout.RIGHT_OF)
+                lp.removeRule(RelativeLayout.CENTER_HORIZONTAL)
 
-                if (isOutgoing) {
+                if (isSystem) {
+                    lp.addRule(RelativeLayout.CENTER_HORIZONTAL)
+                    lp.marginStart = 40.dpToPx()
+                    lp.marginEnd = 40.dpToPx()
+                } else if (isOutgoing) {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_END)
                     lp.marginStart = 40.dpToPx()
                     lp.marginEnd = 0
@@ -252,7 +259,7 @@ class MessageAdapter(
                     lp.marginEnd = 40.dpToPx()
                 }
                 
-                lp.topMargin = if (isConsecutive) 2.dpToPx() else 8.dpToPx()
+                lp.topMargin = if (isConsecutive && !isSystem) 2.dpToPx() else 8.dpToPx()
                 messageContainer.layoutParams = lp
             }
 
@@ -271,27 +278,41 @@ class MessageAdapter(
                 if (isOutgoing) "#1A1B46".toColorInt() else "#6A1B9A".toColorInt()
             }
 
-            // 1. Устанавливаем Drawable (Важно сделать это ПЕРЕД тинтом)
-            val bubbleRes = if (isOutgoing) R.drawable.bg_message_outgoing else R.drawable.bg_message_incoming
-            messageBubble.setBackgroundResource(bubbleRes)
-
-            // 2. Применяем тинт (покраску)
-            messageBubble.backgroundTintList = ColorStateList.valueOf(finalSurfaceColor)
-
-            // 3. Красим тексты
-            messageText.setTextColor(pTextColor)
-            messageText.setLinkTextColor(pTextColor)
-
-            // Для времени и статуса делаем чуть прозрачнее (80% непрозрачности), чтобы не сливалось
             val secondaryColorWithAlpha = (sTextColor and 0x00FFFFFF) or (0xCC shl 24)
-            timeText.setTextColor(secondaryColorWithAlpha)
-            editedText.setTextColor(secondaryColorWithAlpha)
 
-            // 4. Status (Галочки)
-            readStatusIcon.isVisible = isOutgoing
+            // 1. Устанавливаем Drawable (Важно сделать это ПЕРЕД тинтом)
+            if (isSystem) {
+                messageBubble.setBackgroundResource(R.drawable.bg_date_separator)
+                messageBubble.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(Color.GRAY, 0.4f))
+                
+                messageText.setTextColor(Color.WHITE)
+                messageText.textSize = 13f
+                timeText.isVisible = false
+                readStatusIcon.isVisible = false
+                avatarImageView.isVisible = false
+                userText.isVisible = false
+            } else {
+                val bubbleRes = if (isOutgoing) R.drawable.bg_message_outgoing else R.drawable.bg_message_incoming
+                messageBubble.setBackgroundResource(bubbleRes)
+
+                // 2. Применяем тинт (покраску)
+                messageBubble.backgroundTintList = ColorStateList.valueOf(finalSurfaceColor)
+
+                // 3. Красим тексты
+                messageText.setTextColor(pTextColor)
+                messageText.setLinkTextColor(pTextColor)
+                messageText.textSize = 16f
+
+                // Для времени и статуса делаем чуть прозрачнее (80% непрозрачности), чтобы не сливалось
+                timeText.setTextColor(secondaryColorWithAlpha)
+                timeText.isVisible = !shouldHideTime
+                editedText.setTextColor(secondaryColorWithAlpha)
+                
+                readStatusIcon.isVisible = isOutgoing
+            }
             if (isOutgoing) {
                 val isRead = message.isRead || chatId.startsWith("favorites_")
-                val isTimedOut = !message.isSent && (System.currentTimeMillis() - message.timestamp > 5 * 60 * 1000)
+                val isTimedOut = !message.isSent && (System.currentTimeMillis() - message.timestamp > 60 * 1000)
                 
                 val icon = when {
                     isTimedOut -> R.drawable.ic_loading_renew
