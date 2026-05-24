@@ -147,6 +147,7 @@
     <string name="exit">Exit</string>
     <string name="disconnected">Disconnected</string>
     <string name="connecting">Connecting…</string>
+    <string name="waiting_for_network">Waiting for network…</string>
     <string name="connected">Connected</string>
     <plurals name="online_count">
         <item quantity="one">%d user online</item>

@@ -207,6 +207,7 @@ object ThemeApplier {
 
         activity.findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
         activity.findViewById<TextView>(R.id.toolbarTitle)?.setTextColor(customOnPrimary)
+        (activity.findViewById<View>(R.id.toolbarSubtitle) as? TextView)?.setTextColor(adjustAlpha(customOnPrimary, 0.8f))
         activity.findViewById<TextView>(R.id.updateProgressText)?.setTextColor(customOnPrimary)
         activity.findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(textSecondary)
         

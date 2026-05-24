@@ -89,7 +89,6 @@ class ContactsActivity : AppCompatActivity() {
         }
 
         setupRecyclerView()
-        loadContacts()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -169,6 +168,7 @@ class ContactsActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         adapter = UserAdapter(
+            lifecycleScope,
             onUserClick = { selectedUser ->
                 adapter.toggleSelection(selectedUser)
             },
@@ -260,11 +260,12 @@ class ContactsActivity : AppCompatActivity() {
             searchInputLayout.defaultHintTextColor = boxColor
         } catch (_: Exception) {}
 
-        val allUsers = mutableListOf<String>()
-        val filteredUsers = mutableListOf<String>()
+        val allUsersNames = mutableListOf<String>()
+        val filteredUsersNames = mutableListOf<String>()
         
         lateinit var userAdapter: UserAdapter
         userAdapter = UserAdapter(
+            lifecycleScope,
             onUserClick = { selected ->
                 userAdapter.toggleSelection(selected)
             },
@@ -281,21 +282,22 @@ class ContactsActivity : AppCompatActivity() {
 
         grpcClient.loadAllUsers()
         lifecycleScope.launch {
-            kotlinx.coroutines.delay(500)
-            allUsers.clear()
-            allUsers.addAll(grpcClient.allUsers.value.filter { it.username != username && !contacts.contains(it.username) }.map { it.username })
-            filteredUsers.clear()
-            filteredUsers.addAll(allUsers)
-            runOnUiThread { userAdapter.setUsers(filteredUsers) }
+            grpcClient.allUsers.collect { allUsers ->
+                allUsersNames.clear()
+                allUsersNames.addAll(allUsers.filter { it.username != username && !contacts.contains(it.username) }.map { it.username })
+                filteredUsersNames.clear()
+                filteredUsersNames.addAll(allUsersNames)
+                runOnUiThread { userAdapter.setUsers(filteredUsersNames) }
+            }
         }
 
         searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s.toString().lowercase()
-                filteredUsers.clear()
-                filteredUsers.addAll(allUsers.filter { it.lowercase().contains(query) })
-                userAdapter.setUsers(filteredUsers)
+                filteredUsersNames.clear()
+                filteredUsersNames.addAll(allUsersNames.filter { it.lowercase().contains(query) })
+                userAdapter.setUsers(filteredUsersNames)
             }
             override fun afterTextChanged(s: Editable?) {}
         })

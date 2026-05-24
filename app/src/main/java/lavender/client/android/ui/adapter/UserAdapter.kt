@@ -1,6 +1,7 @@
 package lavender.client.android.ui.adapter
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
@@ -9,15 +10,21 @@ import android.widget.CheckBox
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.card.MaterialCardView
-import de.hdodenhof.circleimageview.CircleImageView
+import com.google.android.material.imageview.ShapeableImageView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
 class UserAdapter(
+    private val scope: CoroutineScope,
     private val onUserClick: (String) -> Unit,
     private val onUserLongClick: ((String) -> Unit)? = null,
     private val onSelectionChanged: ((Int) -> Unit)? = null,
@@ -29,48 +36,108 @@ class UserAdapter(
     private var fullUsersList = listOf<String>()
     private val selectedUsers = mutableSetOf<String>()
 
-    @SuppressLint("NotifyDataSetChanged")
+    // Pre-calculated theme values for performance
+    private var cachedPrimaryColor: Int = 0
+    private var cachedOnSurface: Int = 0
+    private var cachedTextPrimary: Int = 0
+    private var cachedTextSecondary: Int = 0
+    private var cachedPrimaryAlpha: Int = 0
+    private var cachedSurfaceAlpha: Int = 0
+    private var density: Float = 1f
+    private var colorsInitialized = false
+    private var currentTheme: lavender.client.android.theme.Theme? = null
+
+    private fun initColors(view: View) {
+        if (colorsInitialized) return
+        val theme = ThemeStore.currentTheme()
+        currentTheme = theme
+        cachedPrimaryColor = theme.primaryColor.toColorInt()
+        cachedOnSurface = theme.onSurfaceColor.toColorInt()
+        cachedTextPrimary = theme.textPrimaryColor.toColorInt()
+        cachedTextSecondary = theme.textSecondaryColor.toColorInt()
+        cachedPrimaryAlpha = adjustAlpha(cachedPrimaryColor, 0.2f)
+        cachedSurfaceAlpha = adjustAlpha(cachedOnSurface, 0.05f)
+        density = view.resources.displayMetrics.density
+        colorsInitialized = true
+    }
+
+    fun updateTheme() {
+        colorsInitialized = false
+        notifyItemRangeChanged(0, itemCount)
+    }
+
     fun setUsers(newUsers: List<String>) {
-        users = newUsers
-        fullUsersList = newUsers
-        notifyDataSetChanged()
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun filter(query: String) {
-        users = if (query.isEmpty()) {
-            fullUsersList
-        } else {
-            fullUsersList.filter { it.lowercase().contains(query.lowercase()) }
+        scope.launch(Dispatchers.Default) {
+            val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+                override fun getOldListSize() = users.size
+                override fun getNewListSize() = newUsers.size
+                override fun areItemsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == newUsers[newPos]
+                override fun areContentsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == newUsers[newPos]
+            })
+            withContext(Dispatchers.Main) {
+                users = newUsers
+                fullUsersList = newUsers
+                diffResult.dispatchUpdatesTo(this@UserAdapter)
+            }
         }
-        notifyDataSetChanged()
     }
 
-    @SuppressLint("NotifyDataSetChanged")
+    fun filter(query: String) {
+        scope.launch(Dispatchers.Default) {
+            val filtered = if (query.isEmpty()) {
+                fullUsersList
+            } else {
+                val q = query.lowercase()
+                fullUsersList.filter { it.lowercase().contains(q) }
+            }
+            
+            val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+                override fun getOldListSize() = users.size
+                override fun getNewListSize() = filtered.size
+                override fun areItemsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == filtered[newPos]
+                override fun areContentsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == filtered[newPos]
+            })
+            withContext(Dispatchers.Main) {
+                users = filtered
+                diffResult.dispatchUpdatesTo(this@UserAdapter)
+            }
+        }
+    }
+
     fun setOnlineUsers(newOnlineUsers: List<String>) {
+        if (onlineUsers == newOnlineUsers) return
+        val oldOnline = onlineUsers
         onlineUsers = newOnlineUsers
-        notifyDataSetChanged()
+        users.forEachIndexed { index, username ->
+            val wasOnline = oldOnline.contains(username)
+            val isOnline = newOnlineUsers.contains(username)
+            if (wasOnline != isOnline) {
+                notifyItemChanged(index, "status")
+            }
+        }
     }
 
     fun getSelectedUser(): String? = if (selectedUsers.isNotEmpty()) selectedUsers.first() else null
-
     fun getSelectedUsers(): List<String> = selectedUsers.toList()
 
-    @SuppressLint("NotifyDataSetChanged")
     fun clearSelection() {
+        if (selectedUsers.isEmpty()) return
         selectedUsers.clear()
-        notifyDataSetChanged()
+        // Use payload to only update checkbox/selection UI, skipping avatar rebinding
+        notifyItemRangeChanged(0, itemCount, "selection_mode")
         onSelectionChanged?.invoke(0)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun toggleSelection(username: String) {
         if (selectedUsers.contains(username)) {
             selectedUsers.remove(username)
         } else {
             selectedUsers.add(username)
         }
-        notifyDataSetChanged()
+        val index = users.indexOf(username)
+        if (index != -1) {
+            notifyItemChanged(index, "selection")
+        }
         onSelectionChanged?.invoke(selectedUsers.size)
     }
 
@@ -80,8 +147,20 @@ class UserAdapter(
     }
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
-        val user = users[position]
-        holder.bind(user, selectedUsers.contains(user))
+        holder.bind(users[position], selectedUsers.contains(users[position]))
+    }
+
+    override fun onBindViewHolder(holder: UserViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isEmpty()) {
+            super.onBindViewHolder(holder, position, payloads)
+        } else {
+            for (payload in payloads) {
+                when (payload) {
+                    "status" -> holder.updateStatus(users[position])
+                    "selection", "selection_mode" -> holder.updateSelection(selectedUsers.contains(users[position]), selectedUsers.isNotEmpty())
+                }
+            }
+        }
     }
 
     override fun getItemCount(): Int = users.size
@@ -89,58 +168,59 @@ class UserAdapter(
     inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: MaterialCardView = itemView as MaterialCardView
         private val usernameText: TextView = itemView.findViewById(R.id.usernameText)
-        private val userAvatar: CircleImageView = itemView.findViewById(R.id.userAvatar)
+        private val userAvatar: ShapeableImageView = itemView.findViewById(R.id.userAvatar)
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
         private val checkBox: CheckBox = itemView.findViewById(R.id.userCheckBox)
 
-        fun bind(username: String, isSelected: Boolean) {
-            usernameText.text = username
-            val isOnline = onlineUsers.contains(username)
-            statusIndicator.isVisible = isOnline
-            checkBox.isChecked = isSelected
-            checkBox.isVisible = selectedUsers.isNotEmpty()
+        fun updateStatus(username: String) {
+            statusIndicator.isVisible = onlineUsers.contains(username)
+        }
 
-            val currentTheme = ThemeStore.currentTheme()
-            val primaryColor = currentTheme.primaryColor.toColorInt()
-            val onSurface = currentTheme.onSurfaceColor.toColorInt()
-            val textPrimary = currentTheme.textPrimaryColor.toColorInt()
-            val textSecondary = currentTheme.textSecondaryColor.toColorInt()
+        fun updateSelection(isSelected: Boolean, isSelectionMode: Boolean) {
+            initColors(itemView)
+            checkBox.isChecked = isSelected
+            checkBox.isVisible = isSelectionMode
+            checkBox.buttonTintList = ColorStateList.valueOf(if (isSelected) cachedPrimaryColor else cachedTextSecondary)
             
-            usernameText.setTextColor(textPrimary)
-            checkBox.buttonTintList = android.content.res.ColorStateList.valueOf(if (isSelected) primaryColor else textSecondary)
-            
-            itemView.alpha = 1.0f
             if (isSelected) {
-                cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.2f))
-                cardView.strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
-                cardView.strokeColor = primaryColor
-                cardView.cardElevation = (4 * itemView.resources.displayMetrics.density)
+                cardView.setCardBackgroundColor(cachedPrimaryAlpha)
+                cardView.strokeWidth = (2 * density).toInt()
+                cardView.strokeColor = cachedPrimaryColor
+                cardView.cardElevation = (4 * density)
             } else {
                 cardView.strokeWidth = 0
                 cardView.cardElevation = 0f
-                cardView.setCardBackgroundColor(adjustAlpha(onSurface, 0.05f))
+                cardView.setCardBackgroundColor(cachedSurfaceAlpha)
             }
+        }
+
+        fun bind(username: String, isSelected: Boolean) {
+            initColors(itemView)
+            usernameText.text = username
+            updateStatus(username)
+            updateSelection(isSelected, selectedUsers.isNotEmpty())
+            
+            usernameText.setTextColor(cachedTextPrimary)
+            itemView.alpha = 1.0f
 
             val avatarUrl = avatarCache[username]
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(userAvatar)
                 userAvatar.clearColorFilter()
             } else {
-                ThemeUtils.applyDefaultAvatar(userAvatar, currentTheme)
+                currentTheme?.let { ThemeUtils.applyDefaultAvatar(userAvatar, it) }
             }
 
-            itemView.setOnClickListener {
-                onUserClick(username)
-            }
+            itemView.setOnClickListener { onUserClick(username) }
             itemView.setOnLongClickListener {
                 onUserLongClick?.invoke(username)
                 true
             }
         }
-        
-        private fun adjustAlpha(color: Int, factor: Float): Int {
-            val alpha = (Color.alpha(color) * factor).toInt()
-            return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
-        }
+    }
+
+    private fun adjustAlpha(color: Int, factor: Float): Int {
+        val alpha = (Color.alpha(color) * factor).toInt()
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 }

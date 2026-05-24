@@ -47,6 +47,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -210,6 +211,7 @@ class ChatListActivity : AppCompatActivity() {
         setupOnboardingTips()
 
         chatAdapter = ChatAdapter(
+            lifecycleScope,
             onChatClick = { chat ->
                 if (chat.type == "favorites") {
                     val intent = Intent(this, NewChatActivity::class.java).apply {
@@ -373,10 +375,26 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             grpcClient.connectionStatus.collect { status ->
                 val isConnecting = status == ConnectionStatus.CONNECTING
-                if (isConnecting) {
-                    binding.toolbarTitle.text = getString(R.string.connecting)
-                } else if (chatAdapter.getSelectedChats().isEmpty()) {
+                val isFailed = status == ConnectionStatus.FAILED
+                
+                if (chatAdapter.getSelectedChats().isEmpty()) {
                     binding.toolbarTitle.text = getString(R.string.chats)
+                    
+                    when {
+                        isConnecting -> {
+                            binding.toolbarSubtitle.text = getString(R.string.connecting)
+                            binding.toolbarSubtitle.isVisible = true
+                        }
+                        isFailed -> {
+                            binding.toolbarSubtitle.text = getString(R.string.waiting_for_network)
+                            binding.toolbarSubtitle.isVisible = true
+                        }
+                        else -> {
+                            binding.toolbarSubtitle.isVisible = false
+                        }
+                    }
+                } else {
+                    binding.toolbarSubtitle.isVisible = false
                 }
 
                 if (status == ConnectionStatus.READY) {
@@ -2046,6 +2064,7 @@ class ChatListActivity : AppCompatActivity() {
         val filteredContacts = mutableListOf<String>()
         
         val userAdapter = UserAdapter(
+            lifecycleScope,
             onUserClick = { selected ->
                 val adapter = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView).adapter as? UserAdapter
                 adapter?.toggleSelection(selected)
@@ -2156,6 +2175,7 @@ class ChatListActivity : AppCompatActivity() {
         val currentContacts = mutableSetOf<String>()
         
         val userAdapter = UserAdapter(
+            lifecycleScope,
             onUserClick = { selected ->
                 val adapter = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView).adapter as? UserAdapter
                 adapter?.toggleSelection(selected)

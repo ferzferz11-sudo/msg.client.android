@@ -2,6 +2,7 @@ package lavender.client.android.theme
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.util.Log
 import android.widget.ImageView
 import androidx.core.graphics.toColorInt
@@ -36,36 +37,37 @@ object ThemeUtils {
     }
 
     fun applyDefaultAvatar(imageView: ImageView, theme: Theme, bubbleColor: String? = null) {
-        val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
-        val isLight = isLight(bgColor)
         val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
         val surfaceContainer = parseSafeColor(theme.surfaceContainer, Color.LTGRAY)
-        // Use bubble color if provided (for chat avatars), otherwise use surfaceContainer
+        val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
+        val isLight = isLight(bgColor)
+
         val avatarBgColor = if (!bubbleColor.isNullOrEmpty()) {
             parseSafeColor(bubbleColor, surfaceContainer)
         } else surfaceContainer
 
-        if (isLight) {
-            imageView.setImageResource(R.drawable.ic_default_avatar_white)
-            // Use setColorFilter instead of imageTintList for CircleImageView compatibility
+        // If it's a ShapeableImageView, we use its native properties
+        if (imageView is com.google.android.material.imageview.ShapeableImageView) {
+            imageView.strokeWidth = 0f // Remove stroke to avoid double contour/aliasing
+            imageView.background = ColorDrawable(avatarBgColor)
+            imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
             imageView.setColorFilter(primaryColor)
+            return
+        }
 
-            // Add a circular background with primary color border
-            val bg = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(avatarBgColor)
-                setStroke(3, primaryColor)
-            }
-            imageView.background = bg
+        // Fallback for regular ImageViews (or CircleImageView)
+        imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
+        imageView.setColorFilter(primaryColor)
+
+        // Reuse or create background
+        val currentBg = imageView.background
+        if (currentBg is android.graphics.drawable.GradientDrawable) {
+            currentBg.setColor(avatarBgColor)
+            currentBg.setStroke(0, Color.TRANSPARENT) // Remove stroke here too
         } else {
-            imageView.setImageResource(R.drawable.ic_default_avatar)
-            // Apply primary color tint for dark themes too
-            imageView.setColorFilter(primaryColor)
-            // For dark themes, also add background using incoming bubble color
             val bg = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.OVAL
                 setColor(avatarBgColor)
-                setStroke(2, primaryColor)
             }
             imageView.background = bg
         }

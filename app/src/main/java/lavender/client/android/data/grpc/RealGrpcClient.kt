@@ -50,6 +50,7 @@ object RealGrpcClient {
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
+    private var isRetrying = false
     val messages: StateFlow<List<Message>> = _messages
 
     private val _users = MutableStateFlow<List<String>>(emptyList())
@@ -215,7 +216,11 @@ object RealGrpcClient {
         }
 
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
-            _connectionStatus.value = ConnectionStatus.CONNECTING
+            // If we are in retry loop, stay in FAILED status until we actually succeed
+            // this prevents flickering "Connecting" -> "Failed" -> "Connecting"
+            if (!isRetrying) {
+                _connectionStatus.value = ConnectionStatus.CONNECTING
+            }
         }
 
         val currentChannel = channel
@@ -555,35 +560,42 @@ object RealGrpcClient {
                 // Clear observer immediately to prevent broken stream reuse
                 requestObserver = null
                 
+                if (isRetrying) return // Already in retry loop
+
                 scope.launch {
-                    var retryDelay = 2000L // Start with 2 seconds
+                    isRetrying = true
+                    var retryDelay = 3000L // Start with 3 seconds
                     val maxRetryDelay = 60000L // Max 60 seconds
                     var retryCount = 0
                     val maxRetries = 100 // Almost indefinite retries while app is active
                     
-                    while (retryCount < maxRetries && requestObserver == null) {
-                        delay(retryDelay)
-                        
-                        // Don't retry if app is in background for too long or channel is gone
-                        if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
-                             Log.d(TAG, "App in background for too long, stopping retry loop")
-                             break
-                        }
-
-                        Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
-                        
-                        lastChatRequest?.let { req ->
-                            startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                            // If connection was successful, break out of retry loop
-                            if (_connectionStatus.value == ConnectionStatus.READY) {
-                                Log.d(TAG, "Stream reconnection successful")
-                                return@launch
+                    try {
+                        while (retryCount < maxRetries && requestObserver == null) {
+                            delay(retryDelay)
+                            
+                            // Don't retry if app is in background for too long or channel is gone
+                            if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
+                                 Log.d(TAG, "App in background for too long, stopping retry loop")
+                                 break
                             }
+
+                            Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
+                            
+                            lastChatRequest?.let { req ->
+                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
+                                // If connection was successful, break out of retry loop
+                                if (_connectionStatus.value == ConnectionStatus.READY) {
+                                    Log.d(TAG, "Stream reconnection successful")
+                                    return@launch
+                                }
+                            }
+                            
+                            retryCount++
+                            // Slower exponential backoff for long-running issues
+                            retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
                         }
-                        
-                        retryCount++
-                        // Slower exponential backoff for long-running issues
-                        retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
+                    } finally {
+                        isRetrying = false
                     }
                     
                     if (retryCount >= maxRetries) {

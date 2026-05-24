@@ -143,7 +143,7 @@ class MessageAdapter(
         val messageBubble: LinearLayout = itemView.findViewById(R.id.messageBubble)
         private val dateText: TextView = itemView.findViewById(R.id.dateText)
         private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
-        private val avatarImageView: de.hdodenhof.circleimageview.CircleImageView = itemView.findViewById(R.id.avatarImageView)
+        private val avatarImageView: com.google.android.material.imageview.ShapeableImageView = itemView.findViewById(R.id.avatarImageView)
         private val userText: TextView = itemView.findViewById(R.id.userText)
         private val messageText: TextView = itemView.findViewById(R.id.messageText)
         private val timeText: TextView = itemView.findViewById(R.id.timeText)

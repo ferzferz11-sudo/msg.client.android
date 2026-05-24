@@ -16,11 +16,12 @@
         android:layout_height="wrap_content"
         android:padding="12dp">
 
-        <de.hdodenhof.circleimageview.CircleImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/userAvatar"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/ic_default_avatar"
+            app:shapeAppearanceOverlay="@style/CircleAppearanceOverlay"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

@@ -112,26 +112,20 @@ class ThemeAdapter(
             modeIndicator.imageTintList = ColorStateList.valueOf(adjustAlpha(onSurface, 0.7f))
 
             itemView.alpha = 1.0f
+            val baseBgColor = adjustAlpha(onSurface, 0.05f)
+            cardView.setCardBackgroundColor(baseBgColor)
+            cardView.cardElevation = 0f
+            
             if (isSelected) {
                 cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.2f))
                 cardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
                 cardView.strokeColor = primaryColor
-                cardView.cardElevation = (4 * context.resources.displayMetrics.density)
             } else if (isCurrent) {
                 cardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
                 cardView.strokeColor = adjustAlpha(primaryColor, 0.4f)
-                cardView.cardElevation = 0f
-                
-                try {
-                    val surfaceColor = theme.surfaceColor.toColorInt()
-                    cardView.setCardBackgroundColor(adjustAlpha(surfaceColor, 0.15f))
-                } catch (_: Exception) {
-                    cardView.setCardBackgroundColor(adjustAlpha(primaryColor, 0.1f))
-                }
+                cardView.setCardBackgroundColor(adjustAlpha(onSurface, 0.1f))
             } else {
                 cardView.strokeWidth = 0
-                cardView.cardElevation = 0f
-                cardView.setCardBackgroundColor(adjustAlpha(onSurface, 0.05f))
             }
 
             // Preview colors

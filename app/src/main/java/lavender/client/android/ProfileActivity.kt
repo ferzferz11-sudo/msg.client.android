@@ -452,7 +452,10 @@ class ProfileActivity : AppCompatActivity() {
         val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
         createChatCheckbox.isVisible = false
 
-        val selectableAdapter = SelectableUserAdapter(avatarCache = grpcClient.getAvatarCache(), onSelectionChanged = { count ->
+        val selectableAdapter = SelectableUserAdapter(
+            lifecycleScope,
+            avatarCache = grpcClient.getAvatarCache(),
+            onSelectionChanged = { count ->
             btnAdd.isEnabled = count > 0
             btnAdd.text = if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)
         })
