@@ -14,8 +14,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import lavender.client.android.databinding.ActivityCallBinding
 import lavender.client.android.data.calls.CallManager
 import lavender.client.android.data.calls.WebRtcClient
@@ -36,6 +40,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var isMicEnabled = true
     private var isCameraEnabled = false
 
+    private var callStartTime: Long = 0
+    private var timerJob: Job? = null
+
     private lateinit var audioManager: AudioManager
     private var oldAudioMode: Int = AudioManager.MODE_NORMAL
 
@@ -52,7 +59,6 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate: isIncoming=$isIncoming")
         binding = ActivityCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -74,16 +80,21 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         CallManager.init(applicationContext)
         if (isConference) {
              CallManager.joinConference(roomId)
+             binding.tvCallStatus.text = getString(R.string.connecting)
+             binding.btnAccept.visibility = View.GONE
+             binding.btnMic.visibility = View.VISIBLE
+             binding.btnCamera.visibility = View.VISIBLE
+             startTimer() // Start timer immediately for conferences
         } else {
              CallManager.syncCallState(callId, receiverId, isIncoming)
+             binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
         }
         GrpcClient.startCallSession()
 
         binding.tvCallerName.text = if (isConference) getString(R.string.group_conference) else receiverId
-        binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
         if (!isConference) loadOtherParticipantAvatar()
 
-        if (isIncoming) {
+        if (isIncoming && !isConference) {
             binding.btnAccept.visibility = View.VISIBLE
             binding.btnMic.visibility = View.GONE
             binding.btnCamera.visibility = View.GONE
@@ -94,8 +105,9 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_CODE)
         } else {
             Log.d(TAG, "Permissions OK")
-            if (!isIncoming) {
-                Log.d(TAG, "Initializing WebRTC for outgoing call")
+            // Join media immediately for conferences or outgoing calls
+            if (!isIncoming || isConference) {
+                Log.d(TAG, "Initializing WebRTC immediately")
                 initWebRtc()
             }
         }
@@ -108,18 +120,28 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         super.onNewIntent(intent)
         setIntent(intent)
         val newCallId = intent.getStringExtra("CALL_ID") ?: ""
-        if (newCallId.isNotEmpty() && newCallId != callId) {
-            Log.d(TAG, "onNewIntent: updating callId from $callId to $newCallId")
+        val newRoomId = intent.getStringExtra("ROOM_ID") ?: ""
+        
+        if ((newCallId.isNotEmpty() && newCallId != callId) || (newRoomId.isNotEmpty() && newRoomId != roomId)) {
+            Log.d(TAG, "onNewIntent: updating call/room from $callId/$roomId to $newCallId/$newRoomId")
             callId = newCallId
+            roomId = newRoomId
             receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
             isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
-            CallManager.syncCallState(callId, receiverId, isIncoming)
+            isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
+            
+            if (isConference) {
+                CallManager.joinConference(roomId)
+            } else {
+                CallManager.syncCallState(callId, receiverId, isIncoming)
+            }
         }
     }
 
     private fun setupButtons() {
         binding.btnHangup.setOnClickListener {
             Log.d(TAG, "Hangup button clicked")
+            stopTimer()
             if (isConference) {
                 CallManager.leaveConference()
             } else if (isIncoming && webRtcClient == null) {
@@ -214,6 +236,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                         Log.d(TAG, "Received ANSWER, setting remote description")
                         val sdp = SessionDescription(SessionDescription.Type.ANSWER, signal.payload)
                         webRtcClient?.setRemoteDescription(sdp)
+                        startTimer()
                     }
                     CallMessageProto.Type.ICE_CANDIDATE -> {
                         Log.d(TAG, "Received ICE_CANDIDATE")
@@ -376,6 +399,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
         runOnUiThread {
             binding.tvCallStatus.text = getString(R.string.call_status_connected)
+            startTimer()
         }
     }
 
@@ -429,9 +453,40 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
     }
 
+    private fun startTimer() {
+        if (timerJob != null) return
+        callStartTime = System.currentTimeMillis()
+        binding.tvCallDuration.isVisible = true
+        timerJob = lifecycleScope.launch {
+            while (isActive) {
+                val elapsed = System.currentTimeMillis() - callStartTime
+                val seconds = (elapsed / 1000) % 60
+                val minutes = (elapsed / (1000 * 60)) % 60
+                val hours = (elapsed / (1000 * 60 * 60))
+
+                val timeStr = if (hours > 0) {
+                    String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+                } else {
+                    String.format(java.util.Locale.getDefault(), "%02d:%02d", minutes, seconds)
+                }
+                
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    binding.tvCallDuration.text = timeStr
+                }
+                delay(1000)
+            }
+        }
+    }
+
+    private fun stopTimer() {
+        timerJob?.cancel()
+        timerJob = null
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: cleaning up")
+        stopTimer()
         
         // Restore audio settings
         audioManager.mode = oldAudioMode

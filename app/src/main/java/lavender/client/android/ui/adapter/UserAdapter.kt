@@ -51,10 +51,10 @@ class UserAdapter(
         if (colorsInitialized) return
         val theme = ThemeStore.currentTheme()
         currentTheme = theme
-        cachedPrimaryColor = theme.primaryColor.toColorInt()
-        cachedOnSurface = theme.onSurfaceColor.toColorInt()
-        cachedTextPrimary = theme.textPrimaryColor.toColorInt()
-        cachedTextSecondary = theme.textSecondaryColor.toColorInt()
+        cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+        cachedOnSurface = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.GRAY)
+        cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        cachedTextSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.LTGRAY)
         cachedPrimaryAlpha = adjustAlpha(cachedPrimaryColor, 0.2f)
         cachedSurfaceAlpha = adjustAlpha(cachedOnSurface, 0.05f)
         density = view.resources.displayMetrics.density

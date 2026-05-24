@@ -117,21 +117,29 @@ class MessageAdapter(
             adapterPosition = position,
             showDateSeparator = showDateSeparator,
             onClick = {
+                val currentPos = holder.bindingAdapterPosition
+                if (currentPos == RecyclerView.NO_POSITION) return@bind
+                
                 if (selectionMode) {
-                    if (selectedPositions.contains(position)) selectedPositions.remove(position)
-                    else selectedPositions.add(position)
-                    notifyItemChanged(position)
-                    onSelectionChanged(selectedPositions.size)
-                } else onMessageClick(currentMessage)
-            },
-            onLongClick = {
-                if (selectionMode) {
-                    if (selectedPositions.contains(position)) selectedPositions.remove(position)
-                    else selectedPositions.add(position)
-                    notifyItemChanged(position)
+                    if (selectedPositions.contains(currentPos)) selectedPositions.remove(currentPos)
+                    else selectedPositions.add(currentPos)
+                    notifyItemChanged(currentPos)
                     onSelectionChanged(selectedPositions.size)
                 } else {
-                    onMessageLongClick?.invoke(currentMessage)
+                    onMessageClick(getItem(currentPos))
+                }
+            },
+            onLongClick = {
+                val currentPos = holder.bindingAdapterPosition
+                if (currentPos == RecyclerView.NO_POSITION) return@bind
+
+                if (selectionMode) {
+                    if (selectedPositions.contains(currentPos)) selectedPositions.remove(currentPos)
+                    else selectedPositions.add(currentPos)
+                    notifyItemChanged(currentPos)
+                    onSelectionChanged(selectedPositions.size)
+                } else {
+                    onMessageLongClick?.invoke(getItem(currentPos))
                 }
             },
             onMessageLongClick = onMessageLongClick
@@ -433,6 +441,9 @@ class MessageAdapter(
                     btnDownloadFile.setImageResource(fileIcon)
                     btnDownloadFile.imageTintList = ColorStateList.valueOf(pTextColor)
                     btnDownloadFile.setOnClickListener {
+                        val currentPos = bindingAdapterPosition
+                        if (currentPos == RecyclerView.NO_POSITION) return@setOnClickListener
+                        
                         if (isSelectionMode) {
                             onClick()
                         } else if (fileUrl.isNotEmpty()) {
@@ -441,15 +452,19 @@ class MessageAdapter(
                         }
                     }
                     btnDownloadFile.setOnLongClickListener {
+                        val currentPos = bindingAdapterPosition
+                        if (currentPos == RecyclerView.NO_POSITION) return@setOnLongClickListener true
+                        
                         if (isSelectionMode) onLongClick() else {
-                            if (adapterPosition != RecyclerView.NO_POSITION) {
-                                onLongClick()
-                            }
+                            onLongClick()
                         }
                         true
                     }
 
                     messageText.setOnClickListener {
+                        val currentPos = bindingAdapterPosition
+                        if (currentPos == RecyclerView.NO_POSITION) return@setOnClickListener
+
                         if (isSelectionMode) {
                             onClick()
                         } else if (fileUrl.isNotEmpty()) {
@@ -625,10 +640,11 @@ class MessageAdapter(
                     }
                 }
                 messageImageView.setOnLongClickListener {
+                    val currentPos = bindingAdapterPosition
+                    if (currentPos == RecyclerView.NO_POSITION) return@setOnLongClickListener true
+                    
                     if (isSelectionMode) onLongClick() else {
-                        if (adapterPosition != RecyclerView.NO_POSITION) {
-                            onLongClick()
-                        }
+                        onLongClick()
                     }
                     true
                 }
@@ -705,8 +721,19 @@ class MessageAdapter(
                 messageContainer.isClickable = false
                 selectionIndicator.setOnClickListener(null)
                 selectionIndicator.isClickable = false
-                messageBubble.setOnClickListener { genericOnClick() }
-                messageBubble.setOnLongClickListener { genericOnLongClick() }
+                messageBubble.setOnClickListener {
+                    val currentPos = bindingAdapterPosition
+                    if (currentPos != RecyclerView.NO_POSITION) {
+                        onClick()
+                    }
+                }
+                messageBubble.setOnLongClickListener {
+                    val currentPos = bindingAdapterPosition
+                    if (currentPos != RecyclerView.NO_POSITION) {
+                        onLongClick()
+                    }
+                    true
+                }
             }
             
             // reactionsText should also be clickable to show the dialog

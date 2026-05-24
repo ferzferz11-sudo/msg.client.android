@@ -5,14 +5,18 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CustomThemeProto
 import kotlin.coroutines.resume
 
+import kotlinx.coroutines.withTimeoutOrNull
+
 class ThemeRemoteDataSource(
     private val grpcClient: GrpcClient = GrpcClient,
 ) {
     suspend fun getThemes(queryId: String): List<CustomThemeProto> =
-        suspendCancellableCoroutine { cont ->
-            grpcClient.getThemes(queryId) { _, themes ->
-                cont.resume(themes)
+        withTimeoutOrNull(5000) {
+            suspendCancellableCoroutine { cont ->
+                grpcClient.getThemes(queryId) { _, themes ->
+                    if (cont.isActive) cont.resume(themes)
+                }
             }
-        }
+        } ?: emptyList()
 }
 

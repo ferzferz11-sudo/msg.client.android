@@ -1,6 +1,7 @@
 package lavender.client.android.ui.adapter
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,9 +42,9 @@ class SelectableUserAdapter(
         val theme = ThemeStore.currentTheme()
         currentTheme = theme
         try {
-            cachedPrimary = theme.primaryColor.toColorInt()
-            cachedSecondary = theme.textSecondaryColor.toColorInt()
-            cachedTextPrimary = theme.textPrimaryColor.toColorInt()
+            cachedPrimary = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            cachedSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.GRAY)
+            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
             colorsInitialized = true
         } catch (_: Exception) {}
     }

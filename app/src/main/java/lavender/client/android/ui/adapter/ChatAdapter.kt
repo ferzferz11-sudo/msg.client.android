@@ -1,5 +1,6 @@
 package lavender.client.android.ui.adapter
 
+import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
@@ -54,6 +55,12 @@ class ChatAdapter(
     private var cachedTheme: Theme? = null
     private var colorsInitialized = false
     private var density: Float = 1f
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun updateTheme() {
+        colorsInitialized = false
+        notifyDataSetChanged()
+    }
 
     private fun initColors(view: View) {
         if (colorsInitialized) return

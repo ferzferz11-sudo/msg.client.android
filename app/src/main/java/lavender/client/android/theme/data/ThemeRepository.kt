@@ -26,10 +26,32 @@ class ThemeRepository(
             return if (!override.isNullOrEmpty()) builtIn.copy(chatListBackgroundImageUrl = override) else builtIn
         }
 
-        val queryId = lavender.client.android.data.grpc.GrpcClient.getUserId() ?: username
-        val themes = remote.getThemes(queryId)
-        val found = themes.find { it.id == themeId } ?: return BuiltInThemes.dark
-        return ThemeMappers.fromProto(found)
+        // Try to load from local cache first for instant startup
+        val cached = prefs.getCustomThemeCache()
+        
+        try {
+            val queryId = lavender.client.android.data.grpc.GrpcClient.getUserId() ?: username
+            if (queryId.isNotEmpty()) {
+                val themes = remote.getThemes(queryId)
+                if (themes.isNotEmpty()) {
+                    val found = themes.find { it.id == themeId }
+                    if (found != null) {
+                        val theme = ThemeMappers.fromProto(found)
+                        prefs.saveCustomThemeCache(theme) // Update cache
+                        return theme
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ThemeRepo", "Failed to fetch theme from remote: ${e.message}")
+        }
+
+        // Fallback to cache if remote failed or theme not found on server
+        if (cached != null && cached.id == themeId) {
+            return cached
+        }
+
+        return BuiltInThemes.dark
     }
 }
 

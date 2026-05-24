@@ -51,12 +51,14 @@
 
             <TextView
                 android:id="@+id/chatType"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 tools:text="General"
                 android:textSize="13sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginTop="2dp" />
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
         </LinearLayout>
 

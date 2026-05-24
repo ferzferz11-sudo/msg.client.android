@@ -622,7 +622,14 @@ class NewChatActivity : AppCompatActivity() {
             currentUsername = username,
             isGroupChat = !isDirect,
             adminUsername = creator,
-            onMessageClick = { showReactionsDialog(it) },
+            onMessageClick = { message ->
+                val text = message.text.lowercase()
+                if (message.user == "SYSTEM" && (text.contains("📹") || text.contains("конференция") || text.contains("conference"))) {
+                    joinConference()
+                } else {
+                    showReactionsDialog(message)
+                }
+            },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
             onMessageLongClick = { enterSelectionMode(it) },
             chatId = roomId,
@@ -798,6 +805,18 @@ class NewChatActivity : AppCompatActivity() {
     private fun startConference() {
         if (roomId.isEmpty()) return
         lavender.client.android.data.calls.CallManager.initiateConference(roomId)
+        
+        val intent = Intent(this, CallActivity::class.java).apply {
+            putExtra("ROOM_ID", roomId)
+            putExtra("IS_INCOMING", false)
+            putExtra("IS_CONFERENCE", true)
+        }
+        startActivity(intent)
+    }
+
+    private fun joinConference() {
+        if (roomId.isEmpty()) return
+        lavender.client.android.data.calls.CallManager.joinConference(roomId)
         
         val intent = Intent(this, CallActivity::class.java).apply {
             putExtra("ROOM_ID", roomId)

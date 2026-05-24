@@ -1230,9 +1230,12 @@ class ChatListActivity : AppCompatActivity() {
         syncJob?.cancel()
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     override fun onResume() {
-        super.onResume()
+        try {
+            super.onResume()
+        } catch (_: ClassCastException) {
+            // Workaround for MIUI/binder bug on some Xiaomi devices
+        }
         
         getSharedPreferences("UpdatePrefs", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(updatePrefsListener)
         getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(announcementPrefsListener)
@@ -1245,7 +1248,7 @@ class ChatListActivity : AppCompatActivity() {
         // Only update chatAdapter if it's initialized (user is authenticated)
         if (::chatAdapter.isInitialized) {
             chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
-            chatAdapter.notifyDataSetChanged() // Force redraw all visible items with new theme
+            chatAdapter.updateTheme()
         }
         
         updateUpdateIndicatorVisibility()

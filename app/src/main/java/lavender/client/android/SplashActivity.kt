@@ -21,6 +21,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         SessionManager.initFromPrefs(this)
+        lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
 
         val savedUsername = prefs.getString("username", null)

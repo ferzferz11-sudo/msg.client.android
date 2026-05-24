@@ -1,8 +1,8 @@
 package lavender.client.android.theme
 
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.util.Log
 import android.widget.ImageView
 import androidx.core.graphics.toColorInt
@@ -48,8 +48,9 @@ object ThemeUtils {
 
         // If it's a ShapeableImageView, we use its native properties
         if (imageView is com.google.android.material.imageview.ShapeableImageView) {
-            imageView.strokeWidth = 0f // Remove stroke to avoid double contour/aliasing
-            imageView.background = ColorDrawable(avatarBgColor)
+            imageView.strokeWidth = 0f // Remove stroke
+            // Use setBackgroundColor for automatic shape clipping on modern Material components
+            imageView.setBackgroundColor(avatarBgColor)
             imageView.setImageResource(if (isLight) R.drawable.ic_default_avatar_white else R.drawable.ic_default_avatar)
             imageView.setColorFilter(primaryColor)
             return

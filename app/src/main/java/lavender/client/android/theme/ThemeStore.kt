@@ -22,6 +22,36 @@ object ThemeStore {
 
     fun currentTheme(): Theme = _theme.value
 
+    /**
+     * Quickly load theme from local cache to avoid flickering on startup
+     */
+    fun init(context: Context) {
+        val prefs = lavender.client.android.theme.data.ThemePreferences(context)
+        val themeId = prefs.getCurrentThemeId()
+        
+        // Instant load for built-in themes
+        if (themeId == "dark" || themeId == "builtin_dark_graphite") {
+            _theme.value = BuiltInThemes.dark
+            return
+        }
+        if (themeId == "light") {
+            _theme.value = BuiltInThemes.BASE_LIGHT
+            return
+        }
+        
+        val builtIn = BuiltInThemes.findById(themeId)
+        if (builtIn != null) {
+            _theme.value = builtIn
+            return
+        }
+        
+        // Load custom theme from cache
+        val cached = prefs.getCustomThemeCache()
+        if (cached != null && cached.id == themeId) {
+            _theme.value = cached
+        }
+    }
+
     fun refresh(context: Context, username: String, force: Boolean = false): Job {
         val running = refreshJob
         if (!force && running?.isActive == true) return running
