@@ -1469,8 +1469,11 @@ class ChatListActivity : AppCompatActivity() {
         val txtColor = try { customTheme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
         val bgColor = try { customTheme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
 
+        val aboutAppName = dialogView.findViewById<TextView>(R.id.aboutAppName)
         val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
         val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
+        val developerLabel = dialogView.findViewById<TextView>(R.id.developerLabel)
+        val developerNameText = dialogView.findViewById<TextView>(R.id.developerNameText)
         val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
         val btnWhatsNew = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnWhatsNew)
         val btnFeedback = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnFeedback)
@@ -1478,13 +1481,33 @@ class ChatListActivity : AppCompatActivity() {
         val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
 
         try {
+            val secondaryTxtColor = try { customTheme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.GRAY }
+            
             dialogView.setBackgroundColor(bgColor)
+            aboutAppName.setTextColor(txtColor)
             clientVersionText.setTextColor(txtColor)
             serverVersionText.setTextColor(txtColor)
+            developerLabel.setTextColor(secondaryTxtColor)
+            developerLabel.alpha = 1.0f // Ensure it's visible
+            developerNameText.setTextColor(pColor)
+            
+            // Fix button theming
+            val buttonStyle = { btn: com.google.android.material.button.MaterialButton ->
+                btn.setTextColor(pColor)
+                btn.setStrokeColor(ColorStateList.valueOf(pColor))
+                btn.iconTint = ColorStateList.valueOf(pColor)
+            }
+            
+            buttonStyle(btnWhatsNew)
+            buttonStyle(btnFeedback)
+            buttonStyle(btnShare)
+            buttonStyle(btnUpdate)
+            
+            btnClose.setTextColor(pColor)
         } catch (_: Exception) {}
 
         val versionName = packageManager.getPackageInfo(packageName, 0).versionName
-        clientVersionText.text = "Client Version: $versionName"
+        clientVersionText.text = getString(R.string.version_label, versionName)
         
         val serverVersion = GrpcClient.serverVersion.value
         if (serverVersion.isNotEmpty()) {

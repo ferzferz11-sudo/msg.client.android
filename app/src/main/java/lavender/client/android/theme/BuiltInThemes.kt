@@ -51,7 +51,7 @@ object BuiltInThemes {
      */
     val BASE_DARK: Theme = Theme(
         id = "dark",
-        name = "Lavender Dark",
+        name = "Лава Темная",
         primaryColor = LAVENDER_PRIMARY,
         onPrimaryColor = "#FFFFFF",
         surfaceColor = "#1A1B46",

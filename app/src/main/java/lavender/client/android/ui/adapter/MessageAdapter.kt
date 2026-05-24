@@ -350,6 +350,7 @@ class MessageAdapter(
 
                 audioMessageView.isVisible = true
                 audioMessageView.setAudioData(message.voiceUrl, message.duration)
+                audioMessageView.applyTheme(theme, isOutgoing)
                 audioMessageView.setOnPlayClickListener { _ -> }
                 audioMessageView.setOnPauseClickListener { }
                 audioMessageView.setOnClickListener {
@@ -671,6 +672,13 @@ class MessageAdapter(
 
             selectionIndicator.isVisible = isSelectionMode
             selectionIndicator.setImageResource(if (isSelected) R.drawable.ic_checked else R.drawable.ic_unchecked)
+            
+            try {
+                val pColor = theme.primaryColor.toColorInt()
+                val sColor = theme.textSecondaryColor.toColorInt()
+                selectionIndicator.imageTintList = ColorStateList.valueOf(if (isSelected) pColor else sColor)
+            } catch (_: Exception) {}
+
             messageBubble.alpha = if (isSelected) 0.6f else 1.0f
             
             val selectionColor = try {

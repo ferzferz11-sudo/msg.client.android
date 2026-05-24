@@ -1,6 +1,7 @@
 package lavender.client.android.ui.audio
 
 import android.content.Context
+import android.graphics.Color
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
@@ -8,12 +9,14 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.audio.AudioPlayerManager
+import lavender.client.android.theme.ThemeUtils
 
 class AudioMessageView @JvmOverloads constructor(
     context: Context,
@@ -71,6 +74,38 @@ class AudioMessageView @JvmOverloads constructor(
         waveformView.generateRandomWaveform()
         
         updateUI()
+    }
+
+    fun applyTheme(theme: lavender.client.android.theme.Theme, isOutgoing: Boolean) {
+        val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, ContextCompat.getColor(context, R.color.lavender_mist))
+        val onPrimaryColor = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
+        val incomingTextColor = ThemeUtils.parseSafeColor(theme.incomingTextColor, Color.WHITE)
+        val outgoingTextColor = ThemeUtils.parseSafeColor(theme.outgoingTextColor, Color.WHITE)
+
+        // Apply theme to buttons (circle background)
+        // For incoming messages: background = primaryColor, icon = onPrimaryColor
+        // For outgoing messages: background = onPrimaryColor, icon = primaryColor (to contrast with bubble)
+        val buttonBgColor = if (isOutgoing) onPrimaryColor else primaryColor
+        val iconColor = if (isOutgoing) primaryColor else onPrimaryColor
+        
+        playButton.backgroundTintList = android.content.res.ColorStateList.valueOf(buttonBgColor)
+        pauseButton.backgroundTintList = android.content.res.ColorStateList.valueOf(buttonBgColor)
+        playButton.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        pauseButton.imageTintList = android.content.res.ColorStateList.valueOf(iconColor)
+
+        // Apply theme to duration text
+        val txtColor = if (isOutgoing) outgoingTextColor else incomingTextColor
+        durationText.setTextColor(txtColor)
+
+        // Apply theme to waveform
+        val waveformColor = if (isOutgoing) {
+            ThemeUtils.adjustAlpha(outgoingTextColor, 0.4f)
+        } else {
+            ThemeUtils.adjustAlpha(incomingTextColor, 0.4f)
+        }
+        val playbackColor = if (isOutgoing) outgoingTextColor else incomingTextColor
+        
+        waveformView.setWaveformColors(waveformColor, playbackColor)
     }
     
     fun setPlaying(playing: Boolean) {

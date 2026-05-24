@@ -24,7 +24,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="Lavender"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
@@ -60,6 +60,7 @@
             android:name=".ShareReceiverActivity"
             android:exported="true"
             android:label="@string/share_to_lavender"
+            android:icon="@drawable/ic_share_logo"
             android:theme="@style/Theme.MsgClientAndroid">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

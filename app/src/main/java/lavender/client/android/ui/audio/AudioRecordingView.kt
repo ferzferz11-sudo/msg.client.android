@@ -24,6 +24,7 @@ class AudioRecordingView @JvmOverloads constructor(
     private val recordButton: ImageView
     private val cancelButton: ImageView
     private val timerText: TextView
+    private val statusText: TextView
     private val recordingIndicator: View
     private val waveformView: AudioWaveformView
 
@@ -42,6 +43,7 @@ class AudioRecordingView @JvmOverloads constructor(
         recordButton = findViewById(R.id.recordButton)
         cancelButton = findViewById(R.id.cancelButton)
         timerText = findViewById(R.id.timerText)
+        statusText = findViewById(R.id.statusText)
         recordingIndicator = findViewById(R.id.recordingIndicator)
         waveformView = findViewById(R.id.waveformView)
 
@@ -52,15 +54,57 @@ class AudioRecordingView @JvmOverloads constructor(
     // Твоя функция для применения прозрачности
     fun applyCustomTheme(theme: CustomThemeProto?) {
         this.currentTheme = theme
-        if (theme != null) {
-            setBackgroundColor(Color.TRANSPARENT)
-            if (childCount > 0) {
-                getChildAt(0).setBackgroundColor(Color.TRANSPARENT)
-            }
-        } else {
-            // Если темы нет, можно вернуть дефолтный цвет фона, если нужно
-            // setBackgroundColor(ContextCompat.getColor(context, R.color.your_default_color))
+        updateColors()
+    }
+
+    private fun updateColors() {
+        val theme = currentTheme
+        val bgColor = if (theme != null) Color.TRANSPARENT else ContextCompat.getColor(context, R.color.pale_lilac)
+        setBackgroundColor(bgColor)
+        if (childCount > 0) {
+            getChildAt(0).setBackgroundColor(bgColor)
         }
+
+        val primColor = try {
+            theme?.primaryColor?.let { Color.parseColor(it) } ?: ContextCompat.getColor(context, R.color.lavender_mist)
+        } catch (_: Exception) {
+            ContextCompat.getColor(context, R.color.lavender_mist)
+        }
+        val onPrimColor = try {
+            theme?.onPrimaryColor?.let { Color.parseColor(it) } ?: Color.WHITE
+        } catch (_: Exception) {
+            Color.WHITE
+        }
+        val textPrimary = try {
+            theme?.textPrimaryColor?.let { Color.parseColor(it) } ?: Color.BLACK
+        } catch (_: Exception) {
+            Color.BLACK
+        }
+
+        val secondaryTxtColor = try {
+            theme?.textSecondaryColor?.let { Color.parseColor(it) } ?: Color.GRAY
+        } catch (_: Exception) {
+            Color.GRAY
+        }
+
+        if (isRecording) {
+            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
+            recordButton.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+        } else {
+            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+            recordButton.imageTintList = android.content.res.ColorStateList.valueOf(onPrimColor)
+        }
+
+        cancelButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+        cancelButton.imageTintList = android.content.res.ColorStateList.valueOf(onPrimColor)
+        timerText.setTextColor(textPrimary)
+        statusText.setTextColor(secondaryTxtColor)
+        
+        // Set waveform colors
+        waveformView.setWaveformColors(
+            lavender.client.android.theme.ThemeUtils.adjustAlpha(textPrimary, 0.4f),
+            primColor
+        )
     }
 
     private fun setupClickListeners() {
@@ -180,15 +224,14 @@ class AudioRecordingView @JvmOverloads constructor(
     }
 
     private fun updateUI() {
-        // Вызываем применение прозрачности при каждом обновлении UI
-        applyCustomTheme(currentTheme)
+        updateColors()
 
         if (isRecording) {
             recordButton.setImageResource(R.drawable.ic_stop)
-            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
-            cancelButton.visibility = VISIBLE
             recordingIndicator.visibility = VISIBLE
             waveformView.visibility = VISIBLE
+            statusText.text = context.getString(R.string.recording)
+            timerText.visibility = VISIBLE
 
             val pulse = ObjectAnimator.ofFloat(recordButton, "scaleX", 1f, 1.1f, 1f)
             pulse.duration = 1000
@@ -197,15 +240,10 @@ class AudioRecordingView @JvmOverloads constructor(
             pulse.start()
         } else {
             recordButton.setImageResource(R.drawable.ic_mic)
-            val primColor = try {
-                currentTheme?.primaryColor?.let { android.graphics.Color.parseColor(it) } ?: ContextCompat.getColor(context, R.color.lavender_mist)
-            } catch (_: Exception) {
-                ContextCompat.getColor(context, R.color.lavender_mist)
-            }
-            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
-            cancelButton.visibility = GONE
             recordingIndicator.visibility = GONE
             waveformView.visibility = GONE
+            statusText.text = context.getString(R.string.tap_to_record)
+            timerText.visibility = GONE
 
             (recordButton.tag as? ObjectAnimator)?.cancel()
             recordButton.scaleX = 1f

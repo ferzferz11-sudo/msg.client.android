@@ -136,7 +136,6 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var uploadProgressBar: ProgressBar
     private lateinit var uploadProgressContainer: com.google.android.material.card.MaterialCardView
     private lateinit var uploadProgressText: TextView
-    private lateinit var audioRecordingView: AudioRecordingView
 
     private lateinit var replyPreview: View
     private lateinit var replyUser: TextView
@@ -307,7 +306,6 @@ class NewChatActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    audioRecordingView.isVisible -> audioRecordingView.cancel()
                     selectionMode -> hideSelectionToolbar()
                     searchBar.isVisible -> hideSearchBar()
                     mentionContainer.isVisible -> mentionContainer.isVisible = false
@@ -364,7 +362,7 @@ class NewChatActivity : AppCompatActivity() {
         replyMessage = findViewById(R.id.replyMessage); deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent); messagesRecyclerView = findViewById(R.id.messagesRecyclerView); swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         messageInput = findViewById(R.id.messageInput); sendButton = findViewById(R.id.sendButton); attachButton = findViewById(R.id.attachButton); audioButton = findViewById(R.id.audioButton)
-        uploadProgressBar = findViewById(R.id.uploadProgressBar); uploadProgressContainer = findViewById(R.id.uploadProgressContainer); uploadProgressText = findViewById(R.id.uploadProgressText); audioRecordingView = findViewById(R.id.audioRecordingView); replyPreview = findViewById(R.id.replyPreview)
+        uploadProgressBar = findViewById(R.id.uploadProgressBar); uploadProgressContainer = findViewById(R.id.uploadProgressContainer); uploadProgressText = findViewById(R.id.uploadProgressText); replyPreview = findViewById(R.id.replyPreview)
         replyUser = findViewById(R.id.replyUser); replyText = findViewById(R.id.replyText); cancelReply = findViewById(R.id.cancelReply); emojiButton = findViewById(R.id.emojiButton)
         mentionContainer = findViewById(R.id.mentionContainer); mentionList = findViewById(R.id.mentionList); mentionAdapter = MentionAdapter { insertMention(it) }
         mentionList.layoutManager = LinearLayoutManager(this); mentionList.adapter = mentionAdapter
@@ -1513,35 +1511,59 @@ class NewChatActivity : AppCompatActivity() {
             requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
             return
         }
-        audioRecordingView.visibility = View.VISIBLE
-        messageInput.visibility = View.GONE
-        sendButton.visibility = View.GONE
-        attachButton.visibility = View.GONE
-        audioButton.visibility = View.GONE
 
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val customTheme = ThemeStore.currentTheme()
-        audioRecordingView.applyCustomTheme(ThemeMappers.toProto(customTheme))
-
-        setupAudioRecordingView()
-    }
-
-    private fun setupAudioRecordingView() {
-        audioRecordingView.setOnRecordingFinished { file, duration ->
-            hideAudioRecordingView()
+        ThemeApplier.applyToDialog(bottomSheet, customTheme)
+        
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = 24.dpToPx()
+            setPadding(p, 0, p, p) // Top padding handled by handle
+            try {
+                setBackgroundColor(customTheme.surfaceColor.toColorInt())
+            } catch (_: Exception) {}
+        }
+        
+        // Add Drag Handle
+        val dragHandle = View(this).apply {
+            val hLp = LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                topMargin = 12.dpToPx()
+                bottomMargin = 24.dpToPx()
+            }
+            layoutParams = hLp
+            alpha = 0.3f
+            try {
+                setBackgroundColor(customTheme.onSurfaceColor.toColorInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(customTheme.onSurfaceColor.toColorInt())
+                    cornerRadius = 2.dpToPx().toFloat()
+                }
+            } catch (_: Exception) {
+                setBackgroundColor(android.graphics.Color.GRAY)
+            }
+        }
+        container.addView(dragHandle)
+        
+        val recordingView = AudioRecordingView(this)
+        recordingView.applyCustomTheme(ThemeMappers.toProto(customTheme))
+        
+        container.addView(recordingView)
+        bottomSheet.setContentView(container)
+        
+        recordingView.setOnRecordingFinished { file, duration ->
+            bottomSheet.dismiss()
             file?.let { uploadAudio(it, duration) }
         }
-        audioRecordingView.setOnRecordingCancelled {
-            hideAudioRecordingView()
+        
+        recordingView.setOnRecordingCancelled {
+            bottomSheet.dismiss()
         }
+        
+        bottomSheet.show()
     }
 
-    private fun hideAudioRecordingView() {
-        audioRecordingView.visibility = View.GONE
-        messageInput.visibility = View.VISIBLE
-        sendButton.visibility = View.VISIBLE
-        attachButton.visibility = View.VISIBLE
-        audioButton.visibility = View.VISIBLE
-    }
     private fun uploadAudio(file: File, duration: Int) {
         uploadProgressBar.isVisible = true; audioButton.isVisible = false
         lifecycleScope.launch {

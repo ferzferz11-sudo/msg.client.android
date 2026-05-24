@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Лаванда</string>
+    <string name="app_name">Лава</string>
     
     <!-- Settings Menu -->
     <string name="action_settings">Настройки</string>
@@ -21,16 +21,16 @@
     <string name="attach_file">Прикрепить файл</string>
 
     <!-- Messages -->
-    <string name="lavender_messenger">Лаванда</string>
+    <string name="lavender_messenger">Лава</string>
     <string name="server_address">159.195.38.145:50051</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">обновить</string>
-    <string name="downloading_update">Загрузка обновления Лаванды</string>
+    <string name="downloading_update">Загрузка обновления Лавы</string>
     <string name="update">Обновить</string>
     <string name="connection_logs">Логи соединения:</string>
     <string name="connected_to_room">Пользователь %1$s вошёл в чат %2$s</string>
     <string name="type_message_here">Сообщение</string>
-    <string name="lavender_ready">Лаванда готова!</string>
+    <string name="lavender_ready">Лава готова!</string>
     <string name="joined">%s присоединился</string>
     <string name="rooms">Чаты</string>
     
@@ -58,7 +58,7 @@
     <string name="profile_deleted">Профиль успешно удален</string>
     <string name="failed_to_delete_profile">Не удалось удалить профиль</string>
     <!-- Log Messages -->
-    <string name="lavender_loaded">Лаванда успешно загружена</string>
+    <string name="lavender_loaded">Лава успешно загружена</string>
     <string name="testing_server">Проверка соединения с 159.195.38.145:50051…</string>
     <string name="attempting_tcp">Попытка TCP соединения…</string>
     <string name="server_reachable">УСПЕХ: Сервер доступен по адресу 159.195.38.145:50051!</string>
@@ -140,7 +140,7 @@
     <string name="history_empty">Добро пожаловать! Это новый чат. Здесь пока нет сообщений.</string>
     <string name="history_load_error">Не удалось загрузить историю: %s</string>
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
-    <string name="share_app">Поделиться Lavender Messenger</string>
+    <string name="share_app">Поделиться Лава</string>
     <string name="exit">Выход</string>
     <string name="disconnected">Отключено</string>
     <string name="connecting">Подключение…</string>
@@ -223,7 +223,7 @@
     <string name="edit">Изменить профиль</string>
     <string name="edit_theme_button">Редактировать</string>
 
-    <string name="welcome_new_user_title">Добро пожаловать в Lavender!</string>
+    <string name="welcome_new_user_title">Добро пожаловать в Лаву!</string>
     <string name="welcome_new_user_description">Это система обмена сообщениями!\nВаша приватность — наш главный приоритет, поэтому все чаты здесь защищены сквозным шифрованием.</string>
 
     <!-- Notification History -->
@@ -292,7 +292,7 @@
     <string name="version_current">Текущая версия: %s</string>
     <string name="version_available">Доступная версия: %s</string>
     <string name="version_info_format">Текущая: %1$s\nДоступная: %2$s</string>
-    <string name="update_confirmation_message">Доступна новая версия Lavender Messenger. Обновить сейчас?</string>
+    <string name="update_confirmation_message">Доступна новая версия Лавы. Обновить сейчас?</string>
     <string name="developer_label">Разработчик</string>
     <string name="your_email">Ваш Email</string>
     <string name="feedback_message">Сообщение</string>
@@ -312,7 +312,7 @@
     <string name="notif_preview_msg_messaging">Посмотрите, как выглядит стиль мессенджера!</string>
     <string name="notif_preview_msg_bigtext">Это пример очень длинного сообщения, которое обычно обрезается, но в стиле расширенного текста его можно развернуть, чтобы увидеть все содержимое целиком.</string>
     <string name="notif_preview_title_bigtext">Важное обновление</string>
-    <string name="notif_preview_title_standard">Lavender Messenger</string>
+    <string name="notif_preview_title_standard">Лава</string>
     <string name="logout_profile">Выход из профиля</string>
     <string name="logout_confirm_title">Выйти из профиля?</string>
     <string name="logout_confirm_message">Вы будете отключены от сервера. При следующем входе вам потребуется заново ввести имя пользователя и пароль, так как они не будут сохранены. Убедитесь, что вы их помните!</string>
@@ -413,7 +413,7 @@
     <string name="favorites_description">Личное хранилище</string>
     <string name="direct_chat_type">Личный чат</string>
     <string name="group_chat_type">Групповой чат</string>
-    <string name="share_to_lavender">Поделиться в Lavender</string>
+    <string name="share_to_lavender">Поделиться в Лаве</string>
     <string name="select_chat_to_send">Выберите чат для отправки</string>
     <string name="shared_content">Содержимое</string>
     <string name="video_preview">Превью видео</string>
@@ -485,4 +485,6 @@
     <string name="group_conference">Групповая конференция</string>
     <string name="in_conference_format">В конференции: %s</string>
     <string name="end_for_all">Завершить для всех</string>
+    <string name="tap_to_record">Нажмите для записи</string>
+    <string name="recording">Запись…</string>
 </resources>

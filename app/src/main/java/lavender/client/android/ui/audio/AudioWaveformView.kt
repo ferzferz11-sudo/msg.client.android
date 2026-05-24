@@ -78,6 +78,12 @@ class AudioWaveformView @JvmOverloads constructor(
         }
     }
     
+    fun setWaveformColors(defaultColor: Int, playingColor: Int) {
+        waveformPaint.color = defaultColor
+        playbackPaint.color = playingColor
+        invalidate()
+    }
+    
     fun generateRandomWaveform() {
         waveformBars.clear()
         val barCount = 40
