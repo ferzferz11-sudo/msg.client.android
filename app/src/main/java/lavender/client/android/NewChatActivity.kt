@@ -623,8 +623,10 @@ class NewChatActivity : AppCompatActivity() {
             isGroupChat = !isDirect,
             adminUsername = creator,
             onMessageClick = { message ->
-                val text = message.text.lowercase()
+                val text = message.text.trim().lowercase()
+                Log.d("NewChat", "Message clicked: user=${message.user}, text=$text")
                 if (message.user == "SYSTEM" && (text.contains("📹") || text.contains("конференция") || text.contains("conference"))) {
+                    Log.d("NewChat", "Joining conference from system message")
                     joinConference()
                 } else {
                     showReactionsDialog(message)

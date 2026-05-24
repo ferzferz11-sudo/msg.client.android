@@ -79,11 +79,13 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         CallManager.init(applicationContext)
         if (isConference) {
+             isCameraEnabled = true // Enable camera by default for conferences
              CallManager.joinConference(roomId)
-             binding.tvCallStatus.text = getString(R.string.connecting)
+             binding.tvCallStatus.text = getString(R.string.waiting_for_participants)
              binding.btnAccept.visibility = View.GONE
              binding.btnMic.visibility = View.VISIBLE
              binding.btnCamera.visibility = View.VISIBLE
+             binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
              startTimer() // Start timer immediately for conferences
         } else {
              CallManager.syncCallState(callId, receiverId, isIncoming)
@@ -341,6 +343,15 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         Log.d(TAG, "Local stream ready")
         runOnUiThread {
             stream.videoTracks.getOrNull(0)?.addSink(binding.localView)
+            // If conference and no remote yet, show local in main view
+            if (isConference && !isRemoteViewInitialized) {
+                if (binding.remoteView.isVisible == false) {
+                     binding.remoteView.isVisible = true
+                     binding.remoteView.init(eglBase.eglBaseContext, null)
+                     isRemoteViewInitialized = true
+                }
+                stream.videoTracks.getOrNull(0)?.addSink(binding.remoteView)
+            }
         }
     }
 
@@ -350,6 +361,10 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             if (!isRemoteViewInitialized) {
                 binding.remoteView.init(eglBase.eglBaseContext, null)
                 isRemoteViewInitialized = true
+            }
+            // Clear any local sink from remote view if conference
+            if (isConference) {
+                binding.remoteView.isVisible = true
             }
             stream.videoTracks.getOrNull(0)?.addSink(binding.remoteView)
         }

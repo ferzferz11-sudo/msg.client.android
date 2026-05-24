@@ -56,12 +56,6 @@ class ChatAdapter(
     private var colorsInitialized = false
     private var density: Float = 1f
 
-    @SuppressLint("NotifyDataSetChanged")
-    fun updateTheme() {
-        colorsInitialized = false
-        notifyDataSetChanged()
-    }
-
     private fun initColors(view: View) {
         if (colorsInitialized) return
         val theme = ThemeStore.currentTheme()
@@ -77,6 +71,12 @@ class ChatAdapter(
     private fun parseSafeColor(colorStr: String?, defaultColor: Int): Int {
         if (colorStr.isNullOrEmpty()) return defaultColor
         return try { colorStr.toColorInt() } catch (_: Exception) { defaultColor }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun updateTheme() {
+        colorsInitialized = false
+        notifyItemRangeChanged(0, itemCount)
     }
 
     fun getSelectedChats(): List<ChatInfo> = selectedPositions.map { displayedChats[it] }
@@ -95,16 +95,29 @@ class ChatAdapter(
     }
 
     fun setChats(newChats: List<ChatInfo>) {
-        allChats = newChats
-        applyFilter()
+        val oldChats = displayedChats
+        scope.launch(Dispatchers.Default) {
+            val filtered = if (currentFilter.isEmpty()) {
+                newChats
+            } else {
+                newChats.filter { chat ->
+                    chat.name.lowercase().contains(currentFilter) ||
+                    chat.participants.lowercase().contains(currentFilter) ||
+                    chat.lastMessageText.lowercase().contains(currentFilter)
+                }
+            }
+            val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
+            withContext(Dispatchers.Main) {
+                allChats = newChats
+                displayedChats = filtered
+                diffResult.dispatchUpdatesTo(this@ChatAdapter)
+            }
+        }
     }
 
     fun filter(query: String) {
         currentFilter = query.lowercase()
-        applyFilter()
-    }
-
-    private fun applyFilter() {
+        val oldChats = displayedChats
         scope.launch(Dispatchers.Default) {
             val filtered = if (currentFilter.isEmpty()) {
                 allChats
@@ -115,8 +128,7 @@ class ChatAdapter(
                     chat.lastMessageText.lowercase().contains(currentFilter)
                 }
             }
-            
-            val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(displayedChats, filtered))
+            val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
             withContext(Dispatchers.Main) {
                 displayedChats = filtered
                 diffResult.dispatchUpdatesTo(this@ChatAdapter)
@@ -127,14 +139,16 @@ class ChatAdapter(
     fun setOnlineUsers(users: List<String>) {
         if (onlineUsers == users) return
         onlineUsers = users
-        notifyItemRangeChanged(0, itemCount, "status")
+        val count = displayedChats.size
+        if (count > 0) notifyItemRangeChanged(0, count, "status")
     }
 
     fun updateAvatarCache(newCache: Map<String, String>) {
         val snapshot = newCache.toMap()
         if (avatarCache == snapshot) return
         avatarCache = snapshot
-        notifyItemRangeChanged(0, itemCount, "avatar")
+        val count = displayedChats.size
+        if (count > 0) notifyItemRangeChanged(0, count, "avatar")
     }
 
     private class ChatDiffCallback(
@@ -143,9 +157,12 @@ class ChatAdapter(
     ) : DiffUtil.Callback() {
         override fun getOldListSize(): Int = oldList.size
         override fun getNewListSize(): Int = newList.size
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean = 
-            oldList[oldItemPosition].id == newList[newItemPosition].id
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            if (oldItemPosition >= oldList.size || newItemPosition >= newList.size) return false
+            return oldList[oldItemPosition].id == newList[newItemPosition].id
+        }
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            if (oldItemPosition >= oldList.size || newItemPosition >= newList.size) return false
             val oldChat = oldList[oldItemPosition]
             val newChat = newList[newItemPosition]
             return (oldChat.name == newChat.name && oldChat.type == newChat.type &&
@@ -163,13 +180,7 @@ class ChatAdapter(
         initColors(holder.itemView)
         val isSelected = selectedPositions.contains(position)
         val chat = displayedChats[position]
-
-        holder.bind(
-            chat,
-            currentUsername,
-            isSelected,
-            deletingChatIds.contains(chat.id)
-        ) {
+        holder.bind(chat, currentUsername, isSelected, deletingChatIds.contains(chat.id)) {
             val currentPos = holder.bindingAdapterPosition
             if (currentPos == RecyclerView.NO_POSITION) return@bind
             if (selectedPositions.contains(currentPos)) selectedPositions.remove(currentPos)
@@ -177,8 +188,19 @@ class ChatAdapter(
             notifyItemChanged(currentPos)
             onSelectionChanged(selectedPositions.size)
         }
-
         holder.loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
+    }
+
+    override fun onBindViewHolder(holder: ChatViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isEmpty()) {
+            super.onBindViewHolder(holder, position, payloads)
+        } else {
+            for (payload in payloads) {
+                when (payload) {
+                    "status", "avatar" -> holder.loadParticipantAvatars(displayedChats[position].participants, displayedChats[position].type, currentUsername, avatarCache, onlineUsers, displayedChats[position].avatarUrl)
+                }
+            }
+        }
     }
 
     override fun getItemCount(): Int = displayedChats.size
@@ -195,7 +217,6 @@ class ChatAdapter(
 
         fun bind(chat: ChatInfo, currentUsername: String, isSelected: Boolean, isDeleting: Boolean, onLongClick: () -> Unit) {
             val context = itemView.context
-            
             if (isSelected) {
                 cardView.setCardBackgroundColor(adjustAlpha(cachedPrimaryColor, 0.3f))
                 itemView.alpha = 0.8f
@@ -203,11 +224,9 @@ class ChatAdapter(
                 cardView.setCardBackgroundColor(cachedSurfaceColor)
                 itemView.alpha = 1.0f
             }
-
             chatName.setTextColor(cachedTextPrimary)
             chatType.setTextColor(cachedTextSecondary)
             chatName.text = chat.getDisplayName(currentUsername)
-
             val lang = context.resources.configuration.locales[0].language
             if (chat.lastMessageHasImage) {
                 val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM" && chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
@@ -219,14 +238,12 @@ class ChatAdapter(
             } else {
                 chatType.text = if (lang == "ru") "Нет сообщений" else "No messages"
             }
-
             unreadCount.isVisible = chat.unreadCount > 0
             if (chat.unreadCount > 0) {
                 unreadCount.text = chat.unreadCount.toString()
                 unreadCount.backgroundTintList = ColorStateList.valueOf(cachedPrimaryColor)
                 unreadCount.setTextColor(if (ThemeUtils.isLight(cachedPrimaryColor)) Color.BLACK else Color.WHITE)
             }
-
             adminIndicator.isVisible = false
             muteIndicator.isVisible = chat.isMuted && !isDeleting
             deleteProgressBar.isVisible = isDeleting
@@ -234,7 +251,6 @@ class ChatAdapter(
                 deleteProgressBar.indeterminateTintList = ColorStateList.valueOf(cachedPrimaryColor)
                 unreadCount.isVisible = false
             }
-
             itemView.setOnClickListener { if (!isDeleting) { if (selectedPositions.isNotEmpty()) onLongClick() else onChatClick(chat) } }
             itemView.setOnLongClickListener { onLongClick(); true }
         }
@@ -259,10 +275,8 @@ class ChatAdapter(
                     }
                     participantAvatars.addView(avatar); return
                 }
-
                 participantAvatars.removeAllViews()
                 if (participantsJson.isEmpty() && chatAvatarUrl.isEmpty()) return
-                
                 if (chatAvatarUrl.isNotEmpty()) {
                     val avatarSize = (52 * density).toInt()
                     val avatar = ShapeableImageView(context).apply { 
@@ -273,10 +287,8 @@ class ChatAdapter(
                     Glide.with(context).load(chatAvatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatar)
                     participantAvatars.addView(avatar); return
                 }
-                
                 val participantsArray = JSONArray(participantsJson)
                 val participantsList = List(participantsArray.length()) { participantsArray.getString(it) }
-                
                 if (chatType == "direct") {
                     val otherPerson = participantsList.find { it != currentUsername } ?: currentUsername
                     val isOnline = onlineUsers.contains(otherPerson)

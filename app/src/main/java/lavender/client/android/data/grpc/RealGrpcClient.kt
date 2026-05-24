@@ -564,7 +564,7 @@ object RealGrpcClient {
 
                 scope.launch {
                     isRetrying = true
-                    var retryDelay = 3000L // Start with 3 seconds
+                    var retryDelay = 5000L // Start with 5 seconds to not spam server
                     val maxRetryDelay = 60000L // Max 60 seconds
                     var retryCount = 0
                     val maxRetries = 100 // Almost indefinite retries while app is active
@@ -577,6 +577,12 @@ object RealGrpcClient {
                             if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
                                  Log.d(TAG, "App in background for too long, stopping retry loop")
                                  break
+                            }
+
+                            // If server was unavailable, fully reset the channel before retrying
+                            if (t is io.grpc.StatusRuntimeException && t.status.code == io.grpc.Status.Code.UNAVAILABLE) {
+                                Log.w(TAG, "Server UNAVAILABLE, resetting connection channel")
+                                currentServerAddress?.let { connect(it, forceReconnect = true) }
                             }
 
                             Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
@@ -592,7 +598,7 @@ object RealGrpcClient {
                             
                             retryCount++
                             // Slower exponential backoff for long-running issues
-                            retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
+                            retryDelay = (retryDelay * 2.0).toLong().coerceAtMost(maxRetryDelay)
                         }
                     } finally {
                         isRetrying = false
@@ -612,6 +618,11 @@ object RealGrpcClient {
         }
 
         this.start(object : io.grpc.ClientCall.Listener<MessageProto>() {
+            override fun onHeaders(headers: io.grpc.Metadata?) {
+                super.onHeaders(headers)
+                // If we get headers back, the stream is essentially established
+                _connectionStatus.value = ConnectionStatus.READY
+            }
             override fun onMessage(message: MessageProto) {
                 // If we receive ANY message, we are definitely READY
                 if (_connectionStatus.value != ConnectionStatus.READY) {

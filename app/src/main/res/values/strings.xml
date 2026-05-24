@@ -474,12 +474,13 @@
     <string name="today">Today</string>
     <string name="yesterday">Yesterday</string>
     <string name="call_status_connecting">Connecting…</string>
+    <string name="waiting_for_participants">Waiting for participants…</string>
+    <string name="in_conference_format">In conference: %s</string>
     <string name="call_status_connected">Connected</string>
     <string name="call_status_calling">Calling…</string>
     <string name="call_status_incoming">Incoming…</string>
     <string name="conference">Conference</string>
     <string name="group_conference">Group Conference</string>
-    <string name="in_conference_format">In conference: %s</string>
     <string name="update_ready_title">Update Ready</string>
     <string name="update_ready_text">A new version of Lava is ready to install.</string>
     <string name="end_for_all">End for all</string>
