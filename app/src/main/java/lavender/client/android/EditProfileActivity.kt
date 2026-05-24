@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -53,6 +55,7 @@ class EditProfileActivity : AppCompatActivity() {
     private var currentAvatarImageView: CircleImageView? = null
     private var currentAvatarProgressBar: ProgressBar? = null
     private var currentFullAvatarUrl: String = ""
+    private var initialBio: String = ""
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -124,7 +127,9 @@ class EditProfileActivity : AppCompatActivity() {
                 Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
                 runOnUiThread {
                     if (profile != null) {
+                        initialBio = profile.bio
                         editTextBio.setText(profile.bio)
+                        btnChangeBio.isVisible = false
                     }
                 }
             }
@@ -182,6 +187,16 @@ class EditProfileActivity : AppCompatActivity() {
                 .show()
         }
 
+        editTextBio.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val newBio = s?.toString()?.trim() ?: ""
+                // Only show save button if bio is different and it was already loaded from server
+                btnChangeBio.isVisible = initialBio.isNotEmpty() && newBio != initialBio.trim()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
         btnChangeAvatar.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             pickImageLauncher.launch(intent)
@@ -200,8 +215,11 @@ class EditProfileActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (success) {
                         Toast.makeText(this, "Био сохранено", Toast.LENGTH_SHORT).show()
+                        initialBio = newBio
+                        btnChangeBio.isVisible = false
                         // Reload profile to verify
                         grpcClient.fetchUserId(username) { userId, success ->
+// ... (rest of the block)
                             if (!success || userId.isNullOrEmpty()) {
                                 Log.e("EditProfile", "Failed to fetch userId for user: $username")
                                 return@fetchUserId
@@ -311,7 +329,10 @@ class EditProfileActivity : AppCompatActivity() {
                                     if (success) {
                                         Toast.makeText(this@EditProfileActivity, "Аватар обновлен", Toast.LENGTH_SHORT).show()
                                         // Update current full avatar URL
-                                        currentFullAvatarUrl = fullUrl.takeIf { it.isNotEmpty() } ?: url
+                                        currentFullAvatarUrl = fullUrl.ifEmpty { url }
+                                        // Explicitly update cache to ensure other parts of app see it
+                                        grpcClient.updateAvatarCache(username, url, currentFullAvatarUrl)
+
                                         // Update avatarImageView (используем миниатюру)
                                         currentAvatarImageView?.let {
                                             Glide.with(this@EditProfileActivity)

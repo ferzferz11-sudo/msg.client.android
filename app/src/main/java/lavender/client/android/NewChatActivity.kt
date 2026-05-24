@@ -201,6 +201,17 @@ class NewChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
+                }
+            }
+        }
     }
 
     private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -287,11 +298,11 @@ class NewChatActivity : AppCompatActivity() {
         SessionManager.updateDeviceInfo(this)
         val session = SessionManager.session.value
         viewModel.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { _ ->
-            viewModel.markRead(username, this)
+            viewModel.markRead(username)
         }
         
         // Mark as read immediately upon entry
-        viewModel.markRead(username, this)
+        viewModel.markRead(username)
 
         // Load draft message when entering chat (after ensuring userId is set)
         ensureUserIdSet { loadDraft() }
@@ -335,6 +346,17 @@ class NewChatActivity : AppCompatActivity() {
                     }
                     adapter.isGroupChat = !isDirect
                     adapter.adminUsername = creator
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -389,6 +411,17 @@ class NewChatActivity : AppCompatActivity() {
                     // Reload messages from server
                     viewModel.switchRoom(roomId)
                     swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -454,7 +487,18 @@ class NewChatActivity : AppCompatActivity() {
             if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
                 showToast(getString(R.string.connecting))
                 viewModel.startChat(username, password, "") { _ ->
-                    viewModel.markRead(username, this)
+                    viewModel.markRead(username)
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -621,9 +665,20 @@ class NewChatActivity : AppCompatActivity() {
                     }
 
                     if ((isFirstLoad || hasNewMessages) && roomMessages.any { it.user != username && !it.isRead }) {
-                        viewModel.markRead(username, this@NewChatActivity)
+                        viewModel.markRead(username)
                     }
                     lastMessageCount = roomMessages.size
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -633,6 +688,17 @@ class NewChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isLoading.collect { loading ->
                     historyLoadingProgress.isVisible = loading && adapter.currentList.isEmpty()
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -762,6 +828,17 @@ class NewChatActivity : AppCompatActivity() {
                     sendMessage(text, "")
                     messageInput.text.clear()
                     hideReplyPreview()
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -1280,6 +1357,17 @@ class NewChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
+                }
+            }
+        }
     }
 
     private fun fullReloadHistory() {
@@ -1293,6 +1381,17 @@ class NewChatActivity : AppCompatActivity() {
                 Log.w("NewChatActivity", "Load history timeout, stopping refresh")
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -1352,7 +1451,7 @@ class NewChatActivity : AppCompatActivity() {
         
         // For favorites, we might want to update UI immediately if stream is slow
         if (roomId.startsWith("favorites_")) {
-            viewModel.markRead(username, this)
+            viewModel.markRead(username)
         }
 
         // Delete draft after successful send
@@ -1578,6 +1677,17 @@ class NewChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
+                }
+            }
+        }
     }
 
     private fun showImagePreview() {
@@ -1721,7 +1831,7 @@ class NewChatActivity : AppCompatActivity() {
         
         // For favorites, we might want to update UI immediately if stream is slow
         if (roomId.startsWith("favorites_")) {
-            viewModel.markRead(username, this)
+            viewModel.markRead(username)
         }
 
         // Delete draft after successful send
@@ -1960,6 +2070,17 @@ class NewChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
+                }
+            }
+        }
     }
 
     private fun showToast(message: String) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
@@ -1981,6 +2102,17 @@ class NewChatActivity : AppCompatActivity() {
                     // chatAdapter.submitList(chats)
 
                     prefs.edit { putLong("chat_list_version", serverVersion) }
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }
@@ -2026,6 +2158,17 @@ class NewChatActivity : AppCompatActivity() {
                     }
 
                     android.util.Log.d("Draft", "Draft loaded for room $roomId: ${draftText.take(50)}...")
+                }
+            }
+        }
+
+        // Observe chat deletion event
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                grpcClient.chatDeletedEvent.collect { deletedChatId ->
+                    if (deletedChatId == roomId) {
+                        finish()
+                    }
                 }
             }
         }

@@ -191,14 +191,27 @@ class LavenderMessagingService : FirebaseMessagingService() {
     companion object {
         fun dismissNotificationsForRoom(context: Context, roomId: String) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            
+            // 1. Direct cancel using the stable ID we used to notify
+            val notifId = roomId.hashCode()
+            Log.d("FCM", "Dismissing notifications for room: $roomId (ID: $notifId)")
+            notificationManager.cancel(notifId)
+
+            // 2. Fallback for older notifications or different ID schemes
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                notificationManager.activeNotifications.forEach { notification ->
-                    if (notification.notification.extras.getString("room_id") == roomId) {
-                        notificationManager.cancel(notification.id)
+                try {
+                    val active = notificationManager.activeNotifications
+                    active.forEach { notification ->
+                        val extras = notification.notification.extras
+                        val notifRoomId = extras.getString("room_id")
+                        if (notifRoomId == roomId) {
+                            Log.d("FCM", "Found active notification for room $roomId, cancelling by ID: ${notification.id}")
+                            notificationManager.cancel(notification.id)
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e("FCM", "Error dismissing notifications: ${e.message}")
                 }
-            } else {
-                notificationManager.cancelAll()
             }
         }
     }

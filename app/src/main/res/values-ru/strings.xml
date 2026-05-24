@@ -260,7 +260,7 @@
     <string name="remove_contact_confirm">Вы уверены, что хотите удалить %s из списка контактов?</string>
     <string name="themes">Темы</string>
     <string name="light_theme">Светлая тема</string>
-    <string name="dark_theme">Темная тема</string>
+    <string name="dark_theme">Графит темный</string>
     <string name="custom_themes">Пользовательские темы</string>
     <string name="add_theme">Добавить тему</string>
     <string name="edit_theme">Редактировать тему</string>
@@ -278,11 +278,13 @@
     <string name="background_image_url">URL фонового изображения</string>
     <string name="delete_theme">Удалить тему</string>
     <string name="delete_theme_confirm">Вы уверены, что хотите удалить эту тему?</string>
+    <string name="theme_applied">Тема применена</string>
+    <string name="failed_to_apply_theme">Не удалось применить тему</string>
     <string name="theme_template_green">Зеленый лес</string>
     <string name="theme_template_blue">Современный синий</string>
     <string name="theme_template_graphite">Графит и золото</string>
     <string name="theme_template_mint">Кибер Мята</string>
-    <string name="theme_dark_graphite">Графитовый ночной</string>
+    <string name="theme_dark_graphite">Графит темный</string>
     <string name="admin_label">(Админ)</string>
     <string name="muted_label">Без звука</string>
     <string name="super_admin">Админ панель</string>

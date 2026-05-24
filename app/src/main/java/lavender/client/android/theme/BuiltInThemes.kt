@@ -52,7 +52,7 @@ object BuiltInThemes {
      */
     val BASE_DARK: Theme = Theme(
         id = "dark",
-        name = "Лава Графит",
+        name = "Графит темный",
         primaryColor = GRAPHITE_PRIMARY,
         onPrimaryColor = "#1A1A1A",
         surfaceColor = "#2D2D2D",

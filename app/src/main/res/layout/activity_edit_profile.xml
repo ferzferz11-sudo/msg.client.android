@@ -32,6 +32,7 @@
 
             <!-- Avatar Section -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/avatarCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -84,6 +85,7 @@
 
             <!-- Bio Section -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/bioCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -100,6 +102,7 @@
                     android:padding="16dp">
 
                     <TextView
+                        android:id="@+id/bioLabelText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/bio_label"
@@ -134,12 +137,14 @@
                         android:layout_marginTop="12dp"
                         android:text="@string/change_bio"
                         android:textAllCaps="false"
-                        android:layout_gravity="center_horizontal" />
+                        android:layout_gravity="center_horizontal"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Settings Section -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/settingsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"

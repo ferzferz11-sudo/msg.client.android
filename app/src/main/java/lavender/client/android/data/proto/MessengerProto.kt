@@ -386,7 +386,8 @@ data class GetUserProfileResponseProto(
     val bio: String = "",
     val status: String = "",
     val avatarUrl: String = "",
-    val lastSeenAt: Timestamp? = null
+    val lastSeenAt: Timestamp? = null,
+    val fullAvatarUrl: String = ""
 )
 
 // Participants management

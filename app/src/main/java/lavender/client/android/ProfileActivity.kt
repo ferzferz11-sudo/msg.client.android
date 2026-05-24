@@ -395,8 +395,15 @@ class ProfileActivity : AppCompatActivity() {
                         }
                         if (profile != null && profile.avatarUrl.isNotEmpty()) {
                             avatarUrl = profile.avatarUrl
+                            fullAvatarUrl = profile.fullAvatarUrl.ifEmpty { avatarUrl }
+                            // Force update cache with fresh data from profile
+                            grpcClient.updateAvatarCache(username, avatarUrl, fullAvatarUrl)
+
                             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
                             grpcClient.getUserAvatar(username, userId) { _ -> }
+                            
+                            // Re-bind avatar click listener because avatarUrl might have been empty initially
+                            setupAvatarClickListener(profileAvatar)
                         }
                     }
                 }
@@ -406,10 +413,7 @@ class ProfileActivity : AppCompatActivity() {
         if (avatarUrl.isNotEmpty()) {
             Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
             profileAvatar.imageTintList = null
-            profileAvatar.setOnClickListener {
-                val fullImageUrl = if (!isGroup) grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl } else fullAvatarUrl.ifEmpty { avatarUrl }
-                if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
-            }
+            setupAvatarClickListener(profileAvatar)
         } else {
             ThemeUtils.applyDefaultAvatar(profileAvatar, currentTheme)
             profileAvatar.setOnClickListener(null)
@@ -420,6 +424,17 @@ class ProfileActivity : AppCompatActivity() {
                 bioCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
                 bioCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
             }
+        }
+    }
+
+    private fun setupAvatarClickListener(profileAvatar: CircleImageView) {
+        profileAvatar.setOnClickListener {
+            val fullImageUrl = if (!isGroup) {
+                grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl }
+            } else {
+                fullAvatarUrl.ifEmpty { avatarUrl }
+            }
+            if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
         }
     }
 

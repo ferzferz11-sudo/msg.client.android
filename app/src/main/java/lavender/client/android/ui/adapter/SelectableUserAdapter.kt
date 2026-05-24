@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.hdodenhof.circleimageview.CircleImageView
@@ -66,6 +67,14 @@ class SelectableUserAdapter(
             usernameText.text = username
             checkBox.isChecked = isSelected
             
+            val theme = ThemeStore.currentTheme()
+            try {
+                val primaryColor = theme.primaryColor.toColorInt()
+                val textSecondary = theme.textSecondaryColor.toColorInt()
+                checkBox.buttonTintList = android.content.res.ColorStateList.valueOf(if (isSelected) primaryColor else textSecondary)
+                usernameText.setTextColor(theme.textPrimaryColor.toColorInt())
+            } catch (_: Exception) {}
+
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context)
                     .load(avatarUrl)

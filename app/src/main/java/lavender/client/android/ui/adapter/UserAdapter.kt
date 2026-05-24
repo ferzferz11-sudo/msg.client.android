@@ -104,8 +104,10 @@ class UserAdapter(
             val primaryColor = currentTheme.primaryColor.toColorInt()
             val onSurface = currentTheme.onSurfaceColor.toColorInt()
             val textPrimary = currentTheme.textPrimaryColor.toColorInt()
+            val textSecondary = currentTheme.textSecondaryColor.toColorInt()
             
             usernameText.setTextColor(textPrimary)
+            checkBox.buttonTintList = android.content.res.ColorStateList.valueOf(if (isSelected) primaryColor else textSecondary)
             
             itemView.alpha = 1.0f
             if (isSelected) {

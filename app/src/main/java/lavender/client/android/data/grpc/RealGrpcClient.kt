@@ -1188,7 +1188,12 @@ object RealGrpcClient {
             .build()
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<UpdateAvatarResponseProto>() {
-            override fun onMessage(message: UpdateAvatarResponseProto) { callback(message.success, message.message) }
+            override fun onMessage(message: UpdateAvatarResponseProto) { 
+                if (message.success) {
+                    updateAvatarCache(username, avatarUrl, fullAvatarUrl)
+                }
+                callback(message.success, message.message) 
+            }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
         call.sendMessage(UpdateAvatarRequestProto(username = username, avatarUrl = avatarUrl, fullAvatarUrl = fullAvatarUrl, userId = currentUserId ?: ""))
@@ -1389,6 +1394,11 @@ object RealGrpcClient {
     }
 
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
+        // Dismiss push notifications for this room locally
+        appContext?.let {
+            lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid)
+        }
+
         val currentChannel = channel
         if (currentChannel == null || _connectionStatus.value != ConnectionStatus.READY) {
             Log.d(TAG, "Queueing markRead for $rid because channel is not ready")
@@ -2333,9 +2343,9 @@ class GetUserProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetU
 class GetUserProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserProfileResponseProto> {
     override fun stream(v: GetUserProfileResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetUserProfileResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""; var ls: com.google.protobuf.Timestamp? = null
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> u = cis.readString(); 2 -> b = cis.readString(); 3 -> st = cis.readString(); 4 -> au = cis.readString(); 5 -> { val len = cis.readUInt32(); ls = ProtoUtils.parseTimestampFromProto(java.io.ByteArrayInputStream(cis.readRawBytes(len))) } else -> cis.skipField(tag) } }
-        return GetUserProfileResponseProto(u, b, st, au, ls)
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""; var ls: com.google.protobuf.Timestamp? = null; var fau = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> u = cis.readString(); 2 -> b = cis.readString(); 3 -> st = cis.readString(); 4 -> au = cis.readString(); 5 -> { val len = cis.readUInt32(); ls = ProtoUtils.parseTimestampFromProto(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }; 6 -> fau = cis.readString(); else -> cis.skipField(tag) } }
+        return GetUserProfileResponseProto(u, b, st, au, ls, fau)
     }
 }
 

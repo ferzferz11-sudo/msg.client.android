@@ -98,7 +98,7 @@ object ThemeApplier {
             setNavigationIconTint(customOnPrimary)
             
             // Tint action icons
-            val actions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon)
+            val actions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat)
             actions.forEach { id ->
                 findViewById<ImageView>(id)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
             }
@@ -174,10 +174,28 @@ object ThemeApplier {
         }
 
         // FABs
-        listOf(R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { fabId ->
-            activity.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(fabId)?.apply {
+        listOf(R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
+            (activity.findViewById<View>(id) as? com.google.android.material.floatingactionbutton.FloatingActionButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)
+            }
+        }
+
+        // Standard Primary Buttons
+        listOf(R.id.btnChangeBio).forEach { id ->
+            (activity.findViewById<View>(id) as? com.google.android.material.button.MaterialButton)?.apply {
+                backgroundTintList = ColorStateList.valueOf(customPrimary)
+                setTextColor(customOnPrimary)
+                iconTint = ColorStateList.valueOf(customOnPrimary)
+            }
+        }
+
+        // TextButtons and others
+        listOf(R.id.btnChangeAvatar, R.id.btnChangeUsername, R.id.btnChangePassword).forEach { id ->
+            (activity.findViewById<View>(id) as? com.google.android.material.button.MaterialButton)?.apply {
+                setTextColor(customPrimary)
+                iconTint = ColorStateList.valueOf(customPrimary)
+                rippleColor = ColorStateList.valueOf(adjustAlpha(customPrimary, 0.1f))
             }
         }
 
@@ -192,7 +210,10 @@ object ThemeApplier {
         activity.findViewById<TextView>(R.id.updateProgressText)?.setTextColor(customOnPrimary)
         activity.findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(textSecondary)
         
-        listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble, R.id.biometricCard, R.id.devicesCard).forEach { id ->
+        // Settings/Edit Profile headers
+        (activity.findViewById<View>(R.id.bioLabelText) as? TextView)?.setTextColor(customPrimary)
+        
+        listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble, R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard).forEach { id ->
             activity.findViewById<View>(id)?.let { view ->
                 if (view is MaterialCardView) {
                     view.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
@@ -201,8 +222,8 @@ object ThemeApplier {
                 }
             }
         }
-        activity.findViewById<TextView>(R.id.onboardingProfileText)?.setTextColor(onSurfaceColor)
-        activity.findViewById<TextView>(R.id.onboardingFabText)?.setTextColor(onSurfaceColor)
+        (activity.findViewById<View>(R.id.onboardingProfileText) as? TextView)?.setTextColor(onSurfaceColor)
+        (activity.findViewById<View>(R.id.onboardingFabText) as? TextView)?.setTextColor(onSurfaceColor)
     }
 
     fun applyToDialog(dialog: com.google.android.material.bottomsheet.BottomSheetDialog, theme: Theme) {

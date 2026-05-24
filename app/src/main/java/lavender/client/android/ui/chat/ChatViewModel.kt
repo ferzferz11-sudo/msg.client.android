@@ -83,12 +83,7 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun markRead(username: String, context: android.content.Context? = null, onCompletion: (() -> Unit)? = null) {
-        // Dismiss push notifications for this room locally
-        context?.let {
-            lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, currentRoomId)
-        }
-
+    fun markRead(username: String, onCompletion: (() -> Unit)? = null) {
         if (currentRoomId.startsWith("favorites_")) {
             onCompletion?.invoke()
             return

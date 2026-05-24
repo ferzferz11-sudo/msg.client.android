@@ -143,9 +143,9 @@ class ThemeAdapter(
                 modeIndicator.setImageResource(if (isLight) R.drawable.ic_light_mode else R.drawable.ic_theme_dark)
 
                 if (theme.id == "dark") {
-                    val pColor = "#1E1E2E".toColorInt()
+                    val pColor = "#5F9EA0".toColorInt()
                     themeColorPreview.backgroundTintList = ColorStateList.valueOf(pColor)
-                    themeColorsInfo.text = context.getString(R.string.dark_theme)
+                    themeColorsInfo.text = context.getString(R.string.theme_palette)
                     if (isCurrent) {
                         appliedIndicator.imageTintList = ColorStateList.valueOf(if (ThemeUtils.isLight(pColor)) Color.BLACK else Color.WHITE)
                     }

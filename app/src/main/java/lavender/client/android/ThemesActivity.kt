@@ -200,6 +200,7 @@ class ThemesActivity : AppCompatActivity() {
         BuiltInThemes.all.map { ThemeMappers.toProto(it) }.forEach { theme ->
             val localizedName = when (theme.id) {
                 "dark"                  -> getString(R.string.dark_theme)
+                "builtin_lavender_dark" -> "Лавандовый ночной"
                 "builtin_dark_graphite" -> getString(R.string.theme_dark_graphite)
                 "builtin_green"         -> getString(R.string.theme_template_green)
                 "builtin_blue"          -> getString(R.string.theme_template_blue)
@@ -238,9 +239,9 @@ class ThemesActivity : AppCompatActivity() {
                     adapter.setCurrentThemeId(themeId)
                     adapter.clearSelection()
                     updateToolbarAvatar()
-                    Toast.makeText(this, "Theme applied", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@ThemesActivity, "Failed to apply theme", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThemesActivity, getString(R.string.failed_to_apply_theme), Toast.LENGTH_SHORT).show()
                 }
             }
         }
