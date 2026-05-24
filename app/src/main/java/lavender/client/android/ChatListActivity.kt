@@ -44,6 +44,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
@@ -172,6 +173,39 @@ class ChatListActivity : AppCompatActivity() {
 
         Log.d("ChatListActivity", "Logged in as $username")
 
+        // Observe background update download
+        WorkManager.getInstance(this)
+            .getWorkInfosForUniqueWorkLiveData("update_download")
+            .observe(this) { workInfos ->
+                val workInfo = workInfos?.firstOrNull()
+                if (workInfo != null) {
+                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                    val isCurrentlyDownloading = workInfo.state == WorkInfo.State.RUNNING || workInfo.state == WorkInfo.State.ENQUEUED
+                    
+                    if (prefs.getBoolean("update_downloading", false) != isCurrentlyDownloading) {
+                        prefs.edit { putBoolean("update_downloading", isCurrentlyDownloading) }
+                    }
+
+                    if (workInfo.state == WorkInfo.State.RUNNING) {
+                        val progress = workInfo.progress.getInt("progress", 0)
+                        binding.updateProgressText.text = getString(R.string.percent_format, progress)
+                        binding.updateProgressText.isVisible = progress > 0
+                    } else {
+                        binding.updateProgressText.isVisible = false
+                    }
+                    updateUpdateIndicatorVisibility()
+                } else {
+                    // No work info, ensure downloading flag is false
+                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                    if (prefs.getBoolean("update_downloading", false)) {
+                        prefs.edit { putBoolean("update_downloading", false) }
+                        updateUpdateIndicatorVisibility()
+                    }
+                }
+            }
+        
+        checkForUpdatesSilently()
+
         // Show onboarding tips for new users (within 24 hours of registration)
         setupOnboardingTips()
 
@@ -285,26 +319,6 @@ class ChatListActivity : AppCompatActivity() {
         
         binding.actionSearch.setOnClickListener {
             showSearchBar()
-        }
-
-        binding.updateAvailableIcon.setOnClickListener {
-            val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-            if (prefs.getBoolean("update_downloaded", false)) {
-                val apkPath = prefs.getString("apk_path", "")
-                if (!apkPath.isNullOrEmpty()) {
-                    prefs.edit {
-                        putBoolean("update_downloaded", false)
-                        remove("apk_path")
-                        putBoolean("update_available", false)
-                    }
-                    updateUpdateIndicatorVisibility()
-                    UpdateUtils.installApk(this, File(apkPath))
-                } else {
-                    checkManualUpdate()
-                }
-            } else {
-                checkManualUpdate()
-            }
         }
 
         binding.toolbar.setNavigationOnClickListener {
@@ -910,22 +924,35 @@ class ChatListActivity : AppCompatActivity() {
         val hasSelection = if (::chatAdapter.isInitialized) chatAdapter.getSelectedChats().isNotEmpty() else false
         val isSearching = binding.searchCard.isVisible
         
-        // Only show if downloading or downloaded (ready to install)
-        binding.updateAvailableIcon.isVisible = (isDownloaded || isDownloading) && !hasSelection && !isSearching
+        // Show container if update is ready or downloading
+        binding.updateContainer.isVisible = (isDownloaded || isDownloading) && !hasSelection && !isSearching
         
         if (isDownloading) {
             binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_rotating)
             val rotation = AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
             binding.updateAvailableIcon.startAnimation(rotation)
             binding.updateAvailableIcon.contentDescription = "Downloading..."
+            // Progress text is managed by WorkInfo observer
         } else {
             binding.updateAvailableIcon.clearAnimation()
+            binding.updateProgressText.isVisible = false
             if (isDownloaded) {
                 binding.updateAvailableIcon.setImageResource(R.drawable.ic_install_update)
                 binding.updateAvailableIcon.contentDescription = getString(R.string.install_update)
             } else {
                 binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_available)
                 binding.updateAvailableIcon.contentDescription = getString(R.string.update_available)
+            }
+        }
+        
+        binding.updateContainer.setOnClickListener {
+            if (isDownloaded) {
+                val apkPath = prefs.getString("apk_path", null)
+                if (apkPath != null) {
+                    installApk(File(apkPath))
+                }
+            } else if (!isDownloading && isAvailable) {
+                startBackgroundDownload()
             }
         }
 
@@ -1029,10 +1056,12 @@ class ChatListActivity : AppCompatActivity() {
                         putBoolean("update_available", isAvailable)
                         putString("latest_version", latestVersion)
                         
-                        // If we are already on latest version, clear download state
+                        // If we are already on latest version, clear download state and stop work
                         if (!isAvailable) {
                             putBoolean("update_downloaded", false)
+                            putBoolean("update_downloading", false)
                             remove("apk_path")
+                            WorkManager.getInstance(applicationContext).cancelUniqueWork("update_download")
                         }
                     }
                     
@@ -1413,15 +1442,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun isUpdateAvailable(current: String, latest: String): Boolean {
-        val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }
-        val latestParts = latest.split(".").mapNotNull { it.toIntOrNull() }
-        for (i in 0 until maxOf(currentParts.size, latestParts.size)) {
-            val c = currentParts.getOrNull(i) ?: 0
-            val l = latestParts.getOrNull(i) ?: 0
-            if (l > c) return true
-            if (l < c) return false
-        }
-        return false
+        return UpdateUtils.isUpdateAvailable(current, latest)
     }
 
     private fun startBackgroundDownload(isAuto: Boolean = false) {

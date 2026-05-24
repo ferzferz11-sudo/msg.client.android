@@ -275,7 +275,7 @@ class MessageAdapter(
 
             // ПРОВЕРКА: Если цвет фона пришел как 0 (прозрачный), ставим аварийный дефолт
             val finalSurfaceColor = if (sColor != 0) sColor else {
-                if (isOutgoing) "#1A1B46".toColorInt() else "#6A1B9A".toColorInt()
+                if (isOutgoing) "#3D6B6C".toColorInt() else "#363636".toColorInt()
             }
 
             val secondaryColorWithAlpha = (sTextColor and 0x00FFFFFF) or (0xCC shl 24)

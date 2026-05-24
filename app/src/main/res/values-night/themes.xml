@@ -8,24 +8,24 @@
         -->
 
         <!-- Base Dark Theme -->
-        <item name="colorPrimary">#04052E</item>
+        <item name="colorPrimary">#1E1E1E</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorPrimaryContainer">#1A1B46</item>
+        <item name="colorPrimaryContainer">#2D2D2D</item>
         <item name="colorOnPrimaryContainer">#FFFFFF</item>
 
-        <item name="colorSecondary">#1A1B46</item>
+        <item name="colorSecondary">#2D2D2D</item>
         <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="colorSecondaryContainer">#04052E</item>
+        <item name="colorSecondaryContainer">#1E1E1E</item>
         <item name="colorOnSecondaryContainer">#FFFFFF</item>
 
-        <item name="android:colorBackground">#04052E</item>
-        <item name="colorSurface">#1A1B46</item>
+        <item name="android:colorBackground">#1E1E1E</item>
+        <item name="colorSurface">#2D2D2D</item>
         <item name="colorOnSurface">#E0E0E0</item>
 
-        <item name="colorSurfaceVariant">#1A1B46</item>
+        <item name="colorSurfaceVariant">#2D2D2D</item>
         <item name="colorOnSurfaceVariant">#E0E0E0</item>
 
-        <item name="colorSurfaceContainer">#1A1B46</item>
+        <item name="colorSurfaceContainer">#2D2D2D</item>
 
         <item name="android:textColor">#FFFFFF</item>
     </style>

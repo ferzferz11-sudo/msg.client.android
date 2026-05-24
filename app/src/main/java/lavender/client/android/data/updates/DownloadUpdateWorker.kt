@@ -21,6 +21,8 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 
+import androidx.work.workDataOf
+
 class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
     CoroutineWorker(context, parameters) {
 
@@ -49,10 +51,18 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
 
                 val response = client.newCall(request).execute()
                 if (!response.isSuccessful) {
+                    applicationContext.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE).edit {
+                        putBoolean("update_downloading", false)
+                    }
                     return@withContext Result.failure()
                 }
 
-                val body = response.body ?: return@withContext Result.failure()
+                val body = response.body ?: run {
+                    applicationContext.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE).edit {
+                        putBoolean("update_downloading", false)
+                    }
+                    return@withContext Result.failure()
+                }
                 val totalBytes = body.contentLength()
                 val inputStream = body.byteStream()
                 val outputStream = FileOutputStream(file)
@@ -69,6 +79,7 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
                         val progress = (downloadedBytes * 100 / totalBytes).toInt()
                         // Update progress every 5% to avoid notification spam
                         if (progress % 5 == 0) {
+                            setProgress(workDataOf("progress" to progress))
                             setForeground(createForegroundInfo(progress))
                         }
                     }

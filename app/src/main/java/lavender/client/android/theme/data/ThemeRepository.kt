@@ -9,7 +9,13 @@ class ThemeRepository(
 ) {
     suspend fun loadCurrentTheme(context: Context, username: String): Theme {
         val prefs = ThemePreferences(context)
-        val themeId = prefs.getCurrentThemeId()
+        var themeId = prefs.getCurrentThemeId()
+
+        // Migrate old graphite ID to default dark
+        if (themeId == "builtin_dark_graphite") {
+            themeId = "dark"
+            prefs.setCurrentThemeId("dark")
+        }
 
         if (themeId == "dark") return BuiltInThemes.dark
         if (themeId == "light") return BuiltInThemes.BASE_LIGHT

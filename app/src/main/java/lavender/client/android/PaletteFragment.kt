@@ -80,7 +80,7 @@ class PaletteFragment : Fragment() {
             "#FF0000", "#FF5722", "#FF9800", "#FFC107", "#FFEB3B", "#CDDC39",
             "#8BC34A", "#4CAF50", "#009688", "#00BCD4", "#03A9F4", "#2196F3",
             "#3F51B5", "#673AB7", "#9C27B0", "#E91E63", "#F44336", "#795548",
-            "#9E9E9E", "#607D8B", "#FFFFFF", "#000000", "#1A1B46", "#967BB6"
+            "#9E9E9E", "#607D8B", "#FFFFFF", "#000000", "#2D2D2D", "#5F9EA0"
         )
 
         presetColors.forEach { colorHex ->

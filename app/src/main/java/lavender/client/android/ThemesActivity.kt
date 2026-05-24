@@ -173,10 +173,16 @@ class ThemesActivity : AppCompatActivity() {
         grpcClient.getThemes(queryId) { currentId, list ->
             customThemes = list.toMutableList()
             
+            var remoteId = currentId
+            // Handle migration from graphite to default dark
+            if (remoteId == "builtin_dark_graphite") {
+                remoteId = "dark"
+            }
+
             val localThemeId = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("current_theme_id", null)
-            if (localThemeId == null) {
-                activeThemeId = currentId
-                currentThemeId = currentId
+            if (localThemeId == null || localThemeId == "builtin_dark_graphite") {
+                activeThemeId = remoteId
+                currentThemeId = remoteId
             } else {
                 activeThemeId = localThemeId
                 currentThemeId = localThemeId
@@ -271,15 +277,15 @@ class ThemesActivity : AppCompatActivity() {
             putExtra("theme_id", "custom_new_${System.currentTimeMillis()}")
             putExtra("username", username)
             // Use dark theme as base
-            putExtra("primary_color", "#967BB6")
-            putExtra("background_color", "#04052E")
-            putExtra("surface_color", "#1A1B46")
-            putExtra("surface_container", "#1A1B46")
+            putExtra("primary_color", "#5F9EA0")
+            putExtra("background_color", "#1E1E1E")
+            putExtra("surface_color", "#2D2D2D")
+            putExtra("surface_container", "#252525")
             putExtra("text_primary_color", "#FFFFFF")
             putExtra("on_primary_color", "#FFFFFF")
             putExtra("on_surface_color", "#E0E0E0")
-            putExtra("bottom_panel_color", "#1A1B46")
-            putExtra("on_bottom_panel_color", "#967BB6")
+            putExtra("bottom_panel_color", "#2D2D2D")
+            putExtra("on_bottom_panel_color", "#5F9EA0")
             putExtra("outgoing_bubble_color", "#2A2C6D")
             putExtra("incoming_bubble_color", "#16173A")
         }

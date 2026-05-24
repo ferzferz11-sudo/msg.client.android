@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Lavender Messenger Palette -->
-    <color name="deep_purple">#312051</color>
-    <color name="lavender_mist">#967BB6</color>
-    <color name="soft_lilac">#E6E6FA</color>
-    <color name="pale_lilac">#F8F7FC</color>
-    <color name="silver_fog">#F5F5F7</color>
+    <!-- Graphite Palette (New Default) -->
+    <color name="deep_purple">#2D2D2D</color> <!-- Surface -->
+    <color name="lavender_mist">#5F9EA0</color> <!-- Primary -->
+    <color name="soft_lilac">#252525</color> <!-- Surface Container -->
+    <color name="pale_lilac">#1E1E1E</color> <!-- Background -->
+    <color name="silver_fog">#2D2D2D</color> <!-- Surface -->
     <color name="dark_slate">#1A1A1A</color>
-    <color name="dark_background">#04052E</color>
+    <color name="dark_background">#1E1E1E</color>
     
     <!-- Standard colors -->
     <color name="black">#FF000000</color>
@@ -15,37 +15,37 @@
 
     <!-- Message colors (default for light theme) -->
     <color name="message_background">@color/white</color>
-    <color name="message_border">@color/pale_lilac</color>
-    <color name="incoming_message_background">@color/pale_lilac</color>
-    <color name="outgoing_message_background">@color/pale_lilac</color>
+    <color name="message_border">#E0E0E0</color>
+    <color name="incoming_message_background">#F5F5F5</color>
+    <color name="outgoing_message_background">#F5F5F5</color>
     <color name="outgoing_message_text">@color/white</color>
     <color name="incoming_message_light">@color/white</color>
 
     <!-- Telegram-like colors -->
     <color name="tg_outgoing_bubble">#EFFDDE</color>
     <color name="tg_incoming_bubble">#FFFFFF</color>
-    <color name="tg_outgoing_bubble_dark">#4A3B6D</color>
-    <color name="tg_incoming_bubble_dark">#312051</color>
+    <color name="tg_outgoing_bubble_dark">#3D6B6C</color>
+    <color name="tg_incoming_bubble_dark">#363636</color>
     <color name="tg_outgoing_text">#1A1A1A</color>
-    <color name="tg_incoming_name">#4081BF</color>
-    <color name="tg_time_incoming">#A0A0A0</color>
+    <color name="tg_incoming_name">#5F9EA0</color>
+    <color name="tg_time_incoming">#909090</color>
     <color name="tg_time_outgoing">#5EAD54</color>
     <color name="tg_read_check">#4FC3F7</color>
-    <color name="tg_blue">#4081BF</color>
+    <color name="tg_blue">#5F9EA0</color>
     <color name="tg_input_hint">#9E9E9E</color>
 
     <!-- UI element colors -->
     <color name="primary">@color/lavender_mist</color>
-    <color name="primary_dark">@color/deep_purple</color>
+    <color name="primary_dark">#1A1A1A</color>
     <color name="accent">@color/soft_lilac</color>
-    <color name="lavender_mist_alpha">#4D967BB6</color>
+    <color name="lavender_mist_alpha">#4D5F9EA0</color>
     
     <!-- Splash screen background -->
-    <color name="splash_background">@color/soft_lilac</color>
+    <color name="splash_background">@color/pale_lilac</color>
     
     <!-- Audio waveform colors -->
-    <color name="audio_waveform_default">#CCCCCC</color>
-    <color name="audio_waveform_playing">#967BB6</color>
+    <color name="audio_waveform_default">#666666</color>
+    <color name="audio_waveform_playing">@color/lavender_mist</color>
     
     <!-- Recording colors -->
     <color name="red">#FF4444</color>

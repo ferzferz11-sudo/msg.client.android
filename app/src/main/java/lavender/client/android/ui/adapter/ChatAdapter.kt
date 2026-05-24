@@ -169,7 +169,7 @@ class ChatAdapter(
         ) {
             val context = itemView.context
 
-            val defaultCardBg = "#1A1B46".toColorInt()
+            val defaultCardBg = "#2D2D2D".toColorInt()
             val defaultText = android.graphics.Color.WHITE
             val defaultSecondary = "#E6E6FA".toColorInt()
             val defaultPrimary = "#B19CD9".toColorInt()

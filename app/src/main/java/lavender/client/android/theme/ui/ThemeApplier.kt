@@ -189,6 +189,7 @@ object ThemeApplier {
 
         activity.findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
         activity.findViewById<TextView>(R.id.toolbarTitle)?.setTextColor(customOnPrimary)
+        activity.findViewById<TextView>(R.id.updateProgressText)?.setTextColor(customOnPrimary)
         activity.findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(textSecondary)
         
         listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble, R.id.biometricCard, R.id.devicesCard).forEach { id ->

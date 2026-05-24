@@ -3,6 +3,7 @@ package lavender.client.android.theme
 import androidx.core.graphics.toColorInt
 
 object BuiltInThemes {
+    private const val GRAPHITE_PRIMARY = "#5F9EA0"
     private const val LAVENDER_PRIMARY = "#967BB6"
     private const val GOLD_PRIMARY = "#85754E"
 
@@ -47,19 +48,46 @@ object BuiltInThemes {
     )
 
     /**
-     * Базовый шаблон для всех темных тем (Дефолтная тема приложения)
+     * Базовый шаблон для всех темных тем (Дефолтная тема приложения - Графит)
      */
     val BASE_DARK: Theme = Theme(
         id = "dark",
-        name = "Лава Темная",
+        name = "Лава Графит",
+        primaryColor = GRAPHITE_PRIMARY,
+        onPrimaryColor = "#1A1A1A",
+        surfaceColor = "#2D2D2D",
+        onSurfaceColor = "#B8B8B8",
+        backgroundColor = "#1E1E1E",
+        textPrimaryColor = "#E8E8E8",
+        textSecondaryColor = "#909090",
+        surfaceContainer = "#252525",
+        bottomPanelColor = "#2D2D2D",
+        onBottomPanelColor = GRAPHITE_PRIMARY,
+        outgoingBubbleColor = "#3D6B6C",
+        incomingBubbleColor = "#363636",
+        outgoingTextColor = getContrastTextColor("#3D6B6C"),
+        incomingTextColor = getContrastTextColor("#363636"),
+        chatListBackgroundImageUrl = "",
+        chatBackgroundImageUrl = "",
+    )
+
+    // Псевдоним для системной темной темы
+    val dark = BASE_DARK
+
+    /**
+     * Альтернативная темная тема - Лавандовый ночной (Старая дефолтная)
+     */
+    val LAVENDER_DARK: Theme = Theme(
+        id = "builtin_lavender_dark",
+        name = "Лавандовый ночной",
         primaryColor = LAVENDER_PRIMARY,
         onPrimaryColor = "#FFFFFF",
         surfaceColor = "#1A1B46",
         onSurfaceColor = "#E0E0E0",
         backgroundColor = "#04052E",
         textPrimaryColor = "#FFFFFF",
-        textSecondaryColor = "#B0B0CC",
-        surfaceContainer = "#121330",
+        textSecondaryColor = "#909090",
+        surfaceContainer = "#252525",
         bottomPanelColor = "#1A1B46",
         onBottomPanelColor = LAVENDER_PRIMARY,
         outgoingBubbleColor = "#2A2C6D",
@@ -70,43 +98,15 @@ object BuiltInThemes {
         chatBackgroundImageUrl = "",
     )
 
-    // Псевдоним для системной темной темы
-    val dark = BASE_DARK
-
-    /**
-     * Альтернативная темная тема - Графитовый ночной
-     * Темная тема с графитовыми оттенками и приглушенным бирюзовым акцентом
-     */
-    val DARK_GRAPHITE: Theme = Theme(
-        id = "builtin_dark_graphite",
-        name = "Графитовый ночной",
-        primaryColor = "#5F9EA0", // Cadet Blue - приглушенный акцент
-        onPrimaryColor = "#1A1A1A",
-        surfaceColor = "#2D2D2D",
-        onSurfaceColor = "#B8B8B8",
-        backgroundColor = "#1E1E1E",
-        textPrimaryColor = "#E8E8E8",
-        textSecondaryColor = "#909090",
-        surfaceContainer = "#252525",
-        bottomPanelColor = "#2D2D2D",
-        onBottomPanelColor = "#5F9EA0",
-        outgoingBubbleColor = "#3D6B6C",
-        incomingBubbleColor = "#363636",
-        outgoingTextColor = getContrastTextColor("#3D6B6C"),
-        incomingTextColor = getContrastTextColor("#363636"),
-        chatListBackgroundImageUrl = "",
-        chatBackgroundImageUrl = "",
-    )
-
     /**
      * Список всех встроенных тем
      */
     val all: List<Theme> = listOf(
-        // Стандартная темная
+        // Стандартная темная (Графит)
         BASE_DARK,
 
-        // Альтернативная темная тема
-        DARK_GRAPHITE,
+        // Альтернативная темная тема (Лаванда)
+        LAVENDER_DARK,
 
         // Светлые темы на базе шаблона
         BASE_LIGHT.copy(
@@ -165,5 +165,8 @@ object BuiltInThemes {
         ),
     )
 
-    fun findById(id: String): Theme? = all.find { it.id == id }
+    fun findById(id: String): Theme? {
+        if (id == "builtin_dark_graphite") return BASE_DARK
+        return all.find { it.id == id }
+    }
 }
