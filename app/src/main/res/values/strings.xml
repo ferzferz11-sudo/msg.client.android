@@ -476,6 +476,8 @@
     <string name="conference">Conference</string>
     <string name="group_conference">Group Conference</string>
     <string name="in_conference_format">In conference: %s</string>
+    <string name="update_ready_title">Update Ready</string>
+    <string name="update_ready_text">A new version of Lava is ready to install.</string>
     <string name="end_for_all">End for all</string>
     <string name="tap_to_record">Tap to record</string>
     <string name="recording">Recording…</string>

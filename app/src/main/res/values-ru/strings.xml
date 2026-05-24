@@ -484,6 +484,8 @@
     <string name="conference">Конференция</string>
     <string name="group_conference">Групповая конференция</string>
     <string name="in_conference_format">В конференции: %s</string>
+    <string name="update_ready_title">Обновление готово</string>
+    <string name="update_ready_text">Новая версия Лавы готова к установке.</string>
     <string name="end_for_all">Завершить для всех</string>
     <string name="tap_to_record">Нажмите для записи</string>
     <string name="recording">Запись…</string>

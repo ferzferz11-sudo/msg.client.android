@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import lavender.client.android.data.session.SessionManager
 
 @SuppressLint("CustomSplashScreen")
@@ -12,10 +13,16 @@ class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        
+        // Initialize language to Russian on first launch
+        if (!prefs.contains("language")) {
+            prefs.edit { putString("language", "ru") }
+        }
+
         SessionManager.initFromPrefs(this)
         lavender.client.android.data.calls.CallManager.init(this)
 
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val savedUsername = prefs.getString("username", null)
         val savedPassword = prefs.getString("password", null)
         val savedServerAddress = prefs.getString("server_address", null)
