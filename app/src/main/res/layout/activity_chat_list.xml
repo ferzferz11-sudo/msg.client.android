@@ -273,9 +273,19 @@
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:src="@drawable/ic_notification_logo"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="8dp"
             android:background="@android:color/transparent"
             android:contentDescription="@string/lavender_messenger" />
+
+        <TextView
+            android:id="@+id/welcomeVersionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:alpha="0.5"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="16dp"
+            tools:text="v1.0.6.29" />
 
         <TextView
             android:id="@+id/welcomeTitle"

@@ -103,6 +103,7 @@
     <string name="enter_password">Enter password</string>
     <string name="password_empty">Password cannot be empty</string>
     <string name="registration_success">User registered successfully</string>
+    <string name="login_success">Logged in successfully</string>
     <string name="auth_failed">Authentication failed</string>
     <string name="email_already_in_use">Email already in use</string>
     <string name="user_already_exists">Username already exists</string>

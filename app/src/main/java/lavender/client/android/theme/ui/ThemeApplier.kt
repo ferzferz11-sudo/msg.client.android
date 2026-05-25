@@ -177,6 +177,11 @@ object ThemeApplier {
             activity.findViewById<android.widget.EditText>(id)?.apply {
                 setTextColor(inputTextColor)
                 setHintTextColor(hintTextColor)
+                textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                    setColor(customPrimary)
+                }
             }
         }
 

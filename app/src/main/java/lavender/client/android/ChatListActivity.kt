@@ -125,6 +125,15 @@ class ChatListActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         
+        // App update cache clearing
+        val currentVersion = lavender.client.android.BuildConfig.VERSION_CODE
+        val lastVersion = prefs.getInt("last_app_version", 0)
+        if (lastVersion != 0 && lastVersion < currentVersion) {
+            Log.d("ChatListActivity", "App updated from $lastVersion to $currentVersion, clearing cache")
+            clearLocalCacheSync()
+        }
+        prefs.edit { putInt("last_app_version", currentVersion) }
+        
         // Check if user is authenticated
         val savedUsername = prefs.getString("saved_username", "")
         val savedPassword = prefs.getString("saved_password", "")
@@ -151,15 +160,6 @@ class ChatListActivity : AppCompatActivity() {
             clearLocalCacheSync()
             // Save current username as last logged
             prefs.edit { putString("last_logged_username", username) }
-            // Check if this is first time for this username
-            val firstLoginKey = "first_login_$username"
-            val isFirstLogin = !prefs.contains(firstLoginKey)
-            if (isFirstLogin) {
-                // Mark as registered with timestamp
-                prefs.edit { putLong(firstLoginKey, System.currentTimeMillis()) }
-                // Show registration success message
-                Toast.makeText(this, getString(R.string.registration_success), Toast.LENGTH_LONG).show()
-            }
         }
 
         if (SessionManager.session.value.username != username) {
@@ -210,6 +210,7 @@ class ChatListActivity : AppCompatActivity() {
             }
         
         checkForUpdatesSilently()
+        checkAnnouncements()
 
         // Show onboarding tips for new users (within 24 hours of registration)
         setupOnboardingTips()
@@ -781,6 +782,7 @@ class ChatListActivity : AppCompatActivity() {
                             // Clear searching filter or force refresh to ensure Favorites stay
                             updateUpdateIndicatorVisibility()
                             checkForUpdatesSilently()
+        checkAnnouncements()
 
                             // Pre-fetch avatars for all participants
                             fetchedChats.forEach { chat ->
@@ -1008,6 +1010,9 @@ class ChatListActivity : AppCompatActivity() {
         val profileHintShown = prefs.getBoolean("onboarding_profile_shown_$username", false)
         val fabHintShown = prefs.getBoolean("onboarding_fab_shown_$username", false)
 
+        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+        binding.welcomeVersionText.text = "v$versionName"
+
         // Show welcome container for new users
         binding.welcomeContainer.isVisible = true
         binding.chatsRecyclerView.isVisible = false
@@ -1062,6 +1067,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdatesSilently() {
+        checkAnnouncements()
         updateManager.checkForUpdates { isAvailable, latestVersion ->
             val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
             val isDownloaded = prefs.getBoolean("update_downloaded", false)
@@ -1348,9 +1354,15 @@ class ChatListActivity : AppCompatActivity() {
         bottomSheet.show()
     }
 
+    private fun checkAnnouncements() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            checkAnnouncementsInternal()
+        }
+    }
+
     private suspend fun checkAnnouncementsInternal() {
         try {
-            val url = URL("http://159.195.38.145:8081/changelog.txt")
+            val url = URL("http://159.195.38.145:8081/changelog.txt?t=${System.currentTimeMillis()}")
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 5000
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
@@ -1390,7 +1402,8 @@ class ChatListActivity : AppCompatActivity() {
         dialogView.setBackgroundColor(bgColor)
         
         dialogView.findViewById<TextView>(R.id.tvContent).apply {
-            this.text = text
+            val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+            this.text = if (versionName.isNotEmpty()) "$text\n\nLava $versionName" else text
             setTextColor(textColor)
         }
         dialogView.findViewById<TextView>(R.id.tvTitle).apply {
@@ -1474,8 +1487,9 @@ class ChatListActivity : AppCompatActivity() {
             btnClose.setTextColor(pColor)
         } catch (_: Exception) {}
 
-        val versionName = packageManager.getPackageInfo(packageName, 0).versionName
+        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
         clientVersionText.text = getString(R.string.version_label, versionName)
+        dialogView.findViewById<TextView>(R.id.aboutLogoVersion)?.text = "v$versionName"
         
         val serverVersion = GrpcClient.serverVersion.value
         if (serverVersion.isNotEmpty()) {
@@ -1506,6 +1520,7 @@ class ChatListActivity : AppCompatActivity() {
         
         btnWhatsNew.setOnClickListener {
             dialog.dismiss()
+            checkAnnouncements()
             showWhatsNewDialog()
         }
 
@@ -1985,8 +2000,14 @@ class ChatListActivity : AppCompatActivity() {
             groupNameLayout.setBoxStrokeColorStateList(boxColor)
             groupNameLayout.defaultHintTextColor = boxColor
             
-            searchEditText.setTextColor(txtColor)
-            groupNameEditText.setTextColor(txtColor)
+            listOf(searchEditText, groupNameEditText).forEach { et ->
+                et.setTextColor(txtColor)
+                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                    setColor(primColor)
+                }
+            }
             view.findViewById<TextView>(R.id.dialogTitle)?.setTextColor(primColor)
         } catch (_: Exception) {}
 
@@ -2097,6 +2118,11 @@ class ChatListActivity : AppCompatActivity() {
             searchInputLayout.defaultHintTextColor = boxColor
             searchInputLayout.setStartIconTintList(boxColor)
             searchEditText.setTextColor(txtColor)
+            searchEditText.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                setColor(primColor)
+            }
             view.findViewById<TextView>(R.id.dialogTitle)?.setTextColor(primColor)
         } catch (_: Exception) {}
 
@@ -2197,7 +2223,7 @@ class ChatListActivity : AppCompatActivity() {
         val serverAddressLabel = sheetView.findViewById<TextView>(R.id.serverAddressLabel)
         val serverStatusLayout = sheetView.findViewById<LinearLayout>(R.id.serverStatusLayout)
         val joinProgressBar = sheetView.findViewById<ProgressBar>(R.id.joinProgressBar)
-        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+        val btnCancel = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnJoin = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
         val forgotPasswordButton = sheetView.findViewById<TextView>(R.id.forgotPasswordButton)
 
@@ -2212,20 +2238,43 @@ class ChatListActivity : AppCompatActivity() {
             // Set background color
             sheetView.setBackgroundColor(bgColor)
             
-            // Set TextInputLayout background
-            usernameInputLayout.boxBackgroundColor = surfaceColor
-            passwordInputLayout.boxBackgroundColor = surfaceColor
+            // Set TextInputLayout background and stroke
+            val strokeColorStateList = ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_focused),
+                    intArrayOf()
+                ),
+                intArrayOf(
+                    primaryColor,
+                    androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 77)
+                )
+            )
+            listOf(usernameInputLayout, passwordInputLayout).forEach { layout ->
+                layout.boxBackgroundColor = surfaceColor
+                layout.setBoxStrokeColorStateList(strokeColorStateList)
+                layout.hintTextColor = ColorStateList.valueOf(primaryColor)
+                layout.defaultHintTextColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 180))
+            }
             
             // Set text colors
-            editText.setTextColor(onSurfaceColor)
-            editText.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-            editTextPassword.setTextColor(onSurfaceColor)
-            editTextPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            listOf(editText, editTextPassword).forEach { et ->
+                et.setTextColor(onSurfaceColor)
+                et.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                    setColor(primaryColor)
+                }
+            }
             
             // Set button colors
             btnJoin.setBackgroundColor(primaryColor)
             btnJoin.setTextColor(onPrimaryColor)
-            btnCancel.setTextColor(onSurfaceColor)
+            
+            btnCancel.setTextColor(primaryColor)
+            btnCancel.strokeColor = ColorStateList.valueOf(primaryColor)
+            btnCancel.rippleColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(primaryColor, 26))
+
             forgotPasswordButton.setTextColor(primaryColor)
             
             // Set spinner text color
@@ -2274,7 +2323,7 @@ class ChatListActivity : AppCompatActivity() {
         // Handle dismiss without login
         bottomSheetDialog.setOnDismissListener {
             if (username.isEmpty() || password.isEmpty()) {
-                //showFavoritesFromCache()
+                showAuthChoiceDialog()
             }
         }
 
@@ -2305,6 +2354,10 @@ class ChatListActivity : AppCompatActivity() {
                                     prefs.edit { putString("user_id", userId) }
                                 }
 
+                                // Clear local cache for existing user login
+                                clearLocalCacheSync()
+
+                                Toast.makeText(this@ChatListActivity, R.string.login_success, Toast.LENGTH_LONG).show()
                                 bottomSheetDialog.dismiss()
                                 recreate() // Reload activity with authenticated user
                             }
@@ -2385,7 +2438,7 @@ class ChatListActivity : AppCompatActivity() {
         val serverAddressLabel = sheetView.findViewById<TextView>(R.id.serverAddressLabel)
         val serverStatusLayout = sheetView.findViewById<LinearLayout>(R.id.serverStatusLayout)
         val registerProgressBar = sheetView.findViewById<ProgressBar>(R.id.registerProgressBar)
-        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
+        val btnCancel = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnRegister = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
 
         // Apply custom theme colors to all views
@@ -2399,26 +2452,43 @@ class ChatListActivity : AppCompatActivity() {
             // Set background color
             sheetView.setBackgroundColor(bgColor)
             
-            // Set TextInputLayout background
-            usernameInputLayout.boxBackgroundColor = surfaceColor
-            passwordInputLayout.boxBackgroundColor = surfaceColor
-            confirmPasswordInputLayout.boxBackgroundColor = surfaceColor
-            emailInputLayout.boxBackgroundColor = surfaceColor
+            // Set TextInputLayout background and stroke
+            val inputLayouts = listOf(usernameInputLayout, passwordInputLayout, confirmPasswordInputLayout, emailInputLayout)
+            val strokeColorStateList = ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_focused),
+                    intArrayOf()
+                ),
+                intArrayOf(
+                    primaryColor,
+                    androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 77) // ~30% alpha
+                )
+            )
+            inputLayouts.forEach { layout ->
+                layout.boxBackgroundColor = surfaceColor
+                layout.setBoxStrokeColorStateList(strokeColorStateList)
+                layout.hintTextColor = ColorStateList.valueOf(primaryColor)
+                layout.defaultHintTextColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 180))
+            }
             
             // Set text colors
-            editText.setTextColor(onSurfaceColor)
-            editText.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-            editTextPassword.setTextColor(onSurfaceColor)
-            editTextPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-            editTextConfirmPassword.setTextColor(onSurfaceColor)
-            editTextConfirmPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-            editTextEmail.setTextColor(onSurfaceColor)
-            editTextEmail.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            listOf(editText, editTextPassword, editTextConfirmPassword, editTextEmail).forEach { et ->
+                et.setTextColor(onSurfaceColor)
+                et.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                    setColor(primaryColor)
+                }
+            }
             
             // Set button colors
             btnRegister.setBackgroundColor(primaryColor)
             btnRegister.setTextColor(onPrimaryColor)
-            btnCancel.setTextColor(onSurfaceColor)
+            
+            btnCancel.setTextColor(primaryColor)
+            btnCancel.strokeColor = ColorStateList.valueOf(primaryColor)
+            btnCancel.rippleColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(primaryColor, 26))
             
             // Set spinner text color
             serverStatusText?.setTextColor(onSurfaceColor)
@@ -2468,7 +2538,7 @@ class ChatListActivity : AppCompatActivity() {
         // Handle dismiss without registration
         bottomSheetDialog.setOnDismissListener {
             if (username.isEmpty() || password.isEmpty()) {
-                //showFavoritesFromCache()
+                showAuthChoiceDialog()
             }
         }
 
@@ -2511,6 +2581,9 @@ class ChatListActivity : AppCompatActivity() {
 
                                 // Clear local cache for new user
                                 clearLocalCacheSync()
+                                
+                                Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
+
                                 // Set onboarding flag
                                 prefs.edit {
                                     putBoolean("onboarding_completed_$username", false)
@@ -2606,12 +2679,15 @@ class ChatListActivity : AppCompatActivity() {
             newPasswordInputLayout.boxBackgroundColor = surfaceColor
             
             // Set text colors
-            editTextEmail.setTextColor(onSurfaceColor)
-            editTextEmail.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-            editTextToken.setTextColor(onSurfaceColor)
-            editTextToken.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-            editTextNewPassword.setTextColor(onSurfaceColor)
-            editTextNewPassword.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+            listOf(editTextEmail, editTextToken, editTextNewPassword).forEach { et ->
+                et.setTextColor(onSurfaceColor)
+                et.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
+                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                    setColor(primaryColor)
+                }
+            }
             
             // Set button colors
             btnSend.setBackgroundColor(primaryColor)
@@ -2756,10 +2832,35 @@ class ChatListActivity : AppCompatActivity() {
         
         val btnLogin = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnLogin)
         val btnRegister = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
+        val versionText = dialogView.findViewById<TextView>(R.id.authVersionText)
+
+        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+        versionText?.text = "v$versionName"
 
         try {
             val bgColor = customTheme.backgroundColor.toColorInt()
-            dialogView.setBackgroundColor(bgColor)
+            val primaryColor = customTheme.primaryColor.toColorInt()
+            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
+            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
+            
+            versionText?.setTextColor(onSurfaceColor)
+            
+            val shape = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 28f * resources.displayMetrics.density
+                setColor(bgColor)
+            }
+            dialogView.background = shape
+            
+            // Theme Login button (Solid)
+            btnLogin.setBackgroundColor(primaryColor)
+            btnLogin.setTextColor(onPrimaryColor)
+            btnLogin.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onPrimaryColor, 0.2f))
+            
+            // Theme Register button (Outlined)
+            btnRegister.setTextColor(primaryColor)
+            btnRegister.strokeColor = ColorStateList.valueOf(primaryColor)
+            btnRegister.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primaryColor, 0.1f))
         } catch (_: Exception) {}
 
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()

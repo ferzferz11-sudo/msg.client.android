@@ -162,27 +162,17 @@
 
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnRegister"
-        style="@style/PrimaryButton"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginBottom="8dp"
-        android:text="@string/register" />
-
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp">
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp">
 
-        <Button
-            android:id="@+id/btnCancel"
-            style="?android:attr/buttonBarButtonStyle"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRegister"
+            style="@style/PrimaryButton"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="@string/cancel_dialog"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSecondary"
-            android:backgroundTint="?attr/colorSecondary" />
+            android:layout_height="56dp"
+            android:text="@string/register" />
 
         <ProgressBar
             android:id="@+id/registerProgressBar"
@@ -192,5 +182,14 @@
             android:visibility="gone"
             android:indeterminateTint="?attr/colorOnPrimary" />
     </FrameLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancel"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/cancel_dialog"
+        android:textSize="16sp"
+        app:cornerRadius="28dp" />
 
 </LinearLayout>

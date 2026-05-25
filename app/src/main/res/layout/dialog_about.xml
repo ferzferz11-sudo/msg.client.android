@@ -12,8 +12,18 @@
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:src="@drawable/ic_notification_logo"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:background="@android:color/transparent" />
+
+    <TextView
+        android:id="@+id/aboutLogoVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="v1.0.6.29"
+        android:textSize="12sp"
+        android:alpha="0.6"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:id="@+id/aboutAppName"

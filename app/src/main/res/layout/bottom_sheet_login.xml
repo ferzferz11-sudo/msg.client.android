@@ -110,47 +110,36 @@
 
     </LinearLayout>
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
+        android:layout_marginBottom="12dp">
 
-        <Button
-            android:id="@+id/btnCancel"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="0dp"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnJoin"
+            style="@style/PrimaryButton"
+            android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="@string/cancel_dialog"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSecondary"
-            android:backgroundTint="?attr/colorSecondary" />
+            android:text="@string/join" />
 
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp">
+        <ProgressBar
+            android:id="@+id/joinProgressBar"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:indeterminateTint="?attr/colorOnPrimary" />
+    </FrameLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnJoin"
-                style="@style/PrimaryButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="@string/join" />
-
-            <ProgressBar
-                android:id="@+id/joinProgressBar"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="center"
-                android:visibility="gone"
-                android:indeterminateTint="?attr/colorOnPrimary" />
-        </FrameLayout>
-
-    </LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancel"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="8dp"
+        android:text="@string/cancel_dialog"
+        android:textSize="16sp"
+        app:cornerRadius="28dp" />
 
     <TextView
         android:id="@+id/forgotPasswordButton"

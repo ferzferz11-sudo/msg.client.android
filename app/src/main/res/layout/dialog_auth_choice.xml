@@ -12,8 +12,19 @@
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:src="@drawable/ic_notification_logo"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="8dp"
         android:background="@android:color/transparent" />
+
+    <TextView
+        android:id="@+id/authVersionText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:alpha="0.5"
+        android:textColor="?attr/colorOnSurface"
+        android:layout_marginBottom="16dp"
+        tools:text="v1.0.6.29"
+        xmlns:tools="http://schemas.android.com/tools" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnLogin"

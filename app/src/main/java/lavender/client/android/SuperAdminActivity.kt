@@ -3,7 +3,7 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -11,10 +11,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -22,30 +19,29 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.bumptech.glide.Glide
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.tabs.TabLayout
-import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
-import java.io.File
+import lavender.client.android.ui.adapter.SuperAdminAdapter
 import java.util.Locale
 
 class SuperAdminActivity : AppCompatActivity() {
 
     private val grpcClient = GrpcClient
     private lateinit var username: String
-    private lateinit var usersContainer: LinearLayout
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: SuperAdminAdapter
     private lateinit var progressOverlay: View
     private lateinit var searchLayout: View
     private lateinit var searchEditText: EditText
@@ -90,11 +86,13 @@ class SuperAdminActivity : AppCompatActivity() {
             insets
         }
 
-        usersContainer = findViewById(R.id.usersContainer)
+        recyclerView = findViewById(R.id.recyclerView)
         progressOverlay = findViewById(R.id.progressOverlay)
         searchLayout = findViewById(R.id.searchLayout)
         searchEditText = findViewById(R.id.searchEditText)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
+
+        setupRecyclerView()
 
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -124,10 +122,54 @@ class SuperAdminActivity : AppCompatActivity() {
         loadData()
     }
 
+    private fun setupRecyclerView() {
+        adapter = SuperAdminAdapter(
+            onUserClick = { user ->
+                if (selectedUsernames.isNotEmpty()) {
+                    toggleUserSelection(user.username)
+                } else {
+                    val intent = Intent(this, ProfileActivity::class.java).apply {
+                        putExtra("username", user.username)
+                        putExtra("is_group", false)
+                    }
+                    startActivity(intent)
+                }
+            },
+            onUserLongClick = { user ->
+                toggleUserSelection(user.username)
+            },
+            onChatClick = { chat ->
+                if (selectedChatIds.isNotEmpty()) {
+                    toggleChatSelection(chat.id)
+                } else {
+                    val intent = Intent(this, ProfileActivity::class.java).apply {
+                        putExtra("username", chat.name)
+                        putExtra("is_group", !chat.type.equals("direct", true))
+                        putExtra("room_id", chat.id)
+                        putExtra("avatar_url", chat.avatarUrl)
+                        putExtra("full_avatar_url", chat.fullAvatarUrl)
+                        putExtra("creator", chat.creator)
+                        putExtra("participants", chat.participants)
+                    }
+                    startActivity(intent)
+                }
+            },
+            onChatLongClick = { chat ->
+                toggleChatSelection(chat.id)
+            },
+            onlineUsers = grpcClient.users.value.toSet()
+        )
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+    }
+
     override fun onResume() {
         super.onResume()
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
         applyThemeToTabs(tabLayout)
+        if (::adapter.isInitialized) {
+            adapter.updateTheme()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -142,9 +184,9 @@ class SuperAdminActivity : AppCompatActivity() {
             typedValue.data
         }
         
-        menu.findItem(R.id.action_show_users)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
-        menu.findItem(R.id.action_show_groups)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
-        menu.findItem(R.id.action_search)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_show_users)?.iconTintList = ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_show_groups)?.iconTintList = ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_search)?.iconTintList = ColorStateList.valueOf(iconColor)
         
         // Hide tabs from menu, now using TabLayout
         menu.findItem(R.id.action_show_users)?.isVisible = false
@@ -164,8 +206,8 @@ class SuperAdminActivity : AppCompatActivity() {
                 .setIcon(R.drawable.ic_delete)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             
-            menu.findItem(R.id.action_change_password)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
-            menu.findItem(R.id.action_delete)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            menu.findItem(R.id.action_change_password)?.iconTintList = ColorStateList.valueOf(iconColor)
+            menu.findItem(R.id.action_delete)?.iconTintList = ColorStateList.valueOf(iconColor)
         }
         
         return true
@@ -176,7 +218,6 @@ class SuperAdminActivity : AppCompatActivity() {
             android.R.id.home -> {
                 if (selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()) {
                     clearSelection()
-                    updateUI(allUsers, allChats)
                 } else {
                     finish()
                 }
@@ -240,13 +281,9 @@ class SuperAdminActivity : AppCompatActivity() {
 
     @SuppressLint("SetTextI18n")
     private fun updateUI(users: List<UserInfoProto>, chats: List<ChatInfo>) {
-        usersContainer.removeAllViews()
         val emptyStateText = findViewById<TextView>(R.id.emptyStateText)
         
         val theme = ThemeStore.currentTheme()
-        val surfaceColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.DKGRAY }
-        val primaryColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
-        val textPrimary = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
         val textSecondary = try { theme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.LTGRAY }
         
         emptyStateText.setTextColor(textSecondary)
@@ -264,127 +301,11 @@ class SuperAdminActivity : AppCompatActivity() {
 
         if (currentMode == Mode.USERS) {
             emptyStateText.isVisible = users.isEmpty()
-            // Sort users by last seen time (most recent first)
             val sortedUsers = users.sortedByDescending { it.lastSeenAt?.seconds ?: 0 }
-            for (user in sortedUsers) {
-                val userView = layoutInflater.inflate(R.layout.item_user_super_admin, usersContainer, false)
-                val card = userView as MaterialCardView
-                val nameText = userView.findViewById<TextView>(R.id.participantName)
-                val versionText = userView.findViewById<TextView>(R.id.clientVersion)
-                val timeAgoText = userView.findViewById<TextView>(R.id.timeAgoText)
-                val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
-                val statusDot = userView.findViewById<View>(R.id.statusIndicator)
-                
-                val isSelected = selectedUsernames.contains(user.username)
-                card.setCardBackgroundColor(if (isSelected) primaryColor else surfaceColor)
-                nameText.text = user.username
-                nameText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textPrimary)
-                
-                val versionStr = if (user.lastClientVersion.isNotEmpty()) "v${user.lastClientVersion}" else ""
-                versionText.text = versionStr
-                versionText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textSecondary)
-                
-                // Calculate and show time ago
-                val timeAgoStr = user.lastSeenAt?.let {
-                    getTimeAgo(it.seconds * 1000)
-                } ?: ""
-                timeAgoText.text = timeAgoStr
-                timeAgoText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textSecondary)
-                
-                val isOnline = grpcClient.users.value.contains(user.username)
-                statusDot.isVisible = !isSelected
-                statusDot.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
-
-                if (user.avatarUrl.isNotEmpty()) {
-                    Glide.with(this).load(user.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatarView)
-                    avatarView.clearColorFilter()
-                } else {
-                    ThemeUtils.applyDefaultAvatar(avatarView, theme)
-                }
-
-                userView.setOnClickListener {
-                    if (selectedUsernames.isNotEmpty()) {
-                        toggleUserSelection(user.username)
-                    } else {
-                        val intent = Intent(this, ProfileActivity::class.java).apply {
-                            putExtra("username", user.username)
-                            putExtra("is_group", false)
-                        }
-                        startActivity(intent)
-                    }
-                }
-
-                userView.setOnLongClickListener {
-                    toggleUserSelection(user.username)
-                    true
-                }
-                usersContainer.addView(userView)
-            }
+            adapter.setItems(sortedUsers)
         } else {
             emptyStateText.isVisible = chats.isEmpty()
-            for (chat in chats) {
-                val chatView = layoutInflater.inflate(R.layout.item_chat, usersContainer, false)
-                val card = chatView as MaterialCardView
-                val nameText = chatView.findViewById<TextView>(R.id.chatName)
-                val typeText = chatView.findViewById<TextView>(R.id.chatType)
-                val participantAvatars = chatView.findViewById<LinearLayout>(R.id.participantAvatars)
-                
-                val isSelected = selectedChatIds.contains(chat.id)
-                card.setCardBackgroundColor(if (isSelected) primaryColor else surfaceColor)
-                nameText.text = chat.name
-                nameText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textPrimary)
-                
-                val sdf = java.text.SimpleDateFormat("dd.MM.yy HH:mm", Locale.getDefault())
-                val creationTime = sdf.format(java.util.Date(chat.createdAt))
-                
-                val description = if (chat.type.equals("direct", true)) {
-                    "${chat.type} - $creationTime\nID: ${chat.id}"
-                } else {
-                    val adminStr = if (chat.creator.isNotEmpty()) "Admin: ${chat.creator}" else ""
-                    "${chat.type} - $creationTime\n$adminStr\nID: ${chat.id}"
-                }
-                
-                typeText.text = description
-                typeText.setTextColor(if (isSelected) try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE } else textSecondary)
-
-                // Load avatars for the group
-                participantAvatars.removeAllViews()
-                if (chat.avatarUrl.isNotEmpty()) {
-                    val iv = CircleImageView(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(52.dpToPx(), 52.dpToPx())
-                    }
-                    Glide.with(this).load(chat.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(iv)
-                    participantAvatars.addView(iv)
-                } else {
-                    ThemeUtils.applyDefaultAvatar(CircleImageView(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(52.dpToPx(), 52.dpToPx())
-                        participantAvatars.addView(this)
-                    }, theme)
-                }
-                
-                chatView.setOnClickListener {
-                    if (selectedChatIds.isNotEmpty()) {
-                        toggleChatSelection(chat.id)
-                    } else {
-                        val intent = Intent(this, ProfileActivity::class.java).apply {
-                            putExtra("username", chat.name)
-                            putExtra("is_group", !chat.type.equals("direct", true))
-                            putExtra("room_id", chat.id)
-                            putExtra("avatar_url", chat.avatarUrl)
-                            putExtra("full_avatar_url", chat.fullAvatarUrl)
-                            putExtra("creator", chat.creator)
-                            putExtra("participants", chat.participants)
-                        }
-                        startActivity(intent)
-                    }
-                }
-
-                chatView.setOnLongClickListener {
-                    toggleChatSelection(chat.id)
-                    true
-                }
-                usersContainer.addView(chatView)
-            }
+            adapter.setItems(chats)
         }
     }
 
@@ -405,6 +326,7 @@ class SuperAdminActivity : AppCompatActivity() {
         } else {
             selectedUsernames.add(username)
         }
+        adapter.toggleSelection(username)
         updateUI(allUsers, allChats)
     }
 
@@ -414,12 +336,15 @@ class SuperAdminActivity : AppCompatActivity() {
         } else {
             selectedChatIds.add(chatId)
         }
+        adapter.toggleSelection(chatId)
         updateUI(allUsers, allChats)
     }
 
     private fun clearSelection() {
         selectedUsernames.clear()
         selectedChatIds.clear()
+        adapter.clearSelection()
+        updateUI(allUsers, allChats)
     }
 
     private fun applyThemeToTabs(tabLayout: TabLayout) {
@@ -500,15 +425,33 @@ class SuperAdminActivity : AppCompatActivity() {
         val titleView = dialogView.findViewById<TextView>(R.id.tvTitle)
         titleView?.setTextColor(textColor)
         
-        val editNewPw = dialogView.findViewById<EditText>(R.id.editTextNewPassword)
-        val editOldPw = dialogView.findViewById<EditText>(R.id.editTextOldPassword)
+        val editNewPw = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editTextNewPassword)
+        val editOldPw = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editTextOldPassword)
         
         // Find TextInputLayouts
+        val editNewPwLayout = editNewPw.parent.parent as? com.google.android.material.textfield.TextInputLayout
         val editOldPwLayout = editOldPw.parent.parent as? com.google.android.material.textfield.TextInputLayout
         
-        editNewPw.setTextColor(textColor)
-        editNewPw.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
-        editOldPw.setTextColor(textColor)
+        val applyInputTheme = { layout: com.google.android.material.textfield.TextInputLayout?, editText: EditText ->
+            editText.setTextColor(textColor)
+            editText.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+            editText.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                setColor(pColor)
+            }
+            layout?.apply {
+                boxBackgroundColor = bgColor
+                setBoxStrokeColor(pColor)
+                hintTextColor = ColorStateList.valueOf(pColor)
+                defaultHintTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(textColor, 0.7f))
+                placeholderTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(textColor, 0.5f))
+                setEndIconTintList(ColorStateList.valueOf(pColor))
+            }
+        }
+
+        applyInputTheme(editNewPwLayout, editNewPw)
+        applyInputTheme(editOldPwLayout, editOldPw)
         
         // Hide old password field since admin doesn't need it
         editOldPwLayout?.visibility = View.GONE
@@ -545,29 +488,5 @@ class SuperAdminActivity : AppCompatActivity() {
             dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
         }
         dialog.show()
-    }
-
-    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
-
-    private fun getTimeAgo(timestampMillis: Long): String {
-        val now = System.currentTimeMillis()
-        val diff = now - timestampMillis
-
-        val seconds = diff / 1000
-        val minutes = seconds / 60
-        val hours = minutes / 60
-        val days = hours / 24
-
-        return when {
-            seconds < 60 -> getString(R.string.just_now)
-            minutes < 60 -> resources.getQuantityString(R.plurals.minutes_ago, minutes.toInt(), minutes.toInt())
-            hours < 24 -> resources.getQuantityString(R.plurals.hours_ago, hours.toInt(), hours.toInt())
-            days < 7 -> resources.getQuantityString(R.plurals.days_ago, days.toInt(), days.toInt())
-            else -> {
-                val date = java.util.Date(timestampMillis)
-                val sdf = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault())
-                sdf.format(date)
-            }
-        }
     }
 }

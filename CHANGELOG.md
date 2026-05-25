@@ -5,12 +5,15 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.0.6.28
+## 1.0.6.29
 ### UI Improvements & Reactions
-- 🛡️ **Admin Panel**: TabLayout background is now transparent, and text uses the primary theme color.
+- 🛡️ **Admin Panel**: TabLayout background is now transparent, and text uses the primary theme color. Optimized list rendering using RecyclerView and DiffUtil to eliminate lag during multi-selection.
 - 😀 **Emoji Picker**: Replaced the dialog-based emoji picker with a themed BottomSheet for better accessibility and style consistency.
 - 🔥 **Reactions**: Added "100%" (💯) reaction and reordered existing reactions (👍, 💯, 🔥, ✅, ❤️, 😂, 😮, 😢, 🙏).
 - 📞 **Conferences**: Prevented re-entry into ended or deleted conferences. Tapping on such messages in chat now opens the standard context menu instead of trying to join.
+- 🔐 **Authentication**: Fixed login notifications to correctly distinguish between new registrations and existing user logins.
+- 🧹 **Cache Management**: Added automatic cache clearing after app updates and successful logins to ensure data consistency.
+- 🎨 **Theme Fixes**: Fixed non-themed buttons in the authentication choice dialog shown after logout.
 
 ## 1.0.6.6
 ### Background Updates & Reliability Fixes
