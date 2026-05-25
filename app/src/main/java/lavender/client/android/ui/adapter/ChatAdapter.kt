@@ -19,10 +19,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.shape.RelativeCornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.theme.Theme
@@ -46,6 +43,7 @@ class ChatAdapter(
     private val selectedPositions = mutableSetOf<Int>()
     private val deletingChatIds = mutableSetOf<String>()
     private var currentFilter: String = ""
+    private var diffJob: Job? = null
 
     // Pre-calculated theme colors
     private var cachedPrimaryColor: Int = 0
@@ -76,7 +74,7 @@ class ChatAdapter(
     @SuppressLint("NotifyDataSetChanged")
     fun updateTheme() {
         colorsInitialized = false
-        notifyItemRangeChanged(0, itemCount)
+        notifyDataSetChanged()
     }
 
     fun getSelectedChats(): List<ChatInfo> = selectedPositions.map { displayedChats[it] }
@@ -95,8 +93,16 @@ class ChatAdapter(
     }
 
     fun setChats(newChats: List<ChatInfo>) {
+        if (allChats.isEmpty() && newChats.isNotEmpty()) {
+             allChats = newChats
+             displayedChats = newChats
+             notifyDataSetChanged()
+             return
+        }
+
+        diffJob?.cancel()
         val oldChats = displayedChats
-        scope.launch(Dispatchers.Default) {
+        diffJob = scope.launch(Dispatchers.Default) {
             val filtered = if (currentFilter.isEmpty()) {
                 newChats
             } else {
@@ -107,6 +113,7 @@ class ChatAdapter(
                 }
             }
             val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
+            
             withContext(Dispatchers.Main) {
                 allChats = newChats
                 displayedChats = filtered
@@ -117,8 +124,9 @@ class ChatAdapter(
 
     fun filter(query: String) {
         currentFilter = query.lowercase()
+        diffJob?.cancel()
         val oldChats = displayedChats
-        scope.launch(Dispatchers.Default) {
+        diffJob = scope.launch(Dispatchers.Default) {
             val filtered = if (currentFilter.isEmpty()) {
                 allChats
             } else {
@@ -129,6 +137,7 @@ class ChatAdapter(
                 }
             }
             val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
+            
             withContext(Dispatchers.Main) {
                 displayedChats = filtered
                 diffResult.dispatchUpdatesTo(this@ChatAdapter)
@@ -140,7 +149,11 @@ class ChatAdapter(
         if (onlineUsers == users) return
         onlineUsers = users
         val count = displayedChats.size
-        if (count > 0) notifyItemRangeChanged(0, count, "status")
+        if (count > 0) {
+             try {
+                notifyItemRangeChanged(0, count, "status")
+             } catch (_: Exception) {}
+        }
     }
 
     fun updateAvatarCache(newCache: Map<String, String>) {
@@ -148,7 +161,11 @@ class ChatAdapter(
         if (avatarCache == snapshot) return
         avatarCache = snapshot
         val count = displayedChats.size
-        if (count > 0) notifyItemRangeChanged(0, count, "avatar")
+        if (count > 0) {
+            try {
+                notifyItemRangeChanged(0, count, "avatar")
+            } catch (_: Exception) {}
+        }
     }
 
     private class ChatDiffCallback(

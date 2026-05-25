@@ -625,8 +625,8 @@ class NewChatActivity : AppCompatActivity() {
             onMessageClick = { message ->
                 val text = message.text.trim().lowercase()
                 Log.d("NewChat", "Message clicked: user=${message.user}, text=$text")
-                if (message.user == "SYSTEM" && (text.contains("📹") || text.contains("конференция") || text.contains("conference"))) {
-                    Log.d("NewChat", "Joining conference from system message")
+                if (text.contains("📹") || text.contains("конференция") || text.contains("conference")) {
+                    Log.d("NewChat", "Joining conference from call message")
                     joinConference()
                 } else {
                     showReactionsDialog(message)
@@ -807,36 +807,19 @@ class NewChatActivity : AppCompatActivity() {
     private fun startConference() {
         if (roomId.isEmpty()) return
         lavender.client.android.data.calls.CallManager.initiateConference(roomId)
-        
-        val intent = Intent(this, CallActivity::class.java).apply {
-            putExtra("ROOM_ID", roomId)
-            putExtra("IS_INCOMING", false)
-            putExtra("IS_CONFERENCE", true)
-        }
-        startActivity(intent)
+        lavender.client.android.data.calls.CallNavigator.startConference(this, roomId)
     }
 
     private fun joinConference() {
         if (roomId.isEmpty()) return
         lavender.client.android.data.calls.CallManager.joinConference(roomId)
-        
-        val intent = Intent(this, CallActivity::class.java).apply {
-            putExtra("ROOM_ID", roomId)
-            putExtra("IS_INCOMING", false)
-            putExtra("IS_CONFERENCE", true)
-        }
-        startActivity(intent)
+        lavender.client.android.data.calls.CallNavigator.joinConference(this, roomId)
     }
 
     private fun startVideoCall() {
         val otherUser = getOtherParticipant() ?: return
         lavender.client.android.data.calls.CallManager.initiateCall(otherUser)
-        
-        val intent = Intent(this, CallActivity::class.java).apply {
-            putExtra("RECEIVER_ID", otherUser)
-            putExtra("IS_INCOMING", false)
-        }
-        startActivity(intent)
+        lavender.client.android.data.calls.CallNavigator.startCall(this, otherUser)
     }
 
     private fun setupListeners() {

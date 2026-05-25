@@ -57,17 +57,17 @@ object CallManager {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
                     val displayName = signal.senderName.takeIf { it.isNotEmpty() } ?: signal.senderId
-                    launchCallActivity(signal.callId, displayName, true)
+                    appContext?.let { CallNavigator.navigateToCall(it, signal.callId, displayName, true) }
                 } else {
                     Log.w(TAG, "Already in a call, ignoring INITIATE")
-                    // Optionally send BUSY signal back
                 }
             }
             CallMessageProto.Type.INITIATE_CONFERENCE -> {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
-                    // For conference, receiverId in UI might be the roomId or a special label
-                    launchCallActivity(signal.callId, "Group Conference", true, isConference = true, roomId = signal.roomId)
+                    appContext?.let { 
+                        CallNavigator.navigateToCall(it, signal.callId, "Group Conference", true, isConference = true, roomId = signal.roomId)
+                    }
                 }
             }
             CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP, CallMessageProto.Type.END_CONFERENCE -> {
@@ -76,20 +76,6 @@ object CallManager {
                 }
             }
             else -> {}
-        }
-    }
-
-    private fun launchCallActivity(callId: String, receiverId: String, isIncoming: Boolean, isConference: Boolean = false, roomId: String = "") {
-        appContext?.let { context ->
-            val intent = Intent(context, CallActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra("CALL_ID", callId)
-                putExtra("RECEIVER_ID", receiverId)
-                putExtra("IS_INCOMING", isIncoming)
-                putExtra("IS_CONFERENCE", isConference)
-                putExtra("ROOM_ID", roomId)
-            }
-            context.startActivity(intent)
         }
     }
 

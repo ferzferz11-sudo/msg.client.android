@@ -2,35 +2,34 @@ package lavender.client.android
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
 import lavender.client.android.databinding.ActivityCallBinding
-import lavender.client.android.data.calls.CallManager
-import lavender.client.android.data.calls.WebRtcClient
+import lavender.client.android.data.calls.*
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
+import lavender.client.android.ui.calls.CallViewModel
 import org.webrtc.*
 import org.json.JSONObject
 
 class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private lateinit var binding: ActivityCallBinding
+    private val viewModel: CallViewModel by viewModels()
     private var webRtcClient: WebRtcClient? = null
+    private var callController: CallController? = null
+    private lateinit var audioModeManager: AudioModeManager
+    
     private var callId: String = ""
     private var receiverId: String = ""
     private var isIncoming: Boolean = false
@@ -40,13 +39,6 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var isMicEnabled = true
     private var isCameraEnabled = false
 
-    private var callStartTime: Long = 0
-    private var timerJob: Job? = null
-
-    private lateinit var audioManager: AudioManager
-    private var oldAudioMode: Int = AudioManager.MODE_NORMAL
-
-    // Shared EGL context for all renderers
     private val eglBase = EglBase.create()
     private var isRemoteViewInitialized = false
     private var isLocalViewInitialized = false
@@ -62,12 +54,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         binding = ActivityCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        oldAudioMode = audioManager.mode
-        
-        // Optimize for communication
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        setSpeakerphoneEnabled(true)
+        audioModeManager = AudioModeManager(this)
+        audioModeManager.setCallMode()
 
         callId = intent.getStringExtra("CALL_ID") ?: ""
         receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
@@ -75,18 +63,16 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
         roomId = intent.getStringExtra("ROOM_ID") ?: ""
 
-        Log.d(TAG, "Call details: ID=$callId, Other=$receiverId, Incoming=$isIncoming, Conf=$isConference")
-
         CallManager.init(applicationContext)
         if (isConference) {
-             isCameraEnabled = true // Enable camera by default for conferences
+             isCameraEnabled = true
              CallManager.joinConference(roomId)
              binding.tvCallStatus.text = getString(R.string.waiting_for_participants)
              binding.btnAccept.visibility = View.GONE
              binding.btnMic.visibility = View.VISIBLE
              binding.btnCamera.visibility = View.VISIBLE
              binding.btnCamera.setImageResource(R.drawable.ic_videocam_on)
-             startTimer() // Start timer immediately for conferences
+             viewModel.startTimer()
         } else {
              CallManager.syncCallState(callId, receiverId, isIncoming)
              binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
@@ -102,20 +88,46 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             binding.btnCamera.visibility = View.GONE
         }
 
-        if (!hasPermissions()) {
-            Log.d(TAG, "Permissions missing, requesting...")
-            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_CODE)
+        if (hasPermissions()) {
+            if (!isIncoming || isConference) initWebRtc()
         } else {
-            Log.d(TAG, "Permissions OK")
-            // Join media immediately for conferences or outgoing calls
-            if (!isIncoming || isConference) {
-                Log.d(TAG, "Initializing WebRTC immediately")
-                initWebRtc()
-            }
+            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_CODE)
         }
 
         setupButtons()
-        observeSignals()
+        setupController()
+        
+        lifecycleScope.launch {
+            viewModel.timerText.collect { binding.tvCallDuration.text = it }
+        }
+    }
+
+    private fun setupController() {
+        callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
+            override fun onCallAccepted() {
+                viewModel.startTimer()
+                runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connected) }
+            }
+
+            override fun onCallTerminated(reason: String) {
+                runOnUiThread {
+                    Toast.makeText(this@CallActivity, reason, Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+
+            override fun onConferencePresenceUpdated(participants: List<String>, creatorId: String) {
+                val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+                runOnUiThread {
+                    binding.tvCallStatus.text = getString(R.string.in_conference_format, participants.joinToString(", "))
+                    binding.btnEndForAll.visibility = if (myId == creatorId) View.VISIBLE else View.GONE
+                }
+            }
+
+            override fun onStatusUpdate(status: String) {
+                runOnUiThread { binding.tvCallStatus.text = status }
+            }
+        })
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
@@ -125,39 +137,29 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         val newRoomId = intent.getStringExtra("ROOM_ID") ?: ""
         
         if ((newCallId.isNotEmpty() && newCallId != callId) || (newRoomId.isNotEmpty() && newRoomId != roomId)) {
-            Log.d(TAG, "onNewIntent: updating call/room from $callId/$roomId to $newCallId/$newRoomId")
             callId = newCallId
             roomId = newRoomId
             receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
             isIncoming = intent.getBooleanExtra("IS_INCOMING", false)
             isConference = intent.getBooleanExtra("IS_CONFERENCE", false)
             
-            if (isConference) {
-                CallManager.joinConference(roomId)
-            } else {
-                CallManager.syncCallState(callId, receiverId, isIncoming)
-            }
+            if (isConference) CallManager.joinConference(roomId)
+            else CallManager.syncCallState(callId, receiverId, isIncoming)
+            
+            setupController()
         }
     }
 
     private fun setupButtons() {
         binding.btnHangup.setOnClickListener {
-            Log.d(TAG, "Hangup button clicked")
-            stopTimer()
-            if (isConference) {
-                CallManager.leaveConference()
-            } else if (isIncoming && webRtcClient == null) {
-                Log.d(TAG, "Rejecting incoming call")
-                CallManager.rejectCall()
-            } else {
-                Log.d(TAG, "Hanging up active call")
-                CallManager.hangup()
-            }
+            viewModel.stopTimer()
+            if (isConference) CallManager.leaveConference()
+            else if (isIncoming && webRtcClient == null) CallManager.rejectCall()
+            else CallManager.hangup()
             finish()
         }
 
         binding.btnAccept.setOnClickListener {
-            Log.d(TAG, "Accept button clicked")
             binding.btnAccept.visibility = View.GONE
             binding.btnMic.visibility = View.VISIBLE
             binding.btnCamera.visibility = View.VISIBLE
@@ -167,163 +169,26 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         binding.btnMic.setOnClickListener {
             isMicEnabled = !isMicEnabled
-            Log.d(TAG, "Mic toggle: $isMicEnabled")
             webRtcClient?.toggleMic(isMicEnabled)
             binding.btnMic.setImageResource(if (isMicEnabled) R.drawable.ic_mic_on else R.drawable.ic_mic_off)
         }
 
         binding.btnCamera.setOnClickListener {
             isCameraEnabled = !isCameraEnabled
-            Log.d(TAG, "Camera toggle: $isCameraEnabled")
             webRtcClient?.toggleCamera(isCameraEnabled)
             binding.btnCamera.setImageResource(if (isCameraEnabled) R.drawable.ic_videocam_on else R.drawable.ic_videocam_off)
-            
-            // Update UI visibility
             updateVideoVisibility()
         }
 
         binding.btnEndForAll.setOnClickListener {
-            Log.d(TAG, "End for all clicked")
             CallManager.endConference()
             finish()
         }
     }
 
-    private fun observeSignals() {
-        lifecycleScope.launch {
-            CallManager.incomingSignals.collectLatest { signal ->
-                val myUserId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                Log.d(TAG, "Incoming signal: ${signal.type} (CallID: ${signal.callId}) from ${signal.senderId}")
-                
-                // For outgoing calls, we pick up the callId from the first INITIATE echo from server
-                if (callId.isEmpty() && signal.type == CallMessageProto.Type.INITIATE && !isIncoming) {
-                    if (signal.senderId == myUserId) {
-                        callId = signal.callId
-                        Log.d(TAG, "CallID assigned from server echo: $callId")
-                        
-                        // Update display name if server provided one
-                        val otherDisplayName = signal.receiverName.takeIf { it.isNotEmpty() } ?: receiverId
-                        runOnUiThread {
-                            binding.tvCallerName.text = otherDisplayName
-                        }
-                    }
-                }
-
-                if (signal.callId != callId && callId.isNotEmpty()) {
-                    Log.w(TAG, "Ignored signal with mismatching CallID: expected $callId, got ${signal.callId}")
-                    return@collectLatest
-                }
-
-                // Ignore self-echoed signals for most types to avoid "glare" and self-termination
-                if (signal.senderId == myUserId && signal.type != CallMessageProto.Type.INITIATE) {
-                    Log.d(TAG, "Ignored self-echoed signal: ${signal.type}")
-                    return@collectLatest
-                }
-                
-                when (signal.type) {
-                    CallMessageProto.Type.ACCEPT -> {
-                        if (!isIncoming) {
-                            Log.d(TAG, "Peer accepted call, creating WebRTC Offer")
-                            webRtcClient?.createOffer()
-                        } else {
-                            Log.d(TAG, "Received ACCEPT signal as receiver, ignoring to avoid glare")
-                        }
-                    }
-                    CallMessageProto.Type.OFFER -> {
-                        Log.d(TAG, "Received OFFER, setting remote description")
-                        val sdp = SessionDescription(SessionDescription.Type.OFFER, signal.payload)
-                        webRtcClient?.setRemoteDescription(sdp)
-                    }
-                    CallMessageProto.Type.ANSWER -> {
-                        Log.d(TAG, "Received ANSWER, setting remote description")
-                        val sdp = SessionDescription(SessionDescription.Type.ANSWER, signal.payload)
-                        webRtcClient?.setRemoteDescription(sdp)
-                        startTimer()
-                    }
-                    CallMessageProto.Type.ICE_CANDIDATE -> {
-                        Log.d(TAG, "Received ICE_CANDIDATE")
-                        try {
-                            val json = JSONObject(signal.payload)
-                            val candidate = IceCandidate(
-                                json.getString("sdpMid"),
-                                json.getInt("sdpMLineIndex"),
-                                json.getString("candidate")
-                            )
-                            webRtcClient?.addIceCandidate(candidate)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to parse ICE candidate JSON", e)
-                        }
-                    }
-                    CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP, CallMessageProto.Type.END_CONFERENCE -> {
-                        Log.d(TAG, "Call terminated by peer (${signal.type})")
-                        runOnUiThread {
-                            val msg = if (signal.type == CallMessageProto.Type.END_CONFERENCE) "Конференция завершена организатором" else "Звонок завершен"
-                            Toast.makeText(this@CallActivity, msg, Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                    }
-                    CallMessageProto.Type.JOIN_CONFERENCE, CallMessageProto.Type.LEAVE_CONFERENCE -> {
-                        if (isConference) {
-                            handleConferencePresence(signal)
-                        }
-                    }
-                    else -> {}
-                }
-            }
-        }
-    }
-
-    private fun handleConferencePresence(signal: CallMessageProto) {
-        if (signal.type == CallMessageProto.Type.JOIN_CONFERENCE) {
-            try {
-                val response = JSONObject(signal.payload)
-                val participants = response.getJSONObject("participants")
-                val creatorId = response.optString("creator_id", "")
-                
-                val names = mutableListOf<String>()
-                val keys = participants.keys()
-                while (keys.hasNext()) {
-                    names.add(participants.getString(keys.next()))
-                }
-                
-                val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                val isCreator = myId == creatorId
-
-                runOnUiThread {
-                    binding.tvCallStatus.text = getString(R.string.in_conference_format, names.joinToString(", "))
-                    binding.btnEndForAll.visibility = if (isCreator) View.VISIBLE else View.GONE
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse participants", e)
-            }
-        }
-    }
-
-    private fun hasPermissions(): Boolean {
-        return PERMISSIONS.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_CODE && hasPermissions()) {
-            Log.d(TAG, "Permissions granted via request")
-            if (!isIncoming) initWebRtc()
-        } else if (requestCode == PERMISSION_CODE) {
-            Log.w(TAG, "Permissions denied")
-            Toast.makeText(this, "Camera and Microphone permissions are required for calls", Toast.LENGTH_LONG).show()
-            finish()
-        }
-    }
-
     private fun initWebRtc() {
-        Log.d(TAG, "Initializing WebRTC components")
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, this)
-        val iceServers = listOf(
-            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
-        )
-        webRtcClient?.initPeerConnection(iceServers)
+        webRtcClient?.initPeerConnection(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
         
         if (!isLocalViewInitialized) {
             binding.localView.init(eglBase.eglBaseContext, null)
@@ -333,19 +198,16 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             isLocalViewInitialized = true
         }
         webRtcClient?.startLocalStream(binding.localView)
-        
-        // Ensure initial camera state is applied
         webRtcClient?.toggleCamera(isCameraEnabled)
         updateVideoVisibility()
+        setupController()
     }
 
     override fun onLocalStream(stream: MediaStream) {
-        Log.d(TAG, "Local stream ready")
         runOnUiThread {
             stream.videoTracks.getOrNull(0)?.addSink(binding.localView)
-            // If conference and no remote yet, show local in main view
             if (isConference && !isRemoteViewInitialized) {
-                if (binding.remoteView.isVisible == false) {
+                if (!binding.remoteView.isVisible) {
                      binding.remoteView.isVisible = true
                      binding.remoteView.init(eglBase.eglBaseContext, null)
                      isRemoteViewInitialized = true
@@ -356,179 +218,94 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     }
 
     override fun onRemoteStream(stream: MediaStream) {
-        Log.d(TAG, "Remote stream received!")
         runOnUiThread {
             if (!isRemoteViewInitialized) {
                 binding.remoteView.init(eglBase.eglBaseContext, null)
                 isRemoteViewInitialized = true
             }
-            // Clear any local sink from remote view if conference
-            if (isConference) {
-                binding.remoteView.isVisible = true
-            }
+            if (isConference) binding.remoteView.isVisible = true
             stream.videoTracks.getOrNull(0)?.addSink(binding.remoteView)
         }
     }
 
     override fun onRemoteTrack(track: MediaStreamTrack) {
-        Log.d(TAG, "onRemoteTrack: kind=${track.kind()}, id=${track.id()}")
         if (track is VideoTrack) {
             runOnUiThread {
                 if (!isRemoteViewInitialized) {
-                    Log.d(TAG, "Initializing remote view for track")
                     binding.remoteView.init(eglBase.eglBaseContext, null)
                     binding.remoteView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
                     binding.remoteView.setEnableHardwareScaler(true)
                     isRemoteViewInitialized = true
                 }
-                Log.d(TAG, "Adding sink to remote view for video track")
                 track.addSink(binding.remoteView)
             }
         } else if (track is AudioTrack) {
-            Log.d(TAG, "Remote audio track received and enabled: ${track.enabled()}")
-            // AudioTrack doesn't need a sink to play on Android WebRTC, 
-            // but we ensure it's enabled.
             track.setEnabled(true)
         }
     }
 
     override fun onIceCandidate(candidate: IceCandidate) {
         val payload = JSONObject().apply {
-            put("sdpMid", candidate.sdpMid)
-            put("sdpMLineIndex", candidate.sdpMLineIndex)
-            put("candidate", candidate.sdp)
+            put("sdpMid", candidate.sdpMid); put("sdpMLineIndex", candidate.sdpMLineIndex); put("candidate", candidate.sdp)
         }.toString()
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ICE_CANDIDATE, payload)
     }
 
     override fun onOfferCreated(description: SessionDescription) {
-        Log.d(TAG, "WebRTC Offer created")
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.OFFER, description.description)
-        runOnUiThread {
-            binding.tvCallStatus.text = getString(R.string.call_status_connecting)
-        }
+        runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
     }
 
     override fun onAnswerCreated(description: SessionDescription) {
-        Log.d(TAG, "WebRTC Answer created")
         CallManager.sendWebRtcSignal(receiverId, CallMessageProto.Type.ANSWER, description.description)
-        runOnUiThread {
-            binding.tvCallStatus.text = getString(R.string.call_status_connected)
-            startTimer()
+        runOnUiThread { 
+            binding.tvCallStatus.text = getString(R.string.call_status_connected) 
+            viewModel.startTimer()
         }
     }
 
     override fun onRemoteDescriptionSet() {
-        Log.d(TAG, "onRemoteDescriptionSet: check signaling state")
-        if (!isConference) {
-            runOnUiThread {
-                binding.tvCallStatus.text = getString(R.string.call_status_connecting)
-            }
-        }
-        // If we are the receiver and just set the OFFER remote description, create ANSWER
-        if (isIncoming && webRtcClient != null) {
-            Log.d(TAG, "Creating WebRTC Answer now that remote description is set")
-            webRtcClient?.createAnswer()
-        }
+        if (!isConference) runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connecting) }
+        if (isIncoming && webRtcClient != null) webRtcClient?.createAnswer()
     }
 
     private fun loadOtherParticipantAvatar() {
-        val otherUser = receiverId
-        if (otherUser.isEmpty()) return
-
-        GrpcClient.getUserAvatar(otherUser) { avatarUrl ->
-            if (avatarUrl.isNotEmpty()) {
-                runOnUiThread {
-                    Glide.with(this@CallActivity)
-                        .load(avatarUrl)
-                        .placeholder(R.drawable.ic_default_avatar)
-                        .into(binding.imgAvatar)
-
-                    // Also load into background for blur effect
-                    Glide.with(this@CallActivity)
-                        .load(avatarUrl)
-                        .centerCrop()
-                        .into(binding.imgBgBlur)
-                }
+        if (receiverId.isEmpty()) return
+        GrpcClient.getUserAvatar(receiverId) { avatarUrl ->
+            if (avatarUrl.isNotEmpty()) runOnUiThread {
+                Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatar)
+                Glide.with(this).load(avatarUrl).centerCrop().into(binding.imgBgBlur)
             }
         }
     }
 
     private fun updateVideoVisibility() {
         runOnUiThread {
-            if (isCameraEnabled) {
-                binding.localView.visibility = View.VISIBLE
-                binding.remoteView.visibility = View.VISIBLE
-                binding.imgAvatar.visibility = View.GONE
-            } else {
-                binding.localView.visibility = View.GONE
-                binding.remoteView.visibility = View.GONE
-                binding.imgAvatar.visibility = View.VISIBLE
-            }
+            binding.localView.isVisible = isCameraEnabled
+            binding.remoteView.isVisible = isCameraEnabled
+            binding.imgAvatar.isVisible = !isCameraEnabled
         }
-    }
-
-    private fun startTimer() {
-        if (timerJob != null) return
-        callStartTime = System.currentTimeMillis()
-        binding.tvCallDuration.isVisible = true
-        timerJob = lifecycleScope.launch {
-            while (isActive) {
-                val elapsed = System.currentTimeMillis() - callStartTime
-                val seconds = (elapsed / 1000) % 60
-                val minutes = (elapsed / (1000 * 60)) % 60
-                val hours = (elapsed / (1000 * 60 * 60))
-
-                val timeStr = if (hours > 0) {
-                    String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
-                } else {
-                    String.format(java.util.Locale.getDefault(), "%02d:%02d", minutes, seconds)
-                }
-                
-                withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    binding.tvCallDuration.text = timeStr
-                }
-                delay(1000)
-            }
-        }
-    }
-
-    private fun stopTimer() {
-        timerJob?.cancel()
-        timerJob = null
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy: cleaning up")
-        stopTimer()
-        
-        // Restore audio settings
-        audioManager.mode = oldAudioMode
-        setSpeakerphoneEnabled(false)
-        
+        audioModeManager.restoreMode()
         CallManager.clearCurrentCall()
-        
-        // Properly release views and tracks
         binding.localView.release()
         binding.remoteView.release()
-
         webRtcClient?.close()
         eglBase.release()
     }
 
-    private fun setSpeakerphoneEnabled(enabled: Boolean) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            if (enabled) {
-                val devices = audioManager.availableCommunicationDevices
-                val speakerDevice = devices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                speakerDevice?.let { audioManager.setCommunicationDevice(it) }
-            } else {
-                audioManager.clearCommunicationDevice()
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = enabled
+    private fun hasPermissions() = PERMISSIONS.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
+    
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_CODE && hasPermissions()) {
+            if (!isIncoming || isConference) initWebRtc()
+        } else if (requestCode == PERMISSION_CODE) {
+            Toast.makeText(this, "Camera and Microphone permissions are required", Toast.LENGTH_LONG).show()
+            finish()
         }
     }
 }

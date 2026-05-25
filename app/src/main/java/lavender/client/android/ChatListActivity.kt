@@ -60,6 +60,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.updates.DownloadUpdateWorker
+import lavender.client.android.data.updates.UpdateManager
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -78,6 +79,7 @@ class ChatListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityChatListBinding
     private lateinit var chatAdapter: ChatAdapter
     private val grpcClient = GrpcClient
+    private lateinit var updateManager: UpdateManager
     private lateinit var username: String
     private lateinit var password: String
     private val chats = mutableListOf<ChatInfo>()
@@ -116,6 +118,8 @@ class ChatListActivity : AppCompatActivity() {
 
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        updateManager = UpdateManager(this)
         
         setupSystemNotificationObserver()
 
@@ -967,10 +971,11 @@ class ChatListActivity : AppCompatActivity() {
             if (isDownloaded) {
                 val apkPath = prefs.getString("apk_path", null)
                 if (apkPath != null) {
-                    installApk(File(apkPath))
+                    UpdateUtils.installApk(this, File(apkPath))
                 }
             } else if (!isDownloading && isAvailable) {
-                startBackgroundDownload()
+                updateManager.startDownload()
+                updateUpdateIndicatorVisibility()
             }
         }
 
@@ -1055,48 +1060,21 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdatesSilently() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            checkAnnouncementsInternal()
-            try {
-                val url = URL("http://159.195.38.145:8081/version.txt")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 5000
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
-                    val currentVersion = BuildConfig.VERSION_NAME
-                    val isAvailable = isUpdateAvailable(currentVersion, latestVersion)
-                    
-                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-                    val isDownloaded = prefs.getBoolean("update_downloaded", false)
-                    val isDownloading = prefs.getBoolean("update_downloading", false)
+        updateManager.checkForUpdates { isAvailable, latestVersion ->
+            val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+            val isDownloaded = prefs.getBoolean("update_downloaded", false)
+            val isDownloading = prefs.getBoolean("update_downloading", false)
 
-                    prefs.edit {
-                        putBoolean("update_available", isAvailable)
-                        putString("latest_version", latestVersion)
-                        
-                        // If we are already on latest version, clear download state and stop work
-                        if (!isAvailable) {
-                            putBoolean("update_downloaded", false)
-                            putBoolean("update_downloading", false)
-                            remove("apk_path")
-                            WorkManager.getInstance(applicationContext).cancelUniqueWork("update_download")
-                        }
-                    }
-                    
-                    withContext(Dispatchers.Main) {
-                        updateUpdateIndicatorVisibility()
-                        if (isAvailable) {
-                            if (!isDownloaded && !isDownloading) {
-                                Log.d("ChatList", "Auto-starting background update download")
-                                startBackgroundDownload(isAuto = true)
-                            } else if (isDownloaded) {
-                                showUpdateAvailableNotification(latestVersion)
-                            }
-                        }
+            runOnUiThread {
+                updateUpdateIndicatorVisibility()
+                if (isAvailable) {
+                    if (!isDownloaded && !isDownloading) {
+                        updateManager.startDownload(isAuto = true)
+                    } else if (isDownloaded) {
+                        showUpdateAvailableNotification(latestVersion)
                     }
                 }
-                connection.disconnect()
-            } catch (_: Exception) {}
+            }
         }
     }
 
@@ -1313,22 +1291,9 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun checkManualUpdate() {
         val currentVersion = BuildConfig.VERSION_NAME
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val url = URL("http://159.195.38.145:8081/version.txt")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 5000
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    val latestVersion = connection.inputStream.bufferedReader().use { it.readText() }.trim()
-                    withContext(Dispatchers.Main) {
-                        showUpdateDialog(currentVersion, latestVersion)
-                    }
-                }
-                connection.disconnect()
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ChatListActivity, "Failed to check updates: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+        updateManager.checkForUpdates { isAvailable, latestVersion ->
+            runOnUiThread {
+                showUpdateDialog(currentVersion, latestVersion)
             }
         }
     }
@@ -1362,10 +1327,10 @@ class ChatListActivity : AppCompatActivity() {
             btnCancel.setTextColor(secTxtColor)
         } catch (_: Exception) {}
 
-        val isAvailable = isUpdateAvailable(current, latest)
+        val isAvailable = UpdateUtils.isUpdateAvailable(current, latest)
         if (!isAvailable) {
             titleView.text = getString(R.string.ok)
-            updateIcon.setImageResource(R.drawable.ic_checked) // Use checkmark if already up to date
+            updateIcon.setImageResource(R.drawable.ic_checked)
             btnUpdate.text = getString(R.string.force_download)
         }
         
@@ -1374,7 +1339,8 @@ class ChatListActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { bottomSheet.dismiss() }
         btnUpdate.setOnClickListener {
             bottomSheet.dismiss()
-            startBackgroundDownload()
+            updateManager.startDownload()
+            updateUpdateIndicatorVisibility()
         }
         
         bottomSheet.setContentView(dialogView)
@@ -1462,47 +1428,6 @@ class ChatListActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun isUpdateAvailable(current: String, latest: String): Boolean {
-        return UpdateUtils.isUpdateAvailable(current, latest)
-    }
-
-    private fun startBackgroundDownload(isAuto: Boolean = false) {
-        getSharedPreferences("UpdatePrefs", MODE_PRIVATE).edit {
-            putBoolean("update_downloading", true)
-        }
-        updateUpdateIndicatorVisibility()
-
-        val constraintsBuilder = androidx.work.Constraints.Builder()
-        
-        if (isAuto) {
-            // More strict for auto-downloads to avoid battery/data drain
-            constraintsBuilder.setRequiredNetworkType(androidx.work.NetworkType.UNMETERED)
-            constraintsBuilder.setRequiresBatteryNotLow(true)
-        } else {
-            constraintsBuilder.setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-        }
-
-        val workRequest = OneTimeWorkRequestBuilder<DownloadUpdateWorker>()
-            .setConstraints(constraintsBuilder.build())
-            .build()
-        WorkManager.getInstance(this).enqueueUniqueWork(
-            "update_download",
-            ExistingWorkPolicy.KEEP,
-            workRequest
-        )
-        Toast.makeText(this, "Загрузка обновления началась в фоне", Toast.LENGTH_LONG).show()
-    }
-
-    private fun installApk(file: File) {
-        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.provider", file)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
-    }
-
     @SuppressLint("SetTextI18n")
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, binding.root, false)
@@ -1570,7 +1495,8 @@ class ChatListActivity : AppCompatActivity() {
                 setTextColor(customTheme.onPrimaryColor.toColorInt())
                 setOnClickListener {
                     dialog.dismiss()
-                    startBackgroundDownload()
+                    updateManager.startDownload()
+                    updateUpdateIndicatorVisibility()
                 }
             }
         }
