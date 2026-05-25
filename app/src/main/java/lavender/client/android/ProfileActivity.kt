@@ -48,6 +48,9 @@ import java.util.Locale
 import androidx.core.graphics.toColorInt
 import androidx.appcompat.app.AlertDialog
 
+import lavender.client.android.ui.widget.SearchableListBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
+
 class ProfileActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
@@ -439,54 +442,39 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun showAddParticipantDialog(contacts: List<String>) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_contact, null)
-        val bgColor = try { ThemeStore.currentTheme().surfaceColor.toColorInt() } catch (_: Exception) { getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainer) }
-        val shapeDrawable = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null))
-        shapeDrawable.paint.color = bgColor
-        dialogView.background = shapeDrawable
-
-        val searchEditText = dialogView.findViewById<EditText>(R.id.searchEditText)
-        val usersRecyclerView = dialogView.findViewById<RecyclerView>(R.id.usersRecyclerView)
-        val createChatCheckbox = dialogView.findViewById<com.google.android.material.checkbox.MaterialCheckBox>(R.id.createChatCheckbox)
-        val btnAdd = dialogView.findViewById<MaterialButton>(R.id.btnAdd)
-        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
-        createChatCheckbox.isVisible = false
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.add_participants))
+            .setActionButtonText(getString(R.string.add))
+            .setExtraInputVisible(false)
 
         val selectableAdapter = SelectableUserAdapter(
             lifecycleScope,
             avatarCache = grpcClient.getAvatarCache(),
             onSelectionChanged = { count ->
-            btnAdd.isEnabled = count > 0
-            btnAdd.text = if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)
-        })
-        usersRecyclerView.adapter = selectableAdapter
-        usersRecyclerView.layoutManager = LinearLayoutManager(this)
+                sheet.setActionButtonEnabled(count > 0)
+                sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
+            }
+        )
+        sheet.setAdapter(selectableAdapter)
         selectableAdapter.setUsers(contacts)
 
-        searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString().lowercase()
-                selectableAdapter.setUsers(contacts.filter { it.lowercase().contains(query) })
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
+        sheet.onSearchTextChanged { query ->
+            val q = query.lowercase()
+            selectableAdapter.setUsers(contacts.filter { it.lowercase().contains(q) })
+        }
 
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnAdd.setOnClickListener {
+        sheet.onActionClick {
             val selected = selectableAdapter.getSelectedUsers()
-            if (selected.isEmpty()) return@setOnClickListener
+            if (selected.isEmpty()) return@onActionClick
             val progressOverlay = findViewById<View>(R.id.progressOverlay)
-            dialog.dismiss()
+            sheet.dismiss()
             progressOverlay.isVisible = true
             grpcClient.addParticipants(roomId, selected) { success, msg ->
                 if (success) refreshParticipantsFromServer { runOnUiThread { progressOverlay.isVisible = false } }
                 else runOnUiThread { progressOverlay.isVisible = false; Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
             }
         }
-        dialog.show()
+        sheet.show()
     }
 
     private fun showFullScreenImage(imageUrl: String) {

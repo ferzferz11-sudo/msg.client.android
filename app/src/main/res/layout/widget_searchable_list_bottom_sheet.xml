@@ -5,6 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
+    android:minHeight="500dp"
     android:background="?attr/colorSurface">
 
     <View
@@ -13,20 +14,20 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="24dp"
-        android:background="?attr/colorOnSurfaceVariant" />
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
 
     <TextView
-        android:id="@+id/dialogTitle"
+        android:id="@+id/titleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/start_chat"
         android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="?attr/colorPrimary"
         android:layout_marginBottom="16dp" />
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/groupNameLayout"
+        android:id="@+id/extraInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
@@ -35,11 +36,9 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/groupNameEditText"
+            android:id="@+id/extraEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/enter_group_name"
-            android:inputType="textCapSentences"
             android:textColor="?attr/colorOnSurface"
             android:textColorHint="?attr/colorOnSurfaceVariant" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -66,19 +65,18 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/usersRecyclerView"
+        android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:minHeight="200dp"
+        android:minHeight="350dp"
         android:layout_marginBottom="16dp" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCreate"
-        style="@style/Widget.MaterialComponents.Button"
+        android:id="@+id/actionButton"
+        style="@style/PrimaryButton"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:text="@string/create"
         app:cornerRadius="28dp"
         android:enabled="false" />
 

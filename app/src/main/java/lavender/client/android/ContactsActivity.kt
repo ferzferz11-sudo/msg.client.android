@@ -27,6 +27,8 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.ui.widget.SearchableListBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
 import lavender.client.android.ui.adapter.UserAdapter
 import org.json.JSONArray
 import java.util.Locale
@@ -236,52 +238,31 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     private fun showAddContactDialog() {
-        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val customTheme = ThemeStore.currentTheme()
-        ThemeApplier.applyToDialog(bottomSheet, customTheme)
-        // Ensure the dialog adjusts when keyboard appears
-        @Suppress("DEPRECATION")
-        bottomSheet.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_add_contacts, null)
-        
-        val searchEditText = view.findViewById<TextInputEditText>(R.id.searchEditText)
-        val searchInputLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.searchInputLayout)
-        val usersRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.usersRecyclerView)
-        val btnAdd = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAdd)
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val primColor = customTheme.primaryColor.toColorInt()
-            view.setBackgroundColor(bgColor)
-            view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
-            
-            val boxColor = ColorStateList.valueOf(primColor)
-            searchInputLayout.setBoxStrokeColorStateList(boxColor)
-            searchInputLayout.defaultHintTextColor = boxColor
-        } catch (_: Exception) {}
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.add_contact))
+            .setActionButtonText(getString(R.string.add))
+            .setExtraInputVisible(false)
 
         val allUsersNames = mutableListOf<String>()
         val filteredUsersNames = mutableListOf<String>()
         
-        lateinit var userAdapter: UserAdapter
-        userAdapter = UserAdapter(
+        val userAdapter = UserAdapter(
             lifecycleScope,
             onUserClick = { selected ->
-                userAdapter.toggleSelection(selected)
+                (sheet.recyclerView?.adapter as? UserAdapter)?.toggleSelection(selected)
             },
             onSelectionChanged = { count ->
-                btnAdd.isEnabled = count > 0
-                btnAdd.text = if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)
+                sheet.setActionButtonEnabled(count > 0)
+                sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
             },
             avatarCache = grpcClient.getAvatarCache(),
             onlineUsers = grpcClient.users.value
         )
 
-        usersRecyclerView.adapter = userAdapter
-        usersRecyclerView.layoutManager = LinearLayoutManager(this)
+        sheet.setAdapter(userAdapter)
 
         grpcClient.loadAllUsers()
-        lifecycleScope.launch {
+        val usersJob = lifecycleScope.launch {
             grpcClient.allUsers.collect { allUsers ->
                 allUsersNames.clear()
                 allUsersNames.addAll(allUsers.filter { it.username != username && !contacts.contains(it.username) }.map { it.username })
@@ -291,18 +272,16 @@ class ContactsActivity : AppCompatActivity() {
             }
         }
 
-        searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString().lowercase()
-                filteredUsersNames.clear()
-                filteredUsersNames.addAll(allUsersNames.filter { it.lowercase().contains(query) })
-                userAdapter.setUsers(filteredUsersNames)
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
+        sheet.setOnDismissListener { usersJob.cancel() }
 
-        btnAdd.setOnClickListener {
+        sheet.onSearchTextChanged { query ->
+            val q = query.lowercase()
+            filteredUsersNames.clear()
+            filteredUsersNames.addAll(allUsersNames.filter { it.lowercase().contains(q) })
+            userAdapter.setUsers(filteredUsersNames)
+        }
+
+        sheet.onActionClick {
             val selected = userAdapter.getSelectedUsers()
             if (selected.isNotEmpty()) {
                 var completed = 0
@@ -313,16 +292,14 @@ class ContactsActivity : AppCompatActivity() {
                             runOnUiThread {
                                 Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
                                 loadContacts()
-                                bottomSheet.dismiss()
+                                sheet.dismiss()
                             }
                         }
                     }
                 }
             }
         }
-
-        bottomSheet.setContentView(view)
-        bottomSheet.show()
+        sheet.show()
     }
 
     private fun startDirectChat(targetUser: String) {

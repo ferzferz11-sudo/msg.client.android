@@ -5,6 +5,16 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.6.30
+### Planned
+- 🧩 **Widget System**: Introduced a new themed widget system with `WidgetManager` for caching components.
+- 🏗️ **Themed Bottom Sheets**: Created specialized widget types:
+    - `ActionBottomSheet`: For menus with icons and labels (Add Chat, Profile).
+    - `ListBottomSheet`: For high-performance themed lists using RecyclerView.
+- 🏗️ **StandardBottomSheet**: Base component for reducing boilerplate code in activities.
+- 📞 **Call Stability**: Fixed a critical bug where users with both a UUID and a Username could not correctly hang up on calls (signals were being sent back to the sender).
+- 🔔 **Call Priority**: Increased notification priority to `MAX` and added `USE_FULL_SCREEN_INTENT` to ensure incoming calls are visible on the lock screen and as heads-up displays.
+
 ## 1.0.6.29
 ### UI Improvements & Reactions
 - 🛡️ **Admin Panel**: TabLayout background is now transparent, and text uses the primary theme color. Optimized list rendering using RecyclerView and DiffUtil to eliminate lag during multi-selection.

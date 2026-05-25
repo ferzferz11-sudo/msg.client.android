@@ -137,6 +137,13 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             override fun onStatusUpdate(status: String) {
                 runOnUiThread { binding.tvCallStatus.text = status }
             }
+
+            override fun onIdAssigned(newCallId: String) {
+                if (callId.isEmpty() && newCallId.isNotEmpty()) {
+                    Log.d(TAG, "Call ID assigned by server: $newCallId")
+                    callId = newCallId
+                }
+            }
         })
     }
 

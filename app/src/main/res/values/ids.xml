@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="action_change_password" type="id" />
+    <item name="actionAddContact" type="id" />
+    <item name="actionCreateChat" type="id" />
+    <item name="attachCamera" type="id" />
+    <item name="attachGallery" type="id" />
+    <item name="attachFile" type="id" />
+    <item name="attachLocation" type="id" />
 </resources>

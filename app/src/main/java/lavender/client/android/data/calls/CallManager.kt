@@ -41,10 +41,9 @@ object CallManager {
         // Ignore internal identity signals
         if (signal.payload == "IDENTITY") return
 
-        Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId}")
+        Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId} (Me: ${GrpcClient.getCurrentUsername()}/${GrpcClient.getUserId()})")
         
-        val myUserId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-        if (signal.senderId == myUserId) {
+        if (isMe(signal.senderId)) {
             when (signal.type) {
                 CallMessageProto.Type.INITIATE, 
                 CallMessageProto.Type.INITIATE_CONFERENCE,
@@ -90,7 +89,7 @@ object CallManager {
     }
 
     fun initiateCall(receiverId: String) {
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         
         // Clear state before starting new call
         _currentCall.value = null
@@ -111,11 +110,11 @@ object CallManager {
     fun syncCallState(callId: String, otherPartyId: String, isIncoming: Boolean) {
         if (_currentCall.value == null || (_currentCall.value?.callId != callId && callId.isNotEmpty())) {
             Log.d(TAG, "Syncing call state for $callId (isIncoming: $isIncoming, other: $otherPartyId)")
-            val currentUsername = GrpcClient.getCurrentUsername() ?: ""
+            val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: ""
             _currentCall.value = CallMessageProto(
                 callId = callId,
-                senderId = if (isIncoming) otherPartyId else currentUsername,
-                receiverId = if (isIncoming) currentUsername else otherPartyId,
+                senderId = if (isIncoming) otherPartyId else myId,
+                receiverId = if (isIncoming) myId else otherPartyId,
                 type = CallMessageProto.Type.INITIATE
             )
         }
@@ -128,10 +127,10 @@ object CallManager {
 
     fun acceptCall() {
         val call = _currentCall.value ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             callId = call.callId,
-            senderId = senderId,
+            senderId = myId,
             receiverId = call.senderId,
             type = CallMessageProto.Type.ACCEPT
         )
@@ -154,7 +153,7 @@ object CallManager {
     fun hangup() {
         val call = _currentCall.value ?: return
         val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
-        val targetId = if (call.senderId == myId) call.receiverId else call.senderId
+        val targetId = if (isMe(call.senderId)) call.receiverId else call.senderId
         
         Log.d(TAG, "Hangup: myId=$myId, call.senderId=${call.senderId}, targetId=$targetId")
         
@@ -166,6 +165,18 @@ object CallManager {
         )
         GrpcClient.sendCallSignal(signal)
         _currentCall.value = null
+    }
+
+    fun isMe(id: String): Boolean {
+        if (id.isEmpty()) return false
+        val myUsername = GrpcClient.getCurrentUsername()
+        val myUserId = GrpcClient.getUserId()
+        
+        // Compare with both username and UUID
+        if (id == myUsername || id == myUserId) return true
+        
+        // Also check if id is a UUID that belongs to me (safety check)
+        return false
     }
 
     fun sendWebRtcSignal(receiverId: String, type: CallMessageProto.Type, payload: String) {

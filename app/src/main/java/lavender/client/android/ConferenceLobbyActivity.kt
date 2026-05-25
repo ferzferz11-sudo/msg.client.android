@@ -32,7 +32,6 @@ import lavender.client.android.data.calls.WebRtcClient
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 import lavender.client.android.databinding.ActivityConferenceLobbyBinding
-import lavender.client.android.databinding.BottomSheetInviteConferenceBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeApplier
@@ -42,6 +41,9 @@ import org.json.JSONObject
 import org.webrtc.*
 import java.text.SimpleDateFormat
 import java.util.*
+
+import lavender.client.android.ui.widget.SearchableListBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
 
 class ConferenceLobbyActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConferenceLobbyBinding
@@ -213,30 +215,18 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     }
 
     private fun showInviteParticipantsDialog() {
-        val dialog = BottomSheetDialog(this)
-        val sheetBinding = BottomSheetInviteConferenceBinding.inflate(layoutInflater)
-        dialog.setContentView(sheetBinding.root)
-        
-        val theme = ThemeStore.currentTheme()
-        ThemeApplier.applyToDialog(dialog, theme)
-        
-        try {
-            val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
-            val pColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
-            val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            
-            sheetBinding.inviteSheetRoot.setBackgroundColor(bgColor)
-            sheetBinding.tvInviteTitle.setTextColor(txtColor)
-            sheetBinding.inviteSheetDragHandle.backgroundTintList = ColorStateList.valueOf(txtColor)
-            
-            sheetBinding.btnSendInvites.backgroundTintList = ColorStateList.valueOf(pColor)
-            sheetBinding.btnSendInvites.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
-        } catch (_: Exception) {}
-        
-        val adapter = SelectableUserAdapter(lifecycleScope, avatarCache = avatarCache) { /* onSelectionChanged */ }
-        sheetBinding.rvParticipants.layoutManager = LinearLayoutManager(this)
-        sheetBinding.rvParticipants.adapter = adapter
-        
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.add_participants))
+            .setActionButtonText(getString(R.string.send_notifications))
+            .setExtraInputVisible(false)
+
+        val adapter = SelectableUserAdapter(lifecycleScope, avatarCache = avatarCache) { count ->
+            sheet.setActionButtonEnabled(count > 0)
+            sheet.setActionButtonText(if (count > 0) "${getString(R.string.send_notifications)} ($count)" else getString(R.string.send_notifications))
+        }
+        sheet.setAdapter(adapter)
+
+        val contacts = mutableListOf<String>()
         GrpcClient.getAllChats { allChats ->
             val chat = allChats.find { it.id == roomId }
             if (chat != null) {
@@ -249,7 +239,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                     val myId = session.userId
                     val myName = session.username
                     
-                    // Filter out: myself (ID or Name) and users already in the invited list
                     val usersToInvite = members.filter { 
                         val isMe = (it == myId || it == myName)
                         !isMe && !currentlyInvited.contains(it)
@@ -259,19 +248,26 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                         GrpcClient.getUserAvatar(username) { /* cached */ }
                     }
                     
-                    runOnUiThread { adapter.setUsers(usersToInvite) }
+                    contacts.clear()
+                    contacts.addAll(usersToInvite)
+                    runOnUiThread { adapter.setUsers(contacts) }
                 } catch (_: Exception) {}
             }
         }
-        
-        sheetBinding.btnSendInvites.setOnClickListener {
+
+        sheet.onSearchTextChanged { query ->
+            val q = query.lowercase()
+            adapter.setUsers(contacts.filter { it.lowercase().contains(q) })
+        }
+
+        sheet.onActionClick {
             val selected = adapter.getSelectedUsers()
             selected.forEach { userId ->
                 CallManager.inviteToConference(roomId, userId, userId)
             }
-            dialog.dismiss()
+            sheet.dismiss()
         }
-        dialog.show()
+        sheet.show()
     }
 
     private fun observeConferenceStatus() {

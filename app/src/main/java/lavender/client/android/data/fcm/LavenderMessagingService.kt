@@ -98,12 +98,13 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle("Входящий звонок")
             .setContentText("Звонит $senderId")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
-            .setAutoCancel(true)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .setFullScreenIntent(pendingIntent, true)
+            .setAutoCancel(false)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         notificationManager.notify(callId.hashCode(), notificationBuilder.build())
     }

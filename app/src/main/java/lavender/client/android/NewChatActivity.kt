@@ -81,6 +81,11 @@ import androidx.core.view.get
 import androidx.core.view.size
 import androidx.core.content.edit
 
+import lavender.client.android.ui.widget.ActionBottomSheet
+import lavender.client.android.ui.widget.SheetAction
+import lavender.client.android.ui.widget.ListBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
+
 class NewChatActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
@@ -830,19 +835,22 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showAttachmentSheet() {
-        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this); val theme = ThemeStore.currentTheme(); ThemeApplier.applyToDialog(sheet, theme); val view = layoutInflater.inflate(R.layout.bottom_sheet_attachments, null)
-        try {
-            val bg = theme.backgroundColor.toColorInt(); val txt = theme.textPrimaryColor.toColorInt(); val pr = theme.primaryColor.toColorInt()
-            view.setBackgroundColor(bg); view.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(pr)
-            listOf(R.id.attachCamera, R.id.attachGallery, R.id.attachFile, R.id.attachLocation).forEach { id ->
-                view.findViewById<LinearLayout>(id)?.let { l -> for (i in 0 until l.childCount) { val c = l.getChildAt(i); if (c is TextView) c.setTextColor(txt); if (c is ImageView) c.imageTintList = ColorStateList.valueOf(pr) } }
-            }
-        } catch (_: Exception) {}
-        view.findViewById<LinearLayout>(R.id.attachCamera).setOnClickListener { sheet.dismiss(); currentPhotoUri = createImageUri(); currentPhotoUri?.let { takePhotoLauncher.launch(it) } }
-        view.findViewById<LinearLayout>(R.id.attachGallery).setOnClickListener { sheet.dismiss(); pickImageLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply { putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }) }
-        view.findViewById<LinearLayout>(R.id.attachFile).setOnClickListener { sheet.dismiss(); pickFileLauncher.launch(Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }) }
-        view.findViewById<LinearLayout>(R.id.attachLocation).setOnClickListener { sheet.dismiss(); pickLocationLauncher.launch(Intent(this, MapPickerActivity::class.java)) }
-        sheet.setContentView(view); sheet.show()
+        WidgetManager.getOrCreate("attachment_sheet") { ActionBottomSheet(this) }
+            .setActions(listOf(
+                SheetAction(R.id.attachCamera, R.drawable.ic_mic, getString(R.string.attach_camera)) {
+                    currentPhotoUri = createImageUri()
+                    currentPhotoUri?.let { takePhotoLauncher.launch(it) }
+                },
+                SheetAction(R.id.attachGallery, R.drawable.ic_gallery, getString(R.string.attach_gallery)) {
+                    pickImageLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply { putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) })
+                },
+                SheetAction(R.id.attachFile, R.drawable.attach_file_add_24, getString(R.string.attach_file_label)) {
+                    pickFileLauncher.launch(Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) })
+                },
+                SheetAction(R.id.attachLocation, R.drawable.ic_location, getString(R.string.attach_location)) {
+                    pickLocationLauncher.launch(Intent(this, MapPickerActivity::class.java))
+                }
+            )).show()
     }
 
     private fun showSearchBar() {
@@ -912,10 +920,33 @@ class NewChatActivity : AppCompatActivity() {
             runOnUiThread {
                 val oc = chats.toMutableList(); if (!roomId.startsWith("favorites_")) oc.add(0, ChatInfo(id = "favorites_$username", name = getString(R.string.favorites), type = "favorites"))
                 val f = oc.filter { it.id != roomId }; if (f.isEmpty()) { showToast(getString(R.string.no_other_chats)); return@runOnUiThread }
-                val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this); val theme = ThemeStore.currentTheme(); ThemeApplier.applyToDialog(sheet, theme); val view = layoutInflater.inflate(R.layout.bottom_sheet_forward, null); sheet.setContentView(view)
-                val rv = view.findViewById<RecyclerView>(R.id.forwardChatsRecyclerView); val tt = view.findViewById<TextView>(R.id.forwardTitle); val h = view.findViewById<View>(R.id.dragHandle)
-                try { val s = theme.surfaceColor.toColorInt(); val t = theme.textPrimaryColor.toColorInt(); val p = theme.primaryColor.toColorInt(); view.setBackgroundColor(s); tt.setTextColor(t); h.backgroundTintList = ColorStateList.valueOf(p) } catch (_: Exception) {}
-                rv.layoutManager = LinearLayoutManager(this); rv.adapter = lavender.client.android.ui.adapter.ForwardChatAdapter(chats = f, currentUsername = username, avatarCache = grpcClient.getAvatarCache(), onChatSelected = { target -> sheet.dismiss(); sm.forEach { m -> grpcClient.sendMessage(Message(user = username, text = m.text, timestamp = System.currentTimeMillis(), roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl, duration = m.duration, userId = grpcClient.getUserId() ?: "")) }; showToast(getString(R.string.messages_forwarded)); hideSelectionToolbar() })
+                
+                val sheet = WidgetManager.getOrCreate("forward_sheet") { ListBottomSheet(this) }
+                    .setTitle(getString(R.string.forward_to))
+                
+                val forwardAdapter = lavender.client.android.ui.adapter.ForwardChatAdapter(
+                    chats = f,
+                    currentUsername = username,
+                    avatarCache = grpcClient.getAvatarCache(),
+                    onChatSelected = { target ->
+                        sheet.dismiss()
+                        sm.forEach { m ->
+                            grpcClient.sendMessage(Message(
+                                user = username,
+                                text = m.text,
+                                timestamp = System.currentTimeMillis(),
+                                roomId = target.id,
+                                imageUrl = m.imageUrl,
+                                voiceUrl = m.voiceUrl,
+                                duration = m.duration,
+                                userId = grpcClient.getUserId() ?: ""
+                            ))
+                        }
+                        showToast(getString(R.string.messages_forwarded))
+                        hideSelectionToolbar()
+                    }
+                )
+                sheet.setAdapter(forwardAdapter)
                 sheet.show()
             }
         }

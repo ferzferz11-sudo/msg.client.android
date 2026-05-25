@@ -33,6 +33,7 @@ class CallController(
         fun onCallTerminated(reason: String)
         fun onConferencePresenceUpdated(participants: List<String>, creatorId: String)
         fun onStatusUpdate(status: String)
+        fun onIdAssigned(newCallId: String)
     }
 
     init {
@@ -42,14 +43,16 @@ class CallController(
     private fun observeSignals() {
         scope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
-                val myUserId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                
                 // Route check
                 if (signal.callId != callId && callId.isNotEmpty() && !isConference) return@collectLatest
                 if (isConference && signal.roomId != roomId) return@collectLatest
 
-                // Self echo ignore
-                if (signal.senderId == myUserId && signal.type != CallMessageProto.Type.INITIATE) return@collectLatest
+                // Self echo ignore (except INITIATE to sync callId)
+                if (CallManager.isMe(signal.senderId) && signal.type != CallMessageProto.Type.INITIATE) return@collectLatest
+
+                if (signal.callId.isNotEmpty() && callId.isEmpty()) {
+                    listener.onIdAssigned(signal.callId)
+                }
 
                 when (signal.type) {
                     CallMessageProto.Type.ACCEPT -> {
