@@ -102,10 +102,11 @@
                 android:id="@+id/cardPreview"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:layout_margin="32dp"
+                android:layout_marginHorizontal="64dp"
+                android:layout_marginTop="24dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:layout_constraintDimensionRatio="H,4:3"
+                app:layout_constraintDimensionRatio="H,1:1"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/timeLayout">
@@ -230,19 +231,6 @@
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/btnDelete" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnInvite"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="24dp"
-                android:text="Пригласить"
-                android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="@id/tvParticipantsHeader"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/tvParticipantsHeader"
-                tools:visibility="visible" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvInvited"

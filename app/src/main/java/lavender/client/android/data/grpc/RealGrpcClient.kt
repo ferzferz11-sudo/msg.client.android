@@ -124,7 +124,7 @@ object RealGrpcClient {
             return
         }
 
-        appContext = context
+        appContext = context?.applicationContext
         currentServerAddress = serverAddress
         _isSuperAdmin.value = false // Reset status for new connection
         loadDeletedMessages()

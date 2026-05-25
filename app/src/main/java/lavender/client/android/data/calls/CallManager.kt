@@ -44,11 +44,20 @@ object CallManager {
         Log.d(TAG, "Received signal: ${signal.type} from ${signal.senderId}")
         
         val myUserId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-        if (signal.senderId == myUserId && signal.type == CallMessageProto.Type.INITIATE) {
-            Log.d(TAG, "Handling self-initiated INITIATE signal to update local call state")
-            _currentCall.value = signal
-            scope.launch { _incomingSignals.emit(signal) }
-            return
+        if (signal.senderId == myUserId) {
+            when (signal.type) {
+                CallMessageProto.Type.INITIATE, 
+                CallMessageProto.Type.INITIATE_CONFERENCE,
+                CallMessageProto.Type.JOIN_CONFERENCE,
+                CallMessageProto.Type.UPDATE_CONFERENCE,
+                CallMessageProto.Type.INVITE_TO_CONFERENCE -> {
+                    Log.d(TAG, "Handling self-initiated signal ${signal.type} to update local state")
+                    _currentCall.value = signal
+                    scope.launch { _incomingSignals.emit(signal) }
+                    return
+                }
+                else -> {}
+            }
         }
 
         scope.launch { _incomingSignals.emit(signal) }

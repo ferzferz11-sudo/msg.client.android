@@ -44,6 +44,9 @@ class ChatAdapter(
     private val deletingChatIds = mutableSetOf<String>()
     private var currentFilter: String = ""
     private var diffJob: Job? = null
+    
+    // Track if we are currently calculating a diff to avoid inconsistent notify calls
+    private var isDiffing = false
 
     // Pre-calculated theme colors
     private var cachedPrimaryColor: Int = 0
@@ -92,15 +95,21 @@ class ChatAdapter(
         onSelectionChanged(0)
     }
 
+    /**
+     * Robust update method to prevent Inconsistency detected crash
+     */
     fun setChats(newChats: List<ChatInfo>) {
-        if (allChats.isEmpty() && newChats.isNotEmpty()) {
-             allChats = newChats
-             displayedChats = newChats
-             notifyDataSetChanged()
-             return
+        diffJob?.cancel()
+        
+        // If current list is empty, perform an immediate update to ensure initial state is consistent
+        if (displayedChats.isEmpty()) {
+            allChats = newChats
+            displayedChats = newChats
+            notifyDataSetChanged()
+            return
         }
 
-        diffJob?.cancel()
+        isDiffing = true
         val oldChats = displayedChats
         diffJob = scope.launch(Dispatchers.Default) {
             val filtered = if (currentFilter.isEmpty()) {
@@ -112,12 +121,19 @@ class ChatAdapter(
                     chat.lastMessageText.lowercase().contains(currentFilter)
                 }
             }
+            
             val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
+            
+            if (!isActive) {
+                isDiffing = false
+                return@launch
+            }
             
             withContext(Dispatchers.Main) {
                 allChats = newChats
                 displayedChats = filtered
                 diffResult.dispatchUpdatesTo(this@ChatAdapter)
+                isDiffing = false
             }
         }
     }
@@ -125,6 +141,8 @@ class ChatAdapter(
     fun filter(query: String) {
         currentFilter = query.lowercase()
         diffJob?.cancel()
+        
+        isDiffing = true
         val oldChats = displayedChats
         diffJob = scope.launch(Dispatchers.Default) {
             val filtered = if (currentFilter.isEmpty()) {
@@ -138,9 +156,15 @@ class ChatAdapter(
             }
             val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
             
+            if (!isActive) {
+                isDiffing = false
+                return@launch
+            }
+            
             withContext(Dispatchers.Main) {
                 displayedChats = filtered
                 diffResult.dispatchUpdatesTo(this@ChatAdapter)
+                isDiffing = false
             }
         }
     }
@@ -148,11 +172,17 @@ class ChatAdapter(
     fun setOnlineUsers(users: List<String>) {
         if (onlineUsers == users) return
         onlineUsers = users
-        val count = displayedChats.size
-        if (count > 0) {
-             try {
-                notifyItemRangeChanged(0, count, "status")
-             } catch (_: Exception) {}
+        
+        // If we are currently diffing, don't perform partial updates as it might cause inconsistency
+        if (isDiffing) return
+        
+        scope.launch(Dispatchers.Main) {
+            val count = displayedChats.size
+            if (count > 0 && !isDiffing) {
+                try {
+                    notifyItemRangeChanged(0, count, "status")
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -160,11 +190,16 @@ class ChatAdapter(
         val snapshot = newCache.toMap()
         if (avatarCache == snapshot) return
         avatarCache = snapshot
-        val count = displayedChats.size
-        if (count > 0) {
-            try {
-                notifyItemRangeChanged(0, count, "avatar")
-            } catch (_: Exception) {}
+        
+        if (isDiffing) return
+
+        scope.launch(Dispatchers.Main) {
+            val count = displayedChats.size
+            if (count > 0 && !isDiffing) {
+                try {
+                    notifyItemRangeChanged(0, count, "avatar")
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -175,16 +210,15 @@ class ChatAdapter(
         override fun getOldListSize(): Int = oldList.size
         override fun getNewListSize(): Int = newList.size
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            if (oldItemPosition >= oldList.size || newItemPosition >= newList.size) return false
             return oldList[oldItemPosition].id == newList[newItemPosition].id
         }
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            if (oldItemPosition >= oldList.size || newItemPosition >= newList.size) return false
             val oldChat = oldList[oldItemPosition]
             val newChat = newList[newItemPosition]
             return (oldChat.name == newChat.name && oldChat.type == newChat.type &&
                     oldChat.unreadCount == newChat.unreadCount && oldChat.lastMessageTime == newChat.lastMessageTime &&
-                    oldChat.isMuted == newChat.isMuted)
+                    oldChat.isMuted == newChat.isMuted && oldChat.lastMessageText == newChat.lastMessageText &&
+                    oldChat.lastMessageHasImage == newChat.lastMessageHasImage)
         }
     }
 

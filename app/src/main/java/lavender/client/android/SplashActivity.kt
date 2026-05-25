@@ -24,8 +24,8 @@ class SplashActivity : AppCompatActivity() {
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
 
-        val savedUsername = prefs.getString("username", null)
-        val savedPassword = prefs.getString("password", null)
+        val savedUsername = prefs.getString("saved_username", null)
+        val savedPassword = prefs.getString("saved_password", null)
         val savedServerAddress = prefs.getString("server_address", null)
 
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)

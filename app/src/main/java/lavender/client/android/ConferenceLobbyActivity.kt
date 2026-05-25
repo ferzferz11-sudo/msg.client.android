@@ -10,12 +10,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -59,6 +59,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
 
     private lateinit var invitedAdapter: InvitedUserAdapter
     private var avatarCache: Map<String, String> = emptyMap()
+    private var currentlyInvited = setOf<String>()
 
     companion object {
         private const val PERMISSION_CODE = 101
@@ -88,10 +89,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         binding.btnDelete.setOnClickListener {
             CallManager.endConference(roomId)
             finish()
-        }
-
-        binding.btnInvite.setOnClickListener {
-            showInviteParticipantsDialog()
         }
 
         binding.btnInviteFab.setOnClickListener {
@@ -129,6 +126,9 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             binding.localPreview.isVisible = isCameraEnabled
             binding.imgAvatarPreview.isVisible = !isCameraEnabled
             binding.imgNoVideo.isVisible = false
+            if (!isCameraEnabled) {
+                loadCurrentUserAvatar()
+            }
         }
 
         binding.imgAvatarPreview.shapeAppearanceModel = ShapeAppearanceModel.builder()
@@ -244,8 +244,16 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                     val jsonArray = JSONArray(chat.participants)
                     val members = mutableListOf<String>()
                     for (i in 0 until jsonArray.length()) members.add(jsonArray.getString(i))
-                    val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
-                    val usersToInvite = members.filter { it != myId }
+                    
+                    val session = lavender.client.android.data.session.SessionManager.session.value
+                    val myId = session.userId
+                    val myName = session.username
+                    
+                    // Filter out: myself (ID or Name) and users already in the invited list
+                    val usersToInvite = members.filter { 
+                        val isMe = (it == myId || it == myName)
+                        !isMe && !currentlyInvited.contains(it)
+                    }
                     
                     usersToInvite.forEach { username ->
                         GrpcClient.getUserAvatar(username) { /* cached */ }
@@ -269,12 +277,19 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     private fun observeConferenceStatus() {
         lifecycleScope.launch {
             CallManager.incomingSignals.collectLatest { signal ->
-                if (signal.roomId == roomId && signal.type == CallMessageProto.Type.JOIN_CONFERENCE) {
-                    handlePresence(signal)
-                } else if (signal.roomId == roomId && signal.type == CallMessageProto.Type.END_CONFERENCE) {
-                    runOnUiThread {
-                        Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_SHORT).show()
-                        finish()
+                if (signal.roomId == roomId) {
+                    when (signal.type) {
+                        CallMessageProto.Type.JOIN_CONFERENCE -> handlePresence(signal)
+                        CallMessageProto.Type.END_CONFERENCE -> {
+                            runOnUiThread {
+                                Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_SHORT).show()
+                                finish()
+                            }
+                        }
+                        else -> {
+                            // Other signals like UPDATE_CONFERENCE might also contain topic/time
+                            // but the server usually broadcasts JOIN_CONFERENCE for status updates
+                        }
                     }
                 }
             }
@@ -309,7 +324,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                 binding.btnCustomTime.isVisible = isCreator
                 binding.btnDelete.isVisible = isCreator
                 binding.btnNotify.isVisible = isCreator && invited.length() > 0
-                binding.btnInvite.isVisible = isCreator
                 binding.btnInviteFab.isVisible = isCreator
                 
                 updateTimeDisplay()
@@ -317,6 +331,8 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                 val invitedList = mutableListOf<String>()
                 val iKeys = invited.keys()
                 while (iKeys.hasNext()) invitedList.add(invited.getString(iKeys.next()))
+                
+                currentlyInvited = invitedList.toSet()
                 invitedAdapter.updateUsers(invitedList, isCreator)
                 
                 val pCount = participants.length()
@@ -352,9 +368,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             binding.btnNotify.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(pColor, 0.8f))
             binding.btnNotify.setTextColor(onPColor)
             
-            binding.btnInvite.setTextColor(pColor)
-            binding.btnInvite.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(pColor, 0.1f))
-
             binding.btnAdd5Min.setTextColor(pColor)
             binding.btnCustomTime.setTextColor(pColor)
 
@@ -392,15 +405,19 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     }
 
     private fun loadCurrentUserAvatar() {
-        val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
-        GrpcClient.getUserAvatar(myId) { url ->
+        val session = lavender.client.android.data.session.SessionManager.session.value
+        val url = session.fullAvatarUrl
+        val theme = ThemeStore.currentTheme()
+        
+        runOnUiThread {
             if (url.isNotEmpty()) {
-                runOnUiThread {
-                    Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(binding.imgAvatarPreview)
-                }
+                Glide.with(this@ConferenceLobbyActivity)
+                    .load(url)
+                    .placeholder(R.drawable.ic_default_avatar)
+                    .circleCrop()
+                    .into(binding.imgAvatarPreview)
             } else {
-                val theme = ThemeStore.currentTheme()
-                runOnUiThread { ThemeUtils.applyDefaultAvatar(binding.imgAvatarPreview, theme) }
+                ThemeUtils.applyDefaultAvatar(binding.imgAvatarPreview, theme)
             }
         }
     }
@@ -410,6 +427,11 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             GrpcClient.avatarCacheFlow.collectLatest { cache ->
                 avatarCache = cache
                 invitedAdapter.updateAvatarCache(cache)
+                
+                val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername()
+                if (myId != null && cache.containsKey(myId)) {
+                    loadCurrentUserAvatar()
+                }
             }
         }
     }
@@ -478,15 +500,15 @@ class InvitedUserAdapter(
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val nameText: TextView = itemView.findViewById(R.id.participantName)
-        private val avatarImg: com.google.android.material.imageview.ShapeableImageView = itemView.findViewById(R.id.participantAvatar)
+        private val avatarImg: ImageView = itemView.findViewById(R.id.participantAvatar)
         private val removeButton: ImageButton = itemView.findViewById(R.id.btnRemove)
         
         fun bind(name: String, canRemove: Boolean, avatarUrl: String?, theme: lavender.client.android.theme.Theme, onRemoveClick: (String) -> Unit) {
             nameText.text = name
             
             try {
-                val txtColor = theme.textPrimaryColor.toColorInt()
-                val surfaceColor = theme.surfaceColor.toColorInt()
+                val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+                val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
                 
                 nameText.setTextColor(txtColor)
                 val shape = android.graphics.drawable.GradientDrawable().apply {
@@ -495,9 +517,10 @@ class InvitedUserAdapter(
                 }
                 itemView.background = shape
                 
-                val lp = itemView.layoutParams as ViewGroup.MarginLayoutParams
-                lp.setMargins(0, 0, 0, (8 * itemView.resources.displayMetrics.density).toInt())
-                itemView.layoutParams = lp
+                (itemView.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+                    lp.setMargins(0, 0, 0, (8 * itemView.resources.displayMetrics.density).toInt())
+                    itemView.layoutParams = lp
+                }
             } catch (_: Exception) {}
 
             if (!avatarUrl.isNullOrEmpty()) {

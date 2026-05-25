@@ -118,6 +118,7 @@
         <activity
             android:name=".ConferenceLobbyActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait" />
 
         <service

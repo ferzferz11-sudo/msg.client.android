@@ -21,7 +21,7 @@
         android:id="@+id/tvInviteTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Пригласить в конференцию"
+        android:text="@string/add_participants"
         android:textColor="@color/white"
         android:textSize="20sp"
         android:textStyle="bold" />
@@ -37,7 +37,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginTop="24dp"
-        android:text="Отправить приглашения"
+        android:text="@string/add_participants"
         app:cornerRadius="28dp" />
 
 </LinearLayout>

@@ -15,10 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.imageview.ShapeableImageView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import lavender.client.android.R
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -46,6 +43,9 @@ class UserAdapter(
     private var density: Float = 1f
     private var colorsInitialized = false
     private var currentTheme: lavender.client.android.theme.Theme? = null
+    
+    private var diffJob: Job? = null
+    private var isDiffing = false
 
     private fun initColors(view: View) {
         if (colorsInitialized) return
@@ -67,23 +67,42 @@ class UserAdapter(
     }
 
     fun setUsers(newUsers: List<String>) {
-        scope.launch(Dispatchers.Default) {
+        if (users.isEmpty()) {
+            users = newUsers
+            fullUsersList = newUsers
+            notifyDataSetChanged()
+            return
+        }
+
+        diffJob?.cancel()
+        isDiffing = true
+        diffJob = scope.launch(Dispatchers.Default) {
             val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
                 override fun getOldListSize() = users.size
                 override fun getNewListSize() = newUsers.size
                 override fun areItemsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == newUsers[newPos]
                 override fun areContentsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == newUsers[newPos]
             })
+            
+            if (!isActive) {
+                isDiffing = false
+                return@launch
+            }
+            
             withContext(Dispatchers.Main) {
                 users = newUsers
                 fullUsersList = newUsers
                 diffResult.dispatchUpdatesTo(this@UserAdapter)
+                isDiffing = false
             }
         }
     }
 
     fun filter(query: String) {
-        scope.launch(Dispatchers.Default) {
+        val oldUsers = users
+        diffJob?.cancel()
+        isDiffing = true
+        diffJob = scope.launch(Dispatchers.Default) {
             val filtered = if (query.isEmpty()) {
                 fullUsersList
             } else {
@@ -92,14 +111,21 @@ class UserAdapter(
             }
             
             val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize() = users.size
+                override fun getOldListSize() = oldUsers.size
                 override fun getNewListSize() = filtered.size
-                override fun areItemsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == filtered[newPos]
-                override fun areContentsTheSame(oldPos: Int, newPos: Int) = users[oldPos] == filtered[newPos]
+                override fun areItemsTheSame(oldPos: Int, newPos: Int) = oldUsers[oldPos] == filtered[newPos]
+                override fun areContentsTheSame(oldPos: Int, newPos: Int) = oldUsers[oldPos] == filtered[newPos]
             })
+            
+            if (!isActive) {
+                isDiffing = false
+                return@launch
+            }
+            
             withContext(Dispatchers.Main) {
                 users = filtered
                 diffResult.dispatchUpdatesTo(this@UserAdapter)
+                isDiffing = false
             }
         }
     }
@@ -108,11 +134,19 @@ class UserAdapter(
         if (onlineUsers == newOnlineUsers) return
         val oldOnline = onlineUsers
         onlineUsers = newOnlineUsers
-        users.forEachIndexed { index, username ->
-            val wasOnline = oldOnline.contains(username)
-            val isOnline = newOnlineUsers.contains(username)
-            if (wasOnline != isOnline) {
-                notifyItemChanged(index, "status")
+        
+        if (isDiffing) return
+        
+        scope.launch(Dispatchers.Main) {
+            if (isDiffing) return@launch
+            users.forEachIndexed { index, username ->
+                val wasOnline = oldOnline.contains(username)
+                val isOnline = newOnlineUsers.contains(username)
+                if (wasOnline != isOnline) {
+                    try {
+                        notifyItemChanged(index, "status")
+                    } catch (_: Exception) {}
+                }
             }
         }
     }
@@ -123,7 +157,6 @@ class UserAdapter(
     fun clearSelection() {
         if (selectedUsers.isEmpty()) return
         selectedUsers.clear()
-        // Use payload to only update checkbox/selection UI, skipping avatar rebinding
         notifyItemRangeChanged(0, itemCount, "selection_mode")
         onSelectionChanged?.invoke(0)
     }
