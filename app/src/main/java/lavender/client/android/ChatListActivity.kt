@@ -402,8 +402,10 @@ class ChatListActivity : AppCompatActivity() {
                 }
 
                 if (status == ConnectionStatus.READY) {
-                    if (username.isNotEmpty() && password.isNotEmpty()) {
+                    if (username.isNotEmpty() && password.isNotEmpty() && !lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground) {
                         val session = SessionManager.session.value
+                        // Only start chat background stream if we are actually on this screen
+                        // and no other room is active
                         grpcClient.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
                         loadChats()
                     }
@@ -1234,7 +1236,7 @@ class ChatListActivity : AppCompatActivity() {
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
 
         // Ensure connection is active if we have a server address
-        val needsReconnect = grpcClient.connectionStatus.value != ConnectionStatus.READY ||
+        val needsReconnect = grpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED ||
                            grpcClient.shouldForceReconnect()
 
         if (needsReconnect) {
@@ -1245,8 +1247,7 @@ class ChatListActivity : AppCompatActivity() {
                 val parts = serverAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                val forceReconnect = grpcClient.shouldForceReconnect()
-                grpcClient.connect(host, false, port, this, forceReconnect)
+                grpcClient.connect(host, false, port, this, false)
             }
         }
 

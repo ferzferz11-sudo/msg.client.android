@@ -193,10 +193,23 @@ object RealGrpcClient {
         // If connection is FAILED or DISCONNECTED, we must allow restart regardless of current observer
         val shouldRestart = _connectionStatus.value != ConnectionStatus.READY || requestObserver == null
         
-        if (!shouldRestart && oldRequest != null && oldRequest.u == username && oldRequest.roomId == currentRoomId && oldRequest.r == register) {
-            Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
+        if (!shouldRestart && oldRequest != null && oldRequest.u == username && oldRequest.r == register) {
+            // Logic to prevent unnecessary stream restarts:
+            // 1. If we are on a specific room and the new request is for the "general" list (empty roomId), just stay on the specific room.
+            //    The stream is already authenticated and receiving all global events.
+            if (currentRoomId.isEmpty() && oldRequest.roomId.isNotEmpty()) {
+                Log.d(TAG, "Staying on active room stream (${oldRequest.roomId}) instead of restarting for general list")
+                return
+            }
+
+            // 2. If the room is the same, definitely skip.
+            if (oldRequest.roomId == currentRoomId) {
+                Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
+                return
+            }
             
-            // Just send auth signal to existing stream to notify server we switched rooms
+            // 3. If we are switching to a DIFFERENT room, send the switch signal to the existing stream.
+            Log.d(TAG, "Switching room signal to existing stream: $currentRoomId")
             val switchMessage = MessageProto.newBuilder()
                 .setUser(username)
                 .setRoomId(currentRoomId)
@@ -207,12 +220,12 @@ object RealGrpcClient {
                 .build()
             try {
                 requestObserver?.onNext(switchMessage)
+                return
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send switch room signal, will restart stream", e)
                 requestObserver = null
-                startChat(username, password, joinMessage, register, deviceId, deviceName, onMessageReceived)
+                // fall through to full restart
             }
-            return
         }
 
         if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
