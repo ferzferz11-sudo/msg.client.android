@@ -426,11 +426,11 @@ class SuperAdminActivity : AppCompatActivity() {
         val theme = ThemeStore.currentTheme()
         try {
             val pColor = theme.primaryColor.toColorInt()
-            val onPColor = theme.onPrimaryColor.toColorInt()
             
-            tabLayout.setSelectedTabIndicatorColor(onPColor)
-            tabLayout.setTabTextColors(onPColor.withAlpha(150), onPColor)
-            tabLayout.backgroundTintList = android.content.res.ColorStateList.valueOf(pColor)
+            tabLayout.setSelectedTabIndicatorColor(pColor)
+            tabLayout.setTabTextColors(pColor.withAlpha(150), pColor)
+            tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            tabLayout.backgroundTintList = null
         } catch (_: Exception) {}
     }
 

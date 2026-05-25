@@ -1,20 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="?attr/colorSurface"
-    android:padding="8dp">
+    android:padding="16dp"
+    android:background="@android:color/transparent">
 
-    <ScrollView
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
+
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="300dp">
+        android:layout_height="350dp"
+        android:overScrollMode="never">
 
         <GridLayout
             android:id="@+id/emojiGrid"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:columnCount="7" />
-    </ScrollView>
+            android:columnCount="7"
+            android:alignmentMode="alignMargins"
+            android:columnOrderPreserved="false" />
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

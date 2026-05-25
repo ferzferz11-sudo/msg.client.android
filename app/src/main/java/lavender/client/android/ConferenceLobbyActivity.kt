@@ -299,6 +299,17 @@ class ConferenceLobbyActivity : AppCompatActivity() {
     private fun handlePresence(signal: CallMessageProto) {
         try {
             val response = JSONObject(signal.payload)
+            
+            // Block entry to ended or deleted conferences
+            val isEnded = response.optBoolean("ended", false) || response.optBoolean("is_deleted", false)
+            if (isEnded) {
+                runOnUiThread {
+                    Toast.makeText(this@ConferenceLobbyActivity, R.string.conference_ended, Toast.LENGTH_LONG).show()
+                    finish()
+                }
+                return
+            }
+
             val participants = response.optJSONObject("participants") ?: JSONObject()
             val invited = response.optJSONObject("invited") ?: JSONObject()
             conferenceCreatorId = response.optString("creator_id", "")

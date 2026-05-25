@@ -535,7 +535,12 @@ class NewChatActivity : AppCompatActivity() {
             adminUsername = creator,
             onMessageClick = { message ->
                 val text = message.text.trim().lowercase()
-                if (text.contains("📹") || text.contains("конференция") || text.contains("conference")) {
+                val isCall = text.contains("📹") || text.contains("конференция") || text.contains("conference")
+                val isEnded = text.contains("завершена") || text.contains("завершен") || 
+                             text.contains("удалена") || text.contains("удален") ||
+                             text.contains("ended") || text.contains("deleted")
+                
+                if (isCall && !isEnded) {
                     joinConference()
                 } else {
                     showReactionsDialog(message)
@@ -774,14 +779,19 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showEmojiPicker() {
+        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val theme = ThemeStore.currentTheme()
+        
         val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, null)
         val emojiGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        val customTheme = ThemeStore.currentTheme()
+        val dragHandle = dialogView.findViewById<View>(R.id.dragHandle)
+        
         try {
-            val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null))
-            shape.paint.color = customTheme.backgroundColor.toColorInt(); dialogView.background = shape
+            val pr = theme.primaryColor.toColorInt()
+            dragHandle?.backgroundTintList = ColorStateList.valueOf(pr)
         } catch (_: Exception) {}
+        
+        // ... (emojis list)
         val emojis = listOf(
             "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
             "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
@@ -792,20 +802,31 @@ class NewChatActivity : AppCompatActivity() {
             "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲",
             "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦿", "🦶"
         )
+        
         val size = (48 * resources.displayMetrics.density).toInt()
         for (emoji in emojis) {
             val tv = TextView(this).apply {
-                text = emoji; textSize = 24f; gravity = android.view.Gravity.CENTER; layoutParams = ViewGroup.LayoutParams(size, size)
-                val v = TypedValue(); this@NewChatActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true); setBackgroundResource(v.resourceId)
+                text = emoji
+                textSize = 24f
+                gravity = android.view.Gravity.CENTER
+                layoutParams = ViewGroup.LayoutParams(size, size)
+                val v = TypedValue()
+                this@NewChatActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
+                setBackgroundResource(v.resourceId)
                 setOnClickListener {
-                    val cp = messageInput.selectionStart; val ct = messageInput.text.toString()
+                    val cp = messageInput.selectionStart
+                    val ct = messageInput.text.toString()
                     messageInput.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
-                    messageInput.setSelection(cp + emoji.length); dialog.dismiss()
+                    messageInput.setSelection(cp + emoji.length)
+                    sheet.dismiss()
                 }
             }
             emojiGrid.addView(tv)
         }
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent); dialog.show()
+        
+        sheet.setContentView(dialogView)
+        ThemeApplier.applyToDialog(sheet, theme)
+        sheet.show()
     }
 
     private fun showAttachmentSheet() {
@@ -920,7 +941,7 @@ class NewChatActivity : AppCompatActivity() {
             s.paint.color = bg; v.background = s; val count = (v as? LinearLayout)?.childCount ?: 0
             for (i in 0 until count) { val c = (v as LinearLayout).getChildAt(i); if (c is LinearLayout) for (j in 0 until c.childCount) { val sc = c.getChildAt(j); if (sc is TextView) sc.setTextColor(txt); if (sc is ImageView) sc.setColorFilter(txt) } }
         } catch (_: Exception) {}
-        val container = v.findViewById<LinearLayout>(R.id.reactionsContainer); listOf("👍", "❤️", "🔥", "😂", "😮", "😢", "🙏", "✅").forEach { e -> val tv = TextView(this).apply { text = e; textSize = 30f; setPadding(16, 8, 16, 8); val v2 = TypedValue(); this@NewChatActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true); setBackgroundResource(v2.resourceId); setOnClickListener { grpcClient.setReaction(m.id, username, e); d.dismiss() } }; container.addView(tv) }
+        val container = v.findViewById<LinearLayout>(R.id.reactionsContainer); listOf("👍", "💯", "🔥", "✅", "❤️", "😂", "😮", "😢", "🙏").forEach { e -> val tv = TextView(this).apply { text = e; textSize = 30f; setPadding(16, 8, 16, 8); val v2 = TypedValue(); this@NewChatActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true); setBackgroundResource(v2.resourceId); setOnClickListener { grpcClient.setReaction(m.id, username, e); d.dismiss() } }; container.addView(tv) }
         v.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener { d.dismiss(); showReplyPreview(m) }; v.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener { d.dismiss(); (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", m.text)); showToast(getString(R.string.copied_to_clipboard)) }
         val edit = v.findViewById<LinearLayout>(R.id.menuEdit); if (m.user == username) { edit.isVisible = true; edit.setOnClickListener { d.dismiss(); showEditMessageDialog(m) } } else edit.isVisible = false
         v.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener { d.dismiss(); grpcClient.deleteMessage(m) }; d.window?.setBackgroundDrawableResource(android.R.color.transparent); d.show()

@@ -105,11 +105,18 @@ object ThemeApplier {
         }
 
         activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {
-            val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
-            val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, customOnPrimary)
-            setBackgroundColor(surfaceColor)
-            setTabTextColors(adjustAlpha(onSurfaceColor, 0.75f), customPrimary)
-            setSelectedTabIndicatorColor(customPrimary)
+            if (tag == "transparent") {
+                setBackgroundColor(Color.TRANSPARENT)
+                val pColor = parseSafeColor(theme.primaryColor, Color.BLUE)
+                setTabTextColors(adjustAlpha(pColor, 0.6f), pColor)
+                setSelectedTabIndicatorColor(pColor)
+            } else {
+                val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
+                val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, customOnPrimary)
+                setBackgroundColor(surfaceColor)
+                setTabTextColors(adjustAlpha(onSurfaceColor, 0.75f), customPrimary)
+                setSelectedTabIndicatorColor(customPrimary)
+            }
         }
 
         // Chat background image
