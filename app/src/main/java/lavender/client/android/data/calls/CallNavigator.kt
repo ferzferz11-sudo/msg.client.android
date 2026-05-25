@@ -3,6 +3,7 @@ package lavender.client.android.data.calls
 import android.content.Context
 import android.content.Intent
 import lavender.client.android.CallActivity
+import lavender.client.android.ConferenceLobbyActivity
 
 /**
  * Centralized navigation for call-related screens to keep Activities clean.
@@ -19,20 +20,16 @@ object CallNavigator {
     }
 
     fun startConference(context: Context, roomId: String) {
-        val intent = Intent(context, CallActivity::class.java).apply {
+        val intent = Intent(context, ConferenceLobbyActivity::class.java).apply {
             putExtra("ROOM_ID", roomId)
-            putExtra("IS_INCOMING", false)
-            putExtra("IS_CONFERENCE", true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
     }
 
     fun joinConference(context: Context, roomId: String) {
-        val intent = Intent(context, CallActivity::class.java).apply {
+        val intent = Intent(context, ConferenceLobbyActivity::class.java).apply {
             putExtra("ROOM_ID", roomId)
-            putExtra("IS_INCOMING", false) // Participants joining an existing conf are not "incoming" in the traditional sense
-            putExtra("IS_CONFERENCE", true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)

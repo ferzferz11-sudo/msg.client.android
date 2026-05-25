@@ -49,13 +49,23 @@ class SplashActivity : AppCompatActivity() {
                     }
                 }
                 roomIdFromPush != null -> {
-                    Log.d("SplashActivity", "Directing to NewChatActivity")
-                    Intent(this, NewChatActivity::class.java).apply {
-                        putExtra("USERNAME", savedUsername)
-                        putExtra("PASSWORD", savedPassword)
-                        putExtra("SERVER_ADDRESS", savedServerAddress)
-                        putExtra("ROOM_ID", roomIdFromPush)
-                        putExtra("from_notification", true)
+                    // Check if it's a conference signal or just a message
+                    val isConference = intent.getStringExtra("IS_CONFERENCE")?.toBoolean() ?: false
+                    if (isConference) {
+                         Log.d("SplashActivity", "Directing to ConferenceLobbyActivity")
+                         Intent(this, ConferenceLobbyActivity::class.java).apply {
+                            putExtra("ROOM_ID", roomIdFromPush)
+                            putExtra("from_notification", true)
+                         }
+                    } else {
+                         Log.d("SplashActivity", "Directing to NewChatActivity")
+                         Intent(this, NewChatActivity::class.java).apply {
+                            putExtra("USERNAME", savedUsername)
+                            putExtra("PASSWORD", savedPassword)
+                            putExtra("SERVER_ADDRESS", savedServerAddress)
+                            putExtra("ROOM_ID", roomIdFromPush)
+                            putExtra("from_notification", true)
+                         }
                     }
                 }
                 else -> {

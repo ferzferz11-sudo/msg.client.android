@@ -29,6 +29,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var webRtcClient: WebRtcClient? = null
     private var callController: CallController? = null
     private lateinit var audioModeManager: AudioModeManager
+    private lateinit var soundManager: CallSoundManager
     
     private var callId: String = ""
     private var receiverId: String = ""
@@ -56,6 +57,8 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
         audioModeManager = AudioModeManager(this)
         audioModeManager.setCallMode()
+        
+        soundManager = CallSoundManager(this)
 
         callId = intent.getStringExtra("CALL_ID") ?: ""
         receiverId = intent.getStringExtra("RECEIVER_ID") ?: ""
@@ -76,6 +79,12 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         } else {
              CallManager.syncCallState(callId, receiverId, isIncoming)
              binding.tvCallStatus.text = if (isIncoming) getString(R.string.call_status_incoming) else getString(R.string.call_status_calling)
+             
+             if (isIncoming) {
+                 soundManager.startRingtone()
+             } else {
+                 soundManager.startDialTone()
+             }
         }
         GrpcClient.startCallSession()
 
@@ -105,6 +114,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private fun setupController() {
         callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
             override fun onCallAccepted() {
+                soundManager.stop()
                 viewModel.startTimer()
                 runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connected) }
             }
@@ -160,6 +170,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
 
         binding.btnAccept.setOnClickListener {
+            soundManager.stop()
             binding.btnAccept.visibility = View.GONE
             binding.btnMic.visibility = View.VISIBLE
             binding.btnCamera.visibility = View.VISIBLE
@@ -289,6 +300,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onDestroy() {
         super.onDestroy()
+        soundManager.stop()
         audioModeManager.restoreMode()
         CallManager.clearCurrentCall()
         binding.localView.release()

@@ -494,4 +494,15 @@
     <string name="end_for_all">Завершить для всех</string>
     <string name="tap_to_record">Нажмите для записи</string>
     <string name="recording">Запись…</string>
+    <string name="participants_already_joined">%d участников уже в звонке</string>
+    <string name="join_conference_action">Присоединиться к конференции</string>
+    <string name="lobby_title">Лобби конференции</string>
+    <string name="conference_ended">Конференция завершена</string>
+    <string name="new_conference_format">Новая конференция %s</string>
+    <string name="edit_topic">Редактировать тему</string>
+    <string name="plus_5_min">+5 мин</string>
+    <string name="set_custom_time">Указать время</string>
+    <string name="starts_at">Начало: %s</string>
+    <string name="send_notifications">Уведомить участников</string>
+    <string name="notifications_sent">Уведомления отправлены</string>
 </resources>

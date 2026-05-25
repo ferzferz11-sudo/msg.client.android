@@ -41,4 +41,14 @@
         android:textColor="?android:attr/textColorPrimary"
         tools:text="Username" />
 
+    <ImageButton
+        android:id="@+id/btnRemove"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_close"
+        android:visibility="gone"
+        app:tint="@color/red"
+        android:contentDescription="@null" />
+
 </LinearLayout>

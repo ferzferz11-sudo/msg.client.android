@@ -783,7 +783,10 @@ data class CallMessageProto(
         INITIATE_CONFERENCE(10),
         JOIN_CONFERENCE(11),
         LEAVE_CONFERENCE(12),
-        END_CONFERENCE(13);
+        END_CONFERENCE(13),
+        INVITE_TO_CONFERENCE(14),
+        REMOVE_FROM_CONFERENCE(15),
+        UPDATE_CONFERENCE(16);
 
         companion object {
             fun fromInt(value: Int) = values().firstOrNull { it.value == value } ?: INITIATE

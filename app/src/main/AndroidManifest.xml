@@ -115,6 +115,11 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Material3.DayNight.NoActionBar" />
 
+        <activity
+            android:name=".ConferenceLobbyActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <service
             android:name=".data.fcm.LavenderMessagingService"
             android:exported="false">

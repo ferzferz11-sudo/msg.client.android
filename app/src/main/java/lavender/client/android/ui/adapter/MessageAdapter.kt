@@ -95,15 +95,20 @@ class MessageAdapter(
         val isOutgoing = currentMessage.user.trim().equals(currentUsername.trim(), ignoreCase = true)
         val isConsecutive = (previousMessage != null &&
                 previousMessage.user.trim() == currentMessage.user.trim())
-        val isSameMinute = previousMessage != null &&
-                (currentMessage.timestamp / 60000 == previousMessage.timestamp / 60000)
+        
+        // Use safe timestamps for display logic
+        val now = System.currentTimeMillis()
+        val currentTs = if (currentMessage.timestamp > now) now else currentMessage.timestamp
+        val previousTs = previousMessage?.let { if (it.timestamp > now) now else it.timestamp } ?: 0L
+
+        val isSameMinute = previousMessage != null && (currentTs / 60000 == previousTs / 60000)
 
         // Date separator logic
         val showDateSeparator = if (previousMessage == null) {
             true
         } else {
-            val currentDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(currentMessage.timestamp))
-            val previousDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(previousMessage.timestamp))
+            val currentDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(currentTs))
+            val previousDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(previousTs))
             currentDay != previousDay
         }
 
@@ -239,7 +244,10 @@ class MessageAdapter(
 
             // 2. Alignment
             val lp = messageContainer.layoutParams
-            val isSystem = message.user == "SYSTEM"
+            val isCallMessage = message.text.contains("📹") || message.text.contains("📞") || 
+                               message.text.contains("Видеозвонок") || message.text.contains("вызов") ||
+                               message.text.contains("Звонок")
+            val isSystem = message.user == "SYSTEM" && !isCallMessage
             
             if (lp is RelativeLayout.LayoutParams) {
                 lp.removeRule(RelativeLayout.ALIGN_PARENT_START)
@@ -309,7 +317,44 @@ class MessageAdapter(
                 // 3. Красим тексты
                 messageText.setTextColor(pTextColor)
                 messageText.setLinkTextColor(pTextColor)
-                messageText.textSize = 16f
+                
+                // Специальное оформление для звонков
+                if (isCallMessage) {
+                    val rawText = message.text
+                    val isMissed = rawText.contains("Пропущенный") || rawText.contains("не принят") || rawText.contains("отклонен")
+                    val isCompleted = rawText.contains("завершен")
+                    
+                    val icon = when {
+                        isMissed -> if (isOutgoing) "🚫" else "📞↙️"
+                        isCompleted -> if (isOutgoing) "📞↗️" else "📞↙️"
+                        else -> if (isOutgoing) "📞↗️" else "📹"
+                    }
+                    
+                    val statusText = when {
+                        isMissed -> if (isOutgoing) "Вызов не принят" else "Пропущенный вызов"
+                        isCompleted -> {
+                             val duration = rawText.substringAfter("(").substringBefore(")")
+                             if (isOutgoing) "Исходящий ($duration)" else "Входящий ($duration)"
+                        }
+                        else -> if (isOutgoing) "Исходящий видеозвонок" else "Входящий видеозвонок"
+                    }
+                    
+                    messageText.text = "$icon $statusText"
+                    messageText.textSize = 15f
+                    messageText.setTypeface(null, android.graphics.Typeface.BOLD)
+                    
+                    // Красим пропущенные (входящие) в красный
+                    if (isMissed && !isOutgoing) {
+                        messageText.setTextColor("#FF5252".toColorInt())
+                    } else {
+                        messageText.setTextColor(pTextColor)
+                    }
+                } else {
+                    messageText.text = message.text
+                    messageText.textSize = 16f
+                    messageText.setTypeface(null, android.graphics.Typeface.NORMAL)
+                    messageText.setTextColor(pTextColor)
+                }
 
                 // Для времени и статуса делаем чуть прозрачнее (80% непрозрачности), чтобы не сливалось
                 timeText.setTextColor(secondaryColorWithAlpha)
@@ -348,7 +393,8 @@ class MessageAdapter(
             }
 
             // 5. Content
-            timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
+            val safeTimestamp = if (message.timestamp > System.currentTimeMillis()) System.currentTimeMillis() else message.timestamp
+            timeText.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(safeTimestamp))
             timeText.isVisible = !shouldHideTime
 
             if (message.voiceUrl.isNotEmpty()) {

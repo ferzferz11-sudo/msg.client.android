@@ -22,7 +22,7 @@ import lavender.client.android.theme.ThemeUtils
 
 class SelectableUserAdapter(
     private val scope: CoroutineScope,
-    private val avatarCache: Map<String, String> = emptyMap(),
+    private var avatarCache: Map<String, String> = emptyMap(),
     private var onlineUsers: List<String> = emptyList(),
     private val onSelectionChanged: (Int) -> Unit
 ) : RecyclerView.Adapter<SelectableUserAdapter.ViewHolder>() {
@@ -34,6 +34,7 @@ class SelectableUserAdapter(
     private var cachedPrimary: Int = 0
     private var cachedSecondary: Int = 0
     private var cachedTextPrimary: Int = 0
+    private var cachedSurface: Int = 0
     private var colorsInitialized = false
     private var currentTheme: lavender.client.android.theme.Theme? = null
 
@@ -45,6 +46,7 @@ class SelectableUserAdapter(
             cachedPrimary = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
             cachedSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.GRAY)
             cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            cachedSurface = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             colorsInitialized = true
         } catch (_: Exception) {}
     }
@@ -62,6 +64,11 @@ class SelectableUserAdapter(
                 diffResult.dispatchUpdatesTo(this@SelectableUserAdapter)
             }
         }
+    }
+
+    fun updateAvatarCache(newCache: Map<String, String>) {
+        this.avatarCache = newCache
+        notifyDataSetChanged()
     }
 
     fun setOnlineUsers(newOnlineUsers: List<String>) {
@@ -86,7 +93,7 @@ class SelectableUserAdapter(
         initColors()
         val username = users[position]
         val isOnline = onlineUsers.contains(username)
-        holder.bind(username, selectedUsers.contains(username), avatarCache[username], isOnline, cachedPrimary, cachedSecondary, cachedTextPrimary, currentTheme)
+        holder.bind(username, selectedUsers.contains(username), avatarCache[username], isOnline, cachedPrimary, cachedSecondary, cachedTextPrimary, cachedSurface, currentTheme)
         
         holder.itemView.setOnClickListener {
             if (selectedUsers.contains(username)) {
@@ -106,13 +113,15 @@ class SelectableUserAdapter(
         private val userAvatar: ShapeableImageView = itemView.findViewById(R.id.userAvatar)
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
         private val checkBox: CheckBox = itemView.findViewById(R.id.userCheckBox)
+        private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(username: String, isSelected: Boolean, avatarUrl: String?, isOnline: Boolean, primary: Int, secondary: Int, textPrimary: Int, theme: lavender.client.android.theme.Theme?) {
+        fun bind(username: String, isSelected: Boolean, avatarUrl: String?, isOnline: Boolean, primary: Int, secondary: Int, textPrimary: Int, surface: Int, theme: lavender.client.android.theme.Theme?) {
             usernameText.text = username
             checkBox.isChecked = isSelected
             
             checkBox.buttonTintList = ColorStateList.valueOf(if (isSelected) primary else secondary)
             usernameText.setTextColor(textPrimary)
+            cardView.setCardBackgroundColor(surface)
 
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context)

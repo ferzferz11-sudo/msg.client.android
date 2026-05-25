@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.CallActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
+import org.json.JSONObject
 
 object CallManager {
     private const val TAG = "CallManager"
@@ -66,7 +67,7 @@ object CallManager {
                 if (_currentCall.value == null) {
                     _currentCall.value = signal
                     appContext?.let { 
-                        CallNavigator.navigateToCall(it, signal.callId, "Group Conference", true, isConference = true, roomId = signal.roomId)
+                        CallNavigator.joinConference(it, signal.roomId)
                     }
                 }
             }
@@ -208,15 +209,55 @@ object CallManager {
         _currentCall.value = null
     }
 
-    fun endConference() {
-        val call = _currentCall.value ?: return
+    fun inviteToConference(roomId: String, targetUserId: String, targetUserName: String) {
         val senderId = GrpcClient.getCurrentUsername() ?: return
         val signal = CallMessageProto(
             senderId = senderId,
-            roomId = call.roomId,
+            receiverId = targetUserId,
+            receiverName = targetUserName,
+            roomId = roomId,
+            type = CallMessageProto.Type.INVITE_TO_CONFERENCE
+        )
+        GrpcClient.sendCallSignal(signal)
+    }
+
+    fun removeFromConference(roomId: String, targetUserId: String) {
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val signal = CallMessageProto(
+            senderId = senderId,
+            receiverId = targetUserId,
+            roomId = roomId,
+            type = CallMessageProto.Type.REMOVE_FROM_CONFERENCE
+        )
+        GrpcClient.sendCallSignal(signal)
+    }
+
+    fun updateConferenceMetadata(roomId: String, topic: String, startTime: Long) {
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val payload = JSONObject().apply {
+            put("topic", topic)
+            put("start_time", startTime)
+        }.toString()
+        val signal = CallMessageProto(
+            senderId = senderId,
+            roomId = roomId,
+            type = CallMessageProto.Type.UPDATE_CONFERENCE,
+            payload = payload
+        )
+        GrpcClient.sendCallSignal(signal)
+    }
+
+    fun endConference(roomId: String? = null) {
+        val targetRoomId = roomId ?: _currentCall.value?.roomId ?: return
+        val senderId = GrpcClient.getCurrentUsername() ?: return
+        val signal = CallMessageProto(
+            senderId = senderId,
+            roomId = targetRoomId,
             type = CallMessageProto.Type.END_CONFERENCE
         )
         GrpcClient.sendCallSignal(signal)
-        _currentCall.value = null
+        if (targetRoomId == _currentCall.value?.roomId) {
+            _currentCall.value = null
+        }
     }
 }
