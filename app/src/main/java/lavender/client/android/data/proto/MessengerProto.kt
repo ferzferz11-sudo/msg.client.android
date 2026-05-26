@@ -200,7 +200,8 @@ data class ChatInfoProto(
     val avatarUrl: String = "",
     val fullAvatarUrl: String = "",
     val lastMessageUsername: String = "",
-    val lastMessageHasImage: Boolean = false
+    val lastMessageHasImage: Boolean = false,
+    val allowMembersToAdd: Boolean = false
 )
 
 // Mark Read Request/Response
@@ -451,6 +452,17 @@ data class UpdateChatAvatarRequestProto(
 )
 
 data class UpdateChatAvatarResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class UpdateChatSettingsRequestProto(
+    val chatId: String = "",
+    val allowMembersToAdd: Boolean = false,
+    val userId: String = ""
+)
+
+data class UpdateChatSettingsResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )

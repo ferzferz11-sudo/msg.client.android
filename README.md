@@ -176,7 +176,11 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.6.31**
+Current version: **1.0.6.32**
+
+### Version 1.0.6.32 - Interactive Updates
+- 📥 **Update Control**: Users can now tap the update indicator to cancel or continue background downloads.
+- 🛠️ **Stability**: Enhanced `UpdateManager` with `cancelDownload` capability.
 
 ### Version 1.0.6.31 - Unified Widget System
 - 🏗️ **Core UI Engine**: Fully implemented `WidgetSystem.kt` providing themed `StandardBottomSheet`, `ActionBottomSheet`, and `SearchableListBottomSheet`.

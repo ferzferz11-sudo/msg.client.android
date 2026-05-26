@@ -931,7 +931,7 @@ object RealGrpcClient {
                              proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                              proto.unreadCount,
                              proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, proto.lastMessageHasImage)
+                             proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd)
                 }
 
                 // Save to cache and sync (delete local chats that are gone from server)
@@ -1558,6 +1558,24 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
         }, io.grpc.Metadata())
         call.sendMessage(UpdateChatAvatarRequestProto(cid, a, u, fa, currentUserId ?: ""))
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatSettingsRequestProto, UpdateChatSettingsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/UpdateChatSettings")
+            .setRequestMarshaller(UpdateChatSettingsRequestMarshaller())
+            .setResponseMarshaller(UpdateChatSettingsResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<UpdateChatSettingsResponseProto>() {
+            override fun onMessage(message: UpdateChatSettingsResponseProto) { callback(message.success, message.message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(UpdateChatSettingsRequestProto(chatId, allowAdd, currentUserId ?: ""))
         call.halfClose()
         call.request(1)
     }
@@ -2641,9 +2659,9 @@ class GetAllChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAll
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false
-                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); else -> cisis.skipField(t2) } }
-                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi))
+                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false
+                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); else -> cisis.skipField(t2) } }
+                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta))
             } else cis.skipField(tag)
         }
         return GetAllChatsResponseProto(chats)
@@ -2808,6 +2826,26 @@ class DeleteProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Dele
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
         return DeleteProfileResponseProto(ok, msg)
+    }
+}
+
+class UpdateChatSettingsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateChatSettingsRequestProto> {
+    override fun stream(v: UpdateChatSettingsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+        cos.writeBool(2, v.allowMembersToAdd)
+        if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UpdateChatSettingsRequestProto = UpdateChatSettingsRequestProto()
+}
+
+class UpdateChatSettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateChatSettingsResponseProto> {
+    override fun stream(v: UpdateChatSettingsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UpdateChatSettingsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
+        return UpdateChatSettingsResponseProto(ok, msg)
     }
 }
 

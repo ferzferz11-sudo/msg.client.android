@@ -5,6 +5,12 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.6.32
+### Update Management (Current Release)
+- 📥 **Interactive Update Progress**: Tap on the update icon in the toolbar to manage ongoing downloads.
+- 🚫 **Cancel Updates**: Added the ability to cancel an in-progress update download directly from the UI.
+- 🏗️ **Core UI Foundations**: Extended `UpdateManager` with cancellation support and integrated it with the themed widget system.
+
 ## 1.0.6.31
 ### 🧩 Unified Widget System (Current Release)
 - 🏗️ **Core UI Engine**: Fully implemented `WidgetSystem.kt` with a suite of themed base components:

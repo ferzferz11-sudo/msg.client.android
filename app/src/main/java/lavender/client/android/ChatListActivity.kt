@@ -948,6 +948,21 @@ class ChatListActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    private fun showUpdateProgressDialog() {
+        ActionBottomSheet(this)
+            .setTitle(getString(R.string.update_in_progress))
+            .setActions(listOf(
+                SheetAction(R.id.actionContinueUpdate, R.drawable.ic_play_arrow, getString(R.string.continue_label)) {
+                    // Do nothing, just close the sheet
+                },
+                SheetAction(R.id.actionCancelUpdate, R.drawable.ic_close, getString(R.string.cancel_update)) {
+                    updateManager.cancelDownload()
+                    updateUpdateIndicatorVisibility()
+                    Toast.makeText(this, R.string.update_cancelled, Toast.LENGTH_SHORT).show()
+                }
+            )).show()
+    }
+
     private fun updateUpdateIndicatorVisibility() {
         val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         val isAvailable = prefs.getBoolean("update_available", false)
@@ -984,7 +999,9 @@ class ChatListActivity : AppCompatActivity() {
                 if (apkPath != null) {
                     UpdateUtils.installApk(this, File(apkPath))
                 }
-            } else if (!isDownloading && isAvailable) {
+            } else if (isDownloading) {
+                showUpdateProgressDialog()
+            } else if (isAvailable) {
                 updateManager.startDownload()
                 updateUpdateIndicatorVisibility()
             }

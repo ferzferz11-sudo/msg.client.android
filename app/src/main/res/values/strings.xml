@@ -499,4 +499,9 @@
     <string name="send_notifications">Send Notifications</string>
     <string name="notifications_sent">Notifications sent</string>
     <string name="add_participants">Add Participants</string>
+    <string name="allow_members_to_add">Allow members to add participants</string>
+    <string name="update_in_progress">Update In Progress</string>
+    <string name="cancel_update">Cancel Update</string>
+    <string name="update_cancelled">Update cancelled</string>
+    <string name="continue_label">Continue</string>
 </resources>

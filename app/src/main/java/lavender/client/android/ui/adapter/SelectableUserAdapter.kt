@@ -188,6 +188,9 @@ class SelectableUserAdapter(
             checkBox.buttonTintList = ColorStateList.valueOf(if (isSelected) primary else secondary)
             usernameText.setTextColor(textPrimary)
             
+            userAvatar.strokeColor = ColorStateList.valueOf(primary)
+            userAvatar.strokeWidth = 1.5f * itemView.resources.displayMetrics.density
+
             // Explicitly set background color and disable elevation to avoid surface tints
             cardView.setCardBackgroundColor(surface)
             cardView.cardElevation = 0f

@@ -507,4 +507,9 @@
     <string name="send_notifications">Отправить уведомления</string>
     <string name="notifications_sent">Уведомления отправлены</string>
     <string name="add_participants">Добавить участников</string>
+    <string name="allow_members_to_add">Разрешить участникам добавлять других</string>
+    <string name="update_in_progress">Загрузка обновления</string>
+    <string name="cancel_update">Отменить загрузку</string>
+    <string name="update_cancelled">Загрузка отменена</string>
+    <string name="continue_label">Продолжить</string>
 </resources>

@@ -237,6 +237,26 @@ class ActionBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme
         }
         return this
     }
+
+    override fun setTitle(title: CharSequence?): ActionBottomSheet {
+        super.setTitle(title)
+        return this
+    }
+
+    override fun setContent(view: View): ActionBottomSheet {
+        super.setContent(view)
+        return this
+    }
+
+    override fun setCancelable(cancelable: Boolean): ActionBottomSheet {
+        super.setCancelable(cancelable)
+        return this
+    }
+
+    override fun setOnDismissListener(listener: () -> Unit): ActionBottomSheet {
+        super.setOnDismissListener(listener)
+        return this
+    }
 }
 
 /**

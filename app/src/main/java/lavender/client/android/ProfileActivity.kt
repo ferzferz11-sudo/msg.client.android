@@ -3,6 +3,7 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -71,6 +72,7 @@ class ProfileActivity : AppCompatActivity() {
     private var roomId: String = ""
     private var creator: String = ""
     private var currentParticipants = mutableListOf<String>()
+    private var allowMembersToAdd: Boolean = false
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
 
@@ -166,6 +168,7 @@ class ProfileActivity : AppCompatActivity() {
                         username = chat.name
                         avatarUrl = chat.avatarUrl
                         fullAvatarUrl = chat.fullAvatarUrl
+                        allowMembersToAdd = chat.allowMembersToAdd
                         currentParticipants.clear()
                         currentParticipants.addAll(newList)
                         loadProfileData()
@@ -196,22 +199,36 @@ class ProfileActivity : AppCompatActivity() {
         val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
         val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
         val changeAvatarButton = findViewById<View>(R.id.changeAvatarButton)
+        val groupSettingsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.groupSettingsCard)
+        val switchAllowAdd = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchAllowAdd)
 
         currentProfileAvatar = profileAvatar
         profileName.text = username
 
-        // Apply theme colors to profile text views
         val currentTheme = ThemeStore.currentTheme()
         val textPrimaryColor = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+        val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+        
         profileName.setTextColor(textPrimaryColor)
         profileBio.setTextColor(textPrimaryColor)
+        profileAvatar.borderColor = primaryColor
+        profileAvatar.borderWidth = (2 * resources.displayMetrics.density).toInt()
 
         if (isGroup) {
             profileStatus.isVisible = false
             bioCard?.isVisible = false
+            groupSettingsCard?.isVisible = true
 
             val currentMe = grpcClient.getCurrentUsername() ?: ""
             val isMeAdmin = currentMe == creator && creator.isNotEmpty()
+
+            if (groupSettingsCard != null && switchAllowAdd != null) {
+                groupSettingsCard.isVisible = true
+                setupAllowAddSwitch(switchAllowAdd, roomId, isMeAdmin)
+                
+                groupSettingsCard.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
+                groupSettingsCard.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
+            }
 
             if (isMeAdmin) {
                 profileName.setOnClickListener {
@@ -320,13 +337,13 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             ThemeStore.currentTheme().let { theme ->
-                participantsCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
+                participantsCard?.setCardBackgroundColor(ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
                 participantsCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
-                addParticipantLayout?.backgroundTintList = android.content.res.ColorStateList.valueOf(theme.surfaceContainer.toColorInt())
+                addParticipantLayout?.backgroundTintList = ColorStateList.valueOf(theme.surfaceContainer.toColorInt())
                 findViewById<TextView>(R.id.addParticipantButton)?.setTextColor(theme.primaryColor.toColorInt())
             }
 
-            if (isMeAdmin) {
+            if (isMeAdmin || allowMembersToAdd) {
                 addParticipantLayout?.isVisible = true
                 addParticipantLayout?.setOnClickListener {
                     addParticipantLayout.isEnabled = false
@@ -428,6 +445,37 @@ class ProfileActivity : AppCompatActivity() {
                 bioCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
             }
         }
+
+        // Apply global theme to all views
+        applyThemeToView(findViewById(android.R.id.content), ThemeStore.currentTheme())
+    }
+
+    private fun setupAllowAddSwitch(switch: com.google.android.material.switchmaterial.SwitchMaterial, roomId: String, isMeAdmin: Boolean) {
+        switch.isEnabled = isMeAdmin
+        switch.setOnCheckedChangeListener(null)
+        switch.isChecked = allowMembersToAdd
+        
+        if (isMeAdmin) {
+            switch.setOnCheckedChangeListener { _, isChecked ->
+                val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                progressOverlay?.isVisible = true
+                grpcClient.updateChatSettings(roomId, isChecked) { success, msg ->
+                    runOnUiThread {
+                        progressOverlay?.isVisible = false
+                        if (success) {
+                            allowMembersToAdd = isChecked
+                            Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                            loadProfileData() 
+                        } else {
+                            switch.setOnCheckedChangeListener(null)
+                            switch.isChecked = !isChecked
+                            setupAllowAddSwitch(switch, roomId, isMeAdmin)
+                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun setupAvatarClickListener(profileAvatar: CircleImageView) {
@@ -513,8 +561,23 @@ class ProfileActivity : AppCompatActivity() {
                                 runOnUiThread {
                                     progressOverlay?.isVisible = false
                                     if (success) {
-                                        currentProfileAvatar?.let { Glide.with(this@ProfileActivity).load(thumbUrl).placeholder(R.drawable.ic_default_avatar).error(R.drawable.ic_default_avatar).skipMemoryCache(true).diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE).into(it) }
-                                        avatarUrl = thumbUrl; fullAvatarUrl = fullUrl
+                                        avatarUrl = thumbUrl
+                                        fullAvatarUrl = fullUrl
+                                        // Update local cache to ensure it stays updated across the app
+                                        grpcClient.updateAvatarCache(roomId, thumbUrl, fullUrl)
+
+                                        // Force refresh avatar without cache
+                                        currentProfileAvatar?.let {
+                                            Glide.with(this@ProfileActivity)
+                                                .load(thumbUrl)
+                                                .placeholder(R.drawable.ic_default_avatar)
+                                                .skipMemoryCache(true)
+                                                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
+                                                .into(it)
+                                        }
+
+                                        loadProfileData()
+                                        Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
                                     } else Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()
                                 }
                             }
@@ -555,12 +618,51 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun applyThemeToView(view: View, theme: lavender.client.android.theme.Theme) {
-        val textPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, android.graphics.Color.BLACK); val onSurface = ThemeUtils.parseSafeColor(theme.onSurfaceColor, android.graphics.Color.GRAY)
+        val textPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, android.graphics.Color.BLACK)
+        val onSurface = ThemeUtils.parseSafeColor(theme.onSurfaceColor, android.graphics.Color.GRAY)
+        val primary = ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.BLUE)
+        
         when (view) {
-            is MaterialButton -> view.setTextColor(ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.BLUE))
-            is android.widget.CheckBox -> view.buttonTintList = android.content.res.ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.BLUE))
-            is TextView -> view.setTextColor(textPrimary)
-            is com.google.android.material.card.MaterialCardView -> { view.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, android.graphics.Color.WHITE))); view.strokeColor = ThemeUtils.adjustAlpha(onSurface, 0.2f) }
+            is MaterialButton -> {
+                if (view.id == R.id.editProfileButton && isGroup) {
+                    // Delete button style
+                    view.setTextColor(android.graphics.Color.WHITE)
+                    view.backgroundTintList = ColorStateList.valueOf("#FF5252".toColorInt())
+                } else {
+                    view.setTextColor(primary)
+                    view.iconTint = ColorStateList.valueOf(primary)
+                }
+            }
+            is com.google.android.material.switchmaterial.SwitchMaterial -> {
+                view.setTextColor(textPrimary)
+                val thumbStates = ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(primary, android.graphics.Color.LTGRAY)
+                )
+                val trackStates = ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(ThemeUtils.adjustAlpha(primary, 0.5f), ThemeUtils.adjustAlpha(android.graphics.Color.GRAY, 0.3f))
+                )
+                view.thumbTintList = thumbStates
+                view.trackTintList = trackStates
+            }
+            is CircleImageView -> {
+                view.borderColor = primary
+                view.borderWidth = (2 * resources.displayMetrics.density).toInt()
+            }
+            is android.widget.CheckBox -> view.buttonTintList = ColorStateList.valueOf(primary)
+            is TextView -> {
+                if (view.id == R.id.participantsTitle || view.id == R.id.addParticipantButton || 
+                    view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) {
+                    view.setTextColor(primary)
+                } else {
+                    view.setTextColor(textPrimary)
+                }
+            }
+            is com.google.android.material.card.MaterialCardView -> { 
+                view.setCardBackgroundColor(ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, android.graphics.Color.WHITE)))
+                view.strokeColor = ThemeUtils.adjustAlpha(onSurface, 0.2f) 
+            }
             is android.view.ViewGroup -> { for (i in 0 until view.childCount) applyThemeToView(view.getChildAt(i), theme) }
         }
     }

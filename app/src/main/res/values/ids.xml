@@ -7,4 +7,6 @@
     <item name="attachGallery" type="id" />
     <item name="attachFile" type="id" />
     <item name="attachLocation" type="id" />
+    <item name="actionContinueUpdate" type="id" />
+    <item name="actionCancelUpdate" type="id" />
 </resources>

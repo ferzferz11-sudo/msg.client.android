@@ -41,7 +41,8 @@ data class ChatInfo(
     val fullAvatarUrl: String = "",
     val lastMessageUsername: String = "",
     val isMuted: Boolean = false,
-    val lastMessageHasImage: Boolean = false
+    val lastMessageHasImage: Boolean = false,
+    val allowMembersToAdd: Boolean = false
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (type != "direct") return name

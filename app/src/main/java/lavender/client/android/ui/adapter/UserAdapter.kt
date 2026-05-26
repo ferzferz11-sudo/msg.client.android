@@ -219,6 +219,9 @@ class UserAdapter(
             usernameText.setTextColor(cachedTextPrimary)
             itemView.alpha = 1.0f
 
+            userAvatar.strokeColor = ColorStateList.valueOf(cachedPrimaryColor)
+            userAvatar.strokeWidth = 1.5f * density
+
             val avatarUrl = avatarCache[username]
             if (!avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).circleCrop().into(userAvatar)

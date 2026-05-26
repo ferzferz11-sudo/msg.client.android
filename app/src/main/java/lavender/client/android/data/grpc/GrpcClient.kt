@@ -194,6 +194,10 @@ object GrpcClient {
         realGrpcClient.updateChatAvatar(chatId, avatarUrl, username, fullAvatarUrl, callback)
     }
 
+    fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.updateChatSettings(chatId, allowAdd, callback)
+    }
+
     fun getUserAvatar(username: String, userId: String = "", callback: (String) -> Unit) {
         realGrpcClient.getUserAvatar(username, userId, callback)
     }

@@ -67,4 +67,11 @@ class UpdateManager(private val context: Context) {
             workRequest
         )
     }
+
+    fun cancelDownload() {
+        WorkManager.getInstance(context).cancelUniqueWork("update_download")
+        prefs.edit { 
+            putBoolean("update_downloading", false) 
+        }
+    }
 }
