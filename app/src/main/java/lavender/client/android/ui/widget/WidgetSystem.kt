@@ -141,13 +141,19 @@ open class StandardBottomSheet(
             view.transformationMethod = null // Crucial to disable Caps
             
             val isCancelType = view.id == R.id.btnCancel || view.id == R.id.btnClose || 
-                             view.id == R.id.btnReset || view.id == android.R.id.button2
+                             view.id == R.id.btnReset || view.id == android.R.id.button2 ||
+                             view.id == R.id.deleteGroupButton
             
             val isActionType = view.id == R.id.btnJoin || view.id == R.id.btnRegister || 
                               view.id == R.id.btnLogin || view.id == R.id.btnSave ||
                               view.id == R.id.actionButton || view.id == R.id.btnUpdate ||
-                              view.id == R.id.btnSend
+                              view.id == R.id.btnSend || view.id == R.id.changeAvatarButton
             
+            // Set consistent corner radius
+            if (view is com.google.android.material.button.MaterialButton) {
+                view.cornerRadius = (28 * context.resources.displayMetrics.density).toInt()
+            }
+
             if (isCancelType) {
                 view.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
                 if (view is com.google.android.material.button.MaterialButton) {

@@ -624,11 +624,26 @@ class ProfileActivity : AppCompatActivity() {
         
         when (view) {
             is MaterialButton -> {
-                view.setTextColor(primary)
-                view.iconTint = ColorStateList.valueOf(primary)
-                // Remove custom background tint for delete button
-                if (view.id == R.id.deleteGroupButton) {
-                    view.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceContainer, android.graphics.Color.LTGRAY))
+                view.isAllCaps = false
+                view.transformationMethod = null
+                view.cornerRadius = (28 * resources.displayMetrics.density).toInt()
+
+                val isCancelType = view.id == R.id.deleteGroupButton
+                val isActionType = view.id == R.id.changeAvatarButton
+
+                if (isCancelType) {
+                    view.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+                    view.strokeColor = ColorStateList.valueOf(primary)
+                    view.strokeWidth = (1 * resources.displayMetrics.density).toInt()
+                    view.setTextColor(primary)
+                    view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primary, 0.1f))
+                } else {
+                    val alpha = if (isActionType) 0.7f else 1.0f
+                    view.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primary, alpha))
+                    val onP = ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
+                    view.setTextColor(onP)
+                    view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onP, 0.2f))
+                    view.strokeWidth = 0
                 }
             }
             is com.google.android.material.switchmaterial.SwitchMaterial -> {
