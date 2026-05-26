@@ -176,7 +176,12 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.6.33**
+Current version: **1.0.6.34**
+
+### Version 1.0.6.34 - UI Perfection
+- 🏗️ **Unified Widgets**: Every dialog is now a beautiful, themed Bottom Sheet.
+- 🎨 **Modern Buttons**: Semi-transparent backgrounds, no Caps-lock, and unified 28dp rounding.
+- ⚖️ **Cohesion**: Perfected spacing and styles for all interactive components.
 
 ### Version 1.0.6.33 - Performance & UX
 - 🚀 **Speed**: Optimized group info with RecyclerView for high-density participant lists.

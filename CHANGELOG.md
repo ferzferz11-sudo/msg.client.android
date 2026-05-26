@@ -5,6 +5,17 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.6.34
+### Widget System & UI Polish (Final)
+- 🏗️ **Full Migration**: 100% of app dialogs (Reactions, Account settings, Security, Palette) migrated to the new themed `WidgetSystem`.
+- 🎨 **Button Overhaul**:
+    - Globally disabled `textAllCaps` for all buttons across the app.
+    - Added 30% transparency (`alpha 0.7`) to primary action buttons for a cleaner, modern look.
+    - Implemented a "Light" style for Cancel/Delete buttons: transparent background with primary stroke.
+    - Unified `cornerRadius` to **28dp** for all themed buttons.
+- ⚙️ **Performance**: Improved `WidgetManager` logic and simplified UI recursions in `StandardBottomSheet`.
+- 🔧 **Bugfixes**: Resolved inconsistent padding and rounded corners in username/password edit dialogs.
+
 ## 1.0.6.33
 ### Optimization & UX Refinement (Current Release)
 - 🚀 **Performance**: Migrated group participants list to `RecyclerView` with optimized view recycling for 30+ member groups.
