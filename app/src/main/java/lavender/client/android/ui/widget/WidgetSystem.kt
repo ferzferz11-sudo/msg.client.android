@@ -62,7 +62,11 @@ data class SheetAction(
 /**
  * Standard Bottom Sheet widget.
  */
-open class StandardBottomSheet(val context: Context, layoutId: Int = R.layout.widget_standard_bottom_sheet) : ThemedWidget {
+open class StandardBottomSheet(
+    val context: Context, 
+    layoutId: Int = R.layout.widget_standard_bottom_sheet,
+    theme: Theme = ThemeStore.currentTheme()
+) : ThemedWidget {
     var dialog: BottomSheetDialog? = null
         protected set
     protected var root: View? = null
@@ -72,7 +76,7 @@ open class StandardBottomSheet(val context: Context, layoutId: Int = R.layout.wi
 
     init {
         initViews(layoutId)
-        applyTheme(ThemeStore.currentTheme())
+        applyTheme(theme)
     }
 
     private fun initViews(layoutId: Int) {
@@ -94,17 +98,18 @@ open class StandardBottomSheet(val context: Context, layoutId: Int = R.layout.wi
             val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
             val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
             val onSurfaceColor = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.WHITE)
+            val textPrimaryColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
             
             root?.setBackgroundColor(bgColor)
             dragHandle?.backgroundTintList = ColorStateList.valueOf(primaryColor)
             titleView?.setTextColor(primaryColor)
 
             // Theme any InputLayouts and EditTexts
-            root?.let { findAndThemeInputs(it, theme, primaryColor, onSurfaceColor) }
+            root?.let { findAndThemeInputs(it, theme, primaryColor, onSurfaceColor, textPrimaryColor) }
         } catch (_: Exception) {}
     }
 
-    protected fun findAndThemeInputs(view: View, theme: Theme, primaryColor: Int, onSurfaceColor: Int) {
+    protected fun findAndThemeInputs(view: View, theme: Theme, primaryColor: Int, onSurfaceColor: Int, textPrimaryColor: Int) {
         if (view is TextInputLayout) {
             val strokeColorStateList = ColorStateList(
                 arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
@@ -116,20 +121,52 @@ open class StandardBottomSheet(val context: Context, layoutId: Int = R.layout.wi
             view.defaultHintTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onSurfaceColor, 0.7f))
             view.setStartIconTintList(ColorStateList.valueOf(primaryColor))
             view.setEndIconTintList(ColorStateList.valueOf(primaryColor))
+            // Fix deprecation: use endIconTintList for end icons including password toggle
+            if (view.endIconMode == TextInputLayout.END_ICON_PASSWORD_TOGGLE) {
+                view.setEndIconTintList(ColorStateList.valueOf(ThemeUtils.adjustAlpha(onSurfaceColor, 0.6f)))
+            }
         } else if (view is EditText) {
-            view.setTextColor(onSurfaceColor)
-            view.setHintTextColor(ThemeUtils.adjustAlpha(onSurfaceColor, 0.5f))
+            view.setTextColor(textPrimaryColor)
+            view.setHintTextColor(ThemeUtils.adjustAlpha(textPrimaryColor, 0.5f))
+            view.highlightColor = ThemeUtils.adjustAlpha(primaryColor, 0.3f)
+            
+            // Apply cursor color
             view.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                 setSize((2 * context.resources.displayMetrics.density).toInt(), 0)
                 setColor(primaryColor)
             }
-        } else if (view is ViewGroup) {
+        } else if (view is com.google.android.material.button.MaterialButton) {
+            if (view.id == R.id.btnCancel) {
+                view.setTextColor(primaryColor)
+                view.strokeColor = ColorStateList.valueOf(primaryColor)
+                view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primaryColor, 0.1f))
+            } else {
+                view.setBackgroundColor(primaryColor)
+                view.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
+                view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(Color.WHITE, 0.2f))
+            }
+        } else if (view is android.widget.ProgressBar) {
+            view.indeterminateTintList = ColorStateList.valueOf(primaryColor)
+        } else if (view is ImageView && view !is de.hdodenhof.circleimageview.CircleImageView) {
+            view.imageTintList = ColorStateList.valueOf(primaryColor)
+        } else if (view is TextView) {
+            if (view.id == R.id.forgotPasswordButton || view.id == R.id.actionShareHeader) {
+                view.setTextColor(primaryColor)
+            } else if (view.id != R.id.titleText) {
+                view.setTextColor(textPrimaryColor)
+            }
+        }
+        
+        // Always recurse if it's a ViewGroup, even if it matched one of the above (like TextInputLayout)
+        if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
-                findAndThemeInputs(view.getChildAt(i), theme, primaryColor, onSurfaceColor)
+                findAndThemeInputs(view.getChildAt(i), theme, primaryColor, onSurfaceColor, textPrimaryColor)
             }
         }
     }
+
+    fun <T : View> findViewById(id: Int): T? = root?.findViewById(id)
 
     open fun setTitle(title: CharSequence?): StandardBottomSheet {
         titleView?.text = title
@@ -173,7 +210,7 @@ open class StandardBottomSheet(val context: Context, layoutId: Int = R.layout.wi
 /**
  * Bottom Sheet with a list of actions (icon + text).
  */
-class ActionBottomSheet(context: Context) : StandardBottomSheet(context) {
+class ActionBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) : StandardBottomSheet(context, theme = theme) {
     
     fun setActions(actions: List<SheetAction>): ActionBottomSheet {
         contentContainer?.removeAllViews()
@@ -205,7 +242,11 @@ class ActionBottomSheet(context: Context) : StandardBottomSheet(context) {
 /**
  * Bottom Sheet with a RecyclerView for list items.
  */
-open class ListBottomSheet(context: Context, layoutId: Int = R.layout.widget_standard_bottom_sheet) : StandardBottomSheet(context, layoutId) {
+open class ListBottomSheet(
+    context: Context, 
+    layoutId: Int = R.layout.widget_standard_bottom_sheet,
+    theme: Theme = ThemeStore.currentTheme()
+) : StandardBottomSheet(context, layoutId, theme) {
     var recyclerView: RecyclerView? = null
         private set
 
@@ -257,20 +298,29 @@ open class ListBottomSheet(context: Context, layoutId: Int = R.layout.widget_sta
 /**
  * Bottom Sheet with Search, Extra Input, and RecyclerView.
  */
-class SearchableListBottomSheet(context: Context) : ListBottomSheet(context, R.layout.widget_searchable_list_bottom_sheet) {
+class SearchableListBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) : 
+    ListBottomSheet(context, R.layout.widget_searchable_list_bottom_sheet, theme) {
     val searchEditText: TextInputEditText? = root?.findViewById(R.id.searchEditText)
     val extraEditText: TextInputEditText? = root?.findViewById(R.id.extraEditText)
     val extraInputLayout: TextInputLayout? = root?.findViewById(R.id.extraInputLayout)
     val actionButton: com.google.android.material.button.MaterialButton? = root?.findViewById(R.id.actionButton)
+    val progressBar: android.widget.ProgressBar? = root?.findViewById(R.id.progressBar)
 
     override fun applyTheme(theme: Theme) {
         super.applyTheme(theme)
+        val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
         actionButton?.let { btn ->
-            val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
             val onPrimaryColor = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
             btn.setBackgroundColor(primaryColor)
             btn.setTextColor(onPrimaryColor)
         }
+        progressBar?.indeterminateTintList = ColorStateList.valueOf(primaryColor)
+    }
+
+    fun setLoading(loading: Boolean): SearchableListBottomSheet {
+        progressBar?.isVisible = loading
+        recyclerView?.isVisible = !loading
+        return this
     }
 
     fun setActionButtonText(text: CharSequence): SearchableListBottomSheet {

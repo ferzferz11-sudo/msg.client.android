@@ -32,6 +32,7 @@ class UserAdapter(
     private var users = listOf<String>()
     private var fullUsersList = listOf<String>()
     private val selectedUsers = mutableSetOf<String>()
+    private var currentFilter: String = ""
 
     // Pre-calculated theme values for performance
     private var cachedPrimaryColor: Int = 0
@@ -67,9 +68,24 @@ class UserAdapter(
     }
 
     fun setUsers(newUsers: List<String>) {
+        fullUsersList = newUsers
+        applyFilter()
+    }
+
+    fun filter(query: String) {
+        currentFilter = query.lowercase()
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val newUsers = if (currentFilter.isEmpty()) {
+            fullUsersList
+        } else {
+            fullUsersList.filter { it.lowercase().contains(currentFilter) }
+        }
+
         if (users.isEmpty()) {
             users = newUsers
-            fullUsersList = newUsers
             notifyDataSetChanged()
             return
         }
@@ -91,39 +107,6 @@ class UserAdapter(
             
             withContext(Dispatchers.Main) {
                 users = newUsers
-                fullUsersList = newUsers
-                diffResult.dispatchUpdatesTo(this@UserAdapter)
-                isDiffing = false
-            }
-        }
-    }
-
-    fun filter(query: String) {
-        val oldUsers = users
-        diffJob?.cancel()
-        isDiffing = true
-        diffJob = scope.launch(Dispatchers.Default) {
-            val filtered = if (query.isEmpty()) {
-                fullUsersList
-            } else {
-                val q = query.lowercase()
-                fullUsersList.filter { it.lowercase().contains(q) }
-            }
-            
-            val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize() = oldUsers.size
-                override fun getNewListSize() = filtered.size
-                override fun areItemsTheSame(oldPos: Int, newPos: Int) = oldUsers[oldPos] == filtered[newPos]
-                override fun areContentsTheSame(oldPos: Int, newPos: Int) = oldUsers[oldPos] == filtered[newPos]
-            })
-            
-            if (!isActive) {
-                isDiffing = false
-                return@launch
-            }
-            
-            withContext(Dispatchers.Main) {
-                users = filtered
                 diffResult.dispatchUpdatesTo(this@UserAdapter)
                 isDiffing = false
             }

@@ -25,7 +25,9 @@ class SelectableUserAdapter(
 ) : RecyclerView.Adapter<SelectableUserAdapter.ViewHolder>() {
 
     private var users = listOf<String>()
+    private var fullUsersList = listOf<String>()
     private val selectedUsers = mutableSetOf<String>()
+    private var currentFilter: String = ""
 
     // Cached theme values
     private var cachedPrimary: Int = 0
@@ -51,6 +53,22 @@ class SelectableUserAdapter(
     }
 
     fun setUsers(newUsers: List<String>) {
+        fullUsersList = newUsers
+        applyFilter()
+    }
+
+    fun filter(query: String) {
+        currentFilter = query.lowercase()
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val newUsers = if (currentFilter.isEmpty()) {
+            fullUsersList
+        } else {
+            fullUsersList.filter { it.lowercase().contains(currentFilter) }
+        }
+
         if (users.isEmpty()) {
             users = newUsers
             notifyDataSetChanged()

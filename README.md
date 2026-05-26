@@ -176,7 +176,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.6.6**
+Current version: **1.0.6.31**
+
+### Version 1.0.6.31 - Unified Widget System
+- 🏗️ **Core UI Engine**: Fully implemented `WidgetSystem.kt` providing themed `StandardBottomSheet`, `ActionBottomSheet`, and `SearchableListBottomSheet`.
+- 🔐 **Themed Auth & Settings**: Entire Auth flow and Settings menus migrated to widgets, reducing boilerplate by 400+ lines.
+- 🎨 **Deep Theming**: Automatic adaptation for cursors, highlights, inputs, and loading indicators based on current theme.
+- ⚡ **UX Refinement**: Added loading states for networked lists and persistent search filtering during background data sync.
 
 ### Version 1.0.6.6 - Background Updates & Reliability
 - 📥 **Background APK Downloading**: Updates are now downloaded in the background using `WorkManager`. A persistent notification shows real-time progress.

@@ -219,6 +219,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             .setTitle(getString(R.string.add_participants))
             .setActionButtonText(getString(R.string.send_notifications))
             .setExtraInputVisible(false)
+            .setLoading(true)
 
         val adapter = SelectableUserAdapter(lifecycleScope, avatarCache = avatarCache) { count ->
             sheet.setActionButtonEnabled(count > 0)
@@ -226,7 +227,6 @@ class ConferenceLobbyActivity : AppCompatActivity() {
         }
         sheet.setAdapter(adapter)
 
-        val contacts = mutableListOf<String>()
         GrpcClient.getAllChats { allChats ->
             val chat = allChats.find { it.id == roomId }
             if (chat != null) {
@@ -248,16 +248,20 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                         GrpcClient.getUserAvatar(username) { /* cached */ }
                     }
                     
-                    contacts.clear()
-                    contacts.addAll(usersToInvite)
-                    runOnUiThread { adapter.setUsers(contacts) }
-                } catch (_: Exception) {}
+                    runOnUiThread { 
+                        sheet.setLoading(false)
+                        adapter.setUsers(usersToInvite) 
+                    }
+                } catch (_: Exception) {
+                    runOnUiThread { sheet.setLoading(false) }
+                }
+            } else {
+                runOnUiThread { sheet.setLoading(false) }
             }
         }
 
         sheet.onSearchTextChanged { query ->
-            val q = query.lowercase()
-            adapter.setUsers(contacts.filter { it.lowercase().contains(q) })
+            adapter.filter(query)
         }
 
         sheet.onActionClick {

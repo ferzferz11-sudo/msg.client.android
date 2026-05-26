@@ -242,10 +242,8 @@ class ContactsActivity : AppCompatActivity() {
             .setTitle(getString(R.string.add_contact))
             .setActionButtonText(getString(R.string.add))
             .setExtraInputVisible(false)
+            .setLoading(true)
 
-        val allUsersNames = mutableListOf<String>()
-        val filteredUsersNames = mutableListOf<String>()
-        
         val userAdapter = UserAdapter(
             lifecycleScope,
             onUserClick = { selected ->
@@ -264,21 +262,18 @@ class ContactsActivity : AppCompatActivity() {
         grpcClient.loadAllUsers()
         val usersJob = lifecycleScope.launch {
             grpcClient.allUsers.collect { allUsers ->
-                allUsersNames.clear()
-                allUsersNames.addAll(allUsers.filter { it.username != username && !contacts.contains(it.username) }.map { it.username })
-                filteredUsersNames.clear()
-                filteredUsersNames.addAll(allUsersNames)
-                runOnUiThread { userAdapter.setUsers(filteredUsersNames) }
+                val filteredUsersNames = allUsers.filter { it.username != username && !contacts.contains(it.username) }.map { it.username }
+                runOnUiThread { 
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filteredUsersNames) 
+                }
             }
         }
 
         sheet.setOnDismissListener { usersJob.cancel() }
 
         sheet.onSearchTextChanged { query ->
-            val q = query.lowercase()
-            filteredUsersNames.clear()
-            filteredUsersNames.addAll(allUsersNames.filter { it.lowercase().contains(q) })
-            userAdapter.setUsers(filteredUsersNames)
+            userAdapter.filter(query)
         }
 
         sheet.onActionClick {

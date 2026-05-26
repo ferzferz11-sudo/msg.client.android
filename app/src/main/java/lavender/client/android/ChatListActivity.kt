@@ -74,8 +74,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 
-import lavender.client.android.ui.widget.SearchableListBottomSheet
+import lavender.client.android.theme.Theme
+import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.ActionBottomSheet
+import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.widget.WidgetManager
 
@@ -1312,52 +1314,31 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showUpdateDialog(current: String, latest: String) {
-        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val customTheme = ThemeStore.currentTheme()
-        ThemeApplier.applyToDialog(bottomSheet, customTheme)
-        val dialogView = layoutInflater.inflate(R.layout.bottom_sheet_update, binding.root, false)
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_update)
         
-        val titleView = dialogView.findViewById<TextView>(R.id.updateTitle)
-        val messageView = dialogView.findViewById<TextView>(R.id.updateMessage)
-        val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
-        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val dragHandle = dialogView.findViewById<View>(R.id.dragHandle)
-        val updateIcon = dialogView.findViewById<ImageView>(R.id.updateIcon)
-
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val txtColor = customTheme.textPrimaryColor.toColorInt()
-            val secTxtColor = customTheme.textSecondaryColor.toColorInt()
-            val primColor = customTheme.primaryColor.toColorInt()
-            
-            dialogView.setBackgroundColor(bgColor)
-            titleView.setTextColor(txtColor)
-            messageView.setTextColor(secTxtColor)
-            dragHandle.backgroundTintList = ColorStateList.valueOf(primColor)
-            updateIcon.imageTintList = ColorStateList.valueOf(primColor)
-            btnUpdate.backgroundTintList = ColorStateList.valueOf(primColor)
-            btnUpdate.setTextColor(customTheme.onPrimaryColor.toColorInt())
-            btnCancel.setTextColor(secTxtColor)
-        } catch (_: Exception) {}
+        val titleView = sheet.findViewById<TextView>(R.id.updateTitle)
+        val messageView = sheet.findViewById<TextView>(R.id.updateMessage)
+        val btnUpdate = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val updateIcon = sheet.findViewById<ImageView>(R.id.updateIcon)
 
         val isAvailable = UpdateUtils.isUpdateAvailable(current, latest)
         if (!isAvailable) {
-            titleView.text = getString(R.string.ok)
-            updateIcon.setImageResource(R.drawable.ic_checked)
-            btnUpdate.text = getString(R.string.force_download)
+            titleView?.text = getString(R.string.ok)
+            updateIcon?.setImageResource(R.drawable.ic_checked)
+            btnUpdate?.text = getString(R.string.force_download)
         }
         
-        messageView.text = getString(R.string.version_info_format, current, latest)
+        messageView?.text = getString(R.string.version_info_format, current, latest)
         
-        btnCancel.setOnClickListener { bottomSheet.dismiss() }
-        btnUpdate.setOnClickListener {
-            bottomSheet.dismiss()
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+        btnUpdate?.setOnClickListener {
+            sheet.dismiss()
             updateManager.startDownload()
             updateUpdateIndicatorVisibility()
         }
         
-        bottomSheet.setContentView(dialogView)
-        bottomSheet.show()
+        sheet.show()
     }
 
     private fun checkAnnouncements() {
@@ -1395,148 +1376,104 @@ class ChatListActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    private fun showWhatsNewDialog() {
+    private var isNavigatingDeeper = false
+
+    private val settingsActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        showAdditionalSettingsSheet { showSettingsSheet() }
+    }
+
+    private fun showWhatsNewDialog(onBack: (() -> Unit)? = null) {
         val prefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
-        val text = prefs.getString("current_text", "") ?: return
+        val announcementText = prefs.getString("current_text", "") ?: return
         
-        val theme = ThemeStore.currentTheme()
-        val pColor = theme.primaryColor.toColorInt()
-        val textColor = theme.textPrimaryColor.toColorInt()
-        val bgColor = theme.surfaceColor.toColorInt()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_whats_new)
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_whats_new, null)
-        dialogView.setBackgroundColor(bgColor)
-        
-        dialogView.findViewById<TextView>(R.id.tvContent).apply {
+        sheet.findViewById<TextView>(R.id.tvTitle)?.isVisible = false // Use Widget's title instead
+        sheet.setTitle(getString(R.string.whats_new))
+
+        val tvContent = sheet.findViewById<TextView>(R.id.tvContent)
+        tvContent?.apply {
             val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-            this.text = if (versionName.isNotEmpty()) "$text\n\nLava $versionName" else text
-            setTextColor(textColor)
-        }
-        dialogView.findViewById<TextView>(R.id.tvTitle).apply {
-            setTextColor(pColor)
+            text = if (versionName.isNotEmpty()) "$announcementText\n\nLava $versionName" else announcementText
         }
 
-        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnMarkRead = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOk)
+        val btnClose = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnMarkRead = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOk)
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-
-        btnMarkRead.apply {
-            backgroundTintList = ColorStateList.valueOf(pColor)
-            setTextColor(theme.onPrimaryColor.toColorInt())
-            setOnClickListener {
-                Log.d("ChatListActivity", "Mark as read clicked")
-                val cleanText = text.trim().replace("\r\n", "\n").replace("\r", "\n")
-                prefs.edit {
-                    putString("last_read_text", cleanText)
-                    putBoolean("show_icon", false)
-                }
-                updateUpdateIndicatorVisibility()
-                Toast.makeText(this@ChatListActivity, R.string.mark_as_read, Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
+        btnMarkRead?.setOnClickListener {
+            val cleanText = announcementText.trim().replace("\r\n", "\n").replace("\r", "\n")
+            prefs.edit {
+                putString("last_read_text", cleanText)
+                putBoolean("show_icon", false)
             }
+            updateUpdateIndicatorVisibility()
+            Toast.makeText(this, R.string.mark_as_read, Toast.LENGTH_SHORT).show()
+            sheet.dismiss()
         }
 
-        btnClose.apply {
-            setTextColor(theme.textSecondaryColor.toColorInt())
-            setOnClickListener { dialog.dismiss() }
+        btnClose?.setOnClickListener { sheet.dismiss() }
+
+        sheet.setOnDismissListener {
+            if (!isNavigatingDeeper) onBack?.invoke()
+            isNavigatingDeeper = false
         }
 
-        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-        dialog.show()
+        sheet.show()
     }
 
     @SuppressLint("SetTextI18n")
-    private fun showAboutDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_about, binding.root, false)
+    private fun showAboutDialog(onBack: (() -> Unit)? = null) {
+        val sheet = StandardBottomSheet(this, R.layout.dialog_about)
         val customTheme = ThemeStore.currentTheme()
-        val pColor = try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
-        val txtColor = try { customTheme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
-        val bgColor = try { customTheme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
 
-        val aboutAppName = dialogView.findViewById<TextView>(R.id.aboutAppName)
-        val clientVersionText = dialogView.findViewById<TextView>(R.id.clientVersionText)
-        val serverVersionText = dialogView.findViewById<TextView>(R.id.serverVersionText)
-        val developerLabel = dialogView.findViewById<TextView>(R.id.developerLabel)
-        val developerNameText = dialogView.findViewById<TextView>(R.id.developerNameText)
-        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
-        val btnWhatsNew = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnWhatsNew)
-        val btnFeedback = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnFeedback)
-        val btnShare = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnShare)
-        val btnUpdate = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
+        sheet.setTitle(getString(R.string.action_about))
 
-        try {
-            val secondaryTxtColor = try { customTheme.textSecondaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.GRAY }
-            
-            dialogView.setBackgroundColor(bgColor)
-            aboutAppName.setTextColor(txtColor)
-            clientVersionText.setTextColor(txtColor)
-            serverVersionText.setTextColor(txtColor)
-            developerLabel.setTextColor(secondaryTxtColor)
-            developerLabel.alpha = 1.0f // Ensure it's visible
-            developerNameText.setTextColor(pColor)
-            
-            // Fix button theming
-            val buttonStyle = { btn: com.google.android.material.button.MaterialButton ->
-                btn.setTextColor(pColor)
-                btn.setStrokeColor(ColorStateList.valueOf(pColor))
-                btn.iconTint = ColorStateList.valueOf(pColor)
-            }
-            
-            buttonStyle(btnWhatsNew)
-            buttonStyle(btnFeedback)
-            buttonStyle(btnShare)
-            buttonStyle(btnUpdate)
-            
-            btnClose.setTextColor(pColor)
-        } catch (_: Exception) {}
+        val clientVersionText = sheet.findViewById<TextView>(R.id.clientVersionText)
+        val serverVersionText = sheet.findViewById<TextView>(R.id.serverVersionText)
+        val btnClose = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        val btnWhatsNew = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnWhatsNew)
+        val btnFeedback = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnFeedback)
+        val btnShare = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnShare)
+        val btnUpdate = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
 
         val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-        clientVersionText.text = getString(R.string.version_label, versionName)
-        dialogView.findViewById<TextView>(R.id.aboutLogoVersion)?.text = "v$versionName"
+        clientVersionText?.text = getString(R.string.version_label, versionName)
+        sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = "v$versionName"
         
         val serverVersion = GrpcClient.serverVersion.value
         if (serverVersion.isNotEmpty()) {
-            serverVersionText.text = "Server Version: $serverVersion"
+            serverVersionText?.text = "Server Version: $serverVersion"
         } else {
-            serverVersionText.visibility = View.GONE
+            serverVersionText?.visibility = View.GONE
         }
-
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         // Show update button if available
         val updatePrefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
         if (updatePrefs.getBoolean("update_available", false)) {
-            btnUpdate.visibility = View.VISIBLE
-            btnUpdate.apply {
-                backgroundTintList = ColorStateList.valueOf(pColor)
-                setTextColor(customTheme.onPrimaryColor.toColorInt())
-                setOnClickListener {
-                    dialog.dismiss()
-                    updateManager.startDownload()
-                    updateUpdateIndicatorVisibility()
-                }
+            btnUpdate?.visibility = View.VISIBLE
+            btnUpdate?.setOnClickListener {
+                sheet.dismiss()
+                updateManager.startDownload()
+                updateUpdateIndicatorVisibility()
             }
         }
         
-        btnClose.setOnClickListener { dialog.dismiss() }
+        btnClose?.setOnClickListener { sheet.dismiss() }
         
-        btnWhatsNew.setOnClickListener {
-            dialog.dismiss()
+        btnWhatsNew?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
             checkAnnouncements()
-            showWhatsNewDialog()
+            showWhatsNewDialog { showAboutDialog(onBack) }
         }
 
-        btnFeedback.setOnClickListener {
-            dialog.dismiss()
-            showFeedbackDialog()
+        btnFeedback?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            showFeedbackDialog { showAboutDialog(onBack) }
         }
         
-        btnShare.setOnClickListener {
-            dialog.dismiss()
+        btnShare?.setOnClickListener {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, "Check out Lavender Messenger!")
@@ -1544,72 +1481,59 @@ class ChatListActivity : AppCompatActivity() {
             startActivity(Intent.createChooser(shareIntent, "Share App"))
         }
         
-        dialog.show()
+        sheet.setOnDismissListener {
+            if (!isNavigatingDeeper) onBack?.invoke()
+            isNavigatingDeeper = false
+        }
+
+        sheet.show()
     }
 
-    private fun showFeedbackDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_feedback, null)
+    private fun showFeedbackDialog(onBack: (() -> Unit)? = null) {
+        val sheet = StandardBottomSheet(this, R.layout.dialog_feedback)
         val customTheme = ThemeStore.currentTheme()
-        val textColor = try { customTheme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
-        val bgColor = try { customTheme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
-        val pColor = try { customTheme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
-
-        dialogView.setBackgroundColor(bgColor)
         
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvTitle)
-        val editTextEmail = dialogView.findViewById<EditText>(R.id.editTextEmail)
-        val editTextMessage = dialogView.findViewById<EditText>(R.id.editTextMessage)
-        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnSend = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
-
-        tvTitle.setTextColor(textColor)
-        editTextEmail.setTextColor(textColor)
-        editTextEmail.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
-        editTextMessage.setTextColor(textColor)
-        editTextMessage.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+        sheet.setTitle(getString(R.string.send_feedback))
         
+        val editTextEmail = sheet.findViewById<EditText>(R.id.editTextEmail)
+        val editTextMessage = sheet.findViewById<EditText>(R.id.editTextMessage)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnSend = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
+
         // Pre-fill email from session
         val userEmail = SessionManager.session.value.email
         if (userEmail.isNotEmpty()) {
-            editTextEmail.setText(userEmail)
+            editTextEmail?.setText(userEmail)
         }
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
+        btnCancel?.setOnClickListener { sheet.dismiss() }
 
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        btnCancel.apply {
-            setTextColor(textColor)
-            setOnClickListener { dialog.dismiss() }
-        }
-
-        btnSend.apply {
-            backgroundTintList = ColorStateList.valueOf(pColor)
-            setTextColor(customTheme.onPrimaryColor.toColorInt())
-            setOnClickListener {
-                val fromEmail = editTextEmail.text.toString().trim()
-                val messageText = editTextMessage.text.toString().trim()
-                
-                if (messageText.isEmpty()) {
-                    Toast.makeText(this@ChatListActivity, R.string.enter_feedback, Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                dialog.dismiss()
-                
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = "mailto:".toUri()
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf("ferzfrez11@gmsil.com"))
-                    putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
-                    putExtra(Intent.EXTRA_TEXT, "From: $fromEmail\n\n$messageText")
-                }
-                startActivity(Intent.createChooser(intent, "Send Feedback"))
+        btnSend?.setOnClickListener {
+            val fromEmail = editTextEmail?.text.toString().trim()
+            val messageText = editTextMessage?.text.toString().trim()
+            
+            if (messageText.isEmpty()) {
+                Toast.makeText(this@ChatListActivity, R.string.enter_feedback, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
+
+            sheet.dismiss()
+            
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = "mailto:".toUri()
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("ferzfrez11@gmsil.com"))
+                putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
+                putExtra(Intent.EXTRA_TEXT, "From: $fromEmail\n\n$messageText")
+            }
+            startActivity(Intent.createChooser(intent, "Send Feedback"))
         }
 
-        dialog.show()
+        sheet.setOnDismissListener {
+            if (!isNavigatingDeeper) onBack?.invoke()
+            isNavigatingDeeper = false
+        }
+
+        sheet.show()
     }
 
     private fun toggleLanguage() {
@@ -1643,32 +1567,17 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showSettingsSheet() {
-        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_user_menu)
         val customTheme = ThemeStore.currentTheme()
-        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_user_menu, binding.root, false)
-        val actionIds = listOf(
-            R.id.actionShareHeader, R.id.actionEditProfile, R.id.actionContacts,
-            R.id.actionThemes, R.id.actionUpdate, R.id.actionToggleLanguage,
-            R.id.actionAdditionalSettings
-        )
 
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val txtColor = customTheme.textPrimaryColor.toColorInt()
-            val primColor = customTheme.primaryColor.toColorInt()
+        val menuUsername = sheet.findViewById<TextView>(R.id.menuUsername)
+        menuUsername?.text = username
 
-            sheetView.setBackgroundColor(bgColor)
-            sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
-
-            val menuUsername = sheetView.findViewById<TextView>(R.id.menuUsername)
-            menuUsername.text = username
-            menuUsername.setTextColor(txtColor)
-
-            val menuUserAvatar = sheetView.findViewById<ImageView>(R.id.menuUserAvatar)
-            val avatarCache = grpcClient.getAvatarCache()
-            val myAvatarUrl = avatarCache[username]
-            
+        val menuUserAvatar = sheet.findViewById<ImageView>(R.id.menuUserAvatar)
+        val avatarCache = grpcClient.getAvatarCache()
+        val myAvatarUrl = avatarCache[username]
+        
+        if (menuUserAvatar != null) {
             if (!myAvatarUrl.isNullOrEmpty()) {
                 com.bumptech.glide.Glide.with(this)
                     .load(myAvatarUrl)
@@ -1707,143 +1616,98 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
             }
-
-            fun applyThemeToMenu(view: View, isShare: Boolean) {
-                if (view is TextView) {
-                    if (isShare) view.setTextColor(primColor)
-                    else view.setTextColor(txtColor)
-                } else if (view is ImageView) {
-                    view.imageTintList = ColorStateList.valueOf(primColor)
-                } else if (view is ViewGroup) {
-                    for (i in 0 until view.childCount) {
-                        applyThemeToMenu(view.getChildAt(i), isShare)
-                    }
-                }
-            }
-
-            actionIds.forEach { id ->
-                sheetView.findViewById<View>(id)?.let { view ->
-                    applyThemeToMenu(view, id == R.id.actionShareHeader)
-                }
-            }
-        } catch (_: Exception) {
-            Log.e("Theme", "Error tinting settings sheet")
         }
 
-        sheetView.findViewById<View>(R.id.actionShareHeader).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionShareHeader)?.setOnClickListener {
+            sheet.dismiss()
             shareApp()
         }
-        sheetView.findViewById<View>(R.id.actionEditProfile).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionEditProfile)?.setOnClickListener {
+            sheet.dismiss()
             val intent = Intent(this, EditProfileActivity::class.java).apply {
                 putExtra("USERNAME", username)
                 putExtra("PASSWORD", password)
             }
             editProfileLauncher.launch(intent)
         }
-        sheetView.findViewById<View>(R.id.actionThemes).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
+            sheet.dismiss()
             val intent = Intent(this, ThemesActivity::class.java).apply { putExtra("username", username) }
             startActivity(intent)
         }
-        sheetView.findViewById<View>(R.id.actionContacts).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionContacts)?.setOnClickListener {
+            sheet.dismiss()
             val intent = Intent(this, ContactsActivity::class.java).apply {
                 putExtra("USERNAME", username)
                 putExtra("PASSWORD", password)
             }
             startActivity(intent)
         }
-        sheetView.findViewById<View>(R.id.actionAdditionalSettings).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            showAdditionalSettingsSheet()
+        sheet.findViewById<View>(R.id.actionAdditionalSettings)?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            showAdditionalSettingsSheet { showSettingsSheet() }
         }
-        sheetView.findViewById<View>(R.id.actionToggleLanguage).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionToggleLanguage)?.setOnClickListener {
+            sheet.dismiss()
             toggleLanguage()
         }
-        sheetView.findViewById<View>(R.id.actionUpdate).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionUpdate)?.setOnClickListener {
+            sheet.dismiss()
             checkManualUpdate()
         }
-        bottomSheetDialog.setContentView(sheetView)
-        bottomSheetDialog.show()
+        sheet.show()
     }
 
-    private fun showAdditionalSettingsSheet() {
-        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val customTheme = ThemeStore.currentTheme()
-        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_additional_settings, binding.root, false)
-        val actionIds = listOf(
-            R.id.actionSecurity, R.id.actionNotifications, R.id.actionClearCache, R.id.actionAbout, R.id.actionAdmin, R.id.actionServers, R.id.actionDeleteProfile, R.id.actionLogout
-        )
+    private fun showAdditionalSettingsSheet(onBack: (() -> Unit)? = null) {
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_additional_settings)
+        val errorColor = "#FF5252".toColorInt()
 
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val txtColor = customTheme.textPrimaryColor.toColorInt()
-            val primColor = customTheme.primaryColor.toColorInt()
-            val errorColor = "#FF5252".toColorInt()
+        // Show Admin Panel and Servers only for super admins
+        val isSuperAdmin = SessionManager.session.value.isSuperAdmin
+        sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
+        sheet.findViewById<View>(R.id.actionServers)?.isVisible = isSuperAdmin
 
-            sheetView.setBackgroundColor(bgColor)
-            sheetView.findViewById<View>(R.id.dragHandle)?.backgroundTintList = ColorStateList.valueOf(primColor)
-
-            sheetView.findViewById<TextView>(R.id.settingsTitle)?.setTextColor(txtColor)
-
-            // Show Admin Panel and Servers only for super admins
-            val isSuperAdmin = SessionManager.session.value.isSuperAdmin
-            sheetView.findViewById<View>(R.id.actionAdmin).isVisible = isSuperAdmin
-            sheetView.findViewById<View>(R.id.actionServers).isVisible = isSuperAdmin
-
-            fun applyThemeToMenu(view: View, isLogout: Boolean, isDelete: Boolean) {
-                if (view is TextView) {
-                    if (isDelete || isLogout) view.setTextColor(errorColor)
-                    else view.setTextColor(txtColor)
-                } else if (view is ImageView) {
-                    if (isDelete || isLogout) view.imageTintList = ColorStateList.valueOf(errorColor)
-                    else view.imageTintList = ColorStateList.valueOf(primColor)
-                } else if (view is ViewGroup) {
-                    for (i in 0 until view.childCount) {
-                        applyThemeToMenu(view.getChildAt(i), isLogout, isDelete)
-                    }
-                }
+        // Red tint for delete and logout
+        fun tintError(id: Int) {
+            val view = sheet.findViewById<ViewGroup>(id) ?: return
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                if (child is ImageView) child.imageTintList = ColorStateList.valueOf(errorColor)
+                if (child is TextView) child.setTextColor(errorColor)
             }
-
-            actionIds.forEach { id ->
-                sheetView.findViewById<View>(id)?.let { view ->
-                    applyThemeToMenu(view, id == R.id.actionLogout, id == R.id.actionDeleteProfile)
-                }
-            }
-
-        } catch (_: Exception) {
-            Log.e("Theme", "Error tinting additional settings sheet")
         }
+        tintError(R.id.actionDeleteProfile)
+        tintError(R.id.actionLogout)
 
-        sheetView.findViewById<View>(R.id.actionSecurity).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            startActivity(Intent(this, SecurityActivity::class.java).apply {
+        sheet.findViewById<View>(R.id.actionSecurity)?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            settingsActivityLauncher.launch(Intent(this, SecurityActivity::class.java).apply {
                 putExtra("username", username)
             })
         }
-        sheetView.findViewById<View>(R.id.actionNotifications).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            startActivity(Intent(this, NotificationActivity::class.java))
+        sheet.findViewById<View>(R.id.actionNotifications)?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            settingsActivityLauncher.launch(Intent(this, NotificationActivity::class.java))
         }
-        sheetView.findViewById<View>(R.id.actionClearCache).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
+            sheet.dismiss()
             clearLocalCache()
         }
-        sheetView.findViewById<View>(R.id.actionAbout).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            showAboutDialog()
+        sheet.findViewById<View>(R.id.actionAbout)?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            showAboutDialog { showAdditionalSettingsSheet(onBack) }
         }
-        sheetView.findViewById<View>(R.id.actionAdmin).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            startActivity(Intent(this, SuperAdminActivity::class.java))
+        sheet.findViewById<View>(R.id.actionAdmin)?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            settingsActivityLauncher.launch(Intent(this, SuperAdminActivity::class.java))
         }
-        sheetView.findViewById<View>(R.id.actionServers).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
+            sheet.dismiss()
             val currentServer = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "Unknown")
             AlertDialog.Builder(this)
                 .setTitle(R.string.servers)
@@ -1851,17 +1715,21 @@ class ChatListActivity : AppCompatActivity() {
                 .setPositiveButton("OK", null)
                 .show()
         }
-        sheetView.findViewById<View>(R.id.actionDeleteProfile).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionDeleteProfile)?.setOnClickListener {
+            sheet.dismiss()
             confirmDeleteProfile()
         }
-        sheetView.findViewById<View>(R.id.actionLogout).setOnClickListener {
-            bottomSheetDialog.dismiss()
+        sheet.findViewById<View>(R.id.actionLogout)?.setOnClickListener {
+            sheet.dismiss()
             logout()
         }
 
-        bottomSheetDialog.setContentView(sheetView)
-        bottomSheetDialog.show()
+        sheet.setOnDismissListener {
+            if (!isNavigatingDeeper) onBack?.invoke()
+            isNavigatingDeeper = false
+        }
+
+        sheet.show()
     }
 
     private fun confirmDeleteProfile() {
@@ -1946,9 +1814,7 @@ class ChatListActivity : AppCompatActivity() {
             .setTitle(getString(R.string.start_chat))
             .setActionButtonText(getString(R.string.create))
             .setExtraInputVisible(false, getString(R.string.enter_group_name))
-
-        val allContacts = mutableListOf<String>()
-        val filteredContacts = mutableListOf<String>()
+            .setLoading(true)
 
         val userAdapter = UserAdapter(
             lifecycleScope,
@@ -1967,18 +1833,14 @@ class ChatListActivity : AppCompatActivity() {
         sheet.setAdapter(userAdapter)
 
         grpcClient.getContacts(username) { list ->
-            allContacts.clear()
-            allContacts.addAll(list)
-            filteredContacts.clear()
-            filteredContacts.addAll(allContacts)
-            runOnUiThread { userAdapter.setUsers(filteredContacts) }
+            runOnUiThread { 
+                sheet.setLoading(false)
+                userAdapter.setUsers(list) 
+            }
         }
 
         sheet.onSearchTextChanged { query ->
-            val q = query.lowercase()
-            filteredContacts.clear()
-            filteredContacts.addAll(allContacts.filter { it.lowercase().contains(q) })
-            userAdapter.setUsers(filteredContacts)
+            userAdapter.filter(query)
         }
 
         sheet.onActionClick {
@@ -2023,9 +1885,8 @@ class ChatListActivity : AppCompatActivity() {
             .setTitle(getString(R.string.add_contact))
             .setActionButtonText(getString(R.string.add))
             .setExtraInputVisible(false)
+            .setLoading(true)
 
-        val allUsers = mutableListOf<String>()
-        val filteredUsers = mutableListOf<String>()
         val currentContacts = mutableSetOf<String>()
 
         val userAdapter = UserAdapter(
@@ -2050,11 +1911,11 @@ class ChatListActivity : AppCompatActivity() {
             // Now that we have contacts, load/collect all users
             val usersJob = lifecycleScope.launch {
                 grpcClient.allUsers.collect { users ->
-                    allUsers.clear()
-                    allUsers.addAll(users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username })
-                    filteredUsers.clear()
-                    filteredUsers.addAll(allUsers)
-                    runOnUiThread { userAdapter.setUsers(filteredUsers) }
+                    val filteredUsers = users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username }
+                    withContext(Dispatchers.Main) { 
+                        sheet.setLoading(false)
+                        userAdapter.setUsers(filteredUsers) 
+                    }
                 }
             }
             sheet.setOnDismissListener { usersJob.cancel() }
@@ -2062,10 +1923,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         sheet.onSearchTextChanged { query ->
-            val q = query.lowercase()
-            filteredUsers.clear()
-            filteredUsers.addAll(allUsers.filter { it.lowercase().contains(q) })
-            userAdapter.setUsers(filteredUsers)
+            userAdapter.filter(query)
         }
 
         sheet.onActionClick {
@@ -2089,108 +1947,31 @@ class ChatListActivity : AppCompatActivity() {
         sheet.show()
     }
 
-    private fun showLoginBottomSheet() {
-        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        // Load theme from SharedPreferences instead of ThemeStore to preserve theme when logged out
+    private fun getAuthTheme(): Theme {
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
-        val customTheme = if (themeId == "dark") {
-            lavender.client.android.theme.BuiltInThemes.dark
-        } else if (themeId == "light") {
-            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
-        } else {
-            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
-            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
+        return when (themeId) {
+            "dark" -> lavender.client.android.theme.BuiltInThemes.dark
+            "light" -> lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
+            else -> lavender.client.android.theme.BuiltInThemes.findById(themeId) ?: lavender.client.android.theme.BuiltInThemes.dark
         }
-        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_login, binding.root, false)
+    }
 
-        val usernameInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
-        val passwordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
-        val editText = sheetView.findViewById<EditText>(R.id.editTextUsername)
-        val editTextPassword = sheetView.findViewById<EditText>(R.id.editTextPassword)
-        val serverAddressSpinner = sheetView.findViewById<Spinner>(R.id.serverAddressSpinner)
-        val serverStatusIndicator = sheetView.findViewById<View>(R.id.serverStatusIndicator)
-        val serverStatusText = sheetView.findViewById<TextView>(R.id.serverStatusText)
-        val serverAddressLabel = sheetView.findViewById<TextView>(R.id.serverAddressLabel)
-        val serverStatusLayout = sheetView.findViewById<LinearLayout>(R.id.serverStatusLayout)
-        val joinProgressBar = sheetView.findViewById<ProgressBar>(R.id.joinProgressBar)
-        val btnCancel = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnJoin = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
-        val forgotPasswordButton = sheetView.findViewById<TextView>(R.id.forgotPasswordButton)
+    private fun showLoginBottomSheet() {
+        val customTheme = getAuthTheme()
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_login, customTheme)
 
-        // Apply custom theme colors to all views
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val surfaceColor = customTheme.surfaceColor.toColorInt()
-            val primaryColor = customTheme.primaryColor.toColorInt()
-            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
-            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
-            
-            // Set background color
-            sheetView.setBackgroundColor(bgColor)
-            
-            // Set TextInputLayout background and stroke
-            val strokeColorStateList = ColorStateList(
-                arrayOf(
-                    intArrayOf(android.R.attr.state_focused),
-                    intArrayOf()
-                ),
-                intArrayOf(
-                    primaryColor,
-                    androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 77)
-                )
-            )
-            listOf(usernameInputLayout, passwordInputLayout).forEach { layout ->
-                layout.boxBackgroundColor = surfaceColor
-                layout.setBoxStrokeColorStateList(strokeColorStateList)
-                layout.hintTextColor = ColorStateList.valueOf(primaryColor)
-                layout.defaultHintTextColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 180))
-            }
-            
-            // Set text colors
-            listOf(editText, editTextPassword).forEach { et ->
-                et.setTextColor(onSurfaceColor)
-                et.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
-                    setColor(primaryColor)
-                }
-            }
-            
-            // Set button colors
-            btnJoin.setBackgroundColor(primaryColor)
-            btnJoin.setTextColor(onPrimaryColor)
-            
-            btnCancel.setTextColor(primaryColor)
-            btnCancel.strokeColor = ColorStateList.valueOf(primaryColor)
-            btnCancel.rippleColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(primaryColor, 26))
-
-            forgotPasswordButton.setTextColor(primaryColor)
-            
-            // Set spinner text color
-            serverStatusText?.setTextColor(onSurfaceColor)
-            
-            // Set title color
-            sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
-            
-            // Set server status indicator to green (online)
-            serverStatusIndicator?.setBackgroundColor("#4CAF50".toColorInt())
-        } catch (_: Exception) {
-            // Fallback to default theme handling
-            if (isDarkTheme()) {
-                val surfaceValue = android.util.TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
-                usernameInputLayout.boxBackgroundColor = surfaceValue.data
-                passwordInputLayout.boxBackgroundColor = surfaceValue.data
-
-                val primaryValue = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                btnJoin.strokeColor = ColorStateList.valueOf(primaryValue.data)
-                btnJoin.strokeWidth = 2
-            }
-        }
+        val usernameInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val passwordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
+        val editText = sheet.findViewById<EditText>(R.id.editTextUsername)
+        val editTextPassword = sheet.findViewById<EditText>(R.id.editTextPassword)
+        val serverAddressSpinner = sheet.findViewById<Spinner>(R.id.serverAddressSpinner)
+        val serverStatusLayout = sheet.findViewById<LinearLayout>(R.id.serverStatusLayout)
+        val serverAddressLabel = sheet.findViewById<TextView>(R.id.serverAddressLabel)
+        val joinProgressBar = sheet.findViewById<ProgressBar>(R.id.joinProgressBar)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
+        val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
         // Setup server address spinner
         val serverList = listOf("159.195.38.145:50051")
@@ -2205,79 +1986,70 @@ class ChatListActivity : AppCompatActivity() {
             serverAddressLabel?.visibility = View.GONE
         }
 
-        bottomSheetDialog.setContentView(sheetView)
-
-        btnCancel.setOnClickListener {
-            bottomSheetDialog.dismiss()
+        btnCancel?.setOnClickListener {
+            sheet.dismiss()
             showAuthChoiceDialog()
         }
 
-        // Handle dismiss without login
-        bottomSheetDialog.setOnDismissListener {
+        sheet.setOnDismissListener {
             if (username.isEmpty() || password.isEmpty()) {
                 showAuthChoiceDialog()
             }
         }
 
-        btnJoin.setOnClickListener {
-            val username = editText.text.toString().trim()
-            val password = editTextPassword.text.toString().trim()
+        btnJoin?.setOnClickListener {
+            val u = editText?.text.toString().trim()
+            val p = editTextPassword?.text.toString().trim()
             val serverAddress = serverAddressSpinner?.selectedItem?.toString() ?: "159.195.38.145:50051"
-            if (username.isNotEmpty() && password.isNotEmpty()) {
-                // Show loading state
-                btnJoin.text = ""
-                btnJoin.isEnabled = false
-                joinProgressBar.isVisible = true
+            if (u.isNotEmpty() && p.isNotEmpty()) {
+                btnJoin?.text = ""
+                btnJoin?.isEnabled = false
+                joinProgressBar?.isVisible = true
 
-                SessionManager.login(this, username, password, serverAddress, register = false, email = "") { result ->
+                SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
                     runOnUiThread {
                         when (result) {
                             "SUCCESS" -> {
-                                // Save credentials
                                 val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit {
-                                    putString("saved_username", username)
-                                    putString("saved_password", password)
+                                    putString("saved_username", u)
+                                    putString("saved_password", p)
                                     putString("server_address", serverAddress)
                                 }
-
                                 val userId = SessionManager.session.value.userId
                                 if (userId.isNotEmpty()) {
                                     prefs.edit { putString("user_id", userId) }
                                 }
-
-                                // Clear local cache for existing user login
                                 clearLocalCacheSync()
-
                                 Toast.makeText(this@ChatListActivity, R.string.login_success, Toast.LENGTH_LONG).show()
-                                bottomSheetDialog.dismiss()
-                                recreate() // Reload activity with authenticated user
+                                sheet.dismiss()
+                                recreate()
                             }
                             "USER_NOT_FOUND" -> {
-                                joinProgressBar.isVisible = false
-                                btnJoin.text = getString(R.string.join)
-                                btnJoin.isEnabled = true
+                                joinProgressBar?.isVisible = false
+                                btnJoin?.text = getString(R.string.join)
+                                btnJoin?.isEnabled = true
                                 
                                 AlertDialog.Builder(this)
                                     .setTitle(R.string.user_not_found)
-                                    .setMessage(getString(R.string.register_confirm, username))
+                                    .setMessage(getString(R.string.register_confirm, u))
                                     .setPositiveButton(R.string.yes) { _, _ ->
-                                        bottomSheetDialog.dismiss()
+                                        sheet.dismiss()
                                         showRegisterBottomSheet()
                                     }
                                     .setNegativeButton(R.string.no) { _, _ ->
-                                        bottomSheetDialog.dismiss()
+                                        sheet.dismiss()
                                     }
                                     .show()
                             }
                             "AUTH_FAILED" -> {
-                                joinProgressBar.isVisible = false
+                                joinProgressBar?.isVisible = false
                                 btnJoin.text = getString(R.string.join)
                                 btnJoin.isEnabled = true
                                 Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
                             }
                             else -> {
-                                joinProgressBar.isVisible = false
+                                joinProgressBar?.isVisible = false
                                 btnJoin.text = getString(R.string.join)
                                 btnJoin.isEnabled = true
                                 Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
@@ -2285,127 +2057,39 @@ class ChatListActivity : AppCompatActivity() {
                         }
                     }
                 }
-            } else if (username.isEmpty()) {
+            } else if (u.isEmpty()) {
                 Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
             } else {
                 Toast.makeText(this, R.string.password_empty, Toast.LENGTH_LONG).show()
             }
         }
 
-        forgotPasswordButton.setOnClickListener {
-            bottomSheetDialog.dismiss()
+        forgotPasswordButton?.setOnClickListener {
+            sheet.dismiss()
             showForgotPasswordBottomSheet()
         }
 
-        bottomSheetDialog.show()
+        sheet.show()
     }
 
     private fun showRegisterBottomSheet() {
-        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        // Load theme from SharedPreferences instead of ThemeStore to preserve theme when logged out
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
-        val customTheme = if (themeId == "dark") {
-            lavender.client.android.theme.BuiltInThemes.dark
-        } else if (themeId == "light") {
-            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
-        } else {
-            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
-            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
-        }
-        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_register, binding.root, false)
+        val customTheme = getAuthTheme()
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_register, customTheme)
 
-        val usernameInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
-        val passwordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
-        val confirmPasswordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.confirmPasswordInputLayout)
-        val emailInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
-        val editText = sheetView.findViewById<EditText>(R.id.editTextUsername)
-        val editTextPassword = sheetView.findViewById<EditText>(R.id.editTextPassword)
-        val editTextConfirmPassword = sheetView.findViewById<EditText>(R.id.editTextConfirmPassword)
-        val editTextEmail = sheetView.findViewById<EditText>(R.id.editTextEmail)
-        val serverAddressSpinner = sheetView.findViewById<Spinner>(R.id.serverAddressSpinner)
-        val serverStatusIndicator = sheetView.findViewById<View>(R.id.serverStatusIndicator)
-        val serverStatusText = sheetView.findViewById<TextView>(R.id.serverStatusText)
-        val serverAddressLabel = sheetView.findViewById<TextView>(R.id.serverAddressLabel)
-        val serverStatusLayout = sheetView.findViewById<LinearLayout>(R.id.serverStatusLayout)
-        val registerProgressBar = sheetView.findViewById<ProgressBar>(R.id.registerProgressBar)
-        val btnCancel = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnRegister = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
-
-        // Apply custom theme colors to all views
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val surfaceColor = customTheme.surfaceColor.toColorInt()
-            val primaryColor = customTheme.primaryColor.toColorInt()
-            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
-            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
-            
-            // Set background color
-            sheetView.setBackgroundColor(bgColor)
-            
-            // Set TextInputLayout background and stroke
-            val inputLayouts = listOf(usernameInputLayout, passwordInputLayout, confirmPasswordInputLayout, emailInputLayout)
-            val strokeColorStateList = ColorStateList(
-                arrayOf(
-                    intArrayOf(android.R.attr.state_focused),
-                    intArrayOf()
-                ),
-                intArrayOf(
-                    primaryColor,
-                    androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 77) // ~30% alpha
-                )
-            )
-            inputLayouts.forEach { layout ->
-                layout.boxBackgroundColor = surfaceColor
-                layout.setBoxStrokeColorStateList(strokeColorStateList)
-                layout.hintTextColor = ColorStateList.valueOf(primaryColor)
-                layout.defaultHintTextColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 180))
-            }
-            
-            // Set text colors
-            listOf(editText, editTextPassword, editTextConfirmPassword, editTextEmail).forEach { et ->
-                et.setTextColor(onSurfaceColor)
-                et.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
-                    setColor(primaryColor)
-                }
-            }
-            
-            // Set button colors
-            btnRegister.setBackgroundColor(primaryColor)
-            btnRegister.setTextColor(onPrimaryColor)
-            
-            btnCancel.setTextColor(primaryColor)
-            btnCancel.strokeColor = ColorStateList.valueOf(primaryColor)
-            btnCancel.rippleColor = ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(primaryColor, 26))
-            
-            // Set spinner text color
-            serverStatusText?.setTextColor(onSurfaceColor)
-            
-            // Set title color
-            sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
-            
-            // Set server status indicator to green (online)
-            serverStatusIndicator?.setBackgroundColor("#4CAF50".toColorInt())
-        } catch (_: Exception) {
-            // Fallback to default theme handling
-            if (isDarkTheme()) {
-                val surfaceValue = android.util.TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
-                usernameInputLayout.boxBackgroundColor = surfaceValue.data
-                passwordInputLayout.boxBackgroundColor = surfaceValue.data
-                confirmPasswordInputLayout.boxBackgroundColor = surfaceValue.data
-                emailInputLayout.boxBackgroundColor = surfaceValue.data
-
-                val primaryValue = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                btnRegister.strokeColor = ColorStateList.valueOf(primaryValue.data)
-                btnRegister.strokeWidth = 2
-            }
-        }
+        val usernameInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
+        val passwordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
+        val confirmPasswordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.confirmPasswordInputLayout)
+        val emailInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
+        val editText = sheet.findViewById<EditText>(R.id.editTextUsername)
+        val editTextPassword = sheet.findViewById<EditText>(R.id.editTextPassword)
+        val editTextConfirmPassword = sheet.findViewById<EditText>(R.id.editTextConfirmPassword)
+        val editTextEmail = sheet.findViewById<EditText>(R.id.editTextEmail)
+        val serverAddressSpinner = sheet.findViewById<Spinner>(R.id.serverAddressSpinner)
+        val serverStatusLayout = sheet.findViewById<LinearLayout>(R.id.serverStatusLayout)
+        val serverAddressLabel = sheet.findViewById<TextView>(R.id.serverAddressLabel)
+        val registerProgressBar = sheet.findViewById<ProgressBar>(R.id.registerProgressBar)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
 
         // Setup server address spinner
         val serverList = listOf("159.195.38.145:50051")
@@ -2420,93 +2104,69 @@ class ChatListActivity : AppCompatActivity() {
             serverAddressLabel?.visibility = View.GONE
         }
 
-        bottomSheetDialog.setContentView(sheetView)
-
-        btnCancel.setOnClickListener {
-            bottomSheetDialog.dismiss()
+        btnCancel?.setOnClickListener {
+            sheet.dismiss()
             showAuthChoiceDialog()
         }
 
-        // Handle dismiss without registration
-        bottomSheetDialog.setOnDismissListener {
+        sheet.setOnDismissListener {
             if (username.isEmpty() || password.isEmpty()) {
                 showAuthChoiceDialog()
             }
         }
 
-        btnRegister.setOnClickListener {
-            val username = editText.text.toString().trim()
-            val password = editTextPassword.text.toString().trim()
-            val confirmPassword = editTextConfirmPassword.text.toString().trim()
-            val email = editTextEmail.text.toString().trim()
+        btnRegister?.setOnClickListener {
+            val u = editText?.text.toString().trim()
+            val p = editTextPassword?.text.toString().trim()
+            val confirmPassword = editTextConfirmPassword?.text.toString().trim()
+            val email = editTextEmail?.text.toString().trim()
             val serverAddress = serverAddressSpinner?.selectedItem?.toString() ?: "159.195.38.145:50051"
 
-            if (username.isEmpty()) {
+            if (u.isEmpty()) {
                 Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
-            } else if (password.isEmpty()) {
+            } else if (p.isEmpty()) {
                 Toast.makeText(this, R.string.password_empty, Toast.LENGTH_LONG).show()
-            } else if (password != confirmPassword) {
+            } else if (p != confirmPassword) {
                 Toast.makeText(this, R.string.passwords_do_not_match, Toast.LENGTH_LONG).show()
             } else {
-                // Show loading state
                 btnRegister.text = ""
                 btnRegister.isEnabled = false
-                registerProgressBar.isVisible = true
+                registerProgressBar?.isVisible = true
 
-                SessionManager.login(this, username, password, serverAddress, register = true, email = email) { result ->
+                SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result ->
                     runOnUiThread {
                         when (result) {
                             "REGISTRATION_SUCCESS" -> {
-                                // Save credentials
                                 val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit {
-                                    putString("saved_username", username)
-                                    putString("saved_password", password)
-                                    putString("saved_email", email)
-                                    putString("server_address", serverAddress)
+                                    putString("saved_username", u); putString("saved_password", p)
+                                    putString("saved_email", email); putString("server_address", serverAddress)
                                 }
-
                                 val userId = SessionManager.session.value.userId
-                                if (userId.isNotEmpty()) {
-                                    prefs.edit { putString("user_id", userId) }
-                                }
-
-                                // Clear local cache for new user
+                                if (userId.isNotEmpty()) prefs.edit { putString("user_id", userId) }
                                 clearLocalCacheSync()
-                                
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
-
-                                // Set onboarding flag
-                                prefs.edit {
-                                    putBoolean("onboarding_completed_$username", false)
-                                    putLong("first_login_$username", System.currentTimeMillis())
-                                }
-
-                                bottomSheetDialog.dismiss()
-                                recreate() // Reload activity with authenticated user
+                                prefs.edit { putBoolean("onboarding_completed_$u", false); putLong("first_login_$u", System.currentTimeMillis()) }
+                                sheet.dismiss(); recreate()
                             }
                             "USER_ALREADY_EXISTS" -> {
-                                registerProgressBar.isVisible = false
-                                btnRegister.text = getString(R.string.register)
-                                btnRegister.isEnabled = true
+                                registerProgressBar?.isVisible = false
+                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
                                 Toast.makeText(this, R.string.user_already_exists, Toast.LENGTH_LONG).show()
                             }
                             "EMAIL_ALREADY_IN_USE" -> {
-                                registerProgressBar.isVisible = false
-                                btnRegister.text = getString(R.string.register)
-                                btnRegister.isEnabled = true
+                                registerProgressBar?.isVisible = false
+                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
                                 Toast.makeText(this, R.string.email_already_in_use, Toast.LENGTH_LONG).show()
                             }
                             "AUTH_FAILED" -> {
-                                registerProgressBar.isVisible = false
-                                btnRegister.text = getString(R.string.register)
-                                btnRegister.isEnabled = true
+                                registerProgressBar?.isVisible = false
+                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
                                 Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
                             }
                             else -> {
-                                registerProgressBar.isVisible = false
-                                btnRegister.text = getString(R.string.register)
-                                btnRegister.isEnabled = true
+                                registerProgressBar?.isVisible = false
+                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
                                 Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -2514,109 +2174,34 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         }
-
-        bottomSheetDialog.show()
-    }
-
-    private fun isDarkTheme(): Boolean {
-        return when (AppCompatDelegate.getDefaultNightMode()) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> {
-                val currentNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-                currentNightMode == Configuration.UI_MODE_NIGHT_YES
-            }
-        }
+        sheet.show()
     }
 
     private fun showForgotPasswordBottomSheet() {
-        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
-        val customTheme = if (themeId == "dark") {
-            lavender.client.android.theme.BuiltInThemes.dark
-        } else if (themeId == "light") {
-            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
-        } else {
-            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
-            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
-        }
-        ThemeApplier.applyToDialog(bottomSheetDialog, customTheme)
-        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_forgot_password, binding.root, false)
+        val customTheme = getAuthTheme()
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_forgot_password, customTheme)
 
-        val emailInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
-        val editTextEmail = sheetView.findViewById<EditText>(R.id.editTextEmail)
-        val sendProgressBar = sheetView.findViewById<ProgressBar>(R.id.sendProgressBar)
-        val btnSend = sheetView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
-        val btnCancel = sheetView.findViewById<Button>(R.id.btnCancel)
-        val tokenInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.tokenInputLayout)
-        val newPasswordInputLayout = sheetView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.newPasswordInputLayout)
-        val editTextToken = sheetView.findViewById<EditText>(R.id.editTextToken)
-        val editTextNewPassword = sheetView.findViewById<EditText>(R.id.editTextNewPassword)
+        val emailInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
+        val editTextEmail = sheet.findViewById<EditText>(R.id.editTextEmail)
+        val sendProgressBar = sheet.findViewById<ProgressBar>(R.id.sendProgressBar)
+        val btnSend = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
+        val btnCancel = sheet.findViewById<Button>(R.id.btnCancel)
+        val tokenInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.tokenInputLayout)
+        val newPasswordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.newPasswordInputLayout)
+        val editTextToken = sheet.findViewById<EditText>(R.id.editTextToken)
+        val editTextNewPassword = sheet.findViewById<EditText>(R.id.editTextNewPassword)
 
-        // Apply custom theme colors to all views
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val surfaceColor = customTheme.surfaceColor.toColorInt()
-            val primaryColor = customTheme.primaryColor.toColorInt()
-            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
-            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
-            
-            // Set background color
-            sheetView.setBackgroundColor(bgColor)
-            
-            // Set TextInputLayout background
-            emailInputLayout.boxBackgroundColor = surfaceColor
-            tokenInputLayout.boxBackgroundColor = surfaceColor
-            newPasswordInputLayout.boxBackgroundColor = surfaceColor
-            
-            // Set text colors
-            listOf(editTextEmail, editTextToken, editTextNewPassword).forEach { et ->
-                et.setTextColor(onSurfaceColor)
-                et.setHintTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 128))
-                et.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
-                    setColor(primaryColor)
-                }
-            }
-            
-            // Set button colors
-            btnSend.setBackgroundColor(primaryColor)
-            btnSend.setTextColor(onPrimaryColor)
-            btnCancel.setTextColor(onSurfaceColor)
-            
-            // Set title color
-            sheetView.findViewById<TextView>(R.id.titleText)?.setTextColor(onSurfaceColor)
-            sheetView.findViewById<TextView>(R.id.descriptionText)?.setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(onSurfaceColor, 178))
-            
-        } catch (_: Exception) {
-            // Fallback to default theme handling
-            if (isDarkTheme()) {
-                val surfaceValue = android.util.TypedValue()
-                theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainer, surfaceValue, true)
-                emailInputLayout.boxBackgroundColor = surfaceValue.data
-                
-                val primaryValue = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.colorPrimary, primaryValue, true)
-                btnSend.strokeColor = ColorStateList.valueOf(primaryValue.data)
-                btnSend.strokeWidth = 2
-            }
-        }
-
-        bottomSheetDialog.setContentView(sheetView)
-
-        btnCancel.setOnClickListener {
-            bottomSheetDialog.dismiss()
+        btnCancel?.setOnClickListener {
+            sheet.dismiss()
             showAuthChoiceDialog()
         }
 
         var isStep2 = false
-        btnSend.setOnClickListener {
+        btnSend?.setOnClickListener {
             if (!isStep2) {
-                val email = editTextEmail.text.toString().trim()
+                val email = editTextEmail?.text.toString().trim()
                 if (email.isNotEmpty()) {
-                    sendProgressBar.isVisible = true
+                    sendProgressBar?.isVisible = true
                     btnSend.isEnabled = false
                     
                     lifecycleScope.launch(Dispatchers.IO) {
@@ -2625,7 +2210,7 @@ class ChatListActivity : AppCompatActivity() {
                         
                         if (serverAddress.isEmpty()) {
                             withContext(Dispatchers.Main) {
-                                sendProgressBar.isVisible = false
+                                sendProgressBar?.isVisible = false
                                 btnSend.isEnabled = true
                                 Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_SHORT).show()
                             }
@@ -2638,7 +2223,6 @@ class ChatListActivity : AppCompatActivity() {
                             val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                             grpcClient.connect(host, false, port, this@ChatListActivity)
                             
-                            // Wait up to 5 seconds for connection to be READY
                             withTimeoutOrNull(5000) {
                                 grpcClient.connectionStatus.first { it == ConnectionStatus.READY || it == ConnectionStatus.FAILED }
                             }
@@ -2647,13 +2231,13 @@ class ChatListActivity : AppCompatActivity() {
                         if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
                             grpcClient.requestPasswordReset(email) { success, message ->
                                 runOnUiThread {
-                                    sendProgressBar.isVisible = false
+                                    sendProgressBar?.isVisible = false
                                     btnSend.isEnabled = true
                                     if (success) {
                                         isStep2 = true
-                                        emailInputLayout.isVisible = false
-                                        tokenInputLayout.isVisible = true
-                                        newPasswordInputLayout.isVisible = true
+                                        emailInputLayout?.isVisible = false
+                                        tokenInputLayout?.isVisible = true
+                                        newPasswordInputLayout?.isVisible = true
                                         btnSend.text = "Сбросить пароль"
                                         Toast.makeText(this@ChatListActivity, "Код отправлен на ваш email", Toast.LENGTH_LONG).show()
                                     } else {
@@ -2663,9 +2247,9 @@ class ChatListActivity : AppCompatActivity() {
                             }
                         } else {
                             withContext(Dispatchers.Main) {
-                                sendProgressBar.isVisible = false
+                                sendProgressBar?.isVisible = false
                                 btnSend.isEnabled = true
-                                Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -2673,8 +2257,8 @@ class ChatListActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.enter_email, Toast.LENGTH_LONG).show()
                 }
             } else {
-                val token = editTextToken.text.toString().trim()
-                val newPw = editTextNewPassword.text.toString().trim()
+                val token = editTextToken?.text.toString().trim()
+                val newPw = editTextNewPassword?.text.toString().trim()
                 
                 if (token.isEmpty()) {
                     Toast.makeText(this, "Введите код", Toast.LENGTH_SHORT).show()
@@ -2685,17 +2269,17 @@ class ChatListActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                sendProgressBar.isVisible = true
+                sendProgressBar?.isVisible = true
                 btnSend.isEnabled = false
 
                 lifecycleScope.launch(Dispatchers.IO) {
                     grpcClient.resetPassword(token, newPw) { success, message ->
                         runOnUiThread {
-                            sendProgressBar.isVisible = false
+                            sendProgressBar?.isVisible = false
                             btnSend.isEnabled = true
                             if (success) {
                                 Toast.makeText(this@ChatListActivity, "Пароль успешно изменен", Toast.LENGTH_LONG).show()
-                                bottomSheetDialog.dismiss()
+                                sheet.dismiss()
                             } else {
                                 Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
                             }
@@ -2704,71 +2288,31 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         }
-
-        bottomSheetDialog.show()
+        sheet.show()
     }
 
     private fun showAuthChoiceDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_auth_choice, binding.root, false)
-        // Load theme from SharedPreferences instead of ThemeStore to preserve theme when logged out
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
-        val customTheme = if (themeId == "dark") {
-            lavender.client.android.theme.BuiltInThemes.dark
-        } else if (themeId == "light") {
-            lavender.client.android.theme.BuiltInThemes.BASE_LIGHT
-        } else {
-            val builtIn = lavender.client.android.theme.BuiltInThemes.findById(themeId)
-            if (builtIn != null) builtIn else lavender.client.android.theme.BuiltInThemes.dark
-        }
+        val customTheme = getAuthTheme()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_auth_choice, customTheme)
         
-        val btnLogin = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnLogin)
-        val btnRegister = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
-        val versionText = dialogView.findViewById<TextView>(R.id.authVersionText)
+        val btnLogin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnLogin)
+        val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
+        val versionText = sheet.findViewById<TextView>(R.id.authVersionText)
 
         val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
         versionText?.text = "v$versionName"
 
-        try {
-            val bgColor = customTheme.backgroundColor.toColorInt()
-            val primaryColor = customTheme.primaryColor.toColorInt()
-            val onPrimaryColor = customTheme.onPrimaryColor.toColorInt()
-            val onSurfaceColor = customTheme.onSurfaceColor.toColorInt()
-            
-            versionText?.setTextColor(onSurfaceColor)
-            
-            val shape = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = 28f * resources.displayMetrics.density
-                setColor(bgColor)
-            }
-            dialogView.background = shape
-            
-            // Theme Login button (Solid)
-            btnLogin.setBackgroundColor(primaryColor)
-            btnLogin.setTextColor(onPrimaryColor)
-            btnLogin.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onPrimaryColor, 0.2f))
-            
-            // Theme Register button (Outlined)
-            btnRegister.setTextColor(primaryColor)
-            btnRegister.strokeColor = ColorStateList.valueOf(primaryColor)
-            btnRegister.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primaryColor, 0.1f))
-        } catch (_: Exception) {}
-
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.setCancelable(false)
-        
-        btnLogin.setOnClickListener {
-            dialog.dismiss()
+        btnLogin?.setOnClickListener {
+            sheet.dismiss()
             showLoginBottomSheet()
         }
-        
-        btnRegister.setOnClickListener {
-            dialog.dismiss()
+
+        btnRegister?.setOnClickListener {
+            sheet.dismiss()
             showRegisterBottomSheet()
         }
-        
-        dialog.show()
+
+        sheet.setCancelable(false)
+        sheet.show()
     }
 }

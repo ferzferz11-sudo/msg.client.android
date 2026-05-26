@@ -83,6 +83,7 @@ import androidx.core.content.edit
 
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SheetAction
+import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.ListBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
 
@@ -784,19 +785,9 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showEmojiPicker() {
-        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val theme = ThemeStore.currentTheme()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_emoji_picker)
+        val emojiGrid = sheet.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
         
-        val dialogView = layoutInflater.inflate(R.layout.dialog_emoji_picker, null)
-        val emojiGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.emojiGrid)
-        val dragHandle = dialogView.findViewById<View>(R.id.dragHandle)
-        
-        try {
-            val pr = theme.primaryColor.toColorInt()
-            dragHandle?.backgroundTintList = ColorStateList.valueOf(pr)
-        } catch (_: Exception) {}
-        
-        // ... (emojis list)
         val emojis = listOf(
             "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
             "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
@@ -826,11 +817,8 @@ class NewChatActivity : AppCompatActivity() {
                     sheet.dismiss()
                 }
             }
-            emojiGrid.addView(tv)
+            emojiGrid?.addView(tv)
         }
-        
-        sheet.setContentView(dialogView)
-        ThemeApplier.applyToDialog(sheet, theme)
         sheet.show()
     }
 
@@ -990,12 +978,21 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showAudioRecordingView() {
-        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001); return }
-        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this); val theme = ThemeStore.currentTheme(); ThemeApplier.applyToDialog(sheet, theme)
-        val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; val p = 24.dpToPx(); setPadding(p, 0, p, p); try { setBackgroundColor(theme.surfaceColor.toColorInt()) } catch (_: Exception) {} }
-        val handle = View(this).apply { val lp = LinearLayout.LayoutParams(40.dpToPx(), 4.dpToPx()).apply { gravity = android.view.Gravity.CENTER_HORIZONTAL; topMargin = 12.dpToPx(); bottomMargin = 24.dpToPx() }; layoutParams = lp; alpha = 0.3f; try { background = android.graphics.drawable.GradientDrawable().apply { setColor(theme.onSurfaceColor.toColorInt()); cornerRadius = 2.dpToPx().toFloat() } } catch (_: Exception) { setBackgroundColor(android.graphics.Color.GRAY) } }
-        container.addView(handle); val recording = AudioRecordingView(this); recording.applyCustomTheme(ThemeMappers.toProto(theme)); container.addView(recording); sheet.setContentView(container)
-        recording.setOnRecordingFinished { file, dur -> sheet.dismiss(); file?.let { uploadAudio(it, dur) } }; recording.setOnRecordingCancelled { sheet.dismiss() }; sheet.show()
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+            return
+        }
+        val sheet = StandardBottomSheet(this)
+        val recording = AudioRecordingView(this)
+        recording.applyCustomTheme(ThemeMappers.toProto(ThemeStore.currentTheme()))
+        sheet.setContent(recording)
+        
+        recording.setOnRecordingFinished { file, dur ->
+            sheet.dismiss()
+            file?.let { uploadAudio(it, dur) }
+        }
+        recording.setOnRecordingCancelled { sheet.dismiss() }
+        sheet.show()
     }
 
     private fun uploadAudio(file: File, duration: Int) {

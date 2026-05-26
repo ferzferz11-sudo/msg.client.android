@@ -5,15 +5,29 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.6.31
+### 🧩 Unified Widget System (Current Release)
+- 🏗️ **Core UI Engine**: Fully implemented `WidgetSystem.kt` with a suite of themed base components:
+    - `StandardBottomSheet`: Base for all interactive modal dialogs.
+    - `ActionBottomSheet`: Dynamic icon-based menus (Attachments, Chat Actions).
+    - `ListBottomSheet`: High-performance RecyclerView integration for themed lists.
+    - `SearchableListBottomSheet`: Advanced component with real-time filtering, loading states, and action buttons.
+- 🔐 **Themed Auth Flow**: Entire authentication system (Login, Registration, Forgot Password, Auth Choice) now uses unified widgets, removing 300+ lines of redundant UI boilerplate.
+- ⚙️ **Themed Settings**: User Profile menu and Additional Settings fully migrated to the widget system with automatic tinting for icons and destructive actions (Logout/Delete).
+- 🎨 **Deep Theme Integration**:
+    - **Smart Inputs**: All text fields, hints, and cursors automatically adapt to the primary theme color.
+    - **Interactive States**: Loading indicators (`ProgressBar`) and text selection (`highlightColor`) now follow theme accents.
+    - **Cursor Support**: Modernized cursor tinting for a polished user experience.
+- ⚡ **UX Refinements**:
+    - **Loading States**: Introduced `setLoading()` for searchable lists to provide visual feedback during gRPC data fetching.
+    - **Persistent Search**: Improved adapter logic (`UserAdapter`, `SelectableUserAdapter`) to maintain search filters during background data updates.
+- 🔧 **Code Cleanup**: Removed deprecated theme application methods and unified dialog logic across all activities.
+
 ## 1.0.6.30
-### Planned
-- 🧩 **Widget System**: Introduced a new themed widget system with `WidgetManager` for caching components.
-- 🏗️ **Themed Bottom Sheets**: Created specialized widget types:
-    - `ActionBottomSheet`: For menus with icons and labels (Add Chat, Profile).
-    - `ListBottomSheet`: For high-performance themed lists using RecyclerView.
-- 🏗️ **StandardBottomSheet**: Base component for reducing boilerplate code in activities.
-- 📞 **Call Stability**: Fixed a critical bug where users with both a UUID and a Username could not correctly hang up on calls (signals were being sent back to the sender).
-- 🔔 **Call Priority**: Increased notification priority to `MAX` and added `USE_FULL_SCREEN_INTENT` to ensure incoming calls are visible on the lock screen and as heads-up displays.
+### Calls & Core Refinement
+- 📞 **Call Stability**: Fixed a critical bug where users with both a UUID and a Username could not correctly hang up on calls.
+- 🔔 **Call Priority**: Increased notification priority to `MAX` and enabled full-screen intent for incoming calls.
+- 🏗️ **Widget Foundations**: Began migration to the new component system for chat creation and contact management.
 
 ## 1.0.6.29
 ### UI Improvements & Reactions
@@ -24,6 +38,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **Authentication**: Fixed login notifications to correctly distinguish between new registrations and existing user logins.
 - 🧹 **Cache Management**: Added automatic cache clearing after app updates and successful logins to ensure data consistency.
 - 🎨 **Theme Fixes**: Fixed non-themed buttons in the authentication choice dialog shown after logout.
+
+## 1.0.6.28
+### Visual Improvements
+- 😀 **Emoji Selection**: Moved to a themed bottom sheet for better UX and consistency.
+- 🔥 **Reaction Update**: Added new reactions and optimized their display order.
+- 📞 **Conference Logic**: Restricted re-entry into finalized conference rooms.
+
+## 1.0.6.27
+### Conference Lobby & Setup
+- 🏠 **Lobby Screen**: Introduced a pre-call setup screen with video/audio toggles.
+- ⚙️ **Advanced Setup**: Users can now set conference topics and scheduled start times.
+- 🔔 **Invite Control**: Manual trigger for participant invitations from the lobby.
+- 🔊 **Audio Experience**: Added dial tones for outgoing and distinctive ringtones for incoming calls.
+- ⌚ **Time Synchronization**: Fixed timezone-related display bugs for message timestamps.
+
+## 1.0.6.26
+### Stability & Core Fixes
+- 🛠️ **Modularization**: Refactored call logic into independent modules for better crash resistance.
+- 🔄 **Rotation Support**: Improved preservation of call state and timers during screen orientation changes.
+- 📱 **MIUI Optimization**: Fixed specific crashes triggered when returning to the app on Xiaomi devices.
+
+## 1.0.6.25
+### Group Conferences & Call UI
+- ⚡ **Seamless Entry**: Enabled instant joining of active conferences.
+- 🖱️ **Deep Linking**: Direct entry into calls via chat message notifications.
+- ⏱️ **Call Tracking**: Integrated a real-time call duration timer into the call UI.
+- 💡 **Display Management**: Implemented screen wake-lock to prevent dimming during video calls.
+
+## 1.0.6.24
+### Interface Optimization
+- 📱 **UI Density**: Compact chat list mode where previews are limited to a single line.
+- 🧠 **Dynamic UI**: Action buttons now dynamically appear only when changes require saving.
+- 🚀 **Performance**: Optimized scrolling performance and search indexing for large contact lists.
+
+## 1.0.6.23
+### Performance Improvements
+- ⚡ **Instant Loading**: Implemented theme caching to allow the UI to load immediately from memory.
+- 🛠️ **Startup Polish**: Eliminated visual flickering during the application boot sequence.
+
+## 1.0.6.21
+### Rebranding
+- 🐦 **Lava Branding**: Officially transitioned branding and assets to "Lava Messenger".
+
+## 1.0.6.16
+### Group Conference Mode
+- 👥 **Group Video**: Launched group video meetings with integrated chat history.
+- 🎨 **Redesigned Call UI**: Modern interface for managing active calls.
+- 📊 **Auto-Logging**: Automated capture of call durations and participant metrics.
 
 ## 1.0.6.6
 ### Background Updates & Reliability Fixes
