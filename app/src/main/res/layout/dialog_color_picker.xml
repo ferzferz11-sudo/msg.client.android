@@ -105,30 +105,33 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="end">
+        android:layout_marginTop="16dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReset"
             style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/reset_color"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="4dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancel"
             style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/cancel_dialog"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginHorizontal="4dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnApply"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/apply"
-            app:cornerRadius="24dp" />
+            android:layout_marginStart="4dp" />
 
     </LinearLayout>
 

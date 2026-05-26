@@ -627,6 +627,7 @@ class ProfileActivity : AppCompatActivity() {
                 view.isAllCaps = false
                 view.transformationMethod = null
                 view.cornerRadius = (28 * resources.displayMetrics.density).toInt()
+                view.minimumHeight = (56 * resources.displayMetrics.density).toInt()
 
                 val isCancelType = view.id == R.id.deleteGroupButton
                 val isActionType = view.id == R.id.changeAvatarButton

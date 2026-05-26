@@ -140,6 +140,9 @@ open class StandardBottomSheet(
             view.isAllCaps = false
             view.transformationMethod = null // Crucial to disable Caps
             
+            // Force consistent height for all buttons in widgets
+            view.minimumHeight = (56 * context.resources.displayMetrics.density).toInt()
+            
             val isCancelType = view.id == R.id.btnCancel || view.id == R.id.btnClose || 
                              view.id == R.id.btnReset || view.id == android.R.id.button2 ||
                              view.id == R.id.deleteGroupButton
