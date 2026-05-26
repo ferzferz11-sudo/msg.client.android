@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -51,22 +50,22 @@ class BackgroundsFragment : Fragment() {
         chatListBackgroundPreview = view.findViewById(R.id.chatListBackgroundPreview)
         chatBackgroundPreview = view.findViewById(R.id.chatBackgroundPreview)
 
-        view.findViewById<Button>(R.id.selectChatListBackground).setOnClickListener {
+        view.findViewById<View>(R.id.selectChatListBackground).setOnClickListener {
             pendingSelection = "chatList"
             pickImage.launch("image/*")
         }
 
-        view.findViewById<Button>(R.id.removeChatListBackground).setOnClickListener {
+        view.findViewById<View>(R.id.removeChatListBackground).setOnClickListener {
             callback?.onChatListBackgroundChanged(null)
             updatePreviews()
         }
 
-        view.findViewById<Button>(R.id.selectChatBackground).setOnClickListener {
+        view.findViewById<View>(R.id.selectChatBackground).setOnClickListener {
             pendingSelection = "chat"
             pickImage.launch("image/*")
         }
 
-        view.findViewById<Button>(R.id.removeChatBackground).setOnClickListener {
+        view.findViewById<View>(R.id.removeChatBackground).setOnClickListener {
             callback?.onChatBackgroundChanged(null)
             updatePreviews()
         }

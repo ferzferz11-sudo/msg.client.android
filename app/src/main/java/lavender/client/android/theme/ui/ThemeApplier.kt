@@ -97,10 +97,21 @@ object ThemeApplier {
             setTitleTextColor(customOnPrimary)
             setNavigationIconTint(customOnPrimary)
             
-            // Tint action icons
-            val actions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat)
-            actions.forEach { id ->
+            // Tint toolbar icons
+            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat)
+            toolbarActions.forEach { id ->
                 findViewById<ImageView>(id)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
+            }
+        }
+
+        // Tint other icons (like in background editor)
+        val otherIcons = listOf(
+            R.id.selectChatListBackground, R.id.removeChatListBackground,
+            R.id.selectChatBackground, R.id.removeChatBackground
+        )
+        otherIcons.forEach { id ->
+            activity.findViewById<View>(id)?.let { v ->
+                if (v is ImageView) v.imageTintList = ColorStateList.valueOf(customPrimary)
             }
         }
 

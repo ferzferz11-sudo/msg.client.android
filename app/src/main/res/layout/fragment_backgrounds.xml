@@ -27,35 +27,47 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <ImageView
-                android:id="@+id/chatListBackgroundPreview"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:scaleType="centerCrop"
-                android:background="?attr/colorSurfaceContainer"
-                android:contentDescription="@string/chat_list_background" />
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="12dp">
+                android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/selectChatListBackground"
+                <ImageView
+                    android:id="@+id/chatListBackgroundPreview"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="140dp"
                     android:layout_weight="1"
-                    android:text="@string/select_image"
-                    style="?attr/materialButtonOutlinedStyle" />
+                    android:scaleType="centerCrop"
+                    android:background="?attr/colorSurfaceContainer"
+                    android:contentDescription="@string/chat_list_background" />
 
-                <Button
-                    android:id="@+id/removeChatListBackground"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/remove_image"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_marginStart="8dp" />
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <ImageButton
+                        android:id="@+id/selectChatListBackground"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_gallery"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="?attr/colorPrimary"
+                        android:contentDescription="@string/select_image" />
+
+                    <ImageButton
+                        android:id="@+id/removeChatListBackground"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:src="@drawable/ic_delete"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="?attr/colorPrimary"
+                        android:contentDescription="@string/remove_image" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -83,35 +95,47 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <ImageView
-                android:id="@+id/chatBackgroundPreview"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:scaleType="centerCrop"
-                android:background="?attr/colorSurfaceContainer"
-                android:contentDescription="@string/chat_background" />
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="12dp">
+                android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/selectChatBackground"
+                <ImageView
+                    android:id="@+id/chatBackgroundPreview"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="140dp"
                     android:layout_weight="1"
-                    android:text="@string/select_image"
-                    style="?attr/materialButtonOutlinedStyle" />
+                    android:scaleType="centerCrop"
+                    android:background="?attr/colorSurfaceContainer"
+                    android:contentDescription="@string/chat_background" />
 
-                <Button
-                    android:id="@+id/removeChatBackground"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/remove_image"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_marginStart="8dp" />
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <ImageButton
+                        android:id="@+id/selectChatBackground"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_gallery"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="?attr/colorPrimary"
+                        android:contentDescription="@string/select_image" />
+
+                    <ImageButton
+                        android:id="@+id/removeChatBackground"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:src="@drawable/ic_delete"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="?attr/colorPrimary"
+                        android:contentDescription="@string/remove_image" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
