@@ -176,7 +176,13 @@ The application connects to Go gRPC server at:
 The project follows semantic versioning (SemVer):
 - **MAJOR.MINOR.PATCH.BUILD** (e.g., 1.0.1.22)
 
-Current version: **1.0.6.32**
+Current version: **1.0.6.33**
+
+### Version 1.0.6.33 - Performance & UX
+- 🚀 **Speed**: Optimized group info with RecyclerView for high-density participant lists.
+- 🎨 **Redesign**: Unified button styles and improved settings layout for groups.
+- 🔍 **Polished Search**: Themed cursors and icons in search results.
+- 🧭 **Quick Info**: Tap on chat title to view profile or group settings.
 
 ### Version 1.0.6.32 - Interactive Updates
 - 📥 **Update Control**: Users can now tap the update indicator to cancel or continue background downloads.

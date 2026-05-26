@@ -624,13 +624,11 @@ class ProfileActivity : AppCompatActivity() {
         
         when (view) {
             is MaterialButton -> {
-                if (view.id == R.id.deleteGroupButton && isGroup) {
-                    // Delete button style
-                    view.setTextColor(android.graphics.Color.WHITE)
-                    view.backgroundTintList = ColorStateList.valueOf("#FF5252".toColorInt())
-                } else {
-                    view.setTextColor(primary)
-                    view.iconTint = ColorStateList.valueOf(primary)
+                view.setTextColor(primary)
+                view.iconTint = ColorStateList.valueOf(primary)
+                // Remove custom background tint for delete button
+                if (view.id == R.id.deleteGroupButton) {
+                    view.backgroundTintList = ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceContainer, android.graphics.Color.LTGRAY))
                 }
             }
             is com.google.android.material.switchmaterial.SwitchMaterial -> {
