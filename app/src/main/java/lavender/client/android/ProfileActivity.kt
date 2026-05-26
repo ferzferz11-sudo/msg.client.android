@@ -39,6 +39,7 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.SelectableUserAdapter
+import lavender.client.android.ui.adapter.ParticipantAdapter
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -75,6 +76,7 @@ class ProfileActivity : AppCompatActivity() {
     private var allowMembersToAdd: Boolean = false
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
+    private var participantsAdapter: ParticipantAdapter? = null
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -223,10 +225,10 @@ class ProfileActivity : AppCompatActivity() {
             val isMeAdmin = currentMe == creator && creator.isNotEmpty()
 
             if (groupSettingsCard != null && switchAllowAdd != null) {
-                groupSettingsCard.isVisible = true
+                groupSettingsCard.isVisible = isMeAdmin
                 setupAllowAddSwitch(switchAllowAdd, roomId, isMeAdmin)
                 
-                groupSettingsCard.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
+                groupSettingsCard.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
                 groupSettingsCard.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
             }
 
@@ -272,68 +274,64 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
-            val participantsContainer = findViewById<LinearLayout>(R.id.participantsContainer)
+            val participantsRecyclerView = findViewById<RecyclerView>(R.id.participantsRecyclerView)
             val addParticipantLayout = findViewById<LinearLayout>(R.id.addParticipantLayout)
             val addParticipantProgress = findViewById<ProgressBar>(R.id.addParticipantProgress)
+            val deleteGroupButton = findViewById<MaterialButton>(R.id.deleteGroupButton)
 
             participantsCard?.isVisible = true
-            participantsContainer?.removeAllViews()
-
-            for (user in currentParticipants) {
-                val userView = layoutInflater.inflate(R.layout.item_participant, participantsContainer, false)
-                val nameText = userView.findViewById<TextView>(R.id.participantName)
-                val avatarView = userView.findViewById<CircleImageView>(R.id.participantAvatar)
-                val statusDot = userView.findViewById<View>(R.id.statusIndicator)
-
-                val trimmedUser = user.trim()
-                val isAdminLabel = if (trimmedUser == creator.trim() && creator.isNotEmpty()) " ${getString(R.string.admin_label)}" else ""
-                nameText?.text = "$trimmedUser$isAdminLabel"
-
-                val isOnline = grpcClient.users.value.contains(user)
-                statusDot?.isVisible = true
-                statusDot?.setBackgroundResource(if (isOnline) R.drawable.status_online_dot else R.drawable.status_offline_dot)
-
-                grpcClient.getUserAvatar(user) { url ->
-                    runOnUiThread {
-                        if (!isFinishing && avatarView != null) {
-                            Glide.with(this).load(url).placeholder(R.drawable.ic_default_avatar).into(avatarView)
-                            avatarView.setOnClickListener {
-                                val fullImageUrl = grpcClient.getFullAvatarUrl(user) ?: url
-                                if (fullImageUrl.isNotEmpty()) {
-                                    showFullScreenImage(fullImageUrl)
-                                }
-                            }
+            
+            if (participantsRecyclerView != null) {
+                if (participantsAdapter == null) {
+                    participantsAdapter = ParticipantAdapter(
+                        theme = currentTheme,
+                        isAdmin = isMeAdmin,
+                        creator = creator,
+                        onRemoveClick = { user ->
+                            showRemoveParticipantDialog(user)
+                        },
+                        onAvatarClick = { user, url ->
+                            val fullImageUrl = grpcClient.getFullAvatarUrl(user) ?: url
+                            if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
+                        },
+                        onLongClick = { user ->
+                            if (isMeAdmin && user != creator) showRemoveParticipantDialog(user)
                         }
-                    }
+                    )
+                    participantsRecyclerView.layoutManager = LinearLayoutManager(this)
+                    participantsRecyclerView.adapter = participantsAdapter
                 }
+                
+                participantsAdapter?.updateData(
+                    currentParticipants, 
+                    grpcClient.users.value.toSet(), 
+                    grpcClient.getAvatarCache()
+                )
 
-                if (isMeAdmin && user != creator) {
-                    userView.setOnLongClickListener {
-                        AlertDialog.Builder(this)
-                            .setTitle(R.string.remove)
-                            .setMessage(getString(R.string.remove_participant_confirm, user))
-                            .setPositiveButton(R.string.remove) { _, _ ->
-                                val progressOverlay = findViewById<View>(R.id.progressOverlay)
-                                progressOverlay?.isVisible = true
-                                grpcClient.removeParticipant(roomId, user) { success, msg ->
-                                    if (success) {
-                                        refreshParticipantsFromServer {
-                                            runOnUiThread { progressOverlay?.isVisible = false }
-                                        }
-                                    } else {
-                                        runOnUiThread {
-                                            progressOverlay?.isVisible = false
-                                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                // Prefetch avatars for participants
+                currentParticipants.forEach { user ->
+                    grpcClient.getUserAvatar(user) { /* cached */ }
+                }
+            }
+
+            deleteGroupButton?.apply {
+                isVisible = isMeAdmin
+                if (isMeAdmin) {
+                    setOnClickListener {
+                        AlertDialog.Builder(this@ProfileActivity)
+                            .setTitle(R.string.delete_group)
+                            .setMessage(R.string.delete_group_confirm)
+                            .setPositiveButton(R.string.delete) { _, _ ->
+                                val intent = Intent(this@ProfileActivity, ChatListActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    putExtra("START_DELETION_ID", roomId)
                                 }
+                                startActivity(intent)
+                                finish()
                             }
                             .setNegativeButton(R.string.cancel, null).show()
-                        true
                     }
                 }
-                participantsContainer?.addView(userView)
-                applyThemeToView(userView, ThemeStore.currentTheme())
             }
 
             ThemeStore.currentTheme().let { theme ->
@@ -360,27 +358,6 @@ class ProfileActivity : AppCompatActivity() {
                 }
             } else {
                 addParticipantLayout?.isVisible = false
-            }
-
-            findViewById<Button>(R.id.editProfileButton)?.apply {
-                text = getString(R.string.delete_group)
-                isVisible = isMeAdmin
-                if (isMeAdmin) {
-                    setOnClickListener {
-                        AlertDialog.Builder(this@ProfileActivity)
-                            .setTitle(R.string.delete_group)
-                            .setMessage(R.string.delete_group_confirm)
-                            .setPositiveButton(R.string.delete) { _, _ ->
-                                val intent = Intent(this@ProfileActivity, ChatListActivity::class.java).apply {
-                                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                    putExtra("START_DELETION_ID", roomId)
-                                }
-                                startActivity(intent)
-                                finish()
-                            }
-                            .setNegativeButton(R.string.cancel, null).show()
-                    }
-                }
             }
         } else {
             // Fetch userId first, then get profile
@@ -448,6 +425,29 @@ class ProfileActivity : AppCompatActivity() {
 
         // Apply global theme to all views
         applyThemeToView(findViewById(android.R.id.content), ThemeStore.currentTheme())
+    }
+
+    private fun showRemoveParticipantDialog(user: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.remove)
+            .setMessage(getString(R.string.remove_participant_confirm, user))
+            .setPositiveButton(R.string.remove) { _, _ ->
+                val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                progressOverlay?.isVisible = true
+                grpcClient.removeParticipant(roomId, user) { success, msg ->
+                    if (success) {
+                        refreshParticipantsFromServer {
+                            runOnUiThread { progressOverlay?.isVisible = false }
+                        }
+                    } else {
+                        runOnUiThread {
+                            progressOverlay?.isVisible = false
+                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun setupAllowAddSwitch(switch: com.google.android.material.switchmaterial.SwitchMaterial, roomId: String, isMeAdmin: Boolean) {
@@ -624,7 +624,7 @@ class ProfileActivity : AppCompatActivity() {
         
         when (view) {
             is MaterialButton -> {
-                if (view.id == R.id.editProfileButton && isGroup) {
+                if (view.id == R.id.deleteGroupButton && isGroup) {
                     // Delete button style
                     view.setTextColor(android.graphics.Color.WHITE)
                     view.backgroundTintList = ColorStateList.valueOf("#FF5252".toColorInt())

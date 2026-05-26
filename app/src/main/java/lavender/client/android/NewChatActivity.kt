@@ -474,7 +474,7 @@ class NewChatActivity : AppCompatActivity() {
         }
 
         toolbarTitle.text = chatName
-        toolbarContent.setOnClickListener {
+        val openProfile = View.OnClickListener {
             val profileUsername = if (isDirect) {
                 try {
                     val arr = JSONArray(participantsJson)
@@ -498,6 +498,10 @@ class NewChatActivity : AppCompatActivity() {
             }
             startActivity(intent)
         }
+        toolbarContent.setOnClickListener(openProfile)
+        toolbarTitle.setOnClickListener(openProfile)
+        toolbarAvatar.setOnClickListener(openProfile)
+        groupParticipantsContainer.setOnClickListener(openProfile)
     }
 
     private fun setToolbarNavigationIcon(iconResId: Int) {
@@ -506,7 +510,7 @@ class NewChatActivity : AppCompatActivity() {
         toolbar.navigationIcon?.let {
             val wrapped = DrawableCompat.wrap(it)
             val theme = ThemeStore.currentTheme()
-            val iconColor = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
+            val iconColor = try { theme.onPrimaryColor.toColorInt() } catch (_: Exception) { ContextCompat.getColor(this, R.color.white) }
             DrawableCompat.setTint(wrapped, iconColor)
             toolbar.navigationIcon = wrapped
         }
@@ -845,9 +849,28 @@ class NewChatActivity : AppCompatActivity() {
         searchBar.isVisible = true; toolbarContent.isVisible = false; setToolbarNavigationIcon(R.drawable.ic_close)
         val theme = ThemeStore.currentTheme()
         try {
-            searchBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            val txt = theme.textPrimaryColor.toColorInt()
-            searchInput.setTextColor(txt); searchInput.setHintTextColor(txt); searchResultsCount.setTextColor(txt)
+            val prim = theme.primaryColor.toColorInt()
+            val onPrim = theme.onPrimaryColor.toColorInt()
+            
+            searchBar.setBackgroundColor(prim)
+            
+            searchInput.setTextColor(onPrim)
+            searchInput.setHintTextColor(ThemeUtils.adjustAlpha(onPrim, 0.6f))
+            searchResultsCount.setTextColor(onPrim)
+            
+            // Cursor and selection
+            searchInput.highlightColor = ThemeUtils.adjustAlpha(onPrim, 0.3f)
+            searchInput.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                setColor(onPrim)
+            }
+
+            // Theme buttons in search bar
+            val tint = ColorStateList.valueOf(onPrim)
+            findViewById<ImageButton>(R.id.searchPrev)?.imageTintList = tint
+            findViewById<ImageButton>(R.id.searchNext)?.imageTintList = tint
+
         } catch (_: Exception) {}
         searchInput.requestFocus()
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(searchInput, 0)
