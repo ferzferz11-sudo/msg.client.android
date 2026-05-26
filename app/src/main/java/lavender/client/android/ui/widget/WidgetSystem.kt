@@ -136,17 +136,39 @@ open class StandardBottomSheet(
                 setSize((2 * context.resources.displayMetrics.density).toInt(), 0)
                 setColor(primaryColor)
             }
-        } else if (view is com.google.android.material.button.MaterialButton) {
-            if (view.id == R.id.btnCancel) {
+        } else if (view is android.widget.Button) { // This covers MaterialButton too
+            view.isAllCaps = false
+            view.transformationMethod = null // Crucial to disable Caps
+            
+            val isCancelType = view.id == R.id.btnCancel || view.id == R.id.btnClose || 
+                             view.id == R.id.btnReset || view.id == android.R.id.button2
+            
+            val isActionType = view.id == R.id.btnJoin || view.id == R.id.btnRegister || 
+                              view.id == R.id.btnLogin || view.id == R.id.btnSave ||
+                              view.id == R.id.actionButton || view.id == R.id.btnUpdate ||
+                              view.id == R.id.btnSend
+            
+            if (isCancelType) {
+                view.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+                if (view is com.google.android.material.button.MaterialButton) {
+                    view.strokeColor = ColorStateList.valueOf(primaryColor)
+                    view.strokeWidth = (1 * context.resources.displayMetrics.density).toInt()
+                    view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primaryColor, 0.1f))
+                }
                 view.setTextColor(primaryColor)
-                view.strokeColor = ColorStateList.valueOf(primaryColor)
-                view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primaryColor, 0.1f))
             } else {
-                view.setBackgroundColor(primaryColor)
-                view.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
-                view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(Color.WHITE, 0.2f))
+                // Main action buttons: 30% transparency = 70% opacity (0.7f)
+                val alpha = if (isActionType) 0.7f else 1.0f
+                view.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primaryColor, alpha))
+                val onP = ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE)
+                view.setTextColor(onP)
+                if (view is com.google.android.material.button.MaterialButton) {
+                    view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onP, 0.2f))
+                    view.strokeWidth = 0
+                }
             }
-        } else if (view is android.widget.ProgressBar) {
+        }
+else if (view is android.widget.ProgressBar) {
             view.indeterminateTintList = ColorStateList.valueOf(primaryColor)
         } else if (view is ImageView && view !is de.hdodenhof.circleimageview.CircleImageView) {
             view.imageTintList = ColorStateList.valueOf(primaryColor)
@@ -204,6 +226,20 @@ open class StandardBottomSheet(
 
     fun dismiss() {
         dialog?.dismiss()
+    }
+}
+
+/**
+ * Bottom Sheet for showing loading state.
+ */
+class LoadingBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) : StandardBottomSheet(context, R.layout.dialog_loading, theme) {
+    fun setMessage(text: CharSequence?): LoadingBottomSheet {
+        root?.findViewById<TextView>(R.id.loading_text)?.text = text
+        return this
+    }
+    
+    init {
+        setCancelable(false)
     }
 }
 

@@ -31,6 +31,9 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
+import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
+
 class SecurityActivity : AppCompatActivity() {
 
     private lateinit var username: String
@@ -240,46 +243,19 @@ class SecurityActivity : AppCompatActivity() {
     }
 
     private fun showDeviceInfoDialog(device: lavender.client.android.data.proto.DeviceInfoProto) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_device_info, null)
-        val theme = ThemeStore.currentTheme()
-        val pColor = theme.primaryColor.toColorInt()
-        val bgColor = theme.backgroundColor.toColorInt()
-        val textColor = theme.textPrimaryColor.toColorInt()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_device_info)
+        sheet.setTitle(getString(R.string.device_details))
 
-        // Theme the view manually for best look
-        dialogView.findViewById<TextView>(R.id.dialogTitle).setTextColor(pColor)
-        dialogView.findViewById<TextView>(R.id.tvDeviceId).apply {
-            text = device.deviceId
-            setTextColor(textColor)
-        }
-        dialogView.findViewById<TextView>(R.id.tvIpAddress).apply {
-            text = device.ipAddress.ifEmpty { "unknown" }
-            setTextColor(textColor)
-        }
-        dialogView.findViewById<TextView>(R.id.tvVersion).apply {
-            text = device.clientVersion.ifEmpty { "unknown" }
-            setTextColor(textColor)
-        }
-        dialogView.findViewById<TextView>(R.id.tvLastActive).apply {
-            text = lavender.client.android.data.proto.ProtoUtils.formatLastSeen(device.lastSeenAt, this@SecurityActivity)
-            setTextColor(textColor)
-        }
+        sheet.findViewById<TextView>(R.id.tvDeviceId)?.text = device.deviceId
+        sheet.findViewById<TextView>(R.id.tvIpAddress)?.text = device.ipAddress.ifEmpty { "unknown" }
+        sheet.findViewById<TextView>(R.id.tvVersion)?.text = device.clientVersion.ifEmpty { "unknown" }
+        sheet.findViewById<TextView>(R.id.tvLastActive)?.text = 
+            lavender.client.android.data.proto.ProtoUtils.formatLastSeen(device.lastSeenAt, this)
 
-        val btnClose = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
-        btnClose.backgroundTintList = android.content.res.ColorStateList.valueOf(pColor)
-        btnClose.setTextColor(theme.onPrimaryColor.toColorInt())
-
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        val btnClose = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnClose)
+        btnClose?.setOnClickListener { sheet.dismiss() }
         
-        // Custom rounded background for dialog
-        val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(
-            floatArrayOf(24f, 24f, 24f, 24f, 24f, 24f, 24f, 24f), null, null
-        ))
-        shape.paint.color = theme.surfaceColor.toColorInt()
-        dialog.window?.setBackgroundDrawable(shape)
-
-        btnClose.setOnClickListener { dialog.dismiss() }
-        dialog.show()
+        sheet.show()
     }
 
     private fun terminateSession(deviceId: String) {

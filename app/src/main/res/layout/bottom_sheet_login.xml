@@ -120,6 +120,7 @@
             style="@style/PrimaryButton"
             android:layout_width="match_parent"
             android:layout_height="56dp"
+            android:textAllCaps="false"
             android:text="@string/join" />
 
         <ProgressBar
@@ -139,6 +140,7 @@
         android:layout_marginBottom="8dp"
         android:text="@string/cancel_dialog"
         android:textSize="16sp"
+        android:textAllCaps="false"
         app:cornerRadius="28dp" />
 
     <TextView

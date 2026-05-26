@@ -4,9 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:layout_margin="16dp"
-    android:background="?attr/colorPrimaryContainer">
+    android:padding="24dp">
 
     <TextView
         android:id="@+id/titleText"
@@ -15,8 +13,8 @@
         android:text="@string/delete_messages_title"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="?attr/colorOnPrimaryContainer"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/messageText"
@@ -57,8 +55,7 @@
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/delete"
-            android:textColor="#FF3B30" />
+            android:text="@string/delete" />
     </LinearLayout>
 
 </LinearLayout>

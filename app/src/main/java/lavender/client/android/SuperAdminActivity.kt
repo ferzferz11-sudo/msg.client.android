@@ -34,6 +34,7 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.SuperAdminAdapter
+import lavender.client.android.ui.widget.StandardBottomSheet
 import java.util.Locale
 
 class SuperAdminActivity : AppCompatActivity() {
@@ -365,128 +366,99 @@ class SuperAdminActivity : AppCompatActivity() {
 
     private fun confirmDeleteSelectedUsers() {
         val count = selectedUsernames.size
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_profile)
-            .setMessage("${getString(R.string.delete_profile)}: $count ${getString(R.string.users)}?")
-            .setPositiveButton(R.string.delete) { _, _ ->
-                val usernames = selectedUsernames.toList()
-                clearSelection()
-                progressOverlay.isVisible = true
-                
-                var deletedCount = 0
-                usernames.forEach { targetUser ->
-                    grpcClient.deleteProfile(targetUser) { _, _ ->
-                        runOnUiThread {
-                            deletedCount++
-                            if (deletedCount == usernames.size) {
-                                loadData()
-                            }
+        val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats) // Reusing delete layout
+        sheet.setTitle(getString(R.string.delete_profile))
+        
+        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+            "${getString(R.string.delete_profile)}: $count ${getString(R.string.users)}?"
+
+        sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
+        sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
+            val usernames = selectedUsernames.toList()
+            clearSelection()
+            progressOverlay.isVisible = true
+            
+            var deletedCount = 0
+            usernames.forEach { targetUser ->
+                grpcClient.deleteProfile(targetUser) { _, _ ->
+                    runOnUiThread {
+                        deletedCount++
+                        if (deletedCount == usernames.size) {
+                            loadData()
                         }
                     }
                 }
             }
-            .setNegativeButton(android.R.string.cancel, null).show()
+            sheet.dismiss()
+        }
+        sheet.show()
     }
 
     private fun confirmDeleteSelectedChats() {
         val count = selectedChatIds.size
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_group)
-            .setMessage("${getString(R.string.delete_group)}: $count ${getString(R.string.chats)}?")
-            .setPositiveButton(R.string.delete) { _, _ ->
-                val chatIds = selectedChatIds.toList()
-                clearSelection()
-                progressOverlay.isVisible = true
-                
-                var deletedCount = 0
-                chatIds.forEach { targetId ->
-                    grpcClient.deleteChat(targetId, username) { _, _ ->
-                        runOnUiThread {
-                            deletedCount++
-                            if (deletedCount == chatIds.size) {
-                                loadData()
-                            }
+        val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats)
+        sheet.setTitle(getString(R.string.delete_group))
+
+        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+            "${getString(R.string.delete_group)}: $count ${getString(R.string.chats)}?"
+
+        sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
+        sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
+            val chatIds = selectedChatIds.toList()
+            clearSelection()
+            progressOverlay.isVisible = true
+            
+            var deletedCount = 0
+            chatIds.forEach { targetId ->
+                grpcClient.deleteChat(targetId, username) { _, _ ->
+                    runOnUiThread {
+                        deletedCount++
+                        if (deletedCount == chatIds.size) {
+                            loadData()
                         }
                     }
                 }
             }
-            .setNegativeButton(android.R.string.cancel, null).show()
+            sheet.dismiss()
+        }
+        sheet.show()
     }
 
     private fun showAdminChangePasswordDialog(targetUser: String) {
-        val theme = ThemeStore.currentTheme()
-        val textColor = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
-        val bgColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
-        val pColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
-
-        val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
-        dialogView.setBackgroundColor(bgColor)
+        val sheet = StandardBottomSheet(this, R.layout.dialog_change_password)
+        sheet.setTitle(getString(R.string.change_password))
         
-        val titleView = dialogView.findViewById<TextView>(R.id.tvTitle)
-        titleView?.setTextColor(textColor)
-        
-        val editNewPw = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editTextNewPassword)
-        val editOldPw = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editTextOldPassword)
-        
-        // Find TextInputLayouts
-        val editNewPwLayout = editNewPw.parent.parent as? com.google.android.material.textfield.TextInputLayout
-        val editOldPwLayout = editOldPw.parent.parent as? com.google.android.material.textfield.TextInputLayout
-        
-        val applyInputTheme = { layout: com.google.android.material.textfield.TextInputLayout?, editText: EditText ->
-            editText.setTextColor(textColor)
-            editText.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
-            editText.textCursorDrawable = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                setSize((2 * resources.displayMetrics.density).toInt(), 0)
-                setColor(pColor)
-            }
-            layout?.apply {
-                boxBackgroundColor = bgColor
-                setBoxStrokeColor(pColor)
-                hintTextColor = ColorStateList.valueOf(pColor)
-                defaultHintTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(textColor, 0.7f))
-                placeholderTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(textColor, 0.5f))
-                setEndIconTintList(ColorStateList.valueOf(pColor))
-            }
-        }
-
-        applyInputTheme(editNewPwLayout, editNewPw)
-        applyInputTheme(editOldPwLayout, editOldPw)
+        val editNewPw = sheet.findViewById<EditText>(R.id.editTextNewPassword)
+        val editOldPw = sheet.findViewById<EditText>(R.id.editTextOldPassword)
         
         // Hide old password field since admin doesn't need it
-        editOldPwLayout?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.editTextOldPassword)?.parent?.parent?.let {
+            if (it is View) it.visibility = View.GONE
+        }
         
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton(R.string.change) { _, _ ->
-                val newPw = editNewPw.text.toString()
-                if (newPw.isEmpty()) {
-                    Toast.makeText(this, R.string.password_empty, Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                
-                progressOverlay.isVisible = true
-                grpcClient.adminUpdatePassword(targetUser, newPw, username) { success, message ->
-                    runOnUiThread {
-                        progressOverlay.isVisible = false
-                        if (success) {
-                            Toast.makeText(this, R.string.password_updated, Toast.LENGTH_SHORT).show()
-                            clearSelection()
-                            updateUI(allUsers, allChats)
-                        } else {
-                            Toast.makeText(this, "Error: $message", Toast.LENGTH_LONG).show()
-                        }
+        sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
+        sheet.findViewById<View>(R.id.btnSave)?.setOnClickListener {
+            val newPw = editNewPw?.text.toString()
+            if (newPw.isEmpty()) {
+                Toast.makeText(this, R.string.password_empty, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            progressOverlay.isVisible = true
+            grpcClient.adminUpdatePassword(targetUser, newPw, username) { success, message ->
+                runOnUiThread {
+                    progressOverlay.isVisible = false
+                    if (success) {
+                        Toast.makeText(this, R.string.password_updated, Toast.LENGTH_SHORT).show()
+                        clearSelection()
+                        updateUI(allUsers, allChats)
+                        sheet.dismiss()
+                    } else {
+                        Toast.makeText(this, "Error: $message", Toast.LENGTH_LONG).show()
                     }
                 }
             }
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(pColor)
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(textColor)
-            dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
         }
-        dialog.show()
+        sheet.show()
     }
 }

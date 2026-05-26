@@ -32,6 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginBottom="12dp"
+        android:textAllCaps="false"
         android:text="@string/login" />
 
     <com.google.android.material.button.MaterialButton
@@ -39,9 +40,8 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="56dp"
+        android:textAllCaps="false"
         android:text="@string/register"
-        app:cornerRadius="28dp"
-        android:textColor="?attr/colorPrimary"
-        app:strokeColor="?attr/colorPrimary" />
+        app:cornerRadius="28dp" />
 
 </LinearLayout>

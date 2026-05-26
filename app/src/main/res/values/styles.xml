@@ -9,6 +9,7 @@
         <item name="backgroundTint">?attr/colorPrimaryContainer</item>
         <item name="cornerRadius">28dp</item>
         <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
     </style>
 
     <!-- Primary button style for landscape layouts (smaller width) -->

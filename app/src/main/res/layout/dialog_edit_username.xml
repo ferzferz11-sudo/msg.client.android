@@ -4,17 +4,18 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="?attr/colorSurfaceContainer">
+    android:padding="24dp">
 
     <TextView
+        android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/change_username"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurface"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="24dp"
+        android:visibility="gone" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/usernameInputLayout"

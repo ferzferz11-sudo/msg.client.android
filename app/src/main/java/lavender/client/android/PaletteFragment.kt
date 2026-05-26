@@ -13,6 +13,8 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
+import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
 
 class PaletteFragment : Fragment() {
 
@@ -70,11 +72,16 @@ class PaletteFragment : Fragment() {
     }
 
     private fun showColorPicker(fieldName: String, currentColor: String) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
-        val colorGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.colorGrid)
-        val hexInput = dialogView.findViewById<android.widget.EditText>(R.id.hexInput)
-        val colorPreview = dialogView.findViewById<View>(R.id.colorPreview)
-        val transparencySlider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.transparencySlider)
+        val sheet = StandardBottomSheet(requireContext(), R.layout.dialog_color_picker)
+        sheet.setTitle(getString(R.string.edit_color))
+
+        val colorGrid = sheet.findViewById<android.widget.GridLayout>(R.id.colorGrid)
+        val hexInput = sheet.findViewById<android.widget.EditText>(R.id.hexInput)
+        val colorPreview = sheet.findViewById<View>(R.id.colorPreview)
+        val transparencySlider = sheet.findViewById<com.google.android.material.slider.Slider>(R.id.transparencySlider)
+        val btnApply = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnApply)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnReset = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnReset)
 
         val presetColors = listOf(
             "#FF0000", "#FF5722", "#FF9800", "#FFC107", "#FFEB3B", "#CDDC39",
@@ -86,49 +93,47 @@ class PaletteFragment : Fragment() {
         presetColors.forEach { colorHex ->
             val colorView = View(requireContext()).apply {
                 layoutParams = android.widget.GridLayout.LayoutParams().apply {
-                    width = 60
-                    height = 60
+                    width = (40 * resources.displayMetrics.density).toInt()
+                    height = (40 * resources.displayMetrics.density).toInt()
                     setMargins(8, 8, 8, 8)
                 }
                 setBackgroundColor(Color.parseColor(colorHex))
                 setOnClickListener {
-                    val currentAlpha = transparencySlider.value.toInt()
+                    val currentAlpha = transparencySlider?.value?.toInt() ?: 255
                     val newHex = if (currentAlpha < 255) {
                         String.format("#%02X%s", currentAlpha, colorHex.removePrefix("#"))
                     } else {
                         colorHex
                     }
-                    hexInput.setText(newHex.uppercase())
+                    hexInput?.setText(newHex.uppercase())
                 }
             }
-            colorGrid.addView(colorView)
+            colorGrid?.addView(colorView)
         }
 
-        hexInput.setText(currentColor.uppercase())
+        hexInput?.setText(currentColor.uppercase())
         
-        // Initial alpha from currentColor
         val initialAlpha = try {
             val c = Color.parseColor(currentColor)
             Color.alpha(c)
         } catch (_: Exception) { 255 }
-        transparencySlider.value = initialAlpha.toFloat()
+        transparencySlider?.value = initialAlpha.toFloat()
 
         fun updatePreviewFromInput() {
-            val hex = hexInput.text.toString().trim()
+            val hex = hexInput?.text.toString().trim()
             if (isValidHexColor(hex)) {
                 try {
                     val color = Color.parseColor(hex)
-                    colorPreview.setBackgroundColor(color)
-                    // Update slider if not currently dragging
+                    colorPreview?.setBackgroundColor(color)
                     val alpha = Color.alpha(color)
-                    if (transparencySlider.value.toInt() != alpha) {
-                        transparencySlider.value = alpha.toFloat()
+                    if (transparencySlider?.value?.toInt() != alpha) {
+                        transparencySlider?.value = alpha.toFloat()
                     }
                 } catch (_: Exception) {}
             }
         }
 
-        hexInput.addTextChangedListener(object : android.text.TextWatcher {
+        hexInput?.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
@@ -136,9 +141,9 @@ class PaletteFragment : Fragment() {
             }
         })
 
-        transparencySlider.addOnChangeListener { _, value, fromUser ->
+        transparencySlider?.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
-                val hex = hexInput.text.toString().trim()
+                val hex = hexInput?.text.toString().trim()
                 if (isValidHexColor(hex)) {
                     val alpha = value.toInt()
                     val color = Color.parseColor(hex)
@@ -146,32 +151,33 @@ class PaletteFragment : Fragment() {
                     val g = Color.green(color)
                     val b = Color.blue(color)
                     val newHex = String.format("#%02X%02X%02X%02X", alpha, r, g, b)
-                    hexInput.setText(newHex)
+                    hexInput?.setText(newHex)
                 }
             }
         }
 
-        // Initialize preview immediately
         updatePreviewFromInput()
 
-        AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.edit_color))
-            .setView(dialogView)
-            .setPositiveButton(R.string.yes) { _, _ ->
-                val hex = hexInput.text.toString().trim().uppercase()
-                if (isValidHexColor(hex)) {
-                    callback?.onColorChanged(fieldName, hex)
-                } else {
-                    android.widget.Toast.makeText(requireContext(), R.string.invalid_hex, android.widget.Toast.LENGTH_SHORT).show()
-                }
+        btnApply?.setOnClickListener {
+            val hex = hexInput?.text.toString().trim().uppercase()
+            if (isValidHexColor(hex)) {
+                callback?.onColorChanged(fieldName, hex)
+                sheet.dismiss()
+            } else {
+                android.widget.Toast.makeText(requireContext(), R.string.invalid_hex, android.widget.Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .setNeutralButton(getString(R.string.reset_color)) { _, _ ->
-                val defaultColors = callback?.getDefaultColors() ?: return@setNeutralButton
-                val defaultColor = defaultColors[fieldName] ?: return@setNeutralButton
-                callback?.onColorChanged(fieldName, defaultColor)
-            }
-            .show()
+        }
+
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+
+        btnReset?.setOnClickListener {
+            val defaultColors = callback?.getDefaultColors() ?: return@setOnClickListener
+            val defaultColor = defaultColors[fieldName] ?: return@setOnClickListener
+            callback?.onColorChanged(fieldName, defaultColor)
+            sheet.dismiss()
+        }
+
+        sheet.show()
     }
 
     private fun isValidHexColor(hex: String): Boolean {

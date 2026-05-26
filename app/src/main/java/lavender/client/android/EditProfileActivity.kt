@@ -46,6 +46,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 
+import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.ui.widget.WidgetManager
+
 class EditProfileActivity : AppCompatActivity() {
 
     private val grpcClient = GrpcClient
@@ -431,36 +434,30 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun showChangeUsernameDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_username, null)
-        val editNewUsername = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
-        val btnCancel = dialogView.findViewById<MaterialButton>(R.id.btnCancel)
-        val btnSave = dialogView.findViewById<MaterialButton>(R.id.btnSave)
+        val sheet = StandardBottomSheet(this, R.layout.dialog_edit_username)
+        val editNewUsername = sheet.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editNewUsername)
+        val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnSave = sheet.findViewById<MaterialButton>(R.id.btnSave)
 
-        editNewUsername.setText(username)
-        editNewUsername.requestFocus()
+        sheet.setTitle(getString(R.string.change_username))
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
+        editNewUsername?.setText(username)
+        editNewUsername?.requestFocus()
 
-        // Ensure keyboard shows up
-        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        btnCancel?.setOnClickListener { sheet.dismiss() }
 
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnSave.setOnClickListener {
-            val newUsername = editNewUsername.text.toString().trim()
+        btnSave?.setOnClickListener {
+            val newUsername = editNewUsername?.text.toString().trim()
             if (newUsername.isEmpty()) {
                 Toast.makeText(this, getString(R.string.username_empty), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (newUsername == username) {
-                dialog.dismiss()
+                sheet.dismiss()
                 return@setOnClickListener
             }
 
-            // Show loading state if we had a progress bar, but for now just disable button
             btnSave.isEnabled = false
 
             grpcClient.updateUsername(username, newUsername) { success, message ->
@@ -469,7 +466,6 @@ class EditProfileActivity : AppCompatActivity() {
                     if (success) {
                         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                         
-                        // Update local identity
                         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                         prefs.edit {
                             putString("saved_username", newUsername)
@@ -478,7 +474,7 @@ class EditProfileActivity : AppCompatActivity() {
                         
                         SessionManager.updateSession(username = newUsername)
                         username = newUsername
-                        dialog.dismiss()
+                        sheet.dismiss()
                         
                         setResult(RESULT_OK)
                         finish() 
@@ -489,62 +485,43 @@ class EditProfileActivity : AppCompatActivity() {
             }
         }
 
-        dialog.show()
+        sheet.show()
     }
 
     private fun showChangePasswordDialog() {
-        val theme = ThemeStore.currentTheme()
-        val textColor = try { theme.textPrimaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.WHITE }
-        val bgColor = try { theme.surfaceColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLACK }
-        val pColor = try { theme.primaryColor.toColorInt() } catch (_: Exception) { android.graphics.Color.BLUE }
-
-        val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
-        dialogView.setBackgroundColor(bgColor)
+        val sheet = StandardBottomSheet(this, R.layout.dialog_change_password)
+        sheet.setTitle(getString(R.string.change_password))
         
-        val titleView = dialogView.findViewById<TextView>(R.id.tvTitle)
-        titleView?.setTextColor(textColor)
-        
-        val oldPassword = dialogView.findViewById<EditText>(R.id.editTextOldPassword)
-        val newPassword = dialogView.findViewById<EditText>(R.id.editTextNewPassword)
+        val oldPassword = sheet.findViewById<EditText>(R.id.editTextOldPassword)
+        val newPassword = sheet.findViewById<EditText>(R.id.editTextNewPassword)
+        val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnSave = sheet.findViewById<MaterialButton>(R.id.btnSave)
 
-        oldPassword.setTextColor(textColor)
-        oldPassword.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
-        newPassword.setTextColor(textColor)
-        newPassword.setHintTextColor(ThemeUtils.adjustAlpha(textColor, 0.6f))
+        btnCancel?.setOnClickListener { sheet.dismiss() }
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton(R.string.change, null) // Listener set later to prevent auto-dismiss on error
-            .setNegativeButton(R.string.cancel_dialog, null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(pColor)
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(textColor)
-            dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
-
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val oldPass = oldPassword.text.toString().trim()
-                val newPass = newPassword.text.toString().trim()
-                
-                if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
-                    grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
-                        runOnUiThread {
-                            if (success) {
-                                Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_SHORT).show()
-                                password = newPass
-                                dialog.dismiss()
-                            } else {
-                                Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
-                            }
+        btnSave?.setOnClickListener {
+            val oldPass = oldPassword?.text.toString().trim()
+            val newPass = newPassword?.text.toString().trim()
+            
+            if (oldPass.isNotEmpty() && newPass.isNotEmpty()) {
+                btnSave.isEnabled = false
+                grpcClient.updatePassword(username, oldPass, newPass) { success, message ->
+                    runOnUiThread {
+                        btnSave.isEnabled = true
+                        if (success) {
+                            Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_SHORT).show()
+                            password = newPass
+                            sheet.dismiss()
+                        } else {
+                            Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
                         }
                     }
-                } else {
-                    Toast.makeText(this@EditProfileActivity, "Введите оба пароля", Toast.LENGTH_SHORT).show()
                 }
+            } else {
+                Toast.makeText(this@EditProfileActivity, "Введите оба пароля", Toast.LENGTH_SHORT).show()
             }
         }
 
-        dialog.show()
+        sheet.show()
     }
 }

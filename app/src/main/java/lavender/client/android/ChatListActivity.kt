@@ -567,46 +567,47 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun confirmDeleteSelectedChats(selected: List<ChatInfo>) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_chats)
-            .setMessage(getString(R.string.delete_chats_confirmation, selected.size))
-            .setPositiveButton(R.string.delete) { _, _ ->
-                var completedCount = 0
-                val totalToDelete = selected.size
+        val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats)
+        sheet.setTitle(getString(R.string.delete_chats))
+
+        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+            getString(R.string.delete_chats_confirmation, selected.size)
+
+        sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
+        sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
+            var completedCount = 0
+            val totalToDelete = selected.size
+            
+            selected.forEach { chat ->
+                pendingDeletions.add(chat.id)
+                chatAdapter.setChatDeleting(chat.id, true)
                 
-                selected.forEach { chat ->
-                    // Show immediate feedback
-                    pendingDeletions.add(chat.id)
-                    chatAdapter.setChatDeleting(chat.id, true)
-                    
-                    grpcClient.deleteChat(chat.id, username) { success, _ ->
-                        runOnUiThread {
-                            completedCount++
-                            if (success) {
-                                // Optimistically remove from local list
-                                chats.removeAll { it.id == chat.id }
-                            } else {
-                                pendingDeletions.remove(chat.id)
-                                chatAdapter.setChatDeleting(chat.id, false)
-                            }
+                grpcClient.deleteChat(chat.id, username) { success, _ ->
+                    runOnUiThread {
+                        completedCount++
+                        if (success) {
+                            chats.removeAll { it.id == chat.id }
+                        } else {
+                            pendingDeletions.remove(chat.id)
+                            chatAdapter.setChatDeleting(chat.id, false)
+                        }
+                        
+                        if (completedCount == totalToDelete) {
+                            chatAdapter.clearSelection()
+                            chatAdapter.setChats(chats.toList())
+                            updateAppIconBadge(chats.sumOf { it.unreadCount })
                             
-                            if (completedCount == totalToDelete) {
-                                chatAdapter.clearSelection()
-                                chatAdapter.setChats(chats.toList())
-                                updateAppIconBadge(chats.sumOf { it.unreadCount })
-                                
-                                // Delayed full refresh to ensure server is in sync
-                                lifecycleScope.launch {
-                                    delay(1000)
-                                    loadChats()
-                                }
+                            lifecycleScope.launch {
+                                delay(1000)
+                                loadChats()
                             }
                         }
                     }
                 }
             }
-            .setNegativeButton(R.string.cancel_dialog, null)
-            .show()
+            sheet.dismiss()
+        }
+        sheet.show()
     }
 
     private fun toggleMuteSelectedChats(selected: List<ChatInfo>) {

@@ -912,17 +912,20 @@ class NewChatActivity : AppCompatActivity() {
     private fun replyToSelectedMessage() { val sm = adapter.getSelectedMessages(); if (sm.size == 1) { showReplyPreview(sm[0]); hideSelectionToolbar() } }
 
     private fun deleteSelectedMessages() {
-        val sm = adapter.getSelectedMessages(); val view = layoutInflater.inflate(R.layout.dialog_delete_messages, null)
-        val tt = view.findViewById<TextView>(R.id.titleText); val mt = view.findViewById<TextView>(R.id.messageText)
-        val cn = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel); val dl = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete)
-        mt.text = getString(R.string.delete_messages_confirm, sm.size); val theme = ThemeStore.currentTheme()
-        try {
-            val op = theme.textPrimaryColor.toColorInt(); tt.setTextColor(op); mt.setTextColor(op); cn.setTextColor(op)
-            val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null))
-            shape.paint.color = theme.surfaceColor.toColorInt(); view.background = shape
-        } catch (_: Exception) {}
-        val d = AlertDialog.Builder(this).setView(view).create(); d.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        cn.setOnClickListener { d.dismiss() }; dl.setOnClickListener { sm.forEach { grpcClient.deleteMessage(it) }; hideSelectionToolbar(); d.dismiss() }; d.show()
+        val sm = adapter.getSelectedMessages()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_delete_messages)
+        sheet.setTitle(getString(R.string.delete_messages_title))
+
+        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+            getString(R.string.delete_messages_confirm, sm.size)
+
+        sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
+        sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
+            sm.forEach { grpcClient.deleteMessage(it) }
+            hideSelectionToolbar()
+            sheet.dismiss()
+        }
+        sheet.show()
     }
 
     private fun forwardSelectedMessages() {
@@ -977,27 +980,78 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun showReactionsDialog(m: Message) {
-        val root = findViewById<ViewGroup>(android.R.id.content); val v = layoutInflater.inflate(R.layout.dialog_reactions, root, false); val d = AlertDialog.Builder(this).setView(v).create(); val theme = ThemeStore.currentTheme()
-        try {
-            val bg = theme.backgroundColor.toColorInt(); val txt = theme.textPrimaryColor.toColorInt(); val s = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(18f, 18f, 18f, 18f, 18f, 18f, 18f, 18f), null, null))
-            s.paint.color = bg; v.background = s; val count = (v as? LinearLayout)?.childCount ?: 0
-            for (i in 0 until count) { val c = (v as LinearLayout).getChildAt(i); if (c is LinearLayout) for (j in 0 until c.childCount) { val sc = c.getChildAt(j); if (sc is TextView) sc.setTextColor(txt); if (sc is ImageView) sc.setColorFilter(txt) } }
-        } catch (_: Exception) {}
-        val container = v.findViewById<LinearLayout>(R.id.reactionsContainer); listOf("👍", "💯", "🔥", "✅", "❤️", "😂", "😮", "😢", "🙏").forEach { e -> val tv = TextView(this).apply { text = e; textSize = 30f; setPadding(16, 8, 16, 8); val v2 = TypedValue(); this@NewChatActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true); setBackgroundResource(v2.resourceId); setOnClickListener { grpcClient.setReaction(m.id, username, e); d.dismiss() } }; container.addView(tv) }
-        v.findViewById<LinearLayout>(R.id.menuReply).setOnClickListener { d.dismiss(); showReplyPreview(m) }; v.findViewById<LinearLayout>(R.id.menuCopy).setOnClickListener { d.dismiss(); (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", m.text)); showToast(getString(R.string.copied_to_clipboard)) }
-        val edit = v.findViewById<LinearLayout>(R.id.menuEdit); if (m.user == username) { edit.isVisible = true; edit.setOnClickListener { d.dismiss(); showEditMessageDialog(m) } } else edit.isVisible = false
-        v.findViewById<LinearLayout>(R.id.menuDelete).setOnClickListener { d.dismiss(); grpcClient.deleteMessage(m) }; d.window?.setBackgroundDrawableResource(android.R.color.transparent); d.show()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_reactions)
+        val container = sheet.findViewById<LinearLayout>(R.id.reactionsContainer)
+        
+        listOf("👍", "💯", "🔥", "✅", "❤️", "😂", "😮", "😢", "🙏").forEach { e ->
+            val tv = TextView(this).apply {
+                text = e
+                textSize = 30f
+                setPadding(16, 8, 16, 8)
+                val v2 = TypedValue()
+                this@NewChatActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true)
+                setBackgroundResource(v2.resourceId)
+                setOnClickListener {
+                    grpcClient.setReaction(m.id, username, e)
+                    sheet.dismiss()
+                }
+            }
+            container?.addView(tv)
+        }
+
+        sheet.findViewById<View>(R.id.menuReply)?.setOnClickListener { 
+            sheet.dismiss()
+            showReplyPreview(m) 
+        }
+        
+        sheet.findViewById<View>(R.id.menuCopy)?.setOnClickListener { 
+            sheet.dismiss()
+            (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("message", m.text))
+            showToast(getString(R.string.copied_to_clipboard))
+        }
+        
+        val edit = sheet.findViewById<View>(R.id.menuEdit)
+        if (m.user == username) {
+            edit?.isVisible = true
+            edit?.setOnClickListener { 
+                sheet.dismiss()
+                showEditMessageDialog(m) 
+            }
+        } else {
+            edit?.isVisible = false
+        }
+        
+        sheet.findViewById<View>(R.id.menuDelete)?.setOnClickListener { 
+            sheet.dismiss()
+            grpcClient.deleteMessage(m) 
+        }
+        
+        sheet.show()
     }
 
     private fun showEditMessageDialog(m: Message) {
-        val v = layoutInflater.inflate(R.layout.dialog_edit_message, null); val edit = v.findViewById<EditText>(R.id.editMessageInput); val input = v.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.editMessageInputLayout); val cancel = v.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel); val save = v.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave)
-        edit.setText(m.text); edit.setSelection(m.text.length); val theme = ThemeStore.currentTheme(); val isLight = ThemeUtils.isLight(theme.backgroundColor.toColorInt())
-        try {
-            val text = theme.textPrimaryColor.toColorInt(); val bg = theme.backgroundColor.toColorInt(); val prim = theme.primaryColor.toColorInt(); val onP = theme.onPrimaryColor.toColorInt()
-            edit.setTextColor(text); edit.setHintTextColor(ThemeUtils.adjustAlpha(text, 0.6f)); input.boxBackgroundColor = bg; input.setBoxStrokeColor(prim); input.hintTextColor = ColorStateList.valueOf(prim); input.defaultHintTextColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(text, 0.7f)); cancel.setTextColor(prim); save.setBackgroundColor(prim); save.setTextColor(onP)
-            val shape = android.graphics.drawable.ShapeDrawable(android.graphics.drawable.shapes.RoundRectShape(floatArrayOf(28f, 28f, 28f, 28f, 28f, 28f, 28f, 28f), null, null)); shape.paint.color = bg; v.background = shape
-        } catch (_: Exception) {}
-        val d = if (isLight) AlertDialog.Builder(this) else AlertDialog.Builder(this, com.google.android.material.R.style.Theme_Material3_Dark_Dialog_Alert); d.setView(v).create().apply { window?.setBackgroundDrawableResource(android.R.color.transparent); cancel.setOnClickListener { dismiss() }; save.setOnClickListener { val nt = edit.text.toString().trim(); if (nt.isNotEmpty() && nt != m.text) grpcClient.editMessage(m.id, nt) { s, msg -> if (!s) runOnUiThread { showToast(msg) } }; dismiss() }; show() }
+        val sheet = StandardBottomSheet(this, R.layout.dialog_edit_message)
+        sheet.setTitle(getString(R.string.edit_message))
+        
+        val edit = sheet.findViewById<EditText>(R.id.editMessageInput)
+        val cancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val save = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave)
+
+        edit?.setText(m.text)
+        edit?.setSelection(m.text.length)
+        edit?.requestFocus()
+
+        cancel?.setOnClickListener { sheet.dismiss() }
+        save?.setOnClickListener {
+            val nt = edit?.text.toString().trim()
+            if (nt.isNotEmpty() && nt != m.text) {
+                grpcClient.editMessage(m.id, nt) { s, msg ->
+                    if (!s) runOnUiThread { showToast(msg) }
+                }
+            }
+            sheet.dismiss()
+        }
+        sheet.show()
     }
 
     private fun showAudioRecordingView() {
