@@ -18,6 +18,16 @@
     <string name="attach_gallery">Gallery</string>
     <string name="attach_file_label">File</string>
     <string name="attach_location">Location</string>
+
+    <!-- Secret Chat (E2EE) -->
+    <string name="secret_chat">Secret Chat</string>
+    <string name="e2ee_enabled">🔒 E2EE</string>
+    <string name="e2ee_pending">🔒 Key exchange…</string>
+    <string name="e2ee_verified">🔒 End-to-end encrypted</string>
+    <string name="e2ee_not_ready">Waiting for peer to connect…</string>
+    <string name="key_exchange_failed">Key exchange failed</string>
+    <string name="verify_identity">Verify Identity</string>
+    <string name="fingerprint_label">Fingerprint:</string>
     <string name="record_audio">Record audio</string>
     <string name="attach_file">Attach file</string>
 

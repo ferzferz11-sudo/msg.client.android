@@ -158,8 +158,10 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var searchResultsCount: TextView
     private lateinit var btnLobby: ImageView
 
+    private var isSecret = false
+    private var secretKeyExchanged = false
+
     private lateinit var adapter: MessageAdapter
-    
     private var searchResults = listOf<Int>()
     private var currentSearchIndex = -1
 
@@ -411,6 +413,12 @@ class NewChatActivity : AppCompatActivity() {
         intent.getStringExtra("CREATOR")?.let { creator = it }
         intent.getStringExtra("AVATAR_URL")?.let { chatAvatarUrl = it }
         intent.getStringExtra("FULL_AVATAR_URL")?.let { chatFullAvatarUrl = it }
+
+        // Secret chat handling
+        isSecret = intent.getStringExtra("IS_SECRET") == "true"
+        if (isSecret) {
+            chatType = "secret"
+        }
     }
 
     private fun setupToolbar() {
@@ -431,7 +439,24 @@ class NewChatActivity : AppCompatActivity() {
             }
         }
 
-        if (roomId.startsWith("favorites_")) {
+        // Secret chat indicator and E2EE setup
+        if (isSecret) {
+            toolbarAvatar.isVisible = true
+            groupParticipantsContainer.isVisible = false
+            toolbarAvatar.setImageResource(R.drawable.ic_lock)
+            val secretTheme = ThemeStore.currentTheme()
+            toolbarAvatar.imageTintList = ColorStateList.valueOf(secretTheme.primaryColor.toColorInt())
+            val secretBg = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(secretTheme.surfaceContainer.toColorInt())
+            }
+            toolbarAvatar.background = secretBg
+            val secretPad = 8.dpToPx()
+            toolbarAvatar.setPadding(secretPad, secretPad, secretPad, secretPad)
+            toolbarSubtitle.text = getString(R.string.e2ee_enabled)
+            toolbarSubtitle.setTextColor(secretTheme.primaryColor.toColorInt())
+            initE2EE()
+        } else if (roomId.startsWith("favorites_")) {
             toolbarAvatar.isVisible = true; groupParticipantsContainer.isVisible = false
             toolbarAvatar.setImageResource(R.drawable.ic_star)
             clearCacheForCurrentRoom()
@@ -1278,4 +1303,64 @@ class NewChatActivity : AppCompatActivity() {
 
     override fun onResume() { super.onResume(); ThemeStore.refresh(this, username); lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false; if (grpcClient.shouldForceReconnect()) { val sa = intent.getStringExtra("SERVER_ADDRESS") ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", ""); if (!sa.isNullOrEmpty()) { val p = sa.split(":"); grpcClient.connect(p[0], false, p.getOrNull(1)?.toIntOrNull() ?: 50051, this, true) } }; fetchChatMetadataIfNeeded() }
     override fun onPause() { super.onPause(); lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true; if (isTypingSignalSent) { isTypingSignalSent = false; grpcClient.sendTypingSignal(username, false) }; saveDraft() }
+
+    // ======= E2EE Methods =======
+
+    private fun initE2EE() {
+        if (!isSecret) return
+        val publicKey = lavender.client.android.data.crypto.E2EEManager.getPublicKeyBase64(this)
+        grpcClient.exchangeSecretKey(roomId, publicKey) { success, peerKey, peerHasKey ->
+            runOnUiThread {
+                if (success && peerHasKey && peerKey.isNotEmpty()) {
+                    // Derive shared secret
+                    lavender.client.android.data.crypto.E2EEManager.deriveAndStoreSharedSecret(this, roomId, peerKey)
+                    secretKeyExchanged = true
+                    toolbarSubtitle.text = getString(R.string.e2ee_verified)
+                    android.util.Log.d("E2EE", "Key exchange complete for chat: $roomId")
+                } else {
+                    toolbarSubtitle.text = getString(R.string.e2ee_pending)
+                    // Retry key exchange after delay
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ initE2EE() }, 3000)
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle incoming E2EE message from the chat stream.
+     * Called from RealGrpcClient message handler when isE2ee flag is set.
+     */
+    fun handleIncomingE2EEMessage(msg: lavender.client.android.data.models.Message) {
+        if (!msg.isE2EE || msg.e2eePayload.isEmpty()) return
+        val decrypted = lavender.client.android.data.crypto.E2EEManager.decryptMessage(this, roomId, msg.e2eePayload)
+        if (decrypted != null) {
+            val decryptedMsg = msg.copy(text = decrypted, isE2EE = false)
+            // Add to message list
+            runOnUiThread {
+                val current = grpcClient.messages.value.toMutableList()
+                current.add(decryptedMsg)
+                // Update via ViewModel
+            }
+        }
+    }
+
+    /**
+     * Send an E2EE-encrypted message.
+     */
+    private fun sendE2EEMessage(plainText: String) {
+        if (!isSecret) {
+            // Fallback to normal send
+            return
+        }
+        if (!secretKeyExchanged) {
+            showToast(getString(R.string.e2ee_not_ready))
+            return
+        }
+        val encrypted = lavender.client.android.data.crypto.E2EEManager.encryptMessage(this, roomId, plainText)
+        if (encrypted != null) {
+            grpcClient.sendE2EEMessage(roomId, encrypted)
+        } else {
+            showToast("E2EE encryption failed")
+        }
+    }
 }

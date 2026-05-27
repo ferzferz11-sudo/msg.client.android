@@ -24,7 +24,9 @@ data class Message(
     val voiceUrl: String = "",
     val duration: Int = 0,
     val userId: String = "",
-    val isSent: Boolean = true // Messages from server are always sent
+    val isSent: Boolean = true, // Messages from server are always sent
+    val isE2EE: Boolean = false, // E2EE-encrypted message
+    val e2eePayload: String = "" // Base64-encoded encrypted data
 )
 
 data class ChatInfo(
@@ -43,7 +45,10 @@ data class ChatInfo(
     val isMuted: Boolean = false,
     val lastMessageHasImage: Boolean = false,
     val allowMembersToAdd: Boolean = false,
-    val conferenceStartTime: Long = 0
+    val conferenceStartTime: Long = 0,
+    val isSecret: Boolean = false,      // E2EE secret chat
+    val peerPublicKey: String = "",     // Base64 peer public key
+    val e2eeReady: Boolean = false      // Both keys exchanged
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (type != "direct") return name

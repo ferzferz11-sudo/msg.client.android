@@ -10,4 +10,5 @@
     <item name="actionContinueUpdate" type="id" />
     <item name="actionCancelUpdate" type="id" />
     <item name="actionCreateConference" type="id" />
+    <item name="actionCreateSecretChat" type="id" />
 </resources>
