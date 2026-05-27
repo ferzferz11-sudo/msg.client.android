@@ -97,6 +97,22 @@
             android:textStyle="bold"
             android:visibility="gone" />
 
+        <ImageView
+            android:id="@+id/btnEnterLobby"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_groups_2"
+            android:background="@drawable/circle_button"
+            android:backgroundTint="?attr/colorPrimary"
+            app:tint="?attr/colorOnPrimary"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/conference" />
+
         <ProgressBar
             android:id="@+id/deleteProgressBar"
             style="?android:attr/progressBarStyleSmall"

@@ -512,4 +512,6 @@
     <string name="cancel_update">Отменить загрузку</string>
     <string name="update_cancelled">Загрузка отменена</string>
     <string name="continue_label">Продолжить</string>
+    <string name="discuss_in_chat">Обсудить в чате</string>
+    <string name="reject_conference">Отказаться</string>
 </resources>

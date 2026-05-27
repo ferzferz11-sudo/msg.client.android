@@ -9,4 +9,5 @@
     <item name="attachLocation" type="id" />
     <item name="actionContinueUpdate" type="id" />
     <item name="actionCancelUpdate" type="id" />
+    <item name="actionCreateConference" type="id" />
 </resources>

@@ -257,9 +257,19 @@ class ChatListActivity : AppCompatActivity() {
                     putExtra("CHAT_NAME", chat.name)
                     putExtra("ROOM_ID", chat.id)
                     putExtra("IS_DIRECT", chat.type == "direct")
+                    putExtra("CHAT_TYPE", chat.type)
                     putExtra("PARTICIPANTS", chat.participants)
                     putExtra("AVATAR_URL", chat.avatarUrl)
                     putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
+                    putExtra("CREATOR", chat.creator)
+                }
+                startActivity(intent)
+            },
+            onEnterLobbyClick = { chat ->
+                val intent = Intent(this, ConferenceLobbyActivity::class.java).apply {
+                    putExtra("ROOM_ID", chat.id)
+                    putExtra("CHAT_NAME", chat.name)
+                    putExtra("PARTICIPANTS", chat.participants)
                     putExtra("CREATOR", chat.creator)
                 }
                 startActivity(intent)
@@ -1823,8 +1833,74 @@ class ChatListActivity : AppCompatActivity() {
                 },
                 SheetAction(R.id.actionCreateChat, R.drawable.ic_play_arrow, getString(R.string.start_chat)) {
                     showCreateChatDialog()
+                },
+                SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
+                    showCreateConferenceDialog()
                 }
             )).show()
+    }
+
+    private fun showCreateConferenceDialog() {
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.conference))
+            .setActionButtonText(getString(R.string.create))
+            .setExtraInputVisible(true, getString(R.string.edit_topic))
+            .setLoading(true)
+
+        val userAdapter = UserAdapter(
+            lifecycleScope,
+            onUserClick = { selected ->
+                (sheet.recyclerView?.adapter as? UserAdapter)?.toggleSelection(selected)
+            },
+            onSelectionChanged = { count ->
+                sheet.setActionButtonEnabled(count > 0)
+                sheet.setActionButtonText(if (count > 0) "${getString(R.string.create)} ($count)" else getString(R.string.create))
+            },
+            avatarCache = grpcClient.getAvatarCache(),
+            onlineUsers = grpcClient.users.value
+        )
+
+        sheet.setAdapter(userAdapter)
+
+        grpcClient.getContacts(username) { list ->
+            runOnUiThread { 
+                sheet.setLoading(false)
+                userAdapter.setUsers(list) 
+            }
+        }
+
+        sheet.onSearchTextChanged { query ->
+            userAdapter.filter(query)
+        }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+
+            val topic = sheet.extraEditText?.text.toString().trim().ifEmpty { 
+                val sdf = java.text.SimpleDateFormat("dd.MM", java.util.Locale.getDefault())
+                getString(R.string.new_conference_format, sdf.format(java.util.Date()))
+            }
+            
+            val participants = selected + username
+            grpcClient.createGroupChat(topic, participants, username, "conference") { chatId ->
+                if (chatId != null) runOnUiThread {
+                    val intent = Intent(this, NewChatActivity::class.java).apply {
+                        putExtra("USERNAME", username)
+                        putExtra("PASSWORD", password)
+                        putExtra("ROOM_ID", chatId)
+                        putExtra("CHAT_NAME", topic)
+                        putExtra("CHAT_TYPE", "conference")
+                        putExtra("PARTICIPANTS", org.json.JSONArray(participants).toString())
+                        putExtra("CREATOR", username)
+                    }
+                    startActivity(intent)
+                    sheet.dismiss()
+                    loadChats(skipCache = true)
+                }
+            }
+        }
+        sheet.show()
     }
 
     private fun showCreateChatDialog() {

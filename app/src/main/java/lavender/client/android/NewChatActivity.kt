@@ -107,6 +107,7 @@ class NewChatActivity : AppCompatActivity() {
     private var roomId = ""
     private var chatName = ""
     private var isDirect = false
+    private var chatType = "group"
     private var participantsJson = "[]"
     private var creator = ""
     private var chatAvatarUrl = ""
@@ -155,6 +156,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var searchNext: ImageButton
     private lateinit var searchPrev: ImageButton
     private lateinit var searchResultsCount: TextView
+    private lateinit var btnLobby: ImageView
 
     private lateinit var adapter: MessageAdapter
     
@@ -317,6 +319,7 @@ class NewChatActivity : AppCompatActivity() {
                 if (chat != null) runOnUiThread {
                     chatName = chat.getDisplayName(username)
                     isDirect = chat.type == "direct"
+                    chatType = chat.type
                     participantsJson = chat.participants
                     creator = chat.creator
                     chatAvatarUrl = chat.avatarUrl
@@ -360,6 +363,7 @@ class NewChatActivity : AppCompatActivity() {
         mentionList.layoutManager = LinearLayoutManager(this); mentionList.adapter = mentionAdapter
         searchBar = findViewById(R.id.searchBar); searchInput = findViewById(R.id.searchInput)
         searchNext = findViewById(R.id.searchNext); searchPrev = findViewById(R.id.searchPrev); searchResultsCount = findViewById(R.id.searchResultsCount)
+        btnLobby = findViewById(R.id.btnLobby)
         imagePreviewScroll = findViewById(R.id.imagePreviewScroll); imagePreviewContainer = findViewById(R.id.imagePreviewContainer)
         historyLoadingProgress = findViewById(R.id.historyLoadingProgress)
         audioButton.isVisible = true
@@ -402,6 +406,7 @@ class NewChatActivity : AppCompatActivity() {
 
         intent.getStringExtra("CHAT_NAME")?.let { chatName = it }
         isDirect = intent.getBooleanExtra("IS_DIRECT", isDirect)
+        chatType = intent.getStringExtra("CHAT_TYPE") ?: (if (isDirect) "direct" else "group")
         intent.getStringExtra("PARTICIPANTS")?.let { participantsJson = it }
         intent.getStringExtra("CREATOR")?.let { creator = it }
         intent.getStringExtra("AVATAR_URL")?.let { chatAvatarUrl = it }
@@ -475,6 +480,17 @@ class NewChatActivity : AppCompatActivity() {
 
         toolbarTitle.text = chatName
         val openProfile = View.OnClickListener {
+            if (chatType == "conference") {
+                val intent = Intent(this, ConferenceLobbyActivity::class.java).apply {
+                    putExtra("ROOM_ID", roomId)
+                    putExtra("CHAT_NAME", chatName)
+                    putExtra("PARTICIPANTS", participantsJson)
+                    putExtra("CREATOR", creator)
+                }
+                startActivity(intent)
+                return@OnClickListener
+            }
+
             val profileUsername = if (isDirect) {
                 try {
                     val arr = JSONArray(participantsJson)
@@ -502,6 +518,37 @@ class NewChatActivity : AppCompatActivity() {
         toolbarTitle.setOnClickListener(openProfile)
         toolbarAvatar.setOnClickListener(openProfile)
         groupParticipantsContainer.setOnClickListener(openProfile)
+
+        // Lobby entry button logic
+        if (chatType == "conference") {
+            val isMeAdmin = username.trim().equals(creator.trim(), ignoreCase = true) && creator.isNotEmpty()
+            btnLobby.isVisible = isMeAdmin // Initial visibility: only for admin
+            btnLobby.setOnClickListener {
+                val intent = Intent(this, ConferenceLobbyActivity::class.java).apply {
+                    putExtra("ROOM_ID", roomId)
+                    putExtra("CHAT_NAME", chatName)
+                    putExtra("PARTICIPANTS", participantsJson)
+                    putExtra("CREATOR", creator)
+                }
+                startActivity(intent)
+            }
+            
+            // Listen for signals to potentially show it to others if conference becomes active
+            lifecycleScope.launch {
+                lavender.client.android.data.calls.CallManager.incomingSignals.collect { signal ->
+                    if (signal.roomId == roomId && signal.type == lavender.client.android.data.proto.CallMessageProto.Type.JOIN_CONFERENCE) {
+                        runOnUiThread { 
+                            if (!btnLobby.isVisible) {
+                                btnLobby.isVisible = true
+                                btnLobby.startAnimation(android.view.animation.AnimationUtils.loadAnimation(this@NewChatActivity, android.R.anim.fade_in))
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            btnLobby.isVisible = false
+        }
     }
 
     private fun setToolbarNavigationIcon(iconResId: Int) {
@@ -645,7 +692,7 @@ class NewChatActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search)?.isVisible = !selectionMode
         menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_")
-        menu.findItem(R.id.action_conference)?.isVisible = !selectionMode && !isDirect && !roomId.startsWith("favorites_")
+        menu.findItem(R.id.action_conference)?.isVisible = false
         
         val iconColor = run {
             val customTheme = ThemeStore.currentTheme()

@@ -201,7 +201,8 @@ data class ChatInfoProto(
     val fullAvatarUrl: String = "",
     val lastMessageUsername: String = "",
     val lastMessageHasImage: Boolean = false,
-    val allowMembersToAdd: Boolean = false
+    val allowMembersToAdd: Boolean = false,
+    val conferenceStartTime: Timestamp? = null
 )
 
 // Mark Read Request/Response
@@ -256,7 +257,8 @@ data class CreateGroupChatRequestProto(
     val participants: List<String> = emptyList(),
     val creator: String = "",
     val creatorId: String = "",
-    val participantIds: List<String> = emptyList()
+    val participantIds: List<String> = emptyList(),
+    val type: String = "group"
 )
 
 data class CreateGroupChatResponseProto(

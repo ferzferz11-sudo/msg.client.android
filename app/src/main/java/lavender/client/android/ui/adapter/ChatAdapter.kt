@@ -31,6 +31,7 @@ import kotlin.math.roundToInt
 class ChatAdapter(
     private val scope: CoroutineScope,
     private val onChatClick: (ChatInfo) -> Unit,
+    private val onEnterLobbyClick: ((ChatInfo) -> Unit)? = null,
     private val onSelectionChanged: (Int) -> Unit = {},
     private val currentUsername: String = "",
     initialAvatarCache: Map<String, String> = emptyMap(),
@@ -262,6 +263,7 @@ class ChatAdapter(
         private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
         private val adminIndicator: ImageView = itemView.findViewById(R.id.adminIndicator)
         private val muteIndicator: ImageView = itemView.findViewById(R.id.muteIndicator)
+        private val btnEnterLobby: ImageView = itemView.findViewById(R.id.btnEnterLobby)
         private val deleteProgressBar: android.widget.ProgressBar = itemView.findViewById(R.id.deleteProgressBar)
         val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
@@ -279,7 +281,13 @@ class ChatAdapter(
             chatType.setTextColor(cachedTextSecondary)
             chatName.text = chat.getDisplayName(currentUsername)
             val lang = context.resources.configuration.locales[0].language
-            if (chat.lastMessageHasImage) {
+            
+            if (chat.type == "conference" && chat.conferenceStartTime > 0) {
+                val sdf = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.getDefault())
+                chatType.text = "📅 ${context.getString(R.string.starts_at, sdf.format(java.util.Date(chat.conferenceStartTime)))}"
+                chatType.setTextColor(cachedPrimaryColor)
+                chatType.setTypeface(null, android.graphics.Typeface.BOLD)
+            } else if (chat.lastMessageHasImage) {
                 val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM" && chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 val photoText = if (lang == "ru") "📷 Фото" else "📷 Photo"
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, photoText)
@@ -288,6 +296,8 @@ class ChatAdapter(
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)
             } else {
                 chatType.text = if (lang == "ru") "Нет сообщений" else "No messages"
+                chatType.setTextColor(cachedTextSecondary)
+                chatType.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
             unreadCount.isVisible = chat.unreadCount > 0
             if (chat.unreadCount > 0) {
@@ -297,6 +307,12 @@ class ChatAdapter(
             }
             adminIndicator.isVisible = false
             muteIndicator.isVisible = chat.isMuted && !isDeleting
+            
+            btnEnterLobby.isVisible = chat.type == "conference" && !isDeleting && selectedPositions.isEmpty()
+            btnEnterLobby.setOnClickListener {
+                onEnterLobbyClick?.invoke(chat)
+            }
+
             deleteProgressBar.isVisible = isDeleting
             if (isDeleting) {
                 deleteProgressBar.indeterminateTintList = ColorStateList.valueOf(cachedPrimaryColor)
@@ -326,6 +342,46 @@ class ChatAdapter(
                     }
                     participantAvatars.addView(avatar); return
                 }
+
+                if (chatType == "conference") {
+                    participantAvatars.removeAllViews()
+                    val avatarSize = (52 * density).toInt()
+                    val container = FrameLayout(context).apply { layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize) }
+                    
+                    val avatar = ShapeableImageView(context).apply { 
+                        layoutParams = FrameLayout.LayoutParams(avatarSize, avatarSize)
+                        scaleType = if (chatAvatarUrl.isNotEmpty()) ImageView.ScaleType.CENTER_CROP else ImageView.ScaleType.CENTER_INSIDE
+                        shapeAppearanceModel = ShapeAppearanceModel.builder().setAllCornerSizes(RelativeCornerSize(0.5f)).build()
+                        if (chatAvatarUrl.isEmpty()) {
+                            setImageResource(R.drawable.ic_videocam_on)
+                            imageTintList = ColorStateList.valueOf(cachedPrimaryColor)
+                            val p = (14 * density).toInt()
+                            setPadding(p, p, p, p)
+                            setBackgroundColor(adjustAlpha(cachedPrimaryColor, 0.15f))
+                        }
+                    }
+                    
+                    if (chatAvatarUrl.isNotEmpty()) {
+                        Glide.with(context).load(chatAvatarUrl).placeholder(R.drawable.ic_default_avatar).into(avatar)
+                    }
+                    
+                    container.addView(avatar)
+                    
+                    // Add a small live indicator if needed or just a badge
+                    val badgeSize = (16 * density).toInt()
+                    val badge = View(context).apply {
+                        layoutParams = FrameLayout.LayoutParams(badgeSize, badgeSize).apply { 
+                            gravity = android.view.Gravity.TOP or android.view.Gravity.END
+                        }
+                        background = ContextCompat.getDrawable(context, R.drawable.status_online_dot)
+                        backgroundTintList = ColorStateList.valueOf(Color.RED)
+                    }
+                    container.addView(badge)
+                    
+                    participantAvatars.addView(container)
+                    return
+                }
+
                 participantAvatars.removeAllViews()
                 if (participantsJson.isEmpty() && chatAvatarUrl.isEmpty()) return
                 if (chatAvatarUrl.isNotEmpty()) {

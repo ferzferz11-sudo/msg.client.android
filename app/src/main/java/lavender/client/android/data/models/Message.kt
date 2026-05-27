@@ -42,7 +42,8 @@ data class ChatInfo(
     val lastMessageUsername: String = "",
     val isMuted: Boolean = false,
     val lastMessageHasImage: Boolean = false,
-    val allowMembersToAdd: Boolean = false
+    val allowMembersToAdd: Boolean = false,
+    val conferenceStartTime: Long = 0
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (type != "direct") return name

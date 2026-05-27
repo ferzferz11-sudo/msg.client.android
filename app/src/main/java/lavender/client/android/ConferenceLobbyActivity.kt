@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -87,9 +88,35 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             finish()
         }
 
+        binding.btnOpenChat.setOnClickListener {
+            val intent = Intent(this, NewChatActivity::class.java).apply {
+                putExtra("ROOM_ID", roomId)
+                putExtra("CHAT_NAME", currentTopic)
+                putExtra("CHAT_TYPE", "conference")
+                putExtra("PARTICIPANTS", currentlyInvited.toList().let { org.json.JSONArray(it).toString() })
+                putExtra("CREATOR", conferenceCreatorId)
+            }
+            startActivity(intent)
+            finish()
+        }
+
         binding.btnDelete.setOnClickListener {
             CallManager.endConference(roomId)
             finish()
+        }
+
+        binding.btnLeave.setOnClickListener {
+            val myId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: ""
+            if (myId.isNotEmpty()) {
+                GrpcClient.removeParticipant(roomId, myId) { success, _ ->
+                    if (success) {
+                        runOnUiThread {
+                            Toast.makeText(this, "Вы покинули конференцию", Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    }
+                }
+            }
         }
 
         binding.btnInviteFab.setOnClickListener {
@@ -333,8 +360,11 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                 binding.btnAdd5Min.isVisible = isCreator
                 binding.btnCustomTime.isVisible = isCreator
                 binding.btnDelete.isVisible = isCreator
+                binding.btnLeave.isVisible = !isCreator
                 binding.btnNotify.isVisible = isCreator && invited.length() > 0
                 binding.btnInviteFab.isVisible = isCreator
+                
+                binding.btnJoin.text = if (isCreator) getString(R.string.join) else getString(R.string.join_conference_action)
                 
                 updateTimeDisplay()
                 
@@ -375,6 +405,10 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             binding.btnJoin.backgroundTintList = ColorStateList.valueOf(pColor)
             binding.btnJoin.setTextColor(onPColor)
 
+            binding.btnOpenChat.setTextColor(pColor)
+            binding.btnOpenChat.iconTint = ColorStateList.valueOf(pColor)
+            binding.btnOpenChat.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(pColor, 0.1f))
+
             binding.btnNotify.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(pColor, 0.8f))
             binding.btnNotify.setTextColor(onPColor)
             
@@ -390,6 +424,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
             binding.btnInviteFab.imageTintList = ColorStateList.valueOf(onPColor)
             
             binding.btnDelete.setTextColor(Color.WHITE)
+            binding.btnLeave.setTextColor(Color.WHITE)
         } catch (_: Exception) {}
     }
 

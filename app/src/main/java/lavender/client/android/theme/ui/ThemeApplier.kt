@@ -103,9 +103,14 @@ object ThemeApplier {
             setNavigationIconTint(customOnPrimary)
             
             // Tint toolbar icons
-            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat)
+            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby)
             toolbarActions.forEach { id ->
-                findViewById<ImageView>(id)?.imageTintList = ColorStateList.valueOf(customOnPrimary)
+                findViewById<ImageView>(id)?.let { iv ->
+                    iv.imageTintList = ColorStateList.valueOf(customOnPrimary)
+                    if (id == R.id.btnLobby) {
+                        iv.backgroundTintList = ColorStateList.valueOf(customPrimary)
+                    }
+                }
             }
         }
 

@@ -119,6 +119,7 @@ message ChatInfo {
   string last_message_username = 12;
   bool last_message_has_image = 13;
   bool allow_members_to_add = 14;
+  google.protobuf.Timestamp conference_start_time = 15;
 }
 
 message GetChatsRequest {
@@ -148,6 +149,7 @@ message CreateGroupChatRequest {
   string creator = 3;
   string creator_id = 4;
   repeated string participant_ids = 5;
+  string type = 6; // "group" or "conference"
 }
 
 message CreateGroupChatResponse {

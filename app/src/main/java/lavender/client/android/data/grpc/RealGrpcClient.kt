@@ -931,7 +931,8 @@ object RealGrpcClient {
                              proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                              proto.unreadCount,
                              proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd)
+                             proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd,
+                             proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L)
                 }
 
                 // Save to cache and sync (delete local chats that are gone from server)
@@ -1526,7 +1527,7 @@ object RealGrpcClient {
         call.request(1)
     }
 
-    fun createGroupChat(n: String, ps: List<String>, c: String, cb: (String?) -> Unit) {
+    fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateGroupChatRequestProto, CreateGroupChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
@@ -1539,7 +1540,7 @@ object RealGrpcClient {
             override fun onMessage(message: CreateGroupChatResponseProto) { if (message.success) cb(message.chatId) else cb(null) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(null) }
         }, io.grpc.Metadata())
-        call.sendMessage(CreateGroupChatRequestProto(n, ps, c, currentUserId ?: "", emptyList()))
+        call.sendMessage(CreateGroupChatRequestProto(n, ps, c, currentUserId ?: "", emptyList(), type))
         call.halfClose()
         call.request(1)
     }
@@ -2073,9 +2074,9 @@ class GetChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatsR
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break;             if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false
-                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); else -> cisis.skipField(t2) } }
-                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta))
+                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null
+                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> { val l = cisis.readUInt32(); cst = Timestamp.parseFrom(cisis.readRawBytes(l)) }; else -> cisis.skipField(t2) } }
+                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst))
             } else cis.skipField(tag)
         }
         return GetChatsResponseProto(chats)
@@ -2484,6 +2485,7 @@ class CreateGroupChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Cre
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.name.isNotEmpty()) cos.writeString(1, v.name); for (p in v.participants) cos.writeString(2, p); if (v.creator.isNotEmpty()) cos.writeString(3, v.creator)
         if (v.creatorId.isNotEmpty()) cos.writeString(4, v.creatorId); for (pid in v.participantIds) cos.writeString(5, pid)
+        if (v.type.isNotEmpty()) cos.writeString(6, v.type)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): CreateGroupChatRequestProto = CreateGroupChatRequestProto()
@@ -2659,9 +2661,9 @@ class GetAllChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAll
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false
-                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); else -> cisis.skipField(t2) } }
-                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta))
+                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null
+                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> { val l = cisis.readUInt32(); cst = Timestamp.parseFrom(cisis.readRawBytes(l)) }; else -> cisis.skipField(t2) } }
+                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst))
             } else cis.skipField(tag)
         }
         return GetAllChatsResponseProto(chats)

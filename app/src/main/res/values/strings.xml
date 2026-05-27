@@ -504,4 +504,6 @@
     <string name="cancel_update">Cancel Update</string>
     <string name="update_cancelled">Update cancelled</string>
     <string name="continue_label">Continue</string>
+    <string name="discuss_in_chat">Discuss in chat</string>
+    <string name="reject_conference">Reject</string>
 </resources>
