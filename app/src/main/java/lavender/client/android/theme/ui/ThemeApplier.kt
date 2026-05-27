@@ -25,6 +25,13 @@ object ThemeApplier {
         val bgColor = parseSafeColor(theme.backgroundColor, Color.BLACK)
         val isLightMode = ThemeUtils.isLight(bgColor)
 
+        val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
+        val customOnPrimary = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
+        val textPrimary = parseSafeColor(theme.textPrimaryColor, if (isLightMode) Color.BLACK else Color.WHITE)
+        val textSecondary = parseSafeColor(theme.textSecondaryColor, if (isLightMode) Color.GRAY else Color.LTGRAY)
+        val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
+        val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, textPrimary)
+
         activity.enableEdgeToEdge()
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = isLightMode
@@ -67,8 +74,6 @@ object ThemeApplier {
             }
         }
 
-        val customPrimary = parseSafeColor(theme.primaryColor, Color.BLUE)
-        val customOnPrimary = parseSafeColor(theme.onPrimaryColor, Color.WHITE)
         toolbar?.apply {
             // Set elevation to 0 if toolbar is transparent to avoid shadow/surface overlay
             elevation = if (Color.alpha(customPrimary) < 255) 0f else 4f * context.resources.displayMetrics.density
@@ -122,8 +127,6 @@ object ThemeApplier {
                 setTabTextColors(adjustAlpha(pColor, 0.6f), pColor)
                 setSelectedTabIndicatorColor(pColor)
             } else {
-                val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
-                val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, customOnPrimary)
                 setBackgroundColor(surfaceColor)
                 setTabTextColors(adjustAlpha(onSurfaceColor, 0.75f), customPrimary)
                 setSelectedTabIndicatorColor(customPrimary)
@@ -174,6 +177,18 @@ object ThemeApplier {
             panel.findViewById<ImageButton>(R.id.sendButton)?.imageTintList = ColorStateList.valueOf(onPanelColor)
         }
 
+        // Previews and Containers
+        activity.findViewById<MaterialCardView>(R.id.replyPreview)?.let { preview ->
+            preview.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
+            preview.findViewById<View>(R.id.replyBar)?.setBackgroundColor(customPrimary)
+            preview.findViewById<TextView>(R.id.replyUser)?.setTextColor(customPrimary)
+            preview.findViewById<TextView>(R.id.replyText)?.setTextColor(onSurfaceColor)
+            preview.findViewById<ImageButton>(R.id.cancelReply)?.imageTintList = ColorStateList.valueOf(adjustAlpha(onSurfaceColor, 0.6f))
+        }
+
+        activity.findViewById<MaterialCardView>(R.id.mentionContainer)?.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
+        activity.findViewById<View>(R.id.imagePreviewScroll)?.setBackgroundColor(surfaceColor)
+
         // Apply text colors to inputs globally in the activity
         val inputTextColor = parseSafeColor(theme.textPrimaryColor, if (isLightMode) Color.BLACK else Color.WHITE)
         val hintTextColor = ThemeUtils.adjustAlpha(inputTextColor, 0.6f)
@@ -223,11 +238,6 @@ object ThemeApplier {
         }
 
         // Onboarding and Welcome
-        val textPrimary = parseSafeColor(theme.textPrimaryColor, if (isLightMode) Color.BLACK else Color.WHITE)
-        val textSecondary = parseSafeColor(theme.textSecondaryColor, if (isLightMode) Color.GRAY else Color.LTGRAY)
-        val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
-        val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, textPrimary)
-
         activity.findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
         activity.findViewById<TextView>(R.id.toolbarTitle)?.setTextColor(customOnPrimary)
         (activity.findViewById<View>(R.id.toolbarSubtitle) as? TextView)?.setTextColor(adjustAlpha(customOnPrimary, 0.8f))
@@ -276,4 +286,3 @@ object ThemeApplier {
         return ThemeUtils.adjustAlpha(color, factor)
     }
 }
-

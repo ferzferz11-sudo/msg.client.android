@@ -11,14 +11,19 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/edit_message">
+        android:hint="@string/edit_message"
+        app:counterEnabled="true"
+        app:counterMaxLength="4000">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editMessageInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textMultiLine"
-            android:maxLines="5" />
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="3"
+            android:maxLines="15"
+            android:gravity="top|start"
+            android:scrollbars="vertical" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
