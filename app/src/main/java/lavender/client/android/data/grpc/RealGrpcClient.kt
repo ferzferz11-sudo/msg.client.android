@@ -3013,6 +3013,10 @@ class CallMessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<CallMessa
                 else -> cis.skipField(tag)
             }
         }
-        return CallMessageProto(cid, sid, rid, CallMessageProto.Type.fromInt(t), p, sn, rn, rm)
+        val result = CallMessageProto(cid, sid, rid, CallMessageProto.Type.fromInt(t), p, sn, rn, rm)
+        return result
     }
+
+    // Flag to control E2EE support based on client version
+    var isE2EEMessageEnabled: Boolean = true
 }

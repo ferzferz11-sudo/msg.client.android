@@ -327,4 +327,16 @@ object GrpcClient {
     fun clearMessages() {
         realGrpcClient.clearMessages()
     }
+
+    // Secret chat methods — TODO: implement after proto generation
+    fun createSecretChat(targetUsername: String, publicKey: String, callback: (String, Boolean, String, String) -> Unit) {
+        callback("", false, "Not implemented in this build", "")
+    }
+    fun exchangeSecretKey(chatId: String, publicKey: String, callback: (Boolean, String, Boolean) -> Unit) {
+        callback(false, "", false)
+    }
+    fun getSecretChatKey(chatId: String, callback: (String, Boolean) -> Unit) {
+        callback("", false)
+    }
+    fun sendE2EEMessage(chatId: String, encryptedPayload: String) {}
 }
