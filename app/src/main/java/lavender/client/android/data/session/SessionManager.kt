@@ -96,9 +96,6 @@ object SessionManager {
         val currentSession = _session.value
         if (currentSession.isLoggedIn) {
             Log.d("SessionManager", "Syncing device info to server: ${currentSession.deviceName}")
-            // Re-send auth message with device info through startChat logic
-            // or a dedicated signal if we add it. 
-            // For now, GrpcClient.startChat handles sending the initial Message with device info.
             GrpcClient.startChat(
                 currentSession.username,
                 currentSession.password,
@@ -113,13 +110,17 @@ object SessionManager {
     }
 
     fun initFromPrefs(context: Context) {
-        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-        val username = prefs.getString("saved_username", "") ?: ""
-        val password = prefs.getString("saved_password", "") ?: ""
-        val userId = prefs.getString("user_id", "") ?: ""
-        val email = prefs.getString("saved_email", "") ?: ""
-        val serverAddress = prefs.getString("server_address", "") ?: ""
-        
+        // Migrate legacy credentials if needed
+        if (CredentialStore.needsMigration(context)) {
+            Log.d("SessionManager", "Migrating legacy credentials to encrypted storage")
+        }
+
+        val username = CredentialStore.getUsername(context)
+        val password = CredentialStore.getPassword(context)
+        val userId = CredentialStore.getUserId(context)
+        val email = CredentialStore.getEmail(context)
+        val serverAddress = CredentialStore.getServerAddress(context)
+
         updateDeviceInfo(context)
 
         if (username.isNotEmpty()) {
@@ -139,7 +140,7 @@ object SessionManager {
     }
 
     fun syncFcmToken(context: Context, username: String) {
-        val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+        val prefs = CredentialStore.getLegacyPrefs(context)
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
 
@@ -180,14 +181,14 @@ object SessionManager {
         val parts = serverAddress.split(":")
         val host = parts[0]
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-        
+
         GrpcClient.connect(host, useTls = false, port = port, context = context)
-        
+
         scope.launch {
             try {
                 // Wait for READY or FAILED status
                 val status = withTimeoutOrNull(10000) {
-                    GrpcClient.connectionStatus.filter { 
+                    GrpcClient.connectionStatus.filter {
                         (it == ConnectionStatus.READY) || (it == ConnectionStatus.FAILED)
                     }.first()
                 }
@@ -206,10 +207,6 @@ object SessionManager {
                     Log.d("SessionManager", "Auth result received: $authResult")
 
                     if (authResult == "REGISTRATION_SUCCESS" || authResult == null || authResult == "SUCCESS") {
-                        // Note: null might happen if server doesn't explicitly send SUCCESS for existing users yet, 
-                        // but we can assume success if no error was received within timeout and connection is READY.
-                        // Actually, for existing users server currently doesn't send "SUCCESS" system message, it just starts sending data.
-                        
                         // Try to fetch User ID
                         val userIdDeferred = CompletableDeferred<String?>()
                         GrpcClient.fetchUserId(username) { id, success ->
@@ -218,17 +215,23 @@ object SessionManager {
                         }
 
                         val fetchedId = withTimeoutOrNull(3000) { userIdDeferred.await() }
-                        if (fetchedId != null) {
-                            updateSession(username = username, password = pass, userId = fetchedId, email = email)
-                        } else {
-                            updateSession(username = username, password = pass, email = email)
-                        }
+                        val userId = fetchedId ?: ""
+
+                        // Store credentials securely
+                        CredentialStore.setCredentials(
+                            context = context,
+                            username = username,
+                            password = pass,
+                            userId = userId,
+                            email = email,
+                            serverAddress = serverAddress
+                        )
+
+                        updateSession(username = username, password = pass, userId = userId, email = email)
 
                         syncFcmToken(context, username)
-                        // This is the bug fix - if it was REGISTRATION_SUCCESS, we must pass it back!
                         onComplete(authResult ?: "SUCCESS")
                     } else {
-                        // Return the actual error signal: AUTH_FAILED or USER_NOT_FOUND
                         onComplete(authResult)
                     }
                 } else {
@@ -244,18 +247,18 @@ object SessionManager {
     fun logout(context: Context) {
         Log.d("SessionManager", "Logging out, clearing all user data")
         _session.value = UserSession()
-        
-        // Clear all relevant preferences
-        context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE).edit {
+
+        // Clear encrypted credentials
+        CredentialStore.clear(context)
+
+        // Clear non-sensitive legacy prefs (theme, push settings, etc.)
+        CredentialStore.getLegacyPrefs(context).edit {
             remove("username")
             remove("password")
             remove("user_id")
-            remove("saved_username")
-            remove("saved_password")
-            remove("saved_email")
             remove("chat_list_version")
         }
-        
+
         GrpcClient.disconnect()
     }
 }

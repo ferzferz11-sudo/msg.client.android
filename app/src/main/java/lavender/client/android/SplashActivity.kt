@@ -14,7 +14,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        
+
         // Initialize language to Russian on first launch
         if (!prefs.contains("language")) {
             prefs.edit { putString("language", "ru") }
@@ -24,20 +24,19 @@ class SplashActivity : AppCompatActivity() {
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
 
-        val savedUsername = prefs.getString("saved_username", null)
-        val savedPassword = prefs.getString("saved_password", null)
-        val savedServerAddress = prefs.getString("server_address", null)
+        val session = SessionManager.session.value
+        val isLoggedIn = session.isLoggedIn
 
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
-        val isLoggedIn = !skipAutoLogin && savedUsername != null && savedPassword != null
+        val shouldProceed = isLoggedIn && !skipAutoLogin
 
         // Проверяем, пришел ли ID комнаты или звонок из уведомления
         val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
         val callIdFromPush = intent.getStringExtra("CALL_ID") ?: intent.getStringExtra("call_id")
-        
+
         Log.d("SplashActivity", "roomIdFromPush: $roomIdFromPush, callIdFromPush: $callIdFromPush")
 
-        val targetIntent = if (isLoggedIn) {
+        val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {
                     Log.d("SplashActivity", "Directing to CallActivity")
@@ -60,9 +59,8 @@ class SplashActivity : AppCompatActivity() {
                     } else {
                          Log.d("SplashActivity", "Directing to NewChatActivity")
                          Intent(this, NewChatActivity::class.java).apply {
-                            putExtra("USERNAME", savedUsername)
-                            putExtra("PASSWORD", savedPassword)
-                            putExtra("SERVER_ADDRESS", savedServerAddress)
+                            putExtra("USERNAME", session.username)
+                            putExtra("SERVER_ADDRESS", prefs.getString("server_address", ""))
                             putExtra("ROOM_ID", roomIdFromPush)
                             putExtra("from_notification", true)
                          }
@@ -70,11 +68,7 @@ class SplashActivity : AppCompatActivity() {
                 }
                 else -> {
                     Log.d("SplashActivity", "Directing to ChatListActivity")
-                    Intent(this, ChatListActivity::class.java).apply {
-                        putExtra("USERNAME", savedUsername)
-                        putExtra("PASSWORD", savedPassword)
-                        putExtra("SERVER_ADDRESS", savedServerAddress)
-                    }
+                    Intent(this, ChatListActivity::class.java)
                 }
             }
         } else {

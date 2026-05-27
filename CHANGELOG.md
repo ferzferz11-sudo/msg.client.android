@@ -5,6 +5,14 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.7.0
+### Security — Encrypted Credential Storage
+- 🔐 **EncryptedSharedPreferences**: Passwords are now stored using AndroidX Security `EncryptedSharedPreferences` with AES-256 encryption and hardware-backed keystore when available.
+- 🔑 **Removed password from Intent extras**: Password is no longer passed between activities via `Intent` extras — a critical security fix.
+- 🧹 **Removed password from FCM notification data**: `LavenderMessagingService` now reads credentials from secure storage instead of including them in notification intents.
+- 🔄 **Automatic migration**: On first run, existing plaintext credentials are migrated from `lavender_prefs` to encrypted storage and removed from the legacy location.
+- 📦 **New dependency**: Added `androidx.security:security-crypto:1.1.0-alpha06`.
+
 ## 1.0.6.34
 ### Widget System & UI Polish (Final)
 - 🏗️ **Full Migration**: 100% of app dialogs (Reactions, Account settings, Security, Palette) migrated to the new themed `WidgetSystem`.

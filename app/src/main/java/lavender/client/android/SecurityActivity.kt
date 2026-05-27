@@ -60,8 +60,7 @@ class SecurityActivity : AppCompatActivity() {
 
         username = SessionManager.session.value.username
         if (username.isEmpty()) {
-            val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-            username = prefs.getString("saved_username", "") ?: ""
+            username = lavender.client.android.data.session.CredentialStore.getUsername(this)
         }
         
         if (username.isEmpty()) return finish()

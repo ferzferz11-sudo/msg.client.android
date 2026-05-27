@@ -141,13 +141,23 @@ class ChatListActivity : AppCompatActivity() {
         }
         prefs.edit { putInt("last_app_version", currentVersion) }
         
-        // Check if user is authenticated
-        val savedUsername = prefs.getString("saved_username", "")
-        val savedPassword = prefs.getString("saved_password", "")
-        
-        username = intent.getStringExtra("USERNAME") ?: savedUsername ?: ""
-        password = intent.getStringExtra("PASSWORD") ?: savedPassword ?: ""
-        val serverAddress = intent.getStringExtra("SERVER_ADDRESS") ?: prefs.getString("server_address", "159.195.38.145:50051") ?: "159.195.38.145:50051"
+        val session = SessionManager.session.value
+
+        // Check if user is authenticated — credentials are stored encrypted
+        username = session.username
+        password = session.password
+
+        // Fallback: allow explicit login via intent extras (from auth dialog)
+        if (username.isEmpty()) {
+            username = intent.getStringExtra("USERNAME") ?: ""
+        }
+        if (password.isEmpty()) {
+            password = intent.getStringExtra("PASSWORD") ?: ""
+        }
+
+        val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
+            ?: lavender.client.android.data.session.CredentialStore.getServerAddress(this)
+            ?: "159.195.38.145:50051"
 
         // Initialize basic UI components regardless of auth state
         setSupportActionBar(binding.toolbar)
@@ -228,10 +238,9 @@ class ChatListActivity : AppCompatActivity() {
                 if (chat.type == "favorites") {
                     val intent = Intent(this, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
-                        putExtra("PASSWORD", password)
                         putExtra("CHAT_NAME", getString(R.string.favorites))
                         putExtra("ROOM_ID", "favorites_$username")
-                        putExtra("IS_DIRECT", false) // Treat as a special room
+                        putExtra("IS_DIRECT", false)
                         putExtra("PARTICIPANTS", "[\"$username\"]")
                         putExtra("CREATOR", username)
                     }
@@ -252,7 +261,6 @@ class ChatListActivity : AppCompatActivity() {
 
                 val intent = Intent(this, NewChatActivity::class.java).apply {
                     putExtra("USERNAME", username)
-                    putExtra("PASSWORD", password)
                     putExtra("SERVER_ADDRESS", intent.getStringExtra("SERVER_ADDRESS") ?: "")
                     putExtra("CHAT_NAME", chat.name)
                     putExtra("ROOM_ID", chat.id)
@@ -1654,7 +1662,6 @@ class ChatListActivity : AppCompatActivity() {
             sheet.dismiss()
             val intent = Intent(this, EditProfileActivity::class.java).apply {
                 putExtra("USERNAME", username)
-                putExtra("PASSWORD", password)
             }
             editProfileLauncher.launch(intent)
         }
@@ -1667,7 +1674,6 @@ class ChatListActivity : AppCompatActivity() {
             sheet.dismiss()
             val intent = Intent(this, ContactsActivity::class.java).apply {
                 putExtra("USERNAME", username)
-                putExtra("PASSWORD", password)
             }
             startActivity(intent)
         }
@@ -1887,7 +1893,6 @@ class ChatListActivity : AppCompatActivity() {
                 if (chatId != null) runOnUiThread {
                     val intent = Intent(this, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
-                        putExtra("PASSWORD", password)
                         putExtra("ROOM_ID", chatId)
                         putExtra("CHAT_NAME", topic)
                         putExtra("CHAT_TYPE", "conference")
@@ -1946,7 +1951,7 @@ class ChatListActivity : AppCompatActivity() {
                 grpcClient.createDirectChat(username, targetUser) { chatId ->
                     if (chatId != null) runOnUiThread {
                         val intent = Intent(this, NewChatActivity::class.java).apply {
-                            putExtra("USERNAME", username); putExtra("PASSWORD", password)
+                            putExtra("USERNAME", username)
                             putExtra("ROOM_ID", chatId); putExtra("CHAT_NAME", targetUser)
                             putExtra("IS_DIRECT", true); putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
                         }
@@ -1960,7 +1965,7 @@ class ChatListActivity : AppCompatActivity() {
                 grpcClient.createGroupChat(groupName, participants, username) { chatId ->
                     if (chatId != null) runOnUiThread {
                         val intent = Intent(this, NewChatActivity::class.java).apply {
-                            putExtra("USERNAME", username); putExtra("PASSWORD", password)
+                            putExtra("USERNAME", username)
                             putExtra("ROOM_ID", chatId); putExtra("CHAT_NAME", groupName)
                             putExtra("IS_DIRECT", false); putExtra("PARTICIPANTS", org.json.JSONArray(participants).toString())
                             putExtra("CREATOR", username)
@@ -2104,15 +2109,16 @@ class ChatListActivity : AppCompatActivity() {
                     runOnUiThread {
                         when (result) {
                             "SUCCESS" -> {
-                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                                prefs.edit {
-                                    putString("saved_username", u)
-                                    putString("saved_password", p)
-                                    putString("server_address", serverAddress)
-                                }
+                                // Store credentials securely via CredentialStore
+                                lavender.client.android.data.session.CredentialStore.setCredentials(
+                                    context = this@ChatListActivity,
+                                    username = u,
+                                    password = p,
+                                    serverAddress = serverAddress
+                                )
                                 val userId = SessionManager.session.value.userId
                                 if (userId.isNotEmpty()) {
-                                    prefs.edit { putString("user_id", userId) }
+                                    lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
                                 }
                                 clearLocalCacheSync()
                                 Toast.makeText(this@ChatListActivity, R.string.login_success, Toast.LENGTH_LONG).show()
@@ -2231,15 +2237,21 @@ class ChatListActivity : AppCompatActivity() {
                     runOnUiThread {
                         when (result) {
                             "REGISTRATION_SUCCESS" -> {
-                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                                prefs.edit {
-                                    putString("saved_username", u); putString("saved_password", p)
-                                    putString("saved_email", email); putString("server_address", serverAddress)
-                                }
+                                // Store credentials securely via CredentialStore
+                                lavender.client.android.data.session.CredentialStore.setCredentials(
+                                    context = this@ChatListActivity,
+                                    username = u,
+                                    password = p,
+                                    email = email,
+                                    serverAddress = serverAddress
+                                )
                                 val userId = SessionManager.session.value.userId
-                                if (userId.isNotEmpty()) prefs.edit { putString("user_id", userId) }
+                                if (userId.isNotEmpty()) {
+                                    lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
+                                }
                                 clearLocalCacheSync()
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
+                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit { putBoolean("onboarding_completed_$u", false); putLong("first_login_$u", System.currentTimeMillis()) }
                                 sheet.dismiss(); recreate()
                             }

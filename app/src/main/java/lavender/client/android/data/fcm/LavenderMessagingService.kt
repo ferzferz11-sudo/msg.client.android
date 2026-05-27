@@ -46,19 +46,17 @@ class LavenderMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         Log.d("FCM", "Refreshed token: $token")
 
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val username = prefs.getString("username", "")
-
-        if (!username.isNullOrEmpty()) {
-            // Use common sync logic from SessionManager
-            lavender.client.android.data.session.SessionManager.syncFcmToken(this, username)
+        // Token sync is handled by SessionManager
+        val session = lavender.client.android.data.session.SessionManager.session.value
+        if (session.isLoggedIn) {
+            lavender.client.android.data.session.SessionManager.syncFcmToken(this, session.username)
         }
     }
 
     private fun handleIncomingCall(callId: String, senderId: String) {
         Log.d("FCM", "Handling incoming VOIP call: $callId from $senderId")
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val serverAddress = prefs.getString("server_address", "82.146.43.235") ?: "82.146.43.235"
+        val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
+            ?: "82.146.43.235"
 
         // Ensure we are connected to receive signaling
         lavender.client.android.data.grpc.GrpcClient.connect(serverAddress, context = applicationContext)
@@ -66,7 +64,6 @@ class LavenderMessagingService : FirebaseMessagingService() {
         lavender.client.android.data.grpc.GrpcClient.startCallSession()
 
         // Show a notification or launch a full-screen Intent for the call
-        // In a real app, you would start a Foreground Service here
         showCallNotification(senderId, callId)
     }
 
@@ -123,17 +120,16 @@ class LavenderMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val username = prefs.getString("username", "") ?: ""
-        val password = prefs.getString("password", "") ?: ""
-        val serverAddress = prefs.getString("server_address", "") ?: ""
+        // Read credentials from secure storage
+        val session = lavender.client.android.data.session.SessionManager.session.value
+        val username = session.username
+        val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this) ?: ""
 
-        val intent = if (username.isNotEmpty() && password.isNotEmpty()) {
+        val intent = if (username.isNotEmpty()) {
             // Логин есть — летим сразу в NewChatActivity
             Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("USERNAME", username)
-                putExtra("PASSWORD", password)
                 putExtra("SERVER_ADDRESS", serverAddress)
                 putExtra("ROOM_ID", roomId)
                 putExtra("CHAT_NAME", title)
@@ -172,6 +168,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         notificationBuilder.addExtras(extras)
 
         // Применяем стиль (если выбран messaging)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val style = prefs.getString("notification_style", "standard")
         if (style == "messaging") {
             val user = androidx.core.app.Person.Builder().setName(title).build()

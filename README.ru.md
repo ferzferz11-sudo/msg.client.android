@@ -36,6 +36,7 @@ Lavanda (Android клиент) - это нативное Android приложе�
 - **Асинхронность**: Kotlin Coroutines + StateFlow
 - **Сетевой протокол**: gRPC (bidirectional streaming)
 - **Протокол**: Protobuf (protobuf-lite)
+- **Хранение учётных данных**: EncryptedSharedPreferences (AES-256, AndroidX Security)
 - **Сервер**: Go gRPC сервер (159.195.38.145:50051)
 
 ## Требования

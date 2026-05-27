@@ -466,9 +466,17 @@ class EditProfileActivity : AppCompatActivity() {
                     if (success) {
                         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                         
+                        // Update username in secure storage
+                        lavender.client.android.data.session.CredentialStore.setCredentials(
+                            context = this,
+                            username = newUsername,
+                            password = SessionManager.session.value.password,
+                            userId = SessionManager.session.value.userId,
+                            email = SessionManager.session.value.email,
+                            serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
+                        )
                         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                         prefs.edit {
-                            putString("saved_username", newUsername)
                             putString("last_logged_username", newUsername)
                         }
                         

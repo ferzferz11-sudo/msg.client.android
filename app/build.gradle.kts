@@ -125,6 +125,9 @@ dependencies {
     // WebRTC
     implementation(libs.webrtc)
 
+    // EncryptedSharedPreferences for secure credential storage
+    implementation(libs.androidx.security.crypto)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

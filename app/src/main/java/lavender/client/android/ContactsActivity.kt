@@ -303,7 +303,6 @@ class ContactsActivity : AppCompatActivity() {
                 runOnUiThread {
                     val intent = Intent(this, NewChatActivity::class.java)
                         .putExtra("USERNAME", username)
-                        .putExtra("PASSWORD", password)
                         .putExtra("ROOM_ID", chatId)
                         .putExtra("CHAT_NAME", getString(R.string.private_chat_with, targetUser))
                         .putExtra("IS_DIRECT", true)
@@ -320,7 +319,6 @@ class ContactsActivity : AppCompatActivity() {
                 runOnUiThread {
                     val intent = Intent(this, NewChatActivity::class.java)
                         .putExtra("USERNAME", username)
-                        .putExtra("PASSWORD", password)
                         .putExtra("ROOM_ID", chatId)
                         .putExtra("CHAT_NAME", name)
                         .putExtra("IS_DIRECT", false)
