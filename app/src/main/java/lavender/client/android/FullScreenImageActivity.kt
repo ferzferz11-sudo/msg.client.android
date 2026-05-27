@@ -102,6 +102,13 @@ class FullScreenImageActivity : AppCompatActivity() {
             val downloadLp = btnDownload.layoutParams as ViewGroup.MarginLayoutParams
             downloadLp.topMargin = systemBars.top + (16 * resources.displayMetrics.density).toInt()
             btnDownload.layoutParams = downloadLp
+
+            // Adjust Top Overlay height to ensure it covers system bar and buttons
+            findViewById<View>(R.id.topOverlay)?.let { overlay ->
+                val overlayLp = overlay.layoutParams
+                overlayLp.height = systemBars.top + (80 * resources.displayMetrics.density).toInt()
+                overlay.layoutParams = overlayLp
+            }
             
             insets
         }

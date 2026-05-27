@@ -77,6 +77,7 @@ class ProfileActivity : AppCompatActivity() {
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
     private var participantsAdapter: ParticipantAdapter? = null
+    private var participantsBottomSheet: SearchableListBottomSheet? = null
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -173,6 +174,14 @@ class ProfileActivity : AppCompatActivity() {
                         allowMembersToAdd = chat.allowMembersToAdd
                         currentParticipants.clear()
                         currentParticipants.addAll(newList)
+                        
+                        // Update bottom sheet adapter if visible
+                        participantsAdapter?.updateData(
+                            currentParticipants,
+                            grpcClient.users.value.toSet(),
+                            grpcClient.getAvatarCache()
+                        )
+                        
                         loadProfileData()
                         onComplete?.invoke()
                     }
@@ -274,44 +283,14 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
-            val participantsRecyclerView = findViewById<RecyclerView>(R.id.participantsRecyclerView)
-            val addParticipantLayout = findViewById<LinearLayout>(R.id.addParticipantLayout)
-            val addParticipantProgress = findViewById<ProgressBar>(R.id.addParticipantProgress)
+            val participantsCountText = findViewById<TextView>(R.id.participantsCountText)
             val deleteGroupButton = findViewById<MaterialButton>(R.id.deleteGroupButton)
 
             participantsCard?.isVisible = true
+            participantsCountText?.text = currentParticipants.size.toString()
             
-            if (participantsRecyclerView != null) {
-                if (participantsAdapter == null) {
-                    participantsAdapter = ParticipantAdapter(
-                        theme = currentTheme,
-                        isAdmin = isMeAdmin,
-                        creator = creator,
-                        onRemoveClick = { user ->
-                            showRemoveParticipantDialog(user)
-                        },
-                        onAvatarClick = { user, url ->
-                            val fullImageUrl = grpcClient.getFullAvatarUrl(user) ?: url
-                            if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
-                        },
-                        onLongClick = { user ->
-                            if (isMeAdmin && user != creator) showRemoveParticipantDialog(user)
-                        }
-                    )
-                    participantsRecyclerView.layoutManager = LinearLayoutManager(this)
-                    participantsRecyclerView.adapter = participantsAdapter
-                }
-                
-                participantsAdapter?.updateData(
-                    currentParticipants, 
-                    grpcClient.users.value.toSet(), 
-                    grpcClient.getAvatarCache()
-                )
-
-                // Prefetch avatars for participants
-                currentParticipants.forEach { user ->
-                    grpcClient.getUserAvatar(user) { /* cached */ }
-                }
+            participantsCard?.setOnClickListener {
+                showParticipantsBottomSheet()
             }
 
             deleteGroupButton?.apply {
@@ -337,27 +316,8 @@ class ProfileActivity : AppCompatActivity() {
             ThemeStore.currentTheme().let { theme ->
                 participantsCard?.setCardBackgroundColor(ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
                 participantsCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
-                addParticipantLayout?.backgroundTintList = ColorStateList.valueOf(theme.surfaceContainer.toColorInt())
-                findViewById<TextView>(R.id.addParticipantButton)?.setTextColor(theme.primaryColor.toColorInt())
-            }
-
-            if (isMeAdmin || allowMembersToAdd) {
-                addParticipantLayout?.isVisible = true
-                addParticipantLayout?.setOnClickListener {
-                    addParticipantLayout.isEnabled = false
-                    addParticipantProgress?.isVisible = true
-                    grpcClient.getContacts(currentMe) { allContacts ->
-                        val availableContacts = allContacts.filter { it !in currentParticipants }
-                        runOnUiThread {
-                            addParticipantLayout.isEnabled = true
-                            addParticipantProgress?.isVisible = false
-                            if (availableContacts.isEmpty()) Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
-                            else showAddParticipantDialog(availableContacts)
-                        }
-                    }
-                }
-            } else {
-                addParticipantLayout?.isVisible = false
+                findViewById<TextView>(R.id.participantsTitle)?.setTextColor(theme.textPrimaryColor.toColorInt())
+                findViewById<android.widget.ImageView>(R.id.participantsArrow)?.imageTintList = ColorStateList.valueOf(theme.onSurfaceColor.toColorInt())
             }
         } else {
             // Fetch userId first, then get profile
@@ -425,6 +385,81 @@ class ProfileActivity : AppCompatActivity() {
 
         // Apply global theme to all views
         applyThemeToView(findViewById(android.R.id.content), ThemeStore.currentTheme())
+    }
+
+    private fun showParticipantsBottomSheet() {
+        val currentTheme = ThemeStore.currentTheme()
+        val currentMe = grpcClient.getCurrentUsername() ?: ""
+        val isMeAdmin = currentMe == creator && creator.isNotEmpty()
+
+        val sheet = SearchableListBottomSheet(this, currentTheme)
+            .setTitle(getString(R.string.participants))
+            .setActionButtonText(getString(R.string.add))
+            .setExtraInputVisible(false)
+
+        if (participantsAdapter == null) {
+            participantsAdapter = ParticipantAdapter(
+                theme = currentTheme,
+                isAdmin = isMeAdmin,
+                creator = creator,
+                onRemoveClick = { user ->
+                    showRemoveParticipantDialog(user)
+                },
+                onAvatarClick = { user, url ->
+                    val fullImageUrl = grpcClient.getFullAvatarUrl(user) ?: url
+                    if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
+                },
+                onLongClick = { user ->
+                    if (isMeAdmin && user != creator) showRemoveParticipantDialog(user)
+                }
+            )
+        }
+
+        sheet.setAdapter(participantsAdapter!!)
+        participantsAdapter?.updateData(
+            currentParticipants,
+            grpcClient.users.value.toSet(),
+            grpcClient.getAvatarCache()
+        )
+
+        sheet.onSearchTextChanged { query ->
+            val q = query.lowercase()
+            val filtered = currentParticipants.filter { it.lowercase().contains(q) }
+            participantsAdapter?.updateData(
+                filtered,
+                grpcClient.users.value.toSet(),
+                grpcClient.getAvatarCache()
+            )
+        }
+
+        val canAdd = isMeAdmin || allowMembersToAdd
+        sheet.setActionButtonEnabled(canAdd)
+        sheet.actionButton?.isVisible = canAdd
+
+        sheet.onActionClick {
+            grpcClient.getContacts(currentMe) { allContacts ->
+                val availableContacts = allContacts.filter { it !in currentParticipants }
+                runOnUiThread {
+                    if (availableContacts.isEmpty()) {
+                        Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
+                    } else {
+                        showAddParticipantDialog(availableContacts)
+                    }
+                }
+            }
+        }
+
+        participantsBottomSheet = sheet
+        sheet.setOnDismissListener {
+            participantsBottomSheet = null
+            // Reset adapter to full list when dismissed so it's ready for next time
+            participantsAdapter?.updateData(
+                currentParticipants,
+                grpcClient.users.value.toSet(),
+                grpcClient.getAvatarCache()
+            )
+        }
+        sheet.show()
     }
 
     private fun showRemoveParticipantDialog(user: String) {
@@ -666,7 +701,7 @@ class ProfileActivity : AppCompatActivity() {
             }
             is android.widget.CheckBox -> view.buttonTintList = ColorStateList.valueOf(primary)
             is TextView -> {
-                if (view.id == R.id.participantsTitle || view.id == R.id.addParticipantButton || 
+                if (view.id == R.id.participantsTitle ||
                     view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) {
                     view.setTextColor(primary)
                 } else {

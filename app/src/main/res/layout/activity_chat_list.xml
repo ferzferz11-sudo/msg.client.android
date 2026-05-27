@@ -270,12 +270,14 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="85dp"
+            android:layout_height="85dp"
             android:src="@drawable/ic_notification_logo"
             android:layout_marginBottom="8dp"
             android:background="@android:color/transparent"
-            android:contentDescription="@string/lavender_messenger" />
+            android:contentDescription="@string/lavender_messenger"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true" />
 
         <TextView
             android:id="@+id/welcomeVersionText"

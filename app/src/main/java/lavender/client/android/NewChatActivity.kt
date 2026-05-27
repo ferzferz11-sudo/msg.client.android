@@ -830,8 +830,17 @@ class NewChatActivity : AppCompatActivity() {
         WidgetManager.getOrCreate("attachment_sheet") { ActionBottomSheet(this) }
             .setActions(listOf(
                 SheetAction(R.id.attachCamera, R.drawable.ic_mic, getString(R.string.attach_camera)) {
-                    currentPhotoUri = createImageUri()
-                    currentPhotoUri?.let { takePhotoLauncher.launch(it) }
+                    try {
+                        currentPhotoUri = createImageUri()
+                        if (currentPhotoUri != null) {
+                            takePhotoLauncher.launch(currentPhotoUri!!)
+                        } else {
+                            showToast("Failed to create image file")
+                        }
+                    } catch (e: Exception) {
+                        showToast("Could not open camera app")
+                        android.util.Log.e("NewChatActivity", "Camera launch error", e)
+                    }
                 },
                 SheetAction(R.id.attachGallery, R.drawable.ic_gallery, getString(R.string.attach_gallery)) {
                     pickImageLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply { putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) })

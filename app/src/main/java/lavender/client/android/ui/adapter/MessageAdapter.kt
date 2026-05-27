@@ -318,6 +318,11 @@ class MessageAdapter(
                 messageText.setTextColor(pTextColor)
                 messageText.setLinkTextColor(pTextColor)
                 
+                // Fix: sender name color for group chats (more prominent)
+                if (canShowSenderInfo) {
+                    userText.setTextColor(ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE))
+                }
+                
                 // Специальное оформление для звонков
                 if (isCallMessage) {
                     val rawText = message.text
