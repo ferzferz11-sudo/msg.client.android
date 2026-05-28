@@ -46,10 +46,7 @@ object RealGrpcClient {
     var currentRoomId = ""
         private set
 
-    // Test method to verify visibility from GrpcClient
-    fun testPing(): Int = 42
 
-    // ======= Server discovery (public, no auth) =======
 
     fun fetchServersList(context: android.content.Context, cb: (List<ServerInfoProto>) -> Unit) {
         val bootstrapHost = "13.140.25.249"
