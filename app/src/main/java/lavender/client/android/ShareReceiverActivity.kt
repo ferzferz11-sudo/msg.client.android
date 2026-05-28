@@ -497,7 +497,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             )
             
             val request = Request.Builder()
-                .url("http://159.195.38.145:8082/$endpoint")
+                .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@ShareReceiverActivity)}/$endpoint")
                 .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build())
                 .build()
 
@@ -562,7 +562,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             )
             
             val uploadRequest = Request.Builder()
-                .url("http://159.195.38.145:8082/upload-image")
+                .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@ShareReceiverActivity)}/upload-image")
                 .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build())
                 .build()
             

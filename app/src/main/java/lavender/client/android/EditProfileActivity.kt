@@ -313,7 +313,7 @@ class EditProfileActivity : AppCompatActivity() {
                     val requestBody = requestBodyBuilder.build()
 
                     val request = Request.Builder()
-                        .url("http://159.195.38.145:8082/upload-avatar")
+                        .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@EditProfileActivity)}/upload-avatar")
                         .post(requestBody)
                         .build()
 

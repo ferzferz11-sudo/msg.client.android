@@ -157,7 +157,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
             ?: lavender.client.android.data.session.CredentialStore.getServerAddress(this)
-            ?: "159.195.38.145:50051"
+            ?: ""
 
         // Initialize basic UI components regardless of auth state
         setSupportActionBar(binding.toolbar)
@@ -1316,7 +1316,7 @@ class ChatListActivity : AppCompatActivity() {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger")
-            putExtra(Intent.EXTRA_TEXT, "http://159.195.38.145:8081/lavender.apk")
+            putExtra(Intent.EXTRA_TEXT, "${lavender.client.android.data.session.CredentialStore.getApkServerUrl(this@ChatListActivity)}/lavender.apk")
         }
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
     }
@@ -1385,7 +1385,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private suspend fun checkAnnouncementsInternal() {
         try {
-            val url = URL("http://159.195.38.145:8081/changelog.txt?t=${System.currentTimeMillis()}")
+            val url = URL("${lavender.client.android.data.session.CredentialStore.getApkServerUrl(this@ChatListActivity)}/changelog.txt?t=${System.currentTimeMillis()}")
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 5000
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
@@ -2146,17 +2146,30 @@ class ChatListActivity : AppCompatActivity() {
         val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
         val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
-        // Setup server address spinner
-        val serverList = listOf("159.195.38.145:50051")
+        // Setup server address spinner — fetch from gRPC (public, no auth)
+        val serverList = mutableListOf<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         serverAddressSpinner?.adapter = adapter
-        serverAddressSpinner?.setSelection(0)
+        serverAddressSpinner?.visibility = View.GONE
+        serverStatusLayout?.visibility = View.GONE
+        serverAddressLabel?.visibility = View.GONE
 
-        if (serverList.size <= 1) {
-            serverAddressSpinner?.visibility = View.GONE
-            serverStatusLayout?.visibility = View.GONE
-            serverAddressLabel?.visibility = View.GONE
+        lavender.client.android.data.grpc.GrpcClient.getServers(this) { servers ->
+            runOnUiThread {
+                serverList.clear()
+                if (servers.isNotEmpty()) {
+                    servers.forEach { serverList.add("${it.name} [${it.address}]") }
+                    serverAddressSpinner?.adapter = adapter
+                    serverAddressSpinner?.setSelection(0)
+                    if (servers.size > 1) {
+                        serverAddressSpinner?.visibility = View.VISIBLE
+                        serverStatusLayout?.visibility = View.VISIBLE
+                        serverAddressLabel?.visibility = View.VISIBLE
+                    }
+                }
+                adapter.notifyDataSetChanged()
+            }
         }
 
         btnCancel?.setOnClickListener {
@@ -2173,7 +2186,12 @@ class ChatListActivity : AppCompatActivity() {
         btnJoin?.setOnClickListener {
             val u = editText?.text.toString().trim()
             val p = editTextPassword?.text.toString().trim()
-            val serverAddress = serverAddressSpinner?.selectedItem?.toString() ?: "159.195.38.145:50051"
+            val serverAddressRaw = serverAddressSpinner?.selectedItem?.toString() ?: ""
+            val serverAddress = if (serverAddressRaw.contains("[") && serverAddressRaw.contains("]")) {
+                serverAddressRaw.substringAfter("[").substringBefore("]")
+            } else {
+                serverAddressRaw
+            }
             if (u.isNotEmpty() && p.isNotEmpty()) {
                 btnJoin?.text = ""
                 btnJoin?.isEnabled = false
@@ -2265,17 +2283,30 @@ class ChatListActivity : AppCompatActivity() {
         val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
 
-        // Setup server address spinner
-        val serverList = listOf("159.195.38.145:50051")
+        // Setup server address spinner — fetch from gRPC (public, no auth)
+        val serverList = mutableListOf<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         serverAddressSpinner?.adapter = adapter
-        serverAddressSpinner?.setSelection(0)
+        serverAddressSpinner?.visibility = View.GONE
+        serverStatusLayout?.visibility = View.GONE
+        serverAddressLabel?.visibility = View.GONE
 
-        if (serverList.size <= 1) {
-            serverAddressSpinner?.visibility = View.GONE
-            serverStatusLayout?.visibility = View.GONE
-            serverAddressLabel?.visibility = View.GONE
+        lavender.client.android.data.grpc.GrpcClient.getServers(this) { servers ->
+            runOnUiThread {
+                serverList.clear()
+                if (servers.isNotEmpty()) {
+                    servers.forEach { serverList.add("${it.name} [${it.address}]") }
+                    serverAddressSpinner?.adapter = adapter
+                    serverAddressSpinner?.setSelection(0)
+                    if (servers.size > 1) {
+                        serverAddressSpinner?.visibility = View.VISIBLE
+                        serverStatusLayout?.visibility = View.VISIBLE
+                        serverAddressLabel?.visibility = View.VISIBLE
+                    }
+                }
+                adapter.notifyDataSetChanged()
+            }
         }
 
         btnCancel?.setOnClickListener {
@@ -2294,7 +2325,12 @@ class ChatListActivity : AppCompatActivity() {
             val p = editTextPassword?.text.toString().trim()
             val confirmPassword = editTextConfirmPassword?.text.toString().trim()
             val email = editTextEmail?.text.toString().trim()
-            val serverAddress = serverAddressSpinner?.selectedItem?.toString() ?: "159.195.38.145:50051"
+            val serverAddressRaw = serverAddressSpinner?.selectedItem?.toString() ?: ""
+            val serverAddress = if (serverAddressRaw.contains("[") && serverAddressRaw.contains("]")) {
+                serverAddressRaw.substringAfter("[").substringBefore("]")
+            } else {
+                serverAddressRaw
+            }
 
             if (u.isEmpty()) {
                 Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()

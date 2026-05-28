@@ -617,7 +617,7 @@ class MessageAdapter(
                 val imageUrl = if (displayImageUrl.startsWith("http")) {
                     displayImageUrl.trim()
                 } else {
-                    "http://159.195.38.145:8082" + displayImageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                    "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(itemView.context)}" + displayImageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
                 }
                 
                 Glide.with(context)
@@ -667,7 +667,7 @@ class MessageAdapter(
                                 val absoluteUrl = if (displayImageUrl.startsWith("http")) {
                                     displayImageUrl.trim()
                                 } else {
-                                    "http://159.195.38.145:8082" + displayImageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                                    "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(itemView.context)}" + displayImageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
                                 }
                                 putExtra("VIDEO_URL", absoluteUrl)
                                 putExtra("IS_LOCAL", false)

@@ -30,7 +30,7 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
             try {
                 val client = OkHttpClient()
                 val request = Request.Builder()
-                    .url(UpdateUtils.UPDATE_URL)
+                    .url(UpdateUtils.getUpdateUrl(applicationContext))
                     .build()
 
                 val response = client.newCall(request).execute()

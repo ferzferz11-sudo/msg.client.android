@@ -1174,7 +1174,7 @@ class NewChatActivity : AppCompatActivity() {
             val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
                 val body = MultipartBody.Part.createFormData("image", getFileName(uri) ?: "image.jpg", bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
-                val req = Request.Builder().url("http://159.195.38.145:8082/upload-image").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                val req = Request.Builder().url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@NewChatActivity)}/upload-image").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 OkHttpClient().newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) { runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Upload failed") } }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
@@ -1206,7 +1206,7 @@ class NewChatActivity : AppCompatActivity() {
             if (bytes != null) {
                 val fn = getFileName(uri) ?: (if (isImage) "image.jpg" else "file")
                 val body = MultipartBody.Part.createFormData(if (isImage) "image" else "file", fn, bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
-                val req = Request.Builder().url("http://159.195.38.145:8082/${if (isImage) "upload-image" else "upload-file"}").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
+                val req = Request.Builder().url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@NewChatActivity)}/${if (isImage) "upload-image" else "upload-file"}").post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 OkHttpClient().newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) { runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") } }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {

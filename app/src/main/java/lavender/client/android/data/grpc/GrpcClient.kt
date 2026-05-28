@@ -5,14 +5,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
-import lavender.client.android.data.models.Message // 🛠️ ВАЖНЫЙ ИМПОРТ
-import lavender.client.android.data.models.ChatInfo // 🛠️ ВАЖНЫЙ ИМПОРТ
+import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
 import lavender.client.android.data.proto.DeviceInfoProto
 import lavender.client.android.data.proto.CallMessageProto
+import lavender.client.android.data.proto.ServerInfoProto
 
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
@@ -96,6 +97,11 @@ object GrpcClient {
 
     fun clearSystemNotification() {
         realGrpcClient.clearSystemNotification()
+    }
+
+    // --- Server discovery ---
+    fun getServers(context: android.content.Context, cb: (List<ServerInfoProto>) -> Unit) {
+        RealGrpcClient.fetchServersList(context, cb)
     }
 
     fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {

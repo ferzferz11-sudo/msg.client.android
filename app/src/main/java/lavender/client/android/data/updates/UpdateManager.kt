@@ -20,7 +20,7 @@ class UpdateManager(private val context: Context) {
     fun checkForUpdates(onResult: (Boolean, String) -> Unit) {
         Thread {
             try {
-                val url = URL(UpdateUtils.VERSION_URL)
+                val url = URL(UpdateUtils.getVersionUrl(context))
                 val connection = url.openConnection() as HttpURLConnection
                 connection.connectTimeout = 5000
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {

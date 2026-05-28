@@ -8,6 +8,7 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import lavender.client.android.data.session.CredentialStore
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -26,13 +27,8 @@ class AudioUploader(private val context: Context) {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
     
-    private var serverAddress: String = "159.195.38.145"
-    private var serverPort: String = "8082"
-
-    fun setServerAddress(address: String, port: String = "8082") {
-        this.serverAddress = address
-        this.serverPort = port
-    }
+    private val serverAddress: String get() = lavender.client.android.data.session.CredentialStore.getServerHost(context)
+    private val serverPort: String get() = "8082"
 
     suspend fun uploadAudio(audioFile: File, duration: Int): AudioUploadResult {
         return withContext(Dispatchers.IO) {

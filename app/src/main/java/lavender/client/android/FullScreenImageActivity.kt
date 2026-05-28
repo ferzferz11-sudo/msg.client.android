@@ -148,7 +148,7 @@ class FullScreenImageActivity : AppCompatActivity() {
     private fun downloadImage() {
         val currentUrl = imageUrls.getOrNull(currentIndex) ?: return
         val finalUrl = if (currentUrl.startsWith("http")) currentUrl.trim() 
-                      else "http://159.195.38.145:8082" + currentUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                      else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@FullScreenImageActivity)}" + currentUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -196,7 +196,7 @@ class FullScreenImageActivity : AppCompatActivity() {
     private fun loadImage(imageUrl: String) {
         if (imageUrl.isNotEmpty()) {
             val finalUrl = if (imageUrl.startsWith("http")) imageUrl.trim() 
-                          else "http://159.195.38.145:8082" + imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
+                          else "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@FullScreenImageActivity)}" + imageUrl.trim().let { if (it.startsWith("/")) it else "/$it" }
 
             // Reset zoom and pan when loading new image
             currentScale = MIN_SCALE

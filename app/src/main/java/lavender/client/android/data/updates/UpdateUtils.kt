@@ -12,9 +12,15 @@ import lavender.client.android.R
 import java.io.File
 
 object UpdateUtils {
-    const val UPDATE_URL = "http://159.195.38.145:8081/lavender.apk"
-    const val VERSION_URL = "http://159.195.38.145:8081/version.txt"
     const val CHANNEL_ID = "update_channel"
+
+    fun getUpdateUrl(context: Context): String {
+        return "${lavender.client.android.data.session.CredentialStore.getApkServerUrl(context)}/lavender.apk"
+    }
+
+    fun getVersionUrl(context: Context): String {
+        return "${lavender.client.android.data.session.CredentialStore.getApkServerUrl(context)}/version.txt"
+    }
 
     fun isUpdateAvailable(current: String, latest: String): Boolean {
         val currentParts = current.split(".").mapNotNull { it.toIntOrNull() }

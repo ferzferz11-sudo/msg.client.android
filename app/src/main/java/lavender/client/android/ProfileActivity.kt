@@ -586,7 +586,7 @@ class ProfileActivity : AppCompatActivity() {
                         runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show() }; return@withContext
                     }
                     val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull())).addFormDataPart("avatar_full", if (isGif) "avatar_full.gif" else "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull())).build()
-                    val request = Request.Builder().url("http://159.195.38.145:8082/upload-avatar").post(requestBody).build()
+                    val request = Request.Builder().url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@ProfileActivity)}/upload-avatar").post(requestBody).build()
                     val client = OkHttpClient(); val response = client.newCall(request).execute()
                     if (response.isSuccessful) {
                         val responseBody = response.body.string(); val (thumbUrl, fullUrl) = extractUrlsFromResponse(responseBody)

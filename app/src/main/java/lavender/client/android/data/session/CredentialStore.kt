@@ -83,6 +83,24 @@ object CredentialStore {
             ?: getLegacyPrefs(context).getString(LEGACY_KEY_SERVER, "") ?: ""
     }
 
+    /** Returns just the host part (without port) from server_address, e.g. "13.140.25.249" */
+    fun getServerHost(context: Context): String {
+        val addr = getServerAddress(context)
+        return addr.split(":").firstOrNull() ?: ""
+    }
+
+    /** Returns "http://host:8082" for HTTP file/image uploads */
+    fun getHttpServerUrl(context: Context): String {
+        val host = getServerHost(context)
+        return if (host.isNotEmpty()) "http://$host:8082" else ""
+    }
+
+    /** Returns "http://host:8081" for APK updates */
+    fun getApkServerUrl(context: Context): String {
+        val host = getServerHost(context)
+        return if (host.isNotEmpty()) "http://$host:8081" else ""
+    }
+
     fun getUserId(context: Context): String {
         return getEncryptedPrefs(context).getString(KEY_USER_ID, null)
             ?: getLegacyPrefs(context).getString(LEGACY_KEY_USER_ID, "") ?: ""

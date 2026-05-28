@@ -356,7 +356,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                 .build()
                 
             val request = Request.Builder()
-                .url("http://159.195.38.145:8082/upload-image")
+                .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@ThemePaletteActivity)}/upload-image")
                 .post(requestBody)
                 .build()
                 
