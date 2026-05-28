@@ -5,6 +5,17 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.7.1
+### Secret Chats — End-to-End Encryption (E2EE)
+- 🔒 **Secret Chats**: New chat type with end-to-end encryption. Messages are encrypted on the sender's device and decrypted on the receiver's — server cannot read them.
+- 🔑 **ECDH Key Exchange**: Curve25519-based key agreement for establishing shared secrets between peers.
+- 🛡️ **AES-256-GCM Encryption**: All secret chat messages are encrypted with AES-256-GCM using the shared secret.
+- 👀 **Key Fingerprint**: Visual fingerprint display for identity verification (to be implemented in UI).
+- 🔄 **Automatic Key Exchange**: Keys are exchanged automatically when a secret chat is opened for the first time.
+- 📱 **Create Secret Chat**: New "Secret Chat" option in the chat creation sheet (lock icon).
+- 🔒 **Visual Indicator**: Lock icon and "End-to-end encrypted" label in secret chat toolbar.
+- ⚠️ **Backward Compatibility**: Old clients (< 1.0.7.1) will not see secret chat messages (they appear as empty/system messages).
+
 ## 1.0.7.0
 ### Security — Encrypted Credential Storage
 - 🔐 **EncryptedSharedPreferences**: Passwords are now stored using AndroidX Security `EncryptedSharedPreferences` with AES-256 encryption and hardware-backed keystore when available.
