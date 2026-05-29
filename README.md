@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)  
-**Version:** 1.0.7.1  
+**Version:** 1.1.0.0  
 **Language:** Kotlin  
 
 Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, and Material Design 3.
@@ -14,7 +14,7 @@ Server lives in a separate repo: `ferzferz11-sudo/msg`
 ## Requirements
 
 - Android 10.0 (API 29) or higher
-- Running Go gRPC server (159.195.38.145:50051 or 10.0.2.2:50051 for emulator)
+- Running Go gRPC server (13.140.25.249:50051 or 10.0.2.2:50051 for emulator)
 
 ## Build
 
@@ -119,7 +119,7 @@ Stored in `version.txt`.
 - Voice messages with waveform
 - File/image attachments
 - Message reactions & replies
-- Server management (multi-server support)
+- Server discovery via gRPC ListServers (multi-server support)
 - Background APK updates via WorkManager
 - Localization (RU/English, RU default)
 
@@ -131,4 +131,4 @@ Stored in `version.txt`.
 ## Keys & Credentials
 
 - `.env`, `release.keystore`, `google-services.json` — NOT in git
-- APK download: `http://159.195.38.145:8081/lavender.apk`
+- APK download: `https://lavender-messenger.com/download`

@@ -5,6 +5,17 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.0.0
+### Server Discovery & Infrastructure Improvements
+- 🌐 **Server Discovery**: Server list is now fetched automatically via gRPC `ListServers`. A server spinner in login/register sheets lets users pick a server manually.
+- 🔧 **No More Hardcoded IPs**: All server URLs (HTTP, APK) are now determined dynamically through `CredentialStore` helper methods.
+- 🖱️ **Logo Tap → Website**: Tapping the app logo on the auth choice dialog opens the Lavender website.
+- 🟢 **Green Online Indicator**: User online status now shown with a green circle indicator.
+- 🎨 **Themed Server Spinner**: Server dropdown in auth screens adapts to the current theme.
+- ⭐ **Favorites Visibility**: Fixed favorites section — now always visible even when userId is empty or no chats exist.
+- 🛠️ **Build Compatibility**: Fixed `packageName` references across all activities for consistent Kotlin compilation.
+- 📦 **Deploy Script**: Updated `deploy_android.sh` with VERSION env var support, proper Python integration, and APK deployment.
+
 ## 1.0.7.1
 ### Secret Chats — End-to-End Encryption (E2EE)
 - 🔒 **Secret Chats**: New chat type with end-to-end encryption. Messages are encrypted on the sender's device and decrypted on the receiver's — server cannot read them.
