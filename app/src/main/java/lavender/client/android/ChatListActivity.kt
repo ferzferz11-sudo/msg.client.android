@@ -2550,6 +2550,14 @@ class ChatListActivity : AppCompatActivity() {
         val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
         versionText?.text = "v$versionName"
 
+        val logoImage = sheet.findViewById<ImageView>(R.id.authLogoImage)
+        logoImage?.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://13.140.25.249/"))
+                startActivity(intent)
+            } catch (_: Exception) {}
+        }
+
         btnLogin?.setOnClickListener {
             sheet.dismiss()
             showLoginBottomSheet()

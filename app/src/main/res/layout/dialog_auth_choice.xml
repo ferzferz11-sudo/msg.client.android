@@ -9,13 +9,16 @@
     android:background="@drawable/dialog_background">
 
     <ImageView
+        android:id="@+id/authLogoImage"
         android:layout_width="68dp"
         android:layout_height="68dp"
         android:src="@drawable/ic_notification_logo"
         android:layout_marginBottom="8dp"
         android:background="@android:color/transparent"
         android:scaleType="fitCenter"
-        android:adjustViewBounds="true" />
+        android:adjustViewBounds="true"
+        android:clickable="true"
+        android:focusable="true" />
 
     <TextView
         android:id="@+id/authVersionText"

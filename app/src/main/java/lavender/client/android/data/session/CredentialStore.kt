@@ -95,10 +95,10 @@ object CredentialStore {
         return if (host.isNotEmpty()) "http://$host:8082" else ""
     }
 
-    /** Returns "http://host:8081" for APK updates */
+    /** Returns "http://host:80" for APK updates (nginx) */
     fun getApkServerUrl(context: Context): String {
         val host = getServerHost(context)
-        return if (host.isNotEmpty()) "http://$host:8081" else ""
+        return if (host.isNotEmpty()) "http://$host:80" else ""
     }
 
     fun getUserId(context: Context): String {
