@@ -10,5 +10,6 @@
 local.properties
 *.keystore
 *.jks
+changelog.txt
 
 .kotlin/
