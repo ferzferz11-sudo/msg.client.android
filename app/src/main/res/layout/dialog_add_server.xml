@@ -28,7 +28,7 @@
         android:id="@+id/nameLayout"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
-        android:layoutHeight="wrap_content"
+        android:layout_height="wrap_content"
         android:hint="@string/server_name_hint"
         app:boxCornerRadiusTopStart="12dp"
         app:boxCornerRadiusTopEnd="12dp"
