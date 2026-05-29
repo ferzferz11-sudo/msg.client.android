@@ -4,17 +4,20 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
@@ -35,6 +38,9 @@ class ServersActivity : AppCompatActivity() {
     private lateinit var adapter: ServerAdapter
     private val servers = mutableListOf<ServerEntry>()
 
+    // Currently selected server address (host:port) from CredentialStore
+    private var currentServerAddress: String = ""
+
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val languageCode = prefs.getString("language", "ru") ?: "ru"
@@ -47,9 +53,12 @@ class ServersActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_servers)
+
+        // Remember current server for highlighting
+        currentServerAddress = CredentialStore.getServerAddress(this)
 
         // Toolbar
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -58,9 +67,9 @@ class ServersActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.title = getString(R.string.servers)
 
-        // Status bar
-        val systemBars = androidx.core.view.WindowInsetsCompat.Type.systemBars()
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(toolbar) { v, insets ->
+        // Status bar insets
+        val systemBars = WindowInsetsCompat.Type.systemBars()
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { v, insets ->
             val top = insets.getInsets(systemBars).top
             v.setPadding(v.paddingLeft, top, v.paddingRight, v.paddingBottom)
             insets
@@ -78,12 +87,27 @@ class ServersActivity : AppCompatActivity() {
         adapter = ServerAdapter(
             context = this,
             servers = servers,
+            currentServerAddress = currentServerAddress,
             onSetDefault = { server -> setDefaultServer(server) },
-            onDelete = { server -> deleteServer(server) },
+            onDelete = { server -> confirmDeleteServer(server) },
             onSelect = { server -> selectServer(server) }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
+
+        // Swipe to delete
+        val swipeHandler = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val pos = viewHolder.adapterPosition
+                if (pos in servers.indices) {
+                    // Reset the item view so it doesn't disappear
+                    adapter.notifyItemChanged(pos)
+                    confirmDeleteServer(servers[pos])
+                }
+            }
+        }
+        ItemTouchHelper(swipeHandler).attachToRecyclerView(recyclerView)
 
         // FAB
         fabAddServer = findViewById(R.id.fabAddServer)
@@ -101,36 +125,29 @@ class ServersActivity : AppCompatActivity() {
         val primary = theme.primaryColor.toColorInt()
         val onPrimary = theme.onPrimaryColor.toColorInt()
         val surface = theme.surfaceColor.toColorInt()
+        val bgColor = theme.backgroundColor.toColorInt()
         val textPrimary = theme.textPrimaryColor.toColorInt()
         val textSecondary = theme.textSecondaryColor.toColorInt()
 
-        // Toolbar
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         toolbar.setBackgroundColor(primary)
         toolbar.setTitleTextColor(onPrimary)
         toolbar.navigationIcon?.setTint(onPrimary)
-        toolbar.setTitleTextColor(onPrimary)
 
-        // Background
-        val bg = findViewById<View>(R.id.serversBackground)
-        bg.setBackgroundColor(theme.backgroundColor.toColorInt())
+        findViewById<View>(R.id.rootLayout).setBackgroundColor(bgColor)
+        findViewById<View>(R.id.serversHint).let { (it as TextView).setTextColor(textSecondary) }
+        findViewById<View>(R.id.emptyView).let { (it as TextView).setTextColor(textSecondary) }
 
-        // Hint
-        findViewById<TextView>(R.id.serversHint).setTextColor(textSecondary)
+        fabAddServer.backgroundTintList = ColorStateList.valueOf(primary)
+        fabAddServer.imageTintList = ColorStateList.valueOf(onPrimary)
 
-        // Empty
-        findViewById<TextView>(R.id.emptyView).setTextColor(textSecondary)
-
-        // FAB
-        fabAddServer.backgroundTintList = ColorStateList.valueOf(onPrimary)
-        fabAddServer.imageTintList = ColorStateList.valueOf(primary)
-
-        // Update adapter colors
         adapter.updateColors(primary, surface, textPrimary, textSecondary)
     }
 
     override fun onResume() {
         super.onResume()
+        currentServerAddress = CredentialStore.getServerAddress(this)
+        adapter.currentServerAddress = currentServerAddress
         loadServers()
     }
 
@@ -149,13 +166,35 @@ class ServersActivity : AppCompatActivity() {
         Toast.makeText(this, getString(R.string.server_set_default, server.name), Toast.LENGTH_SHORT).show()
     }
 
-    private fun deleteServer(server: ServerEntry) {
+    private fun confirmDeleteServer(server: ServerEntry) {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.delete_server_title))
+            .setMessage(getString(R.string.delete_server_confirm, server.name))
+            .setPositiveButton(getString(R.string.delete)) { _, _ -> doDeleteServer(server) }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun doDeleteServer(server: ServerEntry) {
+        val wasDefault = server.isDefault
         CredentialStore.removeServer(this, server.id)
+
+        // If we deleted the default server, make the first remaining one default
+        if (wasDefault) {
+            val remaining = CredentialStore.getServerList(this)
+            if (remaining.isNotEmpty()) {
+                val updated = remaining.mapIndexed { idx, s -> s.copy(isDefault = idx == 0) }
+                CredentialStore.saveServerList(this, updated)
+            }
+        }
+
         loadServers()
+        Toast.makeText(this, getString(R.string.server_deleted, server.name), Toast.LENGTH_SHORT).show()
     }
 
     private fun selectServer(server: ServerEntry) {
-        CredentialStore.setServerAddress(this, "${server.host}:${server.port}")
+        val address = "${server.host}:${server.port}"
+        CredentialStore.setServerAddress(this, address)
         Toast.makeText(this, getString(R.string.server_selected, server.name), Toast.LENGTH_SHORT).show()
         finish()
     }
@@ -183,7 +222,11 @@ class ServersActivity : AppCompatActivity() {
                 hostInput.error = getString(R.string.error_required)
                 return@setOnClickListener
             }
-            val port = portStr.toIntOrNull() ?: 50051
+            val port = portStr.toIntOrNull()
+            if (port == null || port < 1 || port > 65535) {
+                portInput.error = getString(R.string.error_invalid_port)
+                return@setOnClickListener
+            }
 
             val server = ServerEntry(
                 id = UUID.randomUUID().toString(),
@@ -213,6 +256,7 @@ class ServersActivity : AppCompatActivity() {
         private var surfaceColor: Int = Color.DKGRAY
         private var textPrimaryColor: Int = Color.WHITE
         private var textSecondaryColor: Int = Color.LTGRAY
+        var currentServerAddress: String = ""
 
         fun updateColors(primary: Int, surface: Int, textPrimary: Int, textSecondary: Int) {
             primaryColor = primary
@@ -238,9 +282,19 @@ class ServersActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val server = servers[position]
+            val address = "${server.host}:${server.port}"
             holder.name.text = server.name
-            holder.address.text = "${server.host}:${server.port}"
+            holder.address.text = address
             holder.defaultBadge.visibility = if (server.isDefault) View.VISIBLE else View.GONE
+
+            // Highlight if this is the currently selected server
+            val isSelected = address == currentServerAddress
+            if (isSelected) {
+                holder.card.strokeWidth = 2
+                holder.card.strokeColor = primaryColor
+            } else {
+                holder.card.strokeWidth = 0
+            }
 
             // Colors
             holder.card.setCardBackgroundColor(surfaceColor)
@@ -248,9 +302,7 @@ class ServersActivity : AppCompatActivity() {
             holder.address.setTextColor(textSecondaryColor)
 
             holder.card.setOnClickListener { onSelect(server) }
-            holder.deleteBtn.setOnClickListener {
-                onDelete(server)
-            }
+            holder.deleteBtn.setOnClickListener { onDelete(server) }
             holder.card.setOnLongClickListener {
                 if (!server.isDefault) onSetDefault(server)
                 true

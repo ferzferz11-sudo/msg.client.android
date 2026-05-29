@@ -433,6 +433,12 @@
     <string name="server_selected">Selected: %s</string>
     <string name="server_set_default">"%s" set as default</string>
     <string name="error_required">Required</string>
+    <string name="error_invalid_port">Port must be 1-65535</string>
+    <string name="delete_server_title">Delete server</string>
+    <string name="delete_server_confirm">Remove \"%s\" from the list?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="server_deleted">Server \"%s\" removed</string>
     <string name="under_development">In development</string>
     <string name="image_placeholder">Photo</string>
     <string name="favorites_description">Personal storage</string>

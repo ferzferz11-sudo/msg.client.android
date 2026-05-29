@@ -425,6 +425,12 @@
     <string name="server_selected">Выбран: %s</string>
     <string name="server_set_default">"%s" установлен как основной</string>
     <string name="error_required">Обязательное поле</string>
+    <string name="error_invalid_port">Порт должен быть 1-65535</string>
+    <string name="delete_server_title">Удаление сервера</string>
+    <string name="delete_server_confirm">Удалить \"%s\" из списка?</string>
+    <string name="delete">Удалить</string>
+    <string name="cancel">Отмена</string>
+    <string name="server_deleted">Сервер \"%s\" удалён</string>
     <string name="under_development">В разработке</string>
     <string name="image_placeholder">Фото</string>
     <string name="favorites_description">Личное хранилище</string>

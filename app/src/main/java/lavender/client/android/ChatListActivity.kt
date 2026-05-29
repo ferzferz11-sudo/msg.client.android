@@ -1724,10 +1724,11 @@ class ChatListActivity : AppCompatActivity() {
         val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_additional_settings)
         val errorColor = "#FF5252".toColorInt()
 
-        // Show Admin Panel and Servers only for super admins
+        // Show Admin Panel only for super admins
+        // Servers are available for all users
         val isSuperAdmin = SessionManager.session.value.isSuperAdmin
         sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
-        sheet.findViewById<View>(R.id.actionServers)?.isVisible = isSuperAdmin
+        sheet.findViewById<View>(R.id.actionServers)?.isVisible = true
 
         // Red tint for delete and logout
         fun tintError(id: Int) {
