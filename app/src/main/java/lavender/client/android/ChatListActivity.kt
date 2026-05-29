@@ -817,7 +817,32 @@ class ChatListActivity : AppCompatActivity() {
                             // Clear searching filter or force refresh to ensure Favorites stay
                             updateUpdateIndicatorVisibility()
                             checkForUpdatesSilently()
-        checkAnnouncements()
+                            checkAnnouncements()
+                        }
+                    }
+                }
+            } else {
+                // userId empty — still show favorites
+                runOnUiThread {
+                    binding.swipeRefreshLayout.isRefreshing = false
+                    chats.clear()
+                    chats.add(
+                        ChatInfo(
+                            id = "favorites",
+                            name = getString(R.string.favorites),
+                            type = "favorites",
+                            lastMessageText = getString(R.string.favorites_description),
+                            lastMessageTime = 0L
+                        )
+                    )
+                    chats.addAll(fetchedChats)
+                    chatAdapter.setChats(chats.toList())
+                    updateAppIconBadge(0)
+                }
+                updateUpdateIndicatorVisibility()
+                checkForUpdatesSilently()
+                checkAnnouncements()
+            }
 
                             // Pre-fetch avatars for all participants
                             fetchedChats.forEach { chat ->
