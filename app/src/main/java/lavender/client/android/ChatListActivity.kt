@@ -1445,6 +1445,28 @@ class ChatListActivity : AppCompatActivity() {
         showAdditionalSettingsSheet { showSettingsSheet() }
     }
 
+    private val serversActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // When returning from ServersActivity, check if the server changed
+        val newServer = CredentialStore.getServerAddress(this)
+        if (newServer.isNotEmpty() && newServer != grpcClient.currentServerAddress) {
+            val parts = newServer.split(":")
+            val host = parts[0]
+            val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+            // Force reconnect with saved credentials
+            if (::username.isInitialized && ::password.isInitialized) {
+                // Store the new server address
+                CredentialStore.setServerAddress(this, newServer)
+                // Reconnect
+                grpcClient.connect(host, false, port, this, forceReconnect = true)
+                // Trigger auto-login with new server
+                SessionManager.login(this, username, password, newServer, register = false) { _ ->
+                    runOnUiThread { loadChats(); startSync() }
+                }
+            }
+        }
+        showAdditionalSettingsSheet { showSettingsSheet() }
+    }
+
     private fun showWhatsNewDialog(onBack: (() -> Unit)? = null) {
         val prefs = getSharedPreferences("AnnouncementPrefs", MODE_PRIVATE)
         val announcementText = prefs.getString("current_text", "") ?: return
@@ -1771,7 +1793,7 @@ class ChatListActivity : AppCompatActivity() {
         sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
             isNavigatingDeeper = true
             sheet.dismiss()
-            settingsActivityLauncher.launch(Intent(this, ServersActivity::class.java))
+            serversActivityLauncher.launch(Intent(this, ServersActivity::class.java))
         }
         sheet.findViewById<View>(R.id.actionDeleteProfile)?.setOnClickListener {
             sheet.dismiss()

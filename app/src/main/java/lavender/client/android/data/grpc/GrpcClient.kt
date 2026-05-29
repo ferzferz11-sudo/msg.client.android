@@ -51,6 +51,9 @@ object GrpcClient {
         get() = realGrpcClient.isAppInBackground
         set(value) { realGrpcClient.isAppInBackground = value }
 
+    val currentServerAddress: String?
+        get() = realGrpcClient.currentServerAddress
+
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         realGrpcClient.connect(serverAddress, useTls, port, context, forceReconnect)
     }
