@@ -1087,7 +1087,7 @@ class ChatListActivity : AppCompatActivity() {
         val profileHintShown = prefs.getBoolean("onboarding_profile_shown_$username", false)
         val fabHintShown = prefs.getBoolean("onboarding_fab_shown_$username", false)
 
-        val pname = this@ChatListActivity.packageName; val versionName = try { packageManager.getPackageInfo(pname, 0).versionName ?: "" } catch (_: Exception) { "" }
+        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
         binding.welcomeVersionText.text = "v$versionName"
 
         // Show welcome container for new users
@@ -1506,7 +1506,7 @@ class ChatListActivity : AppCompatActivity() {
         val btnShare = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnShare)
         val btnUpdate = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnUpdate)
 
-        val versionName = try { packageManager.getPackageInfo(this@ChatListActivity.packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
         clientVersionText?.text = getString(R.string.version_label, versionName)
         sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = "v$versionName"
         
@@ -2555,7 +2555,7 @@ class ChatListActivity : AppCompatActivity() {
         val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
         val versionText = sheet.findViewById<TextView>(R.id.authVersionText)
 
-        val versionName = try { packageManager.getPackageInfo(this@ChatListActivity.packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
         versionText?.text = "v$versionName"
 
         btnLogin?.setOnClickListener {
