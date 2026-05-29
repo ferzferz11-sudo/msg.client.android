@@ -185,7 +185,6 @@
     <string name="install_update">Install update</string>
     <string name="delete_chats">Delete Chats</string>
     <string name="delete_chats_confirmation">Are you sure you want to delete %d selected chats? This will permanently remove all messages and images.</string>
-    <string name="delete">Delete</string>
     <string name="deleted_count">Deleted %d chats</string>
     <string name="failed_to_delete_chats">Failed to delete chats</string>
     <string name="mute_chats">Mute Chats</string>

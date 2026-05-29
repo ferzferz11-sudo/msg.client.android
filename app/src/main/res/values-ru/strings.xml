@@ -174,7 +174,6 @@
     <string name="install_update">Установить обновление</string>
     <string name="delete_chats">Удалить чаты</string>
     <string name="delete_chats_confirmation">Вы уверены, что хотите удалить %d выбранных чатов? Все сообщения и изображения будут удалены навсегда.</string>
-    <string name="delete">Удалить</string>
     <string name="deleted_count">Удалено чатов: %d</string>
     <string name="failed_to_delete_chats">Не удалось удалить чаты</string>
     <string name="mute_chats">Отключить уведомления</string>
