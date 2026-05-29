@@ -126,6 +126,14 @@ class ChatListActivity : AppCompatActivity() {
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Logo tap → open website
+        binding.logoImage?.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://13.140.25.249/"))
+                startActivity(intent)
+            } catch (_: Exception) { }
+        }
+
         updateManager = UpdateManager(this)
         
         setupSystemNotificationObserver()
@@ -2167,6 +2175,9 @@ class ChatListActivity : AppCompatActivity() {
                         serverStatusLayout?.visibility = View.VISIBLE
                         serverAddressLabel?.visibility = View.VISIBLE
                     }
+                    // Green indicator — we got servers
+                    sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
+                        android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
                 }
                 adapter.notifyDataSetChanged()
             }
@@ -2304,6 +2315,9 @@ class ChatListActivity : AppCompatActivity() {
                         serverStatusLayout?.visibility = View.VISIBLE
                         serverAddressLabel?.visibility = View.VISIBLE
                     }
+                    // Green indicator — we got servers
+                    sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
+                        android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
                 }
                 adapter.notifyDataSetChanged()
             }

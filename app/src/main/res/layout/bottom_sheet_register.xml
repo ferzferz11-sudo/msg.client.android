@@ -130,12 +130,22 @@
         android:textColor="?attr/colorOnSurface"
         android:layout_marginBottom="8dp" />
 
-    <Spinner
-        android:id="@+id/serverAddressSpinner"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:textColor="?attr/colorOnSurface" />
+        android:orientation="vertical"
+        android:background="@drawable/spinner_background"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp"
+        android:layout_marginBottom="12dp">
+
+        <Spinner
+            android:id="@+id/serverAddressSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:textColor="?attr/colorOnSurface"
+            android:popupBackground="?attr/colorSurface" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/serverStatusLayout"
