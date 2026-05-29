@@ -141,7 +141,8 @@
     <string name="history_empty">Добро пожаловать! Это новый чат. Здесь пока нет сообщений.</string>
     <string name="history_load_error">Не удалось загрузить историю: %s</string>
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
-    <string name="share_app">Поделиться Лава</string>
+    <string name="share_app">Поделиться Лавой</string>
+    <string name="share_text">Попробуй Лаву — свою собственную систему коммуникаций!</string>
     <string name="exit">Выход</string>
     <string name="disconnected">Отключено</string>
     <string name="connecting">Подключение…</string>
@@ -345,7 +346,7 @@
     <string name="install_now">Установить</string>
     <string name="onboarding_profile_hint">Настройте профиль, чтобы друзья могли вас узнать!</string>
     <string name="onboarding_fab_hint">Добавьте контакты людей, с которыми хотите общаться!\nСоздайте новый чат или присоединяйтесь к группам, чтобы всегда быть на связи!</string>
-    <string name="share_with_friends">Поделиться с друзьями</string>
+    <string name="share_with_friends">Поделиться Лавой</string>
     <string name="apply">Применить</string>
     <string name="user_is_typing">%1$s печатает…</string>
     <string name="users_are_typing">%1$d чел. печатают…</string>

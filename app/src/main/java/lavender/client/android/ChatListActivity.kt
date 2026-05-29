@@ -1341,8 +1341,9 @@ class ChatListActivity : AppCompatActivity() {
     private fun shareApp() {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger")
-            putExtra(Intent.EXTRA_TEXT, "${lavender.client.android.data.session.CredentialStore.getApkServerUrl(this@ChatListActivity)}/lavender.apk")
+            val siteUrl = lavender.client.android.data.session.CredentialStore.getApkServerUrl(this@ChatListActivity)
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
+            putExtra(Intent.EXTRA_TEXT, "${getString(R.string.share_text)}\n${siteUrl}/download")
         }
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
     }

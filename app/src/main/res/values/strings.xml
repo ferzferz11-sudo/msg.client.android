@@ -155,6 +155,7 @@
     <string name="history_load_error">Failed to load history: %s</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="share_app">Share Lava</string>
+    <string name="share_text">Try Lava Messenger — your own communication system!</string>
     <string name="exit">Exit</string>
     <string name="disconnected">Disconnected</string>
     <string name="connecting">Connecting…</string>
@@ -353,7 +354,7 @@
     <string name="install_now">Install Now</string>
     <string name="onboarding_profile_hint">Set up your profile so friends can recognize you!</string>
     <string name="onboarding_fab_hint">Add contacts of the people you want to message!\nCreate a new chat or join groups to stay always connected!</string>
-    <string name="share_with_friends">Share with friends</string>
+    <string name="share_with_friends">Share Lava</string>
     <string name="apply">Apply</string>
     <string name="user_is_typing">%1$s typing…</string>
     <string name="users_are_typing">%1$d users are typing…</string>
