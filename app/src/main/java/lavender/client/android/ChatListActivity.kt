@@ -1768,13 +1768,9 @@ class ChatListActivity : AppCompatActivity() {
             settingsActivityLauncher.launch(Intent(this, SuperAdminActivity::class.java))
         }
         sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
+            isNavigatingDeeper = true
             sheet.dismiss()
-            val currentServer = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "Unknown")
-            AlertDialog.Builder(this)
-                .setTitle(R.string.servers)
-                .setMessage("${getString(R.string.under_development)}\n\nConnected to: $currentServer")
-                .setPositiveButton("OK", null)
-                .show()
+            settingsActivityLauncher.launch(Intent(this, ServersActivity::class.java))
         }
         sheet.findViewById<View>(R.id.actionDeleteProfile)?.setOnClickListener {
             sheet.dismiss()

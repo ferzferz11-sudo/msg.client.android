@@ -414,6 +414,17 @@
     <string name="clear_cache">Очистка локального кэша</string>
     <string name="cache_cleared">Кэш успешно очищен</string>
     <string name="servers">Серверы</string>
+    <string name="add_server">Добавить сервер</string>
+    <string name="servers_hint">Нажмите на сервер чтобы выбрать. Долгое нажатие — сделать основным.</string>
+    <string name="servers_empty">Серверов пока нет.\nНажмите + чтобы добавить первый сервер.</string>
+    <string name="default_badge">ОСНОВНОЙ</string>
+    <string name="server_name_hint">Название сервера</string>
+    <string name="server_host_hint">Хост (напр. 13.140.25.249)</string>
+    <string name="server_port_hint">Порт (по умолчанию: 50051)</string>
+    <string name="server_added">Сервер "%s" добавлен</string>
+    <string name="server_selected">Выбран: %s</string>
+    <string name="server_set_default">"%s" установлен как основной</string>
+    <string name="error_required">Обязательное поле</string>
     <string name="under_development">В разработке</string>
     <string name="image_placeholder">Фото</string>
     <string name="favorites_description">Личное хранилище</string>

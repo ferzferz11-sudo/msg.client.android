@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Secure credential storage using EncryptedSharedPreferences.
@@ -202,5 +204,79 @@ object CredentialStore {
     fun needsMigration(context: Context): Boolean {
         val legacy = getLegacyPrefs(context)
         return legacy.contains(LEGACY_KEY_PASSWORD) || legacy.contains(LEGACY_KEY_USERNAME)
+    }
+
+    // --- Server list management ---
+
+    data class ServerEntry(
+        val id: String,
+        val name: String,
+        val host: String,
+        val port: Int = 50051,
+        val isDefault: Boolean = false
+    )
+
+    fun getServerList(context: Context): List<ServerEntry> {
+        val json = getLegacyPrefs(context).getString("servers_list", null) ?: return emptyList()
+        return try {
+            val arr = JSONArray(json)
+            val list = mutableListOf<ServerEntry>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                list.add(ServerEntry(
+                    id = obj.optString("id", ""),
+                    name = obj.optString("name", ""),
+                    host = obj.optString("host", ""),
+                    port = obj.optInt("port", 50051),
+                    isDefault = obj.optBoolean("isDefault", false)
+                ))
+            }
+            list
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse server list", e)
+            emptyList()
+        }
+    }
+
+    fun saveServerList(context: Context, servers: List<ServerEntry>) {
+        val arr = JSONArray()
+        servers.forEach { s ->
+            val obj = JSONObject()
+            obj.put("id", s.id)
+            obj.put("name", s.name)
+            obj.put("host", s.host)
+            obj.put("port", s.port)
+            obj.put("isDefault", s.isDefault)
+            arr.put(obj)
+        }
+        getLegacyPrefs(context).edit().putString("servers_list", arr.toString()).apply()
+    }
+
+    fun addServer(context: Context, server: ServerEntry) {
+        val list = getServerList(context).toMutableList()
+        // Remove existing server with same id, add to beginning
+        list.removeAll { it.id == server.id }
+        if (server.isDefault) {
+            // Unset default from others
+            for (i in list.indices) {
+                if (list[i].isDefault) list[i] = list[i].copy(isDefault = false)
+            }
+            list.add(0, server)
+        } else {
+            // Add after all default servers
+            val insertIdx = list.indexOfFirst { !it.isDefault }.let { if (it < 0) list.size else it }
+            list.add(insertIdx, server)
+        }
+        saveServerList(context, list)
+    }
+
+    fun removeServer(context: Context, serverId: String) {
+        val list = getServerList(context).toMutableList()
+        list.removeAll { it.id == serverId }
+        saveServerList(context, list)
+    }
+
+    fun getDefaultServer(context: Context): ServerEntry? {
+        return getServerList(context).firstOrNull { it.isDefault }
     }
 }

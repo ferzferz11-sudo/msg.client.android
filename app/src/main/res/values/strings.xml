@@ -422,6 +422,17 @@
     <string name="clear_cache">Clear local cache</string>
     <string name="cache_cleared">Cache cleared successfully</string>
     <string name="servers">Servers</string>
+    <string name="add_server">Add server</string>
+    <string name="servers_hint">Tap a server to select it. Long press to set as default.</string>
+    <string name="servers_empty">No servers added yet.\nTap + to add your first server.</string>
+    <string name="default_badge">DEFAULT</string>
+    <string name="server_name_hint">Server name</string>
+    <string name="server_host_hint">Host (e.g. 13.140.25.249)</string>
+    <string name="server_port_hint">Port (default: 50051)</string>
+    <string name="server_added">Server "%s" added</string>
+    <string name="server_selected">Selected: %s</string>
+    <string name="server_set_default">"%s" set as default</string>
+    <string name="error_required">Required</string>
     <string name="under_development">In development</string>
     <string name="image_placeholder">Photo</string>
     <string name="favorites_description">Personal storage</string>

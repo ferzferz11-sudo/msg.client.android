@@ -85,8 +85,7 @@
 
     <LinearLayout
         android:id="@+id/actionServers"
-        style="@style/MenuActionItemStyle"
-        android:visibility="gone">
+        style="@style/MenuActionItemStyle">
         <ImageView
             style="@style/MenuActionIconStyle"
             android:src="@drawable/ic_settings" />
