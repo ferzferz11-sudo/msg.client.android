@@ -42,7 +42,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import java.io.File
 import com.google.android.material.textfield.TextInputEditText
@@ -203,19 +205,23 @@ class ChatListActivity : AppCompatActivity() {
 
         // Observe download state via StateFlow
         lifecycleScope.launch {
-            updateManager.isDownloadingInstance.collect { downloading ->
-                updateUpdateIndicatorVisibility()
-            }
-        }
-        lifecycleScope.launch {
-            updateManager.downloadProgressInstance.collect { progress ->
-                binding.updateProgressText.text = getString(R.string.percent_format, progress)
-                binding.updateProgressText.isVisible = progress > 0
-            }
-        }
-        lifecycleScope.launch {
-            updateManager.isDownloadedInstance.collect { downloaded ->
-                updateUpdateIndicatorVisibility()
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    updateManager.isDownloadingInstance.collect { downloading ->
+                        updateUpdateIndicatorVisibility()
+                    }
+                }
+                launch {
+                    updateManager.downloadProgressInstance.collect { progress ->
+                        binding.updateProgressText.text = getString(R.string.percent_format, progress)
+                        binding.updateProgressText.isVisible = progress > 0
+                    }
+                }
+                launch {
+                    updateManager.isDownloadedInstance.collect { downloaded ->
+                        updateUpdateIndicatorVisibility()
+                    }
+                }
             }
         }
         
