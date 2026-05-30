@@ -254,18 +254,15 @@ object CredentialStore {
 
     fun addServer(context: Context, server: ServerEntry) {
         val list = getServerList(context).toMutableList()
-        // Remove existing server with same id, add to beginning
         list.removeAll { it.id == server.id }
         if (server.isDefault) {
-            // Unset default from others
             for (i in list.indices) {
                 if (list[i].isDefault) list[i] = list[i].copy(isDefault = false)
             }
             list.add(0, server)
         } else {
-            // Add after all default servers
-            val insertIdx = list.indexOfFirst { !it.isDefault }.let { if (it < 0) list.size else it }
-            list.add(insertIdx, server)
+            // Add to end of list (after all servers)
+            list.add(server)
         }
         saveServerList(context, list)
     }

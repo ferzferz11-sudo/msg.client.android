@@ -303,7 +303,13 @@ class ServersActivity : AppCompatActivity() {
             holder.address.setTextColor(textSecondaryColor)
 
             holder.card.setOnClickListener { onSelect(server) }
-            holder.deleteBtn.setOnClickListener { onDelete(server) }
+            // Hide delete button for default server
+            if (server.isDefault) {
+                holder.deleteBtn.visibility = View.GONE
+            } else {
+                holder.deleteBtn.visibility = View.VISIBLE
+                holder.deleteBtn.setOnClickListener { onDelete(server) }
+            }
             holder.card.setOnLongClickListener {
                 if (!server.isDefault) onSetDefault(server)
                 true
