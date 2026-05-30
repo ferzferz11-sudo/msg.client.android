@@ -184,6 +184,8 @@ open class StandardBottomSheet(
                         ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
                     )
                 )
+                // Set spinner background to surface color so text is visible
+                view.setBackgroundColor(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY))
             }
         } else if (view is android.widget.ProgressBar) {
             view.indeterminateTintList = ColorStateList.valueOf(primaryColor)
