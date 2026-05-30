@@ -15,7 +15,7 @@ object UpdateUtils {
     const val CHANNEL_ID = "update_channel"
 
     fun getUpdateUrl(context: Context): String {
-        return "${lavender.client.android.data.session.CredentialStore.getApkServerUrl(context)}/lavender.apk"
+        return "${lavender.client.android.data.session.CredentialStore.getApkServerUrl(context)}/download"
     }
 
     fun getVersionUrl(context: Context): String {
