@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import lavender.client.android.data.session.CredentialStore
+import lavender.client.android.data.updates.UpdateUtils
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
@@ -66,6 +67,7 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
+import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection

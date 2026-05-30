@@ -22,20 +22,22 @@ class UpdateManager(private val context: Context) {
     private val TAG = "UpdateManager"
     private val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
 
-    private val _downloadProgress = MutableStateFlow(0)
-    val downloadProgress: StateFlow<Int> = _downloadProgress
+    companion object {
+        @Volatile
+        private var downloadJob: Job? = null
 
-    private val _isDownloading = MutableStateFlow(false)
-    val isDownloading: StateFlow<Boolean> = _isDownloading
+        @Volatile
+        private var downloadCancelled = false
 
-    private val _isDownloaded = MutableStateFlow(false)
-    val isDownloaded: StateFlow<Boolean> = _isDownloaded
+        private val _downloadProgress = MutableStateFlow(0)
+        val downloadProgress: StateFlow<Int> = _downloadProgress
 
-    @Volatile
-    private var downloadJob: Job? = null
+        private val _isDownloading = MutableStateFlow(false)
+        val isDownloading: StateFlow<Boolean> = _isDownloading
 
-    @Volatile
-    private var downloadCancelled = false
+        private val _isDownloaded = MutableStateFlow(false)
+        val isDownloaded: StateFlow<Boolean> = _isDownloaded
+    }
 
     init {
         // Restore state from prefs on init
