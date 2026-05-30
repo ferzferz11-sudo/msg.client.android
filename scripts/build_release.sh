@@ -11,11 +11,9 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 BUILD_TYPE="${1:-release}"
-GRADLE_OPTS="${GRADLE_OPTS:--Xmx512m}"
 
 echo "========================================="
 echo " Lavender Android — сборка $BUILD_TYPE"
-echo " Gradle opts: $GRADLE_OPTS"
 echo "========================================="
 
 # Проверяем version.txt
@@ -47,7 +45,6 @@ fi
 
 # Сборка
 echo "🔨 Сборка..."
-export GRADLE_OPTS
 CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${BUILD_TYPE:0:1})${BUILD_TYPE:1}"
 BUILD_LOG=$(mktemp -t lavender_build.XXXXXX)
 echo "   📄 Лог: $BUILD_LOG"
