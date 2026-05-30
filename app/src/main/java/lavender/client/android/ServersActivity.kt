@@ -134,6 +134,7 @@ class ServersActivity : AppCompatActivity() {
         toolbar.setBackgroundColor(primary)
         toolbar.setTitleTextColor(onPrimary)
         toolbar.navigationIcon?.setTint(onPrimary)
+        findViewById<TextView>(R.id.toolbarTitle).setTextColor(onPrimary)
 
         findViewById<View>(R.id.rootLayout).setBackgroundColor(bgColor)
         findViewById<View>(R.id.serversHint).let { (it as TextView).setTextColor(textSecondary) }
@@ -154,7 +155,30 @@ class ServersActivity : AppCompatActivity() {
 
     private fun loadServers() {
         servers.clear()
-        servers.addAll(CredentialStore.getServerList(this))
+        val list = CredentialStore.getServerList(this)
+        if (list.isEmpty()) {
+            // First run — seed with default servers
+            val defaultServers = listOf(
+                CredentialStore.ServerEntry(
+                    id = "default-server-1",
+                    name = "Lavender (production)",
+                    host = "13.140.25.249",
+                    port = 50051,
+                    isDefault = true
+                ),
+                CredentialStore.ServerEntry(
+                    id = "default-server-2",
+                    name = "Lavender (dev)",
+                    host = "13.140.25.249",
+                    port = 50052,
+                    isDefault = false
+                )
+            )
+            CredentialStore.saveServerList(this, defaultServers)
+            servers.addAll(defaultServers)
+        } else {
+            servers.addAll(list)
+        }
         adapter.notifyDataSetChanged()
         emptyView.visibility = if (servers.isEmpty()) View.VISIBLE else View.GONE
         recyclerView.visibility = if (servers.isEmpty()) View.GONE else View.VISIBLE
