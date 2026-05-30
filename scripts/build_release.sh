@@ -4,7 +4,7 @@
 #   ./scripts/build_release.sh          # release (signed если есть keystore)
 #   ./scripts/build_release.sh debug    # debug сборка (без signing, для теста)
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -49,7 +49,17 @@ fi
 echo "🔨 Сборка..."
 export GRADLE_OPTS
 CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${BUILD_TYPE:0:1})${BUILD_TYPE:1}"
-./gradlew "assemble${CAPITALIZED}" --no-daemon 2>&1 | tail -20
+BUILD_LOG=$(mktemp /tmp/lavender_build_XXXXXX.log)
+echo "   📄 Лог: $BUILD_LOG"
+./gradlew "assemble${CAPITALIZED}" --no-daemon 2>&1 | tee "$BUILD_LOG"
+GRADLE_EXIT=${PIPESTATUS[0]}
+echo ""
+if [ $GRADLE_EXIT -ne 0 ]; then
+  echo "❌ Сборка завершилась с ошибкой (exit code: $GRADLE_EXIT)"
+  echo "   Последние строки лога:"
+  tail -30 "$BUILD_LOG"
+  exit 1
+fi
 
 # Ищем собранный APK
 APK_DIR="app/build/outputs/apk/$BUILD_TYPE"
