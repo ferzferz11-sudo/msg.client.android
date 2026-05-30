@@ -176,8 +176,16 @@ open class StandardBottomSheet(
                     view.strokeWidth = 0
                 }
             }
-        }
-else if (view is android.widget.ProgressBar) {
+        } else if (view is android.widget.Spinner) {
+            view.backgroundTintList = ColorStateList.valueOf(primaryColor)
+            if (view is androidx.appcompat.widget.AppCompatSpinner) {
+                view.setPopupBackgroundDrawable(
+                    android.graphics.drawable.ColorDrawable(
+                        ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+                    )
+                )
+            }
+        } else if (view is android.widget.ProgressBar) {
             view.indeterminateTintList = ColorStateList.valueOf(primaryColor)
         } else if (view is ImageView && view !is de.hdodenhof.circleimageview.CircleImageView) {
             view.imageTintList = ColorStateList.valueOf(primaryColor)
@@ -355,7 +363,7 @@ open class ListBottomSheet(
     }
 
     override fun setOnDismissListener(listener: () -> Unit): ListBottomSheet {
-        super.setOnDismissListener(listener)
+        dialog?.setOnDismissListener { listener() }
         return this
     }
 }
