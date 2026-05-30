@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)  
-**Version:** 1.1.0.0  
+**Version:** 1.1.0.2  
 **Language:** Kotlin  
 
 Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, and Material Design 3.
