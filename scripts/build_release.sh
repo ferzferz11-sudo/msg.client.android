@@ -48,7 +48,8 @@ fi
 # Сборка
 echo "🔨 Сборка..."
 export GRADLE_OPTS
-./gradlew "assemble${BUILD_TYPE^}" --no-daemon 2>&1 | tail -20
+CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${BUILD_TYPE:0:1})${BUILD_TYPE:1}"
+./gradlew "assemble${CAPITALIZED}" --no-daemon 2>&1 | tail -20
 
 # Ищем собранный APK
 APK_DIR="app/build/outputs/apk/$BUILD_TYPE"
