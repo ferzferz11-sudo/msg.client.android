@@ -39,6 +39,11 @@ class UpdateManager(private val context: Context) {
         val isDownloaded: StateFlow<Boolean> = _isDownloaded
     }
 
+    // Instance-level accessors for proper type resolution in collect {}
+    val downloadProgressInstance: StateFlow<Int> get() = downloadProgress
+    val isDownloadingInstance: StateFlow<Boolean> get() = isDownloading
+    val isDownloadedInstance: StateFlow<Boolean> get() = isDownloaded
+
     init {
         // Restore state from prefs on init
         _isDownloading.value = prefs.getBoolean("update_downloading", false)

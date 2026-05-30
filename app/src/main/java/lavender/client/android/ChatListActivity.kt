@@ -59,7 +59,6 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.updates.UpdateManager
-import lavender.client.android.data.updates.UpdateUtils
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -67,7 +66,6 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
-import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -205,18 +203,18 @@ class ChatListActivity : AppCompatActivity() {
 
         // Observe download state via StateFlow
         lifecycleScope.launch {
-            updateManager.isDownloading.collect { downloading ->
+            updateManager.isDownloadingInstance.collect { downloading ->
                 updateUpdateIndicatorVisibility()
             }
         }
         lifecycleScope.launch {
-            updateManager.downloadProgress.collect { progress ->
+            updateManager.downloadProgressInstance.collect { progress ->
                 binding.updateProgressText.text = getString(R.string.percent_format, progress)
                 binding.updateProgressText.isVisible = progress > 0
             }
         }
         lifecycleScope.launch {
-            updateManager.isDownloaded.collect { downloaded ->
+            updateManager.isDownloadedInstance.collect { downloaded ->
                 updateUpdateIndicatorVisibility()
             }
         }
