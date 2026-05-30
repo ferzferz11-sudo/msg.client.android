@@ -47,6 +47,7 @@ class UpdateManager(private val context: Context) {
     }
 
     fun startDownload(isAuto: Boolean = false) {
+        Log.d(TAG, "startDownload called, isAuto=$isAuto")
         prefs.edit { putBoolean("update_downloading", true) }
 
         val constraintsBuilder = androidx.work.Constraints.Builder()
@@ -62,6 +63,7 @@ class UpdateManager(private val context: Context) {
             .build()
             
         val policy = if (isAuto) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE
+        Log.d(TAG, "Enqueuing work with policy=$policy")
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             "update_download",
