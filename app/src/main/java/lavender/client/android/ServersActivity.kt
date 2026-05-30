@@ -60,12 +60,12 @@ class ServersActivity : AppCompatActivity() {
         // Remember current server for highlighting
         currentServerAddress = CredentialStore.getServerAddress(this)
 
-        // Toolbar
+        // Toolbar — custom title inside toolbar (no baseline title)
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
-        toolbar.title = getString(R.string.servers)
+        // Title is set via custom TextView in XML (toolbarTitle)
 
         // Status bar insets
         val systemBars = WindowInsetsCompat.Type.systemBars()
