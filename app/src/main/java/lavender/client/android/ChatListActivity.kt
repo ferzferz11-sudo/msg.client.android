@@ -44,10 +44,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
+import java.io.File
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,8 +58,8 @@ import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
-import lavender.client.android.data.updates.DownloadUpdateWorker
 import lavender.client.android.data.updates.UpdateManager
+import lavender.client.android.data.updates.UpdateUtils
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -71,6 +68,7 @@ import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -205,36 +203,23 @@ class ChatListActivity : AppCompatActivity() {
 
         Log.d("ChatListActivity", "Logged in as $username")
 
-        // Observe background update download
-        WorkManager.getInstance(this)
-            .getWorkInfosForUniqueWorkLiveData("update_download")
-            .observe(this) { workInfos ->
-                val workInfo = workInfos?.firstOrNull()
-                if (workInfo != null) {
-                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-                    val isCurrentlyDownloading = workInfo.state == WorkInfo.State.RUNNING || workInfo.state == WorkInfo.State.ENQUEUED
-                    
-                    if (prefs.getBoolean("update_downloading", false) != isCurrentlyDownloading) {
-                        prefs.edit { putBoolean("update_downloading", isCurrentlyDownloading) }
-                    }
-
-                    if (workInfo.state == WorkInfo.State.RUNNING) {
-                        val progress = workInfo.progress.getInt("progress", 0)
-                        binding.updateProgressText.text = getString(R.string.percent_format, progress)
-                        binding.updateProgressText.isVisible = progress > 0
-                    } else {
-                        binding.updateProgressText.isVisible = false
-                    }
-                    updateUpdateIndicatorVisibility()
-                } else {
-                    // No work info, ensure downloading flag is false
-                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-                    if (prefs.getBoolean("update_downloading", false)) {
-                        prefs.edit { putBoolean("update_downloading", false) }
-                        updateUpdateIndicatorVisibility()
-                    }
-                }
+        // Observe download state via StateFlow
+        lifecycleScope.launch {
+            updateManager.isDownloading.collect { downloading ->
+                updateUpdateIndicatorVisibility()
             }
+        }
+        lifecycleScope.launch {
+            updateManager.downloadProgress.collect { progress ->
+                binding.updateProgressText.text = getString(R.string.percent_format, progress)
+                binding.updateProgressText.isVisible = progress > 0
+            }
+        }
+        lifecycleScope.launch {
+            updateManager.isDownloaded.collect { downloaded ->
+                updateUpdateIndicatorVisibility()
+            }
+        }
         
         checkForUpdatesSilently()
         checkAnnouncements()
@@ -1026,7 +1011,6 @@ class ChatListActivity : AppCompatActivity() {
             val rotation = AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
             binding.updateAvailableIcon.startAnimation(rotation)
             binding.updateAvailableIcon.contentDescription = "Downloading..."
-            // Progress text is managed by WorkInfo observer
         } else {
             binding.updateAvailableIcon.clearAnimation()
             binding.updateProgressText.isVisible = false
