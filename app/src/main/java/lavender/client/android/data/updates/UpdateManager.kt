@@ -48,7 +48,7 @@ class UpdateManager(private val context: Context) {
 
     fun startDownload(isAuto: Boolean = false) {
         prefs.edit { putBoolean("update_downloading", true) }
-        
+
         val constraintsBuilder = androidx.work.Constraints.Builder()
         if (isAuto) {
             constraintsBuilder.setRequiredNetworkType(androidx.work.NetworkType.UNMETERED)
@@ -61,9 +61,11 @@ class UpdateManager(private val context: Context) {
             .setConstraints(constraintsBuilder.build())
             .build()
             
+        val policy = if (isAuto) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE
+
         WorkManager.getInstance(context).enqueueUniqueWork(
             "update_download",
-            ExistingWorkPolicy.KEEP,
+            policy,
             workRequest
         )
     }

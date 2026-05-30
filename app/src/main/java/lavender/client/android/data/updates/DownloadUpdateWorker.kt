@@ -24,6 +24,10 @@ class DownloadUpdateWorker(context: Context, parameters: WorkerParameters) :
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background download...")
         
+        applicationContext.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE).edit {
+            putBoolean("update_downloading", true)
+        }
+
         val file = File(applicationContext.getExternalFilesDir(null), "lavender_update.apk")
         
         return withContext(Dispatchers.IO) {
