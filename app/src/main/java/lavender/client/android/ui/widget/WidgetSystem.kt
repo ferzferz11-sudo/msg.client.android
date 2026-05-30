@@ -177,15 +177,13 @@ open class StandardBottomSheet(
                 }
             }
         } else if (view is android.widget.Spinner) {
-            view.backgroundTintList = ColorStateList.valueOf(primaryColor)
             if (view is androidx.appcompat.widget.AppCompatSpinner) {
                 view.setPopupBackgroundDrawable(
                     android.graphics.drawable.ColorDrawable(
-                        ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+                        primaryColor
                     )
                 )
-                // Set spinner background to surface color so text is visible
-                view.setBackgroundColor(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY))
+                view.setBackgroundColor(primaryColor)
             }
         } else if (view is android.widget.ProgressBar) {
             view.indeterminateTintList = ColorStateList.valueOf(primaryColor)

@@ -4,8 +4,9 @@
     android:layout_height="wrap_content"
     android:padding="12dp"
     android:textSize="14sp"
-    android:textColor="?attr/colorPrimary"
-    android:background="?attr/colorSurface"
+    android:textColor="?attr/colorOnPrimary"
+    android:background="?attr/colorPrimary"
     android:ellipsize="end"
     android:maxLines="1"
-    android:checkMark="?android:attr/listChoiceIndicatorSingle" />
+    android:checkMark="?android:attr/listChoiceIndicatorSingle"
+    android:checkMarkTint="?attr/colorOnPrimary" />
