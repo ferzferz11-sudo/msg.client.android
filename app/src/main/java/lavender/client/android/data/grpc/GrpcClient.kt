@@ -348,4 +348,9 @@ object GrpcClient {
         callback("", false)
     }
     fun sendE2EEMessage(chatId: String, encryptedPayload: String) {}
+
+    // OWL AI Assistant
+    fun chatWithOWL(userId: String, message: String, scope: kotlinx.coroutines.CoroutineScope, onResponse: (lavender.client.android.data.proto.OWLResponseProto) -> Unit) {
+        lavender.client.android.data.grpc.chatWithOWL(userId, message, scope, onResponse)
+    }
 }

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <!-- User message (right-aligned) -->
+    <LinearLayout
+        android:id="@+id/userMessageContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/userMessageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="280dp"
+            android:padding="12dp"
+            android:background="@drawable/owl_bubble_user"
+            android:textColor="?attr/colorOnPrimary"
+            android:textSize="15sp"
+            android:layout_marginStart="64dp" />
+
+    </LinearLayout>
+
+    <!-- OWL message (left-aligned) -->
+    <LinearLayout
+        android:id="@+id/owlMessageContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/owlMessageText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="280dp"
+            android:padding="12dp"
+            android:background="@drawable/owl_bubble_owl"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:layout_marginEnd="64dp" />
+
+    </LinearLayout>
+
+    <!-- Typing indicator -->
+    <LinearLayout
+        android:id="@+id/typingContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:padding="12dp"
+        android:background="@drawable/owl_bowl_owl"
+        android:visibility="gone"
+        android:layout_marginEnd="64dp">
+
+        <ProgressBar
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:indeterminateTint="?attr/colorPrimary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OWL печатает..."
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

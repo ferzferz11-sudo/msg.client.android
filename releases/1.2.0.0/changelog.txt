@@ -1,0 +1,8 @@
+🚀 Lavender 1.2.0.0: OWL — AI-ассистент в чате
+
+— OWL AI: Новый чат с AI-ассистентом прямо в приложении.
+— OWL AI: Streaming-ответ — сообщение появляется по частям.
+— OWL AI: Контекст разговора (до 20 сообщений).
+— OWL AI: Rate limiting — 10 запросов/мин.
+— Сервер: gRPC ChatWithOWL (server streaming) + OpenRouter.
+— Сервер: Rate limiter + session context storage.

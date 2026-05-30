@@ -98,6 +98,7 @@
         <activity android:name=".FCMLogsActivity" android:exported="false" />
         <activity android:name=".SecurityActivity" android:exported="false" />
         <activity android:name=".ServersActivity" android:exported="false" />
+        <activity android:name=".OwlActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"

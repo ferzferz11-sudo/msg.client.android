@@ -1880,6 +1880,10 @@ class ChatListActivity : AppCompatActivity() {
                 },
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
+                },
+                SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "OWL AI") {
+                    val intent = Intent(this, OwlActivity::class.java)
+                    startActivity(intent)
                 }
             )).show()
     }

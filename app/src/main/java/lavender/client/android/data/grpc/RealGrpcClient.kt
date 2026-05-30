@@ -31,6 +31,8 @@ object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var channel: ManagedChannel? = null
+
+    fun getChannel(): ManagedChannel? = channel
     
     private var database: AppDatabase? = null
     private fun db() = database ?: appContext?.let { 

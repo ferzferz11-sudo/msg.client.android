@@ -807,3 +807,17 @@ data class CallMessageProto(
         }
     }
 }
+
+// ======= OWL AI Assistant =======
+
+data class OWLRequestProto(
+    val userId: String = "",
+    val message: String = "",
+    val sessionId: String = ""
+)
+
+data class OWLResponseProto(
+    val text: String = "",
+    val finished: Boolean = false,
+    val error: String = ""
+)
