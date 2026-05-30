@@ -11,6 +11,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.updates.UpdateUtils
 import android.content.res.ColorStateList
 import android.content.res.Configuration

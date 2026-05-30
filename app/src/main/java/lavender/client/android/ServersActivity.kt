@@ -87,11 +87,11 @@ class ServersActivity : AppCompatActivity() {
         adapter = ServerAdapter(
             context = this,
             servers = servers,
-            currentServerAddress = currentServerAddress,
             onSetDefault = { server -> setDefaultServer(server) },
             onDelete = { server -> confirmDeleteServer(server) },
             onSelect = { server -> selectServer(server) }
         )
+        adapter.currentServerAddress = currentServerAddress
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
