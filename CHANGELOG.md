@@ -5,6 +5,24 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.0.1
+### Stability & Bug Fixes
+- 🔧 **CredentialStore**: Fixed import and ServerAdapter constructor.
+- 🔄 **Update System**: Replaced WorkManager with coroutine-based UpdateManager + StateFlow for reliable progress display.
+- 🌐 **Update URL**: Fixed `getUpdateUrl()` to return `/download` for APK checks.
+- 🗄️ **Server**: Fixed `MarkReadAndCheck` — removed `user_id` from INSERT (column doesn't exist), added 25P02 error handling.
+- 🔊 **Voice Messages**: Opened port 8082 in iptables for audio upload.
+- 🌐 **Nginx**: Fixed `/download` location → `/var/www/lavender/`.
+- 📦 **Deprecation**: Replaced deprecated `adapterPosition` with `bindingAdapterPosition`.
+- 🧹 **Cleanup**: Removed duplicate imports.
+- 🏗️ **StateFlow**: Fixed companion object property resolution via instance-level aliases.
+- 📱 **ServersActivity**: Removed duplicate toolbar title.
+- 🎨 **Dialogs**: Rewrote `showAddServerDialog` on `StandardBottomSheet`.
+- 🔧 **WidgetSystem**: Fixed `setOnDismissListener` scope issue.
+- 🔄 **Lifecycle**: Fixed `repeatOnLifecycle` for StateFlow subscriptions.
+- 🛠️ **Build**: Fixed `build_release.sh` for macOS bash3 compatibility.
+- 🛠️ **Build**: Fixed `mktemp` in `build_release.sh`.
+
 ## 1.1.0.0
 ### Server Discovery & Infrastructure Improvements
 - 🌐 **Server Discovery**: Server list is now fetched automatically via gRPC `ListServers`. A server spinner in login/register sheets lets users pick a server manually.
