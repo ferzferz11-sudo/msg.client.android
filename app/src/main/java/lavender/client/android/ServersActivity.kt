@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.CredentialStore.ServerEntry
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.ui.widget.StandardBottomSheet
 import java.util.UUID
 
 class ServersActivity : AppCompatActivity() {
@@ -200,31 +201,31 @@ class ServersActivity : AppCompatActivity() {
     }
 
     private fun showAddServerDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_server, null)
-        val nameInput = dialogView.findViewById<TextInputEditText>(R.id.editServerName)
-        val hostInput = dialogView.findViewById<TextInputEditText>(R.id.editServerHost)
-        val portInput = dialogView.findViewById<TextInputEditText>(R.id.editServerPort)
-        val addBtn = dialogView.findViewById<MaterialButton>(R.id.btnAddServer)
+        val theme = ThemeStore.currentTheme()
+        val sheet = StandardBottomSheet(this, R.layout.dialog_add_server, theme)
+        sheet.setTitle(getString(R.string.add_server))
 
-        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        dialog.setContentView(dialogView)
+        val nameInput = sheet.findViewById<TextInputEditText>(R.id.editServerName)
+        val hostInput = sheet.findViewById<TextInputEditText>(R.id.editServerHost)
+        val portInput = sheet.findViewById<TextInputEditText>(R.id.editServerPort)
+        val addBtn = sheet.findViewById<MaterialButton>(R.id.btnAddServer)
 
-        addBtn.setOnClickListener {
-            val name = nameInput.text.toString().trim()
-            val host = hostInput.text.toString().trim()
-            val portStr = portInput.text.toString().trim()
+        addBtn?.setOnClickListener {
+            val name = nameInput?.text.toString().trim()
+            val host = hostInput?.text.toString().trim()
+            val portStr = portInput?.text.toString().trim()
 
             if (name.isEmpty()) {
-                nameInput.error = getString(R.string.error_required)
+                nameInput?.error = getString(R.string.error_required)
                 return@setOnClickListener
             }
             if (host.isEmpty()) {
-                hostInput.error = getString(R.string.error_required)
+                hostInput?.error = getString(R.string.error_required)
                 return@setOnClickListener
             }
             val port = portStr.toIntOrNull()
             if (port == null || port < 1 || port > 65535) {
-                portInput.error = getString(R.string.error_invalid_port)
+                portInput?.error = getString(R.string.error_invalid_port)
                 return@setOnClickListener
             }
 
@@ -237,11 +238,11 @@ class ServersActivity : AppCompatActivity() {
             )
             CredentialStore.addServer(this, server)
             loadServers()
-            dialog.dismiss()
+            sheet.dismiss()
             Toast.makeText(this, getString(R.string.server_added, name), Toast.LENGTH_SHORT).show()
         }
 
-        dialog.show()
+        sheet.show()
     }
 
     private class ServerAdapter(
