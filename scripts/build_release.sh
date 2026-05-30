@@ -49,7 +49,7 @@ fi
 echo "🔨 Сборка..."
 export GRADLE_OPTS
 CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${BUILD_TYPE:0:1})${BUILD_TYPE:1}"
-BUILD_LOG=$(mktemp /tmp/lavender_build_XXXXXX.log)
+BUILD_LOG=$(mktemp -t lavender_build.XXXXXX)
 echo "   📄 Лог: $BUILD_LOG"
 ./gradlew "assemble${CAPITALIZED}" --no-daemon 2>&1 | tee "$BUILD_LOG"
 GRADLE_EXIT=${PIPESTATUS[0]}
