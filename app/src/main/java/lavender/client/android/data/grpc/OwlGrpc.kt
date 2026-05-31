@@ -6,6 +6,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import lavender.client.android.data.proto.*
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 // ======= OWL AI Assistant =======
 
