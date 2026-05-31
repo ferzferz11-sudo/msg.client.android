@@ -118,7 +118,7 @@ fun chatWithOWL(
 
             call.sendMessage(request)
             call.halfClose()
-            call.request(1)
+            call.request(Int.MAX_VALUE)
         } catch (e: Exception) {
             _owlTyping.emit(false)
             val errorResp = OWLResponseProto(text = "", finished = true, error = e.message ?: "Unknown error")

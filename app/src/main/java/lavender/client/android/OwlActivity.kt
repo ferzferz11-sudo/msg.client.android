@@ -121,23 +121,23 @@ class OwlActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                android.util.Log.d("OwlActivity", "Loading history for chat=$chatId user=$userId")
                 val history = GrpcClient.getOwlHistory(chatId, userId)
+                android.util.Log.d("OwlActivity", "History loaded: ${history.size} messages")
                 runOnUiThread {
                     if (history.isEmpty()) {
-                        // First time — show welcome
                         showWelcomeMessage()
                     } else {
                         for (msg in history) {
+                            android.util.Log.d("OwlActivity", "History msg: role=${msg.role} content=${msg.content.take(50)}")
                             when (msg.role) {
                                 "user" -> adapter.addMessage(OwlMessage(text = msg.content, isUser = true))
                                 "assistant" -> adapter.addMessage(OwlMessage(text = msg.content, isUser = false))
                             }
                         }
-                        // Scroll to bottom
                         val rv = findViewById<RecyclerView>(R.id.messagesRecyclerView)
                         rv.scrollToPosition(adapter.itemCount - 1)
                     }
-
                     // Load per-chat settings from server if available
                     val serverApiKey = GrpcClient.getOwlSettingApiKey(chatId)
                     val serverModel = GrpcClient.getOwlSettingModel(chatId)
@@ -148,6 +148,7 @@ class OwlActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("OwlActivity", "Failed to load history: ${e.message}")
                 runOnUiThread {
                     showWelcomeMessage()
                 }
