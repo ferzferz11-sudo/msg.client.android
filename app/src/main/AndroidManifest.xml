@@ -99,7 +99,7 @@
         <activity android:name=".SecurityActivity" android:exported="false" />
         <activity android:name=".ServersActivity" android:exported="false" />
         <activity android:name=".OwlActivity" android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustNothing" />
 
         <activity
             android:name=".MapPickerActivity"

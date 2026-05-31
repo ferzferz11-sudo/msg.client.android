@@ -82,8 +82,6 @@ class OwlActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        @Suppress("DEPRECATION")
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl)
@@ -103,11 +101,14 @@ class OwlActivity : AppCompatActivity() {
         // Apply theme (colors, background image)
         ThemeUi.bind(this, userId)
 
-        // Handle window insets for bottom panel (navigation bar overlap)
+        // Handle window insets: navigation bar + keyboard
         val bottomPanel = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bottomPanel)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomPanel) { view, insets ->
+        val rootView = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(android.R.id.content)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, systemBars.bottom)
+            val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            val bottomInset = maxOf(systemBars.bottom, ime.bottom)
+            bottomPanel.setPadding(0, 0, 0, bottomInset)
             insets
         }
 
