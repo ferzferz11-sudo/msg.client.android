@@ -39,13 +39,32 @@ class OwlActivity : AppCompatActivity() {
     private var chatId: String = ""
     private var userId: String = ""
 
-    // Available models
+    // Available models — correct OpenRouter format: provider/model
     private val models = listOf(
-        "openrouter/anthropic/claude-sonnet-4" to "Claude Sonnet 4",
-        "openrouter/anthropic/claude-opus-4" to "Claude Opus 4",
-        "openrouter/google/gemini-2.5-pro" to "Gemini 2.5 Pro",
-        "openrouter/openai/gpt-4o" to "GPT-4o",
-        "openrouter/openai/gpt-4o-mini" to "GPT-4o Mini"
+        // Free models
+        "mistralai/mistral-7b-instruct:free" to "Mistral 7B Instruct 🆓",
+        "deepseek/deepseek-r1:free" to "DeepSeek R1 🆓",
+        "meta-llama/llama-3.3-70b-instruct:free" to "Llama 3.3 70B 🆓",
+        "qwen/qwen3-8b:free" to "Qwen 3 8B 🆓",
+        "openai/gpt-oss-20b:free" to "GPT OSS 20B 🆓",
+        "openai/gpt-oss-120b:free" to "GPT OSS 120B 🆓",
+        "z-ai/glm-4.5-air:free" to "GLM 4.5 Air 🆓",
+        // Popular paid (aliases for latest)
+        "~anthropic/claude-sonnet-4-20250514" to "Claude Sonnet 4",
+        "~anthropic/claude-opus-4-20250514" to "Claude Opus 4",
+        "~openai/gpt-4o" to "GPT-4o",
+        "~openai/gpt-4o-mini" to "GPT-4o Mini",
+        "~google/gemini-2.5-pro" to "Gemini 2.5 Pro",
+        "~google/gemini-2.5-flash" to "Gemini 2.5 Flash",
+        "~moonshotai/kimi-k2" to "Kimi K2",
+        // Exact model IDs (use if aliases fail)
+        "anthropic/claude-sonnet-4-20250514" to "Claude Sonnet 4 (exact)",
+        "anthropic/claude-opus-4-20250514" to "Claude Opus 4 (exact)",
+        "openai/gpt-4o-2024-11-20" to "GPT-4o Nov 2024",
+        "google/gemini-2.5-pro-exp-03-25" to "Gemini 2.5 Pro Exp",
+        "deepseek/deepseek-r1" to "DeepSeek R1",
+        "deepseek/deepseek-v3" to "DeepSeek V3",
+        "qwen/qwen-2.5-72b-instruct" to "Qwen 2.5 72B",
     )
     private var selectedModelIndex = 0
     private var userApiKey = ""
@@ -62,6 +81,7 @@ class OwlActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("owl_$chatId", Context.MODE_PRIVATE)
         loadLocalSettings()
+        loadCustomModel()
 
         setupToolbar(hasMenu = true)
         setupRecyclerView()
@@ -234,27 +254,109 @@ class OwlActivity : AppCompatActivity() {
     private fun showModelPickerDialog() {
         val modelNames = models.map { it.second }.toTypedArray()
 
-        AlertDialog.Builder(this)
+        val builder = AlertDialog.Builder(this)
             .setTitle("Выберите модель")
-            .setSingleChoiceItems(modelNames, selectedModelIndex) { dialog, which ->
-                selectedModelIndex = which
-                val (modelId, modelName) = models[which]
-                saveLocalSettings()
 
-                // Also save to server
-                lifecycleScope.launch {
-                    try {
-                        GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
-                    } catch (_: Exception) {}
-                }
+        // Custom view with list + custom input
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 16, 0, 0)
+        }
 
-                adapter.addMessage(
-                    OwlMessage(text = "✅ Модель изменена на: $modelName", isUser = false)
-                )
-                dialog.dismiss()
+        // List of models
+        val listView = android.widget.ListView(this).apply {
+            adapter = ArrayAdapter(context, android.R.layout.simple_list_item_single_choice, modelNames)
+            choiceMode = android.widget.ListView.CHOICE_MODE_SINGLE
+            setSelection(selectedModelIndex)
+        }
+        layout.addView(listView, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+
+        // Custom model input
+        val customLabel = TextView(this).apply {
+            text = "Или введите ID модели:"
+            textSize = 12f
+            setPadding(32, 24, 0, 4)
+        }
+        layout.addView(customLabel)
+
+        val customInput = EditText(this).apply {
+            hint = "provider/model-name"
+            textSize = 14f
+            setPadding(32, 8, 32, 8)
+        }
+        layout.addView(customInput)
+
+        builder.setView(layout)
+
+        builder.setPositiveButton("Выбрать") { dialog, _ ->
+            val checkedPos = listView.checkedItemPosition
+            if (checkedPos >= 0) {
+                selectModel(checkedPos)
             }
-            .setNegativeButton("Отмена", null)
-            .show()
+            dialog.dismiss()
+        }
+
+        builder.setNeutralButton("Своя") { dialog, _ ->
+            val customModel = customInput.text.toString().trim()
+            if (customModel.isNotEmpty()) {
+                selectCustomModel(customModel)
+            }
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton("Отмена", null)
+        builder.show()
+    }
+
+    private fun selectModel(index: Int) {
+        selectedModelIndex = index
+        val (modelId, modelName) = models[index]
+        saveLocalSettings()
+        lifecycleScope.launch {
+            try {
+                GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
+            } catch (_: Exception) {}
+        }
+        adapter.addMessage(
+            OwlMessage(text = "✅ Модель изменена на: $modelName", isUser = false)
+        )
+    }
+
+    private fun selectCustomModel(modelId: String) {
+        selectedModelIndex = models.size // put "after" the last model as a sentinel
+        saveCustomModel(modelId)
+        saveLocalSettings()
+        lifecycleScope.launch {
+            try {
+                GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
+            } catch (_: Exception) {}
+        }
+        adapter.addMessage(
+            OwlMessage(text = "✅ Модель изменена на: $modelId", isUser = false)
+        )
+    }
+
+    // Custom model storage (outside the hardcoded list)
+    private var customModelId: String = ""
+
+    private fun saveCustomModel(modelId: String) {
+        customModelId = modelId
+        prefs.edit().putString("custom_model", modelId).apply()
+    }
+
+    private fun loadCustomModel() {
+        customModelId = prefs.getString("custom_model", "") ?: ""
+    }
+
+    // Get effective model ID (handles custom model selection)
+    private fun getEffectiveModelId(): String {
+        if (selectedModelIndex == models.size && customModelId.isNotEmpty()) {
+            return customModelId
+        }
+        if (selectedModelIndex < models.size) {
+            return models[selectedModelIndex].first
+        }
+        return models[0].first
     }
 
     // ===== Send message =====
@@ -270,7 +372,7 @@ class OwlActivity : AppCompatActivity() {
         findViewById<RecyclerView>(R.id.messagesRecyclerView)
             .scrollToPosition(adapter.itemCount - 1)
 
-        val modelId = models[selectedModelIndex].first
+        val modelId = getEffectiveModelId()
 
         try {
             GrpcClient.chatWithOWL(
