@@ -1061,6 +1061,8 @@ object RealGrpcClient {
                 val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
                 if (cached.isNotEmpty()) {
                     withContext(Dispatchers.Main) { callback(cached) }
+                } else {
+                    withContext(Dispatchers.Main) { callback(emptyList()) }
                 }
             }
             return
@@ -1073,6 +1075,7 @@ object RealGrpcClient {
             .build()
 
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val chatsDeferred = CompletableDeferred<List<ChatInfo>>()
         call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
             override fun onMessage(message: GetChatsResponseProto) {
                 val chats = message.chats.map { proto ->
@@ -1083,21 +1086,37 @@ object RealGrpcClient {
                              proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd,
                              proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L)
                 }
-
-                // Save to cache and sync (delete local chats that are gone from server)
                 scope.launch(Dispatchers.IO) {
                     db()?.chatDao()?.syncChats(chats.map { it.toEntity() })
-
-                    withContext(Dispatchers.Main) {
-                        callback(chats)
-                    }
+                }
+                chatsDeferred.complete(chats)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!chatsDeferred.isCompleted) {
+                    chatsDeferred.completeExceptionally(io.grpc.StatusRuntimeException(status))
                 }
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
         call.sendMessage(GetChatsRequestProto(username = username, userId = currentUserId ?: ""))
         call.halfClose()
         call.request(1)
+
+        scope.launch {
+            try {
+                val result = withTimeoutOrNull(15000) { chatsDeferred.await() }
+                withContext(Dispatchers.Main) {
+                    if (result != null) {
+                        callback(result)
+                    } else {
+                        Log.w(TAG, "getChats: timeout, returning empty list")
+                        callback(emptyList())
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "getChats: error: ${e.message}")
+                withContext(Dispatchers.Main) { callback(emptyList()) }
+            }
+        }
     }
 
     fun setRoomId(roomId: String) {
