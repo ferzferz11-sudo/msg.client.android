@@ -1324,8 +1324,33 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Note: loadChats() is called by the connectionStatus Flow collector in onCreate
-        // when status transitions to READY, so we don't need to call it here explicitly.
+        // Reload chats when returning from another activity.
+        // The connection may have dropped while we were away (e.g. OWL activity
+        // held the gRPC channel and keepalive failed). The Flow collector in
+        // onCreate will call loadChats() when status becomes READY, but only
+        // if the channel actually reconnects. As a safety net, if after 3 seconds
+        // the status is still not READY, force a reconnect.
+        lifecycleScope.launch {
+            var waited = 0
+            while (waited < 3000) {
+                delay(500)
+                waited += 500
+                if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                    loadChats()
+                    return@launch
+                }
+            }
+            // Still not ready after 3s — force reconnect
+            if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                Log.d("ChatListActivity", "onResume: connection still not READY after 3s, forcing reconnect")
+                val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
+                    ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
+                if (!serverAddress.isNullOrEmpty()) {
+                    val parts = serverAddress.split(":")
+                    grpcClient.connect(parts[0], false, parts.getOrNull(1)?.toIntOrNull() ?: 50051, this@ChatListActivity, true)
+                }
+            }
+        }
     }
 
     override fun onPause() {
