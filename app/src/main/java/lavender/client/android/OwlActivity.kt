@@ -42,7 +42,7 @@ class OwlActivity : AppCompatActivity() {
     // Available models — verified free models on OpenRouter (as of 2026-05-31)
     private val models = listOf(
         // Free models (:free suffix)
-        "openrouter/owl-alpha:free" to "OWL Alpha 🆓",
+        "openrouter/owl-alpha" to "OWL Alpha 🆓",
         "openai/gpt-oss-20b:free" to "GPT OSS 20B 🆓",
         "openai/gpt-oss-120b:free" to "GPT OSS 120B 🆓",
         "z-ai/glm-4.5-air:free" to "GLM 4.5 Air 🆓",
