@@ -238,13 +238,19 @@ class OwlActivity : AppCompatActivity() {
             "/model" -> {
                 showModelPickerDialog()
             }
+            "/key" -> {
+                showApiKeyDialog()
+            }
             "/help" -> {
+                val keyStatus = if (userApiKey.isEmpty()) "🔒 Серверный ключ" else "🔑 Ваш ключ"
                 adapter.addMessage(
                     OwlMessage(
                         text = "💡 Доступные команды:\n\n" +
                                 "/model — выбрать модель\n" +
+                                "/key — ввести свой API ключ\n" +
                                 "/help — это сообщение\n\n" +
-                                "Текущая модель: ${getModelsForDisplay()[selectedModelIndex].second}",
+                                "Текущая модель: ${getModelsForDisplay()[selectedModelIndex].second}\n" +
+                                "API ключ: $keyStatus",
                         isUser = false
                     )
                 )
@@ -255,6 +261,62 @@ class OwlActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    // ===== API Key dialog =====
+
+    private fun showApiKeyDialog() {
+        val builder = AlertDialog.Builder(this)
+            .setTitle("API ключ OpenRouter")
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 8)
+        }
+
+        val input = EditText(this).apply {
+            hint = "sk-or-v1-..."
+            setText(userApiKey)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        }
+        layout.addView(input)
+
+        val infoText = TextView(this).apply {
+            text = if (userApiKey.isEmpty())
+                "💡 Без своего ключа используется серверный (только бесплатные модели)."
+            else
+                "✅ Ваш ключ активен. Доступны все модели."
+            textSize = 12f
+            setTextColor(android.graphics.Color.parseColor("#888888"))
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(infoText)
+
+        builder.setView(layout)
+
+        builder.setPositiveButton("Сохранить") { dialog, _ ->
+            val newKey = input.text.toString().trim()
+            userApiKey = newKey
+            saveLocalSettings()
+            if (newKey.isNotEmpty()) {
+                lifecycleScope.launch {
+                    try {
+                        GrpcClient.updateOwlSettings(chatId, userId, newKey, getEffectiveModelId())
+                    } catch (_: Exception) {}
+                }
+            }
+            adapter.addMessage(
+                OwlMessage(
+                    text = if (newKey.isEmpty()) "🔒 API ключ очищен. Используется серверный (только бесплатные модели)."
+                    else "🔑 API ключ сохранён. Доступны все модели.",
+                    isUser = false
+                )
+            )
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton("Отмена", null)
+        builder.show()
     }
 
     // ===== Model picker dialog =====
