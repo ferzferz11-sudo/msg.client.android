@@ -311,7 +311,12 @@ suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, mo
 }
 
 suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessageProto> = withContext(Dispatchers.IO) {
-    val channel = RealGrpcClient.getChannel() ?: return@withContext emptyList()
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "getOwlHistory: channel dead")
+        return@withContext emptyList()
+    }
+    Log.d("OwlGrpc", "getOwlHistory: chatId=$chatId userId=$userId")
     val methodDesc = MethodDescriptor.newBuilder<GetOwlHistoryRequestProto, GetOwlHistoryResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName("messenger.ChatService/GetOwlHistory")
@@ -336,10 +341,26 @@ suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessag
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                         1 -> {
-                            val msgBytes = cis.readByteArray()
+                            // Length-delimited: read length, then parse inner message
+                            val len = cis.readRawVarint32()
+                            val msgBytes = cis.readRawBytes(len)
                             if (msgBytes.isNotEmpty()) {
                                 try {
-                                    messages.add(OwlHistoryMessageProto.parseFrom(msgBytes))
+                                    val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                                    var role = ""
+                                    var content = ""
+                                    var createdAt = ""
+                                    while (!inner.isAtEnd) {
+                                        val innerTag = inner.readTag()
+                                        if (innerTag == 0) break
+                                        when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                            1 -> role = inner.readString()
+                                            2 -> content = inner.readString()
+                                            3 -> createdAt = inner.readString()
+                                            else -> inner.skipField(innerTag)
+                                        }
+                                    }
+                                    messages.add(OwlHistoryMessageProto(role = role, content = content, createdAt = createdAt))
                                 } catch (_: Exception) {}
                             }
                         }
@@ -357,9 +378,11 @@ suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessag
 
     call.start(object : io.grpc.ClientCall.Listener<GetOwlHistoryResponseProto>() {
         override fun onMessage(message: GetOwlHistoryResponseProto) {
+            Log.d("OwlGrpc", "getOwlHistory: received ${message.messagesList.size} messages")
             result.complete(message.messagesList)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            Log.d("OwlGrpc", "getOwlHistory: onClose status=${status.code}")
             if (!result.isCompleted) result.complete(emptyList())
         }
     }, io.grpc.Metadata())
