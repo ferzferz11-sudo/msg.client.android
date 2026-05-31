@@ -19,6 +19,7 @@ class OWLRequestMarshaller : MethodDescriptor.Marshaller<OWLRequestProto> {
         if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
         if (v.message.isNotEmpty()) cos.writeString(2, v.message)
         if (v.sessionId.isNotEmpty()) cos.writeString(3, v.sessionId)
+        if (v.model.isNotEmpty()) cos.writeString(4, v.model)
         cos.flush()
         return ByteArrayInputStream(baos.toByteArray())
     }
@@ -70,6 +71,7 @@ val owlTyping: SharedFlow<Boolean> = _owlTyping
 fun chatWithOWL(
     userId: String,
     message: String,
+    modelId: String,
     scope: CoroutineScope,
     onResponse: (OWLResponseProto) -> Unit
 ) {
@@ -81,7 +83,7 @@ fun chatWithOWL(
         .setResponseMarshaller(OWLResponseMarshaller())
         .build()
 
-    val request = OWLRequestProto(userId = userId, message = message)
+    val request = OWLRequestProto(userId = userId, message = message, model = modelId)
 
     scope.launch(Dispatchers.IO) {
         try {

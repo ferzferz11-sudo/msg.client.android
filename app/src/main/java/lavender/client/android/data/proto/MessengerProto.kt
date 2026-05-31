@@ -813,7 +813,8 @@ data class CallMessageProto(
 data class OWLRequestProto(
     val userId: String = "",
     val message: String = "",
-    val sessionId: String = ""
+    val sessionId: String = "",
+    val model: String = ""
 )
 
 data class OWLResponseProto(
