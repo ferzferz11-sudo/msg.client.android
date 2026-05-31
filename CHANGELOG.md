@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.4
+### OWL AI Assistant — Исправления
+- 🐛 **Исправлено**: OWL чаты корректно отображаются в списке после создания (сервер теперь возвращает по `creator_username`)
+- 🐛 **Исправлено**: История OWL чатов загружается с сервера (`GetOwlHistory`)
+- 🐛 **Исправлено**: Последнее сообщение отображается в списке OWL чатов
+
 ## 1.1.0.3
 ### OWL AI Assistant
 - 🤖 **OWL AI Chat**: New in-app AI assistant chat accessible from the "+" menu on the chat list screen.
