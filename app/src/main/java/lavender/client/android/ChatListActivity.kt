@@ -1933,10 +1933,30 @@ class ChatListActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             try {
-                val chatId = GrpcClient.createOwlChat(uid, "AI Chat")
+                var chatId = GrpcClient.createOwlChat(uid, "AI Chat")
+                if (chatId.isEmpty()) {
+                    // Channel was dead — reconnect and retry once
+                    Toast.makeText(this@ChatListActivity, "Подключение...", Toast.LENGTH_SHORT).show()
+                    val parts = (intent.getStringExtra("SERVER_ADDRESS")
+                        ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")).let {
+                        it?.split(":")
+                    }
+                    if (parts != null && parts.isNotEmpty()) {
+                        val host = parts[0]
+                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                        grpcClient.connect(host, false, port, this@ChatListActivity, true)
+                        // Wait up to 5s for READY
+                        var waited = 0
+                        while (grpcClient.connectionStatus.value != ConnectionStatus.READY && waited < 5000) {
+                            delay(500)
+                            waited += 500
+                        }
+                    }
+                    chatId = GrpcClient.createOwlChat(uid, "AI Chat")
+                }
                 runOnUiThread {
                     if (chatId.isNotEmpty()) {
-                        // Add OWL chat to local list so it appears immediately
+                        // Add OWL chat to local list and cache so it appears immediately
                         val owlChat = ChatInfo(
                             id = chatId,
                             name = "🤖 Чат с AI",
@@ -1949,6 +1969,16 @@ class ChatListActivity : AppCompatActivity() {
                         )
                         chats.add(0, owlChat)
                         chatAdapter.setChats(chats.toList())
+
+                        // Persist to local cache immediately
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                                db.chatDao().insertChats(listOf(owlChat.toEntity()))
+                            } catch (e: Exception) {
+                                android.util.Log.e("ChatListActivity", "Failed to cache OWL chat", e)
+                            }
+                        }
 
                         val intent = Intent(this@ChatListActivity, OwlActivity::class.java)
                         intent.putExtra("CHAT_ID", chatId)
