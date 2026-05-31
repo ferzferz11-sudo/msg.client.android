@@ -110,8 +110,6 @@ fun chatWithOWL(
                         )
                         _owlResponses.tryEmit(errorResp)
                         onResponse(errorResp)
-                    } else {
-                        onResponse(OWLResponseProto(text = "", finished = true))
                     }
                 }
             }, io.grpc.Metadata())

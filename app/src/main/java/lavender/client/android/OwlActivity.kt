@@ -407,9 +407,11 @@ class OwlActivity : AppCompatActivity() {
         } else if (response.finished) {
             adapter.hideTyping()
             if (response.text.isNotEmpty()) {
-                adapter.updateLastMessage(currentResponse + response.text)
-            } else if (currentResponse.isEmpty()) {
-                adapter.updateLastMessage("Получен пустой ответ от сервера")
+                adapter.updateLastAssistantMessage(currentResponse + response.text)
+            } else if (currentResponse.isNotEmpty()) {
+                adapter.updateLastAssistantMessage(currentResponse)
+            } else {
+                adapter.addMessage(OwlMessage(text = "Получен пустой ответ от сервера", isUser = false))
             }
             currentResponse = ""
             isReceiving = false

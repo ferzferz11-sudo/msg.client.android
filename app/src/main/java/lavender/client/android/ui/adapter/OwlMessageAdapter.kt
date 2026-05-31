@@ -59,7 +59,22 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
         val idx = messages.indexOfLast { !it.isUser && !it.isTyping && it.text.isNotEmpty() }
         if (idx >= 0) {
             messages[idx] = messages[idx].copy(text = text)
-            notifyItemChanged(idx)
+            // Direct text update without full rebind to avoid flicker
+            notifyItemChanged(idx, PAYLOAD_TEXT)
+        } else {
+            // No assistant message yet — add one
+            addMessage(OwlMessage(text = text, isUser = false))
+        }
+    }
+
+    companion object {
+        const val PAYLOAD_TEXT = "text_update"
+    }
+
+    fun removeLastMessage() {
+        if (messages.isNotEmpty()) {
+            messages.removeAt(messages.size - 1)
+            notifyItemRemoved(messages.size)
         }
     }
 
@@ -72,6 +87,15 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val msg = messages[position]
         holder.bind(msg)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains(PAYLOAD_TEXT)) {
+            // Partial update — just change text, no full rebind
+            holder.updateText(messages[position])
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     override fun getItemCount(): Int = messages.size
@@ -98,6 +122,15 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
                 owlContainer.visibility = View.VISIBLE
                 typingContainer.visibility = View.GONE
                 owlText.text = msg.text
+            }
+        }
+
+        // Partial update — just change text without touching visibility
+        fun updateText(msg: OwlMessage) {
+            if (!msg.isUser && !msg.isTyping) {
+                owlText.text = msg.text
+            } else if (msg.isUser) {
+                userText.text = msg.text
             }
         }
     }
