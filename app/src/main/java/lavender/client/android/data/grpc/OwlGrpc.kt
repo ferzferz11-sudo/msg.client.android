@@ -249,7 +249,7 @@ suspend fun deleteOwlChat(chatId: String, userId: String): Boolean = withContext
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: false
 }
 
 suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, model: String): Boolean = withContext(Dispatchers.IO) {
@@ -307,7 +307,7 @@ suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, mo
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: false
 }
 
 suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessageProto> = withContext(Dispatchers.IO) {
@@ -368,7 +368,7 @@ suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessag
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList()
 }
 
 fun getOwlSettingApiKey(chatId: String): String {
