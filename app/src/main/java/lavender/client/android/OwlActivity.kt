@@ -81,8 +81,6 @@ class OwlActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl)
 
@@ -103,12 +101,16 @@ class OwlActivity : AppCompatActivity() {
 
         // Handle window insets: navigation bar + keyboard
         val bottomPanel = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bottomPanel)
-        val rootView = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(android.R.id.content)
+        val rootView = findViewById<View>(android.R.id.content)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
-            val bottomInset = maxOf(systemBars.bottom, ime.bottom)
-            bottomPanel.setPadding(0, 0, 0, bottomInset)
+            if (ime.bottom > 0) {
+                // Keyboard open — shift panel up by keyboard height minus nav bar
+                val navBar = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                bottomPanel.translationY = -(ime.bottom - navBar.bottom).toFloat()
+            } else {
+                bottomPanel.translationY = 0f
+            }
             insets
         }
 
