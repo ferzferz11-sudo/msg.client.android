@@ -12,9 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📡 **Streaming Response**: AI responses appear word-by-word in real-time via server-side gRPC streaming.
 - 🧠 **Conversation Context**: Session context retained for up to 20 messages per user.
 - ⏱️ **Rate Limiting**: Max 10 requests per minute per user.
+- 🔄 **Multiple OWL Chats**: Create multiple separate OWL chats with different models and API keys.
+- ⚙️ **Model Selection**: Choose model via `/model` command or settings dialog (23 models + custom).
+- 🔑 **Personal API Key**: Use your own OpenRouter key to bypass free tier rate limits.
+- 🗑️ **Delete OWL Chat**: Delete chats via the (...) menu with confirmation.
+- 📜 **Chat History**: Message history is persisted on server and loaded when opening chat.
+- 🎨 **UI**: MaterialToolbar-based UI matching main chat style.
+
+### Bug Fixes
+- Fixed OWL response duplicates and disappearing (streaming partial update via payload).
+- Fixed OWL chat not appearing in chat list after creation.
+- Fixed input hint text ("Сообщение" instead of long placeholder text).
+
+### Server Changes
 - 🖥️ **Server**: New `ChatWithOWL` gRPC method (server streaming) via `messenger.ChatService`.
 - 🖥️ **Server**: OpenRouter integration for AI responses with configurable model.
-- 🖥️ **Server**: Rate limiter and in-memory session context storage.
+- 🖥️ **Server**: Rate limiter and database-backed session context storage.
+- 🖥️ **Server**: New `CreateOwlChat`, `DeleteOwlChat`, `GetOwlHistory`, `UpdateOwlSettings` RPCs.
+- 🖥️ **Server**: Fixed GetChats returning OWL chats (was comparing UUID against string username field).
 
 ## 1.1.0.2
 ### Server Spinner & Build Fixes
