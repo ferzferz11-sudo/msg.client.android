@@ -272,7 +272,7 @@ class OwlActivity : AppCompatActivity() {
         val keyInput = EditText(this).apply {
             hint = "sk-or-v1-..."
             setText(userApiKey)
-            inputType = android.text.textType.textUri
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
         }
         layout.addView(keyInput)
 
