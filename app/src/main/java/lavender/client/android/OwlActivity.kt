@@ -170,7 +170,7 @@ class OwlActivity : AppCompatActivity() {
     private fun showWelcomeMessage() {
         adapter.addMessage(
             OwlMessage(
-                text = "Привет! Я — OWL, твой AI-ассистент в Lavender. Спроси меня о чём угодно!\n\n💡 Команды:\n/model — выбрать модель\n/help — помощь",
+                text = "Привет! Я — OWL, твой AI-ассистент в Lavender. Спроси меня о чём угодно!\n\n💡 Команды:\n/model — выбрать модель\n/key — задать свой API ключ\n/help — помощь",
                 isUser = false
             )
         )
