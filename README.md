@@ -90,19 +90,19 @@ msg.client.android/           # Android client repo root
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Language | Kotlin |
-| Architecture | MVVM |
-| Async | Kotlin Coroutines + StateFlow |
-| Network | gRPC (bidirectional streaming) |
-| Serialization | Protobuf (protobuf-lite, manual) |
-| Database | Room (SQLite) |
-| Security | EncryptedSharedPreferences, ECDH, AES-256-GCM |
-| Push | Firebase Cloud Messaging |
-| UI | Material Design 3, ViewBinding |
-| Min SDK | 29 (Android 10) |
-| Compile/Target SDK | 34/35 |
+| Component          | Technology                                    |
+|--------------------|-----------------------------------------------|
+| Language           | Kotlin                                        |
+| Architecture       | MVVM                                          |
+| Async              | Kotlin Coroutines + StateFlow                 |
+| Network            | gRPC (bidirectional streaming)                |
+| Serialization      | Protobuf (protobuf-lite, manual)              |
+| Database           | Room (SQLite)                                 |
+| Security           | EncryptedSharedPreferences, ECDH, AES-256-GCM |
+| Push               | Firebase Cloud Messaging                      |
+| UI                 | Material Design 3, ViewBinding                |
+| Min SDK            | 29 (Android 10)                               |
+| Compile/Target SDK | 34/35                                         |
 
 ## Versioning
 
