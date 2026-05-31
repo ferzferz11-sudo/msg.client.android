@@ -1907,14 +1907,16 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 var chatId = GrpcClient.createOwlChat(uid, "AI Chat")
+                Log.d("ChatListActivity", "createOwlChat result: '$chatId' channelStatus=${grpcClient.connectionStatus.value}")
                 if (chatId.isEmpty()) {
                     // Channel was dead — reconnect and retry once
                     Toast.makeText(this@ChatListActivity, "Подключение...", Toast.LENGTH_SHORT).show()
                     val parts = (intent.getStringExtra("SERVER_ADDRESS")
-                        ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")).let {
+                        ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
+                        ?: lavender.client.android.data.session.CredentialStore.getServerAddress(this@ChatListActivity)).let {
                         it?.split(":")
                     }
-                    if (parts != null && parts.isNotEmpty()) {
+                    if (parts != null && parts.isNotEmpty() && parts[0].isNotEmpty()) {
                         val host = parts[0]
                         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                         grpcClient.connect(host, false, port, this@ChatListActivity, true)
