@@ -5,7 +5,8 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.2.0.0
+
+## 1.1.0.3
 ### OWL AI Assistant
 - 🤖 **OWL AI Chat**: New in-app AI assistant chat accessible from the "+" menu on the chat list screen.
 - 📡 **Streaming Response**: AI responses appear word-by-word in real-time via server-side gRPC streaming.
@@ -14,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖥️ **Server**: New `ChatWithOWL` gRPC method (server streaming) via `messenger.ChatService`.
 - 🖥️ **Server**: OpenRouter integration for AI responses with configurable model.
 - 🖥️ **Server**: Rate limiter and in-memory session context storage.
+
+## 1.1.0.2
+### Server Spinner & Build Fixes
+- 🎨 **Spinner theming**: Server dropdown in login/register sheets uses `ColorDrawable(primaryColor)` — no more white outline.
+- 🎨 **ServersActivity toolbar**: Title now uses `onPrimaryColor`.
+- 🌐 **Default servers**: Auto-added on first launch (prod 50051, dev 50052).
+- 🛡️ **Server protection**: Default server cannot be deleted (delete button hidden).
+- 📋 **Server ordering**: New servers added to end of list.
+- 🔧 **Gradle heap**: Increased to 2g for D8 dexer.
 
 ## 1.1.0.1
 ### Stability & Bug Fixes
@@ -347,7 +357,6 @@ ZIP/RAR/7Z архивы → ic_file_archive
 Видимость меню супер админа - Добавлена проверка флага isSuperAdmin при отображении меню в ChatListActivity.kt:556
 
 Сохранение настроек уведомлений - Исправлена регистрация токена при запуске приложения с передачей сохраненных флагов push_send_enabled и push_receive_enabled в ChatListActivity.kt:247-258
-
 
 ## [1.0.2.12] - 2026-04-27
 
