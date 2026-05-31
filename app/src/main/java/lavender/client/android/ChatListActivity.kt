@@ -234,6 +234,13 @@ class ChatListActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(
             lifecycleScope,
             onChatClick = { chat ->
+                // OWL AI virtual chat
+                if (chat.id.startsWith("owl-")) {
+                    val intent = Intent(this, OwlActivity::class.java)
+                    startActivity(intent)
+                    return@ChatAdapter
+                }
+
                 if (chat.type == "favorites") {
                     val intent = Intent(this, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
@@ -1881,7 +1888,7 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
                 },
-                SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "OWL AI") {
+                SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "Чат с AI") {
                     val intent = Intent(this, OwlActivity::class.java)
                     startActivity(intent)
                 }

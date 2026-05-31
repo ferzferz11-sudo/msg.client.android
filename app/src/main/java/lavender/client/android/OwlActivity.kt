@@ -1,14 +1,23 @@
 package lavender.client.android
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.imageview.ShapeableImageView
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
@@ -35,12 +44,17 @@ class OwlActivity : AppCompatActivity() {
         "openrouter/openai/gpt-4o-mini" to "GPT-4o Mini"
     )
     private var selectedModelIndex = 0
+    private lateinit var prefs: SharedPreferences
+    private var userApiKey = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl)
 
-        setupToolbar(binding = false)
+        prefs = getSharedPreferences("owl_prefs", Context.MODE_PRIVATE)
+        loadSettings()
+
+        setupToolbar(hasMenu = true)
         setupRecyclerView()
         setupInput()
         observeOwlResponses()
@@ -54,7 +68,7 @@ class OwlActivity : AppCompatActivity() {
         )
     }
 
-    private fun setupToolbar(binding: Boolean) {
+    private fun setupToolbar(hasMenu: Boolean) {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
@@ -64,6 +78,19 @@ class OwlActivity : AppCompatActivity() {
         // Load avatar
         val avatarView = findViewById<CircleImageView>(R.id.toolbarAvatar)
         avatarView?.setImageResource(R.drawable.ic_notification_logo)
+
+        if (hasMenu) {
+            toolbar.inflateMenu(R.menu.owl_menu)
+            toolbar.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.action_owl_settings -> {
+                        showSettingsDialog()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -150,7 +177,7 @@ class OwlActivity : AppCompatActivity() {
 
         try {
             val modelId = models[selectedModelIndex].first
-            GrpcClient.chatWithOWL(userId, text, modelId, lifecycleScope) { response ->
+            GrpcClient.chatWithOWL(userId, text, modelId, userApiKey, lifecycleScope) { response ->
                 runOnUiThread {
                     if (response.error.isNotEmpty()) {
                         adapter.hideTyping()
@@ -211,5 +238,77 @@ class OwlActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         finish()
+    }
+
+    // ===== Settings =====
+
+    private fun loadSettings() {
+        userApiKey = prefs.getString("owl_api_key", "") ?: ""
+        selectedModelIndex = prefs.getInt("owl_model_index", 0)
+        if (selectedModelIndex >= models.size) selectedModelIndex = 0
+    }
+
+    private fun saveSettings() {
+        prefs.edit()
+            .putString("owl_api_key", userApiKey)
+            .putInt("owl_model_index", selectedModelIndex)
+            .apply()
+    }
+
+    private fun showSettingsDialog() {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 0)
+        }
+
+        // API Key input
+        val keyLabel = TextView(this).apply {
+            text = "OpenRouter API Key (оставьте пустым для серверного ключа)"
+            textSize = 14f
+            setPadding(0, 0, 0, 8)
+        }
+        layout.addView(keyLabel)
+
+        val keyInput = EditText(this).apply {
+            hint = "sk-or-v1-..."
+            setText(userApiKey)
+            inputType = android.text.textType.textUri
+        }
+        layout.addView(keyInput)
+
+        // Model selector
+        val modelLabel = TextView(this).apply {
+            text = "Модель"
+            textSize = 14f
+            setPadding(0, 24, 0, 8)
+        }
+        layout.addView(modelLabel)
+
+        val modelNames = models.map { it.second }.toTypedArray()
+        val spinner = Spinner(this).apply {
+            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, modelNames)
+            setSelection(selectedModelIndex)
+        }
+        layout.addView(spinner)
+
+        // Info
+        val infoText = TextView(this).apply {
+            text = "💡 Без своего ключа используется серверный.\nВаш ключ хранится только на устройстве."
+            textSize = 12f
+            setPadding(0, 24, 0, 0)
+        }
+        layout.addView(infoText)
+
+        AlertDialog.Builder(this)
+            .setTitle("Настройки OWL")
+            .setView(layout)
+            .setPositiveButton("Сохранить") { _, _ ->
+                userApiKey = keyInput.text.toString().trim()
+                selectedModelIndex = spinner.selectedItemPosition
+                saveSettings()
+                Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 }

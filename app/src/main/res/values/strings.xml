@@ -20,7 +20,7 @@
     <string name="attach_location">Location</string>
 
     <!-- Secret Chat (E2EE) -->
-    <string name="secret_chat">Secret Chat</string>
+    <string name="secret_chat">Секретный чат</string>
     <string name="e2ee_enabled">🔒 E2EE</string>
     <string name="e2ee_pending">🔒 Key exchange…</string>
     <string name="e2ee_verified">🔒 End-to-end encrypted</string>

@@ -20,6 +20,7 @@ class OWLRequestMarshaller : MethodDescriptor.Marshaller<OWLRequestProto> {
         if (v.message.isNotEmpty()) cos.writeString(2, v.message)
         if (v.sessionId.isNotEmpty()) cos.writeString(3, v.sessionId)
         if (v.model.isNotEmpty()) cos.writeString(4, v.model)
+        if (v.apiKey.isNotEmpty()) cos.writeString(5, v.apiKey)
         cos.flush()
         return ByteArrayInputStream(baos.toByteArray())
     }
@@ -72,6 +73,7 @@ fun chatWithOWL(
     userId: String,
     message: String,
     modelId: String,
+    apiKey: String,
     scope: CoroutineScope,
     onResponse: (OWLResponseProto) -> Unit
 ) {
@@ -83,7 +85,7 @@ fun chatWithOWL(
         .setResponseMarshaller(OWLResponseMarshaller())
         .build()
 
-    val request = OWLRequestProto(userId = userId, message = message, model = modelId)
+    val request = OWLRequestProto(userId = userId, message = message, model = modelId, apiKey = apiKey)
 
     scope.launch(Dispatchers.IO) {
         try {

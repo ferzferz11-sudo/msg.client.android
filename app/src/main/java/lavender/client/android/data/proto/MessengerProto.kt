@@ -814,7 +814,8 @@ data class OWLRequestProto(
     val userId: String = "",
     val message: String = "",
     val sessionId: String = "",
-    val model: String = ""
+    val model: String = "",
+    val apiKey: String = ""
 )
 
 data class OWLResponseProto(
