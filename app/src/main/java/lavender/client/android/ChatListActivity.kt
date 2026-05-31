@@ -737,7 +737,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
-            delay(15000) // 15 second timeout
+            delay(10000) // 10 second timeout
             if (binding.swipeRefreshLayout.isRefreshing) {
                 Log.w("ChatListActivity", "Load chats timeout, stopping refresh")
                 runOnUiThread {
@@ -768,93 +768,64 @@ class ChatListActivity : AppCompatActivity() {
 
         grpcClient.getChats(username, skipCache = skipCache) { fetchedChats ->
             loadTimeout.cancel()
+            runOnUiThread {
+                binding.swipeRefreshLayout.isRefreshing = false
+                chats.clear()
+
+                // Always add Favorites at the top
+                chats.add(
+                    ChatInfo(
+                        id = "favorites",
+                        name = getString(R.string.favorites),
+                        type = "favorites",
+                        lastMessageText = getString(R.string.favorites_description),
+                        lastMessageTime = 0L
+                    )
+                )
+
+                val chatsWithMute = fetchedChats
+                    .filter { !pendingDeletions.contains(it.id) }
+
+                // Clean up pendingDeletions that are no longer on server
+                val serverIds = fetchedChats.map { it.id }.toSet()
+                pendingDeletions.removeAll { !serverIds.contains(it) }
+
+                chats.addAll(chatsWithMute)
+                chatAdapter.setChats(chats.toList())
+
+                // If user has real chats (more than just favorites), mark onboarding as completed
+                if (fetchedChats.isNotEmpty()) {
+                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                    if (!prefs.getBoolean("onboarding_completed_$username", false)) {
+                        prefs.edit { putBoolean("onboarding_completed_$username", true) }
+                        hideOnboardingTips()
+                    }
+                }
+
+                val totalUnread = chats.sumOf { it.unreadCount }
+                updateAppIconBadge(totalUnread)
+
+                Log.d("ChatListActivity", "Loaded ${chats.size} chats")
+            }
+
+            // Load muted chats and favorites in background (non-blocking)
             val userId = grpcClient.getUserId() ?: ""
             if (userId.isNotEmpty()) {
                 grpcClient.getMutedChats { mutedChatIds ->
-                    grpcClient.getFavorites(userId) { _ ->
-                        runOnUiThread {
-                            binding.swipeRefreshLayout.isRefreshing = false
-                            chats.clear()
-
-                            // Always add Favorites at the top
-                            chats.add(
-                                ChatInfo(
-                                    id = "favorites",
-                                    name = getString(R.string.favorites),
-                                    type = "favorites",
-                                    lastMessageText = getString(R.string.favorites_description),
-                                    lastMessageTime = 0L
-                                )
-                            )
-
-                            val chatsWithMute = fetchedChats
-                                .filter { !pendingDeletions.contains(it.id) }
-                                .map { chat ->
-                                    chat.copy(isMuted = mutedChatIds.contains(chat.id))
-                                }
-
-                            // Clean up pendingDeletions that are no longer on server
-                            val serverIds = fetchedChats.map { it.id }.toSet()
-                            pendingDeletions.removeAll { !serverIds.contains(it) }
-
-                            chats.addAll(chatsWithMute)
-                            chatAdapter.setChats(chats.toList())
-
-                            // If user has real chats (more than just favorites), mark onboarding as completed
-                            if (fetchedChats.isNotEmpty()) {
-                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                                if (!prefs.getBoolean("onboarding_completed_$username", false)) {
-                                    prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                                    hideOnboardingTips()
-                                }
-                            }
-
-                            val totalUnread = chats.sumOf { it.unreadCount }
-                            updateAppIconBadge(totalUnread)
-
-                            Log.d("ChatListActivity", "Loaded ${chats.size} chats")
-
-                            // Clear searching filter or force refresh to ensure Favorites stay
-                            updateUpdateIndicatorVisibility()
-                            checkForUpdatesSilently()
-                            checkAnnouncements()
-
-                            // Pre-fetch avatars for all participants
-                            fetchedChats.forEach { chat ->
-                                try {
-                                    val arr = org.json.JSONArray(chat.participants)
-                                    for (i in 0 until arr.length()) {
-                                        val p = arr.getString(i)
-                                        if (!grpcClient.getAvatarCache().containsKey(p)) {
-                                            grpcClient.getUserAvatar(p) { }
-                                        }
-                                    }
-                                } catch (_: Exception) {
-                                }
-                            }
+                    runOnUiThread {
+                        val updatedChats = chats.map { chat ->
+                            chat.copy(isMuted = mutedChatIds.contains(chat.id))
                         }
+                        chats.clear()
+                        chats.addAll(updatedChats)
+                        chatAdapter.setChats(chats.toList())
                     }
                 }
-            } else {
-                // No userId - still show favorites
-                runOnUiThread {
-                    binding.swipeRefreshLayout.isRefreshing = false
-                    chats.clear()
-                    chats.add(
-                        ChatInfo(
-                            id = "favorites",
-                            name = getString(R.string.favorites),
-                            type = "favorites",
-                            lastMessageText = getString(R.string.favorites_description),
-                            lastMessageTime = 0L
-                        )
-                    )
-                    chats.addAll(fetchedChats)
-                    chatAdapter.setChats(chats.toList())
-                    updateAppIconBadge(0)
-                }
-                checkForUpdatesSilently()
-                checkAnnouncements()
+                grpcClient.getFavorites(userId) { _ -> }
+            }
+
+            if (fetchedChats.isEmpty()) {
+                loadChatsFromCache(fetchedChats)
             }
         }
     }

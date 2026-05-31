@@ -1111,7 +1111,7 @@ object RealGrpcClient {
 
         scope.launch {
             try {
-                val result = withTimeoutOrNull(5000) { chatsDeferred.await() }
+                val result = withTimeoutOrNull(3000) { chatsDeferred.await() }
                 withContext(Dispatchers.Main) {
                     if (result != null) {
                         callback(result)
