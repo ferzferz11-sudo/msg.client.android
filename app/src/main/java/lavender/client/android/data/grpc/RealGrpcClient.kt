@@ -237,7 +237,8 @@ object RealGrpcClient {
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${_connectionStatus.value}")
 
-        if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null && !forceReconnect) {
+        val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
+        if (!forceReconnect && currentServerAddress == serverAddress && channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY) {
             Log.d(TAG, "Connection already ready, skipping connect")
             return
         }
@@ -294,6 +295,14 @@ object RealGrpcClient {
                 Log.d(TAG, "Retrying connection to $serverAddress...")
                 connect(serverAddress, useTls, port, context)
             }
+        }
+    }
+
+    fun reconnect() {
+        val addr = currentServerAddress
+        if (!addr.isNullOrEmpty()) {
+            Log.d(TAG, "reconnect() called, reconnecting to $addr")
+            connect(addr, false, 50051, appContext, true)
         }
     }
 
@@ -1039,7 +1048,23 @@ object RealGrpcClient {
             }
         }
 
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
+            Log.w(TAG, "getChats: channel is null or dead, attempting reconnect")
+            _connectionStatus.value = ConnectionStatus.FAILED
+            val addr = currentServerAddress
+            if (!addr.isNullOrEmpty()) {
+                connect(addr)
+            }
+            // Return cached data immediately
+            scope.launch(Dispatchers.IO) {
+                val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
+                if (cached.isNotEmpty()) {
+                    withContext(Dispatchers.Main) { callback(cached) }
+                }
+            }
+            return
+        }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetChats")

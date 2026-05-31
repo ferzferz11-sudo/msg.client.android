@@ -1,5 +1,6 @@
 package lavender.client.android.data.grpc
 
+import android.util.Log
 import io.grpc.MethodDescriptor
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.*
@@ -129,7 +130,12 @@ fun chatWithOWL(
 // ===== Unary RPC helpers =====
 
 suspend fun createOwlChat(userId: String, name: String): String = withContext(Dispatchers.IO) {
-    val channel = RealGrpcClient.getChannel() ?: return@withContext ""
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "createOwlChat: channel dead, attempting reconnect")
+        RealGrpcClient.reconnect()
+        return@withContext ""
+    }
     val methodDesc = MethodDescriptor.newBuilder<CreateOwlChatRequestProto, CreateOwlChatResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName("messenger.ChatService/CreateOwlChat")
@@ -187,7 +193,7 @@ suspend fun createOwlChat(userId: String, name: String): String = withContext(Di
     call.halfClose()
     call.request(1)
 
-    return@withContext result.await()
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
 }
 
 suspend fun deleteOwlChat(chatId: String, userId: String): Boolean = withContext(Dispatchers.IO) {
@@ -243,7 +249,7 @@ suspend fun deleteOwlChat(chatId: String, userId: String): Boolean = withContext
     call.halfClose()
     call.request(1)
 
-    return@withContext result.await()
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
 }
 
 suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, model: String): Boolean = withContext(Dispatchers.IO) {
@@ -301,7 +307,7 @@ suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, mo
     call.halfClose()
     call.request(1)
 
-    return@withContext result.await()
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
 }
 
 suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessageProto> = withContext(Dispatchers.IO) {
@@ -362,7 +368,7 @@ suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessag
     call.halfClose()
     call.request(1)
 
-    return@withContext result.await()
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: ""
 }
 
 fun getOwlSettingApiKey(chatId: String): String {

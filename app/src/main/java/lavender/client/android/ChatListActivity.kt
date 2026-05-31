@@ -1933,7 +1933,7 @@ class ChatListActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             try {
-                val chatId = GrpcClient.createOwlChat(uid, "🤖 Чат с AI")
+                val chatId = GrpcClient.createOwlChat(uid, "AI Chat")
                 runOnUiThread {
                     if (chatId.isNotEmpty()) {
                         // Add OWL chat to local list so it appears immediately
