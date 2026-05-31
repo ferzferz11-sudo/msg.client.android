@@ -39,9 +39,8 @@ class OwlActivity : AppCompatActivity() {
     private var chatId: String = ""
     private var userId: String = ""
 
-    // Available models — verified free models on OpenRouter (as of 2026-05-31)
-    private val models = listOf(
-        // Free models (:free suffix)
+    // Free-only models (when using server API key)
+    private val freeModels = listOf(
         "openrouter/owl-alpha" to "OWL Alpha 🆓",
         "openai/gpt-oss-20b:free" to "GPT OSS 20B 🆓",
         "openai/gpt-oss-120b:free" to "GPT OSS 120B 🆓",
@@ -54,7 +53,10 @@ class OwlActivity : AppCompatActivity() {
         "nvidia/nemotron-3-super-120b-a12b:free" to "Nemotron Super 120B 🆓",
         "moonshotai/kimi-k2.6:free" to "Kimi K2.6 🆓",
         "google/gemma-4-26b-a4b-it:free" to "Gemma 4 26B 🆓",
-        // Paid — popular choices (without ~ prefix, exact IDs)
+    )
+
+    // All models (free + paid) — shown when user provides their own API key
+    private val allModels = freeModels + listOf(
         "anthropic/claude-sonnet-4-20250514" to "Claude Sonnet 4",
         "anthropic/claude-opus-4-20250514" to "Claude Opus 4",
         "openai/gpt-4o" to "GPT-4o",
@@ -66,6 +68,11 @@ class OwlActivity : AppCompatActivity() {
         "qwen/qwen-2.5-72b-instruct" to "Qwen 2.5 72B",
         "mistralai/mistral-large-2407" to "Mistral Large 2",
     )
+
+    /** Returns the model list to show: free-only if using server key, all if user key is set */
+    private fun getModelsForDisplay(): List<Pair<String, String>> {
+        return if (userApiKey.isEmpty()) freeModels else allModels
+    }
     private var selectedModelIndex = 0
     private var userApiKey = ""
 
@@ -105,7 +112,7 @@ class OwlActivity : AppCompatActivity() {
 
     private fun loadLocalSettings() {
         selectedModelIndex = prefs.getInt("model_index", 0)
-        if (selectedModelIndex >= models.size) selectedModelIndex = 0
+        if (selectedModelIndex >= getModelsForDisplay().size) selectedModelIndex = 0
         userApiKey = prefs.getString("api_key", "") ?: ""
     }
 
@@ -143,7 +150,7 @@ class OwlActivity : AppCompatActivity() {
                     val serverModel = GrpcClient.getOwlSettingModel(chatId)
                     if (serverApiKey.isNotEmpty()) userApiKey = serverApiKey
                     if (serverModel.isNotEmpty()) {
-                        val idx = models.indexOfFirst { it.first == serverModel }
+                        val idx = getModelsForDisplay().indexOfFirst { it.first == serverModel }
                         if (idx >= 0) selectedModelIndex = idx
                     }
                 }
@@ -237,7 +244,7 @@ class OwlActivity : AppCompatActivity() {
                         text = "💡 Доступные команды:\n\n" +
                                 "/model — выбрать модель\n" +
                                 "/help — это сообщение\n\n" +
-                                "Текущая модель: ${models[selectedModelIndex].second}",
+                                "Текущая модель: ${getModelsForDisplay()[selectedModelIndex].second}",
                         isUser = false
                     )
                 )
@@ -253,10 +260,12 @@ class OwlActivity : AppCompatActivity() {
     // ===== Model picker dialog =====
 
     private fun showModelPickerDialog() {
-        val modelNames = models.map { it.second }.toTypedArray()
+        val displayModels = getModelsForDisplay()
+        val modelNames = displayModels.map { it.second }.toTypedArray()
+        if (selectedModelIndex >= displayModels.size) selectedModelIndex = 0
 
         val builder = AlertDialog.Builder(this)
-            .setTitle("Выберите модель")
+            .setTitle(if (userApiKey.isEmpty()) "Выберите модель (бесплатные)" else "Выберите модель")
 
         // Custom view with list + custom input
         val layout = LinearLayout(this).apply {
@@ -310,8 +319,10 @@ class OwlActivity : AppCompatActivity() {
     }
 
     private fun selectModel(index: Int) {
+        val displayModels = getModelsForDisplay()
+        if (index < 0 || index >= displayModels.size) return
         selectedModelIndex = index
-        val (modelId, modelName) = models[index]
+        val (modelId, modelName) = displayModels[index]
         saveLocalSettings()
         lifecycleScope.launch {
             try {
@@ -324,7 +335,7 @@ class OwlActivity : AppCompatActivity() {
     }
 
     private fun selectCustomModel(modelId: String) {
-        selectedModelIndex = models.size // put "after" the last model as a sentinel
+        selectedModelIndex = getModelsForDisplay().size // sentinel: custom model is "after" the last in list
         saveCustomModel(modelId)
         saveLocalSettings()
         lifecycleScope.launch {
@@ -351,13 +362,14 @@ class OwlActivity : AppCompatActivity() {
 
     // Get effective model ID (handles custom model selection)
     private fun getEffectiveModelId(): String {
-        if (selectedModelIndex == models.size && customModelId.isNotEmpty()) {
+        val displayModels = getModelsForDisplay()
+        if (selectedModelIndex == displayModels.size && customModelId.isNotEmpty()) {
             return customModelId
         }
-        if (selectedModelIndex < models.size) {
-            return models[selectedModelIndex].first
+        if (selectedModelIndex < displayModels.size) {
+            return displayModels[selectedModelIndex].first
         }
-        return models[0].first
+        return displayModels[0].first
     }
 
     // ===== Send message =====
@@ -479,10 +491,12 @@ class OwlActivity : AppCompatActivity() {
         }
         layout.addView(modelLabel)
 
-        val modelNames = models.map { it.second }.toTypedArray()
+        val modelNames = getModelsForDisplay().map { it.second }.toTypedArray()
+        val displayModels = getModelsForDisplay()
+        val safeIndex = if (selectedModelIndex < displayModels.size) selectedModelIndex else 0
         val spinner = Spinner(this).apply {
             adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, modelNames)
-            setSelection(selectedModelIndex)
+            setSelection(safeIndex)
         }
         layout.addView(spinner)
 
@@ -503,7 +517,7 @@ class OwlActivity : AppCompatActivity() {
                 saveLocalSettings()
 
                 // Save to server
-                val modelId = models[selectedModelIndex].first
+                val modelId = getModelsForDisplay()[selectedModelIndex].first
                 lifecycleScope.launch {
                     try {
                         GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
