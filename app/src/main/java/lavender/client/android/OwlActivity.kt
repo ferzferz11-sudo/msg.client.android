@@ -39,32 +39,31 @@ class OwlActivity : AppCompatActivity() {
     private var chatId: String = ""
     private var userId: String = ""
 
-    // Available models — correct OpenRouter format: provider/model
+    // Available models — verified free models on OpenRouter (as of 2026-05-31)
     private val models = listOf(
-        // Free models
-        "mistralai/mistral-7b-instruct:free" to "Mistral 7B Instruct 🆓",
-        "deepseek/deepseek-r1:free" to "DeepSeek R1 🆓",
-        "meta-llama/llama-3.3-70b-instruct:free" to "Llama 3.3 70B 🆓",
-        "qwen/qwen3-8b:free" to "Qwen 3 8B 🆓",
+        // Free models (:free suffix)
         "openai/gpt-oss-20b:free" to "GPT OSS 20B 🆓",
         "openai/gpt-oss-120b:free" to "GPT OSS 120B 🆓",
         "z-ai/glm-4.5-air:free" to "GLM 4.5 Air 🆓",
-        // Popular paid (aliases for latest)
-        "~anthropic/claude-sonnet-4-20250514" to "Claude Sonnet 4",
-        "~anthropic/claude-opus-4-20250514" to "Claude Opus 4",
-        "~openai/gpt-4o" to "GPT-4o",
-        "~openai/gpt-4o-mini" to "GPT-4o Mini",
-        "~google/gemini-2.5-pro" to "Gemini 2.5 Pro",
-        "~google/gemini-2.5-flash" to "Gemini 2.5 Flash",
-        "~moonshotai/kimi-k2" to "Kimi K2",
-        // Exact model IDs (use if aliases fail)
-        "anthropic/claude-sonnet-4-20250514" to "Claude Sonnet 4 (exact)",
-        "anthropic/claude-opus-4-20250514" to "Claude Opus 4 (exact)",
-        "openai/gpt-4o-2024-11-20" to "GPT-4o Nov 2024",
-        "google/gemini-2.5-pro-exp-03-25" to "Gemini 2.5 Pro Exp",
+        "meta-llama/llama-3.3-70b-instruct:free" to "Llama 3.3 70B 🆓",
+        "meta-llama/llama-3.2-3b-instruct:free" to "Llama 3.2 3B 🆓",
+        "deepseek/deepseek-v4-flash:free" to "DeepSeek V4 Flash 🆓",
+        "qwen/qwen3-coder:free" to "Qwen 3 Coder 🆓",
+        "qwen/qwen3-next-80b-a3b-instruct:free" to "Qwen 3 Next 80B 🆓",
+        "nvidia/nemotron-3-super-120b-a12b:free" to "Nemotron Super 120B 🆓",
+        "moonshotai/kimi-k2.6:free" to "Kimi K2.6 🆓",
+        "google/gemma-4-26b-a4b-it:free" to "Gemma 4 26B 🆓",
+        // Paid — popular choices (without ~ prefix, exact IDs)
+        "anthropic/claude-sonnet-4-20250514" to "Claude Sonnet 4",
+        "anthropic/claude-opus-4-20250514" to "Claude Opus 4",
+        "openai/gpt-4o" to "GPT-4o",
+        "openai/gpt-4o-mini" to "GPT-4o Mini",
+        "google/gemini-2.5-pro" to "Gemini 2.5 Pro",
+        "google/gemini-2.5-flash" to "Gemini 2.5 Flash",
         "deepseek/deepseek-r1" to "DeepSeek R1",
         "deepseek/deepseek-v3" to "DeepSeek V3",
         "qwen/qwen-2.5-72b-instruct" to "Qwen 2.5 72B",
+        "mistralai/mistral-large-2407" to "Mistral Large 2",
     )
     private var selectedModelIndex = 0
     private var userApiKey = ""
