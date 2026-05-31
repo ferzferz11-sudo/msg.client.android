@@ -1906,6 +1906,20 @@ class ChatListActivity : AppCompatActivity() {
                 val chatId = GrpcClient.createOwlChat(uid, "🤖 Чат с AI")
                 runOnUiThread {
                     if (chatId.isNotEmpty()) {
+                        // Add OWL chat to local list so it appears immediately
+                        val owlChat = ChatInfo(
+                            id = chatId,
+                            name = "🤖 Чат с AI",
+                            type = "owl",
+                            participants = "[\"$uid\"]",
+                            creator = uid,
+                            avatarUrl = "",
+                            fullAvatarUrl = "",
+                            unreadCount = 0
+                        )
+                        chats.add(0, owlChat)
+                        chatAdapter.setChats(chats.toList())
+
                         val intent = Intent(this@ChatListActivity, OwlActivity::class.java)
                         intent.putExtra("CHAT_ID", chatId)
                         startActivity(intent)

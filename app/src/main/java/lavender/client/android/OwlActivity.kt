@@ -418,7 +418,12 @@ class OwlActivity : AppCompatActivity() {
         } else {
             currentResponse += response.text
             adapter.hideTyping()
-            adapter.addMessage(OwlMessage(text = currentResponse, isUser = false))
+            // Update the last assistant message instead of adding new one
+            adapter.updateLastAssistantMessage(currentResponse)
+            // If no assistant message exists yet, add one
+            if (adapter.itemCount == 0 || adapter.isLastMessageUser()) {
+                adapter.addMessage(OwlMessage(text = currentResponse, isUser = false))
+            }
             findViewById<RecyclerView>(R.id.messagesRecyclerView)
                 .scrollToPosition(adapter.itemCount - 1)
         }

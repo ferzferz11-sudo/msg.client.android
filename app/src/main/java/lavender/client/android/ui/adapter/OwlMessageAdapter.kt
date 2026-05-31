@@ -50,6 +50,19 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
         notifyDataSetChanged()
     }
 
+    fun isLastMessageUser(): Boolean {
+        return messages.isNotEmpty() && messages.last().isUser
+    }
+
+    fun updateLastAssistantMessage(text: String) {
+        // Find the last non-user, non-typing message
+        val idx = messages.indexOfLast { !it.isUser && !it.isTyping && it.text.isNotEmpty() }
+        if (idx >= 0) {
+            messages[idx] = messages[idx].copy(text = text)
+            notifyItemChanged(idx)
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_owl_message, parent, false)
