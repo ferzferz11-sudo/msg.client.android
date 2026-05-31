@@ -12,4 +12,6 @@
     <item name="actionCreateConference" type="id" />
     <item name="actionCreateSecretChat" type="id" />
     <item name="actionOwlChat" type="id" />
+    <item name="action_owl_settings" type="id" />
+    <item name="action_owl_delete" type="id" />
 </resources>

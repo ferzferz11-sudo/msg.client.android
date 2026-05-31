@@ -823,3 +823,72 @@ data class OWLResponseProto(
     val finished: Boolean = false,
     val error: String = ""
 )
+
+// OWL Chat management proto classes
+data class CreateOwlChatRequestProto(
+    val userId: String = "",
+    val name: String = ""
+)
+
+data class CreateOwlChatResponseProto(
+    val chatId: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeleteOwlChatRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class DeleteOwlChatResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetOwlHistoryRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class OwlHistoryMessageProto(
+    var role: String = "",
+    var content: String = "",
+    var createdAt: String = ""
+) {
+    companion object {
+        fun parseFrom(bytes: ByteArray): OwlHistoryMessageProto {
+            val cis = com.google.protobuf.CodedInputStream.newInstance(bytes)
+            var role = ""
+            var content = ""
+            var createdAt = ""
+            while (!cis.isAtEnd) {
+                val tag = cis.readTag()
+                if (tag == 0) break
+                when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                    1 -> role = cis.readString()
+                    2 -> content = cis.readString()
+                    3 -> createdAt = cis.readString()
+                    else -> cis.skipField(tag)
+                }
+            }
+            return OwlHistoryMessageProto(role, content, createdAt)
+        }
+    }
+}
+
+data class GetOwlHistoryResponseProto(
+    val messagesList: List<OwlHistoryMessageProto> = emptyList()
+)
+
+data class UpdateOwlSettingsRequestProto(
+    val chatId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateOwlSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)

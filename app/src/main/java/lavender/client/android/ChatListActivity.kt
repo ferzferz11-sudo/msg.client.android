@@ -237,6 +237,7 @@ class ChatListActivity : AppCompatActivity() {
                 // OWL AI virtual chat
                 if (chat.id.startsWith("owl-")) {
                     val intent = Intent(this, OwlActivity::class.java)
+                    intent.putExtra("CHAT_ID", chat.id)
                     startActivity(intent)
                     return@ChatAdapter
                 }
@@ -1889,10 +1890,35 @@ class ChatListActivity : AppCompatActivity() {
                     showCreateConferenceDialog()
                 },
                 SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "Чат с AI") {
-                    val intent = Intent(this, OwlActivity::class.java)
-                    startActivity(intent)
+                    createNewOwlChat()
                 }
             )).show()
+    }
+
+    private fun createNewOwlChat() {
+        val uid = username
+        if (uid.isEmpty()) {
+            Toast.makeText(this, "Необходимо войти в аккаунт", Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                val chatId = GrpcClient.createOwlChat(uid, "🤖 Чат с AI")
+                runOnUiThread {
+                    if (chatId.isNotEmpty()) {
+                        val intent = Intent(this@ChatListActivity, OwlActivity::class.java)
+                        intent.putExtra("CHAT_ID", chatId)
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(this@ChatListActivity, "Ошибка создания чата", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this@ChatListActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun showCreateConferenceDialog() {

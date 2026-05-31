@@ -35,6 +35,10 @@ class OwlActivity : AppCompatActivity() {
     private var currentResponse = ""
     private var isReceiving = false
 
+    // Chat ID — unique per OWL chat
+    private var chatId: String = ""
+    private var userId: String = ""
+
     // Available models
     private val models = listOf(
         "openrouter/anthropic/claude-sonnet-4" to "Claude Sonnet 4",
@@ -44,25 +48,97 @@ class OwlActivity : AppCompatActivity() {
         "openrouter/openai/gpt-4o-mini" to "GPT-4o Mini"
     )
     private var selectedModelIndex = 0
-    private lateinit var prefs: SharedPreferences
     private var userApiKey = ""
+
+    // Local prefs for per-chat settings (fallback if server unreachable)
+    private lateinit var prefs: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl)
 
-        prefs = getSharedPreferences("owl_prefs", Context.MODE_PRIVATE)
-        loadSettings()
+        chatId = intent.getStringExtra("CHAT_ID") ?: ""
+        userId = SessionManager.session.value.username
+
+        prefs = getSharedPreferences("owl_$chatId", Context.MODE_PRIVATE)
+        loadLocalSettings()
 
         setupToolbar(hasMenu = true)
         setupRecyclerView()
         setupInput()
         observeOwlResponses()
 
-        // Add welcome message
+        if (chatId.isEmpty()) {
+            // No chat ID — show error
+            adapter.addMessage(
+                OwlMessage(
+                    text = "Ошибка: chat_id не указан",
+                    isUser = false
+                )
+            )
+            return
+        }
+
+        // Load history from server
+        loadHistory()
+    }
+
+    private fun loadLocalSettings() {
+        selectedModelIndex = prefs.getInt("model_index", 0)
+        if (selectedModelIndex >= models.size) selectedModelIndex = 0
+        userApiKey = prefs.getString("api_key", "") ?: ""
+    }
+
+    private fun saveLocalSettings() {
+        prefs.edit()
+            .putInt("model_index", selectedModelIndex)
+            .putString("api_key", userApiKey)
+            .apply()
+    }
+
+    private fun loadHistory() {
+        if (chatId.isEmpty() || userId.isEmpty()) return
+
+        lifecycleScope.launch {
+            try {
+                val history = GrpcClient.getOwlHistory(chatId, userId)
+                runOnUiThread {
+                    if (history.isEmpty()) {
+                        // First time — show welcome
+                        showWelcomeMessage()
+                    } else {
+                        for (msg in history) {
+                            when (msg.role) {
+                                "user" -> adapter.addMessage(OwlMessage(text = msg.content, isUser = true))
+                                "assistant" -> adapter.addMessage(OwlMessage(text = msg.content, isUser = false))
+                            }
+                        }
+                        // Scroll to bottom
+                        val rv = findViewById<RecyclerView>(R.id.messagesRecyclerView)
+                        rv.scrollToPosition(adapter.itemCount - 1)
+                    }
+
+                    // Load per-chat settings from server if available
+                    val serverApiKey = GrpcClient.getOwlSettingApiKey(chatId)
+                    val serverModel = GrpcClient.getOwlSettingModel(chatId)
+                    if (serverApiKey.isNotEmpty()) userApiKey = serverApiKey
+                    if (serverModel.isNotEmpty()) {
+                        val idx = models.indexOfFirst { it.first == serverModel }
+                        if (idx >= 0) selectedModelIndex = idx
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    showWelcomeMessage()
+                }
+            }
+        }
+    }
+
+    private fun showWelcomeMessage() {
         adapter.addMessage(
             OwlMessage(
-                text = "Привет! Я — OWL, твой AI-ассистент в Lavender. Спроси меня о чём угодно!\n\n💡 Команды:\n/model — сменить модель\n/help — помощь",
+                text = "Привет! Я — OWL, твой AI-ассистент в Lavender. Спроси меня о чём угодно!\n\n💡 Команды:\n/model — выбрать модель\n/help — помощь",
                 isUser = false
             )
         )
@@ -75,7 +151,6 @@ class OwlActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.title = ""
 
-        // Load avatar
         val avatarView = findViewById<CircleImageView>(R.id.toolbarAvatar)
         avatarView?.setImageResource(R.drawable.ic_notification_logo)
 
@@ -85,6 +160,10 @@ class OwlActivity : AppCompatActivity() {
                 when (item.itemId) {
                     R.id.action_owl_settings -> {
                         showSettingsDialog()
+                        true
+                    }
+                    R.id.action_owl_delete -> {
+                        confirmDeleteChat()
                         true
                     }
                     else -> false
@@ -110,7 +189,11 @@ class OwlActivity : AppCompatActivity() {
             val text = messageInput.text.toString().trim()
             if (text.isEmpty() || isReceiving) return@setOnClickListener
 
-            // Handle commands
+            if (chatId.isEmpty()) {
+                Toast.makeText(this, "Ошибка: chat не создан", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             if (text.startsWith("/")) {
                 handleCommand(text)
                 messageInput.setText("")
@@ -125,17 +208,13 @@ class OwlActivity : AppCompatActivity() {
         val parts = command.split(" ", limit = 2)
         when (parts[0].lowercase()) {
             "/model" -> {
-                selectedModelIndex = (selectedModelIndex + 1) % models.size
-                val (modelId, modelName) = models[selectedModelIndex]
-                adapter.addMessage(
-                    OwlMessage(text = "✅ Модель изменена на: $modelName\n(ID: $modelId)", isUser = false)
-                )
+                showModelPickerDialog()
             }
             "/help" -> {
                 adapter.addMessage(
                     OwlMessage(
                         text = "💡 Доступные команды:\n\n" +
-                                "/model — сменить модель (циклически)\n" +
+                                "/model — выбрать модель\n" +
                                 "/help — это сообщение\n\n" +
                                 "Текущая модель: ${models[selectedModelIndex].second}",
                         isUser = false
@@ -150,61 +229,60 @@ class OwlActivity : AppCompatActivity() {
         }
     }
 
+    // ===== Model picker dialog =====
+
+    private fun showModelPickerDialog() {
+        val modelNames = models.map { it.second }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Выберите модель")
+            .setSingleChoiceItems(modelNames, selectedModelIndex) { dialog, which ->
+                selectedModelIndex = which
+                val (modelId, modelName) = models[which]
+                saveLocalSettings()
+
+                // Also save to server
+                lifecycleScope.launch {
+                    try {
+                        GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
+                    } catch (_: Exception) {}
+                }
+
+                adapter.addMessage(
+                    OwlMessage(text = "✅ Модель изменена на: $modelName", isUser = false)
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    // ===== Send message =====
+
     private fun sendMessage(text: String) {
-        // Add user message
         adapter.addMessage(OwlMessage(text = text, isUser = true))
         messageInput.setText("")
         currentResponse = ""
         isReceiving = true
 
-        // Show typing
         adapter.showTyping()
 
-        // Scroll to bottom
         findViewById<RecyclerView>(R.id.messagesRecyclerView)
             .scrollToPosition(adapter.itemCount - 1)
 
-        // Send to OWL
-        val userId = SessionManager.session.value.username
-        if (userId.isEmpty()) {
-            adapter.hideTyping()
-            adapter.addMessage(
-                OwlMessage(text = "Ошибка: необходимо войти в аккаунт", isUser = false)
-            )
-            isReceiving = false
-            return
-        }
+        val modelId = models[selectedModelIndex].first
 
         try {
-            val modelId = models[selectedModelIndex].first
-            GrpcClient.chatWithOWL(userId, text, modelId, userApiKey, lifecycleScope) { response ->
+            GrpcClient.chatWithOWL(
+                userId = userId,
+                message = text,
+                chatId = chatId,
+                modelId = modelId,
+                apiKey = userApiKey,
+                scope = lifecycleScope
+            ) { response ->
                 runOnUiThread {
-                    if (response.error.isNotEmpty()) {
-                        adapter.hideTyping()
-                        adapter.addMessage(
-                            OwlMessage(text = "Ошибка: ${response.error}", isUser = false)
-                        )
-                        isReceiving = false
-                    } else if (response.finished) {
-                        adapter.hideTyping()
-                        if (response.text.isNotEmpty()) {
-                            adapter.updateLastMessage(currentResponse + response.text)
-                        } else if (currentResponse.isEmpty()) {
-                            adapter.updateLastMessage("Получен пустой ответ от сервера")
-                        }
-                        currentResponse = ""
-                        isReceiving = false
-                        findViewById<RecyclerView>(R.id.messagesRecyclerView)
-                            .scrollToPosition(adapter.itemCount - 1)
-                    } else {
-                        currentResponse += response.text
-                        adapter.hideTyping()
-                        adapter.addMessage(
-                            OwlMessage(text = currentResponse, isUser = false)
-                        )
-                        findViewById<RecyclerView>(R.id.messagesRecyclerView)
-                            .scrollToPosition(adapter.itemCount - 1)
-                    }
+                    onOwlResponse(response)
                 }
             }
         } catch (e: Exception) {
@@ -218,6 +296,31 @@ class OwlActivity : AppCompatActivity() {
         }
     }
 
+    private fun onOwlResponse(response: OWLResponseProto) {
+        if (response.error.isNotEmpty()) {
+            adapter.hideTyping()
+            adapter.addMessage(OwlMessage(text = "Ошибка: ${response.error}", isUser = false))
+            isReceiving = false
+        } else if (response.finished) {
+            adapter.hideTyping()
+            if (response.text.isNotEmpty()) {
+                adapter.updateLastMessage(currentResponse + response.text)
+            } else if (currentResponse.isEmpty()) {
+                adapter.updateLastMessage("Получен пустой ответ от сервера")
+            }
+            currentResponse = ""
+            isReceiving = false
+            findViewById<RecyclerView>(R.id.messagesRecyclerView)
+                .scrollToPosition(adapter.itemCount - 1)
+        } else {
+            currentResponse += response.text
+            adapter.hideTyping()
+            adapter.addMessage(OwlMessage(text = currentResponse, isUser = false))
+            findViewById<RecyclerView>(R.id.messagesRecyclerView)
+                .scrollToPosition(adapter.itemCount - 1)
+        }
+    }
+
     private fun observeOwlResponses() {
         lifecycleScope.launch {
             owlTyping.collect { isTyping ->
@@ -226,34 +329,16 @@ class OwlActivity : AppCompatActivity() {
                     val subtitle = toolbar.findViewById<android.widget.TextView>(R.id.toolbarSubtitle)
                     if (isTyping) {
                         subtitle?.text = "Печатает..."
-                        subtitle?.visibility = android.view.View.VISIBLE
+                        subtitle?.visibility = View.VISIBLE
                     } else {
-                        subtitle?.visibility = android.view.View.GONE
+                        subtitle?.visibility = View.GONE
                     }
                 }
             }
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        finish()
-    }
-
-    // ===== Settings =====
-
-    private fun loadSettings() {
-        userApiKey = prefs.getString("owl_api_key", "") ?: ""
-        selectedModelIndex = prefs.getInt("owl_model_index", 0)
-        if (selectedModelIndex >= models.size) selectedModelIndex = 0
-    }
-
-    private fun saveSettings() {
-        prefs.edit()
-            .putString("owl_api_key", userApiKey)
-            .putInt("owl_model_index", selectedModelIndex)
-            .apply()
-    }
+    // ===== Settings dialog =====
 
     private fun showSettingsDialog() {
         val layout = LinearLayout(this).apply {
@@ -293,7 +378,7 @@ class OwlActivity : AppCompatActivity() {
 
         // Info
         val infoText = TextView(this).apply {
-            text = "💡 Без своего ключа используется серверный.\nВаш ключ хранится только на устройстве."
+            text = "💡 Без своего ключа используется серверный.\nВаш ключ хранится на сервере и устройстве."
             textSize = 12f
             setPadding(0, 24, 0, 0)
         }
@@ -305,10 +390,49 @@ class OwlActivity : AppCompatActivity() {
             .setPositiveButton("Сохранить") { _, _ ->
                 userApiKey = keyInput.text.toString().trim()
                 selectedModelIndex = spinner.selectedItemPosition
-                saveSettings()
+                saveLocalSettings()
+
+                // Save to server
+                val modelId = models[selectedModelIndex].first
+                lifecycleScope.launch {
+                    try {
+                        GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
+                    } catch (_: Exception) {}
+                }
+
                 Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    // ===== Delete chat =====
+
+    private fun confirmDeleteChat() {
+        AlertDialog.Builder(this)
+            .setTitle("Удалить чат?")
+            .setMessage("Вся история будет удалена. Это действие нельзя отменить.")
+            .setPositiveButton("Удалить") { _, _ ->
+                lifecycleScope.launch {
+                    try {
+                        GrpcClient.deleteOwlChat(chatId, userId)
+                        runOnUiThread {
+                            Toast.makeText(this@OwlActivity, "Чат удалён", Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    } catch (e: Exception) {
+                        runOnUiThread {
+                            Toast.makeText(this@OwlActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        finish()
     }
 }
