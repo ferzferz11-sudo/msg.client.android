@@ -57,10 +57,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import lavender.client.android.data.grpc.ConnectionStatus
+import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.session.SessionManager
-import lavender.client.android.data.updates.UpdateManager
+import lavender.client.android.data.db.*
+import lavender.client.android.data.models.*
+import lavender.client.android.data.session.*
+import lavender.client.android.data.updates.*
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
