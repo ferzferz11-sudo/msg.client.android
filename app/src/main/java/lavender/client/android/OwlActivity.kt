@@ -26,6 +26,7 @@ import lavender.client.android.data.proto.OWLResponseProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.OwlMessage
 import lavender.client.android.ui.adapter.OwlMessageAdapter
+import lavender.client.android.theme.ui.ThemeUi
 
 class OwlActivity : AppCompatActivity() {
 
@@ -94,6 +95,9 @@ class OwlActivity : AppCompatActivity() {
         setupRecyclerView()
         setupInput()
         observeOwlResponses()
+
+        // Apply theme (colors, background image)
+        ThemeUi.bind(this, userId)
 
         if (chatId.isEmpty()) {
             // No chat ID — show error

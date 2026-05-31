@@ -7,12 +7,23 @@
     android:background="@android:color/transparent"
     tools:context=".OwlActivity">
 
+    <View
+        android:id="@+id/chatBgColor"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="?attr/colorSurface"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <ImageView
-        android:id="@id/chatBackground"
+        android:id="@+id/chatBackground"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="centerCrop"
         android:contentDescription="@null"
+        android:alpha="0.15"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -23,10 +34,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="@dimen/custom_toolbar_height"
-        android:background="@drawable/toolbar_background"
+        android:background="?attr/colorPrimary"
         android:elevation="4dp"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent">
 
         <RelativeLayout
