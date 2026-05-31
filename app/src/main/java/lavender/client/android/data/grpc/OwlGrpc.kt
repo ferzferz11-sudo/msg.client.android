@@ -106,6 +106,9 @@ fun chatWithOWL(
                         )
                         _owlResponses.tryEmit(errorResp)
                         onResponse(errorResp)
+                    } else {
+                        // Stream closed normally — signal completion
+                        onResponse(OWLResponseProto(text = "", finished = true))
                     }
                 }
             }, io.grpc.Metadata())
