@@ -1306,6 +1306,11 @@ class ChatListActivity : AppCompatActivity() {
         
         updateUpdateIndicatorVisibility()
 
+        // Refresh chat list when returning from another activity (e.g. OWL chat)
+        if (::chatAdapter.isInitialized && username.isNotEmpty()) {
+            loadChats()
+        }
+
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
 
         // Ensure connection is active if we have a server address
