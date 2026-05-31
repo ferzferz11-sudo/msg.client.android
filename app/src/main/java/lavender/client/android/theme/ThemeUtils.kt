@@ -104,8 +104,6 @@ object ThemeUtils {
             toolbar.setBackgroundColor(bgColor)
             toolbar.setTitleTextColor(onSurfaceColor)
             toolbar.setNavigationIconTint(onSurfaceColor)
-            toolbar.setOverflowIconTint(onSurfaceColor)
-            toolbar.supportActionBar?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
         } catch (_: Exception) {
             Log.e("ThemeUtils", "Error applying toolbar theme")
         }

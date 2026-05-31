@@ -97,7 +97,7 @@ fun chatWithOWL(
                 }
 
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    _owlTyping.emit(false)
+                    _owlTyping.tryEmit(false)
                     if (!status.isOk) {
                         val errorResp = OWLResponseProto(
                             text = "",
