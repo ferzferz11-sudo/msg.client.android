@@ -145,39 +145,24 @@ class OwlActivity : AppCompatActivity() {
     private fun loadHistory() {
         if (chatId.isEmpty() || userId.isEmpty()) return
 
-        lifecycleScope.launch {
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.Job()).launch {
             try {
-                android.util.Log.d("OwlActivity", "Loading history for chat=$chatId user=$userId")
                 val history = GrpcClient.getOwlHistory(chatId, userId)
-                android.util.Log.d("OwlActivity", "History loaded: ${history.size} messages")
                 runOnUiThread {
                     if (history.isEmpty()) {
                         showWelcomeMessage()
                     } else {
                         for (msg in history) {
-                            android.util.Log.d("OwlActivity", "History msg: role=${msg.role} content=${msg.content.take(50)}")
                             when (msg.role) {
                                 "user" -> adapter.addMessage(OwlMessage(text = msg.content, isUser = true))
                                 "assistant" -> adapter.addMessage(OwlMessage(text = msg.content, isUser = false))
                             }
                         }
-                        val rv = findViewById<RecyclerView>(R.id.messagesRecyclerView)
-                        rv.scrollToPosition(adapter.itemCount - 1)
-                    }
-                    // Load per-chat settings from server if available
-                    val serverApiKey = GrpcClient.getOwlSettingApiKey(chatId)
-                    val serverModel = GrpcClient.getOwlSettingModel(chatId)
-                    if (serverApiKey.isNotEmpty()) userApiKey = serverApiKey
-                    if (serverModel.isNotEmpty()) {
-                        val idx = getModelsForDisplay().indexOfFirst { it.first == serverModel }
-                        if (idx >= 0) selectedModelIndex = idx
+                        findViewById<RecyclerView>(R.id.messagesRecyclerView).scrollToPosition(adapter.itemCount - 1)
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("OwlActivity", "Failed to load history: ${e.message}")
-                runOnUiThread {
-                    showWelcomeMessage()
-                }
+                runOnUiThread { showWelcomeMessage() }
             }
         }
     }
