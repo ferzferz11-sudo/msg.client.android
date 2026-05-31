@@ -1310,6 +1310,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Ensure connection is active if we have a server address
         val needsReconnect = grpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED ||
+                           grpcClient.connectionStatus.value == ConnectionStatus.FAILED ||
                            grpcClient.shouldForceReconnect()
 
         if (needsReconnect) {
@@ -1320,7 +1321,7 @@ class ChatListActivity : AppCompatActivity() {
                 val parts = serverAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                grpcClient.connect(host, false, port, this, false)
+                grpcClient.connect(host, false, port, this, true)
             }
         }
 
