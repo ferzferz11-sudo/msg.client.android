@@ -777,6 +777,10 @@ object RealGrpcClient {
                 responseObserver.onNext(message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    _connectionStatus.value = ConnectionStatus.FAILED
+                    requestObserver = null
+                }
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
         }, io.grpc.Metadata())
@@ -958,6 +962,10 @@ object RealGrpcClient {
         this.start(object : io.grpc.ClientCall.Listener<CallMessageProto>() {
             override fun onMessage(message: CallMessageProto) = responseObserver.onNext(message)
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    _connectionStatus.value = ConnectionStatus.FAILED
+                    requestObserver = null
+                }
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
         }, io.grpc.Metadata())
