@@ -1309,8 +1309,10 @@ class ChatListActivity : AppCompatActivity() {
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
 
         // Ensure connection is active if we have a server address
-        val needsReconnect = grpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED ||
-                           grpcClient.connectionStatus.value == ConnectionStatus.FAILED ||
+        val currentStatus = grpcClient.connectionStatus.value
+        Log.d("ChatListActivity", "onResume: connectionStatus=$currentStatus")
+        val needsReconnect = currentStatus == ConnectionStatus.DISCONNECTED ||
+                           currentStatus == ConnectionStatus.FAILED ||
                            grpcClient.shouldForceReconnect()
 
         if (needsReconnect) {
@@ -1321,6 +1323,7 @@ class ChatListActivity : AppCompatActivity() {
                 val parts = serverAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                Log.d("ChatListActivity", "onResume: reconnecting to $host:$port")
                 grpcClient.connect(host, false, port, this, true)
             }
         }

@@ -235,6 +235,8 @@ object RealGrpcClient {
     private val pendingReads = mutableSetOf<String>()
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
+        Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${_connectionStatus.value}")
+
         if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null && !forceReconnect) {
             Log.d(TAG, "Connection already ready, skipping connect")
             return
