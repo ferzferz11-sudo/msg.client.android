@@ -28,21 +28,17 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import lavender.client.android.ui.adapter.MessageSwipeController
-import lavender.client.android.ui.adapter.OwlMessage
-import lavender.client.android.ui.adapter.OwlMessageAdapter
-import lavender.client.android.theme.ThemeStore
-import androidx.lifecycle.lifecycleScope
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.OWLResponseProto
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.ui.adapter.MessageSwipeController
 import lavender.client.android.ui.adapter.OwlMessage
 import lavender.client.android.ui.adapter.OwlMessageAdapter
 import lavender.client.android.theme.ui.ThemeUi
@@ -319,6 +315,8 @@ class OwlActivity : AppCompatActivity() {
         replyingTo = null
         replyPreview.isVisible = false
     }
+
+    private fun setupSelectionToolbar() {
         selectionToolbar = findViewById(R.id.selectionToolbar)
         selectionCountText = findViewById(R.id.selectionCountText)
         copyMessagesBtn = findViewById(R.id.copyMessages)
