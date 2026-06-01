@@ -32,6 +32,9 @@ class WebRtcClient(
     private val iceCandidateQueue = mutableListOf<IceCandidate>()
     private var isRemoteDescriptionSet = false
 
+    // ICE connection state callback
+    var onIceConnectionStateChange: ((PeerConnection.IceConnectionState) -> Unit)? = null
+
     init {
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .createInitializationOptions()
@@ -59,9 +62,34 @@ class WebRtcClient(
             }
             override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
                 Log.d("WebRtcClient", "Ice connection: $state")
+                state?.let { onIceConnectionStateChange?.invoke(it) }
             }
             override fun onIceConnectionReceivingChange(p0: Boolean) {}
             override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
+            override fun onIceCandidate(candidate: IceCandidate) {
+                observer.onIceCandidate(candidate)
+            }
+            override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
+            override fun onAddStream(stream: MediaStream) {
+                Log.d("WebRtcClient", "Remote stream added")
+                observer.onRemoteStream(stream)
+            }
+            override fun onRemoveStream(stream: MediaStream) {}
+            override fun onDataChannel(dataChannel: DataChannel?) {}
+            override fun onRenegotiationNeeded() {
+                Log.d("WebRtcClient", "Renegotiation needed")
+            }
+            override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {
+                Log.d("WebRtcClient", "onAddTrack: ${receiver?.track()?.kind()}")
+                receiver?.track()?.let { track ->
+                    observer.onRemoteTrack(track)
+                }
+                streams?.getOrNull(0)?.let {
+                    observer.onRemoteStream(it)
+                }
+            }
+        })
+    }
             override fun onIceCandidate(candidate: IceCandidate) {
                 observer.onIceCandidate(candidate)
             }

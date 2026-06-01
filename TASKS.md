@@ -2,81 +2,68 @@
 
 **Последнее обновление:** 2026-06-01
 **Ветка:** feat/1.1.0.x
-**Версия:** 1.1.0.4
+**Версия:** 1.1.0.8
 
 ---
 
 ## 🔧 В процессе
 
-### 1. OWL чат: поле ввода перекрывает кнопки навигации
-- **Статус:** частично исправлено, требует проверки на устройстве
-- **Описание:** При открытии OWL чата поле ввода (bottomPanel) расположено поверх навигационных кнопок телефона. Клавиатура при открытии не сдвигает layout.
+### 1. WebRTC: звонки не соединяются
+- **Статус:** частично исправлено
 - **Что сделано:**
-  - Добавлен `android:fitsSystemWindows="true"` → не помогло
-  - Добавлен `adjustResize` в манифест → не помогло
-  - Добавлен `adjustNothing` + ручная обработка insets → в процессе
-- **Текущий подход:** `adjustResize` + `translationY` на bottomPanel при открытии клавиатки
-- **Проблема:** `enableEdgeToEdge()` в `ThemeApplier.kt` конфликтует с `adjustResize`
-- **Файлы:** `activity_owl.xml`, `OwlActivity.kt`, `AndroidManifest.xml`
+  - handleAbruptDisconnect теперь отправляет HANGUP собеседнику
+  - Добавлен connection timeout (30s) в CallActivity
+  - Добавлен ICE connection state handling
+  - Исправлен senderId (UUID вместо username) в call signals
+  - BroadcastCall fallback по username
+- **Что осталось:**
+  - TURN сервер для NAT traversal (coturn)
+  - FCM key обновление (ждём пользователя)
+- **Файлы:** server.go, db.go, hub.go, CallActivity.kt, CallManager.kt, WebRtcClient.kt
 
-### 2. OWL чат: keepalive failed при длительном простое
-- **Статус:** наблюдается, не критично
-- **Описание:** `UNAVAILABLE: Keepalive failed. The connection is gone` — gRPC канал теряется при длительном простое на мобильной сети
-- **Сервер:** keepalive настроен (15s ping, 10s timeout)
-- **Клиент:** автоматический reconnect в `onClose` RealGrpcClient
-- **Файлы:** `RealGrpcClient.kt`
-
-### 3. OWL чат: /key команда не работает при использовании серверного ключа
-- **Статус:** исправлено
-- **Описание:** Команда `/key` не показывалась в приветственном сообщении
-- **Исправлено:** добавлена в `showWelcomeMessage()` и в `/help`
-- **Файлы:** `OwlActivity.kt`
+### 2. FCM: Invalid JWT Signature
+- **Статус:** ждём новый Firebase key от пользователя
+- **Описание:** Push уведомления не работают, звонки не пробуждают устройство
+- **Решение:** пользователь создаст завтра новый key в Firebase Console
 
 ---
 
 ## ✅ Исправлено
 
-### 1. Ветки переименованы
-- `feat/1.2.0.owl` → `feat/1.1.0.x`
-- Версия: 1.1.0.4
+### 1. Звонки: abrupt disconnect → HANGUP
+- handleAbruptDisconnect отправляет HANGUP собеседнику
+- Сообщение "Соединение потеряно" сохраняется в чат
 
-### 2. OWL чаты в списке после возврата
-- Исправлен `CreateOwlChat` — резолвит username из DB
-- Убран `creator == userId` check в `GetOwlHistory`
-- Восстановлена колонка `last_message_text` в `chats`
+### 2. Звонки: connection timeout
+- 30s timeout для исходящих звонков
+- ICE FAILED → автоматический hangup
 
-### 3. Поле ввода в OWL чате
-- Исправлен `textInputType` — убран невалидный `textUri`
-- Добавлены потолстевшие импорты
+### 3. Звонки: senderId/UUID путаница
+- CallManager.sendWebRtcSignal теперь использует UUID
 
-### 4. Дублирующиеся сообщения при стриминге  OWL
-- Заменён `addMessage` на `updateLastAssistantMessage` для стриминга
-- Убран дубль `finished=true` из `onClose`
-
-### 5. Темы в OWL чате
-- Добавлен `ThemeUi.bind(this, userId)` в `onCreate`
-- Layout приведён к виду `activity_new_chat.xml`
-
-### 6. Удаление OWL чатов
-- **Было:** `Failed to parse participants: invalid character 'e' in literal false`
-- **Причина:** старый формат participants `[ferz]` вместо `["ferz"]`
-- **Исправлено:** обновлены данные в БД
+### 4. Сервер: BroadcastCall fallback
+- BroadcastCall теперь ищет по ReceiverId ИЛИ ReceiverName
 
 ---
 
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] Секретный чат — заглушка "not implemented in this build"
-- [ ] Медленная загрузка "Избранное" при переключении стрима
+- [ ] TURN сервер для WebRTC (coturn)
+- [ ] FCM key update (ждём пользователя)
+- [ ] Обновить ServerVersion до 1.1.0.8
 
 ### Средний приоритет
-- [ ] Mac session logout issue — не исследовано
-- [ ] Кэширование OWL чатов в локальной БД
+- [ ] Секретный чат — заглушка "not implemented in this build"
+- [ ] Медленная загрузка "Избранное"
+- [ ] Graceful shutdown сервера
+- [ ] Structured logging (zap/logrus)
 
 ### Низкий приоритет
-- [ ] Оптимизация списка моделей OWL (23 модели — можно кэшировать)
-- [ ] Graceful reconnect при keepalive failed без потери сообщений
+- [ ] Рефакторинг server.go → пакеты
+- [ ] Rate limiting на сервере
+- [ ] Кэширование запросов чатов
+- [ ] OWL: поле ввода перекрывает кнопки навигации
 
 ---
 

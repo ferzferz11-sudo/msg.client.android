@@ -44,6 +44,11 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private var isRemoteViewInitialized = false
     private var isLocalViewInitialized = false
 
+    // WebRTC connection timeout
+    private var connectionTimeoutRunnable: Runnable? = null
+    private val connectionTimeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val CONNECTION_TIMEOUT_MS = 30_000L // 30 seconds
+
     companion object {
         private const val TAG = "CallActivity"
         private const val PERMISSION_CODE = 101
@@ -109,18 +114,44 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         lifecycleScope.launch {
             viewModel.timerText.collect { binding.tvCallDuration.text = it }
         }
+
+        // Start connection timeout for outgoing calls
+        if (!isIncoming && !isConference) {
+            startConnectionTimeout()
+        }
+    }
+
+    private fun startConnectionTimeout() {
+        connectionTimeoutRunnable = Runnable {
+            Log.w(TAG, "Connection timeout reached!")
+            if (!isFinishing) {
+                soundManager.stop()
+                Toast.makeText(this@CallActivity, "Не удалось соединиться", Toast.LENGTH_SHORT).show()
+                CallManager.hangup()
+                CallManager.clearCurrentCall()
+                finish()
+            }
+        }
+        connectionTimeoutHandler.postDelayed(connectionTimeoutRunnable!!, CONNECTION_TIMEOUT_MS)
+    }
+
+    private fun cancelConnectionTimeout() {
+        connectionTimeoutRunnable?.let { connectionTimeoutHandler.removeCallbacks(it) }
+        connectionTimeoutRunnable = null
     }
 
     private fun setupController() {
         callController = CallController(callId, receiverId, isIncoming, isConference, roomId, webRtcClient, object : CallController.Listener {
             override fun onCallAccepted() {
                 soundManager.stop()
+                cancelConnectionTimeout() // Cancel timeout on successful connection
                 viewModel.startTimer()
                 runOnUiThread { binding.tvCallStatus.text = getString(R.string.call_status_connected) }
             }
 
             override fun onCallTerminated(reason: String) {
                 runOnUiThread {
+                    cancelConnectionTimeout()
                     Toast.makeText(this@CallActivity, reason, Toast.LENGTH_SHORT).show()
                     finish()
                 }
@@ -207,7 +238,34 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private fun initWebRtc() {
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, this)
         webRtcClient?.initPeerConnection(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
-        
+
+        // Monitor ICE connection state
+        webRtcClient?.onIceConnectionStateChange = { state ->
+            Log.d(TAG, "ICE connection state: $state")
+            when (state) {
+                PeerConnection.IceConnectionState.CONNECTED, PeerConnection.IceConnectionState.COMPLETED -> {
+                    Log.d(TAG, "WebRTC connection established!")
+                    runOnUiThread {
+                        cancelConnectionTimeout()
+                        binding.tvCallStatus.text = getString(R.string.call_status_connected)
+                    }
+                }
+                PeerConnection.IceConnectionState.FAILED -> {
+                    Log.e(TAG, "WebRTC connection FAILED!")
+                    runOnUiThread {
+                        Toast.makeText(this@CallActivity, "Ошибка соединения", Toast.LENGTH_SHORT).show()
+                        CallManager.hangup()
+                        finish()
+                    }
+                }
+                PeerConnection.IceConnectionState.DISCONNECTED -> {
+                    Log.w(TAG, "WebRTC connection disconnected")
+                    // Don't immediately fail — may recover
+                }
+                else -> {}
+            }
+        }
+
         if (!isLocalViewInitialized) {
             binding.localView.init(eglBase.eglBaseContext, null)
             binding.localView.setEnableHardwareScaler(true)
@@ -307,6 +365,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
 
     override fun onDestroy() {
         super.onDestroy()
+        cancelConnectionTimeout()
         soundManager.stop()
         audioModeManager.restoreMode()
         CallManager.clearCurrentCall()
