@@ -106,6 +106,9 @@ class OwlActivity : AppCompatActivity() {
     // Local prefs for per-chat settings (fallback if server unreachable)
     private lateinit var prefs: SharedPreferences
 
+    // Typing indicator in toolbar
+    private lateinit var toolbarSubtitle: TextView
+
     // Selection mode
     private var selectionMode = false
     private lateinit var selectionToolbar: LinearLayout
@@ -275,7 +278,9 @@ class OwlActivity : AppCompatActivity() {
         }
 
         toolbarContent = findViewById(R.id.toolbarContent)
-    }
+        
+        // Find toolbar subtitle for typing indicator
+        toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
 
     private fun setupRecyclerView() {
         val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
@@ -286,9 +291,7 @@ class OwlActivity : AppCompatActivity() {
             onReactionClick = { position, emoji -> adapter.addReaction(position, emoji) }
         )
         recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this).apply {
-            stackFromEnd = true
-        }
+        recyclerView.layoutManager = LinearLayoutManager(this)
         adapter.updateThemeColors()
 
         // Swipe to reply
@@ -743,6 +746,10 @@ class OwlActivity : AppCompatActivity() {
 
         adapter.showTyping()
 
+        // Show typing indicator in toolbar
+        toolbarSubtitle?.text = "Печетает..."
+        toolbarSubtitle?.isVisible = true
+
         findViewById<RecyclerView>(R.id.messagesRecyclerView)
             .scrollToPosition(adapter.itemCount - 1)
 
@@ -764,6 +771,7 @@ class OwlActivity : AppCompatActivity() {
         } catch (e: Exception) {
             runOnUiThread {
                 adapter.hideTyping()
+                hideToolbarTyping()
                 adapter.addMessage(
                     OwlMessage(text = "Ошибка отправки: ${e.message}", isUser = false)
                 )
@@ -775,10 +783,12 @@ class OwlActivity : AppCompatActivity() {
     private fun onOwlResponse(response: OWLResponseProto) {
         if (response.error.isNotEmpty()) {
             adapter.hideTyping()
+            hideToolbarTyping()
             adapter.addMessage(OwlMessage(text = "Ошибка: ${response.error}", isUser = false))
             isReceiving = false
         } else if (response.finished) {
             adapter.hideTyping()
+            hideToolbarTyping()
             if (response.text.isNotEmpty()) {
                 adapter.updateLastAssistantMessage(currentResponse + response.text)
             } else if (currentResponse.isNotEmpty()) {
@@ -789,6 +799,10 @@ class OwlActivity : AppCompatActivity() {
             currentResponse += response.text
             adapter.updateLastAssistantMessage(currentResponse)
         }
+    }
+    
+    private fun hideToolbarTyping() {
+        toolbarSubtitle?.isVisible = false
     }
 
     private fun confirmDeleteChat() {
