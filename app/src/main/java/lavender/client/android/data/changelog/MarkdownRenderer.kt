@@ -3,10 +3,10 @@ package lavender.client.android.data.changelog
 import android.graphics.Typeface
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.style.BulletSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
 
 /**
  * Simple markdown-to-Spannable renderer for release notes.
@@ -135,7 +135,7 @@ object MarkdownRenderer {
                         val codeText = text.substring(pos + 1, end)
                         val start = sb.length
                         sb.append(codeText)
-                        sb.setSpan(StyleSpan(Typeface.MONOSPACE), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        sb.setSpan(TypefaceSpan("monospace"), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                         sb.setSpan(ForegroundColorSpan(textColor), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                         pos = end + 1
                     } else {
