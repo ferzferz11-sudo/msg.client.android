@@ -766,7 +766,7 @@ class ChatListActivity : AppCompatActivity() {
                 // 1. Fetch chats from server
                 val fetchedChats = suspendCancellableCoroutine<List<ChatInfo>> { cont ->
                     grpcClient.getChats(username, skipCache = skipCache) { chats ->
-                        if (cont.isActive) cont.resume(chats) {}
+                        cont.resume(chats) { }
                     }
                 }
 
@@ -775,7 +775,7 @@ class ChatListActivity : AppCompatActivity() {
                 val mutedIds = if (userId.isNotEmpty()) {
                     suspendCancellableCoroutine<Set<String>> { cont ->
                         grpcClient.getMutedChats { ids ->
-                            if (cont.isActive) cont.resume(ids.toSet()) {}
+                            cont.resume(ids.toSet()) { }
                         }
                     }
                 } else emptySet()

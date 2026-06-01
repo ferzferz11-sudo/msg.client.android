@@ -232,11 +232,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        @Suppress("DEPRECATION")
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        // setDecorFitsSystemWindows(true) — needed for adjustResize from manifest
+        // Do NOT use transparent here — breaks keyboard adjustment
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_chat)
