@@ -353,7 +353,7 @@ class OwlActivity : AppCompatActivity() {
     private fun deleteSelectedMessages() {
         val count = adapter.getSelectedPositions().size
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.delete_messages))
+            .setTitle(getString(R.string.delete_messages_title))
             .setMessage(getString(R.string.delete_messages_confirmation, count))
             .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 val positions = adapter.getSelectedPositions().toList()
@@ -420,6 +420,33 @@ class OwlActivity : AppCompatActivity() {
 
             sendMessage(text)
         }
+    }
+
+    private fun observeOwlResponses() {
+        // OWL responses are handled via callback in sendMessage()
+        // This method is kept for compatibility with onCreate() call
+    }
+
+    // ===== Settings dialog =====
+
+    private fun showSettingsDialog() {
+        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_owl_settings, null)
+        sheet.setContentView(view)
+
+        // Model picker
+        view.findViewById<View>(R.id.menuModelPicker)?.setOnClickListener {
+            sheet.dismiss()
+            showModelPickerDialog()
+        }
+
+        // API Key
+        view.findViewById<View>(R.id.menuApiKey)?.setOnClickListener {
+            sheet.dismiss()
+            showApiKeyDialog()
+        }
+
+        sheet.show()
     }
 
     private fun handleCommand(command: String) {
@@ -684,8 +711,8 @@ class OwlActivity : AppCompatActivity() {
 
     private fun confirmDeleteChat() {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.delete_chat))
-            .setMessage(getString(R.string.delete_chat_confirmation))
+            .setTitle(getString(R.string.delete_chats))
+            .setMessage(getString(R.string.delete_chats_confirmation, 1))
             .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 lifecycleScope.launch {
                     try {

@@ -208,6 +208,9 @@
     <string name="delete_for_me">Delete for me</string>
     <string name="delete_messages_confirm">Are you sure you want to delete %d selected messages?</string>
     <string name="delete_messages_action">Delete messages</string>
+    <string name="delete_message_confirmation">Delete this message?</string>
+    <string name="delete_messages_confirmation">Delete %d selected messages?</string>
+    <string name="delete_chat_confirmation">Delete this chat?</string>
     <string name="participants_count">%d participants</string>
     <string name="participants_online_count">%1$d participants (%2$d online)</string>
     <string name="search">Search</string>
