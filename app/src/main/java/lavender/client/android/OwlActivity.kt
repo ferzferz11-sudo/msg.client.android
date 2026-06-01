@@ -57,6 +57,15 @@ class OwlActivity : AppCompatActivity() {
     private var chatId: String = ""
     private var userId: String = ""
 
+    override fun onSupportNavigateUp(): Boolean {
+        if (selectionMode) {
+            exitSelectionMode()
+        } else {
+            finish()
+        }
+        return true
+    }
+
     // Free-only models (when using server API key)
     private val freeModels = listOf(
         "openrouter/owl-alpha" to "OWL Alpha 🆓",
@@ -455,7 +464,9 @@ class OwlActivity : AppCompatActivity() {
     private fun hideSelectionToolbar() {
         selectionMode = false
         toolbarContent.isVisible = true
-        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        // Show back arrow for navigation (not close icon)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_back_arrow)
         selectionToolbar.isVisible = false
     }
 
