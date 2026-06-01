@@ -733,11 +733,14 @@ class ChatListActivity : AppCompatActivity() {
 
         Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
-        binding.swipeRefreshLayout.isRefreshing = true
+        // Show refresh indicator only if not first load (user initiated refresh)
+        if (chats.isNotEmpty()) {
+            binding.swipeRefreshLayout.isRefreshing = true
+        }
 
         // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
-            delay(10000) // 10 second timeout
+            delay(5000) // 5 second timeout
             if (binding.swipeRefreshLayout.isRefreshing) {
                 Log.w("ChatListActivity", "Load chats timeout, stopping refresh")
                 runOnUiThread {
@@ -754,18 +757,48 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // 1. Immediately ensure Favorites is in the list to avoid flickering
-        if (chats.none { it.id == "favorites" }) {
-            chats.add(0, ChatInfo(
-                id = "favorites",
-                name = getString(R.string.favorites),
-                type = "favorites",
-                lastMessageText = getString(R.string.favorites_description),
-                lastMessageTime = 0L
-            ))
-            chatAdapter.setChats(chats.toList())
+        // 1. Immediately show Favorites + cached chats for instant UI
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+            val cachedChats = db.chatDao().getAllChats()
+
+            runOnUiThread {
+                chats.clear()
+                // Always add Favorites at the top
+                chats.add(ChatInfo(
+                    id = "favorites",
+                    name = getString(R.string.favorites),
+                    type = "favorites",
+                    lastMessageText = getString(R.string.favorites_description),
+                    lastMessageTime = 0L
+                ))
+                // Add cached chats (excluding favorites which we already added)
+                if (cachedChats.isNotEmpty()) {
+                    chats.addAll(cachedChats.map { dbChat ->
+                        ChatInfo(
+                            id = dbChat.id,
+                            name = dbChat.name,
+                            type = dbChat.type,
+                            participants = dbChat.participants,
+                            createdAt = dbChat.createdAt,
+                            unreadCount = dbChat.unreadCount,
+                            lastMessageText = dbChat.lastMessageText,
+                            lastMessageTime = dbChat.lastMessageTime,
+                            creator = dbChat.creator,
+                            avatarUrl = dbChat.avatarUrl,
+                            fullAvatarUrl = dbChat.fullAvatarUrl,
+                            lastMessageUsername = dbChat.lastMessageUsername,
+                            lastMessageHasImage = dbChat.lastMessageHasImage,
+                            isMuted = dbChat.muted
+                        )
+                    })
+                }
+                chatAdapter.setChats(chats.toList())
+                Log.d("ChatListActivity", "Loaded ${chats.size} chats from cache")
+            }
         }
 
+        // 2. Fetch from server in background
         grpcClient.getChats(username, skipCache = skipCache) { fetchedChats ->
             loadTimeout.cancel()
             runOnUiThread {
