@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class], version = 5, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
@@ -94,6 +94,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 5 to 6: Add E2EE columns to chats table
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE chats ADD COLUMN isSecret INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE chats ADD COLUMN peerPublicKey TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE chats ADD COLUMN e2eeReady INTEGER NOT NULL DEFAULT 0")
+                } catch (e: Exception) {
+                    android.util.Log.e("AppDatabase", "Migration 5-6 failed", e)
+                }
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -101,7 +114,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
