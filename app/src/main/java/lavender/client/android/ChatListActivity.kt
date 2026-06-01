@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.suspendCancellableCoroutine
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.grpc.GrpcClient
@@ -94,6 +95,7 @@ class ChatListActivity : AppCompatActivity() {
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var isChatsLoaded = false // prevent reload flicker on resume
+    private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
 
     private var syncJob: Job? = null
     
@@ -735,19 +737,18 @@ class ChatListActivity : AppCompatActivity() {
 
         Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
-        // Show refresh indicator only if not first load (user initiated refresh)
-        if (chats.isNotEmpty()) {
+        // Show refresh indicator only for pull-to-refresh (list already has data)
+        val isRefresh = chats.isNotEmpty()
+        if (isRefresh) {
             binding.swipeRefreshLayout.isRefreshing = true
         }
 
         // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
-            delay(5000) // 5 second timeout
+            delay(5000)
             if (binding.swipeRefreshLayout.isRefreshing) {
                 Log.w("ChatListActivity", "Load chats timeout, stopping refresh")
-                runOnUiThread {
-                    binding.swipeRefreshLayout.isRefreshing = false
-                }
+                runOnUiThread { binding.swipeRefreshLayout.isRefreshing = false }
             }
         }
 
@@ -759,56 +760,33 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // 1. Immediately show Favorites + cached chats for instant UI
+        // Fetch everything on background thread, apply once on UI
         lifecycleScope.launch(Dispatchers.IO) {
-            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
-            val cachedChats = db.chatDao().getAllChats()
-
-            runOnUiThread {
-                chats.clear()
-                // Always add Favorites at the top
-                chats.add(ChatInfo(
-                    id = "favorites",
-                    name = getString(R.string.favorites),
-                    type = "favorites",
-                    lastMessageText = getString(R.string.favorites_description),
-                    lastMessageTime = 0L
-                ))
-                // Add cached chats (excluding favorites which we already added)
-                if (cachedChats.isNotEmpty()) {
-                    chats.addAll(cachedChats.map { dbChat ->
-                        ChatInfo(
-                            id = dbChat.id,
-                            name = dbChat.name,
-                            type = dbChat.type,
-                            participants = dbChat.participants,
-                            createdAt = dbChat.createdAt,
-                            unreadCount = dbChat.unreadCount,
-                            lastMessageText = dbChat.lastMessageText,
-                            lastMessageTime = dbChat.lastMessageTime,
-                            creator = dbChat.creator,
-                            avatarUrl = dbChat.avatarUrl,
-                            fullAvatarUrl = dbChat.fullAvatarUrl,
-                            lastMessageUsername = dbChat.lastMessageUsername,
-                            lastMessageHasImage = dbChat.lastMessageHasImage,
-                            isMuted = dbChat.muted
-                        )
-                    })
+            try {
+                // 1. Fetch chats from server
+                val fetchedChats = suspendCancellableCoroutine<List<ChatInfo>> { cont ->
+                    grpcClient.getChats(username, skipCache = skipCache) { chats ->
+                        cont.resume(chats) {}
+                    }
                 }
-                chatAdapter.setChats(chats.toList())
-                Log.d("ChatListActivity", "Loaded ${chats.size} chats from cache")
-            }
-        }
 
-        // 2. Fetch from server in background
-        grpcClient.getChats(username, skipCache = skipCache) { fetchedChats ->
-            loadTimeout.cancel()
-            runOnUiThread {
-                binding.swipeRefreshLayout.isRefreshing = false
-                chats.clear()
+                // 2. Get muted chats IDs (non-blocking fire-and-forget on IO)
+                val userId = grpcClient.getUserId() ?: ""
+                val mutedIds = if (userId.isNotEmpty()) {
+                    suspendCancellableCoroutine<Set<String>> { cont ->
+                        grpcClient.getMutedChats { ids -> cont.resume(ids.toSet()) {} }
+                    }
+                } else emptySet()
 
-                // Always add Favorites at the top
-                chats.add(
+                // 3. Clean up pending deletions
+                val serverIds = fetchedChats.map { it.id }.toSet()
+                pendingDeletions.removeAll { !serverIds.contains(it) }
+                val filteredChats = fetchedChats
+                    .filter { !pendingDeletions.contains(it.id) }
+                    .map { it.copy(isMuted = mutedIds.contains(it.id)) }
+
+                // 4. Build final list: Favorites + chats with muted flag
+                val newChats = mutableListOf(
                     ChatInfo(
                         id = "favorites",
                         name = getString(R.string.favorites),
@@ -817,62 +795,67 @@ class ChatListActivity : AppCompatActivity() {
                         lastMessageTime = 0L
                     )
                 )
+                newChats.addAll(filteredChats)
 
-                val chatsWithMute = fetchedChats
-                    .filter { !pendingDeletions.contains(it.id) }
-
-                // Clean up pendingDeletions that are no longer on server
-                val serverIds = fetchedChats.map { it.id }.toSet()
-                pendingDeletions.removeAll { !serverIds.contains(it) }
-
-                // Use DiffUtil for smooth update (no flickering)
-                val newChats = mutableListOf(ChatInfo(
-                    id = "favorites",
-                    name = getString(R.string.favorites),
-                    type = "favorites",
-                    lastMessageText = getString(R.string.favorites_description),
-                    lastMessageTime = 0L
-                ))
-                newChats.addAll(chatsWithMute)
-                chats.clear()
-                chats.addAll(newChats)
-                chatAdapter.setChats(newChats)
-
-                // If user has real chats (more than just favorites), mark onboarding as completed
-                if (fetchedChats.isNotEmpty()) {
-                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                    if (!prefs.getBoolean("onboarding_completed_$username", false)) {
-                        prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                        hideOnboardingTips()
-                    }
+                // 5. Update local cache in background
+                try {
+                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                    db.chatDao().syncChats(filteredChats.map { it.toEntity() })
+                } catch (e: Exception) {
+                    Log.e("ChatListActivity", "Failed to cache chats", e)
                 }
 
-                val totalUnread = chats.sumOf { it.unreadCount }
-                updateAppIconBadge(totalUnread)
+                // 6. Apply to UI once — single update, no flicker
+                withContext(Dispatchers.Main) {
+                    loadTimeout.cancel()
+                    binding.swipeRefreshLayout.isRefreshing = false
 
-                Log.d("ChatListActivity", "Loaded ${chats.size} chats")
-                isChatsLoaded = true
-            }
+                    chats.clear()
+                    chats.addAll(newChats)
+                    chatAdapter.setChats(newChats)
 
-            // Load muted chats and favorites in background (non-blocking)
-            val userId = grpcClient.getUserId() ?: ""
-            if (userId.isNotEmpty()) {
-                grpcClient.getMutedChats { mutedChatIds ->
-                    runOnUiThread {
-                        val updatedChats = chats.map { chat ->
-                            chat.copy(isMuted = mutedChatIds.contains(chat.id))
+                    // Mark onboarding completed
+                    if (fetchedChats.isNotEmpty()) {
+                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                        if (!prefs.getBoolean("onboarding_completed_$username", false)) {
+                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
+                            hideOnboardingTips()
                         }
-                        chats.clear()
-                        chats.addAll(updatedChats)
-                        chatAdapter.setChats(chats.toList())
+                    }
+
+                    updateAppIconBadge(chats.sumOf { it.unreadCount })
+                    isChatsLoaded = true
+
+                    Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
+                }
+
+                // Fetch favorites data in background (non-visual)
+                if (userId.isNotEmpty()) {
+                    grpcClient.getFavorites(userId) { _ -> }
+                }
+
+                // Fallback: if server returned empty, try cache
+                if (fetchedChats.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        loadChatsFromCache(fetchedChats)
                     }
                 }
-                grpcClient.getFavorites(userId) { _ -> }
+            } catch (e: Exception) {
+                Log.e("ChatListActivity", "Error loading chats", e)
+                withContext(Dispatchers.Main) {
+                    loadTimeout.cancel()
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
             }
+        }
+    }
 
-            if (fetchedChats.isEmpty()) {
-                loadChatsFromCache(fetchedChats)
-            }
+    // Debounced refresh: wait 500ms for rapid events to batch together
+    private fun refreshChatsDebounced() {
+        refreshDebounceJob?.cancel()
+        refreshDebounceJob = lifecycleScope.launch {
+            delay(500)
+            loadChats(skipCache = true)
         }
     }
 
@@ -2074,7 +2057,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                     sheet.dismiss()
-                    loadChats(skipCache = true)
+                    refreshChatsDebounced()
                 }
             }
         }
@@ -2129,7 +2112,7 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("IS_DIRECT", true); putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
                         }
                         startActivity(intent); sheet.dismiss()
-                        loadChats(skipCache = true)
+                        refreshChatsDebounced()
                     }
                 }
             } else {
@@ -2144,7 +2127,7 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("CREATOR", username)
                         }
                         startActivity(intent); sheet.dismiss()
-                        loadChats(skipCache = true)
+                        refreshChatsDebounced()
                     }
                 }
             }
@@ -2213,7 +2196,7 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("IS_SECRET", "true")
                         }
                         startActivity(intent)
-                        loadChats(skipCache = true)
+                        refreshChatsDebounced()
                     } else {
                         Toast.makeText(this@ChatListActivity, message.ifEmpty { "Failed to create secret chat" }, Toast.LENGTH_LONG).show()
                     }
@@ -2280,7 +2263,7 @@ class ChatListActivity : AppCompatActivity() {
                             runOnUiThread {
                                 Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
                                 sheet.dismiss()
-                                loadChats(skipCache = true)
+                                refreshChatsDebounced()
                             }
                         }
                     }
