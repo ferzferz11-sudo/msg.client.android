@@ -278,9 +278,10 @@ class OwlActivity : AppCompatActivity() {
         }
 
         toolbarContent = findViewById(R.id.toolbarContent)
-        
+
         // Find toolbar subtitle for typing indicator
         toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
+    }
 
     private fun setupRecyclerView() {
         val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
