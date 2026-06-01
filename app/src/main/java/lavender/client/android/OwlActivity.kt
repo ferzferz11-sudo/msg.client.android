@@ -351,30 +351,30 @@ class OwlActivity : AppCompatActivity() {
         val sheet = StandardBottomSheet(this)
         val view = sheet.setContent(R.layout.dialog_message_actions)
 
-        // Quick reactions
-        view.findViewById<View>(R.id.reactionThumbsUp)?.setOnClickListener {
-            sheet.dismiss()
-            adapter.addReaction(position, "👍")
+        // Reactions — dynamically added like in NewChatActivity
+        val container = view.findViewById<LinearLayout>(R.id.reactionsContainer)
+        if (container != null) {
+            listOf("👍", "💯", "🔥", "✅", "❤️", "😂", "😮", "😢", "🙏").forEach { e ->
+                val tv = TextView(this).apply {
+                    text = e
+                    textSize = 30f
+                    setPadding(16, 8, 16, 8)
+                    val v2 = TypedValue()
+                    this@OwlActivity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true)
+                    setBackgroundResource(v2.resourceId)
+                    setOnClickListener {
+                        sheet.dismiss()
+                        adapter.addReaction(position, e)
+                    }
+                }
+                container.addView(tv)
+            }
         }
-        view.findViewById<View>(R.id.reactionHeart)?.setOnClickListener {
+
+        // Reply
+        view.findViewById<View>(R.id.menuReply)?.setOnClickListener {
             sheet.dismiss()
-            adapter.addReaction(position, "❤️")
-        }
-        view.findViewById<View>(R.id.reactionLaugh)?.setOnClickListener {
-            sheet.dismiss()
-            adapter.addReaction(position, "😂")
-        }
-        view.findViewById<View>(R.id.reactionWow)?.setOnClickListener {
-            sheet.dismiss()
-            adapter.addReaction(position, "😮")
-        }
-        view.findViewById<View>(R.id.reactionSad)?.setOnClickListener {
-            sheet.dismiss()
-            adapter.addReaction(position, "😢")
-        }
-        view.findViewById<View>(R.id.reactionFire)?.setOnClickListener {
-            sheet.dismiss()
-            adapter.addReaction(position, "🔥")
+            showReplyPreview(msg)
         }
 
         // Copy
@@ -752,8 +752,9 @@ class OwlActivity : AppCompatActivity() {
         toolbarSubtitle?.text = "Печетает..."
         toolbarSubtitle?.isVisible = true
 
-        findViewById<RecyclerView>(R.id.messagesRecyclerView)
-            .scrollToPosition(adapter.itemCount - 1)
+        // Scroll to bottom after adding user message + typing indicator
+        val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
+        recyclerView.post { recyclerView.scrollToPosition(adapter.itemCount - 1) }
 
         val modelId = getEffectiveModelId()
 
@@ -800,6 +801,9 @@ class OwlActivity : AppCompatActivity() {
         } else {
             currentResponse += response.text
             adapter.updateLastAssistantMessage(currentResponse)
+            // Scroll to bottom on each chunk
+            val rv = findViewById<RecyclerView>(R.id.messagesRecyclerView)
+            rv.post { rv.scrollToPosition(adapter.itemCount - 1) }
         }
     }
     

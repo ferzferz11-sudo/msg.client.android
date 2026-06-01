@@ -1,156 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="8dp">
 
-    <TextView
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Действия"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="?attr/colorOnSurface"
-        android:paddingBottom="8dp" />
+        android:scrollbars="none">
 
-    <!-- Quick reactions row -->
-    <LinearLayout
-        android:id="@+id/reactionsRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="12dp"
-        android:paddingTop="4dp">
-
-        <TextView
-            android:id="@+id/reactionThumbsUp"
+        <LinearLayout
+            android:id="@+id/reactionsContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="👍"
-            android:textSize="24sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
+            android:orientation="horizontal"
+            android:padding="8dp" />
+    </HorizontalScrollView>
 
-        <TextView
-            android:id="@+id/reactionHeart"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="❤️"
-            android:textSize="24sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/reactionLaugh"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="😂"
-            android:textSize="24sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/reactionWow"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="😮"
-            android:textSize="24sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/reactionSad"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="😢"
-            android:textSize="24sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/reactionFire"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔥"
-            android:textSize="24sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-    </LinearLayout>
-
-    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/colorOutlineVariant"
-        android:layout_marginBottom="8dp" />
+        android:background="?android:attr/dividerVertical"
+        android:layout_marginVertical="8dp" />
+
+    <!-- Reply -->
+    <LinearLayout
+        android:id="@+id/menuReply"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_reply"
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorPrimary" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/reply"
+            android:textSize="16sp" />
+    </LinearLayout>
 
     <!-- Copy -->
     <LinearLayout
         android:id="@+id/menuCopy"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="12dp"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
+        android:paddingHorizontal="16dp"
+        android:background="?attr/selectableItemBackground">
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_copy"
-            android:contentDescription="Копировать" />
-
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorPrimary" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Копировать"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
+            android:text="@string/copy"
+            android:textSize="16sp" />
     </LinearLayout>
 
     <!-- Delete -->
     <LinearLayout
         android:id="@+id/menuDelete"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="12dp"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-
+        android:paddingHorizontal="16dp"
+        android:background="?attr/selectableItemBackground">
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_delete"
-            android:contentDescription="Удалить" />
-
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorPrimary" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Удалить"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface" />
+            android:text="@string/delete"
+            android:textSize="16sp" />
     </LinearLayout>
 
 </LinearLayout>
