@@ -263,9 +263,11 @@ class OwlActivity : AppCompatActivity() {
         selectionCountText = findViewById(R.id.selectionCountText)
         copyMessagesBtn = findViewById(R.id.copyMessages)
         deleteMessagesBtn = findViewById(R.id.deleteMessages)
+        val forwardMessagesBtn = findViewById<ImageButton>(R.id.forwardMessages)
 
         copyMessagesBtn.setOnClickListener { copySelectedMessages() }
         deleteMessagesBtn.setOnClickListener { deleteSelectedMessages() }
+        forwardMessagesBtn.setOnClickListener { /* Forward not implemented for OWL yet */ }
     }
 
     private fun showMessageActionsDialog(position: Int) {
