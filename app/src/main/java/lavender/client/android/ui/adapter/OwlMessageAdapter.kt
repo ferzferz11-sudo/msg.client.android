@@ -23,6 +23,7 @@ data class OwlMessage(
 )
 
 class OwlMessageAdapter(
+    private val onMessageClick: ((Int) -> Unit)? = null,
     private val onMessageLongClick: ((Int) -> Unit)? = null,
     private val onSelectionChanged: ((Int) -> Unit)? = null,
     private val onReactionClick: ((Int, String) -> Unit)? = null
@@ -220,14 +221,12 @@ class OwlMessageAdapter(
                 owlContainer.visibility = View.GONE
                 typingContainer.visibility = View.GONE
                 userText.text = msg.text
-                // Reactions
                 bindReactions(msg, userReactionsContainer, position, true)
             } else {
                 userContainer.visibility = View.GONE
                 owlContainer.visibility = View.VISIBLE
                 typingContainer.visibility = View.GONE
                 owlText.text = msg.text
-                // Reactions
                 bindReactions(msg, owlReactionsContainer, position, false)
             }
 
@@ -235,8 +234,12 @@ class OwlMessageAdapter(
             val clickTarget = if (msg.isUser) userContainer else owlContainer
 
             clickTarget.setOnClickListener {
-                if (isSelectionMode && !msg.isTyping) {
-                    toggleSelection(bindingAdapterPosition)
+                if (!msg.isTyping) {
+                    if (isSelectionMode) {
+                        toggleSelection(bindingAdapterPosition)
+                    } else {
+                        onMessageClick?.invoke(bindingAdapterPosition)
+                    }
                 }
             }
 

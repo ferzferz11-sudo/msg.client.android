@@ -247,7 +247,8 @@ class OwlActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
         adapter = OwlMessageAdapter(
-            onMessageLongClick = { position -> showMessageActionsDialog(position) },
+            onMessageClick = { position -> showMessageActionsDialog(position) },
+            onMessageLongClick = { position -> enterSelectionMode(position) },
             onSelectionChanged = { count -> updateSelectionToolbar(count) },
             onReactionClick = { position, emoji -> adapter.addReaction(position, emoji) }
         )
@@ -311,12 +312,6 @@ class OwlActivity : AppCompatActivity() {
         view.findViewById<View>(R.id.menuDelete)?.setOnClickListener {
             sheet.dismiss()
             deleteMessage(position)
-        }
-
-        // Select (enter selection mode)
-        view.findViewById<View>(R.id.menuSelect)?.setOnClickListener {
-            sheet.dismiss()
-            enterSelectionMode(position)
         }
 
         sheet.show()
