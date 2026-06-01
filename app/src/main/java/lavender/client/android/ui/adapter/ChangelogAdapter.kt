@@ -134,7 +134,7 @@ class ChangelogAdapter(
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
             inputFormat.timeZone = java.util.TimeZone.getTimeZone("UTC")
             val date = inputFormat.parse(isoDate) ?: return isoDate
-            val outputFormat = SimpleDateFormat("d MMM yyyy", Locale("ru"))
+            val outputFormat = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("ru"))
             outputFormat.format(date)
         } catch (e: Exception) {
             isoDate
