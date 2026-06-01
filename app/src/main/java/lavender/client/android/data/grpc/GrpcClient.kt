@@ -337,17 +337,49 @@ object GrpcClient {
         realGrpcClient.clearMessages()
     }
 
-    // Secret chat methods — TODO: implement after proto generation
+    // Secret chat methods
     fun createSecretChat(targetUsername: String, publicKey: String, callback: (String, Boolean, String, String) -> Unit) {
-        callback("", false, "Not implemented in this build", "")
+        val clientVersion = lavender.client.android.BuildConfig.VERSION_NAME
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val (chatId, success, message) = lavender.client.android.data.grpc.createSecretChat(
+                targetUsername = targetUsername,
+                targetUserId = "",
+                publicKey = publicKey,
+                clientVersion = clientVersion
+            )
+            callback(chatId, success, message, "")
+        }
     }
+
     fun exchangeSecretKey(chatId: String, publicKey: String, callback: (Boolean, String, Boolean) -> Unit) {
-        callback(false, "", false)
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val (success, peerKey, peerHasKey) = lavender.client.android.data.grpc.exchangeSecretKey(chatId, publicKey)
+            callback(success, peerKey, peerHasKey)
+        }
     }
+
     fun getSecretChatKey(chatId: String, callback: (String, Boolean) -> Unit) {
-        callback("", false)
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val (peerKey, peerHasKey) = lavender.client.android.data.grpc.getSecretChatKey(chatId)
+            callback(peerKey, peerHasKey)
+        }
     }
-    fun sendE2EEMessage(chatId: String, encryptedPayload: String) {}
+
+    fun sendE2EEMessage(chatId: String, encryptedPayload: String) {
+        // Send as a regular message with E2EE flags
+        val msg = Message(
+            id = java.util.UUID.randomUUID().toString(),
+            user = username,
+            text = "", // Empty — real content is in e2eePayload
+            timestamp = System.currentTimeMillis(),
+            roomId = chatId,
+            userId = getUserId() ?: "",
+            isE2EE = true,
+            e2eePayload = encryptedPayload
+        )
+        addLocalMessage(msg)
+        sendMessage(msg)
+    }
 
     // OWL AI Assistant
     fun chatWithOWL(

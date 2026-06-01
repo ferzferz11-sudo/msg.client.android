@@ -44,7 +44,10 @@ data class ChatEntity(
     val fullAvatarUrl: String,
     val lastMessageUsername: String,
     val muted: Boolean,
-    val lastMessageHasImage: Boolean = false
+    val lastMessageHasImage: Boolean = false,
+    val isSecret: Boolean = false,
+    val peerPublicKey: String = "",
+    val e2eeReady: Boolean = false
 )
 
 fun Message.toEntity(): MessageEntity {
@@ -125,10 +128,12 @@ fun MessageEntity.toDomain(): Message {
 
 fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
-    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage
+    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage,
+    isSecret, peerPublicKey, e2eeReady
 )
 
 fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
-    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage
+    creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage,
+    isSecret, peerPublicKey, e2eeReady
 )

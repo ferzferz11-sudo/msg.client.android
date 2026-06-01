@@ -1050,6 +1050,20 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun sendMessage(text: String, imageUrl: String) {
         typingJob?.cancel(); if (isTypingSignalSent) { isTypingSignalSent = false; grpcClient.sendTypingSignal(username, false) }
+
+        // E2EE: encrypt message for secret chats
+        if (isSecret && secretKeyExchanged) {
+            val encrypted = lavender.client.android.data.crypto.E2EEManager.encryptMessage(this, roomId, text)
+            if (encrypted != null) {
+                grpcClient.sendE2EEMessage(roomId, encrypted)
+                if (roomId.startsWith("favorites_")) viewModel.markRead(username)
+                grpcClient.deleteDraft(roomId); messageInput.text.clear(); hideReplyPreview(); sendButton.isVisible = false; audioButton.isVisible = true
+            } else {
+                showToast("E2EE encryption failed")
+            }
+            return
+        }
+
         val et = when { text.isEmpty() && imageUrl.isEmpty() -> "Message"; imageUrl.isNotEmpty() && text.isEmpty() -> ""; else -> text }
         val msg = Message(id = java.util.UUID.randomUUID().toString(), user = username, text = et, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "", userId = grpcClient.getUserId() ?: "", isSent = false)
         grpcClient.addLocalMessage(msg); grpcClient.sendMessage(msg)

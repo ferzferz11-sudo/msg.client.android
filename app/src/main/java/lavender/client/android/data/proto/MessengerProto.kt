@@ -202,7 +202,10 @@ data class ChatInfoProto(
     val lastMessageUsername: String = "",
     val lastMessageHasImage: Boolean = false,
     val allowMembersToAdd: Boolean = false,
-    val conferenceStartTime: Timestamp? = null
+    val conferenceStartTime: Timestamp? = null,
+    val isSecret: Boolean = false,
+    val peerPublicKey: String = "",
+    val e2eeReady: Boolean = false
 )
 
 // Mark Read Request/Response
@@ -891,4 +894,40 @@ data class UpdateOwlSettingsRequestProto(
 data class UpdateOwlSettingsResponseProto(
     val success: Boolean = false,
     val message: String = ""
+)
+
+// ======= Secret Chat (E2EE) =======
+
+data class CreateSecretChatRequestProto(
+    val targetUsername: String = "",
+    val targetUserId: String = "",
+    val publicKey: String = "",
+    val clientVersion: String = ""
+)
+
+data class CreateSecretChatResponseProto(
+    val chatId: String = "",
+    val success: Boolean = false,
+    val message: String = "",
+    val peerPublicKey: String = ""
+)
+
+data class ExchangeSecretKeyRequestProto(
+    val chatId: String = "",
+    val publicKey: String = ""
+)
+
+data class ExchangeSecretKeyResponseProto(
+    val success: Boolean = false,
+    val peerPublicKey: String = "",
+    val peerHasKey: Boolean = false
+)
+
+data class GetSecretChatKeyRequestProto(
+    val chatId: String = ""
+)
+
+data class GetSecretChatKeyResponseProto(
+    val peerPublicKey: String = "",
+    val peerHasKey: Boolean = false
 )
