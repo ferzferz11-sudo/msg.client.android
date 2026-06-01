@@ -537,7 +537,7 @@
     <string name="reject_conference">Reject</string>
 
     <!-- Changelog -->
-    <string name="changelog_title">What's New</string>
+    <string name="changelog_title">What\'s New</string>
     <string name="tag_latest">★ Latest</string>
     <string name="tag_prerelease">Pre</string>
     <string name="files_count">📦 %d file(s)</string>
