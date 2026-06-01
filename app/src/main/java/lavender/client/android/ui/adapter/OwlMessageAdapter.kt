@@ -23,6 +23,7 @@ data class OwlMessage(
     val text: String,
     val isUser: Boolean,
     val isTyping: Boolean = false,
+    val replyToText: String = "",
     val reactions: MutableList<Reaction> = mutableListOf()
 )
 
@@ -242,7 +243,7 @@ class OwlMessageAdapter(
                 userContainer.visibility = View.VISIBLE
                 owlContainer.visibility = View.GONE
                 typingContainer.visibility = View.GONE
-                userText.text = msg.text
+                userText.text = if (msg.replyToText.isNotEmpty()) "${msg.replyToText}${msg.text}" else msg.text
                 userText.setTextColor(outgoingText)
                 (userText.parent as? View)?.backgroundTintList = android.content.res.ColorStateList.valueOf(outgoingBg)
                 bindReactions(msg, userReactionsContainer, position, true)
@@ -250,7 +251,7 @@ class OwlMessageAdapter(
                 userContainer.visibility = View.GONE
                 owlContainer.visibility = View.VISIBLE
                 typingContainer.visibility = View.GONE
-                owlText.text = msg.text
+                owlText.text = if (msg.replyToText.isNotEmpty()) "${msg.replyToText}${msg.text}" else msg.text
                 owlText.setTextColor(incomingText)
                 (owlText.parent as? View)?.backgroundTintList = android.content.res.ColorStateList.valueOf(incomingBg)
                 bindReactions(msg, owlReactionsContainer, position, false)

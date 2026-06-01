@@ -28,9 +28,15 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
-import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import lavender.client.android.ui.adapter.MessageSwipeController
+import lavender.client.android.ui.adapter.OwlMessage
+import lavender.client.android.ui.adapter.OwlMessageAdapter
+import lavender.client.android.theme.ThemeStore
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
@@ -103,6 +109,13 @@ class OwlActivity : AppCompatActivity() {
     private lateinit var deleteMessagesBtn: ImageButton
     private lateinit var toolbarContent: View
 
+    // Reply
+    private var replyingTo: OwlMessage? = null
+    private lateinit var replyPreview: View
+    private lateinit var replyUser: TextView
+    private lateinit var replyText: TextView
+    private lateinit var cancelReply: ImageButton
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl)
@@ -117,6 +130,7 @@ class OwlActivity : AppCompatActivity() {
         setupToolbar(hasMenu = true)
         setupRecyclerView()
         setupSelectionToolbar()
+        setupReplyPreview()
         setupInput()
         observeOwlResponses()
 
@@ -271,9 +285,40 @@ class OwlActivity : AppCompatActivity() {
             stackFromEnd = true
         }
         adapter.updateThemeColors()
+
+        // Swipe to reply
+        val swipeController = MessageSwipeController(this) { position, direction ->
+            if (direction == ItemTouchHelper.LEFT) {
+                val msg = adapter.getMessageAt(position)
+                if (msg != null && !msg.isTyping) {
+                    showReplyPreview(msg)
+                }
+                adapter.notifyItemChanged(position)
+            }
+        }
+        ItemTouchHelper(swipeController).attachToRecyclerView(recyclerView)
     }
 
-    private fun setupSelectionToolbar() {
+    private fun setupReplyPreview() {
+        replyPreview = findViewById(R.id.replyPreview)
+        replyUser = findViewById(R.id.replyUser)
+        replyText = findViewById(R.id.replyText)
+        cancelReply = findViewById(R.id.cancelReply)
+        cancelReply.setOnClickListener { hideReplyPreview() }
+    }
+
+    private fun showReplyPreview(msg: OwlMessage) {
+        replyingTo = msg
+        replyPreview.isVisible = true
+        replyUser.text = if (msg.isUser) userId else "OWL"
+        replyText.text = msg.text
+        messageInput.requestFocus()
+    }
+
+    private fun hideReplyPreview() {
+        replyingTo = null
+        replyPreview.isVisible = false
+    }
         selectionToolbar = findViewById(R.id.selectionToolbar)
         selectionCountText = findViewById(R.id.selectionCountText)
         copyMessagesBtn = findViewById(R.id.copyMessages)
@@ -675,8 +720,13 @@ class OwlActivity : AppCompatActivity() {
     // ===== Send message =====
 
     private fun sendMessage(text: String) {
-        adapter.addMessage(OwlMessage(text = text, isUser = true))
+        val replyPrefix = if (replyingTo != null) {
+            val replyLabel = if (replyingTo!!.isUser) userId else "OWL"
+            "↩️ $replyLabel: ${replyingTo!!.text}\n\n"
+        } else ""
+        adapter.addMessage(OwlMessage(text = text, isUser = true, replyToText = replyPrefix))
         messageInput.setText("")
+        hideReplyPreview()
         currentResponse = ""
         isReceiving = true
 
