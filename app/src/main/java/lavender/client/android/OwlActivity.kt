@@ -752,10 +752,6 @@ class OwlActivity : AppCompatActivity() {
         toolbarSubtitle?.text = "Печетает..."
         toolbarSubtitle?.isVisible = true
 
-        // Scroll to bottom after adding user message + typing indicator
-        val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
-        recyclerView.post { recyclerView.scrollToPosition(adapter.itemCount - 1) }
-
         val modelId = getEffectiveModelId()
 
         try {
@@ -801,9 +797,6 @@ class OwlActivity : AppCompatActivity() {
         } else {
             currentResponse += response.text
             adapter.updateLastAssistantMessage(currentResponse)
-            // Scroll to bottom on each chunk
-            val rv = findViewById<RecyclerView>(R.id.messagesRecyclerView)
-            rv.post { rv.scrollToPosition(adapter.itemCount - 1) }
         }
     }
     
