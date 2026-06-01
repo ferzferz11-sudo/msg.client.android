@@ -12,7 +12,8 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import lavender.client.android.R
 import lavender.client.android.audio.AudioRecorder
-import lavender.client.android.data.proto.CustomThemeProto // Добавлен импорт
+import lavender.client.android.data.proto.CustomThemeProto
+import lavender.client.android.theme.ThemeUtils
 import java.io.File
 
 class AudioRecordingView @JvmOverloads constructor(
@@ -88,18 +89,21 @@ class AudioRecordingView @JvmOverloads constructor(
         }
 
         if (isRecording) {
-            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
+            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                ThemeUtils.adjustAlpha(android.graphics.Color.RED, 0.3f)
+            )
             recordButton.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
-            recordButton.alpha = 0.5f
         } else {
-            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+            recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                ThemeUtils.adjustAlpha(primColor, 0.3f)
+            )
             recordButton.imageTintList = android.content.res.ColorStateList.valueOf(onPrimColor)
-            recordButton.alpha = 0.5f
         }
 
-        cancelButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
+        cancelButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            ThemeUtils.adjustAlpha(primColor, 0.3f)
+        )
         cancelButton.imageTintList = android.content.res.ColorStateList.valueOf(onPrimColor)
-        cancelButton.alpha = 0.5f
         timerText.setTextColor(textPrimary)
         statusText.setTextColor(secondaryTxtColor)
         
