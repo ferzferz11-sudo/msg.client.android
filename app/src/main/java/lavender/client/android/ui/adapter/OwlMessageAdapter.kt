@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
@@ -266,22 +265,12 @@ class OwlMessageAdapter(
             messageBubble?.backgroundTintList = ColorStateList.valueOf(bubbleColor)
 
             // Position: outgoing = right, incoming = left
-            val layoutParams = messageContainer?.layoutParams as? RelativeLayout.LayoutParams
             if (isOutgoing) {
-                layoutParams?.addRule(RelativeLayout.ALIGN_PARENT_END)
-                layoutParams?.removeRule(RelativeLayout.ALIGN_PARENT_START)
-                messageContainer?.layoutParams = layoutParams
-
                 // Hide avatar for outgoing
                 avatarImageView?.visibility = View.GONE
-
-                // Align bubble content to end
+                // Align bubble to end
                 (messageBubble?.parent as? LinearLayout)?.gravity = android.view.Gravity.END
             } else {
-                layoutParams?.addRule(RelativeLayout.ALIGN_PARENT_START)
-                layoutParams?.removeRule(RelativeLayout.ALIGN_PARENT_END)
-                messageContainer?.layoutParams = layoutParams
-
                 // Show avatar for incoming (OWL)
                 avatarImageView?.visibility = View.VISIBLE
                 // Set OWL avatar
@@ -292,7 +281,6 @@ class OwlMessageAdapter(
                     val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, 0xFF6200EE.toInt())
                     avatarImageView?.setColorFilter(primaryColor)
                 } catch (_: Exception) {}
-
                 (messageBubble?.parent as? LinearLayout)?.gravity = android.view.Gravity.START
             }
 
@@ -322,7 +310,7 @@ class OwlMessageAdapter(
             // Read status (hidden for incoming, check for outgoing)
             if (isOutgoing) {
                 readStatusIcon?.visibility = View.VISIBLE
-                readStatusIcon?.setImageResource(R.drawable.ic_done_all)
+                readStatusIcon?.setImageResource(R.drawable.ic_message_sent)
                 readStatusIcon?.imageTintList = ColorStateList.valueOf(textColor)
             } else {
                 readStatusIcon?.visibility = View.GONE

@@ -95,6 +95,7 @@ class ChatListActivity : AppCompatActivity() {
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var isChatsLoaded = false // prevent reload flicker on resume
+    private var isNewUser = false // track new user for loading indicator
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
 
     private var syncJob: Job? = null
@@ -183,7 +184,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         val previousUsername = prefs.getString("last_logged_username", "")
-        val isNewUser = previousUsername != username
+        isNewUser = previousUsername != username
 
         if (isNewUser) {
             // Clear cache for new user to prevent showing previous user's chats
