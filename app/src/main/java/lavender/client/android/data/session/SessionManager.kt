@@ -204,17 +204,19 @@ object SessionManager {
                         GrpcClient.authStatus.filter { it != null }.first()
                     }
 
-                    Log.d("SessionManager", "Auth result received: $authResult")
+                    Log.d("SessionManager", "Auth result received: $authResult, register=$register")
 
                     if (authResult == "REGISTRATION_SUCCESS" || authResult == null || authResult == "SUCCESS") {
                         // Try to fetch User ID
                         val userIdDeferred = CompletableDeferred<String?>()
                         GrpcClient.fetchUserId(username) { id, success ->
+                            Log.d("SessionManager", "fetchUserId callback: id=$id, success=$success")
                             if (success) userIdDeferred.complete(id)
                             else userIdDeferred.complete(null)
                         }
 
                         val fetchedId = withTimeoutOrNull(3000) { userIdDeferred.await() }
+                        Log.d("SessionManager", "fetchedId=$fetchedId")
                         val userId = fetchedId ?: ""
 
                         // Store credentials securely
@@ -229,7 +231,12 @@ object SessionManager {
 
                         updateSession(username = username, password = pass, userId = userId, email = email)
 
-                        syncFcmToken(context, username)
+                        try {
+                            syncFcmToken(context, username)
+                        } catch (e: Exception) {
+                            Log.e("SessionManager", "syncFcmToken error: ${e.message}")
+                        }
+                        Log.d("SessionManager", "Registration complete, calling onComplete with: ${authResult ?: "SUCCESS"}")
                         onComplete(authResult ?: "SUCCESS")
                     } else {
                         onComplete(authResult)
