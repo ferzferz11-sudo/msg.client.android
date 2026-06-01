@@ -786,8 +786,9 @@ class ChatListActivity : AppCompatActivity() {
                 val filteredChats = fetchedChats
                     .filter { !pendingDeletions.contains(it.id) }
                     .map { it.copy(isMuted = mutedIds.contains(it.id)) }
+                    .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
 
-                // 4. Build final list: Favorites + chats with muted flag
+                // 4. Build final list: Favorites + sorted chats
                 val newChats = mutableListOf(
                     ChatInfo(
                         id = "favorites",
