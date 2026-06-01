@@ -94,16 +94,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 5 to 6: Add E2EE columns to chats table
+        // Migration from version 5 to 6: Add E2EE columns + ensure all previous columns exist
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 try {
+                    // Add E2EE columns for secret chats
                     db.execSQL("ALTER TABLE chats ADD COLUMN isSecret INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE chats ADD COLUMN peerPublicKey TEXT NOT NULL DEFAULT ''")
                     db.execSQL("ALTER TABLE chats ADD COLUMN e2eeReady INTEGER NOT NULL DEFAULT 0")
                 } catch (e: Exception) {
-                    android.util.Log.e("AppDatabase", "Migration 5-6 failed", e)
+                    android.util.Log.e("AppDatabase", "Migration 5-6 E2EE columns failed", e)
                 }
+                // Ensure lastMessageHasImage exists (from migration 2-3, may be skipped on some devices)
+                try {
+                    db.execSQL("ALTER TABLE chats ADD COLUMN lastMessageHasImage INTEGER NOT NULL DEFAULT 0")
+                } catch (_: Exception) { /* already exists */ }
+                // Ensure lastMessageTime exists
+                try {
+                    db.execSQL("ALTER TABLE chats ADD COLUMN lastMessageTime INTEGER NOT NULL DEFAULT 0")
+                } catch (_: Exception) { /* already exists */ }
             }
         }
 
@@ -115,7 +124,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "lavender_cache"
                 )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
-                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
