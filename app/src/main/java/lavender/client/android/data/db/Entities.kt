@@ -2,6 +2,7 @@ package lavender.client.android.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Reaction
@@ -44,11 +45,11 @@ data class ChatEntity(
     val fullAvatarUrl: String,
     val lastMessageUsername: String,
     val muted: Boolean,
-    val lastMessageHasImage: Boolean = false,
-    val allowMembersToAdd: Boolean = false,
-    val isSecret: Boolean = false,
-    val peerPublicKey: String = "",
-    val e2eeReady: Boolean = false
+    @ColumnInfo(defaultValue = "0") val lastMessageHasImage: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val allowMembersToAdd: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val isSecret: Boolean = false,
+    @ColumnInfo(defaultValue = "") val peerPublicKey: String = "",
+    @ColumnInfo(defaultValue = "0") val e2eeReady: Boolean = false
 )
 
 fun Message.toEntity(): MessageEntity {
