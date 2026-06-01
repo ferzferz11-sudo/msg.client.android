@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.OWLResponseProto
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.ui.widget.*
 import lavender.client.android.ui.adapter.MessageSwipeController
 import lavender.client.android.ui.adapter.OwlMessage
 import lavender.client.android.ui.adapter.OwlMessageAdapter
@@ -347,9 +348,8 @@ class OwlActivity : AppCompatActivity() {
         val msg = adapter.getMessageAt(position) ?: return
         if (msg.isTyping) return
 
-        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.dialog_message_actions, null)
-        sheet.setContentView(view)
+        val sheet = StandardBottomSheet(this)
+        val view = sheet.setContent(R.layout.dialog_message_actions)
 
         // Quick reactions
         view.findViewById<View>(R.id.reactionThumbsUp)?.setOnClickListener {
@@ -511,9 +511,8 @@ class OwlActivity : AppCompatActivity() {
     // ===== Settings dialog =====
 
     private fun showSettingsDialog() {
-        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.dialog_owl_settings, null)
-        sheet.setContentView(view)
+        val sheet = StandardBottomSheet(this)
+        val view = sheet.setContent(R.layout.dialog_owl_settings)
 
         // Model picker
         view.findViewById<View>(R.id.menuModelPicker)?.setOnClickListener {
