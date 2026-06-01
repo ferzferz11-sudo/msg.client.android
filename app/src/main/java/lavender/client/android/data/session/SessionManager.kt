@@ -236,6 +236,12 @@ object SessionManager {
                         } catch (e: Exception) {
                             Log.e("SessionManager", "syncFcmToken error: ${e.message}")
                         }
+
+                        // Fetch user avatar
+                        GrpcClient.getUserAvatar(username) { avatarUrl ->
+                            Log.d("SessionManager", "getUserAvatar callback: url=$avatarUrl")
+                        }
+
                         Log.d("SessionManager", "Registration complete, calling onComplete with: ${authResult ?: "SUCCESS"}")
                         onComplete(authResult ?: "SUCCESS")
                     } else {

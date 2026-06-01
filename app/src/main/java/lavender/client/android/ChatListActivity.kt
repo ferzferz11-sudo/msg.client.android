@@ -1308,6 +1308,11 @@ class ChatListActivity : AppCompatActivity() {
         if (::chatAdapter.isInitialized) {
             chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
             chatAdapter.updateTheme()
+            // Fetch avatar from server if not in cache (e.g. after app restart)
+            val avatarCache = grpcClient.getAvatarCache()
+            if (avatarCache[username].isNullOrEmpty()) {
+                grpcClient.getUserAvatar(username) { _ -> }
+            }
         }
         
         updateUpdateIndicatorVisibility()
