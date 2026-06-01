@@ -14,6 +14,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -102,15 +106,21 @@ class OwlActivity : AppCompatActivity() {
         // Handle window insets: navigation bar + keyboard
         val bottomPanel = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bottomPanel)
         val rootView = findViewById<View>(android.R.id.content)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
-            val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
-            if (ime.bottom > 0) {
-                // Keyboard open — shift panel up by keyboard height minus nav bar
-                val navBar = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                bottomPanel.translationY = -(ime.bottom - navBar.bottom).toFloat()
-            } else {
-                bottomPanel.translationY = 0f
+        val bottomPanelContent = bottomPanel.findViewById<LinearLayout>(R.id.bottomPanelContent)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+
+            bottomPanel.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
+                bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom
             }
+            bottomPanelContent.setPadding(
+                bottomPanelContent.paddingLeft,
+                bottomPanelContent.paddingTop,
+                bottomPanelContent.paddingRight,
+                4.dpToPx()
+            )
             insets
         }
 
@@ -620,6 +630,8 @@ class OwlActivity : AppCompatActivity() {
             .setNegativeButton("Отмена", null)
             .show()
     }
+
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
