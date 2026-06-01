@@ -264,23 +264,13 @@ class OwlMessageAdapter(
             // Apply bubble color
             messageBubble?.backgroundTintList = ColorStateList.valueOf(bubbleColor)
 
-            // Position: outgoing = right, incoming = left
+            // Position: outgoing = right, incoming = left — no avatars in OWL chat
+            avatarImageView?.visibility = View.GONE
             if (isOutgoing) {
-                // Hide avatar for outgoing
-                avatarImageView?.visibility = View.GONE
-                // Align bubble to end
+                // Align bubble to end (right)
                 (messageBubble?.parent as? LinearLayout)?.gravity = android.view.Gravity.END
             } else {
-                // Show avatar for incoming (OWL)
-                avatarImageView?.visibility = View.VISIBLE
-                // Set OWL avatar
-                avatarImageView?.setImageResource(R.drawable.ic_notification_logo)
-                // Tint avatar background with theme primary
-                try {
-                    val theme = ThemeStore.currentTheme()
-                    val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, 0xFF6200EE.toInt())
-                    avatarImageView?.setColorFilter(primaryColor)
-                } catch (_: Exception) {}
+                // Align bubble to start (left)
                 (messageBubble?.parent as? LinearLayout)?.gravity = android.view.Gravity.START
             }
 
@@ -296,13 +286,15 @@ class OwlMessageAdapter(
             // Username (hidden in OWL 1-on-1)
             userText?.visibility = View.GONE
 
-            // Message text
+            // Message text — left-aligned in OWL chat
             messageText?.text = msg.text
             messageText?.setTextColor(textColor)
+            messageText?.gravity = android.view.Gravity.START
 
-            // Time
+            // Time — left-aligned in OWL chat
             timeText?.text = formatTime(msg.timestamp)
-            timeText?.setTextColor(textColor and 0x80FFFFFF.toInt()) // semi-transparent
+            timeText?.setTextColor(textColor and 0x80FFFFFF.toInt())
+            timeText?.gravity = android.view.Gravity.START
 
             // Edited indicator (hidden in OWL)
             editedText?.visibility = View.GONE
