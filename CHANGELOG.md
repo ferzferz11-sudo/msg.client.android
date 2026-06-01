@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.7
+### Секретные чаты (E2EE)
+- 🔒 **Secret Chat**: End-to-end encryption (AES-256-GCM + ECDH) via E2EEManager.
+- 🔑 **Key Exchange**: Automatic ECDH key exchange between participants on chat open.
+- 🛡️ **Server**: Stores `e2ee_payload` as-is (no double encryption) when `isE2EE = true`.
+- 🚫 **No calls**: Video call button hidden for secret chats.
+- 🎨 **UI**: Lock icon avatar, "E2EE включено" subtitle, encrypted message indicator.
+
+### Server
+- New gRPC methods: `CreateSecretChat`, `ExchangeSecretKey`, `GetSecretChatKey`.
+- New table: `secret_chat_keys` (chat_id, user_id, public_key).
+- New columns: `is_secret`, `peer_public_key`, `e2ee_ready` in `chats` table.
+
 ## 1.1.0.6
 ### Исправления
 - 🐛 **Исправлено**: Поле ввода в OWL чате больше не перекрыто навигационными кнопками (bottomMargin подход)

@@ -713,7 +713,7 @@ class NewChatActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean { menuInflater.inflate(R.menu.chat_menu, menu); return true }
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search)?.isVisible = !selectionMode
-        menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_")
+        menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_") && !isSecret
         menu.findItem(R.id.action_conference)?.isVisible = false
         
         val iconColor = run {
