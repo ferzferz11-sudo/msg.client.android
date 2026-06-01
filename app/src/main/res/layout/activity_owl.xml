@@ -84,6 +84,58 @@
                         tools:visibility="visible" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Selection toolbar (copy, forward, delete) -->
+            <LinearLayout
+                android:id="@+id/selectionToolbar"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/custom_toolbar_height"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="4dp"
+                android:visibility="gone"
+                android:background="@android:color/transparent"
+                tools:visibility="gone">
+
+                <TextView
+                    android:id="@+id/selectionCountText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="16dp"
+                    tools:text="1" />
+
+                <ImageButton
+                    android:id="@+id/copyMessages"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_copy"
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="Копировать" />
+
+                <ImageButton
+                    android:id="@+id/forwardMessages"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_forward"
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="Переслать" />
+
+                <ImageButton
+                    android:id="@+id/deleteMessages"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_delete"
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="Удалить" />
+
+            </LinearLayout>
         </RelativeLayout>
     </com.google.android.material.appbar.MaterialToolbar>
 
@@ -98,59 +150,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/item_owl_message" />
-
-    <!-- Selection toolbar (star, copy, forward, delete) -->
-    <LinearLayout
-        android:id="@+id/selectionToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/custom_toolbar_height"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="4dp"
-        android:visibility="gone"
-        android:background="?attr/colorPrimaryVariant"
-        app:layout_constraintTop_toBottomOf="@+id/toolbar"
-        tools:visibility="gone">
-
-        <TextView
-            android:id="@+id/selectionCountText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="?attr/colorOnPrimary"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginStart="16dp"
-            tools:text="1" />
-
-        <ImageButton
-            android:id="@+id/copyMessages"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_copy"
-            app:tint="?attr/colorOnPrimary"
-            android:contentDescription="Копировать" />
-
-        <ImageButton
-            android:id="@+id/forwardMessages"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_forward"
-            app:tint="?attr/colorOnPrimary"
-            android:contentDescription="Переслать" />
-
-        <ImageButton
-            android:id="@+id/deleteMessages"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_delete"
-            app:tint="?attr/colorOnPrimary"
-            android:contentDescription="Удалить" />
-
-    </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bottomPanel"

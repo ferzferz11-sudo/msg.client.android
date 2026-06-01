@@ -1,13 +1,17 @@
 package lavender.client.android.ui.adapter
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 data class Reaction(
     val emoji: String,
@@ -33,6 +37,16 @@ class OwlMessageAdapter(
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
     private val quickReactions = listOf("👍", "❤️", "😂", "😮", "😢", "🔥")
+
+    // Theme-based bubble colors
+    var outgoingBg: Int = 0xFF2A2C6D.toInt()
+        set(value) { field = value; notifyItemRangeChanged(0, itemCount) }
+    var incomingBg: Int = 0xFF16173A.toInt()
+        set(value) { field = value; notifyItemRangeChanged(0, itemCount) }
+    var outgoingText: Int = 0xFFFFFFFF.toInt()
+        set(value) { field = value; notifyItemRangeChanged(0, itemCount) }
+    var incomingText: Int = 0xFFFFFFFF.toInt()
+        set(value) { field = value; notifyItemRangeChanged(0, itemCount) }
 
     fun addMessage(msg: OwlMessage) {
         messages.add(msg)
@@ -161,6 +175,14 @@ class OwlMessageAdapter(
 
     fun getQuickReactions(): List<String> = quickReactions
 
+    fun updateThemeColors() {
+        val theme = ThemeStore.currentTheme()
+        outgoingBg = ThemeUtils.parseSafeColor(theme.outgoingBubbleColor, 0xFF2A2C6D.toInt())
+        incomingBg = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, 0xFF16173A.toInt())
+        outgoingText = ThemeUtils.parseSafeColor(theme.outgoingTextColor, 0xFFFFFFFF.toInt())
+        incomingText = ThemeUtils.parseSafeColor(theme.incomingTextColor, 0xFFFFFFFF.toInt())
+    }
+
     companion object {
         const val PAYLOAD_TEXT = "text_update"
     }
@@ -221,12 +243,16 @@ class OwlMessageAdapter(
                 owlContainer.visibility = View.GONE
                 typingContainer.visibility = View.GONE
                 userText.text = msg.text
+                userText.setTextColor(outgoingText)
+                (userText.parent as? View)?.backgroundTintList = android.content.res.ColorStateList.valueOf(outgoingBg)
                 bindReactions(msg, userReactionsContainer, position, true)
             } else {
                 userContainer.visibility = View.GONE
                 owlContainer.visibility = View.VISIBLE
                 typingContainer.visibility = View.GONE
                 owlText.text = msg.text
+                owlText.setTextColor(incomingText)
+                (owlText.parent as? View)?.backgroundTintList = android.content.res.ColorStateList.valueOf(incomingBg)
                 bindReactions(msg, owlReactionsContainer, position, false)
             }
 

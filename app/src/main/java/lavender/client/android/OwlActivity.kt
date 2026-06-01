@@ -270,6 +270,7 @@ class OwlActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = true
         }
+        adapter.updateThemeColors()
     }
 
     private fun setupSelectionToolbar() {
@@ -394,6 +395,11 @@ class OwlActivity : AppCompatActivity() {
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
         selectionToolbar.isVisible = true
         selectionCountText.text = count.toString()
+        try {
+            selectionToolbar.setBackgroundColor(
+                ThemeStore.currentTheme().primaryColor.toColorInt()
+            )
+        } catch (_: Exception) {}
     }
 
     private fun updateSelectionToolbar(count: Int) {
