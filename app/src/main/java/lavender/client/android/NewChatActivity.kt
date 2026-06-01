@@ -448,7 +448,7 @@ class NewChatActivity : AppCompatActivity() {
                 setColor(secretTheme.surfaceContainer.toColorInt())
             }
             toolbarAvatar.background = secretBg
-            val secretPad = 8.dpToPx()
+            val secretPad = 4.dpToPx()
             toolbarAvatar.setPadding(secretPad, secretPad, secretPad, secretPad)
             toolbarSubtitle.text = getString(R.string.e2ee_enabled)
             toolbarSubtitle.setTextColor(secretTheme.primaryColor.toColorInt())

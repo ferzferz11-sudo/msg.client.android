@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
@@ -22,9 +23,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePadding
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -37,6 +39,8 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.OwlMessage
 import lavender.client.android.ui.adapter.OwlMessageAdapter
 import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 class OwlActivity : AppCompatActivity() {
 
@@ -223,6 +227,15 @@ class OwlActivity : AppCompatActivity() {
 
         val avatarView = findViewById<CircleImageView>(R.id.toolbarAvatar)
         avatarView?.setImageResource(R.drawable.ic_notification_logo)
+        val owlTheme = ThemeStore.currentTheme()
+        val owlBg = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(owlTheme.primaryColor.toColorInt())
+        }
+        avatarView?.background = owlBg
+        avatarView?.imageTintList = ColorStateList.valueOf(owlTheme.onPrimaryColor.toColorInt())
+        val owlPad = 4.dpToPx()
+        avatarView?.setPadding(owlPad, owlPad, owlPad, owlPad)
 
         if (hasMenu) {
             toolbar.inflateMenu(R.menu.owl_menu)
