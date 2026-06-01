@@ -3,20 +3,27 @@ package lavender.client.android.ui.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 
 data class OwlMessage(
+    val id: Long = System.currentTimeMillis(),
     val text: String,
     val isUser: Boolean,
     val isTyping: Boolean = false
 )
 
-class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
+class OwlMessageAdapter(
+    private val onMessageLongClick: ((Int) -> Unit)? = null,
+    private val onSelectionChanged: ((Int) -> Unit)? = null
+) : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
 
     private val messages = mutableListOf<OwlMessage>()
+    private val selectedPositions = mutableSetOf<Int>()
+    private var selectionMode = false
 
     fun addMessage(msg: OwlMessage) {
         messages.add(msg)
@@ -33,7 +40,7 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
 
     fun showTyping() {
         hideTyping()
-        messages.add(OwlMessage("", isUser = false, isTyping = true))
+        messages.add(OwlMessage(text = "", isUser = false, isTyping = true))
         notifyItemInserted(messages.size - 1)
     }
 
@@ -47,6 +54,8 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
 
     fun clear() {
         messages.clear()
+        selectedPositions.clear()
+        selectionMode = false
         notifyDataSetChanged()
     }
 
@@ -55,20 +64,13 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
     }
 
     fun updateLastAssistantMessage(text: String) {
-        // Find the last non-user, non-typing message
         val idx = messages.indexOfLast { !it.isUser && !it.isTyping && it.text.isNotEmpty() }
         if (idx >= 0) {
             messages[idx] = messages[idx].copy(text = text)
-            // Direct text update without full rebind to avoid flicker
             notifyItemChanged(idx, PAYLOAD_TEXT)
         } else {
-            // No assistant message yet — add one
             addMessage(OwlMessage(text = text, isUser = false))
         }
-    }
-
-    companion object {
-        const val PAYLOAD_TEXT = "text_update"
     }
 
     fun removeLastMessage() {
@@ -76,6 +78,67 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
             messages.removeAt(messages.size - 1)
             notifyItemRemoved(messages.size)
         }
+    }
+
+    fun removeMessages(indices: List<Int>) {
+        val toRemove = indices.sortedDescending()
+        for (i in toRemove) {
+            if (i < messages.size) {
+                messages.removeAt(i)
+                notifyItemRemoved(i)
+            }
+        }
+        selectedPositions.clear()
+        selectionMode = false
+    }
+
+    fun getMessageAt(position: Int): OwlMessage? {
+        return if (position in messages.indices) messages[position] else null
+    }
+
+    fun getAllMessages(): List<OwlMessage> = messages.toList()
+
+    fun getSelectedPositions(): Set<Int> = selectedPositions.toSet()
+
+    fun toggleSelectionMode(enabled: Boolean) {
+        val wasEnabled = selectionMode
+        selectionMode = enabled
+        if (!enabled) {
+            selectedPositions.clear()
+        }
+        if (wasEnabled != enabled) {
+            notifyItemRangeChanged(0, itemCount)
+        }
+        onSelectionChanged?.invoke(selectedPositions.size)
+    }
+
+    fun toggleSelection(position: Int) {
+        if (selectedPositions.contains(position)) {
+            selectedPositions.remove(position)
+        } else {
+            selectedPositions.add(position)
+        }
+        notifyItemChanged(position)
+        onSelectionChanged?.invoke(selectedPositions.size)
+    }
+
+    fun clearSelection() {
+        val previousSelected = selectedPositions.toList()
+        selectedPositions.clear()
+        selectionMode = false
+        previousSelected.forEach { notifyItemChanged(it) }
+        onSelectionChanged?.invoke(0)
+    }
+
+    fun exitSelectionMode() {
+        selectedPositions.clear()
+        selectionMode = false
+        notifyItemRangeChanged(0, itemCount)
+        onSelectionChanged?.invoke(0)
+    }
+
+    companion object {
+        const val PAYLOAD_TEXT = "text_update"
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -86,12 +149,11 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val msg = messages[position]
-        holder.bind(msg)
+        holder.bind(msg, selectionMode, selectedPositions.contains(position), position)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
         if (payloads.contains(PAYLOAD_TEXT)) {
-            // Partial update — just change text, no full rebind
             holder.updateText(messages[position])
         } else {
             super.onBindViewHolder(holder, position, payloads)
@@ -100,14 +162,28 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
 
     override fun getItemCount(): Int = messages.size
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val userContainer: LinearLayout = itemView.findViewById(R.id.userMessageContainer)
         private val userText: TextView = itemView.findViewById(R.id.userMessageText)
         private val owlContainer: LinearLayout = itemView.findViewById(R.id.owlMessageContainer)
         private val owlText: TextView = itemView.findViewById(R.id.owlMessageText)
         private val typingContainer: LinearLayout = itemView.findViewById(R.id.typingContainer)
+        private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
 
-        fun bind(msg: OwlMessage) {
+        fun bind(msg: OwlMessage, isSelectionMode: Boolean, isSelected: Boolean, position: Int) {
+            // Selection indicator
+            selectionIndicator?.visibility = if (isSelectionMode) View.VISIBLE else View.GONE
+            if (isSelectionMode) {
+                selectionIndicator?.isSelected = isSelected
+            }
+
+            // Highlight background when selected
+            if (isSelectionMode && isSelected) {
+                itemView.setBackgroundColor(0x33000000.toInt()) // semi-transparent overlay
+            } else {
+                itemView.setBackgroundColor(0x00000000) // transparent
+            }
+
             if (msg.isTyping) {
                 userContainer.visibility = View.GONE
                 owlContainer.visibility = View.GONE
@@ -123,9 +199,24 @@ class OwlMessageAdapter : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
                 typingContainer.visibility = View.GONE
                 owlText.text = msg.text
             }
+
+            // Click handlers
+            val clickTarget = if (msg.isUser) userContainer else owlContainer
+
+            clickTarget.setOnClickListener {
+                if (isSelectionMode && !msg.isTyping) {
+                    toggleSelection(bindingAdapterPosition)
+                }
+            }
+
+            clickTarget.setOnLongClickListener {
+                if (!msg.isTyping && bindingAdapterPosition != RecyclerView.NO_POSITION) {
+                    onMessageLongClick?.invoke(bindingAdapterPosition)
+                }
+                true
+            }
         }
 
-        // Partial update — just change text without touching visibility
         fun updateText(msg: OwlMessage) {
             if (!msg.isUser && !msg.isTyping) {
                 owlText.text = msg.text

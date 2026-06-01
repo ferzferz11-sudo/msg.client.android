@@ -1,14 +1,20 @@
 package lavender.client.android
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
+import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -25,7 +31,6 @@ import com.google.android.material.appbar.MaterialToolbar
 import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.grpc.owlTyping
 import lavender.client.android.data.proto.OWLResponseProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.adapter.OwlMessage
@@ -35,7 +40,7 @@ import lavender.client.android.theme.ui.ThemeUi
 class OwlActivity : AppCompatActivity() {
 
     private lateinit var adapter: OwlMessageAdapter
-    private lateinit var sendButton: android.widget.ImageButton
+    private lateinit var sendButton: ImageButton
     private lateinit var messageInput: EditText
     private var currentResponse = ""
     private var isReceiving = false
@@ -84,6 +89,14 @@ class OwlActivity : AppCompatActivity() {
     // Local prefs for per-chat settings (fallback if server unreachable)
     private lateinit var prefs: SharedPreferences
 
+    // Selection mode
+    private var selectionMode = false
+    private lateinit var selectionToolbar: LinearLayout
+    private lateinit var selectionCountText: TextView
+    private lateinit var copyMessagesBtn: ImageButton
+    private lateinit var deleteMessagesBtn: ImageButton
+    private lateinit var toolbarContent: View
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl)
@@ -97,6 +110,7 @@ class OwlActivity : AppCompatActivity() {
 
         setupToolbar(hasMenu = true)
         setupRecyclerView()
+        setupSelectionToolbar()
         setupInput()
         observeOwlResponses()
 
@@ -112,7 +126,7 @@ class OwlActivity : AppCompatActivity() {
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
 
-            bottomPanel.updateLayoutParams<android.view.ViewGroup.MarginLayoutParams> {
+            bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom
             }
             bottomPanelContent.setPadding(
@@ -125,7 +139,6 @@ class OwlActivity : AppCompatActivity() {
         }
 
         if (chatId.isEmpty()) {
-            // No chat ID — show error
             adapter.addMessage(
                 OwlMessage(
                     text = "Ошибка: chat_id не указан",
@@ -190,7 +203,10 @@ class OwlActivity : AppCompatActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
-        toolbar.setNavigationOnClickListener { finish() }
+        toolbar.setNavigationOnClickListener {
+            if (selectionMode) exitSelectionMode()
+            else finish()
+        }
         toolbar.title = ""
 
         val avatarView = findViewById<CircleImageView>(R.id.toolbarAvatar)
@@ -212,14 +228,143 @@ class OwlActivity : AppCompatActivity() {
                 }
             }
         }
+
+        toolbarContent = findViewById(R.id.toolbarContent)
     }
 
     private fun setupRecyclerView() {
         val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
-        adapter = OwlMessageAdapter()
+        adapter = OwlMessageAdapter(
+            onMessageLongClick = { position -> showMessageActionsDialog(position) },
+            onSelectionChanged = { count -> updateSelectionToolbar(count) }
+        )
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = true
+        }
+    }
+
+    private fun setupSelectionToolbar() {
+        selectionToolbar = findViewById(R.id.selectionToolbar)
+        selectionCountText = findViewById(R.id.selectionCountText)
+        copyMessagesBtn = findViewById(R.id.copyMessages)
+        deleteMessagesBtn = findViewById(R.id.deleteMessages)
+
+        copyMessagesBtn.setOnClickListener { copySelectedMessages() }
+        deleteMessagesBtn.setOnClickListener { deleteSelectedMessages() }
+    }
+
+    private fun showMessageActionsDialog(position: Int) {
+        val msg = adapter.getMessageAt(position) ?: return
+        if (msg.isTyping) return
+
+        val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_message_actions, null)
+        sheet.setContentView(view)
+
+        // Copy
+        view.findViewById<View>(R.id.menuCopy)?.setOnClickListener {
+            sheet.dismiss()
+            copyMessage(msg)
+        }
+
+        // Delete
+        view.findViewById<View>(R.id.menuDelete)?.setOnClickListener {
+            sheet.dismiss()
+            deleteMessage(position)
+        }
+
+        // Select (enter selection mode)
+        view.findViewById<View>(R.id.menuSelect)?.setOnClickListener {
+            sheet.dismiss()
+            enterSelectionMode(position)
+        }
+
+        sheet.show()
+    }
+
+    private fun copyMessage(msg: OwlMessage) {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("message", msg.text))
+        Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun deleteMessage(position: Int) {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.delete_message))
+            .setMessage(getString(R.string.delete_message_confirmation))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                adapter.removeMessages(listOf(position))
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun enterSelectionMode(position: Int) {
+        selectionMode = true
+        adapter.toggleSelectionMode(true)
+        adapter.toggleSelection(position)
+        showSelectionToolbar(1)
+    }
+
+    private fun exitSelectionMode() {
+        selectionMode = false
+        adapter.exitSelectionMode()
+        hideSelectionToolbar()
+    }
+
+    private fun copySelectedMessages() {
+        val selectedPositions = adapter.getSelectedPositions().sorted()
+        val messages = selectedPositions.mapNotNull { adapter.getMessageAt(it) }
+        val text = messages.joinToString("\n\n") { "${if (it.isUser) userId else "OWL"}: ${it.text}" }
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("messages", text))
+        Toast.makeText(this, getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+        exitSelectionMode()
+    }
+
+    private fun deleteSelectedMessages() {
+        val count = adapter.getSelectedPositions().size
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.delete_messages))
+            .setMessage(getString(R.string.delete_messages_confirmation, count))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                val positions = adapter.getSelectedPositions().toList()
+                adapter.removeMessages(positions)
+                exitSelectionMode()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun showSelectionToolbar(count: Int) {
+        selectionMode = true
+        toolbarContent.isVisible = false
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
+        selectionToolbar.isVisible = true
+        selectionCountText.text = count.toString()
+    }
+
+    private fun updateSelectionToolbar(count: Int) {
+        selectionCountText.text = count.toString()
+        if (count == 0) {
+            hideSelectionToolbar()
+        }
+    }
+
+    private fun hideSelectionToolbar() {
+        selectionMode = false
+        toolbarContent.isVisible = true
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        selectionToolbar.isVisible = false
+    }
+
+    override fun onBackPressed() {
+        if (selectionMode) {
+            exitSelectionMode()
+        } else {
+            super.onBackPressed()
         }
     }
 
@@ -228,6 +373,10 @@ class OwlActivity : AppCompatActivity() {
         sendButton = findViewById(R.id.sendButton)
 
         sendButton.setOnClickListener {
+            if (selectionMode) {
+                exitSelectionMode()
+                return@setOnClickListener
+            }
             val text = messageInput.text.toString().trim()
             if (text.isEmpty() || isReceiving) return@setOnClickListener
 
@@ -351,7 +500,7 @@ class OwlActivity : AppCompatActivity() {
 
         // List of models
         val listView = android.widget.ListView(this).apply {
-            adapter = ArrayAdapter(context, android.R.layout.simple_list_item_single_choice, modelNames)
+            adapter = android.widget.ArrayAdapter(context, android.R.layout.simple_list_item_single_choice, modelNames)
             choiceMode = android.widget.ListView.CHOICE_MODE_SINGLE
             setSelection(selectedModelIndex)
         }
@@ -498,143 +647,30 @@ class OwlActivity : AppCompatActivity() {
                 adapter.updateLastAssistantMessage(currentResponse + response.text)
             } else if (currentResponse.isNotEmpty()) {
                 adapter.updateLastAssistantMessage(currentResponse)
-            } else {
-                adapter.addMessage(OwlMessage(text = "Получен пустой ответ от сервера", isUser = false))
             }
-            currentResponse = ""
             isReceiving = false
-            findViewById<RecyclerView>(R.id.messagesRecyclerView)
-                .scrollToPosition(adapter.itemCount - 1)
         } else {
             currentResponse += response.text
-            adapter.hideTyping()
-            // Update the last assistant message instead of adding new one
             adapter.updateLastAssistantMessage(currentResponse)
-            // If no assistant message exists yet, add one
-            if (adapter.itemCount == 0 || adapter.isLastMessageUser()) {
-                adapter.addMessage(OwlMessage(text = currentResponse, isUser = false))
-            }
-            findViewById<RecyclerView>(R.id.messagesRecyclerView)
-                .scrollToPosition(adapter.itemCount - 1)
         }
     }
-
-    private fun observeOwlResponses() {
-        lifecycleScope.launch {
-            owlTyping.collect { isTyping ->
-                runOnUiThread {
-                    val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-                    val subtitle = toolbar.findViewById<android.widget.TextView>(R.id.toolbarSubtitle)
-                    if (isTyping) {
-                        subtitle?.text = "Печатает..."
-                        subtitle?.visibility = View.VISIBLE
-                    } else {
-                        subtitle?.visibility = View.GONE
-                    }
-                }
-            }
-        }
-    }
-
-    // ===== Settings dialog =====
-
-    private fun showSettingsDialog() {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 32, 48, 0)
-        }
-
-        // API Key input
-        val keyLabel = TextView(this).apply {
-            text = "OpenRouter API Key (оставьте пустым для серверного ключа)"
-            textSize = 14f
-            setPadding(0, 0, 0, 8)
-        }
-        layout.addView(keyLabel)
-
-        val keyInput = EditText(this).apply {
-            hint = "sk-or-v1-..."
-            setText(userApiKey)
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-        }
-        layout.addView(keyInput)
-
-        // Model selector
-        val modelLabel = TextView(this).apply {
-            text = "Модель"
-            textSize = 14f
-            setPadding(0, 24, 0, 8)
-        }
-        layout.addView(modelLabel)
-
-        val modelNames = getModelsForDisplay().map { it.second }.toTypedArray()
-        val displayModels = getModelsForDisplay()
-        val safeIndex = if (selectedModelIndex < displayModels.size) selectedModelIndex else 0
-        val spinner = Spinner(this).apply {
-            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, modelNames)
-            setSelection(safeIndex)
-        }
-        layout.addView(spinner)
-
-        // Info
-        val infoText = TextView(this).apply {
-            text = "💡 Без своего ключа используется серверный.\nВаш ключ хранится на сервере и устройстве."
-            textSize = 12f
-            setPadding(0, 24, 0, 0)
-        }
-        layout.addView(infoText)
-
-        AlertDialog.Builder(this)
-            .setTitle("Настройки OWL")
-            .setView(layout)
-            .setPositiveButton("Сохранить") { _, _ ->
-                userApiKey = keyInput.text.toString().trim()
-                selectedModelIndex = spinner.selectedItemPosition
-                saveLocalSettings()
-
-                // Save to server
-                val modelId = getModelsForDisplay()[selectedModelIndex].first
-                lifecycleScope.launch {
-                    try {
-                        GrpcClient.updateOwlSettings(chatId, userId, userApiKey, modelId)
-                    } catch (_: Exception) {}
-                }
-
-                Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-
-    // ===== Delete chat =====
 
     private fun confirmDeleteChat() {
         AlertDialog.Builder(this)
-            .setTitle("Удалить чат?")
-            .setMessage("Вся история будет удалена. Это действие нельзя отменить.")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle(getString(R.string.delete_chat))
+            .setMessage(getString(R.string.delete_chat_confirmation))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 lifecycleScope.launch {
                     try {
                         GrpcClient.deleteOwlChat(chatId, userId)
-                        runOnUiThread {
-                            Toast.makeText(this@OwlActivity, "Чат удалён", Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                    } catch (e: Exception) {
-                        runOnUiThread {
-                            Toast.makeText(this@OwlActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    } catch (_: Exception) {}
+                    runOnUiThread { finish() }
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
+    // Extension for dp to px
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
-
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        finish()
-    }
 }
