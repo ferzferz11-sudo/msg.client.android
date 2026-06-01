@@ -823,8 +823,18 @@ class ChatListActivity : AppCompatActivity() {
                 val serverIds = fetchedChats.map { it.id }.toSet()
                 pendingDeletions.removeAll { !serverIds.contains(it) }
 
-                chats.addAll(chatsWithMute)
-                chatAdapter.setChats(chats.toList())
+                // Use DiffUtil for smooth update (no flickering)
+                val newChats = mutableListOf(ChatInfo(
+                    id = "favorites",
+                    name = getString(R.string.favorites),
+                    type = "favorites",
+                    lastMessageText = getString(R.string.favorites_description),
+                    lastMessageTime = 0L
+                ))
+                newChats.addAll(chatsWithMute)
+                chats.clear()
+                chats.addAll(newChats)
+                chatAdapter.setChats(newChats)
 
                 // If user has real chats (more than just favorites), mark onboarding as completed
                 if (fetchedChats.isNotEmpty()) {

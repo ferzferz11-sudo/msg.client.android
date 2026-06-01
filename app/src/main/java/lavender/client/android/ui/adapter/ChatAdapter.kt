@@ -390,14 +390,10 @@ class ChatAdapter(
                     val avatarSize = (52 * density).toInt()
                     val avatar = ShapeableImageView(context).apply {
                         layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
-                        scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        scaleType = ImageView.ScaleType.CENTER_CROP
                         shapeAppearanceModel = ShapeAppearanceModel.builder().setAllCornerSizes(RelativeCornerSize(0.5f)).build()
-                        setImageResource(R.drawable.ic_notification_logo)
-                        imageTintList = ColorStateList.valueOf(cachedPrimaryColor)
-                        val p = (10 * density).toInt()
-                        setPadding(p, p, p, p)
-                        setBackgroundColor(adjustAlpha(cachedPrimaryColor, 0.15f))
                     }
+                    ThemeUtils.applyDefaultAvatar(avatar, cachedTheme!!)
                     participantAvatars.addView(avatar)
                     return
                 }
