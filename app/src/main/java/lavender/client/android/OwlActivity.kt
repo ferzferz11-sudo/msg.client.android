@@ -292,7 +292,9 @@ class OwlActivity : AppCompatActivity() {
             onReactionClick = { position, emoji -> adapter.addReaction(position, emoji) }
         )
         recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.layoutManager = LinearLayoutManager(this).apply {
+            stackFromEnd = true
+        }
         adapter.updateThemeColors()
 
         // Swipe to reply
