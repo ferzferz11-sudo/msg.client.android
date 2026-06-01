@@ -90,13 +90,16 @@ class AudioRecordingView @JvmOverloads constructor(
         if (isRecording) {
             recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
             recordButton.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            recordButton.alpha = 0.5f
         } else {
             recordButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
             recordButton.imageTintList = android.content.res.ColorStateList.valueOf(onPrimColor)
+            recordButton.alpha = 0.5f
         }
 
         cancelButton.backgroundTintList = android.content.res.ColorStateList.valueOf(primColor)
         cancelButton.imageTintList = android.content.res.ColorStateList.valueOf(onPrimColor)
+        cancelButton.alpha = 0.5f
         timerText.setTextColor(textPrimary)
         statusText.setTextColor(secondaryTxtColor)
         
