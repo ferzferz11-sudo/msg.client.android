@@ -93,6 +93,7 @@ class ChatListActivity : AppCompatActivity() {
     private lateinit var password: String
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    private var isChatsLoaded = false // prevent reload flicker on resume
 
     private var syncJob: Job? = null
     
@@ -185,6 +186,7 @@ class ChatListActivity : AppCompatActivity() {
         if (isNewUser) {
             // Clear cache for new user to prevent showing previous user's chats
             clearLocalCacheSync()
+            isChatsLoaded = false
             // Save current username as last logged
             prefs.edit { putString("last_logged_username", username) }
         }
@@ -442,7 +444,7 @@ class ChatListActivity : AppCompatActivity() {
                         // Only start chat background stream if we are actually on this screen
                         // and no other room is active
                         grpcClient.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
-                        loadChats()
+                        if (!isChatsLoaded) loadChats()
                     }
                 }
             }
@@ -527,7 +529,7 @@ class ChatListActivity : AppCompatActivity() {
         intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
             chatAdapter.setChatDeleting(chatId, true)
         }
-        loadChats()
+        if (!isChatsLoaded) loadChats()
     }
 
     private fun performDirectDeletion(chatId: String) {
@@ -849,6 +851,7 @@ class ChatListActivity : AppCompatActivity() {
                 updateAppIconBadge(totalUnread)
 
                 Log.d("ChatListActivity", "Loaded ${chats.size} chats")
+                isChatsLoaded = true
             }
 
             // Load muted chats and favorites in background (non-blocking)
@@ -1356,7 +1359,9 @@ class ChatListActivity : AppCompatActivity() {
                 delay(500)
                 waited += 500
                 if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
-                    loadChats()
+                    if (!isChatsLoaded) {
+                        loadChats()
+                    }
                     return@launch
                 }
             }
@@ -1393,6 +1398,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun logout() {
         syncJob?.cancel()
+        isChatsLoaded = false
         SessionManager.logout(this)
 
         // Save current theme to SharedPreferences before logout
