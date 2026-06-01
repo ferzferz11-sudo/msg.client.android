@@ -886,7 +886,8 @@ class ChatListActivity : AppCompatActivity() {
                     
                     runOnUiThread {
                         if (cachedChats.isNotEmpty()) {
-                            chats.addAll(cachedChats.map { dbChat ->
+                            val sorted = cachedChats.sortedByDescending { it.lastMessageTime }
+                            chats.addAll(sorted.map { dbChat ->
                                 ChatInfo(
                                     id = dbChat.id,
                                     name = dbChat.name,

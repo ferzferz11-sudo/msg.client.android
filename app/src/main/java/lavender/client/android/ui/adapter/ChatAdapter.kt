@@ -291,12 +291,14 @@ class ChatAdapter(
                 val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM" && chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 val photoText = if (lang == "ru") "📷 Фото" else "📷 Photo"
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, photoText)
+            } else if (chat.type == "owl") {
+                val owlPrefix = if (lang == "ru") "🤖 OWL AI: " else "🤖 OWL AI: "
+                val text = if (chat.lastMessageText.isNotEmpty()) chat.lastMessageText else if (lang == "ru") "Нет сообщений" else "No messages"
+                chatType.text = "$owlPrefix$text"
+                if (chat.lastMessageText.isNotEmpty()) chatType.setTextColor(cachedTextSecondary) else chatType.setTextColor(cachedPrimaryColor)
             } else if (chat.lastMessageText.isNotEmpty()) {
                 val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM" && chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)
-            } else if (chat.type == "owl") {
-                chatType.text = if (lang == "ru") "🤖 OWL AI" else "🤖 OWL AI"
-                chatType.setTextColor(cachedPrimaryColor)
             } else {
                 chatType.text = if (lang == "ru") "Нет сообщений" else "No messages"
                 chatType.setTextColor(cachedTextSecondary)
