@@ -718,11 +718,13 @@ class OwlActivity : AppCompatActivity() {
     // ===== Send message =====
 
     private fun sendMessage(text: String) {
-        val replyPrefix = if (replyingTo != null) {
-            val replyLabel = if (replyingTo!!.isUser) userId else "OWL"
-            "↩️ $replyLabel: ${replyingTo!!.text}\n\n"
-        } else ""
-        adapter.addMessage(OwlMessage(text = text, isUser = true, replyToText = replyPrefix))
+        val replyMsg = replyingTo
+        adapter.addMessage(OwlMessage(
+            text = text,
+            isUser = true,
+            replyToText = replyMsg?.text ?: "",
+            replyToUser = if (replyMsg != null) (if (replyMsg.isUser) userId else "OWL") else ""
+        ))
         messageInput.setText("")
         hideReplyPreview()
         currentResponse = ""

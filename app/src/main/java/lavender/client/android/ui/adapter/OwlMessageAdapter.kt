@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.imageview.ShapeableImageView
 import lavender.client.android.R
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -24,6 +25,8 @@ data class OwlMessage(
     val isUser: Boolean,
     val isTyping: Boolean = false,
     val replyToText: String = "",
+    val replyToUser: String = "",
+    val timestamp: Long = System.currentTimeMillis(),
     val reactions: MutableList<Reaction> = mutableListOf()
 )
 
@@ -210,14 +213,24 @@ class OwlMessageAdapter(
     override fun getItemCount(): Int = messages.size
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val userContainer: LinearLayout = itemView.findViewById(R.id.userMessageContainer)
-        private val userText: TextView = itemView.findViewById(R.id.userMessageText)
-        private val userReactionsContainer: LinearLayout = itemView.findViewById(R.id.userReactionsContainer)
-        private val owlContainer: LinearLayout = itemView.findViewById(R.id.owlMessageContainer)
-        private val owlText: TextView = itemView.findViewById(R.id.owlMessageText)
-        private val owlReactionsContainer: LinearLayout = itemView.findViewById(R.id.owlReactionsContainer)
-        private val typingContainer: LinearLayout = itemView.findViewById(R.id.typingContainer)
+        // New layout fields (matching item_message.xml structure)
+        private val messageContainer: LinearLayout = itemView.findViewById(R.id.messageContainer)
+        private val avatarImageView: ShapeableImageView = itemView.findViewById(R.id.avatarImageView)
+        private val messageBubble: LinearLayout = itemView.findViewById(R.id.messageBubble)
+        private val replyQuoteContainer: LinearLayout = itemView.findViewById(R.id.replyQuoteContainer)
+        private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
+        private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
+        private val userText: TextView = itemView.findViewById(R.id.userText)
+        private val messageText: TextView = itemView.findViewById(R.id.messageText)
+        private val editedText: TextView = itemView.findViewById(R.id.editedText)
+        private val timeText: TextView = itemView.findViewById(R.id.timeText)
+        private val readStatusIcon: ImageView = itemView.findViewById(R.id.readStatusIcon)
+        private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
         private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
+        private val dateText: TextView = itemView.findViewById(R.id.dateText)
+
+        // Typing indicator (custom for OWL)
+        private val typingContainer: LinearLayout? = itemView.findViewById(R.id.typingContainer)
 
         fun bind(msg: OwlMessage, isSelectionMode: Boolean, isSelected: Boolean, position: Int) {
             // Selection indicator
@@ -226,41 +239,99 @@ class OwlMessageAdapter(
                 selectionIndicator?.isSelected = isSelected
             }
 
-            // Highlight background when selected
+            // Highlight bubble when selected
             if (isSelectionMode && isSelected) {
-                itemView.setBackgroundColor(0x33000000.toInt())
+                messageBubble?.alpha = 0.6f
             } else {
-                itemView.setBackgroundColor(0x00000000)
+                messageBubble?.alpha = 1.0f
             }
 
             if (msg.isTyping) {
-                userContainer.visibility = View.GONE
-                owlContainer.visibility = View.GONE
-                typingContainer.visibility = View.VISIBLE
-                userReactionsContainer?.visibility = View.GONE
-                owlReactionsContainer?.visibility = View.GONE
-            } else if (msg.isUser) {
-                userContainer.visibility = View.VISIBLE
-                owlContainer.visibility = View.GONE
-                typingContainer.visibility = View.GONE
-                userText.text = if (msg.replyToText.isNotEmpty()) "${msg.replyToText}${msg.text}" else msg.text
-                userText.setTextColor(outgoingText)
-                (userText.parent as? View)?.backgroundTintList = android.content.res.ColorStateList.valueOf(outgoingBg)
-                bindReactions(msg, userReactionsContainer, position, true)
-            } else {
-                userContainer.visibility = View.GONE
-                owlContainer.visibility = View.VISIBLE
-                typingContainer.visibility = View.GONE
-                owlText.text = if (msg.replyToText.isNotEmpty()) "${msg.replyToText}${msg.text}" else msg.text
-                owlText.setTextColor(incomingText)
-                (owlText.parent as? View)?.backgroundTintList = android.content.res.ColorStateList.valueOf(incomingBg)
-                bindReactions(msg, owlReactionsContainer, position, false)
+                // Show typing indicator
+                messageContainer?.visibility = View.GONE
+                typingContainer?.visibility = View.VISIBLE
+                return
             }
 
-            // Click handlers
-            val clickTarget = if (msg.isUser) userContainer else owlContainer
+            messageContainer?.visibility = View.VISIBLE
+            typingContainer?.visibility = View.GONE
 
-            clickTarget.setOnClickListener {
+            // Determine if outgoing (user) or incoming (OWL)
+            val isOutgoing = msg.isUser
+            val bubbleColor = if (isOutgoing) outgoingBg else incomingBg
+            val textColor = if (isOutgoing) outgoingText else incomingText
+
+            // Apply bubble color
+            messageBubble?.backgroundTintList = ColorStateList.valueOf(bubbleColor)
+
+            // Position: outgoing = right, incoming = left
+            val layoutParams = messageContainer?.layoutParams as? RelativeLayout.LayoutParams
+            if (isOutgoing) {
+                layoutParams?.addRule(RelativeLayout.ALIGN_PARENT_END)
+                layoutParams?.removeRule(RelativeLayout.ALIGN_PARENT_START)
+                messageContainer?.layoutParams = layoutParams
+
+                // Hide avatar for outgoing
+                avatarImageView?.visibility = View.GONE
+
+                // Align bubble content to end
+                (messageBubble?.parent as? LinearLayout)?.gravity = android.view.Gravity.END
+            } else {
+                layoutParams?.addRule(RelativeLayout.ALIGN_PARENT_START)
+                layoutParams?.removeRule(RelativeLayout.ALIGN_PARENT_END)
+                messageContainer?.layoutParams = layoutParams
+
+                // Show avatar for incoming (OWL)
+                avatarImageView?.visibility = View.VISIBLE
+                // Set OWL avatar
+                avatarImageView?.setImageResource(R.drawable.ic_notification_logo)
+                // Tint avatar background with theme primary
+                try {
+                    val theme = ThemeStore.currentTheme()
+                    val primaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, 0xFF6200EE.toInt())
+                    avatarImageView?.setColorFilter(primaryColor)
+                } catch (_: Exception) {}
+
+                (messageBubble?.parent as? LinearLayout)?.gravity = android.view.Gravity.START
+            }
+
+            // Reply quote
+            if (msg.replyToText.isNotEmpty()) {
+                replyQuoteContainer?.visibility = View.VISIBLE
+                replyQuoteUser?.text = if (msg.replyToUser.isNotEmpty()) msg.replyToUser else if (isOutgoing) "Вы" else "OWL"
+                replyQuoteText?.text = msg.replyToText
+            } else {
+                replyQuoteContainer?.visibility = View.GONE
+            }
+
+            // Username (hidden in OWL 1-on-1)
+            userText?.visibility = View.GONE
+
+            // Message text
+            messageText?.text = msg.text
+            messageText?.setTextColor(textColor)
+
+            // Time
+            timeText?.text = formatTime(msg.timestamp)
+            timeText?.setTextColor(textColor and 0x80FFFFFF.toInt()) // semi-transparent
+
+            // Edited indicator (hidden in OWL)
+            editedText?.visibility = View.GONE
+
+            // Read status (hidden for incoming, check for outgoing)
+            if (isOutgoing) {
+                readStatusIcon?.visibility = View.VISIBLE
+                readStatusIcon?.setImageResource(R.drawable.ic_done_all)
+                readStatusIcon?.imageTintList = ColorStateList.valueOf(textColor)
+            } else {
+                readStatusIcon?.visibility = View.GONE
+            }
+
+            // Reactions
+            bindReactions(msg)
+
+            // Click handlers
+            messageBubble?.setOnClickListener {
                 if (!msg.isTyping) {
                     if (isSelectionMode) {
                         toggleSelection(bindingAdapterPosition)
@@ -270,7 +341,7 @@ class OwlMessageAdapter(
                 }
             }
 
-            clickTarget.setOnLongClickListener {
+            messageBubble?.setOnLongClickListener {
                 if (!msg.isTyping && bindingAdapterPosition != RecyclerView.NO_POSITION) {
                     onMessageLongClick?.invoke(bindingAdapterPosition)
                 }
@@ -278,41 +349,23 @@ class OwlMessageAdapter(
             }
         }
 
-        private fun bindReactions(msg: OwlMessage, container: LinearLayout?, position: Int, isUser: Boolean) {
-            if (container == null) return
+        private fun bindReactions(msg: OwlMessage) {
             if (msg.reactions.isEmpty()) {
-                container.visibility = View.GONE
+                reactionsText?.visibility = View.GONE
                 return
             }
-            container.visibility = View.VISIBLE
-            container.removeAllViews()
-            for (reaction in msg.reactions) {
-                val tv = TextView(container.context).apply {
-                    text = "${reaction.emoji} ${reaction.count}"
-                    textSize = 12f
-                    setPadding(8, 2, 8, 2)
-                    background = container.context.getDrawable(R.drawable.bg_reactions)
-                    setOnClickListener {
-                        if (!selectionMode) {
-                            onReactionClick?.invoke(position, reaction.emoji)
-                        }
-                    }
-                }
-                container.addView(tv, LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    marginEnd = 4.dpToPx(container.context)
-                })
-            }
+            reactionsText?.visibility = View.VISIBLE
+            val text = msg.reactions.joinToString(" ") { "${it.emoji} ${it.count}" }
+            reactionsText?.text = text
         }
 
         fun updateText(msg: OwlMessage) {
-            if (!msg.isUser && !msg.isTyping) {
-                owlText.text = msg.text
-            } else if (msg.isUser) {
-                userText.text = msg.text
-            }
+            messageText?.text = msg.text
+        }
+
+        private fun formatTime(timestamp: Long): String {
+            val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            return sdf.format(java.util.Date(timestamp))
         }
 
         private fun Int.dpToPx(context: android.content.Context): Int =
