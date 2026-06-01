@@ -531,4 +531,16 @@
     <string name="continue_label">Продолжить</string>
     <string name="discuss_in_chat">Обсудить в чате</string>
     <string name="reject_conference">Отказаться</string>
+
+    <!-- Changelog -->
+    <string name="changelog_title">Что нового</string>
+    <string name="tag_latest">★ Новейший</string>
+    <string name="tag_prerelease">Пре</string>
+    <string name="files_count">📦 %d файл(ов)</string>
+    <string name="downloads">Скачать</string>
+    <string name="view_on_github">Открыть на GitHub →</string>
+    <string name="changelog_empty">Релизов пока нет</string>
+    <string name="changelog_error">Не удалось загрузить список релизов</string>
+    <string name="changelog_open_github">Открыть на GitHub</string>
+    <string name="open">Открыть</string>
 </resources>

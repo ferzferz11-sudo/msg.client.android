@@ -1604,12 +1604,16 @@ class ChatListActivity : AppCompatActivity() {
         }
         
         btnClose?.setOnClickListener { sheet.dismiss() }
-        
+
         btnWhatsNew?.setOnClickListener {
             isNavigatingDeeper = true
             sheet.dismiss()
-            checkAnnouncements()
-            showWhatsNewDialog { showAboutDialog(onBack) }
+            try {
+                startActivity(ChangelogActivity.createIntent(this@ChatListActivity))
+            } catch (e: Exception) {
+                Log.e("ChatListActivity", "Failed to open ChangelogActivity", e)
+                showWhatsNewDialog { showAboutDialog(onBack) }
+            }
         }
 
         btnFeedback?.setOnClickListener {

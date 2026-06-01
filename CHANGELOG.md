@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.8
+### Changelog Screen
+- 📜 **ChangelogActivity**: New full-screen activity showing all GitHub releases with version, date, description, and download links.
+- 🎨 **Markdown rendering**: Supports headings, bold, lists, code spans, emoji — rendered via custom MarkdownRenderer.
+- 🏷️ **Release tags**: "★ Latest" green tag for newest stable release, "Pre" for pre-releases.
+- 📦 **Download assets**: Shows APK files with size, tap to open download URL.
+- 🔗 **GitHub fallback**: If API fails, shows Snackbar with link to GitHub releases page.
+- 💾 **Caching**: Releases cached for 30 minutes in SharedPreferences.
+- 🌐 **GitHub API**: Fetches from `api.github.com/repos/ferzferz11-sudo/msg.client.android/releases`.
+- 🔄 **Language**: Respects app locale (RU/EN) via `attachBaseContext` pattern.
+- 📱 **About dialog**: "What's New" button now opens ChangelogActivity instead of plain text dialog.
+
 ## 1.1.0.7
 ### Секретные чаты (E2EE)
 - 🔒 **Secret Chat**: End-to-end encryption (AES-256-GCM + ECDH) via E2EEManager.
@@ -13,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛡️ **Server**: Stores `e2ee_payload` as-is (no double encryption) when `isE2EE = true`.
 - 🚫 **No calls**: Video call button hidden for secret chats.
 - 🎨 **UI**: Lock icon avatar, "E2EE включено" subtitle, encrypted message indicator.
+
+### OWL AI Chat — Исправления
+- 🐛 **Исправлено**: Порядок сообщений — ответ OWL теперь появляется после сообщения пользователя, а не перед ним
+- 🐛 **Исправлено**: Индикатор набора текста ("Печатает...") отображается в тулбаре, а не внизу списка
+- 🐛 **Исправлено**: Кнопка назад в тулбаре после выхода из режима выбора
+- 🐛 **Исправлено**: Шторка действий над сообщением адаптирована к темам (StandardBottomSheet)
+- 🐛 **Исправлено**: Убран заголовок "Действия" в шторке, реакции как в обычном чате (👍 💯 🔥 ✅ ❤️ 😂 😮 😢 🙏)
+- 🐛 **Исправлено**: Ответы OWL сохраняются в историю на сервере и загружаются при перезаходе
+- 🎨 **UI**: Аватары скрыты в OWL чате, текст выровнен по левому краю
+- 🎨 **UI**: Режим выбора сообщений (long click) с копированием, удалением, пересылкой
+- 🎨 **UI**: Реакции на сообщения (локальные)
+- 🎨 **UI**: Свайп для ответа (swipe to reply)
+- 🎨 **UI**: Превью ответа при наборе сообщения
 
 ### Server
 - New gRPC methods: `CreateSecretChat`, `ExchangeSecretKey`, `GetSecretChatKey`.

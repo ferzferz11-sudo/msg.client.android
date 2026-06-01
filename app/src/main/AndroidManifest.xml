@@ -102,6 +102,8 @@
         <activity android:name=".OwlActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name=".ChangelogActivity" android:exported="false" />
+
         <activity
             android:name=".MapPickerActivity"
             android:exported="false" />
