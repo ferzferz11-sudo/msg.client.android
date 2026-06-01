@@ -3,6 +3,7 @@ package lavender.client.android.data.grpc
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import lavender.client.android.data.models.Message
@@ -369,7 +370,7 @@ object GrpcClient {
         // Send as a regular message with E2EE flags
         val msg = Message(
             id = java.util.UUID.randomUUID().toString(),
-            user = username,
+            user = getCurrentUsername() ?: "",
             text = "", // Empty — real content is in e2eePayload
             timestamp = System.currentTimeMillis(),
             roomId = chatId,

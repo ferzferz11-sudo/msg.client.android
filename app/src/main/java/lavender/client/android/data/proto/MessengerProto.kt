@@ -32,7 +32,9 @@ data class MessageProto(
     val register: Boolean = false,
     val deviceId: String = "",
     val deviceName: String = "",
-    val userId: String = ""
+    val userId: String = "",
+    val isE2Ee: Boolean = false,
+    val e2EePayload: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -57,6 +59,8 @@ data class MessageProto(
         private var deviceId: String = ""
         private var deviceName: String = ""
         private var userId: String = ""
+        private var isE2Ee: Boolean = false
+        private var e2EePayload: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -164,6 +168,16 @@ data class MessageProto(
             return this
         }
 
+        fun setIsE2Ee(isE2Ee: Boolean): Builder {
+            this.isE2Ee = isE2Ee
+            return this
+        }
+
+        fun setE2EePayload(e2EePayload: String): Builder {
+            this.e2EePayload = e2EePayload
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -177,7 +191,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId, isE2Ee, e2EePayload)
         }
     }
     
