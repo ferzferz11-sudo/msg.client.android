@@ -52,6 +52,7 @@ class OwlActivity : AppCompatActivity() {
     private lateinit var sendButton: ImageButton
     private lateinit var messageInput: EditText
     private var currentResponse = ""
+    private var currentResponseIndex = -1
     private var isReceiving = false
 
     // Chat ID — unique per OWL chat
@@ -744,6 +745,7 @@ class OwlActivity : AppCompatActivity() {
         messageInput.setText("")
         hideReplyPreview()
         currentResponse = ""
+        currentResponseIndex = -1
         isReceiving = true
 
         adapter.showTyping()
@@ -783,20 +785,38 @@ class OwlActivity : AppCompatActivity() {
         if (response.error.isNotEmpty()) {
             adapter.hideTyping()
             hideToolbarTyping()
+            // Remove partial response if any
+            if (currentResponseIndex >= 0) {
+                adapter.removeMessages(listOf(currentResponseIndex))
+                currentResponseIndex = -1
+            }
             adapter.addMessage(OwlMessage(text = "Ошибка: ${response.error}", isUser = false))
             isReceiving = false
+            currentResponse = ""
         } else if (response.finished) {
             adapter.hideTyping()
             hideToolbarTyping()
-            if (response.text.isNotEmpty()) {
-                adapter.updateLastAssistantMessage(currentResponse + response.text)
-            } else if (currentResponse.isNotEmpty()) {
-                adapter.updateLastAssistantMessage(currentResponse)
+            val fullText = currentResponse + response.text
+            if (fullText.isNotEmpty()) {
+                if (currentResponseIndex >= 0) {
+                    adapter.updateMessageAt(currentResponseIndex, fullText)
+                } else {
+                    adapter.addMessage(OwlMessage(text = fullText, isUser = false))
+                }
             }
             isReceiving = false
+            currentResponse = ""
+            currentResponseIndex = -1
         } else {
             currentResponse += response.text
-            adapter.updateLastAssistantMessage(currentResponse)
+            if (currentResponseIndex < 0) {
+                // First chunk — create new message
+                adapter.addMessage(OwlMessage(text = currentResponse, isUser = false))
+                currentResponseIndex = adapter.itemCount - 1
+            } else {
+                // Subsequent chunks — update by index
+                adapter.updateMessageAt(currentResponseIndex, currentResponse)
+            }
         }
     }
     

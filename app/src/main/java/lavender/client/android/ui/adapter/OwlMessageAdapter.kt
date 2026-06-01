@@ -100,6 +100,13 @@ class OwlMessageAdapter(
         }
     }
 
+    fun updateMessageAt(index: Int, text: String) {
+        if (index in messages.indices) {
+            messages[index] = messages[index].copy(text = text)
+            notifyItemChanged(index, PAYLOAD_TEXT)
+        }
+    }
+
     fun removeLastMessage() {
         if (messages.isNotEmpty()) {
             messages.removeAt(messages.size - 1)
