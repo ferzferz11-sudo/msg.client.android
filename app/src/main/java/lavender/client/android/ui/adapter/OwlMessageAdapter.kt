@@ -9,21 +9,29 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 
+data class Reaction(
+    val emoji: String,
+    val count: Int = 1
+)
+
 data class OwlMessage(
     val id: Long = System.currentTimeMillis(),
     val text: String,
     val isUser: Boolean,
-    val isTyping: Boolean = false
+    val isTyping: Boolean = false,
+    val reactions: MutableList<Reaction> = mutableListOf()
 )
 
 class OwlMessageAdapter(
     private val onMessageLongClick: ((Int) -> Unit)? = null,
-    private val onSelectionChanged: ((Int) -> Unit)? = null
+    private val onSelectionChanged: ((Int) -> Unit)? = null,
+    private val onReactionClick: ((Int, String) -> Unit)? = null
 ) : RecyclerView.Adapter<OwlMessageAdapter.ViewHolder>() {
 
     private val messages = mutableListOf<OwlMessage>()
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
+    private val quickReactions = listOf("👍", "❤️", "😂", "😮", "😢", "🔥")
 
     fun addMessage(msg: OwlMessage) {
         messages.add(msg)
@@ -137,6 +145,21 @@ class OwlMessageAdapter(
         onSelectionChanged?.invoke(0)
     }
 
+    fun addReaction(position: Int, emoji: String) {
+        if (position !in messages.indices) return
+        val msg = messages[position]
+        val existing = msg.reactions.find { it.emoji == emoji }
+        if (existing != null) {
+            msg.reactions.remove(existing)
+            msg.reactions.add(existing.copy(count = existing.count + 1))
+        } else {
+            msg.reactions.add(Reaction(emoji))
+        }
+        notifyItemChanged(position)
+    }
+
+    fun getQuickReactions(): List<String> = quickReactions
+
     companion object {
         const val PAYLOAD_TEXT = "text_update"
     }
@@ -165,8 +188,10 @@ class OwlMessageAdapter(
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val userContainer: LinearLayout = itemView.findViewById(R.id.userMessageContainer)
         private val userText: TextView = itemView.findViewById(R.id.userMessageText)
+        private val userReactionsContainer: LinearLayout = itemView.findViewById(R.id.userReactionsContainer)
         private val owlContainer: LinearLayout = itemView.findViewById(R.id.owlMessageContainer)
         private val owlText: TextView = itemView.findViewById(R.id.owlMessageText)
+        private val owlReactionsContainer: LinearLayout = itemView.findViewById(R.id.owlReactionsContainer)
         private val typingContainer: LinearLayout = itemView.findViewById(R.id.typingContainer)
         private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
 
@@ -179,25 +204,31 @@ class OwlMessageAdapter(
 
             // Highlight background when selected
             if (isSelectionMode && isSelected) {
-                itemView.setBackgroundColor(0x33000000.toInt()) // semi-transparent overlay
+                itemView.setBackgroundColor(0x33000000.toInt())
             } else {
-                itemView.setBackgroundColor(0x00000000) // transparent
+                itemView.setBackgroundColor(0x00000000)
             }
 
             if (msg.isTyping) {
                 userContainer.visibility = View.GONE
                 owlContainer.visibility = View.GONE
                 typingContainer.visibility = View.VISIBLE
+                userReactionsContainer?.visibility = View.GONE
+                owlReactionsContainer?.visibility = View.GONE
             } else if (msg.isUser) {
                 userContainer.visibility = View.VISIBLE
                 owlContainer.visibility = View.GONE
                 typingContainer.visibility = View.GONE
                 userText.text = msg.text
+                // Reactions
+                bindReactions(msg, userReactionsContainer, position, true)
             } else {
                 userContainer.visibility = View.GONE
                 owlContainer.visibility = View.VISIBLE
                 typingContainer.visibility = View.GONE
                 owlText.text = msg.text
+                // Reactions
+                bindReactions(msg, owlReactionsContainer, position, false)
             }
 
             // Click handlers
@@ -217,6 +248,35 @@ class OwlMessageAdapter(
             }
         }
 
+        private fun bindReactions(msg: OwlMessage, container: LinearLayout?, position: Int, isUser: Boolean) {
+            if (container == null) return
+            if (msg.reactions.isEmpty()) {
+                container.visibility = View.GONE
+                return
+            }
+            container.visibility = View.VISIBLE
+            container.removeAllViews()
+            for (reaction in msg.reactions) {
+                val tv = TextView(container.context).apply {
+                    text = "${reaction.emoji} ${reaction.count}"
+                    textSize = 12f
+                    setPadding(8, 2, 8, 2)
+                    background = container.context.getDrawable(R.drawable.bg_reactions)
+                    setOnClickListener {
+                        if (!selectionMode) {
+                            onReactionClick?.invoke(position, reaction.emoji)
+                        }
+                    }
+                }
+                container.addView(tv, LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = 4.dpToPx(container.context)
+                })
+            }
+        }
+
         fun updateText(msg: OwlMessage) {
             if (!msg.isUser && !msg.isTyping) {
                 owlText.text = msg.text
@@ -224,5 +284,8 @@ class OwlMessageAdapter(
                 userText.text = msg.text
             }
         }
+
+        private fun Int.dpToPx(context: android.content.Context): Int =
+            (this * context.resources.displayMetrics.density).toInt()
     }
 }

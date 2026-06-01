@@ -236,7 +236,8 @@ class OwlActivity : AppCompatActivity() {
         val recyclerView = findViewById<RecyclerView>(R.id.messagesRecyclerView)
         adapter = OwlMessageAdapter(
             onMessageLongClick = { position -> showMessageActionsDialog(position) },
-            onSelectionChanged = { count -> updateSelectionToolbar(count) }
+            onSelectionChanged = { count -> updateSelectionToolbar(count) },
+            onReactionClick = { position, emoji -> adapter.addReaction(position, emoji) }
         )
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this).apply {
@@ -261,6 +262,32 @@ class OwlActivity : AppCompatActivity() {
         val sheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.dialog_message_actions, null)
         sheet.setContentView(view)
+
+        // Quick reactions
+        view.findViewById<View>(R.id.reactionThumbsUp)?.setOnClickListener {
+            sheet.dismiss()
+            adapter.addReaction(position, "👍")
+        }
+        view.findViewById<View>(R.id.reactionHeart)?.setOnClickListener {
+            sheet.dismiss()
+            adapter.addReaction(position, "❤️")
+        }
+        view.findViewById<View>(R.id.reactionLaugh)?.setOnClickListener {
+            sheet.dismiss()
+            adapter.addReaction(position, "😂")
+        }
+        view.findViewById<View>(R.id.reactionWow)?.setOnClickListener {
+            sheet.dismiss()
+            adapter.addReaction(position, "😮")
+        }
+        view.findViewById<View>(R.id.reactionSad)?.setOnClickListener {
+            sheet.dismiss()
+            adapter.addReaction(position, "😢")
+        }
+        view.findViewById<View>(R.id.reactionFire)?.setOnClickListener {
+            sheet.dismiss()
+            adapter.addReaction(position, "🔥")
+        }
 
         // Copy
         view.findViewById<View>(R.id.menuCopy)?.setOnClickListener {

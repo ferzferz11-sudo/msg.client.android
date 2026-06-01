@@ -27,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="2dp"
             android:visibility="gone">
 
             <TextView
@@ -42,6 +42,15 @@
                 android:layout_marginStart="64dp" />
 
         </LinearLayout>
+        <!-- Reactions row for user message -->
+        <LinearLayout
+            android:id="@+id/userReactionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:visibility="gone"
+            android:paddingEnd="64dp"
+            android:paddingBottom="2dp" />
 
         <!-- OWL message (left-aligned) -->
         <LinearLayout
@@ -49,7 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="start"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="2dp"
             android:visibility="gone">
 
             <TextView
@@ -64,6 +73,15 @@
                 android:layout_marginEnd="64dp" />
 
         </LinearLayout>
+        <!-- Reactions row for OWL message -->
+        <LinearLayout
+            android:id="@+id/owlReactionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:visibility="gone"
+            android:paddingStart="0dp"
+            android:paddingBottom="2dp" />
 
         <!-- Typing indicator -->
         <LinearLayout
