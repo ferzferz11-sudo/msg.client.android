@@ -294,6 +294,9 @@ class ChatAdapter(
             } else if (chat.lastMessageText.isNotEmpty()) {
                 val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM" && chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)
+            } else if (chat.type == "owl") {
+                chatType.text = if (lang == "ru") "🤖 OWL AI" else "🤖 OWL AI"
+                chatType.setTextColor(cachedPrimaryColor)
             } else {
                 chatType.text = if (lang == "ru") "Нет сообщений" else "No messages"
                 chatType.setTextColor(cachedTextSecondary)
@@ -379,6 +382,23 @@ class ChatAdapter(
                     container.addView(badge)
                     
                     participantAvatars.addView(container)
+                    return
+                }
+
+                if (chatType == "owl") {
+                    participantAvatars.removeAllViews()
+                    val avatarSize = (52 * density).toInt()
+                    val avatar = ShapeableImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(avatarSize, avatarSize)
+                        scaleType = ImageView.ScaleType.CENTER_INSIDE
+                        shapeAppearanceModel = ShapeAppearanceModel.builder().setAllCornerSizes(RelativeCornerSize(0.5f)).build()
+                        setImageResource(R.drawable.ic_notification_logo)
+                        imageTintList = ColorStateList.valueOf(cachedPrimaryColor)
+                        val p = (10 * density).toInt()
+                        setPadding(p, p, p, p)
+                        setBackgroundColor(adjustAlpha(cachedPrimaryColor, 0.15f))
+                    }
+                    participantAvatars.addView(avatar)
                     return
                 }
 
