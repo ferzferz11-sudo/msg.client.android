@@ -45,11 +45,11 @@ data class ChatEntity(
     val fullAvatarUrl: String,
     val lastMessageUsername: String,
     val muted: Boolean,
-    @ColumnInfo(defaultValue = "0") val lastMessageHasImage: Boolean = false,
-    @ColumnInfo(defaultValue = "0") val allowMembersToAdd: Boolean = false,
-    @ColumnInfo(defaultValue = "0") val isSecret: Boolean = false,
-    @ColumnInfo(defaultValue = "") val peerPublicKey: String = "",
-    @ColumnInfo(defaultValue = "0") val e2eeReady: Boolean = false
+    val lastMessageHasImage: Boolean = false,
+    val allowMembersToAdd: Boolean = false,
+    val isSecret: Boolean = false,
+    val peerPublicKey: String = "",
+    val e2eeReady: Boolean = false
 )
 
 fun Message.toEntity(): MessageEntity {
