@@ -1623,11 +1623,9 @@ class ChatListActivity : AppCompatActivity() {
         }
         
         btnShare?.setOnClickListener {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "Check out Lavender Messenger!")
-            }
-            startActivity(Intent.createChooser(shareIntent, "Share App"))
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            shareApp()
         }
         
         sheet.setOnDismissListener {
