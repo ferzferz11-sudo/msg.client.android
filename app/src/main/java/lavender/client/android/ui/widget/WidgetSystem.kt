@@ -238,6 +238,14 @@ open class StandardBottomSheet(
 
     fun show() {
         applyTheme(ThemeStore.currentTheme())
+        dialog?.apply {
+            @Suppress("DEPRECATION")
+            window?.setSoftInputMode(
+                android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            )
+            @Suppress("DEPRECATION")
+            behavior.peekHeight = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        }
         dialog?.show()
     }
 
