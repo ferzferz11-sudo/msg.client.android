@@ -446,7 +446,14 @@ class ChatListActivity : AppCompatActivity() {
                         // Only start chat background stream if we are actually on this screen
                         // and no other room is active
                         grpcClient.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
-                        if (!isChatsLoaded) loadChats()
+                        if (!isChatsLoaded) {
+                            // Show loading indicator for new users
+                            if (isNewUser) {
+                                binding.loadingContainer.isVisible = true
+                                binding.chatsRecyclerView.isVisible = false
+                            }
+                            loadChats()
+                        }
                     }
                 }
             }
@@ -828,6 +835,17 @@ class ChatListActivity : AppCompatActivity() {
 
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
                     isChatsLoaded = true
+
+                    // Hide loading indicator for new users
+                    if (isNewUser) {
+                        binding.loadingContainer.isVisible = false
+                        // Show welcome screen or chat list
+                        if (fetchedChats.isEmpty()) {
+                            setupOnboardingTips()
+                        } else {
+                            binding.chatsRecyclerView.isVisible = true
+                        }
+                    }
 
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
                 }
