@@ -17,6 +17,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
@@ -137,8 +138,8 @@ class OwlActivity : AppCompatActivity() {
             )
             insets
         }
-
         if (chatId.isEmpty()) {
+            // No chat ID — show error
             adapter.addMessage(
                 OwlMessage(
                     text = "Ошибка: chat_id не указан",
@@ -147,6 +148,17 @@ class OwlActivity : AppCompatActivity() {
             )
             return
         }
+
+        // Handle back press
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (selectionMode) {
+                    exitSelectionMode()
+                } else {
+                    finish()
+                }
+            }
+        })
 
         // Load history from server
         loadHistory()
@@ -385,14 +397,6 @@ class OwlActivity : AppCompatActivity() {
         toolbarContent.isVisible = true
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
         selectionToolbar.isVisible = false
-    }
-
-    override fun onBackPressed() {
-        if (selectionMode) {
-            exitSelectionMode()
-        } else {
-            super.onBackPressed()
-        }
     }
 
     private fun setupInput() {
