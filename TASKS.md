@@ -2,47 +2,48 @@
 
 **Последнее обновление:** 2026-06-03
 **Ветка:** feat/1.1.0.x
-**Версия:** 1.1.0.8
+**Версия:** 1.1.0.9
 
 ---
 
 ## 🔴 В процессе
 
-### 1. WebRTC: TURN сервер для NAT traversal
+### 1. Секретные чаты — сообщения видны в логах сервера
+- **Статус:** не исправлено
+- **Проблема:** Сообщения секретных чатов логируются в открытом виде на сервере
+  - `[ferz] in secret_xxx: Едешь?` — текст сообщения виден в journalctl
+  - Это нарушает приватность E2EE
+- **Причина:** Сервер логирует сообщения до шифрования при сохранении в БД и отправке push
+- **Решение:** Не логировать текст сообщений секретных чатов. Лог должен содержать только: chat_id, sender, message_id (без тела сообщения)
+
+### 2. GrpcClient — Delicate API warnings
+- **Статус:** не исправлено
+- **Проблема:** 3 warning'а при сборке:
+  - `GrpcClient.kt:345` — delicate API
+  - `GrpcClient.kt:357` — delicate API
+  - `GrpcClient.kt:364` — delicate API
+
+### 3. Секретные чаты — интеграция и улучшения
 - **Статус:** не начато
-- **Проблема:** Звонки работают только в одной сети (WiFi). Из разных сетей — нет соединения.
-- **Решение:** Установить и настроить coturn на сервере 13.140.25.249
-- **Что сделано ранее по звонкам:**
-  - handleAbruptDisconnect → HANGUP собеседнику
-  - Connection timeout 30s в CallActivity
-  - ICE connection state handling (FAILED → auto hangup)
-  - senderId = UUID вместо username
-  - BroadcastCall fallback по username
-  - Убран дубликат PeerConnection.Observer в WebRtcClient
-- **Файлы:** server.go, db.go, hub.go, CallActivity.kt, CallManager.kt, WebRtcClient.kt
+- **Задача:** Проверить и улучшить работу секретных чатов (E2EE)
+
+### 4. WebRTC — тестирование TURN
+- **Статус:** ждёт тестирования пользователем
+- **Что проверить:** Звонки из разных сетей (WiFi ↔ мобильный интернет)
 
 ---
 
-## ✅ Исправлено
+## ✅ Исправлено (v1.1.0.9)
 
-### WebRTC звонки — базовая функциональность
-- HANGUP при abrupt disconnect
-- Connection timeout 30s
-- ICE state monitoring (FAILED → hangup)
-- UUID senderId
-- BroadcastCall fallback
-- WebRtcClient: убран дубликат Observer
+### WebRTC — TURN сервер
+- Coturn установлен на сервере, порт 3478
+- `/turn-credentials` endpoint на HTTP 8082
+- HMAC-based временные креденшалы (TTL 24h)
+- CallActivity: fetchTurnCredentials() + fallback STUN
+- WebRtcClient: убран дубликат PeerConnection.Observer
 
-### FCM Push
-- Обновлён firebase key, push работают
-
-### Secret Chat (E2EE)
-- Заглушка "not implemented" убрана, чаты работают
-
-### ChangelogActivity
-- Locale(ru) → Locale.forLanguageTag(ru)
-- bg_release_card: hardcoded color вместо ?attr/colorSurfaceVariant
-- Белый экран — требует logcat для диагностики
+### OWL AI
+- Обновлён OpenRouter API ключ, OWL работает
 
 ---
 
@@ -63,12 +64,9 @@
 
 | Решение | Обоснование |
 |---------|-------------|
-| OWL чаты хранятся в `chats` с `type='owl'` | Единая таблица, не нужна отдельная |
-| Participants формат: `["username"]` JSON array | Совместимость с существующим парсером |
-| `ThemeUi.bind()` для тем | Единообразие с остальным приложением |
-| `adjustResize` + `updateLayoutParams` | Правильная обработка клавиатуры |
-| `CoroutineScope` вместо `lifecycleScope` для `loadHistory()` | Предотвращает отмену корутины |
 | TURN (coturn) для WebRTC | NAT traversal для звонков из разных сетей |
+| HMAC-based креденшалы | Безопаснее чем статический пароль |
+| Не логировать текст E2EE сообщений | Приватность секретных чатов |
 
 ---
 
@@ -76,11 +74,9 @@
 
 | Файл | Назначение |
 |------|------------|
-| `/root/msg/server.go` | Сервер, версия 1.1.0.8 |
-| `/root/msg/server/owl.go` | OWL сессии и БД |
-| `/root/msg/messenger.proto` | gRPC определения |
-| `OwlActivity.kt` | OWL чат UI |
-| `CallActivity.kt` | Звонки UI |
-| `CallManager.kt` | Управление звонками |
+| `/root/msg/server.go` | Сервер, версия 1.1.0.9 |
+| `/root/msg/http_server.go` | HTTP endpoints, /turn-credentials |
+| `/root/msg/server/secret_chat.go` | Секретные чаты |
+| `CallActivity.kt` | Звонки UI, fetchTurnCredentials() |
 | `WebRtcClient.kt` | WebRTC клиент |
-| `RealGrpcClient.kt` | gRPC канал и reconnect |
+| `GrpcClient.kt` | gRPC клиент (delicate API warnings) |
