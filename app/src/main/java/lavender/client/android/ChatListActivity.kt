@@ -1509,19 +1509,37 @@ class ChatListActivity : AppCompatActivity() {
         // When returning from ServersActivity, check if the server changed
         val newServer = CredentialStore.getServerAddress(this)
         if (newServer.isNotEmpty() && newServer != grpcClient.currentServerAddress) {
+            // Disconnect from current server first
+            grpcClient.disconnect()
+
             val parts = newServer.split(":")
             val host = parts[0]
             val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-            // Force reconnect with saved credentials
-            if (::username.isInitialized && ::password.isInitialized) {
-                // Store the new server address
-                CredentialStore.setServerAddress(this, newServer)
-                // Reconnect
-                grpcClient.connect(host, false, port, this, forceReconnect = true)
-                // Trigger auto-login with new server
-                SessionManager.login(this, username, password, newServer, register = false) { _ ->
-                    runOnUiThread { loadChats(); startSync() }
+
+            if (::username.isInitialized && ::password.isInitialized && username.isNotEmpty() && password.isNotEmpty()) {
+                // Try auto-login with saved credentials on the new server
+                SessionManager.login(this, username, password, newServer, register = false) { result ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS", "REGISTRATION_SUCCESS", null -> {
+                                // Auto-login successful, load chats
+                                loadChats()
+                                startSync()
+                            }
+                            "USER_NOT_FOUND", "AUTH_FAILED" -> {
+                                // No account on this server or wrong password — show auth dialog
+                                logout()
+                            }
+                            else -> {
+                                // Connection error or other issue — show auth dialog
+                                logout()
+                            }
+                        }
+                    }
                 }
+            } else {
+                // No saved credentials — show auth dialog
+                showAuthChoiceDialog()
             }
         }
         showAdditionalSettingsSheet { showSettingsSheet() }
