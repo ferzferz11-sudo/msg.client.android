@@ -3,7 +3,6 @@ package lavender.client.android.data.grpc
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -342,7 +341,7 @@ object GrpcClient {
     // Secret chat methods
     fun createSecretChat(targetUsername: String, publicKey: String, callback: (String, Boolean, String, String) -> Unit) {
         val clientVersion = lavender.client.android.BuildConfig.VERSION_NAME
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
             val (chatId, success, message) = lavender.client.android.data.grpc.createSecretChat(
                 targetUsername = targetUsername,
                 targetUserId = "",
@@ -354,14 +353,14 @@ object GrpcClient {
     }
 
     fun exchangeSecretKey(chatId: String, publicKey: String, callback: (Boolean, String, Boolean) -> Unit) {
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
             val (success, peerKey, peerHasKey) = lavender.client.android.data.grpc.exchangeSecretKey(chatId, publicKey)
             callback(success, peerKey, peerHasKey)
         }
     }
 
     fun getSecretChatKey(chatId: String, callback: (String, Boolean) -> Unit) {
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
             val (peerKey, peerHasKey) = lavender.client.android.data.grpc.getSecretChatKey(chatId)
             callback(peerKey, peerHasKey)
         }
