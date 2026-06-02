@@ -235,10 +235,57 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         }
     }
 
+    private fun fetchTurnCredentials(callback: (List<PeerConnection.IceServer>) -> Unit) {
+        Thread {
+            try {
+                val url = java.net.URL("http://13.140.25.249:8082/turn-credentials")
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                val response = connection.inputStream.bufferedReader().readText()
+                val json = org.json.JSONObject(response)
+                val iceServers = json.getJSONArray("iceServers")
+
+                val servers = mutableListOf<PeerConnection.IceServer>()
+                for (i in 0 until iceServers.length()) {
+                    val server = iceServers.getJSONObject(i)
+                    val urls = server.getJSONArray("urls")
+                    val username = server.getString("username")
+                    val credential = server.getString("credential")
+
+                    for (j in 0 until urls.length()) {
+                        val urlStr = urls.getString(j)
+                        servers.add(
+                            PeerConnection.IceServer.builder(urlStr)
+                                .setUsername(username)
+                                .setPassword(credential)
+                                .createIceServer()
+                        )
+                    }
+                }
+                callback(servers)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch TURN credentials, using STUN only", e)
+                callback(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
+            }
+        }.start()
+    }
+
     private fun initWebRtc() {
         webRtcClient = WebRtcClient(this, eglBase.eglBaseContext, this)
-        webRtcClient?.initPeerConnection(listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()))
 
+        // Get TURN credentials from server
+        fetchTurnCredentials { iceServers ->
+            runOnUiThread {
+                webRtcClient?.initPeerConnection(iceServers)
+                setupWebRtcListeners()
+            }
+        }
+    }
+
+    private fun setupWebRtcListeners() {
         // Monitor ICE connection state
         webRtcClient?.onIceConnectionStateChange = { state ->
             Log.d(TAG, "ICE connection state: $state")
