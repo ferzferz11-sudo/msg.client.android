@@ -15,7 +15,6 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import lavender.client.android.data.changelog.ChangelogRepository
 import lavender.client.android.data.changelog.ReleaseInfo
-import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ChangelogAdapter
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.snackbar.Snackbar
@@ -36,24 +35,8 @@ class ChangelogActivity : AppCompatActivity() {
     private lateinit var tvError: TextView
     private lateinit var adapter: ChangelogAdapter
 
-    override fun attachBaseContext(newBase: Context) {
-        val prefs = newBase.getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val languageCode = prefs.getString("language", "ru") ?: "ru"
-        val locale = java.util.Locale.forLanguageTag(languageCode)
-        java.util.Locale.setDefault(locale)
-        val config = android.content.res.Configuration(newBase.resources.configuration)
-        config.setLocale(locale)
-        val context = newBase.createConfigurationContext(config)
-        super.attachBaseContext(context)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val username = try {
-            lavender.client.android.data.session.CredentialStore.getUsername(this)
-        } catch (_: Exception) { "" }
-        ThemeUi.bind(this, username)
 
         setContentView(R.layout.activity_changelog)
 
@@ -88,29 +71,35 @@ class ChangelogActivity : AppCompatActivity() {
         showLoading()
 
         lifecycleScope.launch {
-            val result = ChangelogRepository.fetchReleases(this@ChangelogActivity, forceRefresh)
+            try {
+                val result = ChangelogRepository.fetchReleases(this@ChangelogActivity, forceRefresh)
 
-            result.fold(
-                onSuccess = { releases ->
-                    hideLoading()
-                    if (releases.isNotEmpty()) {
-                        adapter.setReleases(releases)
-                    } else {
-                        showError(getString(R.string.changelog_empty))
-                    }
-                },
-                onFailure = { error ->
-                    hideLoading()
-                    Log.e(TAG, "Failed to load changelog from GitHub", error)
-                    showError(getString(R.string.changelog_error))
-                    // Offer to open on GitHub as fallback
-                    Snackbar.make(rvReleases, R.string.changelog_open_github, Snackbar.LENGTH_LONG)
-                        .setAction(R.string.open) {
-                            openUrl("https://github.com/ferzferz11-sudo/msg.client.android/releases")
+                result.fold(
+                    onSuccess = { releases ->
+                        hideLoading()
+                        if (releases.isNotEmpty()) {
+                            adapter.setReleases(releases)
+                        } else {
+                            showError(getString(R.string.changelog_empty))
                         }
-                        .show()
-                }
-            )
+                    },
+                    onFailure = { error ->
+                        hideLoading()
+                        Log.e(TAG, "Failed to load changelog from GitHub", error)
+                        showError(getString(R.string.changelog_error))
+                        // Offer to open on GitHub as fallback
+                        Snackbar.make(rvReleases, R.string.changelog_open_github, Snackbar.LENGTH_LONG)
+                            .setAction(R.string.open) {
+                                openUrl("https://github.com/ferzferz11-sudo/msg.client.android/releases")
+                            }
+                            .show()
+                    }
+                )
+            } catch (e: Exception) {
+                hideLoading()
+                Log.e(TAG, "Unexpected error loading changelog", e)
+                showError(getString(R.string.changelog_error))
+            }
         }
     }
 
