@@ -1517,32 +1517,18 @@ class ChatListActivity : AppCompatActivity() {
             val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
 
             if (::username.isInitialized && ::password.isInitialized && username.isNotEmpty() && password.isNotEmpty()) {
-                // Try auto-login with saved credentials on the new server
-                SessionManager.login(this, username, password, newServer, register = false) { result ->
-                    runOnUiThread {
-                        when (result) {
-                            "SUCCESS", "REGISTRATION_SUCCESS", null -> {
-                                // Auto-login successful, load chats
-                                loadChats()
-                                startSync()
-                            }
-                            "USER_NOT_FOUND", "AUTH_FAILED" -> {
-                                // No account on this server or wrong password — show auth dialog
-                                logout()
-                            }
-                            else -> {
-                                // Connection error or other issue — show auth dialog
-                                logout()
-                            }
-                        }
-                    }
-                }
-            } else {
-                // No saved credentials — show auth dialog
-                showAuthChoiceDialog()
+                connectToServer(host, port, username, password, isSplitGrpc = BuildConfig.SPLIT_GRPC)
             }
         }
-        showAdditionalSettingsSheet { showSettingsSheet() }
+    }
+
+    private var pendingAboutOnBack: (() -> Unit)? = null
+
+    private val changelogActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // Re-open the about dialog when returning from ChangelogActivity
+        val onBack = pendingAboutOnBack
+        pendingAboutOnBack = null
+        showAboutDialog(onBack)
     }
 
     private fun showWhatsNewDialog(onBack: (() -> Unit)? = null) {
@@ -1625,9 +1611,10 @@ class ChatListActivity : AppCompatActivity() {
 
         btnWhatsNew?.setOnClickListener {
             isNavigatingDeeper = true
+            pendingAboutOnBack = onBack
             sheet.dismiss()
             try {
-                startActivity(ChangelogActivity.createIntent(this@ChatListActivity))
+                changelogActivityLauncher.launch(ChangelogActivity.createIntent(this@ChatListActivity))
             } catch (e: Exception) {
                 Log.e("ChatListActivity", "Failed to open ChangelogActivity", e)
                 showWhatsNewDialog { showAboutDialog(onBack) }

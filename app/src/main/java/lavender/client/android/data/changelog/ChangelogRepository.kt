@@ -35,8 +35,8 @@ object ChangelogRepository {
                 Log.d(TAG, "Fetching releases from GitHub API...")
                 val url = URL(ChangelogParser.getApiUrl())
                 val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
+                connection.connectTimeout = 3000
+                connection.readTimeout = 3000
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
 
                 val responseCode = connection.responseCode

@@ -79,6 +79,11 @@ class ChangelogActivity : AppCompatActivity() {
         loadReleases()
     }
 
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
+    }
+
     private fun loadReleases(forceRefresh: Boolean = false) {
         showLoading()
 
@@ -96,9 +101,8 @@ class ChangelogActivity : AppCompatActivity() {
                 },
                 onFailure = { error ->
                     hideLoading()
-                    Log.e(TAG, "Failed to load changelog", error)
+                    Log.e(TAG, "Failed to load changelog from GitHub", error)
                     showError(getString(R.string.changelog_error))
-
                     // Offer to open on GitHub as fallback
                     Snackbar.make(rvReleases, R.string.changelog_open_github, Snackbar.LENGTH_LONG)
                         .setAction(R.string.open) {
