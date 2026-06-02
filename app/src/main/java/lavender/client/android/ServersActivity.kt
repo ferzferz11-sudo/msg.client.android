@@ -219,9 +219,16 @@ class ServersActivity : AppCompatActivity() {
 
     private fun selectServer(server: ServerEntry) {
         val address = "${server.host}:${server.port}"
-        CredentialStore.setServerAddress(this, address)
-        Toast.makeText(this, getString(R.string.server_selected, server.name), Toast.LENGTH_SHORT).show()
-        finish()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.server_connect_title))
+            .setMessage(getString(R.string.server_connect_confirm, server.name))
+            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                CredentialStore.setServerAddress(this, address)
+                Toast.makeText(this, getString(R.string.server_selected, server.name), Toast.LENGTH_SHORT).show()
+                finish()
+            }
+            .setNegativeButton(getString(R.string.no), null)
+            .show()
     }
 
     private fun showAddServerDialog() {
@@ -327,8 +334,8 @@ class ServersActivity : AppCompatActivity() {
             holder.address.setTextColor(textSecondaryColor)
 
             holder.card.setOnClickListener { onSelect(server) }
-            // Hide delete button for default server
-            if (server.isDefault) {
+            // Hide delete button for default or protected servers
+            if (server.isDefault || server.isProtected) {
                 holder.deleteBtn.visibility = View.GONE
             } else {
                 holder.deleteBtn.visibility = View.VISIBLE

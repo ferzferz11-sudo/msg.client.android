@@ -434,6 +434,10 @@
     <string name="server_added">Server "%s" added</string>
     <string name="server_selected">Selected: %s</string>
     <string name="server_set_default">"%s" set as default</string>
+    <string name="server_connect_title">Подключиться к серверу</string>
+    <string name="server_connect_confirm">Войти на сервер \"%s\"?</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
     <string name="error_required">Required</string>
     <string name="error_invalid_port">Port must be 1-65535</string>
     <string name="delete_server_title">Delete server</string>

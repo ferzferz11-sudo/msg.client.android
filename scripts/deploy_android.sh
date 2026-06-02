@@ -3,6 +3,7 @@
 # Использование:
 #   С указанием пути:  ./deploy_android.sh /path/to/app-release.apk
 #   Без аргументов:    ./deploy_android.sh  (ищет app/build/outputs/apk/release/app-release.apk)
+#   На сервере:        ./deploy_android.sh --local  (ищет APK в текущей директории)
 
 set -e
 
@@ -11,9 +12,18 @@ SERVER_DIR="/var/www/lavender"
 ARCHIVE_DIR="$SERVER_DIR/archive/android"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/lava}"
 
+# Режим — локальный (APK уже на сервере) или удалённый
+LOCAL_MODE=false
+if [ "$1" = "--local" ]; then
+  LOCAL_MODE=true
+  shift
+fi
+
 # Определяем путь к APK
 if [ -n "$1" ]; then
   APK_PATH="$1"
+elif [ "$LOCAL_MODE" = true ]; then
+  APK_PATH="app/build/outputs/apk/release/app-release.apk"
 else
   APK_PATH="app/build/outputs/apk/release/app-release.apk"
 fi
@@ -52,18 +62,23 @@ echo "🚀 Деплой на $SERVER..."
 # Дата для versions.json
 TODAY=$(date +%Y-%m-%d)
 
-# SCP парметры
+# SCP параметры
 SCP_OPTS=""
 SSH_OPTS=""
-if [ -f "$SSH_KEY" ]; then
+if [ "$LOCAL_MODE" = false ] && [ -f "$SSH_KEY" ]; then
   SCP_OPTS="-i $SSH_KEY"
   SSH_OPTS="-i $SSH_KEY"
 fi
 
-
-# 1. Копируем APK на сервер
-echo "→ Копирование APK..."
-scp $SCP_OPTS "$APK_PATH" "$SERVER:$SERVER_DIR/lavender.apk"
+# 1. Копируем APK на сервер (или локально)
+echo "→ Копирование APK в $SERVER_DIR/lavender.apk..."
+if [ "$LOCAL_MODE" = true ]; then
+  cp "$APK_PATH" "$SERVER_DIR/lavender.apk"
+  echo "  (локальное копирование)"
+else
+  scp $SCP_OPTS "$APK_PATH" "$SERVER:$SERVER_DIR/lavender.apk"
+  echo "  (scp на $SERVER)"
+fi
 
 # 2. Копируем в архив и обновляем version.txt + changelog.txt
 echo "→ Обновление сайта..."

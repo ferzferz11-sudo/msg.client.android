@@ -213,7 +213,8 @@ object CredentialStore {
         val name: String,
         val host: String,
         val port: Int = 50051,
-        val isDefault: Boolean = false
+        val isDefault: Boolean = false,
+        val isProtected: Boolean = false
     )
 
     fun getServerList(context: Context): List<ServerEntry> {
@@ -228,7 +229,8 @@ object CredentialStore {
                     name = obj.optString("name", ""),
                     host = obj.optString("host", ""),
                     port = obj.optInt("port", 50051),
-                    isDefault = obj.optBoolean("isDefault", false)
+                    isDefault = obj.optBoolean("isDefault", false),
+                    isProtected = obj.optBoolean("isProtected", false)
                 ))
             }
             list
