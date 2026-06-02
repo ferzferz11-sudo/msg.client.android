@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.9
+### WebRTC — TURN сервер для звонков из разных сетей
+- 📞 **TURN сервер**: Установлен и настроен coturn на сервере для NAT traversal
+- 🌐 **Звонки из разных сетей**: Теперь звонки работают не только в одной WiFi-сети, а из любых сетей через TURN relay
+- 🔑 **Временные креденшалы**: Клиент получает HMAC-based временные креденшалы с сервера через `/turn-credentials`
+- 🛡️ **Fallback**: При недоступности TURN автоматически используется только STUN
+- 🐛 **Исправлено**: Убран дубликат `PeerConnection.Observer` в `WebRtcClient.initPeerConnection` (ошибка компиляции)
+
+### OpenRouter
+- 🔑 **Обновлён API ключ**: Исправлена ошибка 401 (User not found) при обращении к OWL AI
+
 ## 1.1.0.8
 ### Changelog Screen
 - 📜 **ChangelogActivity**: New full-screen activity showing all GitHub releases with version, date, description, and download links.
