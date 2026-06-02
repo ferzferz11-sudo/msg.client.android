@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.10
+### Changelog — исправления
+- 🐛 **Белый экран**: убран ThemeUi.bind и attachBaseContext из ChangelogActivity — теперь не крашится при запуске
+- 🐛 **Таймаут**: уменьшен с 10с до 3с — быстрая ошибка вместо долгого ожидания
+- 🐛 **Навигация назад**: при возврате из ChangelogActivity шторка «О программе» открывается снова
+
 ## 1.1.0.9
 ### WebRTC — TURN сервер для звонков из разных сетей
 - 📞 **TURN сервер**: Установлен и настроен coturn на сервере для NAT traversal
