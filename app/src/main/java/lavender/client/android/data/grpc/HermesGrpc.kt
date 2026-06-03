@@ -127,7 +127,8 @@ fun chatWithOrchestrator(
 
             call.sendMessage(request)
             call.halfClose()
-            run { call.request(Int.MAX_VALUE) }
+            call.request(Int.MAX_VALUE)
+            Unit
         } catch (e: Exception) {
             _hermesTyping.emit(false)
             val errorResp = OrchestratorResponseProto(token = "", finished = true, error = e.message ?: "Unknown error")
