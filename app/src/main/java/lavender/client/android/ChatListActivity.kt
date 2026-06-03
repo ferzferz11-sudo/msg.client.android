@@ -1341,19 +1341,18 @@ class ChatListActivity : AppCompatActivity() {
         // Ensure connection is active if we have a server address
         val currentStatus = grpcClient.connectionStatus.value
         Log.d("ChatListActivity", "onResume: connectionStatus=$currentStatus")
+        val savedServerAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
         val needsReconnect = currentStatus == ConnectionStatus.DISCONNECTED ||
                            currentStatus == ConnectionStatus.FAILED ||
-                           grpcClient.shouldForceReconnect()
+                           grpcClient.shouldForceReconnect() ||
+                           (savedServerAddress.isNotEmpty() && savedServerAddress != grpcClient.currentServerAddress)
 
         if (needsReconnect) {
-            val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
-                ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-
-            if (!serverAddress.isNullOrEmpty()) {
-                val parts = serverAddress.split(":")
+            if (savedServerAddress.isNotEmpty()) {
+                val parts = savedServerAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                Log.d("ChatListActivity", "onResume: reconnecting to $host:$port")
+                Log.d("ChatListActivity", "onResume: reconnecting to $host:$port (was: ${grpcClient.currentServerAddress})")
                 grpcClient.connect(host, false, port, this, true)
             }
         }
@@ -1379,9 +1378,8 @@ class ChatListActivity : AppCompatActivity() {
             // Still not ready after 3s — force reconnect
             if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
                 Log.d("ChatListActivity", "onResume: connection still not READY after 3s, forcing reconnect")
-                val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
-                    ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-                if (!serverAddress.isNullOrEmpty()) {
+                val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this@ChatListActivity)
+                if (serverAddress.isNotEmpty()) {
                     val parts = serverAddress.split(":")
                     grpcClient.connect(parts[0], false, parts.getOrNull(1)?.toIntOrNull() ?: 50051, this@ChatListActivity, true)
                 }
