@@ -1984,6 +1984,10 @@ class ChatListActivity : AppCompatActivity() {
                 },
                 SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "Чат с AI") {
                     createNewOwlChat()
+                },
+                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Hermes AI") {
+                    val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
+                    startActivity(intent)
                 }
             )).show()
     }

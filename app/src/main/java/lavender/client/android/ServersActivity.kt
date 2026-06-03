@@ -225,6 +225,7 @@ class ServersActivity : AppCompatActivity() {
             .setPositiveButton(getString(R.string.yes)) { _, _ ->
                 CredentialStore.setServerAddress(this, address)
                 Toast.makeText(this, getString(R.string.server_selected, server.name), Toast.LENGTH_SHORT).show()
+                setResult(RESULT_OK)
                 finish()
             }
             .setNegativeButton(getString(R.string.no), null)
