@@ -82,7 +82,7 @@ fun chatWithOrchestrator(
     scope: CoroutineScope,
     onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
 ) {
-    val channel = RealGrpcClient.getChannel() ?: return Log.w("HermesGrpc", "chatWithOrchestrator: channel is null")
+    val channel = RealGrpcClient.getChannel() ?: run { Log.w("HermesGrpc", "chatWithOrchestrator: channel is null"); return }
     val methodDesc = MethodDescriptor.newBuilder<OrchestratorRequestProto, OrchestratorResponseProto>()
         .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
         .setFullMethodName("messenger.ChatService/ChatWithOrchestrator")
@@ -128,7 +128,6 @@ fun chatWithOrchestrator(
             call.sendMessage(request)
             call.halfClose()
             call.request(Int.MAX_VALUE)
-            Unit
         } catch (e: Exception) {
             _hermesTyping.emit(false)
             val errorResp = OrchestratorResponseProto(token = "", finished = true, error = e.message ?: "Unknown error")
