@@ -19,6 +19,7 @@ import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.models.AgentPreset
+import lavender.client.android.data.models.AgentInfo
 import lavender.client.android.data.session.SessionManager
 
 class AgentListActivity : AppCompatActivity() {
@@ -62,6 +63,9 @@ class AgentListActivity : AppCompatActivity() {
             onDeleteClick = { agent -> confirmDeleteAgent(agent) },
             showDeleteButton = false
         )
+        adapter.onAgentLongClick = { agent ->
+            showAgentSettingsSheet(agent)
+        }
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -155,5 +159,17 @@ class AgentListActivity : AppCompatActivity() {
             }
             .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    private fun showAgentSettingsSheet(agent: AgentInfo) {
+        val sheet = AgentSettingsBottomSheet(
+            context = this,
+            agent = agent,
+            userId = userId,
+            onSaved = {
+                viewModel.loadUserAgents(userId)
+            }
+        )
+        sheet.show()
     }
 }

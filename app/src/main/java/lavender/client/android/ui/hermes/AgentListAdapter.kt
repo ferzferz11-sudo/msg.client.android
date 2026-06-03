@@ -18,7 +18,8 @@ sealed class AgentListItem {
 class AgentListAdapter(
     private val onAgentClick: (Any) -> Unit,
     private val onDeleteClick: (Any) -> Unit,
-    private var showDeleteButton: Boolean = false
+    private var showDeleteButton: Boolean = false,
+    var onAgentLongClick: ((AgentInfo) -> Unit)? = null
 ) : RecyclerView.Adapter<AgentListAdapter.ViewHolder>() {
 
     private var items = listOf<AgentListItem>()
@@ -67,6 +68,10 @@ class AgentListAdapter(
                     deleteButton.visibility = if (showDeleteButton) View.VISIBLE else View.GONE
 
                     itemView.setOnClickListener { onAgentClick(item.agent) }
+                    itemView.setOnLongClickListener {
+                        onAgentLongClick?.invoke(item.agent)
+                        true
+                    }
                     deleteButton.setOnClickListener { onDeleteClick(item.agent) }
                 }
             }
