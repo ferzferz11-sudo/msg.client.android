@@ -418,4 +418,83 @@ object GrpcClient {
     fun getOwlSettingModel(chatId: String): String {
         return lavender.client.android.data.grpc.getOwlSettingModel(chatId)
     }
+
+    // ======= Hermes Multi-Agent Orchestrator =======
+
+    // Streaming — чат с оркестратором
+    fun chatWithOrchestrator(
+        userId: String,
+        sessionId: String,
+        message: String,
+        agentId: String = "",
+        mode: String = "",
+        scope: kotlinx.coroutines.CoroutineScope,
+        onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
+    ) {
+        lavender.client.android.data.grpc.chatWithOrchestrator(
+            userId, sessionId, message, agentId, mode, scope, onResponse
+        )
+    }
+
+    // StateFlow для Hermес ответов
+    val hermesResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.OrchestratorResponseProto> =
+        lavender.client.android.data.grpc.hermesResponses
+    val hermesTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
+        lavender.client.android.data.grpc.hermesTyping
+
+    // Unary методы
+    suspend fun listAgents(userId: String = ""): List<lavender.client.android.data.proto.AgentInfoProto> =
+        lavender.client.android.data.grpc.listAgents(userId)
+
+    suspend fun listAgentPresets(): List<lavender.client.android.data.proto.AgentPresetInfoProto> =
+        lavender.client.android.data.grpc.listAgentPresets()
+
+    suspend fun createAgent(
+        userId: String,
+        presetId: String,
+        customName: String = "",
+        customPrompt: String = "",
+        model: String = "",
+        maxTokens: Int = 0
+    ): lavender.client.android.data.proto.CreateAgentResponseProto =
+        lavender.client.android.data.grpc.createAgent(userId, presetId, customName, customPrompt, model, maxTokens)
+
+    suspend fun updateAgent(
+        agentId: String,
+        userId: String,
+        name: String = "",
+        systemPrompt: String = "",
+        model: String = "",
+        maxTokens: Int = 0
+    ): Boolean =
+        lavender.client.android.data.grpc.updateAgent(agentId, userId, name, systemPrompt, model, maxTokens)
+
+    suspend fun deleteAgent(agentId: String, userId: String): Boolean =
+        lavender.client.android.data.grpc.deleteAgent(agentId, userId)
+
+    suspend fun listUserAgents(userId: String): List<lavender.client.android.data.proto.AgentInfoProto> =
+        lavender.client.android.data.grpc.listUserAgents(userId)
+
+    suspend fun createHermesSession(
+        userId: String,
+        agentId: String = "",
+        mode: String = ""
+    ): lavender.client.android.data.proto.CreateHermesSessionResponseProto =
+        lavender.client.android.data.grpc.createHermesSession(userId, agentId, mode)
+
+    suspend fun deleteHermesSession(sessionId: String, userId: String): Boolean =
+        lavender.client.android.data.grpc.deleteHermesSession(sessionId, userId)
+
+    suspend fun getOrchestratorHistory(
+        sessionId: String,
+        limit: Int = 50
+    ): List<lavender.client.android.data.proto.OrchestratorHistoryMessageProto> =
+        lavender.client.android.data.grpc.getOrchestratorHistory(sessionId, limit)
+
+    // Remote Agent методы (FUTURE)
+    suspend fun listRemoteAgents(filterStatus: String = ""): List<lavender.client.android.data.proto.RemoteAgentInfoProto> =
+        lavender.client.android.data.grpc.listRemoteAgents(filterStatus)
+
+    suspend fun getRemoteAgentStatus(agentId: String): lavender.client.android.data.proto.GetRemoteAgentStatusResponseProto =
+        lavender.client.android.data.grpc.getRemoteAgentStatus(agentId)
 }

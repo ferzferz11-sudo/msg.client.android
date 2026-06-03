@@ -34,6 +34,12 @@
     <color name="tg_blue">#5F9EA0</color>
     <color name="tg_input_hint">#9E9E9E</color>
 
+    <!-- Hermes chat colors -->
+    <color name="message_user_text">#FFFFFFFF</color>
+    <color name="message_user_time">#B0FFFFFF</color>
+    <color name="message_agent_text">#FFE0E0E0</color>
+    <color name="message_agent_time">#909090</color>
+
     <!-- UI element colors -->
     <color name="primary">@color/lavender_mist</color>
     <color name="primary_dark">#1A1A1A</color>

@@ -104,6 +104,11 @@
 
         <activity android:name=".ChangelogActivity" android:exported="false" />
 
+        <activity android:name=".ui.hermes.HermesChatActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.hermes.AgentListActivity" android:exported="false" />
+        <activity android:name=".ui.hermes.AgentSettingsActivity" android:exported="false" />
+
         <activity
             android:name=".MapPickerActivity"
             android:exported="false" />

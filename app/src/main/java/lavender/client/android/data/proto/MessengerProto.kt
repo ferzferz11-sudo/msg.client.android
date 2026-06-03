@@ -945,3 +945,192 @@ data class GetSecretChatKeyResponseProto(
     val peerPublicKey: String = "",
     val peerHasKey: Boolean = false
 )
+
+// ======= Hermes Multi-Agent Orchestrator =======
+
+data class OrchestratorRequestProto(
+    val userId: String = "",
+    val sessionId: String = "",
+    val message: String = "",
+    val agentId: String = "",
+    val mode: String = ""
+)
+
+data class OrchestratorResponseProto(
+    val token: String = "",
+    val finished: Boolean = false,
+    val error: String = "",
+    val agentId: String = "",
+    val agentName: String = ""
+)
+
+data class GetOrchestratorHistoryRequestProto(
+    val sessionId: String = "",
+    val limit: Int = 50
+)
+
+data class OrchestratorHistoryMessageProto(
+    var role: String = "",
+    var content: String = "",
+    var agentId: String = "",
+    var agentName: String = "",
+    var createdAt: String = ""
+)
+
+data class GetOrchestratorHistoryResponseProto(
+    val messagesList: List<OrchestratorHistoryMessageProto> = emptyList()
+)
+
+data class ListAgentsRequestProto(
+    val userId: String = ""
+)
+
+data class AgentInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val role: String = "",
+    val isPreset: Boolean = false,
+    val icon: String = ""
+)
+
+data class ListAgentsResponseProto(
+    val agents: List<AgentInfoProto> = emptyList()
+)
+
+data class ListAgentPresetsRequestProto(
+    val dummy: Boolean = false  // empty message needs at least one field
+)
+
+data class AgentPresetInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val role: String = "",
+    val description: String = "",
+    val icon: String = "",
+    val maxTokens: Int = 0
+)
+
+data class ListAgentPresetsResponseProto(
+    val presets: List<AgentPresetInfoProto> = emptyList()
+)
+
+data class CreateAgentRequestProto(
+    val userId: String = "",
+    val presetId: String = "",
+    val customName: String = "",
+    val customPrompt: String = "",
+    val model: String = "",
+    val maxTokens: Int = 0
+)
+
+data class CreateAgentResponseProto(
+    val agentId: String = "",
+    val success: Boolean = false,
+    val message: String = "",
+    val agent: AgentInfoProto? = null
+)
+
+data class UpdateAgentRequestProto(
+    val agentId: String = "",
+    val userId: String = "",
+    val name: String = "",
+    val systemPrompt: String = "",
+    val model: String = "",
+    val maxTokens: Int = 0
+)
+
+data class UpdateAgentResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeleteAgentRequestProto(
+    val agentId: String = "",
+    val userId: String = ""
+)
+
+data class DeleteAgentResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class ListUserAgentsRequestProto(
+    val userId: String = ""
+)
+
+data class ListUserAgentsResponseProto(
+    val agents: List<AgentInfoProto> = emptyList()
+)
+
+data class CreateHermesSessionRequestProto(
+    val userId: String = "",
+    val agentId: String = "",
+    val mode: String = ""
+)
+
+data class CreateHermesSessionResponseProto(
+    val sessionId: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeleteHermesSessionRequestProto(
+    val sessionId: String = "",
+    val userId: String = ""
+)
+
+data class DeleteHermesSessionResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// ======= Remote Agent proto classes (FUTURE) =======
+
+data class ListRemoteAgentsRequestProto(
+    val filterStatus: String = ""
+)
+
+data class RemoteAgentInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val host: String = "",
+    val ipAddress: String = "",
+    val os: String = "",
+    val status: String = "",
+    val capabilities: List<String> = emptyList(),
+    val activeTasks: Int = 0,
+    val lastHeartbeat: String = ""
+)
+
+data class ListRemoteAgentsResponseProto(
+    val agents: List<RemoteAgentInfoProto> = emptyList()
+)
+
+data class DeployAgentTaskRequestProto(
+    val agentId: String = "",
+    val taskType: String = "",
+    val params: Map<String, String> = emptyMap(),
+    val workingDir: String = "",
+    val timeoutSec: Int = 0
+)
+
+data class DeployAgentTaskResponseProto(
+    val taskId: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetRemoteAgentStatusRequestProto(
+    val agentId: String = ""
+)
+
+data class GetRemoteAgentStatusResponseProto(
+    val id: String = "",
+    val name: String = "",
+    val status: String = "",
+    val host: String = "",
+    val capabilities: List<String> = emptyList(),
+    val activeTasks: Int = 0,
+    val lastHeartbeat: String = ""
+)
