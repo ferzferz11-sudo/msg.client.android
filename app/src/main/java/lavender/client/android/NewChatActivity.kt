@@ -232,11 +232,8 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        @Suppress("DEPRECATION")
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        // setDecorFitsSystemWindows(true) — needed for adjustResize from manifest
+        // Do NOT use transparent here — breaks keyboard adjustment
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_chat)
@@ -451,7 +448,7 @@ class NewChatActivity : AppCompatActivity() {
                 setColor(secretTheme.surfaceContainer.toColorInt())
             }
             toolbarAvatar.background = secretBg
-            val secretPad = 8.dpToPx()
+            val secretPad = 4.dpToPx()
             toolbarAvatar.setPadding(secretPad, secretPad, secretPad, secretPad)
             toolbarSubtitle.text = getString(R.string.e2ee_enabled)
             toolbarSubtitle.setTextColor(secretTheme.primaryColor.toColorInt())
@@ -716,7 +713,7 @@ class NewChatActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean { menuInflater.inflate(R.menu.chat_menu, menu); return true }
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.action_search)?.isVisible = !selectionMode
-        menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_")
+        menu.findItem(R.id.action_video_call)?.isVisible = !selectionMode && isDirect && !roomId.startsWith("favorites_") && !isSecret
         menu.findItem(R.id.action_conference)?.isVisible = false
         
         val iconColor = run {
@@ -1053,6 +1050,20 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun sendMessage(text: String, imageUrl: String) {
         typingJob?.cancel(); if (isTypingSignalSent) { isTypingSignalSent = false; grpcClient.sendTypingSignal(username, false) }
+
+        // E2EE: encrypt message for secret chats
+        if (isSecret && secretKeyExchanged) {
+            val encrypted = lavender.client.android.data.crypto.E2EEManager.encryptMessage(this, roomId, text)
+            if (encrypted != null) {
+                grpcClient.sendE2EEMessage(roomId, encrypted)
+                if (roomId.startsWith("favorites_")) viewModel.markRead(username)
+                grpcClient.deleteDraft(roomId); messageInput.text.clear(); hideReplyPreview(); sendButton.isVisible = false; audioButton.isVisible = true
+            } else {
+                showToast("E2EE encryption failed")
+            }
+            return
+        }
+
         val et = when { text.isEmpty() && imageUrl.isEmpty() -> "Message"; imageUrl.isNotEmpty() && text.isEmpty() -> ""; else -> text }
         val msg = Message(id = java.util.UUID.randomUUID().toString(), user = username, text = et, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "", userId = grpcClient.getUserId() ?: "", isSent = false)
         grpcClient.addLocalMessage(msg); grpcClient.sendMessage(msg)

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="4dp">
+
+    <!-- Date separator -->
+    <TextView
+        android:id="@+id/dateText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:background="@drawable/bg_date_separator"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="22 мая" />
+
+    <!-- Selection indicator -->
+    <ImageView
+        android:id="@+id/selectionIndicator"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_alignTop="@id/messageContainer"
+        android:layout_alignBottom="@id/messageContainer"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_unchecked"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <!-- Message content -->
+    <LinearLayout
+        android:id="@+id/messageContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_toEndOf="@id/selectionIndicator"
+        android:layout_below="@id/dateText"
+        android:layout_marginStart="0dp"
+        android:layout_alignParentEnd="false"
+        android:gravity="bottom">
+
+        <!-- Avatar (for incoming/OWL messages) -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/avatarImageView"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:scaleType="centerCrop"
+            android:padding="1dp"
+            android:layout_gravity="bottom"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="2dp"
+            android:visibility="gone"
+            app:shapeAppearanceOverlay="@style/CircleAppearanceOverlay" />
+
+        <!-- Bubble -->
+        <LinearLayout
+            android:id="@+id/messageBubble"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="300dp"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:minWidth="40dp">
+
+            <!-- Reply quote container -->
+            <LinearLayout
+                android:id="@+id/replyQuoteContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                android:background="#15000000"
+                android:padding="4dp"
+                android:layout_marginBottom="4dp"
+                tools:visibility="visible">
+
+                <View
+                    android:id="@+id/replyQuoteBar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/colorPrimary"
+                    android:layout_marginEnd="4dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/replyQuoteUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        tools:text="Pavel" />
+
+                    <TextView
+                        android:id="@+id/replyQuoteText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="?android:attr/textColorPrimary"
+                        tools:text="Hello, how are you?" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Username (for group chats, hidden in OWL) -->
+            <TextView
+                android:id="@+id/userText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:layout_marginBottom="2dp"
+                android:visibility="gone" />
+
+            <!-- Message text -->
+            <TextView
+                android:id="@+id/messageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:autoLink="web"
+                android:linksClickable="true"
+                android:layout_gravity="start"
+                tools:text="Hello world" />
+
+            <!-- Time + read status row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="start"
+                android:layout_marginTop="2dp"
+                android:layout_gravity="start">
+
+                <TextView
+                    android:id="@+id/editedText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:layout_marginEnd="4dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/timeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    tools:text="12:34" />
+
+                <ImageView
+                    android:id="@+id/readStatusIcon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="2dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Reactions -->
+            <TextView
+                android:id="@+id/reactionsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:padding="4dp"
+                android:textSize="12sp"
+                android:background="@drawable/bg_reactions"
+                android:visibility="gone"
+                tools:visibility="visible"
+                tools:text="❤️ 2" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Typing indicator (OWL is typing) -->
+    <LinearLayout
+        android:id="@+id/typingContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dateText"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="@drawable/owl_bubble_owl"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ProgressBar
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:indeterminateTint="?attr/colorPrimary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OWL печатает..."
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+</RelativeLayout>

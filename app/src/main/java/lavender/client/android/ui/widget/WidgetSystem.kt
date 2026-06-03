@@ -176,8 +176,16 @@ open class StandardBottomSheet(
                     view.strokeWidth = 0
                 }
             }
-        }
-else if (view is android.widget.ProgressBar) {
+        } else if (view is android.widget.Spinner) {
+            if (view is androidx.appcompat.widget.AppCompatSpinner) {
+                view.setPopupBackgroundDrawable(
+                    android.graphics.drawable.ColorDrawable(
+                        primaryColor
+                    )
+                )
+                view.setBackgroundColor(primaryColor)
+            }
+        } else if (view is android.widget.ProgressBar) {
             view.indeterminateTintList = ColorStateList.valueOf(primaryColor)
         } else if (view is ImageView && view !is de.hdodenhof.circleimageview.CircleImageView) {
             view.imageTintList = ColorStateList.valueOf(primaryColor)
@@ -230,6 +238,14 @@ else if (view is android.widget.ProgressBar) {
 
     fun show() {
         applyTheme(ThemeStore.currentTheme())
+        dialog?.apply {
+            @Suppress("DEPRECATION")
+            window?.setSoftInputMode(
+                android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            )
+            @Suppress("DEPRECATION")
+            behavior.peekHeight = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        }
         dialog?.show()
     }
 
@@ -355,7 +371,7 @@ open class ListBottomSheet(
     }
 
     override fun setOnDismissListener(listener: () -> Unit): ListBottomSheet {
-        super.setOnDismissListener(listener)
+        dialog?.setOnDismissListener { listener() }
         return this
     }
 }

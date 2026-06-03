@@ -56,11 +56,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.suspendCancellableCoroutine
 import lavender.client.android.data.grpc.ConnectionStatus
+import lavender.client.android.data.grpc.RealGrpcClient
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.session.SessionManager
-import lavender.client.android.data.updates.UpdateManager
+import lavender.client.android.data.db.*
+import lavender.client.android.data.models.*
+import lavender.client.android.data.session.*
+import lavender.client.android.data.updates.*
 import lavender.client.android.databinding.ActivityChatListBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -91,6 +94,9 @@ class ChatListActivity : AppCompatActivity() {
     private lateinit var password: String
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    private var isChatsLoaded = false // prevent reload flicker on resume
+    private var isNewUser = false // track new user for loading indicator
+    private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
 
     private var syncJob: Job? = null
     
@@ -178,11 +184,12 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         val previousUsername = prefs.getString("last_logged_username", "")
-        val isNewUser = previousUsername != username
+        isNewUser = previousUsername != username
 
         if (isNewUser) {
             // Clear cache for new user to prevent showing previous user's chats
             clearLocalCacheSync()
+            isChatsLoaded = false
             // Save current username as last logged
             prefs.edit { putString("last_logged_username", username) }
         }
@@ -234,6 +241,14 @@ class ChatListActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(
             lifecycleScope,
             onChatClick = { chat ->
+                // OWL AI virtual chat
+                if (chat.id.startsWith("owl-")) {
+                    val intent = Intent(this, OwlActivity::class.java)
+                    intent.putExtra("CHAT_ID", chat.id)
+                    startActivity(intent)
+                    return@ChatAdapter
+                }
+
                 if (chat.type == "favorites") {
                     val intent = Intent(this, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
@@ -432,7 +447,14 @@ class ChatListActivity : AppCompatActivity() {
                         // Only start chat background stream if we are actually on this screen
                         // and no other room is active
                         grpcClient.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
-                        loadChats()
+                        if (!isChatsLoaded) {
+                            // Show loading indicator for new users
+                            if (isNewUser) {
+                                binding.loadingContainer.isVisible = true
+                                binding.chatsRecyclerView.isVisible = false
+                            }
+                            loadChats()
+                        }
                     }
                 }
             }
@@ -517,7 +539,7 @@ class ChatListActivity : AppCompatActivity() {
         intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
             chatAdapter.setChatDeleting(chatId, true)
         }
-        loadChats()
+        if (!isChatsLoaded) loadChats()
     }
 
     private fun performDirectDeletion(chatId: String) {
@@ -723,16 +745,18 @@ class ChatListActivity : AppCompatActivity() {
 
         Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
-        binding.swipeRefreshLayout.isRefreshing = true
+        // Show refresh indicator only for pull-to-refresh (list already has data)
+        val isRefresh = chats.isNotEmpty()
+        if (isRefresh) {
+            binding.swipeRefreshLayout.isRefreshing = true
+        }
 
         // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
-            delay(15000) // 15 second timeout
+            delay(5000)
             if (binding.swipeRefreshLayout.isRefreshing) {
                 Log.w("ChatListActivity", "Load chats timeout, stopping refresh")
-                runOnUiThread {
-                    binding.swipeRefreshLayout.isRefreshing = false
-                }
+                runOnUiThread { binding.swipeRefreshLayout.isRefreshing = false }
             }
         }
 
@@ -744,108 +768,116 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // 1. Immediately ensure Favorites is in the list to avoid flickering
-        if (chats.none { it.id == "favorites" }) {
-            chats.add(0, ChatInfo(
-                id = "favorites",
-                name = getString(R.string.favorites),
-                type = "favorites",
-                lastMessageText = getString(R.string.favorites_description),
-                lastMessageTime = 0L
-            ))
-            chatAdapter.setChats(chats.toList())
-        }
-
-        grpcClient.getChats(username, skipCache = skipCache) { fetchedChats ->
-            loadTimeout.cancel()
-            val userId = grpcClient.getUserId() ?: ""
-            if (userId.isNotEmpty()) {
-                grpcClient.getMutedChats { mutedChatIds ->
-                    grpcClient.getFavorites(userId) { _ ->
-                        runOnUiThread {
-                            binding.swipeRefreshLayout.isRefreshing = false
-                            chats.clear()
-
-                            // Always add Favorites at the top
-                            chats.add(
-                                ChatInfo(
-                                    id = "favorites",
-                                    name = getString(R.string.favorites),
-                                    type = "favorites",
-                                    lastMessageText = getString(R.string.favorites_description),
-                                    lastMessageTime = 0L
-                                )
-                            )
-
-                            val chatsWithMute = fetchedChats
-                                .filter { !pendingDeletions.contains(it.id) }
-                                .map { chat ->
-                                    chat.copy(isMuted = mutedChatIds.contains(chat.id))
-                                }
-
-                            // Clean up pendingDeletions that are no longer on server
-                            val serverIds = fetchedChats.map { it.id }.toSet()
-                            pendingDeletions.removeAll { !serverIds.contains(it) }
-
-                            chats.addAll(chatsWithMute)
-                            chatAdapter.setChats(chats.toList())
-
-                            // If user has real chats (more than just favorites), mark onboarding as completed
-                            if (fetchedChats.isNotEmpty()) {
-                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                                if (!prefs.getBoolean("onboarding_completed_$username", false)) {
-                                    prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                                    hideOnboardingTips()
-                                }
-                            }
-
-                            val totalUnread = chats.sumOf { it.unreadCount }
-                            updateAppIconBadge(totalUnread)
-
-                            Log.d("ChatListActivity", "Loaded ${chats.size} chats")
-
-                            // Clear searching filter or force refresh to ensure Favorites stay
-                            updateUpdateIndicatorVisibility()
-                            checkForUpdatesSilently()
-                            checkAnnouncements()
-
-                            // Pre-fetch avatars for all participants
-                            fetchedChats.forEach { chat ->
-                                try {
-                                    val arr = org.json.JSONArray(chat.participants)
-                                    for (i in 0 until arr.length()) {
-                                        val p = arr.getString(i)
-                                        if (!grpcClient.getAvatarCache().containsKey(p)) {
-                                            grpcClient.getUserAvatar(p) { }
-                                        }
-                                    }
-                                } catch (_: Exception) {
-                                }
-                            }
-                        }
+        // Fetch everything on background thread, apply once on UI
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 1. Fetch chats from server
+                val fetchedChats = suspendCancellableCoroutine<List<ChatInfo>> { cont ->
+                    grpcClient.getChats(username, skipCache = skipCache) { chats ->
+                        if (cont.isActive) cont.resumeWith(Result.success(chats))
                     }
                 }
-            } else {
-                // No userId - still show favorites
-                runOnUiThread {
-                    binding.swipeRefreshLayout.isRefreshing = false
-                    chats.clear()
-                    chats.add(
-                        ChatInfo(
-                            id = "favorites",
-                            name = getString(R.string.favorites),
-                            type = "favorites",
-                            lastMessageText = getString(R.string.favorites_description),
-                            lastMessageTime = 0L
-                        )
+
+                // 2. Get muted chats IDs (non-blocking fire-and-forget on IO)
+                val userId = grpcClient.getUserId() ?: ""
+                val mutedIds = if (userId.isNotEmpty()) {
+                    suspendCancellableCoroutine<Set<String>> { cont ->
+                        grpcClient.getMutedChats { ids ->
+                            if (cont.isActive) cont.resumeWith(Result.success(ids.toSet()))
+                        }
+                    }
+                } else emptySet()
+
+                // 3. Clean up pending deletions
+                val serverIds = fetchedChats.map { it.id }.toSet()
+                pendingDeletions.removeAll { !serverIds.contains(it) }
+                val filteredChats = fetchedChats
+                    .filter { !pendingDeletions.contains(it.id) }
+                    .map { it.copy(isMuted = mutedIds.contains(it.id)) }
+                    .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
+
+                // 4. Build final list: Favorites + sorted chats
+                val newChats = mutableListOf(
+                    ChatInfo(
+                        id = "favorites",
+                        name = getString(R.string.favorites),
+                        type = "favorites",
+                        lastMessageText = getString(R.string.favorites_description),
+                        lastMessageTime = 0L
                     )
-                    chats.addAll(fetchedChats)
-                    chatAdapter.setChats(chats.toList())
-                    updateAppIconBadge(0)
+                )
+                newChats.addAll(filteredChats)
+
+                // 5. Update local cache in background
+                try {
+                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                    db.chatDao().syncChats(filteredChats.map { it.toEntity() })
+                } catch (e: Exception) {
+                    Log.e("ChatListActivity", "Failed to cache chats", e)
                 }
-                checkForUpdatesSilently()
-                checkAnnouncements()
+
+                // 6. Apply to UI once — single update, no flicker
+                withContext(Dispatchers.Main) {
+                    loadTimeout.cancel()
+                    binding.swipeRefreshLayout.isRefreshing = false
+
+                    chats.clear()
+                    chats.addAll(newChats)
+                    chatAdapter.setChats(newChats)
+
+                    // Mark onboarding completed
+                    if (fetchedChats.isNotEmpty()) {
+                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                        if (!prefs.getBoolean("onboarding_completed_$username", false)) {
+                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
+                            hideOnboardingTips()
+                        }
+                    }
+
+                    updateAppIconBadge(chats.sumOf { it.unreadCount })
+                    isChatsLoaded = true
+
+                    // Hide loading indicator for new users
+                    if (isNewUser) {
+                        binding.loadingContainer.isVisible = false
+                        // Show welcome screen or chat list
+                        if (fetchedChats.isEmpty()) {
+                            setupOnboardingTips()
+                        } else {
+                            binding.chatsRecyclerView.isVisible = true
+                        }
+                    }
+
+                    Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
+                }
+
+                // Fetch favorites data in background (non-visual)
+                if (userId.isNotEmpty()) {
+                    grpcClient.getFavorites(userId) { _ -> }
+                }
+
+                // Fallback: if server returned empty, try cache
+                if (fetchedChats.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        loadChatsFromCache(fetchedChats)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ChatListActivity", "Error loading chats", e)
+                withContext(Dispatchers.Main) {
+                    loadTimeout.cancel()
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
             }
+        }
+    }
+
+    // Debounced refresh: wait 500ms for rapid events to batch together
+    private fun refreshChatsDebounced() {
+        refreshDebounceJob?.cancel()
+        refreshDebounceJob = lifecycleScope.launch {
+            delay(500)
+            loadChats(skipCache = true)
         }
     }
 
@@ -873,7 +905,8 @@ class ChatListActivity : AppCompatActivity() {
                     
                     runOnUiThread {
                         if (cachedChats.isNotEmpty()) {
-                            chats.addAll(cachedChats.map { dbChat ->
+                            val sorted = cachedChats.sortedByDescending { it.lastMessageTime }
+                            chats.addAll(sorted.map { dbChat ->
                                 ChatInfo(
                                     id = dbChat.id,
                                     name = dbChat.name,
@@ -1294,6 +1327,11 @@ class ChatListActivity : AppCompatActivity() {
         if (::chatAdapter.isInitialized) {
             chatAdapter.updateAvatarCache(grpcClient.getAvatarCache())
             chatAdapter.updateTheme()
+            // Fetch avatar from server if not in cache (e.g. after app restart)
+            val avatarCache = grpcClient.getAvatarCache()
+            if (avatarCache[username].isNullOrEmpty()) {
+                grpcClient.getUserAvatar(username) { _ -> }
+            }
         }
         
         updateUpdateIndicatorVisibility()
@@ -1301,22 +1339,52 @@ class ChatListActivity : AppCompatActivity() {
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
 
         // Ensure connection is active if we have a server address
-        val needsReconnect = grpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED ||
-                           grpcClient.shouldForceReconnect()
+        val currentStatus = grpcClient.connectionStatus.value
+        Log.d("ChatListActivity", "onResume: connectionStatus=$currentStatus")
+        val savedServerAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
+        val needsReconnect = currentStatus == ConnectionStatus.DISCONNECTED ||
+                           currentStatus == ConnectionStatus.FAILED ||
+                           grpcClient.shouldForceReconnect() ||
+                           (savedServerAddress.isNotEmpty() && savedServerAddress != grpcClient.currentServerAddress)
 
         if (needsReconnect) {
-            val serverAddress = intent.getStringExtra("SERVER_ADDRESS")
-                ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-
-            if (!serverAddress.isNullOrEmpty()) {
-                val parts = serverAddress.split(":")
+            if (savedServerAddress.isNotEmpty()) {
+                val parts = savedServerAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                grpcClient.connect(host, false, port, this, false)
+                Log.d("ChatListActivity", "onResume: reconnecting to $host:$port (was: ${grpcClient.currentServerAddress})")
+                grpcClient.connect(host, false, port, this, true)
             }
         }
 
-        loadChats()
+        // Reload chats when returning from another activity.
+        // The connection may have dropped while we were away (e.g. OWL activity
+        // held the gRPC channel and keepalive failed). The Flow collector in
+        // onCreate will call loadChats() when status becomes READY, but only
+        // if the channel actually reconnects. As a safety net, if after 3 seconds
+        // the status is still not READY, force a reconnect.
+        lifecycleScope.launch {
+            var waited = 0
+            while (waited < 3000) {
+                delay(500)
+                waited += 500
+                if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                    if (!isChatsLoaded) {
+                        loadChats()
+                    }
+                    return@launch
+                }
+            }
+            // Still not ready after 3s — force reconnect
+            if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                Log.d("ChatListActivity", "onResume: connection still not READY after 3s, forcing reconnect")
+                val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this@ChatListActivity)
+                if (serverAddress.isNotEmpty()) {
+                    val parts = serverAddress.split(":")
+                    grpcClient.connect(parts[0], false, parts.getOrNull(1)?.toIntOrNull() ?: 50051, this@ChatListActivity, true)
+                }
+            }
+        }
     }
 
     override fun onPause() {
@@ -1339,6 +1407,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun logout() {
         syncJob?.cancel()
+        isChatsLoaded = false
         SessionManager.logout(this)
 
         // Save current theme to SharedPreferences before logout
@@ -1438,22 +1507,49 @@ class ChatListActivity : AppCompatActivity() {
         // When returning from ServersActivity, check if the server changed
         val newServer = CredentialStore.getServerAddress(this)
         if (newServer.isNotEmpty() && newServer != grpcClient.currentServerAddress) {
+            // Disconnect from current server first
+            grpcClient.disconnect()
+
             val parts = newServer.split(":")
             val host = parts[0]
             val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-            // Force reconnect with saved credentials
-            if (::username.isInitialized && ::password.isInitialized) {
-                // Store the new server address
-                CredentialStore.setServerAddress(this, newServer)
-                // Reconnect
-                grpcClient.connect(host, false, port, this, forceReconnect = true)
-                // Trigger auto-login with new server
-                SessionManager.login(this, username, password, newServer, register = false) { _ ->
-                    runOnUiThread { loadChats(); startSync() }
+
+            if (::username.isInitialized && ::password.isInitialized && username.isNotEmpty() && password.isNotEmpty()) {
+                // Try auto-login with saved credentials on the new server
+                SessionManager.login(this, username, password, newServer, register = false) { result ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS", "REGISTRATION_SUCCESS", null -> {
+                                // Auto-login successful, load chats
+                                loadChats()
+                                startSync()
+                            }
+                            "USER_NOT_FOUND", "AUTH_FAILED" -> {
+                                // No account on this server or wrong password — show auth dialog
+                                logout()
+                            }
+                            else -> {
+                                // Connection error or other issue — show auth dialog
+                                logout()
+                            }
+                        }
+                    }
                 }
+            } else {
+                // No saved credentials — show auth dialog
+                showAuthChoiceDialog()
             }
         }
         showAdditionalSettingsSheet { showSettingsSheet() }
+    }
+
+    private var pendingAboutOnBack: (() -> Unit)? = null
+
+    private val changelogActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // Re-open the about dialog when returning from ChangelogActivity
+        val onBack = pendingAboutOnBack
+        pendingAboutOnBack = null
+        showAboutDialog(onBack)
     }
 
     private fun showWhatsNewDialog(onBack: (() -> Unit)? = null) {
@@ -1533,12 +1629,17 @@ class ChatListActivity : AppCompatActivity() {
         }
         
         btnClose?.setOnClickListener { sheet.dismiss() }
-        
+
         btnWhatsNew?.setOnClickListener {
             isNavigatingDeeper = true
+            pendingAboutOnBack = onBack
             sheet.dismiss()
-            checkAnnouncements()
-            showWhatsNewDialog { showAboutDialog(onBack) }
+            try {
+                changelogActivityLauncher.launch(ChangelogActivity.createIntent(this@ChatListActivity))
+            } catch (e: Exception) {
+                Log.e("ChatListActivity", "Failed to open ChangelogActivity", e)
+                showWhatsNewDialog { showAboutDialog(onBack) }
+            }
         }
 
         btnFeedback?.setOnClickListener {
@@ -1548,11 +1649,9 @@ class ChatListActivity : AppCompatActivity() {
         }
         
         btnShare?.setOnClickListener {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "Check out Lavender Messenger!")
-            }
-            startActivity(Intent.createChooser(shareIntent, "Share App"))
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            shareApp()
         }
         
         sheet.setOnDismissListener {
@@ -1880,8 +1979,87 @@ class ChatListActivity : AppCompatActivity() {
                 },
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
+                },
+                SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "Чат с AI") {
+                    createNewOwlChat()
+                },
+                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Hermes AI") {
+                    val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
+                    startActivity(intent)
                 }
             )).show()
+    }
+
+    private fun createNewOwlChat() {
+        val uid = username
+        if (uid.isEmpty()) {
+            Toast.makeText(this, "Необходимо войти в аккаунт", Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                var chatId = GrpcClient.createOwlChat(uid, "AI Chat")
+                Log.d("ChatListActivity", "createOwlChat result: '$chatId' channelStatus=${grpcClient.connectionStatus.value}")
+                if (chatId.isEmpty()) {
+                    // Channel was dead — reconnect and retry once
+                    Toast.makeText(this@ChatListActivity, "Подключение...", Toast.LENGTH_SHORT).show()
+                    val parts = (intent.getStringExtra("SERVER_ADDRESS")
+                        ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
+                        ?: lavender.client.android.data.session.CredentialStore.getServerAddress(this@ChatListActivity)).let {
+                        it?.split(":")
+                    }
+                    if (parts != null && parts.isNotEmpty() && parts[0].isNotEmpty()) {
+                        val host = parts[0]
+                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                        grpcClient.connect(host, false, port, this@ChatListActivity, true)
+                        // Wait up to 5s for READY
+                        var waited = 0
+                        while (grpcClient.connectionStatus.value != ConnectionStatus.READY && waited < 5000) {
+                            delay(500)
+                            waited += 500
+                        }
+                    }
+                    chatId = GrpcClient.createOwlChat(uid, "AI Chat")
+                }
+                runOnUiThread {
+                    if (chatId.isNotEmpty()) {
+                        // Add OWL chat to local list and cache so it appears immediately
+                        val owlChat = ChatInfo(
+                            id = chatId,
+                            name = "🤖 Чат с AI",
+                            type = "owl",
+                            participants = "[\"$uid\"]",
+                            creator = uid,
+                            avatarUrl = "",
+                            fullAvatarUrl = "",
+                            unreadCount = 0
+                        )
+                        chats.add(0, owlChat)
+                        chatAdapter.setChats(chats.toList())
+
+                        // Persist to local cache immediately
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                                db.chatDao().insertChats(listOf(owlChat.toEntity()))
+                            } catch (e: Exception) {
+                                android.util.Log.e("ChatListActivity", "Failed to cache OWL chat", e)
+                            }
+                        }
+
+                        val intent = Intent(this@ChatListActivity, OwlActivity::class.java)
+                        intent.putExtra("CHAT_ID", chatId)
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(this@ChatListActivity, "Ошибка создания чата", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this@ChatListActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun showCreateConferenceDialog() {
@@ -1939,7 +2117,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                     sheet.dismiss()
-                    loadChats(skipCache = true)
+                    refreshChatsDebounced()
                 }
             }
         }
@@ -1994,7 +2172,7 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("IS_DIRECT", true); putExtra("PARTICIPANTS", "[\"$username\", \"$targetUser\"]")
                         }
                         startActivity(intent); sheet.dismiss()
-                        loadChats(skipCache = true)
+                        refreshChatsDebounced()
                     }
                 }
             } else {
@@ -2009,7 +2187,7 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("CREATOR", username)
                         }
                         startActivity(intent); sheet.dismiss()
-                        loadChats(skipCache = true)
+                        refreshChatsDebounced()
                     }
                 }
             }
@@ -2078,7 +2256,7 @@ class ChatListActivity : AppCompatActivity() {
                             putExtra("IS_SECRET", "true")
                         }
                         startActivity(intent)
-                        loadChats(skipCache = true)
+                        refreshChatsDebounced()
                     } else {
                         Toast.makeText(this@ChatListActivity, message.ifEmpty { "Failed to create secret chat" }, Toast.LENGTH_LONG).show()
                     }
@@ -2145,7 +2323,7 @@ class ChatListActivity : AppCompatActivity() {
                             runOnUiThread {
                                 Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
                                 sheet.dismiss()
-                                loadChats(skipCache = true)
+                                refreshChatsDebounced()
                             }
                         }
                     }

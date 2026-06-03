@@ -32,7 +32,9 @@ data class MessageProto(
     val register: Boolean = false,
     val deviceId: String = "",
     val deviceName: String = "",
-    val userId: String = ""
+    val userId: String = "",
+    val isE2Ee: Boolean = false,
+    val e2EePayload: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -57,6 +59,8 @@ data class MessageProto(
         private var deviceId: String = ""
         private var deviceName: String = ""
         private var userId: String = ""
+        private var isE2Ee: Boolean = false
+        private var e2EePayload: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -164,6 +168,16 @@ data class MessageProto(
             return this
         }
 
+        fun setIsE2Ee(isE2Ee: Boolean): Builder {
+            this.isE2Ee = isE2Ee
+            return this
+        }
+
+        fun setE2EePayload(e2EePayload: String): Builder {
+            this.e2EePayload = e2EePayload
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -177,7 +191,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId, isE2Ee, e2EePayload)
         }
     }
     
@@ -202,7 +216,10 @@ data class ChatInfoProto(
     val lastMessageUsername: String = "",
     val lastMessageHasImage: Boolean = false,
     val allowMembersToAdd: Boolean = false,
-    val conferenceStartTime: Timestamp? = null
+    val conferenceStartTime: Timestamp? = null,
+    val isSecret: Boolean = false,
+    val peerPublicKey: String = "",
+    val e2eeReady: Boolean = false
 )
 
 // Mark Read Request/Response
@@ -807,3 +824,313 @@ data class CallMessageProto(
         }
     }
 }
+
+// ======= OWL AI Assistant =======
+
+data class OWLRequestProto(
+    val userId: String = "",
+    val message: String = "",
+    val sessionId: String = "",
+    val model: String = "",
+    val apiKey: String = ""
+)
+
+data class OWLResponseProto(
+    val text: String = "",
+    val finished: Boolean = false,
+    val error: String = ""
+)
+
+// OWL Chat management proto classes
+data class CreateOwlChatRequestProto(
+    val userId: String = "",
+    val name: String = ""
+)
+
+data class CreateOwlChatResponseProto(
+    val chatId: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeleteOwlChatRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class DeleteOwlChatResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetOwlHistoryRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class OwlHistoryMessageProto(
+    var role: String = "",
+    var content: String = "",
+    var createdAt: String = ""
+) {
+    companion object {
+        fun parseFrom(bytes: ByteArray): OwlHistoryMessageProto {
+            val cis = com.google.protobuf.CodedInputStream.newInstance(bytes)
+            var role = ""
+            var content = ""
+            var createdAt = ""
+            while (!cis.isAtEnd) {
+                val tag = cis.readTag()
+                if (tag == 0) break
+                when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                    1 -> role = cis.readString()
+                    2 -> content = cis.readString()
+                    3 -> createdAt = cis.readString()
+                    else -> cis.skipField(tag)
+                }
+            }
+            return OwlHistoryMessageProto(role, content, createdAt)
+        }
+    }
+}
+
+data class GetOwlHistoryResponseProto(
+    val messagesList: List<OwlHistoryMessageProto> = emptyList()
+)
+
+data class UpdateOwlSettingsRequestProto(
+    val chatId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateOwlSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// ======= Secret Chat (E2EE) =======
+
+data class CreateSecretChatRequestProto(
+    val targetUsername: String = "",
+    val targetUserId: String = "",
+    val publicKey: String = "",
+    val clientVersion: String = ""
+)
+
+data class CreateSecretChatResponseProto(
+    val chatId: String = "",
+    val success: Boolean = false,
+    val message: String = "",
+    val peerPublicKey: String = ""
+)
+
+data class ExchangeSecretKeyRequestProto(
+    val chatId: String = "",
+    val publicKey: String = ""
+)
+
+data class ExchangeSecretKeyResponseProto(
+    val success: Boolean = false,
+    val peerPublicKey: String = "",
+    val peerHasKey: Boolean = false
+)
+
+data class GetSecretChatKeyRequestProto(
+    val chatId: String = ""
+)
+
+data class GetSecretChatKeyResponseProto(
+    val peerPublicKey: String = "",
+    val peerHasKey: Boolean = false
+)
+
+// ======= Hermes Multi-Agent Orchestrator =======
+
+data class OrchestratorRequestProto(
+    val userId: String = "",
+    val sessionId: String = "",
+    val message: String = "",
+    val agentId: String = "",
+    val mode: String = ""
+)
+
+data class OrchestratorResponseProto(
+    val token: String = "",
+    val finished: Boolean = false,
+    val error: String = "",
+    val agentId: String = "",
+    val agentName: String = ""
+)
+
+data class GetOrchestratorHistoryRequestProto(
+    val sessionId: String = "",
+    val limit: Int = 50
+)
+
+data class OrchestratorHistoryMessageProto(
+    var role: String = "",
+    var content: String = "",
+    var agentId: String = "",
+    var agentName: String = "",
+    var createdAt: String = ""
+)
+
+data class GetOrchestratorHistoryResponseProto(
+    val messagesList: List<OrchestratorHistoryMessageProto> = emptyList()
+)
+
+data class ListAgentsRequestProto(
+    val userId: String = ""
+)
+
+data class AgentInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val role: String = "",
+    val isPreset: Boolean = false,
+    val icon: String = ""
+)
+
+data class ListAgentsResponseProto(
+    val agents: List<AgentInfoProto> = emptyList()
+)
+
+data class ListAgentPresetsRequestProto(
+    val dummy: Boolean = false  // empty message needs at least one field
+)
+
+data class AgentPresetInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val role: String = "",
+    val description: String = "",
+    val icon: String = "",
+    val maxTokens: Int = 0
+)
+
+data class ListAgentPresetsResponseProto(
+    val presets: List<AgentPresetInfoProto> = emptyList()
+)
+
+data class CreateAgentRequestProto(
+    val userId: String = "",
+    val presetId: String = "",
+    val customName: String = "",
+    val customPrompt: String = "",
+    val model: String = "",
+    val maxTokens: Int = 0
+)
+
+data class CreateAgentResponseProto(
+    val agentId: String = "",
+    val success: Boolean = false,
+    val message: String = "",
+    val agent: AgentInfoProto? = null
+)
+
+data class UpdateAgentRequestProto(
+    val agentId: String = "",
+    val userId: String = "",
+    val name: String = "",
+    val systemPrompt: String = "",
+    val model: String = "",
+    val maxTokens: Int = 0
+)
+
+data class UpdateAgentResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeleteAgentRequestProto(
+    val agentId: String = "",
+    val userId: String = ""
+)
+
+data class DeleteAgentResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class ListUserAgentsRequestProto(
+    val userId: String = ""
+)
+
+data class ListUserAgentsResponseProto(
+    val agents: List<AgentInfoProto> = emptyList()
+)
+
+data class CreateHermesSessionRequestProto(
+    val userId: String = "",
+    val agentId: String = "",
+    val mode: String = ""
+)
+
+data class CreateHermesSessionResponseProto(
+    val sessionId: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class DeleteHermesSessionRequestProto(
+    val sessionId: String = "",
+    val userId: String = ""
+)
+
+data class DeleteHermesSessionResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// ======= Remote Agent proto classes (FUTURE) =======
+
+data class ListRemoteAgentsRequestProto(
+    val filterStatus: String = ""
+)
+
+data class RemoteAgentInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val host: String = "",
+    val ipAddress: String = "",
+    val os: String = "",
+    val status: String = "",
+    val capabilities: List<String> = emptyList(),
+    val activeTasks: Int = 0,
+    val lastHeartbeat: String = ""
+)
+
+data class ListRemoteAgentsResponseProto(
+    val agents: List<RemoteAgentInfoProto> = emptyList()
+)
+
+data class DeployAgentTaskRequestProto(
+    val agentId: String = "",
+    val taskType: String = "",
+    val params: Map<String, String> = emptyMap(),
+    val workingDir: String = "",
+    val timeoutSec: Int = 0
+)
+
+data class DeployAgentTaskResponseProto(
+    val taskId: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetRemoteAgentStatusRequestProto(
+    val agentId: String = ""
+)
+
+data class GetRemoteAgentStatusResponseProto(
+    val id: String = "",
+    val name: String = "",
+    val status: String = "",
+    val host: String = "",
+    val capabilities: List<String> = emptyList(),
+    val activeTasks: Int = 0,
+    val lastHeartbeat: String = ""
+)

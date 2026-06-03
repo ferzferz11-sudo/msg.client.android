@@ -32,7 +32,11 @@ object ThemeApplier {
         val surfaceColor = parseSafeColor(theme.surfaceColor, bgColor)
         val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, textPrimary)
 
-        activity.enableEdgeToEdge()
+        // NOTE: Do NOT call enableEdgeToEdge() here — it sets
+        // setDecorFitsSystemWindows(false) which makes adjustResize
+        // stop working, causing keyboard/nav bar overlap in OwlActivity,
+        // NewChatActivity and any activity with adjustResize in manifest.
+        // Instead, we only set status/nav bar icon appearance here.
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = isLightMode
             isAppearanceLightNavigationBars = isLightMode

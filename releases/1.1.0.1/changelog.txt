@@ -1,0 +1,17 @@
+Lavender 1.1.0.1: Стабильность и исправления
+
+— CredentialStore: Исправлен импорт и конструктор ServerAdapter.
+— Обновление: WorkManager заменён на coroutine-based UpdateManager с StateFlow для надёжного отображения прогресса.
+— Обновление: Исправлен URL проверки обновлений (UpdateUtils → /download).
+— Сервер: Исправлен MarkReadAndCheck (убран user_id из INSERT).
+— Сервер: Открыт порт 8082 для загрузки голосовых сообщений.
+— Nginx: Исправлен location /download → /var/www/lavender/.
+— Совместимость: Заменены устаревшие adapterPosition на bindingAdapterPosition.
+— Совместимость: Убраны дублирующиеся импорты.
+— UI: Исправлены ссылки на companion object StateFlow через instance-level свойства.
+— UI: Исправлен дублирующийся заголовок в ServersActivity.
+— UI: showAddServerDialog переписан на StandardBottomSheet.
+— UI: Исправлен setOnDismissListener в WidgetSystem.kt.
+— UI: Исправлен repeatOnLifecycle для подписок на StateFlow.
+— Сборка: Исправлен build_release.sh для bash3 (macOS).
+— Сборка: Исправлен mktemp в build_release.sh.

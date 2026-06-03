@@ -31,6 +31,8 @@ object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var channel: ManagedChannel? = null
+
+    fun getChannel(): ManagedChannel? = channel
     
     private var database: AppDatabase? = null
     private fun db() = database ?: appContext?.let { 
@@ -233,7 +235,10 @@ object RealGrpcClient {
     private val pendingReads = mutableSetOf<String>()
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
-        if (currentServerAddress == serverAddress && _connectionStatus.value == ConnectionStatus.READY && channel != null && !forceReconnect) {
+        Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${_connectionStatus.value}")
+
+        val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
+        if (!forceReconnect && currentServerAddress == serverAddress && channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY) {
             Log.d(TAG, "Connection already ready, skipping connect")
             return
         }
@@ -290,6 +295,14 @@ object RealGrpcClient {
                 Log.d(TAG, "Retrying connection to $serverAddress...")
                 connect(serverAddress, useTls, port, context)
             }
+        }
+    }
+
+    fun reconnect() {
+        val addr = currentServerAddress
+        if (!addr.isNullOrEmpty()) {
+            Log.d(TAG, "reconnect() called, reconnecting to $addr")
+            connect(addr, false, 50051, appContext, true)
         }
     }
 
@@ -619,6 +632,22 @@ object RealGrpcClient {
                 
                 val message = ProtoUtils.createMessageFromProto(value)
                 if (deletedMessageHashes.contains(getMessageHash(message))) return
+
+                // E2EE: decrypt secret chat messages
+                if (message.isE2EE && message.e2eePayload.isNotEmpty()) {
+                    val decrypted = lavender.client.android.data.crypto.E2EEManager.decryptMessage(
+                        appContext ?: return, message.roomId, message.e2eePayload
+                    )
+                    if (decrypted != null) {
+                        val decryptedMsg = message.copy(text = decrypted, isE2EE = false, e2eePayload = "")
+                        onMessageReceived(decryptedMsg)
+                    } else {
+                        // Decryption failed — show placeholder
+                        val errorMsg = message.copy(text = "🔒 Encrypted message", isE2EE = false, e2eePayload = "")
+                        onMessageReceived(errorMsg)
+                    }
+                    return
+                }
                 
                 // Only process messages for the current room
                 // For Favorites virtual room, we also accept any message that the server explicitly sent to us
@@ -764,6 +793,10 @@ object RealGrpcClient {
                 responseObserver.onNext(message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    _connectionStatus.value = ConnectionStatus.FAILED
+                    requestObserver = null
+                }
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
         }, io.grpc.Metadata())
@@ -945,6 +978,10 @@ object RealGrpcClient {
         this.start(object : io.grpc.ClientCall.Listener<CallMessageProto>() {
             override fun onMessage(message: CallMessageProto) = responseObserver.onNext(message)
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    _connectionStatus.value = ConnectionStatus.FAILED
+                    requestObserver = null
+                }
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
         }, io.grpc.Metadata())
@@ -1025,7 +1062,7 @@ object RealGrpcClient {
     }
 
     fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
-        // Load from cache first (if not skipped)
+        // Load from cache first (if not skipped) and show immediately
         if (!skipCache) {
             scope.launch(Dispatchers.IO) {
                 val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
@@ -1035,7 +1072,16 @@ object RealGrpcClient {
             }
         }
 
-        val currentChannel = channel ?: return
+        val currentChannel = channel
+        if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
+            Log.w(TAG, "getChats: channel is null or dead, attempting reconnect")
+            _connectionStatus.value = ConnectionStatus.FAILED
+            val addr = currentServerAddress
+            if (!addr.isNullOrEmpty()) {
+                connect(addr)
+            }
+            return
+        }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetChats")
@@ -1052,19 +1098,22 @@ object RealGrpcClient {
                              proto.unreadCount,
                              proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                              proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd,
-                             proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L)
+                             proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                             proto.isSecret, proto.peerPublicKey, proto.e2eeReady)
                 }
-
-                // Save to cache and sync (delete local chats that are gone from server)
                 scope.launch(Dispatchers.IO) {
                     db()?.chatDao()?.syncChats(chats.map { it.toEntity() })
-
-                    withContext(Dispatchers.Main) {
-                        callback(chats)
-                    }
+                }
+                // Only update UI with network result if it's not empty
+                if (chats.isNotEmpty()) {
+                    scope.launch(Dispatchers.Main) { callback(chats) }
                 }
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.w(TAG, "getChats: onClose error: ${status.code}")
+                }
+            }
         }, io.grpc.Metadata())
         call.sendMessage(GetChatsRequestProto(username = username, userId = currentUserId ?: ""))
         call.halfClose()
@@ -1878,7 +1927,13 @@ object RealGrpcClient {
                         avatarUrl = proto.avatarUrl,
                         fullAvatarUrl = proto.fullAvatarUrl,
                         lastMessageUsername = proto.lastMessageUsername,
-                        lastMessageHasImage = proto.lastMessageHasImage
+                        isMuted = false,
+                        lastMessageHasImage = proto.lastMessageHasImage,
+                        allowMembersToAdd = proto.allowMembersToAdd,
+                        conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
+                        isSecret = proto.isSecret,
+                        peerPublicKey = proto.peerPublicKey,
+                        e2eeReady = proto.e2eeReady
                     )
                 })
             }
@@ -2194,9 +2249,9 @@ class GetChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatsR
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break;             if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null
-                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> { val l = cisis.readUInt32(); cst = Timestamp.parseFrom(cisis.readRawBytes(l)) }; else -> cisis.skipField(t2) } }
-                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst))
+                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false
+                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> { val l = cisis.readUInt32(); cst = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 18 -> isSecret = cisis.readBool(); 19 -> peerKey = cisis.readString(); 20 -> e2eeReady = cisis.readBool(); else -> cisis.skipField(t2) } }
+                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady))
             } else cis.skipField(tag)
         }
         return GetChatsResponseProto(chats)
@@ -2781,9 +2836,9 @@ class GetAllChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAll
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); val chats = mutableListOf<ChatInfoProto>()
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null
-                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> { val l = cisis.readUInt32(); cst = Timestamp.parseFrom(cisis.readRawBytes(l)) }; else -> cisis.skipField(t2) } }
-                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst))
+                var id = ""; var n = ""; var t = ""; var p = ""; var ca: Timestamp? = null; var uc = 0; var lmt: Timestamp? = null; var cr = ""; var lmtxt = ""; var au = ""; var fau = ""; var lmu = ""; var lmhi = false; var amta = false; var cst: Timestamp? = null; var isSecret = false; var peerKey = ""; var e2eeReady = false
+                while (!cisis.isAtEnd) { val t2 = cisis.readTag(); if (t2 == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) { 1 -> id = cisis.readString(); 2 -> n = cisis.readString(); 3 -> t = cisis.readString(); 4 -> p = cisis.readString(); 5 -> { val l = cisis.readUInt32(); ca = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 6 -> uc = cisis.readInt32(); 7 -> { val l = cisis.readUInt32(); lmt = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 8 -> cr = cisis.readString(); 9 -> lmtxt = cisis.readString(); 10 -> au = cisis.readString(); 11 -> fau = cisis.readString(); 12 -> lmu = cisis.readString(); 13 -> lmhi = cisis.readBool(); 14 -> amta = cisis.readBool(); 15 -> { val l = cisis.readUInt32(); cst = Timestamp.parseFrom(cisis.readRawBytes(l)) }; 18 -> isSecret = cisis.readBool(); 19 -> peerKey = cisis.readString(); 20 -> e2eeReady = cisis.readBool(); else -> cisis.skipField(t2) } }
+                chats.add(ChatInfoProto(id, n, t, p, ca, uc, lmt, cr, lmtxt, au, fau, lmu, lmhi, amta, cst, isSecret, peerKey, e2eeReady))
             } else cis.skipField(tag)
         }
         return GetAllChatsResponseProto(chats)

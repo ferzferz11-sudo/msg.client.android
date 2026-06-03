@@ -32,6 +32,9 @@ class WebRtcClient(
     private val iceCandidateQueue = mutableListOf<IceCandidate>()
     private var isRemoteDescriptionSet = false
 
+    // ICE connection state callback
+    var onIceConnectionStateChange: ((PeerConnection.IceConnectionState) -> Unit)? = null
+
     init {
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .createInitializationOptions()
@@ -59,6 +62,7 @@ class WebRtcClient(
             }
             override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
                 Log.d("WebRtcClient", "Ice connection: $state")
+                state?.let { onIceConnectionStateChange?.invoke(it) }
             }
             override fun onIceConnectionReceivingChange(p0: Boolean) {}
             override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}

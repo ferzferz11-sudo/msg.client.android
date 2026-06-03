@@ -6,16 +6,19 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import lavender.client.android.data.db.AppDatabase
+import lavender.client.android.data.db.toDomain
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.MessageAdapter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class FavoritesActivity : AppCompatActivity() {
@@ -37,7 +40,7 @@ class FavoritesActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        // setDecorFitsSystemWindows(true) — default, needed for adjustResize
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_favorites)
 
@@ -79,6 +82,22 @@ class FavoritesActivity : AppCompatActivity() {
             return
         }
 
+        val favoritesRoomId = "favorites_$username"
+
+        // Step 1: Show cached data immediately
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = AppDatabase.getDatabase(this@FavoritesActivity)
+                val cached = db.messageDao().getFavorites(favoritesRoomId).map { it.toDomain() }
+                if (cached.isNotEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        adapter.submitList(cached)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        // Step 2: Refresh from server (async, non-blocking)
         GrpcClient.getFavorites(userId) { messages ->
             runOnUiThread {
                 adapter.submitList(messages)

@@ -8,19 +8,22 @@
     android:background="@android:color/transparent">
 
     <ImageView
-        android:id="@+id/recordButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:src="@drawable/ic_mic"
-        android:background="@drawable/record_button_background"
-        android:padding="16dp"
-        android:contentDescription="Record audio" />
+        android:id="@+id/cancelButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_close"
+        android:background="@drawable/cancel_button_background"
+        android:padding="12dp"
+        android:alpha="0.5"
+        android:contentDescription="Cancel recording"
+        android:visibility="visible" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:orientation="vertical">
 
         <LinearLayout
@@ -69,13 +72,13 @@
     </LinearLayout>
 
     <ImageView
-        android:id="@+id/cancelButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_close"
-        android:background="@drawable/cancel_button_background"
-        android:padding="12dp"
-        android:contentDescription="Cancel recording"
-        android:visibility="visible" />
+        android:id="@+id/recordButton"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:src="@drawable/ic_mic"
+        android:background="@drawable/record_button_background"
+        android:padding="16dp"
+        android:alpha="0.5"
+        android:contentDescription="Record audio" />
 
 </LinearLayout>

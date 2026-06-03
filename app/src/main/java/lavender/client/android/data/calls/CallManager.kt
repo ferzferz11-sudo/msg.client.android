@@ -180,17 +180,18 @@ object CallManager {
     }
 
     fun sendWebRtcSignal(receiverId: String, type: CallMessageProto.Type, payload: String) {
-        val call = _currentCall.value ?: return
-        val senderId = GrpcClient.getCurrentUsername() ?: return
-        val signal = CallMessageProto(
-            callId = call.callId,
-            senderId = senderId,
-            receiverId = receiverId,
-            type = type,
-            payload = payload,
-            roomId = call.roomId
-        )
-        GrpcClient.sendCallSignal(signal)
+    	val call = _currentCall.value ?: return
+    	// Always use UUID for senderId (never username)
+    	val senderId = GrpcClient.getUserId() ?: GrpcClient.getCurrentUsername() ?: return
+    	val signal = CallMessageProto(
+    		callId = call.callId,
+    		senderId = senderId,
+    		receiverId = receiverId,
+    		type = type,
+    		payload = payload,
+    		roomId = call.roomId
+    	)
+    	GrpcClient.sendCallSignal(signal)
     }
 
     fun initiateConference(roomId: String) {

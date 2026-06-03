@@ -61,6 +61,7 @@
             android:name=".ChatListActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
@@ -98,6 +99,15 @@
         <activity android:name=".FCMLogsActivity" android:exported="false" />
         <activity android:name=".SecurityActivity" android:exported="false" />
         <activity android:name=".ServersActivity" android:exported="false" />
+        <activity android:name=".OwlActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity android:name=".ChangelogActivity" android:exported="false" />
+
+        <activity android:name=".ui.hermes.HermesChatActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.hermes.AgentListActivity" android:exported="false" />
+        <activity android:name=".ui.hermes.AgentSettingsActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"

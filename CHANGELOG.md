@@ -5,6 +5,139 @@ All notable changes to Lavender Messenger (Android client) will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## 1.1.0.10
+### Changelog — исправления
+- 🐛 **Белый экран**: убран ThemeUi.bind и attachBaseContext из ChangelogActivity — теперь не крашится при запуске
+- 🐛 **Таймаут**: уменьшен с 10с до 3с — быстрая ошибка вместо долгого ожидания
+- 🐛 **Навигация назад**: при возврате из ChangelogActivity шторка «О программе» открывается снова
+
+## 1.1.0.9
+### WebRTC — TURN сервер для звонков из разных сетей
+- 📞 **TURN сервер**: Установлен и настроен coturn на сервере для NAT traversal
+- 🌐 **Звонки из разных сетей**: Теперь звонки работают не только в одной WiFi-сети, а из любых сетей через TURN relay
+- 🔑 **Временные креденшалы**: Клиент получает HMAC-based временные креденшалы с сервера через `/turn-credentials`
+- 🛡️ **Fallback**: При недоступности TURN автоматически используется только STUN
+- 🐛 **Исправлено**: Убран дубликат `PeerConnection.Observer` в `WebRtcClient.initPeerConnection` (ошибка компиляции)
+
+### OpenRouter
+- 🔑 **Обновлён API ключ**: Исправлена ошибка 401 (User not found) при обращении к OWL AI
+
+## 1.1.0.8
+### Changelog Screen
+- 📜 **ChangelogActivity**: New full-screen activity showing all GitHub releases with version, date, description, and download links.
+- 🎨 **Markdown rendering**: Supports headings, bold, lists, code spans, emoji — rendered via custom MarkdownRenderer.
+- 🏷️ **Release tags**: "★ Latest" green tag for newest stable release, "Pre" for pre-releases.
+- 📦 **Download assets**: Shows APK files with size, tap to open download URL.
+- 🔗 **GitHub fallback**: If API fails, shows Snackbar with link to GitHub releases page.
+- 💾 **Caching**: Releases cached for 30 minutes in SharedPreferences.
+- 🌐 **GitHub API**: Fetches from `api.github.com/repos/ferzferz11-sudo/msg.client.android/releases`.
+- 🔄 **Language**: Respects app locale (RU/EN) via `attachBaseContext` pattern.
+- 📱 **About dialog**: "What's New" button now opens ChangelogActivity instead of plain text dialog.
+
+## 1.1.0.7
+### Секретные чаты (E2EE)
+- 🔒 **Secret Chat**: End-to-end encryption (AES-256-GCM + ECDH) via E2EEManager.
+- 🔑 **Key Exchange**: Automatic ECDH key exchange between participants on chat open.
+- 🛡️ **Server**: Stores `e2ee_payload` as-is (no double encryption) when `isE2EE = true`.
+- 🚫 **No calls**: Video call button hidden for secret chats.
+- 🎨 **UI**: Lock icon avatar, "E2EE включено" subtitle, encrypted message indicator.
+
+### OWL AI Chat — Исправления
+- 🐛 **Исправлено**: Порядок сообщений — ответ OWL теперь появляется после сообщения пользователя, а не перед ним
+- 🐛 **Исправлено**: Индикатор набора текста ("Печатает...") отображается в тулбаре, а не внизу списка
+- 🐛 **Исправлено**: Кнопка назад в тулбаре после выхода из режима выбора
+- 🐛 **Исправлено**: Шторка действий над сообщением адаптирована к темам (StandardBottomSheet)
+- 🐛 **Исправлено**: Убран заголовок "Действия" в шторке, реакции как в обычном чате (👍 💯 🔥 ✅ ❤️ 😂 😮 😢 🙏)
+- 🐛 **Исправлено**: Ответы OWL сохраняются в историю на сервере и загружаются при перезаходе
+- 🎨 **UI**: Аватары скрыты в OWL чате, текст выровнен по левому краю
+- 🎨 **UI**: Режим выбора сообщений (long click) с копированием, удалением, пересылкой
+- 🎨 **UI**: Реакции на сообщения (локальные)
+- 🎨 **UI**: Свайп для ответа (swipe to reply)
+- 🎨 **UI**: Превью ответа при наборе сообщения
+
+### Server
+- New gRPC methods: `CreateSecretChat`, `ExchangeSecretKey`, `GetSecretChatKey`.
+- New table: `secret_chat_keys` (chat_id, user_id, public_key).
+- New columns: `is_secret`, `peer_public_key`, `e2ee_ready` in `chats` table.
+
+## 1.1.0.6
+### Исправления
+- 🐛 **Исправлено**: Поле ввода в OWL чате больше не перекрыто навигационными кнопками (bottomMargin подход)
+- 🐛 **Исправлено**: Список чатов загружается мгновенно из кэша с последующим обновлением с сервера
+- 🐛 **Исправлено**: Мерцание списка чатов — заменено `clear()+addAll()` на `DiffUtil`
+- 🐛 **Исправлено**: Дублирование загрузки списка при возврате на экран
+- 🐛 **Исправлено**: Сортировка OWL чатов по времени последнего сообщения
+- 🐛 **Исправлено**: Отображение последнего сообщения OWL чата в списке ("🤖 OWL AI:")
+- 🐛 **Исправлено**: Аватарка пользователя загружается при старте приложения
+- 🐛 **Исправлено**: Кнопки записи голоса — отмена слева, запись справа, прозрачность 50%
+- 🐛 **Исправлено**: Краш "Already resumed" при повторных gRPC колбэках
+- ⚠️ **Deprecated**: Исправлены предупреждения `suspendCancellableCoroutine.resume()` в ChatListActivity
+
+### Сервер
+- 🖥️ Добавлена колонка `last_message_time` в таблицу `chats`
+- 🖥️ Добавлено логирование ответов OWL AI
+
+## 1.1.0.4
+### OWL AI Assistant — Исправления
+- 🐛 **Исправлено**: OWL чаты корректно отображаются в списке после создания
+- 🐛 **Исправлено**: История OWL чатов загружается с сервера (`GetOwlHistory`)
+- 🐛 **Исправлено**: Последнее сообщение отображается в списке OWL чатов
+- 🎨 **Выбор моделей**: Без своего API ключа показываются только бесплатные модели (12 шт.)
+- 🔑 **Свой ключ**: При вводе своего OpenRouter ключа доступны все модели (22 шт.)
+
+## 1.1.0.3
+### OWL AI Assistant
+- 🤖 **OWL AI Chat**: New in-app AI assistant chat accessible from the "+" menu on the chat list screen.
+- 📡 **Streaming Response**: AI responses appear word-by-word in real-time via server-side gRPC streaming.
+- 🧠 **Conversation Context**: Session context retained for up to 20 messages per user.
+- ⏱️ **Rate Limiting**: Max 10 requests per minute per user.
+- 🔄 **Multiple OWL Chats**: Create multiple separate OWL chats with different models and API keys.
+- ⚙️ **Model Selection**: Choose model via `/model` command or settings dialog (23 models + custom).
+- 🔑 **Personal API Key**: Use your own OpenRouter key to bypass free tier rate limits.
+- 🗑️ **Delete OWL Chat**: Delete chats via the (...) menu with confirmation.
+- 📜 **Chat History**: Message history is persisted on server and loaded when opening chat.
+- 🎨 **UI**: MaterialToolbar-based UI matching main chat style.
+
+### Bug Fixes
+- Fixed OWL response duplicates and disappearing (streaming partial update via payload).
+- Fixed OWL chat not appearing in chat list after creation.
+- Fixed input hint text ("Сообщение" instead of long placeholder text).
+
+### Server Changes
+- 🖥️ **Server**: New `ChatWithOWL` gRPC method (server streaming) via `messenger.ChatService`.
+- 🖥️ **Server**: OpenRouter integration for AI responses with configurable model.
+- 🖥️ **Server**: Rate limiter and database-backed session context storage.
+- 🖥️ **Server**: New `CreateOwlChat`, `DeleteOwlChat`, `GetOwlHistory`, `UpdateOwlSettings` RPCs.
+- 🖥️ **Server**: Fixed GetChats returning OWL chats (was comparing UUID against string username field).
+
+## 1.1.0.2
+### Server Spinner & Build Fixes
+- 🎨 **Spinner theming**: Server dropdown in login/register sheets uses `ColorDrawable(primaryColor)` — no more white outline.
+- 🎨 **ServersActivity toolbar**: Title now uses `onPrimaryColor`.
+- 🌐 **Default servers**: Auto-added on first launch (prod 50051, dev 50052).
+- 🛡️ **Server protection**: Default server cannot be deleted (delete button hidden).
+- 📋 **Server ordering**: New servers added to end of list.
+- 🔧 **Gradle heap**: Increased to 2g for D8 dexer.
+
+## 1.1.0.1
+### Stability & Bug Fixes
+- 🔧 **CredentialStore**: Fixed import and ServerAdapter constructor.
+- 🔄 **Update System**: Replaced WorkManager with coroutine-based UpdateManager + StateFlow for reliable progress display.
+- 🌐 **Update URL**: Fixed `getUpdateUrl()` to return `/download` for APK checks.
+- 🗄️ **Server**: Fixed `MarkReadAndCheck` — removed `user_id` from INSERT (column doesn't exist), added 25P02 error handling.
+- 🔊 **Voice Messages**: Opened port 8082 in iptables for audio upload.
+- 🌐 **Nginx**: Fixed `/download` location → `/var/www/lavender/`.
+- 📦 **Deprecation**: Replaced deprecated `adapterPosition` with `bindingAdapterPosition`.
+- 🧹 **Cleanup**: Removed duplicate imports.
+- 🏗️ **StateFlow**: Fixed companion object property resolution via instance-level aliases.
+- 📱 **ServersActivity**: Removed duplicate toolbar title.
+- 🎨 **Dialogs**: Rewrote `showAddServerDialog` on `StandardBottomSheet`.
+- 🔧 **WidgetSystem**: Fixed `setOnDismissListener` scope issue.
+- 🔄 **Lifecycle**: Fixed `repeatOnLifecycle` for StateFlow subscriptions.
+- 🛠️ **Build**: Fixed `build_release.sh` for macOS bash3 compatibility.
+- 🛠️ **Build**: Fixed `mktemp` in `build_release.sh`.
+
 ## 1.1.0.0
 ### Server Discovery & Infrastructure Improvements
 - 🌐 **Server Discovery**: Server list is now fetched automatically via gRPC `ListServers`. A server spinner in login/register sheets lets users pick a server manually.
@@ -319,7 +452,6 @@ ZIP/RAR/7Z архивы → ic_file_archive
 Видимость меню супер админа - Добавлена проверка флага isSuperAdmin при отображении меню в ChatListActivity.kt:556
 
 Сохранение настроек уведомлений - Исправлена регистрация токена при запуске приложения с передачей сохраненных флагов push_send_enabled и push_receive_enabled в ChatListActivity.kt:247-258
-
 
 ## [1.0.2.12] - 2026-04-27
 

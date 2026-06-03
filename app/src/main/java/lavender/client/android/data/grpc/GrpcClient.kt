@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.proto.UserInfoProto
@@ -337,15 +338,163 @@ object GrpcClient {
         realGrpcClient.clearMessages()
     }
 
-    // Secret chat methods — TODO: implement after proto generation
+    // Secret chat methods
     fun createSecretChat(targetUsername: String, publicKey: String, callback: (String, Boolean, String, String) -> Unit) {
-        callback("", false, "Not implemented in this build", "")
+        val clientVersion = lavender.client.android.BuildConfig.VERSION_NAME
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val (chatId, success, message) = lavender.client.android.data.grpc.createSecretChat(
+                targetUsername = targetUsername,
+                targetUserId = "",
+                publicKey = publicKey,
+                clientVersion = clientVersion
+            )
+            callback(chatId, success, message, "")
+        }
     }
+
     fun exchangeSecretKey(chatId: String, publicKey: String, callback: (Boolean, String, Boolean) -> Unit) {
-        callback(false, "", false)
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val (success, peerKey, peerHasKey) = lavender.client.android.data.grpc.exchangeSecretKey(chatId, publicKey)
+            callback(success, peerKey, peerHasKey)
+        }
     }
+
     fun getSecretChatKey(chatId: String, callback: (String, Boolean) -> Unit) {
-        callback("", false)
+        scope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val (peerKey, peerHasKey) = lavender.client.android.data.grpc.getSecretChatKey(chatId)
+            callback(peerKey, peerHasKey)
+        }
     }
-    fun sendE2EEMessage(chatId: String, encryptedPayload: String) {}
+
+    fun sendE2EEMessage(chatId: String, encryptedPayload: String) {
+        // Send as a regular message with E2EE flags
+        val msg = Message(
+            id = java.util.UUID.randomUUID().toString(),
+            user = getCurrentUsername() ?: "",
+            text = "", // Empty — real content is in e2eePayload
+            timestamp = System.currentTimeMillis(),
+            roomId = chatId,
+            userId = getUserId() ?: "",
+            isE2EE = true,
+            e2eePayload = encryptedPayload
+        )
+        addLocalMessage(msg)
+        sendMessage(msg)
+    }
+
+    // OWL AI Assistant
+    fun chatWithOWL(
+        userId: String,
+        message: String,
+        chatId: String,
+        modelId: String,
+        apiKey: String,
+        scope: kotlinx.coroutines.CoroutineScope,
+        onResponse: (lavender.client.android.data.proto.OWLResponseProto) -> Unit
+    ) {
+        lavender.client.android.data.grpc.chatWithOWL(userId, message, chatId, modelId, apiKey, scope, onResponse)
+    }
+
+    suspend fun createOwlChat(userId: String, name: String): String {
+        return lavender.client.android.data.grpc.createOwlChat(userId, name)
+    }
+
+    suspend fun deleteOwlChat(chatId: String, userId: String): Boolean {
+        return lavender.client.android.data.grpc.deleteOwlChat(chatId, userId)
+    }
+
+    suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, model: String): Boolean {
+        return lavender.client.android.data.grpc.updateOwlSettings(chatId, userId, apiKey, model)
+    }
+
+    suspend fun getOwlHistory(chatId: String, userId: String): List<lavender.client.android.data.proto.OwlHistoryMessageProto> {
+        return lavender.client.android.data.grpc.getOwlHistory(chatId, userId)
+    }
+
+    fun getOwlSettingApiKey(chatId: String): String {
+        return lavender.client.android.data.grpc.getOwlSettingApiKey(chatId)
+    }
+
+    fun getOwlSettingModel(chatId: String): String {
+        return lavender.client.android.data.grpc.getOwlSettingModel(chatId)
+    }
+
+    // ======= Hermes Multi-Agent Orchestrator =======
+
+    // Streaming — чат с оркестратором
+    fun chatWithOrchestrator(
+        userId: String,
+        sessionId: String,
+        message: String,
+        agentId: String = "",
+        mode: String = "",
+        scope: kotlinx.coroutines.CoroutineScope,
+        onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
+    ) {
+        lavender.client.android.data.grpc.chatWithOrchestrator(
+            userId, sessionId, message, agentId, mode, scope, onResponse
+        )
+    }
+
+    // StateFlow для Hermес ответов
+    val hermesResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.OrchestratorResponseProto> =
+        lavender.client.android.data.grpc.hermesResponses
+    val hermesTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
+        lavender.client.android.data.grpc.hermesTyping
+
+    // Unary методы
+    suspend fun listAgents(userId: String = ""): List<lavender.client.android.data.proto.AgentInfoProto> =
+        lavender.client.android.data.grpc.listAgents(userId)
+
+    suspend fun listAgentPresets(): List<lavender.client.android.data.proto.AgentPresetInfoProto> =
+        lavender.client.android.data.grpc.listAgentPresets()
+
+    suspend fun createAgent(
+        userId: String,
+        presetId: String,
+        customName: String = "",
+        customPrompt: String = "",
+        model: String = "",
+        maxTokens: Int = 0
+    ): lavender.client.android.data.proto.CreateAgentResponseProto =
+        lavender.client.android.data.grpc.createAgent(userId, presetId, customName, customPrompt, model, maxTokens)
+
+    suspend fun updateAgent(
+        agentId: String,
+        userId: String,
+        name: String = "",
+        systemPrompt: String = "",
+        model: String = "",
+        maxTokens: Int = 0
+    ): Boolean =
+        lavender.client.android.data.grpc.updateAgent(agentId, userId, name, systemPrompt, model, maxTokens)
+
+    suspend fun deleteAgent(agentId: String, userId: String): Boolean =
+        lavender.client.android.data.grpc.deleteAgent(agentId, userId)
+
+    suspend fun listUserAgents(userId: String): List<lavender.client.android.data.proto.AgentInfoProto> =
+        lavender.client.android.data.grpc.listUserAgents(userId)
+
+    suspend fun createHermesSession(
+        userId: String,
+        agentId: String = "",
+        mode: String = ""
+    ): lavender.client.android.data.proto.CreateHermesSessionResponseProto =
+        lavender.client.android.data.grpc.createHermesSession(userId, agentId, mode)
+
+    suspend fun deleteHermesSession(sessionId: String, userId: String): Boolean =
+        lavender.client.android.data.grpc.deleteHermesSession(sessionId, userId)
+
+    suspend fun getOrchestratorHistory(
+        sessionId: String,
+        limit: Int = 50
+    ): List<lavender.client.android.data.proto.OrchestratorHistoryMessageProto> =
+        lavender.client.android.data.grpc.getOrchestratorHistory(sessionId, limit)
+
+    // Remote Agent методы (FUTURE)
+    suspend fun listRemoteAgents(filterStatus: String = ""): List<lavender.client.android.data.proto.RemoteAgentInfoProto> =
+        lavender.client.android.data.grpc.listRemoteAgents(filterStatus)
+
+    suspend fun getRemoteAgentStatus(agentId: String): lavender.client.android.data.proto.GetRemoteAgentStatusResponseProto =
+        lavender.client.android.data.grpc.getRemoteAgentStatus(agentId)
 }

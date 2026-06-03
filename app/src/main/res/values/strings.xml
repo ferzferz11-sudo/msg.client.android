@@ -20,7 +20,7 @@
     <string name="attach_location">Location</string>
 
     <!-- Secret Chat (E2EE) -->
-    <string name="secret_chat">Secret Chat</string>
+    <string name="secret_chat">Секретный чат</string>
     <string name="e2ee_enabled">🔒 E2EE</string>
     <string name="e2ee_pending">🔒 Key exchange…</string>
     <string name="e2ee_verified">🔒 End-to-end encrypted</string>
@@ -208,6 +208,9 @@
     <string name="delete_for_me">Delete for me</string>
     <string name="delete_messages_confirm">Are you sure you want to delete %d selected messages?</string>
     <string name="delete_messages_action">Delete messages</string>
+    <string name="delete_message_confirmation">Delete this message?</string>
+    <string name="delete_messages_confirmation">Delete %d selected messages?</string>
+    <string name="delete_chat_confirmation">Delete this chat?</string>
     <string name="participants_count">%d participants</string>
     <string name="participants_online_count">%1$d participants (%2$d online)</string>
     <string name="search">Search</string>
@@ -431,6 +434,8 @@
     <string name="server_added">Server "%s" added</string>
     <string name="server_selected">Selected: %s</string>
     <string name="server_set_default">"%s" set as default</string>
+    <string name="server_connect_title">Подключиться к серверу</string>
+    <string name="server_connect_confirm">Войти на сервер \"%s\"?</string>
     <string name="error_required">Required</string>
     <string name="error_invalid_port">Port must be 1-65535</string>
     <string name="delete_server_title">Delete server</string>
@@ -532,4 +537,16 @@
     <string name="continue_label">Continue</string>
     <string name="discuss_in_chat">Discuss in chat</string>
     <string name="reject_conference">Reject</string>
+
+    <!-- Changelog -->
+    <string name="changelog_title">What\'s New</string>
+    <string name="tag_latest">★ Latest</string>
+    <string name="tag_prerelease">Pre</string>
+    <string name="files_count">📦 %d file(s)</string>
+    <string name="downloads">Downloads</string>
+    <string name="view_on_github">View on GitHub →</string>
+    <string name="changelog_empty">No releases yet</string>
+    <string name="changelog_error">Failed to load changelog</string>
+    <string name="changelog_open_github">Open on GitHub</string>
+    <string name="open">Open</string>
 </resources>

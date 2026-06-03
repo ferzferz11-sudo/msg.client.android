@@ -82,4 +82,30 @@ object ThemeUtils {
             Log.e("ThemeUtils", "Error applying theme to activity")
         }
     }
+
+    fun applyToolbarTheme(toolbar: com.google.android.material.appbar.MaterialToolbar) {
+        try {
+            val ctx = toolbar.context
+            val prefs = ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+            val themeId = prefs.getString("current_theme_id", "dark") ?: "dark"
+
+            val theme = if (themeId == "dark") {
+                BuiltInThemes.dark
+            } else if (themeId == "light") {
+                BuiltInThemes.BASE_LIGHT
+            } else {
+                BuiltInThemes.findById(themeId) ?: BuiltInThemes.dark
+            }
+
+            val bgColor = parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+            val onSurfaceColor = parseSafeColor(theme.onSurfaceColor, Color.WHITE)
+            val primaryColor = parseSafeColor(theme.primaryColor, Color.BLUE)
+
+            toolbar.setBackgroundColor(bgColor)
+            toolbar.setTitleTextColor(onSurfaceColor)
+            toolbar.setNavigationIconTint(onSurfaceColor)
+        } catch (_: Exception) {
+            Log.e("ThemeUtils", "Error applying toolbar theme")
+        }
+    }
 }

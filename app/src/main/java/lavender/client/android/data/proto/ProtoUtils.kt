@@ -40,6 +40,12 @@ object ProtoUtils {
             builder.addImageUrls(imageUrl)
         }
 
+        // E2EE fields
+        if (message.isE2EE) {
+            builder.setIsE2Ee(true)
+            builder.setE2EePayload(message.e2eePayload)
+        }
+
         return builder.build()
     }
 
@@ -66,7 +72,9 @@ object ProtoUtils {
             isSuperAdmin = proto.isSuperAdmin,
             voiceUrl = proto.voiceUrl,
             duration = proto.duration,
-            userId = proto.userId
+            userId = proto.userId,
+            isE2EE = proto.isE2Ee,
+            e2eePayload = proto.e2EePayload
         )
     }
     
