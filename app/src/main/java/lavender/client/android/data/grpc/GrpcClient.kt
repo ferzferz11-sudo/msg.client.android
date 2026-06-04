@@ -382,43 +382,6 @@ object GrpcClient {
         sendMessage(msg)
     }
 
-    // OWL AI Assistant
-    fun chatWithOWL(
-        userId: String,
-        message: String,
-        chatId: String,
-        modelId: String,
-        apiKey: String,
-        scope: kotlinx.coroutines.CoroutineScope,
-        onResponse: (lavender.client.android.data.proto.OWLResponseProto) -> Unit
-    ) {
-        lavender.client.android.data.grpc.chatWithOWL(userId, message, chatId, modelId, apiKey, scope, onResponse)
-    }
-
-    suspend fun createOwlChat(userId: String, name: String): String {
-        return lavender.client.android.data.grpc.createOwlChat(userId, name)
-    }
-
-    suspend fun deleteOwlChat(chatId: String, userId: String): Boolean {
-        return lavender.client.android.data.grpc.deleteOwlChat(chatId, userId)
-    }
-
-    suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, model: String): Boolean {
-        return lavender.client.android.data.grpc.updateOwlSettings(chatId, userId, apiKey, model)
-    }
-
-    suspend fun getOwlHistory(chatId: String, userId: String): List<lavender.client.android.data.proto.OwlHistoryMessageProto> {
-        return lavender.client.android.data.grpc.getOwlHistory(chatId, userId)
-    }
-
-    fun getOwlSettingApiKey(chatId: String): String {
-        return lavender.client.android.data.grpc.getOwlSettingApiKey(chatId)
-    }
-
-    fun getOwlSettingModel(chatId: String): String {
-        return lavender.client.android.data.grpc.getOwlSettingModel(chatId)
-    }
-
     // ======= Hermes Multi-Agent Orchestrator =======
 
     // Streaming — чат с оркестратором

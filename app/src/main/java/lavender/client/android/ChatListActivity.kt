@@ -241,14 +241,6 @@ class ChatListActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(
             lifecycleScope,
             onChatClick = { chat ->
-                // OWL AI virtual chat
-                if (chat.id.startsWith("owl-")) {
-                    val intent = Intent(this, OwlActivity::class.java)
-                    intent.putExtra("CHAT_ID", chat.id)
-                    startActivity(intent)
-                    return@ChatAdapter
-                }
-
                 if (chat.type == "favorites") {
                     val intent = Intent(this, NewChatActivity::class.java).apply {
                         putExtra("USERNAME", username)
@@ -1980,86 +1972,15 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
                 },
-                SheetAction(R.id.actionOwlChat, R.drawable.ic_notification_logo, "Чат с AI") {
-                    createNewOwlChat()
-                },
                 SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Hermes AI") {
                     val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
                     startActivity(intent)
+                },
+                SheetAction(R.id.actionHermesAgents, R.drawable.ic_agents, "Агенты") {
+                    val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
+                    startActivity(intent)
                 }
             )).show()
-    }
-
-    private fun createNewOwlChat() {
-        val uid = username
-        if (uid.isEmpty()) {
-            Toast.makeText(this, "Необходимо войти в аккаунт", Toast.LENGTH_SHORT).show()
-            return
-        }
-        lifecycleScope.launch {
-            try {
-                var chatId = GrpcClient.createOwlChat(uid, "AI Chat")
-                Log.d("ChatListActivity", "createOwlChat result: '$chatId' channelStatus=${grpcClient.connectionStatus.value}")
-                if (chatId.isEmpty()) {
-                    // Channel was dead — reconnect and retry once
-                    Toast.makeText(this@ChatListActivity, "Подключение...", Toast.LENGTH_SHORT).show()
-                    val parts = (intent.getStringExtra("SERVER_ADDRESS")
-                        ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")
-                        ?: lavender.client.android.data.session.CredentialStore.getServerAddress(this@ChatListActivity)).let {
-                        it?.split(":")
-                    }
-                    if (parts != null && parts.isNotEmpty() && parts[0].isNotEmpty()) {
-                        val host = parts[0]
-                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                        grpcClient.connect(host, false, port, this@ChatListActivity, true)
-                        // Wait up to 5s for READY
-                        var waited = 0
-                        while (grpcClient.connectionStatus.value != ConnectionStatus.READY && waited < 5000) {
-                            delay(500)
-                            waited += 500
-                        }
-                    }
-                    chatId = GrpcClient.createOwlChat(uid, "AI Chat")
-                }
-                runOnUiThread {
-                    if (chatId.isNotEmpty()) {
-                        // Add OWL chat to local list and cache so it appears immediately
-                        val owlChat = ChatInfo(
-                            id = chatId,
-                            name = "🤖 Чат с AI",
-                            type = "owl",
-                            participants = "[\"$uid\"]",
-                            creator = uid,
-                            avatarUrl = "",
-                            fullAvatarUrl = "",
-                            unreadCount = 0
-                        )
-                        chats.add(0, owlChat)
-                        chatAdapter.setChats(chats.toList())
-
-                        // Persist to local cache immediately
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            try {
-                                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
-                                db.chatDao().insertChats(listOf(owlChat.toEntity()))
-                            } catch (e: Exception) {
-                                android.util.Log.e("ChatListActivity", "Failed to cache OWL chat", e)
-                            }
-                        }
-
-                        val intent = Intent(this@ChatListActivity, OwlActivity::class.java)
-                        intent.putExtra("CHAT_ID", chatId)
-                        startActivity(intent)
-                    } else {
-                        Toast.makeText(this@ChatListActivity, "Ошибка создания чата", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this@ChatListActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
 
     private fun showCreateConferenceDialog() {

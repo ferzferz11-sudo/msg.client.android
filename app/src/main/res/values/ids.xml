@@ -11,8 +11,8 @@
     <item name="actionCancelUpdate" type="id" />
     <item name="actionCreateConference" type="id" />
     <item name="actionCreateSecretChat" type="id" />
-    <item name="actionOwlChat" type="id" />
     <item name="actionHermesChat" type="id" />
+    <item name="actionHermesAgents" type="id" />
     <item name="action_owl_settings" type="id" />
     <item name="action_owl_delete" type="id" />
 </resources>
