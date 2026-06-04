@@ -108,6 +108,7 @@
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.hermes.AgentListActivity" android:exported="false" />
         <activity android:name=".ui.hermes.AgentSettingsActivity" android:exported="false" />
+        <activity android:name=".ui.LogViewerActivity" android:exported="false" />
 
         <activity
             android:name=".MapPickerActivity"

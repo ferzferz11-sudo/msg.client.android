@@ -10,15 +10,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import lavender.client.android.R
 import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.models.LogEntry
-import lavender.client.android.data.session.SessionManager
-import lavender.client.android.theme.ui.ThemeUi
 
 /**
  * Activity для просмотра логов ошибок
@@ -35,8 +32,7 @@ class LogViewerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_log_viewer)
 
-        val username = SessionManager.session.value.username
-        ThemeUi.bind(this, username)
+        // Тему применяем без ThemeUi.bind — он вызывает ClassCastException при возврате на предыдущий Activity
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
