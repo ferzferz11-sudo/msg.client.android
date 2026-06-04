@@ -130,9 +130,19 @@ class HermesRepository {
                     )
                 )
             } else {
-                Result.failure(Exception(response.message.ifEmpty { "Failed to create session" }))
+                val errorMsg = response.message.ifEmpty { "Failed to create session" }
+                lavender.client.android.data.models.AppLog.error(
+                    "HermesRepository:createSession",
+                    "userId=$userId agentId=$agentId mode=$mode error=$errorMsg"
+                )
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
+            lavender.client.android.data.models.AppLog.error(
+                "HermesRepository:createSession",
+                "userId=$userId agentId=$agentId mode=$mode",
+                e
+            )
             Result.failure(e)
         }
     }

@@ -67,9 +67,12 @@ class HermesChatActivity : AppCompatActivity() {
         }
 
         // Create session and load history
+        android.util.Log.d("HermesChatActivity", "onCreate: chatId=$chatId userId=$userId")
         if (chatId.isEmpty()) {
+            android.util.Log.d("HermesChatActivity", "onCreate: creating new session for userId=$userId")
             viewModel.createSession(userId)
         } else {
+            android.util.Log.d("HermesChatActivity", "onCreate: loading history for chatId=$chatId")
             viewModel.loadHistory()
         }
     }

@@ -19,4 +19,11 @@
         android:icon="@drawable/ic_search_custom"
         android:title="Search"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_logs"
+        android:icon="@drawable/ic_info"
+        android:title="Logs"
+        app:showAsAction="ifRoom" />
+
 </menu>

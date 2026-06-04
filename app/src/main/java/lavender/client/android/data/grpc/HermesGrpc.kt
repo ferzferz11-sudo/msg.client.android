@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import lavender.client.android.data.proto.*
+import lavender.client.android.data.models.AppLog
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
@@ -596,8 +597,18 @@ suspend fun createHermesSession(
     agentId: String = "",
     mode: String = ""
 ): CreateHermesSessionResponseProto = withContext(Dispatchers.IO) {
+    android.util.Log.d("HermesGrpc", "createHermesSession: userId=$userId agentId=$agentId mode=$mode")
     val channel = RealGrpcClient.getChannel()
-    if (channel == null || channel.isShutdown || channel.isTerminated) return@withContext CreateHermesSessionResponseProto()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        android.util.Log.e("HermesGrpc", "createHermesSession: CHANNEL IS NULL OR DEAD! channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}")
+        lavender.client.android.data.models.AppLog.error(
+            "HermesGrpc:createHermesSession",
+            "Channel is null or dead! userId=$userId channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}"
+        )
+        return@withContext CreateHermesSessionResponseProto()
+    }
+
+    android.util.Log.d("HermesGrpc", "createHermesSession: channel OK, creating call...")
 
     val methodDesc = MethodDescriptor.newBuilder<CreateHermesSessionRequestProto, CreateHermesSessionResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -639,10 +650,18 @@ suspend fun createHermesSession(
 
     call.start(object : io.grpc.ClientCall.Listener<CreateHermesSessionResponseProto>() {
         override fun onMessage(message: CreateHermesSessionResponseProto) {
+            android.util.Log.d("HermesGrpc", "createHermesSession: response success=${message.success} sessionId=${message.sessionId} message=${message.message}")
             result.complete(message)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-            if (!result.isCompleted) result.complete(CreateHermesSessionResponseProto())
+            android.util.Log.d("HermesGrpc", "createHermesSession: onClose status=${status.code} desc=${status.description}")
+            if (!result.isCompleted) {
+                lavender.client.android.data.models.AppLog.error(
+                    "HermesGrpc:createHermesSession",
+                    "Stream closed before response! status=${status.code} desc=${status.description}"
+                )
+                result.complete(CreateHermesSessionResponseProto())
+            }
         }
     }, io.grpc.Metadata())
 
@@ -650,7 +669,9 @@ suspend fun createHermesSession(
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() } ?: CreateHermesSessionResponseProto()
+    val response = withTimeoutOrNull(10000) { result.await() } ?: CreateHermesSessionResponseProto()
+    android.util.Log.d("HermesGrpc", "createHermesSession: final result success=${response.success} sessionId=${response.sessionId}")
+    return@withContext response
 }
 
 suspend fun deleteHermesSession(sessionId: String, userId: String): Boolean = withContext(Dispatchers.IO) {

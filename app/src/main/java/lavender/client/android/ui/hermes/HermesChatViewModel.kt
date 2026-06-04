@@ -47,16 +47,19 @@ class HermesChatViewModel : ViewModel() {
      * Create a new Hermes session
      */
     fun createSession(userId: String, agentId: String = "", mode: String = "single") {
+        android.util.Log.d("HermesChatVM", "createSession: userId=$userId agentId=$agentId mode=$mode")
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             val result = repository.createSession(userId, agentId, mode)
             result.onSuccess { session ->
+                android.util.Log.d("HermesChatVM", "createSession SUCCESS: sessionId=${session.id}")
                 _currentSession.value = session
                 if (agentId.isNotEmpty()) {
                     _currentSession.value = session.copy(activeAgentId = agentId)
                 }
             }.onFailure { e ->
+                android.util.Log.e("HermesChatVM", "createSession FAILED: ${e.message}", e)
                 _error.value = e.message ?: "Failed to create session"
             }
             _isLoading.value = false

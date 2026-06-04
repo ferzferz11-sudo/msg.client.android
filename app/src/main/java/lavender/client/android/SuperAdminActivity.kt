@@ -123,6 +123,13 @@ class SuperAdminActivity : AppCompatActivity() {
         loadData()
     }
 
+    // ======= Log Viewer =======
+
+    private fun showLogViewer() {
+        val intent = Intent(this, lavender.client.android.ui.LogViewerActivity::class.java)
+        startActivity(intent)
+    }
+
     private fun setupRecyclerView() {
         adapter = SuperAdminAdapter(
             onUserClick = { user ->
@@ -242,6 +249,10 @@ class SuperAdminActivity : AppCompatActivity() {
                     searchEditText.text.clear()
                     filterCurrentList("")
                 }
+                return true
+            }
+            R.id.action_logs -> {
+                showLogViewer()
                 return true
             }
         }
