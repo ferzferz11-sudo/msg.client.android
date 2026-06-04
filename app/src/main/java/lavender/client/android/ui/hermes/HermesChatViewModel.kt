@@ -38,6 +38,10 @@ class HermesChatViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Agents registry — агенты как участники группового чата
+    private val _agents = MutableStateFlow<List<AgentInfo>>(emptyList())
+    val agents: StateFlow<List<AgentInfo>> = _agents.asStateFlow()
+
     // Accumulated streaming content
     private var streamingContent = ""
     private var streamingAgentId = ""
@@ -199,5 +203,48 @@ class HermesChatViewModel : ViewModel() {
      */
     fun setCurrentAgent(agent: AgentInfo) {
         _currentAgent.value = agent
+    }
+
+    /**
+     * Add agent as chat participant.
+     * Called from AgentListActivity or when orchestrator routes to a new agent.
+     */
+    fun addAgent(agent: AgentInfo) {
+        val current = _agents.value.toMutableList()
+        if (current.none { it.id == agent.id }) {
+            current.add(agent)
+            _agents.value = current
+        }
+    }
+
+    /**
+     * Remove agent from participants.
+     */
+    fun removeAgent(agentId: String) {
+        _agents.value = _agents.value.filter { it.id != agentId }
+    }
+
+    /**
+     * Get agent by ID.
+     */
+    fun getAgent(agentId: String): AgentInfo? {
+        return _agents.value.find { it.id == agentId }
+    }
+
+    /**
+     * Initialize with preset agents.
+     */
+    fun initPresetAgents() {
+        val presets = listOf(
+            AgentInfo("developer", "Developer", "Software development expert", "developer", true, "💻"),
+            AgentInfo("designer", "Designer", "UI/UX design expert", "designer", true, "🎨"),
+            AgentInfo("writer", "Writer", "Content writing expert", "writer", true, "✍️"),
+            AgentInfo("analyst", "Analyst", "Data analysis expert", "analyst", true, "📊"),
+            AgentInfo("translator", "Translator", "Translation expert", "translator", true, "🌐"),
+            AgentInfo("researcher", "Researcher", "Research expert", "researcher", true, "🔬"),
+            AgentInfo("tester", "Tester", "QA testing expert", "tester", true, "🧪"),
+            AgentInfo("hermes-owl", "OWL", "General AI assistant", "assistant", true, "🦉")
+        )
+        _agents.value = presets
     }
 }

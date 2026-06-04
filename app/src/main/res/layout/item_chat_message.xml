@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  item_chat_message.xml — универсальный item сообщения.
+  Поддерживает:
+    - User messages (right-aligned, primary color bubble)
+    - Agent/participant messages (left-aligned, with avatar + name)
+    - System messages (centered, small text)
+    - Streaming indicator (typing dots)
+    - Reply quote
+    - Timestamp, read status
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="2dp">
+
+    <!-- Date separator -->
+    <TextView
+        android:id="@+id/dateText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginVertical="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:background="@drawable/bg_date_separator"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="gone"
+        tools:text="22 мая" />
+
+    <!-- ===== USER MESSAGE (right-aligned) ===== -->
+    <LinearLayout
+        android:id="@+id/userMessageContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:paddingStart="48dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end"
+            android:background="@drawable/bg_message_user"
+            android:padding="10dp"
+            android:layout_marginStart="8dp">
+
+            <!-- Reply quote inside user message -->
+            <LinearLayout
+                android:id="@+id/userReplyContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#15000000"
+                android:padding="4dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone"
+                tools:visibility="gone">
+
+                <View
+                    android:id="@+id/userReplyBar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/lavender_mist"
+                    android:layout_marginEnd="4dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/userReplyUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/tg_blue" />
+
+                    <TextView
+                        android:id="@+id/userReplyText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="?android:attr/textColorPrimary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/userMessageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/message_user_text"
+                android:textSize="15sp"
+                android:autoLink="web|email"
+                android:linksClickable="true"
+                tools:text="Привет, оркестратор!" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="end"
+                android:layout_marginTop="2dp">
+
+                <TextView
+                    android:id="@+id/userMessageTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:textColor="@color/message_user_time"
+                    tools:text="12:30" />
+
+                <ImageView
+                    android:id="@+id/userReadStatus"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="2dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ===== AGENT/PARTICIPANT MESSAGE (left-aligned with avatar) ===== -->
+    <LinearLayout
+        android:id="@+id/agentMessageContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:paddingStart="8dp"
+        android:paddingEnd="48dp"
+        android:visibility="gone"
+        tools:visibility="gone">
+
+        <!-- Avatar or emoji icon -->
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/agentAvatar"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/agentEmoji"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:textSize="18sp"
+            android:layout_marginEnd="8dp"
+            android:layout_gravity="bottom"
+            tools:text="🤖" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_message_agent"
+            android:padding="10dp"
+            android:layout_marginEnd="8dp">
+
+            <!-- Agent/participant name -->
+            <TextView
+                android:id="@+id/agentName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:visibility="gone"
+                tools:text="Developer"
+                tools:visibility="visible" />
+
+            <!-- Reply quote inside agent message -->
+            <LinearLayout
+                android:id="@+id/agentReplyContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#15000000"
+                android:padding="4dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone"
+                tools:visibility="gone">
+
+                <View
+                    android:id="@+id/agentReplyBar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/lavender_mist"
+                    android:layout_marginEnd="4dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/agentReplyUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/tg_blue" />
+
+                    <TextView
+                        android:id="@+id/agentReplyText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textColor="?android:attr/textColorPrimary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/agentMessageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/message_agent_text"
+                android:textSize="15sp"
+                android:autoLink="web|email"
+                android:linksClickable="true"
+                tools:text="Ответ от агента-разработчика..." />
+
+            <TextView
+                android:id="@+id/agentMessageTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="@color/message_agent_time"
+                android:layout_marginTop="2dp"
+                tools:text="12:31" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ===== TYPING INDICATOR ===== -->
+    <LinearLayout
+        android:id="@+id/typingContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:paddingStart="48dp"
+        android:paddingEnd="48dp"
+        android:visibility="gone"
+        tools:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_message_agent"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/typingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="●●●"
+                android:textSize="14sp"
+                android:textColor="?attr/colorPrimary"
+                android:fontFamily="monospace" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

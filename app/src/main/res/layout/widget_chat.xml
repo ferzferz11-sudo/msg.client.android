@@ -1,17 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  activity_hermes_chat.xml — чат с оркестратором агентов.
-  Использует widget_chat.xml как основу (include).
-  Агенты отображаются как участники группового чата.
+<!-- 
+  widget_chat.xml — универсальный chat widget layout.
+  Используется в NewChatActivity (групповой чат) и HermesChatActivity (агенты как участники).
+  
+  Структура:
+    - Toolbar: аватар, название, статус/участники, действия
+    - Messages: RecyclerView с адаптером
+    - Reply preview: цитируемое сообщение
+    - Input panel: emoji, input, attach, send
+    - Typing indicator: встроен в адаптер (последний item)
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/chatRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
-    tools:context=".ui.hermes.HermesChatActivity">
+    android:background="@android:color/transparent">
 
+    <!-- Background image -->
     <ImageView
         android:id="@+id/chatBackground"
         android:layout_width="0dp"
@@ -40,6 +47,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical">
 
+            <!-- Main toolbar content -->
             <LinearLayout
                 android:id="@+id/toolbarContent"
                 android:layout_width="wrap_content"
@@ -50,7 +58,19 @@
                 android:layout_alignParentStart="true"
                 android:paddingEnd="8dp">
 
-                <!-- Agent emoji icon (shown for Hermes) -->
+                <!-- Avatar / Icon -->
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/toolbarAvatar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="12dp"
+                    android:src="@drawable/ic_default_avatar"
+                    android:visibility="gone"
+                    app:civ_border_width="1.5dp"
+                    app:civ_border_color="?attr/colorOnPrimary"
+                    tools:visibility="visible" />
+
+                <!-- Agent icon (emoji) for Hermes -->
                 <TextView
                     android:id="@+id/toolbarAgentIcon"
                     android:layout_width="48dp"
@@ -72,14 +92,14 @@
                         android:id="@+id/toolbarTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hermes"
                         android:textColor="?attr/colorOnPrimary"
                         android:textSize="17sp"
                         android:textStyle="bold"
                         android:ellipsize="end"
-                        android:maxLines="1" />
+                        android:maxLines="1"
+                        tools:text="Chat Title" />
 
-                    <!-- Agents as participants row -->
+                    <!-- Group participants row -->
                     <LinearLayout
                         android:id="@+id/groupHeader"
                         android:layout_width="wrap_content"
@@ -108,7 +128,7 @@
                             android:paddingVertical="1dp"
                             android:background="@drawable/bg_status_bubble"
                             android:visibility="gone"
-                            tools:text="печатает..."
+                            tools:text="online"
                             tools:visibility="visible" />
                     </LinearLayout>
                 </LinearLayout>
@@ -116,7 +136,7 @@
         </RelativeLayout>
     </com.google.android.material.appbar.MaterialToolbar>
 
-    <!-- Messages -->
+    <!-- Messages list -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/messagesRecyclerView"
         android:layout_width="0dp"
@@ -124,10 +144,72 @@
         android:clipToPadding="false"
         android:padding="8dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
+        app:layout_constraintBottom_toTopOf="@id/replyPreview"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/item_chat_message" />
+
+    <!-- Reply preview -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/replyPreview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:visibility="gone"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant"
+        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <View
+                android:id="@+id/replyBar"
+                android:layout_width="4dp"
+                android:layout_height="match_parent"
+                android:background="?attr/colorPrimary"
+                android:layout_marginEnd="8dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/replyUser"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    tools:text="Pavel" />
+
+                <TextView
+                    android:id="@+id/replyText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="14sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:text="Hello, how are you?" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/cancelReply"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                app:tint="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Bottom input panel -->
     <com.google.android.material.card.MaterialCardView
@@ -146,12 +228,21 @@
             android:gravity="bottom"
             android:padding="4dp">
 
+            <ImageButton
+                android:id="@+id/emojiButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/add_reaction_24"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:contentDescription="@string/add_emoji" />
+
             <EditText
                 android:id="@+id/messageInput"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Сообщение оркестратору"
+                android:hint="@string/type_message_here"
                 android:background="@android:color/transparent"
                 android:padding="12dp"
                 android:minLines="1"
@@ -171,7 +262,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/send_24"
                 app:tint="?attr/colorPrimary"
-                android:contentDescription="Отправить" />
+                android:contentDescription="@string/send_message" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
