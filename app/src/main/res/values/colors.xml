@@ -40,6 +40,10 @@
     <color name="message_agent_text">#FFE0E0E0</color>
     <color name="message_agent_time">#909090</color>
 
+    <!-- Chip colors for agent participants -->
+    <color name="chip_background">#33FFFFFF</color>
+    <color name="chip_text">#FFE0E0E0</color>
+
     <!-- UI element colors -->
     <color name="primary">@color/lavender_mist</color>
     <color name="primary_dark">#1A1A1A</color>

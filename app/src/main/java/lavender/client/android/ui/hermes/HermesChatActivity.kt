@@ -142,20 +142,23 @@ class HermesChatActivity : AppCompatActivity() {
         groupParticipantsContainer.visibility = View.VISIBLE
     }
 
-    private fun createAgentChip(agent: AgentInfo): android.widget.TextView {
-        val chip = android.widget.TextView(this).apply {
+    private fun createAgentChip(agent: AgentInfo): com.google.android.material.chip.Chip {
+        val chip = com.google.android.material.chip.Chip(this).apply {
             text = "${agent.icon.ifEmpty { "🤖" }} ${agent.name}"
             textSize = 11f
-            setTextColor(resources.getColor(R.color.message_agent_text, null))
-            setBackgroundResource(R.drawable.bg_status_bubble)
-            setPadding(8, 2, 8, 2)
+            isClickable = true
+            isCheckable = false
+            chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+                resources.getColor(R.color.chip_background, null)
+            )
+            setTextColor(resources.getColor(R.color.chip_text, null))
+            chipStrokeWidth = 0f
             layoutParams = android.widget.LinearLayout.LayoutParams(
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                marginEnd = 4
+                marginEnd = 4.dpToPx()
             }
-            // Tap on agent chip → switch to direct chat with this agent
             setOnClickListener {
                 switchToAgent(agent)
             }
