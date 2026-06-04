@@ -618,8 +618,10 @@ suspend fun createHermesSession(
                 val baos = ByteArrayOutputStream()
                 val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
                 if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+                // field 2 = name (server expects name, not agentId)
+                // If agentId is provided use it as name, otherwise use empty string
                 if (v.agentId.isNotEmpty()) cos.writeString(2, v.agentId)
-                if (v.mode.isNotEmpty()) cos.writeString(3, v.mode)
+                // Note: field 3 (mode) is not in server proto, skip it
                 cos.flush()
                 return ByteArrayInputStream(baos.toByteArray())
             }
@@ -634,9 +636,9 @@ suspend fun createHermesSession(
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> sessionId = cis.readString()
-                        2 -> success = cis.readBool()
-                        3 -> message = cis.readString()
+                        1 -> success = cis.readBool()      // field 1 = success (bool)
+                        2 -> sessionId = cis.readString()  // field 2 = session_id (string)
+                        3 -> message = cis.readString()    // field 3 = error (string)
                         else -> cis.skipField(tag)
                     }
                 }
