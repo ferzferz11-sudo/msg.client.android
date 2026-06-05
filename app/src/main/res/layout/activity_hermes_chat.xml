@@ -1,178 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   activity_hermes_chat.xml — чат с оркестратором агентов.
-  Использует widget_chat.xml как основу (include).
+  Использует ChatWidget как основной компонент.
   Агенты отображаются как участники группового чата.
 -->
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
     tools:context=".ui.hermes.HermesChatActivity">
 
-    <ImageView
-        android:id="@+id/chatBackground"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:scaleType="centerCrop"
-        android:contentDescription="@null"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Toolbar -->
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <lavender.client.android.ui.chat.widget.ChatWidget
+        android:id="@+id/chatWidget"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="@dimen/custom_toolbar_height"
-        android:background="@drawable/toolbar_background"
-        android:elevation="4dp"
-        app:navigationIcon="@drawable/ic_back_arrow"
-        app:navigationIconTint="?attr/colorOnPrimary"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_height="match_parent" />
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical">
+    <!-- Loading indicator (shown on top of chat when loading) -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:elevation="10dp"
+        tools:visibility="gone" />
 
-            <LinearLayout
-                android:id="@+id/toolbarContent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_centerVertical="true"
-                android:layout_alignParentStart="true"
-                android:paddingEnd="8dp">
-
-                <!-- Agent emoji icon (shown for Hermes) -->
-                <TextView
-                    android:id="@+id/toolbarAgentIcon"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="12dp"
-                    android:gravity="center"
-                    android:textSize="24sp"
-                    android:background="@drawable/bg_hermes_circle"
-                    android:visibility="gone"
-                    tools:text="🎼"
-                    tools:visibility="visible" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/toolbarTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Hermes"
-                        android:textColor="?attr/colorOnPrimary"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:ellipsize="end"
-                        android:maxLines="1" />
-
-                    <!-- Agents as participants row -->
-                    <LinearLayout
-                        android:id="@+id/groupHeader"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="4dp"
-                        android:visibility="gone"
-                        tools:visibility="visible">
-
-                        <LinearLayout
-                            android:id="@+id/groupParticipantsContainer"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginEnd="8dp" />
-
-                        <TextView
-                            android:id="@+id/toolbarSubtitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="?attr/colorOnPrimary"
-                            android:textSize="11sp"
-                            android:alpha="1.0"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="1dp"
-                            android:background="@drawable/bg_status_bubble"
-                            android:visibility="gone"
-                            tools:text="печатает..."
-                            tools:visibility="visible" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-        </RelativeLayout>
-    </com.google.android.material.appbar.MaterialToolbar>
-
-    <!-- Messages -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/messagesRecyclerView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:padding="8dp"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:listitem="@layout/item_chat_message" />
-
-    <!-- Bottom input panel -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/bottomPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="0dp"
-        app:cardElevation="8dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="bottom"
-            android:padding="4dp">
-
-            <EditText
-                android:id="@+id/messageInput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Сообщение оркестратору"
-                android:background="@android:color/transparent"
-                android:padding="12dp"
-                android:minLines="1"
-                android:maxLines="12"
-                android:gravity="top|start"
-                android:scrollbars="vertical"
-                android:textSize="16sp"
-                android:inputType="textCapSentences|textMultiLine"
-                android:autofillHints="none"
-                android:textColor="?attr/colorOnSurface"
-                android:textColorHint="?attr/colorOnSurfaceVariant" />
-
-            <ImageButton
-                android:id="@+id/sendButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/send_24"
-                app:tint="?attr/colorPrimary"
-                android:contentDescription="Отправить" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

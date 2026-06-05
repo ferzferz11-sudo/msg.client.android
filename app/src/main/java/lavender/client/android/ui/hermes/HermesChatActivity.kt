@@ -3,6 +3,7 @@ package lavender.client.android.ui.hermes
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -11,7 +12,6 @@ import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.models.AgentInfo
@@ -20,37 +20,30 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
+import lavender.client.android.ui.chat.widget.ChatWidget
 
 /**
  * HermesChatActivity — чат с оркестратором агентов.
- * 
+ *
  * Использует единый ChatWidget (как и групповой чат).
  * Агенты отображаются как участники группового чата:
  * - Каждый агент имеет emoji-иконку и имя
  * - Сообщения от разных агентов визуально различаются
- * - Можно добавлять новых агентов как участников
+ * - Тап по чипу агента → переключение на прямой чат
  */
 class HermesChatActivity : AppCompatActivity() {
 
     private lateinit var viewModel: HermesChatViewModel
     private lateinit var adapter: ChatMessageAdapter
-
-    // Widget views
-    private lateinit var messagesRecyclerView: androidx.recyclerview.widget.RecyclerView
-    private lateinit var messageInput: android.widget.EditText
-    private lateinit var sendButton: android.widget.ImageButton
-    private lateinit var toolbarTitle: android.widget.TextView
-    private lateinit var toolbarSubtitle: android.widget.TextView
-    private lateinit var toolbarAgentIcon: android.widget.TextView
-    private lateinit var groupHeader: android.view.View
-    private lateinit var groupParticipantsContainer: android.widget.LinearLayout
-    private lateinit var bottomPanel: com.google.android.material.card.MaterialCardView
+    private lateinit var chatWidget: ChatWidget
+    private lateinit var progressBar: ProgressBar
 
     private var userId: String = ""
     private var chatId: String = ""
 
     // Agent registry — агенты как участники
     private val agents = mutableListOf<AgentInfo>()
+    private var activeAgentId: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,10 +54,12 @@ class HermesChatActivity : AppCompatActivity() {
 
         viewModel = androidx.lifecycle.ViewModelProvider(this)[HermesChatViewModel::class.java]
 
-        initViews()
+        chatWidget = findViewById(R.id.chatWidget)
+        progressBar = findViewById(R.id.progressBar)
+
+        setupToolbar()
         setupRecyclerView()
         setupInput()
-        setupToolbar()
         observeState()
         ThemeUi.bind(this, userId)
 
@@ -74,13 +69,12 @@ class HermesChatActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
-            bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            chatWidget.bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = if (isImeVisible) imeInsets.bottom else systemBars.bottom
             }
             insets
         }
 
-        // Create session and load history
         android.util.Log.d("HermesChatActivity", "onCreate: chatId=$chatId userId=$userId")
 
         // Initialize preset agents if empty
@@ -99,27 +93,15 @@ class HermesChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun initViews() {
-        messagesRecyclerView = findViewById(R.id.messagesRecyclerView)
-        messageInput = findViewById(R.id.messageInput)
-        sendButton = findViewById(R.id.sendButton)
-        toolbarTitle = findViewById(R.id.toolbarTitle)
-        toolbarSubtitle = findViewById(R.id.toolbarSubtitle)
-        toolbarAgentIcon = findViewById(R.id.toolbarAgentIcon)
-        groupHeader = findViewById(R.id.groupHeader)
-        groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer)
-        bottomPanel = findViewById(R.id.bottomPanel)
-    }
-
     private fun setupToolbar() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
 
-        toolbarTitle.text = "Hermes"
-        toolbarAgentIcon.text = "🎼"
-        toolbarAgentIcon.visibility = View.VISIBLE
+        chatWidget.setToolbarTitle("Hermes")
+        chatWidget.setToolbarAgentIcon("🎼", true)
+        chatWidget.setToolbarAvatar(false)
 
         // Show agents as participants in header
         updateAgentParticipants()
@@ -128,31 +110,43 @@ class HermesChatActivity : AppCompatActivity() {
     /**
      * Обновить список агентов-участников в тулбаре.
      * Каждый агент отображается как emoji-чип.
+     * Активный агент визуально выделен.
      */
     private fun updateAgentParticipants() {
-        groupParticipantsContainer.removeAllViews()
+        chatWidget.clearParticipantChips()
 
         agents.forEach { agent ->
-            val chip = createAgentChip(agent)
-            groupParticipantsContainer.addView(chip)
+            val chip = createAgentChip(agent, agent.id == activeAgentId)
+            chatWidget.addParticipantChip(chip)
         }
-
-        // Always show group header for Hermes (it's a multi-agent chat)
-        groupHeader.visibility = View.VISIBLE
-        groupParticipantsContainer.visibility = View.VISIBLE
     }
 
-    private fun createAgentChip(agent: AgentInfo): com.google.android.material.chip.Chip {
+    private fun createAgentChip(agent: AgentInfo, isActive: Boolean): com.google.android.material.chip.Chip {
         val chip = com.google.android.material.chip.Chip(this).apply {
             text = "${agent.icon.ifEmpty { "🤖" }} ${agent.name}"
             textSize = 11f
             isClickable = true
             isCheckable = false
-            chipBackgroundColor = android.content.res.ColorStateList.valueOf(
-                resources.getColor(R.color.chip_background, null)
-            )
-            setTextColor(resources.getColor(R.color.chip_text, null))
-            chipStrokeWidth = 0f
+
+            if (isActive) {
+                // Active agent: highlighted
+                chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.chip_background_active, null)
+                )
+                setTextColor(resources.getColor(R.color.chip_text_active, null))
+                chipStrokeWidth = 2f
+                chipStrokeColor = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.chip_stroke_active, null)
+                )
+            } else {
+                // Inactive agent: subtle
+                chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.chip_background, null)
+                )
+                setTextColor(resources.getColor(R.color.chip_text, null))
+                chipStrokeWidth = 0f
+            }
+
             layoutParams = android.widget.LinearLayout.LayoutParams(
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
@@ -167,9 +161,15 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     private fun switchToAgent(agent: AgentInfo) {
+        activeAgentId = agent.id
         viewModel.switchAgent(agent.id, agents)
-        toolbarTitle.text = agent.name
-        toolbarAgentIcon.text = agent.icon.ifEmpty { "🤖" }
+        chatWidget.setToolbarTitle(agent.name)
+        chatWidget.setToolbarAgentIcon(agent.icon.ifEmpty { "🤖" }, true)
+        chatWidget.setToolbarAvatar(false)
+
+        // Re-render chips to update active state
+        updateAgentParticipants()
+
         Toast.makeText(this, "Переключение на ${agent.name}", Toast.LENGTH_SHORT).show()
     }
 
@@ -179,21 +179,15 @@ class HermesChatActivity : AppCompatActivity() {
             showAvatars = false,     // Hermes uses emoji icons
             showNames = true         // Show agent names
         )
-        messagesRecyclerView.adapter = adapter
-        messagesRecyclerView.layoutManager = LinearLayoutManager(this).apply {
-            stackFromEnd = true
-        }
+        chatWidget.setAdapter(adapter)
     }
 
     private fun setupInput() {
-        sendButton.setOnClickListener {
-            val text = messageInput.text.toString().trim()
-            if (text.isEmpty()) return@setOnClickListener
-
+        chatWidget.setOnSendMessageListener { text ->
             val session = viewModel.currentSession.value
             if (session == null) {
                 Toast.makeText(this, "Сессия не создана", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+                return@setOnSendMessageListener
             }
 
             // Add user message immediately
@@ -206,9 +200,7 @@ class HermesChatActivity : AppCompatActivity() {
                 timestamp = System.currentTimeMillis()
             )
             adapter.submitList(adapter.currentList + userMessage)
-            scrollToBottom()
-
-            messageInput.setText("")
+            chatWidget.scrollToBottom()
 
             // Send via ViewModel
             val currentAgent = viewModel.currentAgent.value
@@ -227,7 +219,7 @@ class HermesChatActivity : AppCompatActivity() {
                     val items = hermesMessages.map { it.toChatMessageItem() }
                     adapter.submitList(items)
                     if (items.isNotEmpty()) {
-                        scrollToBottom()
+                        chatWidget.scrollToBottom()
                     }
                 }
             }
@@ -250,11 +242,12 @@ class HermesChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
-                    toolbarSubtitle.visibility = if (isTyping) View.VISIBLE else View.GONE
-                    toolbarSubtitle.text = "печатает..."
+                    val typingText = if (isTyping) {
+                        "${viewModel.currentAgent.value?.name ?: "Агент"} печатает..."
+                    } else ""
+                    chatWidget.setToolbarSubtitle(typingText, isTyping)
 
                     if (isTyping) {
-                        // Add typing indicator as last item
                         val typingItem = ChatMessageItem(
                             id = "typing",
                             content = "",
@@ -264,9 +257,8 @@ class HermesChatActivity : AppCompatActivity() {
                             timestamp = System.currentTimeMillis()
                         )
                         adapter.submitList(adapter.currentList + typingItem)
-                        scrollToBottom()
+                        chatWidget.scrollToBottom()
                     } else {
-                        // Remove typing indicator
                         val filtered = adapter.currentList.filter { !it.isTyping }
                         adapter.submitList(filtered)
                     }
@@ -279,12 +271,25 @@ class HermesChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.currentAgent.collect { agent ->
                     if (agent != null) {
-                        toolbarTitle.text = agent.name
-                        toolbarAgentIcon.text = agent.icon.ifEmpty { "🤖" }
+                        activeAgentId = agent.id
+                        chatWidget.setToolbarTitle(agent.name)
+                        chatWidget.setToolbarAgentIcon(agent.icon.ifEmpty { "🤖" }, true)
+                        updateAgentParticipants()
                     } else {
-                        toolbarTitle.text = "Hermes"
-                        toolbarAgentIcon.text = "🎼"
+                        activeAgentId = ""
+                        chatWidget.setToolbarTitle("Hermes")
+                        chatWidget.setToolbarAgentIcon("🎼", true)
+                        updateAgentParticipants()
                     }
+                }
+            }
+        }
+
+        // Loading state
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isLoading.collect { isLoading ->
+                    progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
                 }
             }
         }
@@ -302,15 +307,8 @@ class HermesChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun scrollToBottom() {
-        if (adapter.itemCount > 0) {
-            messagesRecyclerView.scrollToPosition(adapter.itemCount - 1)
-        }
-    }
-
     /**
      * Добавить агента как участника чата.
-     * Вызывается из AgentListActivity или при маршрутизации оркестратора.
      */
     fun addAgent(agent: AgentInfo) {
         if (agents.none { it.id == agent.id }) {
@@ -333,7 +331,6 @@ class HermesChatActivity : AppCompatActivity() {
     fun getAgents(): List<AgentInfo> = agents.toList()
 
     private fun HermesMessage.toChatMessageItem(): ChatMessageItem {
-        // Find agent info from ViewModel agents list
         val agent = viewModel.getAgent(this.agentId)
         return ChatMessageItem(
             id = this.id,
