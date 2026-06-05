@@ -118,6 +118,12 @@ object ThemeApplier {
             }
         }
 
+        // Tint FAB (e.g. AgentListActivity)
+        activity.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab)?.apply {
+            backgroundTintList = ColorStateList.valueOf(customPrimary)
+            imageTintList = ColorStateList.valueOf(customOnPrimary)
+        }
+
         // Tint other icons (like in background editor)
         val otherIcons = listOf(
             R.id.selectChatListBackground, R.id.removeChatListBackground,
