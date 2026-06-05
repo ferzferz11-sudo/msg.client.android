@@ -83,19 +83,6 @@ class HermesChatViewModel : ViewModel() {
     }
 
     /**
-     * Set reaction on a message
-     */
-    fun setReaction(messageId: String, userId: String, emoji: String) {
-        viewModelScope.launch {
-            try {
-                repository.setReaction(messageId, userId, emoji)
-            } catch (e: Exception) {
-                android.util.Log.e("HermesChatVM", "setReaction failed: ${e.message}")
-            }
-        }
-    }
-
-    /**
      * Load history for current session
      */
     fun loadHistory() {

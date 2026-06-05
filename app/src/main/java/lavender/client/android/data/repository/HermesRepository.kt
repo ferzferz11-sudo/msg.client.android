@@ -203,8 +203,4 @@ class HermesRepository {
             System.currentTimeMillis()
         }
     }
-
-    suspend fun setReaction(messageId: String, userId: String, emoji: String) {
-        return grpcClient.setReaction(messageId, userId, emoji)
-    }
 }

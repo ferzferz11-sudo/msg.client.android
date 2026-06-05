@@ -67,12 +67,8 @@ android {
 
     buildFeatures {
         viewBinding = true
-        buildConfig = false
+        buildConfig = true
         resValues = true
-    }
-
-    configurations.all {
-        exclude(group = "com.squareup", module = "javawriter")
     }
 }
 

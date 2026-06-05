@@ -23,9 +23,7 @@ import java.util.*
 class ChatMessageAdapter(
     private val currentUserId: String = "",
     private val showAvatars: Boolean = true,
-    private val showNames: Boolean = true,
-    private val onMessageClick: ((ChatMessageItem) -> Unit)? = null,
-    private val onMessageLongClick: ((ChatMessageItem) -> Unit)? = null
+    private val showNames: Boolean = true
 ) : ListAdapter<ChatMessageItem, RecyclerView.ViewHolder>(ChatMessageDiffCallback()) {
 
     companion object {
@@ -139,14 +137,6 @@ class ChatMessageAdapter(
 
             // Read status
             readStatus.isVisible = item.isRead
-
-            // Click listeners
-            onMessageClick?.let { listener ->
-                itemView.setOnClickListener { listener(item) }
-            }
-            onMessageLongClick?.let { listener ->
-                itemView.setOnLongClickListener { listener(item); true }
-            }
         }
     }
 
@@ -200,14 +190,6 @@ class ChatMessageAdapter(
                 replyText.text = item.replyToText
             } else {
                 replyContainer.isVisible = false
-            }
-
-            // Click listeners
-            onMessageClick?.let { listener ->
-                itemView.setOnClickListener { listener(item) }
-            }
-            onMessageLongClick?.let { listener ->
-                itemView.setOnLongClickListener { listener(item); true }
             }
         }
     }

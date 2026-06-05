@@ -1,9 +1,6 @@
 package lavender.client.android.ui.hermes
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -17,11 +14,8 @@ import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import lavender.client.android.R
-import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.models.AgentInfo
 import lavender.client.android.data.models.HermesMessage
 import lavender.client.android.data.session.SessionManager
@@ -30,9 +24,6 @@ import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
 import lavender.client.android.ui.chat.widget.MentionItem
-import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.ui.audio.AudioRecordingView
-import java.io.File
 
 /**
  * HermesChatActivity — чат с оркестратором агентов.
@@ -71,39 +62,6 @@ class HermesChatActivity : AppCompatActivity() {
                 mentionTag = agent.name.lowercase().replace(" ", "_")
             )
         }
-
-    // Activity result launchers
-    private val takePhotoLauncher = registerForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            // Photo taken successfully - handled by createImageUri()
-        }
-    }
-
-    private val pickImageLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            handleImageSelection(result.data)
-        }
-    }
-
-    private val pickFileLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            handleFileSelection(result.data)
-        }
-    }
-
-    private val pickLocationLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            handleLocationSelection(result.data)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -230,9 +188,7 @@ class HermesChatActivity : AppCompatActivity() {
         adapter = ChatMessageAdapter(
             currentUserId = userId,
             showAvatars = false,
-            showNames = true,
-            onMessageClick = { item -> showReactionsDialog(item) },
-            onMessageLongClick = { item -> showMessageMenu(item) }
+            showNames = true
         )
         chatWidget.setAdapter(adapter)
     }
@@ -283,201 +239,13 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     private fun showAttachmentSheet() {
-        val sheet = StandardBottomSheet(this, R.layout.dialog_attachment_picker)
-        sheet.contentContainer?.let { container ->
-            // Camera
-            container.findViewById<android.widget.LinearLayout>(R.id.attachCamera)?.setOnClickListener {
-                takePhotoLauncher.launch(createImageUri() ?: run {
-                    Toast.makeText(this, "Не удалось создать URI для фото", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                })
-                sheet.dismiss()
-            }
-
-            // Gallery
-            container.findViewById<android.widget.LinearLayout>(R.id.attachGallery)?.setOnClickListener {
-                pickImageLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
-                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                })
-                sheet.dismiss()
-            }
-
-            // File
-            container.findViewById<android.widget.LinearLayout>(R.id.attachFile)?.setOnClickListener {
-                pickFileLauncher.launch(Intent(Intent.ACTION_GET_CONTENT).apply {
-                    type = "*/*"
-                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                })
-                sheet.dismiss()
-            }
-
-            // Location
-            container.findViewById<android.widget.LinearLayout>(R.id.attachLocation)?.setOnClickListener {
-                pickLocationLauncher.launch(Intent(this, MapPickerActivity::class.java))
-                sheet.dismiss()
-            }
-        }
-        sheet.show()
+        val sheet = lavender.client.android.ui.widget.StandardBottomSheet(this, R.layout.dialog_emoji_picker)
+        // TODO: replace with proper attachment sheet
+        Toast.makeText(this, "Вложения — в разработке", Toast.LENGTH_SHORT).show()
     }
 
     private fun showVoiceRecorder() {
-        val sheet = StandardBottomSheet(this, R.layout.audio_recording_view)
-        sheet.contentContainer?.let { container ->
-            val audioView = container.findViewById<AudioRecordingView>(R.id.audioRecordingView) ?: 
-                AudioRecordingView(this).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                }
-
-            // Clear any existing views and add audio view
-            container.removeAllViews()
-            container.addView(audioView)
-
-            audioView.setOnRecordingStarted {
-                // Show upload progress when recording starts
-                chatWidget.showUploadProgress("Запись аудио...")
-            }
-
-            audioView.setOnRecordingFinished { file, duration ->
-                sheet.dismiss()
-                if (file != null) {
-                    // Show upload progress
-                    chatWidget.showUploadProgress("Отправка аудио...")
-                    lifecycleScope.launch {
-                        val result = AudioUploader(this@HermesChatActivity).uploadAudio(file, duration)
-                        runOnUiThread {
-                            chatWidget.hideUploadProgress()
-                            if (result.success && result.url.isNotEmpty() && !result.url.contains("404")) {
-                                // Send voice message
-                                val session = viewModel.currentSession.value
-                                val currentAgent = viewModel.currentAgent.value
-                                viewModel.sendMessage(
-                                    text = "Голосовое сообщение",
-                                    agentId = currentAgent?.id ?: "",
-                                    voiceUrl = result.url,
-                                    duration = result.duration
-                                )
-                            } else {
-                                Toast.makeText(
-                                    this@HermesChatActivity,
-                                    "Не удалось загрузить аудио: ${if (result.url.contains("404")) "Ошибка сервера 404" else result.error}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }
-                } else {
-                    Toast.makeText(this@HermesChatActivity, "Не удалось записать аудио", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            audioView.setOnRecordingCancelled {
-                sheet.dismiss()
-            }
-        }
-        sheet.show()
-    }
-
-    private fun createImageUri(): Uri? {
-        val contentValues = android.content.ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "temp_photo_${System.currentTimeMillis()}.jpg")
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-        }
-        return contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-    }
-
-    private fun handleImageSelection(data: Intent?) {
-        val uris = mutableSetOf<Uri>()
-        data?.data?.let { uris.add(it) }
-        data?.clipData?.let { clipData ->
-            for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
-        }
-        if (uris.isNotEmpty()) {
-            // For now, just send as regular message - could enhance to show preview
-            val fileList = uris.joinToString(", ") { it.toString() }
-            val session = viewModel.currentSession.value
-            val currentAgent = viewModel.currentAgent.value
-            viewModel.sendMessage(
-                text = "Изображение: $fileList",
-                agentId = currentAgent?.id ?: ""
-            )
-        }
-    }
-
-    private fun handleFileSelection(data: Intent?) {
-        val uris = mutableSetOf<Uri>()
-        data?.data?.let { uris.add(it) }
-        data?.clipData?.let { clipData ->
-            for (i in 0 until clipData.itemCount) uris.add(clipData.getItemAt(i).uri)
-        }
-        if (uris.isNotEmpty()) {
-            val fileList = uris.joinToString(", ") { it.toString() }
-            val session = viewModel.currentSession.value
-            val currentAgent = viewModel.currentAgent.value
-            viewModel.sendMessage(
-                text = "Файл: $fileList",
-                agentId = currentAgent?.id ?: ""
-            )
-        }
-    }
-
-    private fun handleLocationSelection(data: Intent?) {
-        data?.let {
-            val lat = it.getDoubleExtra("lat", 0.0)
-            val lng = it.getDoubleExtra("lng", 0.0)
-            if (lat != 0.0 || lng != 0.0) {
-                val session = viewModel.currentSession.value
-                val currentAgent = viewModel.currentAgent.value
-                viewModel.sendMessage(
-                    text = "geo:$lat,$lng",
-                    agentId = currentAgent?.id ?: ""
-                )
-            }
-        }
-    }
-
-    // ===== Reactions & Message Menu =====
-
-    private fun showReactionsDialog(item: ChatMessageItem) {
-        val sheet = StandardBottomSheet(this, R.layout.dialog_reactions)
-        val container = sheet.findViewById<android.widget.LinearLayout>(R.id.reactionsContainer)
-        listOf("👍", "💯", "🔥", "✅", "❤️", "😂", "😮", "😢", "🙏").forEach { e ->
-            val tv = android.widget.TextView(this).apply {
-                text = e
-                textSize = 30f
-                setPadding(16, 8, 16, 8)
-                val v2 = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true)
-                setBackgroundResource(v2.resourceId)
-                setOnClickListener {
-                    // Send reaction via gRPC
-                    viewModel.setReaction(item.id, userId, e)
-                    sheet.dismiss()
-                }
-            }
-            container?.addView(tv)
-        }
-        sheet.show()
-    }
-
-    private fun showMessageMenu(item: ChatMessageItem) {
-        val actions = listOf(
-            SheetAction(R.id.actionCopy, R.drawable.ic_copy, "Копировать") {
-                copyToClipboard(item.content)
-            },
-            SheetAction(R.id.actionReply, R.drawable.ic_reply, "Ответить") {
-                chatWidget.showReplyPreview(item.senderName, item.content)
-            }
-        )
-        lavender.client.android.ui.widget.ActionBottomSheet(this, actions).show()
-    }
-
-    private fun copyToClipboard(text: String) {
-        val cm = getSystemService(android.content.ClipboardManager::class.java)
-        cm?.setPrimaryClip(android.content.ClipData.newPlainText("message", text))
-        Toast.makeText(this, "Скопировано", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Голосовые — в разработке", Toast.LENGTH_SHORT).show()
     }
 
     // ===== Mention logic =====
@@ -505,7 +273,7 @@ class HermesChatActivity : AppCompatActivity() {
         // Safety: toString() bypasses SpannableBuilder issues
         val textStr = text.toString()
         val len = textStr.length
-
+        
         if (cursorPos <= 0 || cursorPos > len) {
             hideMention()
             return
