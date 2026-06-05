@@ -959,31 +959,44 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun handleMention(s: CharSequence?) {
+        // Skip in direct chats – no need for mentions
         if (isDirect) return
         val cp = messageInput.selectionStart
         val t = s?.toString() ?: ""
         if (cp <= 0) { mentionContainer.isVisible = false; return }
         var la = -1
-        // Find the last '@' before the cursor without encountering a space
+        // Scan backwards to find the nearest '@' that isn't preceded by a space
         for (i in (cp - 1) downTo 0) {
-            if (t[i] == '@') { la = i; break }
-            if (t[i] == ' ') break
+            val ch = t[i]
+            if (ch == '@') { la = i; break }
+            if (ch == ' ') break
         }
-        // If we didn't find a preceding '@', but the character just typed is '@', treat it as start
+        // If the cursor is right after a freshly typed '@', treat it as the start position
         if (la == -1 && cp > 0 && t[cp - 1] == '@') {
             la = cp - 1
         }
         if (la != -1) {
+            // The query part after '@' (may be empty when just typed '@')
             val q = t.substring(la + 1, cp).lowercase()
-            val p = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
-            val f = mutableListOf<String>()
-            val ac = grpcClient.getAvatarCache()
-            for (i in 0 until p.length()) {
-                val u = p.getString(i)
-                if (u != username && u.lowercase().contains(q)) f.add(u)
+            // Ensure we have the participants list; if it's still empty, try to reload it lazily
+            if (participantsJson.isEmpty()) {
+                // Asynchronously fetch chat metadata; once loaded the next keystroke will trigger the popup
+                fetchChatMetadataIfNeeded()
+                mentionContainer.isVisible = false
+                return
             }
-            if (f.isNotEmpty()) {
-                mentionAdapter.setUsers(f, ac)
+            val participantsArray = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
+            val matches = mutableListOf<String>()
+            val avatarCache = grpcClient.getAvatarCache()
+            for (i in 0 until participantsArray.length()) {
+                val participant = participantsArray.getString(i)
+                if (participant != username && participant.lowercase().contains(q)) {
+                    matches.add(participant)
+                }
+            }
+            // Show the popup even when the query is empty – this yields the full participant list
+            if (matches.isNotEmpty() || q.isEmpty()) {
+                mentionAdapter.setUsers(matches, avatarCache)
                 mentionContainer.isVisible = true
             } else {
                 mentionContainer.isVisible = false
