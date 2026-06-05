@@ -193,6 +193,17 @@ class ChatMessageAdapter(
             }
         }
     }
+
+    // ===== Search highlight =====
+
+    private var highlightPosition: Int = -1
+
+    fun highlightPosition(position: Int) {
+        val old = highlightPosition
+        highlightPosition = position
+        if (old >= 0) notifyItemChanged(old)
+        if (position >= 0) notifyItemChanged(position)
+    }
 }
 
 /**
