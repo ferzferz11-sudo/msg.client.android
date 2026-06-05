@@ -1374,6 +1374,10 @@ class ChatListActivity : AppCompatActivity() {
                 if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
                     if (!isChatsLoaded) {
                         loadChats()
+                    } else {
+                        // Always refresh when returning from another activity (e.g. HermesChatActivity
+                        // may have created a new session that should appear in the list)
+                        loadChats(skipCache = true)
                     }
                     return@launch
                 }

@@ -2,9 +2,12 @@ package lavender.client.android.ui.chat.widget
 
 import android.content.Context
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.GridLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -13,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
+import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.databinding.WidgetChatBinding
 
 /**
@@ -189,4 +193,48 @@ class ChatWidget @JvmOverloads constructor(
     }
 
     fun isMentionListVisible(): Boolean = mentionContainer.visibility == View.VISIBLE
+
+    // ===== Emoji Picker =====
+
+    private val emojiList = listOf(
+        "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
+        "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
+        "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤔",
+        "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴",
+        "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "🤡", "💩", "👻", "💀", "☠️", "👽",
+        "👾", "🤖", "🎃", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾", "👋", "🤚", "🖐", "✋", "🖖", "👌", "🤏", "✌️",
+        "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲",
+        "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦿", "🦶",
+        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟",
+        "🔥", "⭐", "🌟", "💫", "💥", "💢", "💦", "💨", "💣", "💬", "💭", "💤"
+    )
+
+    fun showEmojiPicker() {
+        val ctx = context
+        val sheet = StandardBottomSheet(ctx, R.layout.dialog_emoji_picker)
+        val emojiGrid = sheet.findViewById<GridLayout>(R.id.emojiGrid) ?: return
+        val size = (48 * ctx.resources.displayMetrics.density).toInt()
+
+        for (emoji in emojiList) {
+            val tv = TextView(ctx).apply {
+                text = emoji
+                textSize = 24f
+                gravity = android.view.Gravity.CENTER
+                layoutParams = ViewGroup.LayoutParams(size, size)
+                val tv2 = TypedValue()
+                ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv2, true)
+                setBackgroundResource(tv2.resourceId)
+                setOnClickListener {
+                    val input = messageInput
+                    val cp = input.selectionStart
+                    val ct = input.text.toString()
+                    input.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
+                    input.setSelection(cp + emoji.length)
+                    sheet.dismiss()
+                }
+            }
+            emojiGrid.addView(tv)
+        }
+        sheet.show()
+    }
 }

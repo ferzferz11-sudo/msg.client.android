@@ -220,6 +220,10 @@ class HermesChatActivity : AppCompatActivity() {
                 agentId = currentAgent?.id ?: ""
             )
         }
+
+        chatWidget.setOnEmojiClickListener {
+            chatWidget.showEmojiPicker()
+        }
     }
 
     // ===== Mention logic =====

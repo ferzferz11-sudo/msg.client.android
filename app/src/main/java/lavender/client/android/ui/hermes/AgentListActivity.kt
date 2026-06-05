@@ -45,6 +45,7 @@ class AgentListActivity : AppCompatActivity() {
         setupViews()
         observeState()
         viewModel.loadAgents()
+        lavender.client.android.theme.ui.ThemeUi.bind(this, userId)
     }
 
     private fun setupToolbar() {
