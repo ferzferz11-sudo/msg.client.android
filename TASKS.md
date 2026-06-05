@@ -1,49 +1,67 @@
 # Lavender Messenger — Известные проблемы и задачи в работе
 
-**Последнее обновление:** 2026-06-03
+**Последнее обновление:** 2026-07-16
 **Ветка:** feat/1.1.0.x
-**Версия:** 1.1.0.9
+**Версия:** 1.1.0.14
 
 ---
 
 ## 🔴 В процессе
 
-### 1. Секретные чаты — сообщения видны в логах сервера
+### 1. HermesChatActivity — полный функционал чата
+- **Стус:** в работе
+- **Задача:** HermesChatActivity должна иметь полный функционал как NewChatActivity:
+  - ✅ Search bar (поиск по чату)
+  - ✅ Selection toolbar (выделение → reply/copy/forward/delete/star)
+  - ✅ Image preview strip
+  - ✅ Upload progress bar
+  - ✅ Search highlight в адаптере
+  - ✅ Emoji picker (через ChatWidget)
+  - ✅ Attach/Audio кнопки (UI есть, функционал — Toast "в разработке")
+  - ⬜ Attachment sheet (камера, галерея, файл, локация)
+  - ⬜ Voice recorder (запись и отправка аудио)
+  - ⬜ Reactions dialog (долгий тап → emoji reactions)
+  - ⬜ Поиск внутри чатов (search bar уже в ChatWidget)
+  - ⬜ Форвард/копирование сообщений
+  - ⬜ Видеосвязь — НЕ нужна для агентов
+
+### 2. Секретные чаты — сообщения видны в логах сервера
 - **Статус:** не исправлено
 - **Проблема:** Сообщения секретных чатов логируются в открытом виде на сервере
-  - `[ferz] in secret_xxx: Едешь?` — текст сообщения виден в journalctl
-  - Это нарушает приватность E2EE
-- **Причина:** Сервер логирует сообщения до шифрования при сохранении в БД и отправке push
-- **Решение:** Не логировать текст сообщений секретных чатов. Лог должен содержать только: chat_id, sender, message_id (без тела сообщения)
+- **Решение:** Не логировать текст сообщений секретных чатов
 
-### 2. GrpcClient — Delicate API warnings
+### 3. GrpcClient — Delicate API warnings
 - **Статус:** не исправлено
-- **Проблема:** 3 warning'а при сборке:
-  - `GrpcClient.kt:345` — delicate API
-  - `GrpcClient.kt:357` — delicate API
-  - `GrpcClient.kt:364` — delicate API
-
-### 3. Секретные чаты — интеграция и улучшения
-- **Статус:** не начато
-- **Задача:** Проверить и улучшить работу секретных чатов (E2EE)
-
-### 4. WebRTC — тестирование TURN
-- **Статус:** ждёт тестирования пользователем
-- **Что проверить:** Звонки из разных сетей (WiFi ↔ мобильный интернет)
 
 ---
 
-## ✅ Исправлено (v1.1.0.9)
+## ✅ Исправлено (v1.1.0.14)
 
-### WebRTC — TURN сервер
-- Coturn установлен на сервере, порт 3478
-- `/turn-credentials` endpoint на HTTP 8082
-- HMAC-based временные креденшалы (TTL 24h)
-- CallActivity: fetchTurnCredentials() + fallback STUN
-- WebRtcClient: убран дубликат PeerConnection.Observer
+### Hermes сессии в списке чатов
+- ✅ Сервер: `GetUserHermesSessions()` в `db_hermes.go` — SQL с LEFT JOIN для последнего сообщения
+- ✅ Сервер: `GetChats()` включает hermes_sessions с `chat_type="hermes"`, `active_agent_id`, `agent_mode`
+- ✅ Proto: добавлены поля 20/21 (`active_agent_id`, `agent_mode`) в `ChatInfo`
+- ✅ Android: `ChatInfoProto`, `RealGrpcClient.kt` парсеры, `Message.kt` ChatInfo обновлены
+- ✅ Android: `ChatEntity` + Room DB версия 8→9 с миграцией `MIGRATION_8_9`
+- ✅ Android: `ChatListActivity.onChatClick` — при `type == "hermes"` открывает `HermesChatActivity`
+- ✅ Android: `HermesChatActivity` принимает `CHAT_ID`, `ACTIVE_AGENT_ID`, `AGENT_MODE`, `CHAT_NAME`
+- ✅ Android: `HermesChatViewModel.setExistingSession()` для открытия существующей сессии
+- ✅ Android: `ChatListActivity.onResume` — `loadChats(skipCache=true)` при возврате
+- ✅ Android: `AgentListActivity` — темизация через `ThemeUi.bind()`
 
-### OWL AI
-- Обновлён OpenRouter API ключ, OWL работает
+### ChatWidget — полный функционал
+- ✅ Search bar с навигацией (up/down/count)
+- ✅ Selection toolbar (reply/copy/forward/delete/star)
+- ✅ Image preview strip
+- ✅ Upload progress bar
+- ✅ Search highlight в `ChatMessageAdapter.highlightPosition()`
+- ✅ Emoji picker через `ChatWidget.showEmojiPicker()`
+- ✅ Attach/Audio кнопки (UI, пока Toast)
+
+### Mention System
+- ✅ TextWatcher обнаруживает `@`, показывает popup с фильтрацией
+- ✅ Два отдельных MentionAdapter: agents/emojis и users/avatars
+- ✅ Agent chips с подсветкой активного агента
 
 ---
 
@@ -52,11 +70,12 @@
 ### Средний приоритет
 - [ ] Graceful shutdown сервера
 - [ ] Structured logging (zap/logrus)
-
-### Низкий приоритет
 - [ ] Рефакторинг server.go → пакеты
 - [ ] Rate limiting на сервере
+
+### Низкий приоритет
 - [ ] Кэширование запросов чатов
+- [ ] WebRTC — тестирование TURN (ждёт пользователя)
 
 ---
 
@@ -64,9 +83,11 @@
 
 | Решение | Обоснование |
 |---------|-------------|
-| TURN (coturn) для WebRTC | NAT traversal для звонков из разных сетей |
-| HMAC-based креденшалы | Безопаснее чем статический пароль |
-| Не логировать текст E2EE сообщений | Приватность секретных чатов |
+| Proto field номера 20/21 | Избежание конфликта с Android парсером (18/19/20) |
+| Room migration 8→9 | Вместо destructive migration — ALTER TABLE |
+| ChatWidget-подход | Общий функционал через виджет, не копипаст |
+| setExistingSession | Передача существующей сессии через intent |
+| HermesChatActivity = full chat | Полный функционал как NewChatActivity |
 
 ---
 
@@ -74,9 +95,13 @@
 
 | Файл | Назначение |
 |------|------------|
-| `/root/msg/server.go` | Сервер, версия 1.1.0.9 |
-| `/root/msg/http_server.go` | HTTP endpoints, /turn-credentials |
-| `/root/msg/server/secret_chat.go` | Секретные чаты |
-| `CallActivity.kt` | Звонки UI, fetchTurnCredentials() |
-| `WebRtcClient.kt` | WebRTC клиент |
-| `GrpcClient.kt` | gRPC клиент (delicate API warnings) |
+| `/root/msg/server.go` | Сервер, GetChats() с hermes sessions |
+| `/root/msg/db_hermes.go` | GetUserHermesSessions() |
+| `/root/msg/messenger.proto` | ChatInfo fields 20/21 |
+| `ChatWidget.kt` | Общий виджет чата (search, selection, emoji, attach) |
+| `HermesChatActivity.kt` | Чат с Hermes агентом |
+| `HermesChatViewModel.kt` | setExistingSession() |
+| `ChatListActivity.kt` | onChatClick hermes + onResume fix |
+| `ChatMessageAdapter.kt` | highlightPosition() |
+| `Entities.kt` | ChatEntity + Room DB v9 |
+| `Database.kt` | MIGRATION_8_9 |

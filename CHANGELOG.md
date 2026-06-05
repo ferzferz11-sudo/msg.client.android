@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.14
+### Hermes AI — сессии в списке чатов + полный функционал ChatWidget
+- 🤖 **Hermes сессии в чатах**: чаты с Hermes AI теперь появляются в едином списке чатов как `type="hermes"` с полями `active_agent_id` и `agent_mode`
+- 🔄 **Сервер**: `GetUserHermesSessions()` — SQL с LEFT JOIN для последнего сообщения; `GetChats()` включает hermes сессии в ответ
+- 📡 **Proto**: добавлены поля 20/21 (`active_agent_id`, `agent_mode`) в `ChatInfo`
+- 💾 **Room DB**: версия 8→9, миграция `MIGRATION_8_9` с `ALTER TABLE chats ADD COLUMN activeAgentId/agentMode`
+- 🎯 **Навигация**: тап по hermes чату → `HermesChatActivity` с передачей `CHAT_ID`, `ACTIVE_AGENT_ID`, `AGENT_MODE`
+- 🔄 **Refresh**: `ChatListActivity.onReload` вызывает `loadChats(skipCache=true)` при возврате из активити
+- 🎨 **AgentListActivity**: темизация через `ThemeUi.bind()`
+
+### ChatWidget — расширенный функционал
+- 🔍 **Search bar**: поиск по чату с навигацией (up/down/count), highlight найденного сообщения
+- 📋 **Selection toolbar**: выделение сообщений → reply/copy/forward/delete/star
+- 🖼️ **Image preview strip**: превью вложений над полем ввода
+- 📊 **Upload progress bar**: прогресс-бар загрузки файлов
+- 😀 **Emoji picker**: вынесен из NewChatActivity в ChatWidget
+- 📎 **Attach/Audio кнопки**: UI кнопки в ChatWidget (функционал — в разработке)
+
+### Mention System
+- 📝 **@mention**: TextWatcher обнаруживает `@`, показывает popup с фильтрацией по имени/тегу
+- 👥 **Два MentionAdapter**: agents/emojis и users/avatars — не объединять
+- 🎨 **Agent chips**: активный агент подсвечивается primary color
+
+### Исправления
+- 🐛 **Room crash**: миграция 8→9 вместо destructive migration
+- 🐛 **HermesChatActivity theme**: добавлен `ThemeUi.bind()` в `AgentListActivity`
+- 🐛 **record_voice string**: исправлен несуществующий ресурс на `record_audio`
+
 ## 1.1.0.10
 ### Changelog — исправления
 - 🐛 **Белый экран**: убран ThemeUi.bind и attachBaseContext из ChangelogActivity — теперь не крашится при запуске
