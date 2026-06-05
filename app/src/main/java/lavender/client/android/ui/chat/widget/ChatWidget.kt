@@ -180,7 +180,7 @@ class ChatWidget @JvmOverloads constructor(
     // ===== Mention API =====
 
     fun showMentionList(items: List<MentionItem>, filter: String = "") {
-        mentionAdapter?.submitList(items, filter)
+        mentionAdapter?.setItems(items, filter)
         mentionContainer.visibility = if (items.isNotEmpty()) View.VISIBLE else View.GONE
     }
 

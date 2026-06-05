@@ -33,7 +33,7 @@ class MentionAdapter(
     private var filter: String = ""
     private var fullList: List<MentionItem> = emptyList()
 
-    fun submitList(items: List<MentionItem>, filter: String = "") {
+    fun setItems(items: List<MentionItem>, filter: String = "") {
         this.fullList = items
         this.filter = filter.lowercase()
         val filtered = if (this.filter.isEmpty()) items
