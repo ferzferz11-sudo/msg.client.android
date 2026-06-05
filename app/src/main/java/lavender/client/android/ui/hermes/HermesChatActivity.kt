@@ -239,13 +239,17 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     private fun detectMention(text: CharSequence, cursorPos: Int) {
-        if (cursorPos <= 0) {
+        // Safety: toString() bypasses SpannableBuilder issues
+        val textStr = text.toString()
+        val len = textStr.length
+        
+        if (cursorPos <= 0 || cursorPos > len) {
             hideMention()
             return
         }
 
         // Find the last @ before cursor
-        val beforeCursor = text.substring(0, cursorPos)
+        val beforeCursor = textStr.substring(0, cursorPos)
         val atPos = beforeCursor.lastIndexOf('@')
 
         if (atPos == -1) {
@@ -287,7 +291,7 @@ class HermesChatActivity : AppCompatActivity() {
 
     private fun insertMention(item: MentionItem) {
         val input = chatWidget.messageInput
-        val text = input.text
+        val text = input.text.toString() // toString() for safety
 
         // Replace @query with @mentionTag
         if (mentionStartPos >= 0) {
