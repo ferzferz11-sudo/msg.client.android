@@ -842,13 +842,9 @@ class ChatListActivity : AppCompatActivity() {
 
                     // Hide loading indicator for new users
                     if (isNewUser) {
+                        // Skip onboarding, directly show chat list (Favorites will be displayed)
                         binding.loadingContainer.isVisible = false
-                        // Show welcome screen or chat list
-                        if (fetchedChats.isEmpty()) {
-                            setupOnboardingTips()
-                        } else {
-                            binding.chatsRecyclerView.isVisible = true
-                        }
+                        binding.chatsRecyclerView.isVisible = true
                     }
 
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
