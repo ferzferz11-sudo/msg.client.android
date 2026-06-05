@@ -194,6 +194,10 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     private fun setupInput() {
+        // Show attach/audio buttons for Hermes chat
+        chatWidget.attachButton.visibility = View.VISIBLE
+        chatWidget.audioButton.visibility = View.VISIBLE
+
         chatWidget.setOnSendMessageListener { text ->
             val session = viewModel.currentSession.value
             if (session == null) {
@@ -224,6 +228,24 @@ class HermesChatActivity : AppCompatActivity() {
         chatWidget.setOnEmojiClickListener {
             chatWidget.showEmojiPicker()
         }
+
+        chatWidget.attachButton.setOnClickListener {
+            showAttachmentSheet()
+        }
+
+        chatWidget.audioButton.setOnClickListener {
+            showVoiceRecorder()
+        }
+    }
+
+    private fun showAttachmentSheet() {
+        val sheet = lavender.client.android.ui.widget.StandardBottomSheet(this, R.layout.dialog_emoji_picker)
+        // TODO: replace with proper attachment sheet
+        Toast.makeText(this, "Вложения — в разработке", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showVoiceRecorder() {
+        Toast.makeText(this, "Голосовые — в разработке", Toast.LENGTH_SHORT).show()
     }
 
     // ===== Mention logic =====

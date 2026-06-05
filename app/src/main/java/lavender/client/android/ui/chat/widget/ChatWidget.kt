@@ -46,6 +46,8 @@ class ChatWidget @JvmOverloads constructor(
     val messageInput: EditText get() = binding.messageInput
     val sendButton: ImageButton get() = binding.sendButton
     val emojiButton: ImageButton get() = binding.emojiButton
+    val attachButton: ImageButton get() = binding.attachButton
+    val audioButton: ImageButton get() = binding.audioButton
     val toolbarTitle: TextView get() = binding.toolbarTitle
     val toolbarSubtitle: TextView get() = binding.toolbarSubtitle
     val toolbarAvatar: CircleImageView get() = binding.toolbarAvatar
