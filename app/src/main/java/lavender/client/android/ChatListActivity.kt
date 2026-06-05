@@ -447,9 +447,10 @@ class ChatListActivity : AppCompatActivity() {
                 if (status == ConnectionStatus.READY) {
                     if (username.isNotEmpty() && password.isNotEmpty() && !lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground) {
                         val session = SessionManager.session.value
+                        val isNewlyRegistered = intent.getBooleanExtra("is_newly_registered", false)
                         // Only start chat background stream if we are actually on this screen
                         // and no other room is active
-                        grpcClient.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
+                        grpcClient.startChat(username, password, "", register = isNewlyRegistered, deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
                         if (!isChatsLoaded) {
                             // Show loading indicator for new users
                             if (isNewUser) {
@@ -2514,7 +2515,11 @@ class ChatListActivity : AppCompatActivity() {
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
                                 val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit { putBoolean("onboarding_completed_$u", false); putLong("first_login_$u", System.currentTimeMillis()) }
-                                sheet.dismiss(); recreate()
+                                sheet.dismiss()
+                                val intent = Intent(this@ChatListActivity, ChatListActivity::class.java)
+                                intent.putExtra("is_newly_registered", true)
+                                startActivity(intent)
+                                finish()
                             }
                             "USER_ALREADY_EXISTS" -> {
                                 registerProgressBar?.isVisible = false

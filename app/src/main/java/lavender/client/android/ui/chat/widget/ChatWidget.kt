@@ -47,7 +47,7 @@ class ChatWidget @JvmOverloads constructor(
     val messagesRecyclerView: RecyclerView get() = binding.messagesRecyclerView
     val messageInput: EditText get() = binding.messageInput
     val sendButton: ImageButton get() = binding.sendButton
-    val emojiButton: ImageButton get() = binding.emojiButton
+    val commandButton: ImageButton get() = binding.commandButton
     val attachButton: ImageButton get() = binding.attachButton
     val audioButton: ImageButton get() = binding.audioButton
     val toolbarTitle: TextView get() = binding.toolbarTitle
@@ -96,7 +96,6 @@ class ChatWidget @JvmOverloads constructor(
     private var adapter: ChatMessageAdapter? = null
     private var mentionAdapter: MentionAdapter? = null
     private var onSendMessageListener: ((String) -> Unit)? = null
-    private var onEmojiClickListener: (() -> Unit)? = null
     private var onCancelReplyListener: (() -> Unit)? = null
     private var onMentionSelectedListener: ((MentionItem) -> Unit)? = null
     private var onAttachClickListener: (() -> Unit)? = null
@@ -139,10 +138,6 @@ class ChatWidget @JvmOverloads constructor(
                 onSendMessageListener?.invoke(text)
                 messageInput.setText("")
             }
-        }
-
-        emojiButton.setOnClickListener {
-            onEmojiClickListener?.invoke()
         }
 
         attachButton.setOnClickListener {
@@ -255,10 +250,6 @@ class ChatWidget @JvmOverloads constructor(
         onSendMessageListener = listener
     }
 
-    fun setOnEmojiClickListener(listener: () -> Unit) {
-        onEmojiClickListener = listener
-    }
-
     fun setOnCancelReplyListener(listener: () -> Unit) {
         onCancelReplyListener = listener
     }
@@ -326,48 +317,4 @@ class ChatWidget @JvmOverloads constructor(
     }
 
     fun isMentionListVisible(): Boolean = mentionContainer.visibility == View.VISIBLE
-
-    // ===== Emoji Picker =====
-
-    private val emojiList = listOf(
-        "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
-        "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
-        "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤔",
-        "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴",
-        "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "😈", "👿", "👹", "👺", "🤡", "💩", "👻", "💀", "☠️", "👽",
-        "👾", "🤖", "🎃", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾", "👋", "🤚", "🖐", "✋", "🖖", "👌", "🤏", "✌️",
-        "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲",
-        "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦿", "🦶",
-        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟",
-        "🔥", "⭐", "🌟", "💫", "💥", "💢", "💦", "💨", "💣", "💬", "💭", "💤"
-    )
-
-    fun showEmojiPicker() {
-        val ctx = context
-        val sheet = StandardBottomSheet(ctx, R.layout.dialog_emoji_picker)
-        val emojiGrid = sheet.findViewById<GridLayout>(R.id.emojiGrid) ?: return
-        val size = (48 * ctx.resources.displayMetrics.density).toInt()
-
-        for (emoji in emojiList) {
-            val tv = TextView(ctx).apply {
-                text = emoji
-                textSize = 24f
-                gravity = android.view.Gravity.CENTER
-                layoutParams = ViewGroup.LayoutParams(size, size)
-                val tv2 = TypedValue()
-                ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv2, true)
-                setBackgroundResource(tv2.resourceId)
-                setOnClickListener {
-                    val input = messageInput
-                    val cp = input.selectionStart
-                    val ct = input.text.toString()
-                    input.setText(ct.substring(0, cp) + emoji + ct.substring(cp))
-                    input.setSelection(cp + emoji.length)
-                    sheet.dismiss()
-                }
-            }
-            emojiGrid.addView(tv)
-        }
-        sheet.show()
-    }
 }

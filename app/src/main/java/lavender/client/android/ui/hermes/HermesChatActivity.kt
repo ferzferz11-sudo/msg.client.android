@@ -15,6 +15,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.models.AgentInfo
@@ -26,13 +29,6 @@ import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
 import lavender.client.android.ui.chat.widget.MentionItem
 
-/**
- * HermesChatActivity — чат с оркестратором агентов.
- *
- * Использует единый ChatWidget.
- * Агенты отображаются как участники группового чата.
- * Поддержка меншена: @ → popup с выбором агента.
- */
 class HermesChatActivity : AppCompatActivity() {
 
     private lateinit var viewModel: HermesChatViewModel
@@ -200,9 +196,9 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     private fun setupInput() {
-        // Show attach/audio buttons for Hermes chat
-        chatWidget.attachButton.visibility = View.VISIBLE
-        chatWidget.audioButton.visibility = View.VISIBLE
+        chatWidget.commandButton.setOnClickListener {
+            showCommandMenu()
+        }
 
         chatWidget.setOnSendMessageListener { text ->
             val session = viewModel.currentSession.value
@@ -230,28 +226,23 @@ class HermesChatActivity : AppCompatActivity() {
                 agentId = currentAgent?.id ?: ""
             )
         }
-
-        chatWidget.setOnEmojiClickListener {
-            chatWidget.showEmojiPicker()
-        }
-
-        chatWidget.attachButton.setOnClickListener {
-            showAttachmentSheet()
-        }
-
-        chatWidget.audioButton.setOnClickListener {
-            showVoiceRecorder()
-        }
     }
 
-    private fun showAttachmentSheet() {
-        val sheet = lavender.client.android.ui.widget.StandardBottomSheet(this, R.layout.dialog_emoji_picker)
-        // TODO: replace with proper attachment sheet
-        Toast.makeText(this, "Вложения — в разработке", Toast.LENGTH_SHORT).show()
-    }
+    private fun showCommandMenu() {
+        val commands = listOf(
+            HermesCommand("/status", "Get current agent status")
+        )
 
-    private fun showVoiceRecorder() {
-        Toast.makeText(this, "Голосовые — в разработке", Toast.LENGTH_SHORT).show()
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_hermes_commands, null)
+        val recyclerView = view.findViewById<RecyclerView>(R.id.commandsRecyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = HermesCommandAdapter(commands) { command ->
+            chatWidget.messageInput.setText(command.command)
+            dialog.dismiss()
+        }
+        dialog.setContentView(view)
+        dialog.show()
     }
 
     // ===== Mention logic =====

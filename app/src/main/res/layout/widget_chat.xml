@@ -413,13 +413,13 @@
             android:padding="4dp">
 
             <ImageButton
-                android:id="@+id/emojiButton"
+                android:id="@+id/commandButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/add_reaction_24"
+                android:src="@drawable/ic_hermes"
                 app:tint="?attr/colorOnSurfaceVariant"
-                android:contentDescription="@string/add_emoji" />
+                android:contentDescription="Commands" />
 
             <EditText
                 android:id="@+id/messageInput"
