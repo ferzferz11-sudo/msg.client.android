@@ -456,7 +456,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_mic"
                 app:tint="?attr/colorOnSurfaceVariant"
-                android:contentDescription="@string/record_voice"
+                android:contentDescription="@string/record_audio"
                 android:visibility="gone" />
 
             <ImageButton
