@@ -71,6 +71,18 @@ class HermesChatViewModel : ViewModel() {
     }
 
     /**
+     * Set existing session (when opening from chat list)
+     */
+    fun setExistingSession(sessionId: String, userId: String, agentId: String = "", mode: String = "single") {
+        _currentSession.value = HermesSession(
+            id = sessionId,
+            userId = userId,
+            activeAgentId = agentId,
+            mode = mode
+        )
+    }
+
+    /**
      * Load history for current session
      */
     fun loadHistory() {

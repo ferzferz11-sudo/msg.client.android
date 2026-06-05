@@ -32,7 +32,7 @@ data class Message(
 data class ChatInfo(
     val id: String = "",
     val name: String = "",
-    val type: String = "", // 'group' or 'direct'
+    val type: String = "", // 'group', 'direct', 'hermes'
     val participants: String = "", // JSON array of usernames
     val createdAt: Long = 0,
     val unreadCount: Int = 0,
@@ -48,7 +48,9 @@ data class ChatInfo(
     val conferenceStartTime: Long = 0,
     val isSecret: Boolean = false,      // E2EE secret chat
     val peerPublicKey: String = "",     // Base64 peer public key
-    val e2eeReady: Boolean = false      // Both keys exchanged
+    val e2eeReady: Boolean = false,     // Both keys exchanged
+    val activeAgentId: String = "",     // For hermes sessions: current active agent
+    val agentMode: String = ""          // For hermes sessions: single/parallel/pipeline
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (type != "direct") return name

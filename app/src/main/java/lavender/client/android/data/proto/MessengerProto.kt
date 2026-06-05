@@ -219,7 +219,9 @@ data class ChatInfoProto(
     val conferenceStartTime: Timestamp? = null,
     val isSecret: Boolean = false,
     val peerPublicKey: String = "",
-    val e2eeReady: Boolean = false
+    val e2eeReady: Boolean = false,
+    val activeAgentId: String = "",   // For hermes sessions: current active agent
+    val agentMode: String = ""        // For hermes sessions: single/parallel/pipeline
 )
 
 // Mark Read Request/Response

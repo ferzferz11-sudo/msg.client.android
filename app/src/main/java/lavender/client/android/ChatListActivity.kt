@@ -265,6 +265,17 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
 
+                if (chat.type == "hermes") {
+                    val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
+                        putExtra("CHAT_ID", chat.id)
+                        putExtra("CHAT_NAME", chat.name)
+                        putExtra("ACTIVE_AGENT_ID", chat.activeAgentId)
+                        putExtra("AGENT_MODE", chat.agentMode)
+                    }
+                    startActivity(intent)
+                    return@ChatAdapter
+                }
+
                 val intent = Intent(this, NewChatActivity::class.java).apply {
                     putExtra("USERNAME", username)
                     putExtra("SERVER_ADDRESS", intent.getStringExtra("SERVER_ADDRESS") ?: "")

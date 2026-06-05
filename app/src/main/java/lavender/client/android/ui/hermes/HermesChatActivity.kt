@@ -104,8 +104,13 @@ class HermesChatActivity : AppCompatActivity() {
         updateAgentParticipants()
 
         if (chatId.isEmpty()) {
+            // New session — create on server
             viewModel.createSession(userId)
         } else {
+            // Existing session from chat list
+            val agentId = intent.getStringExtra("ACTIVE_AGENT_ID") ?: ""
+            val mode = intent.getStringExtra("AGENT_MODE") ?: "single"
+            viewModel.setExistingSession(chatId, userId, agentId, mode)
             viewModel.loadHistory()
         }
     }
@@ -116,7 +121,7 @@ class HermesChatActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
 
-        chatWidget.setToolbarTitle("Hermes")
+        chatWidget.setToolbarTitle(intent.getStringExtra("CHAT_NAME") ?: "Hermes")
         chatWidget.setToolbarAgentIcon("🎼", true)
         chatWidget.setToolbarAvatar(false)
 

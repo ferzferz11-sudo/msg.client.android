@@ -49,7 +49,9 @@ data class ChatEntity(
     val allowMembersToAdd: Boolean = false,
     val isSecret: Boolean = false,
     val peerPublicKey: String = "",
-    val e2eeReady: Boolean = false
+    val e2eeReady: Boolean = false,
+    val activeAgentId: String = "",
+    val agentMode: String = ""
 )
 
 fun Message.toEntity(): MessageEntity {
@@ -131,12 +133,12 @@ fun MessageEntity.toDomain(): Message {
 fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage,
-    allowMembersToAdd, isSecret, peerPublicKey, e2eeReady
+    allowMembersToAdd, isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode
 )
 
 fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage,
     allowMembersToAdd, conferenceStartTime = 0L,
-    isSecret, peerPublicKey, e2eeReady
+    isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode
 )
