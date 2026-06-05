@@ -960,14 +960,37 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun handleMention(s: CharSequence?) {
         if (isDirect) return
-        val cp = messageInput.selectionStart; val t = s?.toString() ?: ""; if (cp <= 0) { mentionContainer.isVisible = false; return }
-        var la = -1; for (i in (cp - 1) downTo 0) { if (t[i] == '@') { la = i; break }; if (t[i] == ' ') break }
+        val cp = messageInput.selectionStart
+        val t = s?.toString() ?: ""
+        if (cp <= 0) { mentionContainer.isVisible = false; return }
+        var la = -1
+        // Find the last '@' before the cursor without encountering a space
+        for (i in (cp - 1) downTo 0) {
+            if (t[i] == '@') { la = i; break }
+            if (t[i] == ' ') break
+        }
+        // If we didn't find a preceding '@', but the character just typed is '@', treat it as start
+        if (la == -1 && cp > 0 && t[cp - 1] == '@') {
+            la = cp - 1
+        }
         if (la != -1) {
-            val q = t.substring(la + 1, cp).lowercase(); val p = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
-            val f = mutableListOf<String>(); val ac = grpcClient.getAvatarCache()
-            for (i in 0 until p.length()) { val u = p.getString(i); if (u != username && u.lowercase().contains(q)) f.add(u) }
-            if (f.isNotEmpty()) { mentionAdapter.setUsers(f, ac); mentionContainer.isVisible = true } else mentionContainer.isVisible = false
-        } else mentionContainer.isVisible = false
+            val q = t.substring(la + 1, cp).lowercase()
+            val p = try { JSONArray(participantsJson) } catch (_: Exception) { JSONArray() }
+            val f = mutableListOf<String>()
+            val ac = grpcClient.getAvatarCache()
+            for (i in 0 until p.length()) {
+                val u = p.getString(i)
+                if (u != username && u.lowercase().contains(q)) f.add(u)
+            }
+            if (f.isNotEmpty()) {
+                mentionAdapter.setUsers(f, ac)
+                mentionContainer.isVisible = true
+            } else {
+                mentionContainer.isVisible = false
+            }
+        } else {
+            mentionContainer.isVisible = false
+        }
     }
 
     private fun insertMention(u: String) {

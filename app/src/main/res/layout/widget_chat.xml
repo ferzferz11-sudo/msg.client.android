@@ -466,7 +466,8 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/send_24"
                 app:tint="?attr/colorPrimary"
-                android:contentDescription="@string/send_message" />
+                android:contentDescription="@string/send_message"
+                android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
