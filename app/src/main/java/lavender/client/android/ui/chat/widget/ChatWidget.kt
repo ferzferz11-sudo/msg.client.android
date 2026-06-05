@@ -10,23 +10,24 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
 import de.hdodenhof.circleimageview.CircleImageView
 import lavender.client.android.R
 import lavender.client.android.databinding.WidgetChatBinding
 
 /**
  * ChatWidget — переиспользуемый UI компонент чата.
- * 
+ *
  * Используется в:
  * - NewChatActivity (групповой чат)
  * - HermesChatActivity (агенты как участники группового чата)
- * 
+ *
  * Предоставляет:
  * - Toolbar с аватаром/иконкой, названием, статусом
  * - RecyclerView с ChatMessageAdapter
  * - Input panel с emoji, input, send
  * - Reply preview
- * - Typing indicator
+ * - Mention popup (@ agent selection)
  */
 class ChatWidget @JvmOverloads constructor(
     context: Context,
@@ -53,14 +54,21 @@ class ChatWidget @JvmOverloads constructor(
     val cancelReply: ImageButton get() = binding.cancelReply
     val bottomPanel: View get() = binding.bottomPanel
 
+    // Mention UI
+    val mentionContainer: MaterialCardView get() = binding.mentionContainer
+    val mentionList: RecyclerView get() = binding.mentionList
+
     private var adapter: ChatMessageAdapter? = null
+    private var mentionAdapter: MentionAdapter? = null
     private var onSendMessageListener: ((String) -> Unit)? = null
     private var onEmojiClickListener: (() -> Unit)? = null
     private var onCancelReplyListener: (() -> Unit)? = null
+    private var onMentionSelectedListener: ((MentionItem) -> Unit)? = null
 
     init {
         orientation = VERTICAL
         setupRecyclerView()
+        setupMentionList()
         setupInput()
     }
 
@@ -68,6 +76,14 @@ class ChatWidget @JvmOverloads constructor(
         messagesRecyclerView.layoutManager = LinearLayoutManager(context).apply {
             stackFromEnd = true
         }
+    }
+
+    private fun setupMentionList() {
+        mentionList.layoutManager = LinearLayoutManager(context)
+        mentionAdapter = MentionAdapter { item ->
+            onMentionSelectedListener?.invoke(item)
+        }
+        mentionList.adapter = mentionAdapter
     }
 
     private fun setupInput() {
@@ -108,6 +124,10 @@ class ChatWidget @JvmOverloads constructor(
 
     fun setOnCancelReplyListener(listener: () -> Unit) {
         onCancelReplyListener = listener
+    }
+
+    fun setOnMentionSelectedListener(listener: (MentionItem) -> Unit) {
+        onMentionSelectedListener = listener
     }
 
     fun setToolbarTitle(title: String) {
@@ -155,6 +175,18 @@ class ChatWidget @JvmOverloads constructor(
 
     fun clearParticipantChips() {
         groupParticipantsContainer.removeAllViews()
-        groupParticipantsContainer.visibility = View.GONE
     }
+
+    // ===== Mention API =====
+
+    fun showMentionList(items: List<MentionItem>, filter: String = "") {
+        mentionAdapter?.submitList(items, filter)
+        mentionContainer.visibility = if (items.isNotEmpty()) View.VISIBLE else View.GONE
+    }
+
+    fun hideMentionList() {
+        mentionContainer.visibility = View.GONE
+    }
+
+    fun isMentionListVisible(): Boolean = mentionContainer.visibility == View.VISIBLE
 }

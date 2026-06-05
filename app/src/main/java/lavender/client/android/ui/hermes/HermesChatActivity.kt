@@ -1,6 +1,8 @@
 package lavender.client.android.ui.hermes
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
@@ -21,15 +23,14 @@ import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
+import lavender.client.android.ui.chat.widget.MentionItem
 
 /**
  * HermesChatActivity — чат с оркестратором агентов.
  *
- * Использует единый ChatWidget (как и групповой чат).
- * Агенты отображаются как участники группового чата:
- * - Каждый агент имеет emoji-иконку и имя
- * - Сообщения от разных агентов визуально различаются
- * - Тап по чипу агента → переключение на прямой чат
+ * Использует единый ChatWidget.
+ * Агенты отображаются как участники группового чата.
+ * Поддержка меншена: @ → popup с выбором агента.
  */
 class HermesChatActivity : AppCompatActivity() {
 
@@ -41,9 +42,26 @@ class HermesChatActivity : AppCompatActivity() {
     private var userId: String = ""
     private var chatId: String = ""
 
-    // Agent registry — агенты как участники
+    // Agent registry
     private val agents = mutableListOf<AgentInfo>()
     private var activeAgentId: String = ""
+
+    // Mention state
+    private var mentionQuery: String = ""
+    private var mentionStartPos: Int = -1
+    private var isMentionActive = false
+
+    // Mention items derived from agents
+    private val mentionItems: List<MentionItem>
+        get() = agents.map { agent ->
+            MentionItem(
+                id = agent.id,
+                name = agent.name,
+                description = agent.description,
+                emoji = agent.icon.ifEmpty { "🤖" },
+                mentionTag = agent.name.lowercase().replace(" ", "_")
+            )
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +78,7 @@ class HermesChatActivity : AppCompatActivity() {
         setupToolbar()
         setupRecyclerView()
         setupInput()
+        setupMentionListener()
         observeState()
         ThemeUi.bind(this, userId)
 
@@ -77,11 +96,9 @@ class HermesChatActivity : AppCompatActivity() {
 
         android.util.Log.d("HermesChatActivity", "onCreate: chatId=$chatId userId=$userId")
 
-        // Initialize preset agents if empty
         if (viewModel.agents.value.isEmpty()) {
             viewModel.initPresetAgents()
         }
-        // Sync local agents list from ViewModel
         agents.clear()
         agents.addAll(viewModel.agents.value)
         updateAgentParticipants()
@@ -103,15 +120,9 @@ class HermesChatActivity : AppCompatActivity() {
         chatWidget.setToolbarAgentIcon("🎼", true)
         chatWidget.setToolbarAvatar(false)
 
-        // Show agents as participants in header
         updateAgentParticipants()
     }
 
-    /**
-     * Обновить список агентов-участников в тулбаре.
-     * Каждый агент отображается как emoji-чип.
-     * Активный агент визуально выделен.
-     */
     private fun updateAgentParticipants() {
         chatWidget.clearParticipantChips()
 
@@ -129,7 +140,6 @@ class HermesChatActivity : AppCompatActivity() {
             isCheckable = false
 
             if (isActive) {
-                // Active agent: highlighted
                 chipBackgroundColor = android.content.res.ColorStateList.valueOf(
                     resources.getColor(R.color.chip_background_active, null)
                 )
@@ -139,7 +149,6 @@ class HermesChatActivity : AppCompatActivity() {
                     resources.getColor(R.color.chip_stroke_active, null)
                 )
             } else {
-                // Inactive agent: subtle
                 chipBackgroundColor = android.content.res.ColorStateList.valueOf(
                     resources.getColor(R.color.chip_background, null)
                 )
@@ -166,18 +175,15 @@ class HermesChatActivity : AppCompatActivity() {
         chatWidget.setToolbarTitle(agent.name)
         chatWidget.setToolbarAgentIcon(agent.icon.ifEmpty { "🤖" }, true)
         chatWidget.setToolbarAvatar(false)
-
-        // Re-render chips to update active state
         updateAgentParticipants()
-
         Toast.makeText(this, "Переключение на ${agent.name}", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupRecyclerView() {
         adapter = ChatMessageAdapter(
             currentUserId = userId,
-            showAvatars = false,     // Hermes uses emoji icons
-            showNames = true         // Show agent names
+            showAvatars = false,
+            showNames = true
         )
         chatWidget.setAdapter(adapter)
     }
@@ -211,8 +217,103 @@ class HermesChatActivity : AppCompatActivity() {
         }
     }
 
+    // ===== Mention logic =====
+
+    private fun setupMentionListener() {
+        // Track @ in input
+        chatWidget.messageInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                if (s == null) return
+                detectMention(s, start + count)
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        // Handle mention selection
+        chatWidget.setOnMentionSelectedListener { item ->
+            insertMention(item)
+        }
+    }
+
+    private fun detectMention(text: CharSequence, cursorPos: Int) {
+        if (cursorPos <= 0) {
+            hideMention()
+            return
+        }
+
+        // Find the last @ before cursor
+        val beforeCursor = text.substring(0, cursorPos)
+        val atPos = beforeCursor.lastIndexOf('@')
+
+        if (atPos == -1) {
+            hideMention()
+            return
+        }
+
+        // Check that @ is at word boundary or start of text
+        if (atPos > 0 && !beforeCursor[atPos - 1].isWhitespace()) {
+            hideMention()
+            return
+        }
+
+        // Extract query after @
+        val query = beforeCursor.substring(atPos + 1)
+
+        // If space typed after @, close mention
+        if (query.contains(" ")) {
+            hideMention()
+            return
+        }
+
+        // Show mention popup
+        mentionStartPos = atPos
+        mentionQuery = query
+        isMentionActive = true
+
+        if (agents.isNotEmpty()) {
+            chatWidget.showMentionList(mentionItems, query)
+        }
+    }
+
+    private fun hideMention() {
+        isMentionActive = false
+        mentionQuery = ""
+        mentionStartPos = -1
+        chatWidget.hideMentionList()
+    }
+
+    private fun insertMention(item: MentionItem) {
+        val input = chatWidget.messageInput
+        val text = input.text
+
+        // Replace @query with @mentionTag
+        if (mentionStartPos >= 0) {
+            val before = text.substring(0, mentionStartPos)
+            val after = if (mentionStartPos + mentionQuery.length + 1 < text.length) {
+                text.substring(mentionStartPos + mentionQuery.length + 1)
+            } else ""
+
+            val mentionTag = "@${item.mentionTag} "
+            val newText = before + mentionTag + after
+
+            input.setText(newText)
+            input.setSelection(before.length + mentionTag.length)
+        } else {
+            // Fallback: append
+            val mentionTag = "@${item.mentionTag} "
+            input.append(mentionTag)
+        }
+
+        hideMention()
+    }
+
+    // ===== State observation =====
+
     private fun observeState() {
-        // Messages from ViewModel → convert to ChatMessageItems
+        // Messages
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.messages.collect { hermesMessages ->
@@ -307,9 +408,8 @@ class HermesChatActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Добавить агента как участника чата.
-     */
+    // ===== Public API =====
+
     fun addAgent(agent: AgentInfo) {
         if (agents.none { it.id == agent.id }) {
             agents.add(agent)
@@ -317,18 +417,14 @@ class HermesChatActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Удалить агента из участников.
-     */
     fun removeAgent(agentId: String) {
         agents.removeAll { it.id == agentId }
         updateAgentParticipants()
     }
 
-    /**
-     * Получить список текущих агентов-участников.
-     */
     fun getAgents(): List<AgentInfo> = agents.toList()
+
+    // ===== Helpers =====
 
     private fun HermesMessage.toChatMessageItem(): ChatMessageItem {
         val agent = viewModel.getAgent(this.agentId)
