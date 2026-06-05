@@ -1,5 +1,8 @@
 package lavender.client.android.ui.hermes
 
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,9 +13,10 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.*
 import lavender.client.android.data.repository.HermesRepository
 
-class HermesChatViewModel : ViewModel() {
+class HermesChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = HermesRepository()
+    private val prefs = application.getSharedPreferences("hermes_prefs", Context.MODE_PRIVATE)
 
     // Current session
     private val _currentSession = MutableStateFlow<HermesSession?>(null)
@@ -137,6 +141,10 @@ class HermesChatViewModel : ViewModel() {
         )
         _messages.value = _messages.value + agentMessage
 
+        val defaultModel = prefs.getString("default_model", "openai/gpt-oss-120b:free") ?: ""
+        val agent = _agents.value.find { it.id == agentId }
+        val modelToSend = agent?.model?.ifEmpty { defaultModel } ?: defaultModel
+
         // Send via gRPC
         GrpcClient.chatWithOrchestrator(
             userId = userId,
@@ -258,5 +266,9 @@ class HermesChatViewModel : ViewModel() {
             AgentInfo("hermes-owl", "OWL", "General AI assistant", "assistant", true, "🦉")
         )
         _agents.value = presets
+        // Set OWL as the default agent when the chat starts
+        if (_currentAgent.value == null) {
+            _currentAgent.value = presets.find { it.id == "hermes-owl" }
+        }
     }
 }

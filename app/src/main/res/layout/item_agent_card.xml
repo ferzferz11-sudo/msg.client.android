@@ -60,6 +60,15 @@
                 android:layout_marginTop="4dp"
                 tools:text="Специалист по разработке ПО" />
 
+            <TextView
+                android:id="@+id/agentModel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/colorSecondary"
+                android:layout_marginTop="4dp"
+                tools:text="Model: google/gemini-pro" />
+
         </LinearLayout>
 
         <ImageButton

@@ -809,6 +809,7 @@ message AgentInfo {
   string role = 4;
   bool is_preset = 5;
   string icon = 6;
+  string model = 7;
 }
 
 message ListAgentsResponse {

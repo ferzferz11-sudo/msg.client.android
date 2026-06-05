@@ -12,6 +12,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
@@ -70,7 +71,8 @@ class HermesChatActivity : AppCompatActivity() {
         chatId = intent.getStringExtra("CHAT_ID") ?: ""
         userId = SessionManager.session.value.username
 
-        viewModel = androidx.lifecycle.ViewModelProvider(this)[HermesChatViewModel::class.java]
+        val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        viewModel = ViewModelProvider(this, factory).get(HermesChatViewModel::class.java)
 
         chatWidget = findViewById(R.id.chatWidget)
         progressBar = findViewById(R.id.progressBar)
@@ -113,6 +115,10 @@ class HermesChatActivity : AppCompatActivity() {
             viewModel.setExistingSession(chatId, userId, agentId, mode)
             viewModel.loadHistory()
         }
+
+        intent.getStringExtra("PREFILL_MESSAGE")?.let {
+            chatWidget.messageInput.setText(it)
+        }
     }
 
     private fun setupToolbar() {
@@ -121,7 +127,7 @@ class HermesChatActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
 
-        chatWidget.setToolbarTitle(intent.getStringExtra("CHAT_NAME") ?: "Lava AI")
+        chatWidget.setToolbarTitle(getString(R.string.hermes_chat_title))
         chatWidget.setToolbarAgentIcon("🎼", true)
         chatWidget.setToolbarAvatar(false)
 
@@ -417,7 +423,7 @@ class HermesChatActivity : AppCompatActivity() {
                         updateAgentParticipants()
                     } else {
                         activeAgentId = ""
-                        chatWidget.setToolbarTitle("Lava AI")
+                        chatWidget.setToolbarTitle(getString(R.string.hermes_chat_title))
                         chatWidget.setToolbarAgentIcon("🎼", true)
                         updateAgentParticipants()
                     }
@@ -471,7 +477,7 @@ class HermesChatActivity : AppCompatActivity() {
             id = this.id,
             content = this.content,
             senderId = this.agentId.ifEmpty { "hermes" },
-            senderName = this.agentName.ifEmpty { agent?.name ?: "Lava AI" },
+            senderName = this.agentName.ifEmpty { agent?.name ?: getString(R.string.hermes_chat_title) },
             senderEmoji = this.agentIcon.ifEmpty { agent?.icon ?: "🤖" },
             timestamp = this.timestamp,
             isCurrentUser = this.role == "user",

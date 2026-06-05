@@ -19,7 +19,9 @@ class AgentListAdapter(
     private val onAgentClick: (Any) -> Unit,
     private val onDeleteClick: (Any) -> Unit,
     private var showDeleteButton: Boolean = false,
-    var onAgentLongClick: ((AgentInfo) -> Unit)? = null
+    var onAgentLongClick: ((AgentInfo) -> Unit)? = null,
+    var onModelClick: ((AgentInfo) -> Unit)? = null,
+    var onModelLongClick: ((AgentInfo) -> Unit)? = null
 ) : RecyclerView.Adapter<AgentListAdapter.ViewHolder>() {
 
     private var items = listOf<AgentListItem>()
@@ -47,6 +49,7 @@ class AgentListAdapter(
         private val agentName: TextView = itemView.findViewById(R.id.agentName)
         private val agentRole: TextView = itemView.findViewById(R.id.agentRole)
         private val agentDescription: TextView = itemView.findViewById(R.id.agentDescription)
+        private val agentModel: TextView = itemView.findViewById(R.id.agentModel)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
 
         fun bind(item: AgentListItem) {
@@ -56,6 +59,7 @@ class AgentListAdapter(
                     agentName.text = item.preset.name
                     agentRole.text = item.preset.role
                     agentDescription.text = item.preset.description
+                    agentModel.visibility = View.GONE
                     deleteButton.visibility = View.GONE
 
                     itemView.setOnClickListener { onAgentClick(item.preset) }
@@ -65,6 +69,8 @@ class AgentListAdapter(
                     agentName.text = item.agent.name
                     agentRole.text = item.agent.role
                     agentDescription.text = item.agent.description
+                    agentModel.text = "Model: ${item.agent.model.ifEmpty { "default" }}"
+                    agentModel.visibility = View.VISIBLE
                     deleteButton.visibility = if (showDeleteButton) View.VISIBLE else View.GONE
 
                     itemView.setOnClickListener { onAgentClick(item.agent) }
@@ -73,6 +79,11 @@ class AgentListAdapter(
                         true
                     }
                     deleteButton.setOnClickListener { onDeleteClick(item.agent) }
+                    agentModel.setOnClickListener { onModelClick?.invoke(item.agent) }
+                    agentModel.setOnLongClickListener {
+                        onModelLongClick?.invoke(item.agent)
+                        true
+                    }
                 }
             }
         }

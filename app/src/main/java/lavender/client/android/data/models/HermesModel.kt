@@ -19,7 +19,8 @@ data class AgentInfo(
     val description: String = "",
     val role: String = "",
     val isPreset: Boolean = false,
-    val icon: String = ""            // emoji
+    val icon: String = "",           // emoji
+    val model: String = ""           // OpenRouter model ID
 )
 
 data class AgentPreset(

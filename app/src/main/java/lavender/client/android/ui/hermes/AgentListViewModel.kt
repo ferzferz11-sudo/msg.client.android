@@ -83,6 +83,17 @@ class AgentListViewModel : ViewModel() {
         }
     }
 
+    fun updateAgentModel(agentId: String, userId: String, model: String) {
+        viewModelScope.launch {
+            val result = repository.updateAgent(agentId, userId, model = model)
+            result.onSuccess {
+                loadUserAgents(userId)
+            }.onFailure { e ->
+                _error.value = e.message ?: "Failed to update model"
+            }
+        }
+    }
+
     fun clearError() {
         _error.value = null
     }

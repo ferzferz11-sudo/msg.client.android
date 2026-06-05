@@ -39,6 +39,11 @@
             android:layout_height="wrap_content"
             android:text="Мои агенты" />
 
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="По умолчанию" />
+
     </com.google.android.material.tabs.TabLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -52,6 +57,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/item_agent_card" />
+
+    <FrameLayout
+        android:id="@+id/defaultsContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ProgressBar
         android:id="@+id/progressBar"

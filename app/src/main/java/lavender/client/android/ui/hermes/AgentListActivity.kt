@@ -1,8 +1,10 @@
 package lavender.client.android.ui.hermes
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,6 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.models.AgentPreset
@@ -30,9 +33,17 @@ class AgentListActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
     private lateinit var fab: FloatingActionButton
+    private lateinit var defaultsContainer: FrameLayout
 
     private var userId: String = ""
-    private var currentTab = 0 // 0 = presets, 1 = my agents
+    private var currentTab = 0 // 0 = presets, 1 = my agents, 2 = defaults
+
+    private val availableModels = arrayOf(
+        "google/gemini-pro",
+        "openai/gpt-4o",
+        "anthropic/claude-3-haiku",
+        "mistralai/mistral-large"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +69,7 @@ class AgentListActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.agentsRecyclerView)
         progressBar = findViewById(R.id.progressBar)
         fab = findViewById(R.id.fab)
+        defaultsContainer = findViewById(R.id.defaultsContainer)
 
         adapter = AgentListAdapter(
             onAgentClick = { agent -> openAgentChat(agent) },
@@ -66,6 +78,12 @@ class AgentListActivity : AppCompatActivity() {
         )
         adapter.onAgentLongClick = { agent ->
             showAgentSettingsSheet(agent)
+        }
+        adapter.onModelClick = { agent ->
+            showModelSelectionDialog(agent)
+        }
+        adapter.onModelLongClick = { agent ->
+            openChatWithModelMention(agent)
         }
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -133,14 +151,40 @@ class AgentListActivity : AppCompatActivity() {
     private fun refreshTab() {
         when (currentTab) {
             0 -> {
+                recyclerView.visibility = View.VISIBLE
+                defaultsContainer.visibility = View.GONE
                 adapter.setItems(viewModel.presets.value.map { AgentListItem.PresetItem(it) }, showDelete = false)
                 fab.hide()
             }
             1 -> {
+                recyclerView.visibility = View.VISIBLE
+                defaultsContainer.visibility = View.GONE
                 viewModel.loadUserAgents(userId)
                 adapter.setItems(viewModel.customAgents.value.map { AgentListItem.AgentItem(it) }, showDelete = true)
                 fab.show()
             }
+            2 -> {
+                recyclerView.visibility = View.GONE
+                defaultsContainer.visibility = View.VISIBLE
+                fab.hide()
+                setupDefaultsTab()
+            }
+        }
+    }
+
+    private fun setupDefaultsTab() {
+        defaultsContainer.removeAllViews()
+        val view = layoutInflater.inflate(R.layout.fragment_agent_defaults, defaultsContainer, true)
+        val input = view.findViewById<TextInputEditText>(R.id.defaultModelInput)
+        val saveButton = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.saveDefaultsButton)
+
+        val prefs = getSharedPreferences("hermes_prefs", Context.MODE_PRIVATE)
+        input.setText(prefs.getString("default_model", "openai/gpt-oss-120b:free"))
+
+        saveButton.setOnClickListener {
+            val newModel = input.text.toString()
+            prefs.edit().putString("default_model", newModel).apply()
+            Toast.makeText(this, "Default model saved", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -172,5 +216,24 @@ class AgentListActivity : AppCompatActivity() {
             }
         )
         sheet.show()
+    }
+
+    private fun showModelSelectionDialog(agent: AgentInfo) {
+        val currentModelIndex = availableModels.indexOf(agent.model)
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Select Model")
+            .setSingleChoiceItems(availableModels, currentModelIndex) { dialog, which ->
+                val selectedModel = availableModels[which]
+                viewModel.updateAgentModel(agent.id, userId, selectedModel)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openChatWithModelMention(agent: AgentInfo) {
+        val intent = Intent(this, HermesChatActivity::class.java)
+        intent.putExtra("PREFILL_MESSAGE", "Расскажи подробнее о модели ${agent.model}")
+        startActivity(intent)
     }
 }

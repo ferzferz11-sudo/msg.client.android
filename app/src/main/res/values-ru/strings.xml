@@ -545,4 +545,5 @@
     <string name="changelog_error">Не удалось загрузить список релизов</string>
     <string name="changelog_open_github">Открыть на GitHub</string>
     <string name="open">Открыть</string>
+    <string name="hermes_chat_title">Лава ИИ</string>
 </resources>

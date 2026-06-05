@@ -365,6 +365,7 @@
     <string name="action_super_admin">Admin Panel</string>
     <string name="action_hermes_agents">Lava AI — Агенты</string>
     <string name="lava_ai_name">Lava AI</string>
+    <string name="hermes_chat_title">Lava AI</string>
     <string name="favorites">Favorites</string>
     <string name="added_to_favorites">Added to Favorites</string>
     <string name="remove_multiple_contacts_confirm">Are you sure you want to remove %d selected contacts?</string>
