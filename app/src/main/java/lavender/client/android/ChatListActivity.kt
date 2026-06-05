@@ -1987,7 +1987,7 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
                 },
-                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Лава ИИ") {
+                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Lava AI") {
                     val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
                     startActivity(intent)
                 },
