@@ -413,16 +413,6 @@
             android:padding="4dp">
 
             <ImageButton
-                android:id="@+id/attachButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/attach_file_add_24"
-                app:tint="?attr/colorOnSurfaceVariant"
-                android:contentDescription="@string/attach_file_label"
-                android:visibility="gone" />
-
-            <ImageButton
                 android:id="@+id/emojiButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
@@ -448,6 +438,16 @@
                 android:autofillHints="none"
                 android:textColor="?attr/colorOnSurface"
                 android:textColorHint="?attr/colorOnSurfaceVariant" />
+
+            <ImageButton
+                android:id="@+id/attachButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/attach_file_add_24"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:contentDescription="@string/attach_file_label"
+                android:visibility="gone" />
 
             <ImageButton
                 android:id="@+id/audioButton"

@@ -121,7 +121,7 @@ class HermesChatActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
 
-        chatWidget.setToolbarTitle(intent.getStringExtra("CHAT_NAME") ?: "Lava AI")
+        chatWidget.setToolbarTitle(intent.getStringExtra("CHAT_NAME") ?: "Лава ИИ")
         chatWidget.setToolbarAgentIcon("🎼", true)
         chatWidget.setToolbarAvatar(false)
 
@@ -413,7 +413,7 @@ class HermesChatActivity : AppCompatActivity() {
                         updateAgentParticipants()
                     } else {
                         activeAgentId = ""
-                        chatWidget.setToolbarTitle("Lava AI")
+                        chatWidget.setToolbarTitle("Лава ИИ")
                         chatWidget.setToolbarAgentIcon("🎼", true)
                         updateAgentParticipants()
                     }
@@ -467,7 +467,7 @@ class HermesChatActivity : AppCompatActivity() {
             id = this.id,
             content = this.content,
             senderId = this.agentId.ifEmpty { "hermes" },
-            senderName = this.agentName.ifEmpty { agent?.name ?: "Lava AI" },
+            senderName = this.agentName.ifEmpty { agent?.name ?: "Лава ИИ" },
             senderEmoji = this.agentIcon.ifEmpty { agent?.icon ?: "🤖" },
             timestamp = this.timestamp,
             isCurrentUser = this.role == "user",

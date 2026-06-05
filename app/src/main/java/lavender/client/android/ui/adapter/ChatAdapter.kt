@@ -101,7 +101,7 @@ class ChatAdapter(
      */
     fun setChats(newChats: List<ChatInfo>) {
         diffJob?.cancel()
-        
+
         // If current list is empty, perform an immediate update to ensure initial state is consistent
         if (displayedChats.isEmpty()) {
             allChats = newChats

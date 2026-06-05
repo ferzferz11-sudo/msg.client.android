@@ -777,9 +777,6 @@ class ChatListActivity : AppCompatActivity() {
                 // 1. Fetch chats from server
                 val fetchedChats = suspendCancellableCoroutine<List<ChatInfo>> { cont ->
                     grpcClient.getChats(username, skipCache = skipCache) { chats ->
-                        Log.d("ChatListActivity", "getChats callback: total=${chats.size}")
-                        val hermesCount = chats.count { it.type == "hermes" }
-                        Log.d("ChatListActivity", "getChats callback: hermes=$hermesCount")
                         if (cont.isActive) cont.resumeWith(Result.success(chats))
                     }
                 }
@@ -830,11 +827,6 @@ class ChatListActivity : AppCompatActivity() {
                     chats.clear()
                     chats.addAll(newChats)
                     chatAdapter.setChats(newChats)
-
-                    // DEBUG: log hermes chats
-                    val hermesChats = newChats.filter { it.type == "hermes" }
-                    Log.d("ChatListActivity", "DEBUG: total=${newChats.size} hermes=${hermesChats.size}")
-                    hermesChats.forEach { Log.d("ChatListActivity", "DEBUG hermes: id=${it.id} name=${it.name} type=${it.type} lastMsg=${it.lastMessageText.take(50)}") }
 
                     // Mark onboarding completed
                     if (fetchedChats.isNotEmpty()) {
@@ -1995,7 +1987,7 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
                 },
-                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Lava AI") {
+                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Лава ИИ") {
                     val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
                     startActivity(intent)
                 },
