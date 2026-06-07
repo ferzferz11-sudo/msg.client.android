@@ -636,9 +636,9 @@ suspend fun createHermesSession(
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> success = cis.readBool()      // field 1 = success (bool)
-                        2 -> sessionId = cis.readString()  // field 2 = session_id (string)
-                        3 -> message = cis.readString()    // field 3 = error (string)
+                        1 -> sessionId = cis.readString()  // field 1 = session_id (string)
+                        2 -> success = cis.readBool()      // field 2 = success (bool)
+                        3 -> message = cis.readString()    // field 3 = message (string)
                         else -> cis.skipField(tag)
                     }
                 }
