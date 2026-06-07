@@ -806,13 +806,13 @@ class ChatListActivity : AppCompatActivity() {
                     .map { it.copy(isMuted = mutedIds.contains(it.id)) }
                     .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
 
-                // 4. Build final list: Favorites + sorted chats
+                // 4. Add favorites placeholder (actual data comes from server via GetChats)
                 val newChats = mutableListOf(
                     ChatInfo(
                         id = "favorites",
                         name = getString(R.string.favorites),
                         type = "favorites",
-                        lastMessageText = getString(R.string.favorites_description),
+                        lastMessageText = "",
                         lastMessageTime = 0L
                     )
                 )
@@ -903,17 +903,6 @@ class ChatListActivity : AppCompatActivity() {
         runOnUiThread {
             binding.swipeRefreshLayout.isRefreshing = false
             chats.clear()
-            
-            // Always add Favorites at the top
-            chats.add(
-                ChatInfo(
-                    id = "favorites",
-                    name = getString(R.string.favorites),
-                    type = "favorites",
-                    lastMessageText = getString(R.string.favorites_description),
-                    lastMessageTime = 0L
-                )
-            )
 
             // Load from local database if available
             lifecycleScope.launch(Dispatchers.IO) {
@@ -1247,17 +1236,6 @@ class ChatListActivity : AppCompatActivity() {
                         grpcClient.getMutedChats { mutedChatIds ->
                             grpcClient.getFavorites(currentUserId) { _ ->
                                 val newFullList = mutableListOf<ChatInfo>()
-                                
-                                // Always add Favorites
-                                newFullList.add(
-                                    ChatInfo(
-                                        id = "favorites",
-                                        name = getString(R.string.favorites),
-                                        type = "favorites",
-                                        lastMessageText = getString(R.string.favorites_description),
-                                        lastMessageTime = 0L
-                                    )
-                                )
 
                                 val chatsWithMute = fetchedChats
                                     .filter { !pendingDeletions.contains(it.id) }
@@ -1293,16 +1271,7 @@ class ChatListActivity : AppCompatActivity() {
                     } else {
                         // Fallback if no userId
                         val newFullList = mutableListOf<ChatInfo>()
-                        newFullList.add(
-                            ChatInfo(
-                                id = "favorites",
-                                name = getString(R.string.favorites),
-                                type = "favorites",
-                                lastMessageText = getString(R.string.favorites_description),
-                                        lastMessageTime = 0L
-                            )
-                        )
-                        
+
                         val filteredFetched = fetchedChats.filter { !pendingDeletions.contains(it.id) }
                         newFullList.addAll(filteredFetched)
 
