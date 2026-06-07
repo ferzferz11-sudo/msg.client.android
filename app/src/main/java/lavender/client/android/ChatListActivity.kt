@@ -237,22 +237,12 @@ class ChatListActivity : AppCompatActivity() {
         // Show onboarding tips for new users (within 24 hours of registration)
         setupOnboardingTips()
 
+        // Setup static Favorites item (outside RecyclerView, never flickers)
+        setupFavoritesItem()
+
         chatAdapter = ChatAdapter(
             lifecycleScope,
             onChatClick = { chat ->
-                if (chat.type == "favorites") {
-                    val intent = Intent(this, NewChatActivity::class.java).apply {
-                        putExtra("USERNAME", username)
-                        putExtra("CHAT_NAME", getString(R.string.favorites))
-                        putExtra("ROOM_ID", "favorites_$username")
-                        putExtra("IS_DIRECT", false)
-                        putExtra("PARTICIPANTS", "[\"$username\"]")
-                        putExtra("CREATOR", username)
-                    }
-                    startActivity(intent)
-                    return@ChatAdapter
-                }
-
                 if (chat.unreadCount > 0) {
                     grpcClient.markRead(chat.id, username)
                     // Locally update for immediate visual feedback
@@ -326,19 +316,8 @@ class ChatListActivity : AppCompatActivity() {
             adapter = chatAdapter
         }
 
-        // Add Favorites placeholder immediately — always visible, no flicker
-        if (username.isNotEmpty()) {
-            chats.add(
-                ChatInfo(
-                    id = "favorites_$username",
-                    name = getString(R.string.favorites),
-                    type = "favorites",
-                    lastMessageText = "",
-                    lastMessageTime = 0L
-                )
-            )
-            chatAdapter.setChats(chats.toList())
-        }
+        // Setup static Favorites item (outside RecyclerView, never flickers)
+        setupFavoritesItem()
 
         // Handle bottom navigation bar insets
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
@@ -820,17 +799,8 @@ class ChatListActivity : AppCompatActivity() {
                     .map { it.copy(isMuted = mutedIds.contains(it.id)) }
                     .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
 
-                // 4. Add favorites placeholder (server does not inject it anymore)
-                val newChats = mutableListOf(
-                    ChatInfo(
-                        id = "favorites_$username",
-                        name = getString(R.string.favorites),
-                        type = "favorites",
-                        lastMessageText = "",
-                        lastMessageTime = 0L
-                    )
-                )
-                newChats.addAll(filteredChats)
+                // 4. Favorites is now a static view above RecyclerView
+                val newChats = filteredChats.toMutableList()
 
                 // 5. Update local cache in background
                 try {
@@ -1114,6 +1084,22 @@ class ChatListActivity : AppCompatActivity() {
             }
         } else {
             hideOnboardingTips()
+        }
+    }
+
+    private fun setupFavoritesItem() {
+        if (username.isEmpty()) return
+        binding.favoritesContainer.isVisible = true
+        binding.favoritesItem.setOnClickListener {
+            val intent = Intent(this, NewChatActivity::class.java).apply {
+                putExtra("USERNAME", username)
+                putExtra("CHAT_NAME", getString(R.string.favorites))
+                putExtra("ROOM_ID", "_$username")
+                putExtra("IS_DIRECT", false)
+                putExtra("PARTICIPANTS", "[\"$username\"]")
+                putExtra("CREATOR", username)
+            }
+            startActivity(intent)
         }
     }
 
