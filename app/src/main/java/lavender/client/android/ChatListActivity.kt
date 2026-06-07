@@ -1997,6 +1997,10 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionHermesAgents, R.drawable.ic_agents, "Агенты") {
                     val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
                     startActivity(intent)
+                },
+                SheetAction(R.id.actionOwlChat, R.drawable.ic_owl, "OWL AI") {
+                    val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
+                    startActivity(intent)
                 }
             )).show()
     }

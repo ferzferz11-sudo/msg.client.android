@@ -1051,3 +1051,80 @@ data class GetRemoteAgentStatusResponseProto(
     val activeTasks: Int = 0,
     val lastHeartbeat: String = ""
 )
+
+// ======= Bot Command proto classes =======
+
+data class BotCommandRequestProto(
+    val userId: String = "",
+    val username: String = "",
+    val chatId: String = "",
+    val command: String = "",
+    val args: List<String> = emptyList()
+)
+
+data class BotCommandResponseProto(
+    val success: Boolean = false,
+    val responseText: String = "",
+    val isError: Boolean = false,
+    val errorMessage: String = ""
+)
+
+data class BotCommandInfoProto(
+    val command: String = "",
+    val description: String = "",
+    val usage: String = "",
+    val category: String = ""
+)
+
+data class GetBotCommandsRequestProto(
+    val userId: String = ""
+)
+
+data class GetBotCommandsResponseProto(
+    val commands: List<BotCommandInfoProto> = emptyList()
+)
+
+data class OWLStatusRequestProto(
+    val userId: String = ""
+)
+
+data class OWLStatusResponseProto(
+    val available: Boolean = false,
+    val model: String = "",
+    val queueLength: Int = 0,
+    val status: String = ""
+)
+
+// ======= Server Notification proto classes =======
+
+data class ServerNotificationProto(
+    val id: String = "",
+    val type: String = "",
+    val title: String = "",
+    val message: String = "",
+    val timestamp: String = "",
+    val metadata: Map<String, String> = emptyMap()
+)
+
+data class SubscribeNotificationsRequestProto(
+    val userId: String = "",
+    val types: List<String> = emptyList()
+)
+
+data class GetNotificationHistoryRequestProto(
+    val userId: String = "",
+    val limit: Int = 0
+)
+
+data class GetNotificationHistoryResponseProto(
+    val notifications: List<ServerNotificationProto> = emptyList()
+)
+
+data class MarkNotificationReadRequestProto(
+    val userId: String = "",
+    val notificationIds: List<String> = emptyList()
+)
+
+data class MarkNotificationReadResponseProto(
+    val success: Boolean = false
+)
