@@ -243,6 +243,19 @@ class ChatListActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(
             lifecycleScope,
             onChatClick = { chat ->
+                if (chat.type == "favorites") {
+                    val intent = Intent(this, NewChatActivity::class.java).apply {
+                        putExtra("USERNAME", username)
+                        putExtra("CHAT_NAME", getString(R.string.favorites))
+                        putExtra("ROOM_ID", "favorites_$username")
+                        putExtra("IS_DIRECT", false)
+                        putExtra("PARTICIPANTS", "[\"$username\"]")
+                        putExtra("CREATOR", username)
+                    }
+                    startActivity(intent)
+                    return@ChatAdapter
+                }
+
                 if (chat.unreadCount > 0) {
                     grpcClient.markRead(chat.id, username)
                     // Locally update for immediate visual feedback
@@ -799,8 +812,17 @@ class ChatListActivity : AppCompatActivity() {
                     .map { it.copy(isMuted = mutedIds.contains(it.id)) }
                     .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
 
-                // 4. Favorites is now a static view above RecyclerView
-                val newChats = filteredChats.toMutableList()
+                // 4. Prepend Favorites as first item (static, never changes)
+                val newChats = mutableListOf(
+                    ChatInfo(
+                        id = "favorites_$username",
+                        name = getString(R.string.favorites),
+                        type = "favorites",
+                        lastMessageText = "",
+                        lastMessageTime = 0L
+                    )
+                )
+                newChats.addAll(filteredChats)
 
                 // 5. Update local cache in background
                 try {

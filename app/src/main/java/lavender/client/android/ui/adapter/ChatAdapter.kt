@@ -96,16 +96,20 @@ class ChatAdapter(
         onSelectionChanged(0)
     }
 
-    /**
-     * Robust update method to prevent Inconsistency detected crash
-     */
+    private var favoritesItem: ChatInfo? = null
+
     fun setChats(newChats: List<ChatInfo>) {
         diffJob?.cancel()
 
-        // If current list is empty, perform an immediate update to ensure initial state is consistent
-        if (displayedChats.isEmpty()) {
-            allChats = newChats
-            displayedChats = newChats
+        // Extract Favorites from list (always at position 0 if present)
+        val newFavorites = newChats.firstOrNull { it.type == "favorites" }
+        val actualChats = if (newFavorites != null) newChats.drop(1) else newChats
+
+        // If current list is empty, perform an immediate update
+        if (displayedChats.isEmpty() && favoritesItem == null) {
+            favoritesItem = newFavorites
+            allChats = actualChats
+            displayedChats = actualChats
             notifyDataSetChanged()
             return
         }
@@ -114,29 +118,90 @@ class ChatAdapter(
         val oldChats = displayedChats
         diffJob = scope.launch(Dispatchers.Default) {
             val filtered = if (currentFilter.isEmpty()) {
-                newChats
+                actualChats
             } else {
-                newChats.filter { chat ->
+                actualChats.filter { chat ->
                     chat.name.lowercase().contains(currentFilter) ||
                     chat.participants.lowercase().contains(currentFilter) ||
                     chat.lastMessageText.lowercase().contains(currentFilter)
                 }
             }
-            
+
+            // Only diff the actual chats, not Favorites
             val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
-            
+
             if (!isActive) {
                 isDiffing = false
                 return@launch
             }
-            
+
             withContext(Dispatchers.Main) {
-                allChats = newChats
+                val oldFavorites = favoritesItem
+                favoritesItem = newFavorites
+                allChats = actualChats
                 displayedChats = filtered
-                diffResult.dispatchUpdatesTo(this@ChatAdapter)
+
+                // If Favorites was added/removed, notify about position 0
+                val hadFavorites = oldFavorites != null
+                val hasFavoritesNow = favoritesItem != null
+                if (hadFavorites != hasFavoritesNow) {
+                    if (hasFavoritesNow) {
+                        notifyItemInserted(0)
+                    } else {
+                        notifyItemRemoved(0)
+                    }
+                    return@withContext
+                }
+
+                // Apply diff with offset for Favorites at position 0
+                diffResult.dispatchUpdatesTo(object : androidx.recyclerview.widget.ListUpdateCallback {
+                    override fun onInserted(position: Int, count: Int) {
+                        notifyItemRangeInserted(position + 1, count)
+                    }
+                    override fun onRemoved(position: Int, count: Int) {
+                        notifyItemRangeRemoved(position + 1, count)
+                    }
+                    override fun onMoved(fromPosition: Int, toPosition: Int) {
+                        notifyItemMoved(fromPosition + 1, toPosition + 1)
+                    }
+                    override fun onChanged(position: Int, count: Int, payload: Any?) {
+                        notifyItemRangeChanged(position + 1, count, payload)
+                    }
+                })
                 isDiffing = false
             }
         }
+    }
+
+    override fun getItemCount(): Int = displayedChats.size + (if (favoritesItem != null) 1 else 0)
+
+    override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
+        initColors(holder.itemView)
+        val isSelected = selectedPositions.contains(position)
+
+        // Position 0 is Favorites (static, never changes)
+        if (position == 0 && favoritesItem != null) {
+            holder.bind(favoritesItem!!, currentUsername, isSelected, false)
+            holder.loadParticipantAvatars(favoritesItem!!.participants, favoritesItem!!.type, currentUsername, avatarCache, onlineUsers, favoritesItem!!.avatarUrl)
+            return
+        }
+
+        // Other positions are regular chats (offset by -1 if Favorites present)
+        val chatPosition = position - if (favoritesItem != null) 1 else 0
+        val chat = displayedChats[chatPosition]
+        holder.bind(chat, currentUsername, isSelected, deletingChatIds.contains(chat.id)) {
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                if (selectedPositions.contains(currentPos)) {
+                    selectedPositions.remove(currentPos)
+                } else {
+                    selectedPositions.add(currentPos)
+                }
+                notifyItemChanged(currentPos)
+                onSelectionChanged(selectedPositions.size)
+            }
+        }
+        holder.loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
     }
 
     fun filter(query: String) {
@@ -164,7 +229,12 @@ class ChatAdapter(
             
             withContext(Dispatchers.Main) {
                 displayedChats = filtered
-                diffResult.dispatchUpdatesTo(this@ChatAdapter)
+                // Offset by 1 if Favorites is present
+                if (favoritesItem != null) {
+                    notifyItemRangeChanged(1, filtered.size, "status")
+                } else {
+                    diffResult.dispatchUpdatesTo(this@ChatAdapter)
+                }
                 isDiffing = false
             }
         }
@@ -181,7 +251,9 @@ class ChatAdapter(
             val count = displayedChats.size
             if (count > 0 && !isDiffing) {
                 try {
-                    notifyItemRangeChanged(0, count, "status")
+                    // Offset by 1 if Favorites is present (position 0 is Favorites)
+                    val startPos = if (favoritesItem != null) 1 else 0
+                    notifyItemRangeChanged(startPos, count, "status")
                 } catch (_: Exception) {}
             }
         }
@@ -249,13 +321,14 @@ class ChatAdapter(
         } else {
             for (payload in payloads) {
                 when (payload) {
-                    "status", "avatar" -> holder.loadParticipantAvatars(displayedChats[position].participants, displayedChats[position].type, currentUsername, avatarCache, onlineUsers, displayedChats[position].avatarUrl)
+                    "status", "avatar" -> {
+                        val chat = if (position == 0 && favoritesItem != null) favoritesItem!! else displayedChats[position - if (favoritesItem != null) 1 else 0]
+                        holder.loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
+                    }
                 }
             }
         }
     }
-
-    override fun getItemCount(): Int = displayedChats.size
 
     inner class ChatViewHolder(itemView: View, private val onChatClick: (ChatInfo) -> Unit) : RecyclerView.ViewHolder(itemView) {
         private val chatName: TextView = itemView.findViewById(R.id.chatName)
