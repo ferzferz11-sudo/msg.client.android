@@ -750,6 +750,12 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
+        // Don't hammer the server if we're not connected — wait for READY status
+        if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+            Log.d("ChatListActivity", "loadChats: not connected (${grpcClient.connectionStatus.value}), skipping")
+            return
+        }
+
         Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
         // Show refresh indicator only for pull-to-refresh (list already has data)
@@ -870,11 +876,13 @@ class ChatListActivity : AppCompatActivity() {
                 Log.d("ChatListActivity", "loadChats cancelled (activity destroyed)")
             } catch (e: Exception) {
                 Log.e("ChatListActivity", "Error loading chats", e)
-                if (isActive) {
+                try {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
                         binding.swipeRefreshLayout.isRefreshing = false
                     }
+                } catch (_: CancellationException) {
+                    // Activity destroyed during error handling
                 }
             }
         }
