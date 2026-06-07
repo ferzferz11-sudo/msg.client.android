@@ -880,6 +880,11 @@ class ChatListActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
                         binding.swipeRefreshLayout.isRefreshing = false
+                        // Hide loading indicator on error for new users
+                        if (isNewUser) {
+                            binding.loadingContainer.isVisible = false
+                            binding.chatsRecyclerView.isVisible = true
+                        }
                     }
                 } catch (_: CancellationException) {
                     // Activity destroyed during error handling
