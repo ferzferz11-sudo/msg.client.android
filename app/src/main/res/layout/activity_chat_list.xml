@@ -272,15 +272,15 @@
             android:paddingVertical="12dp"
             android:background="?attr/selectableItemBackground">
 
-            <ImageView
+            <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/favoritesIcon"
                 android:layout_width="52dp"
                 android:layout_height="52dp"
                 android:layout_marginEnd="16dp"
                 android:padding="12dp"
-                android:src="@drawable/ic_star"
                 android:background="@drawable/bg_favorites_circle"
                 android:contentDescription="@string/favorites"
+                app:srcCompat="@drawable/ic_star"
                 app:tint="?attr/colorOnPrimary" />
 
             <LinearLayout
