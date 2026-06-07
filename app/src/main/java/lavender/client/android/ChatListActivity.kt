@@ -806,16 +806,8 @@ class ChatListActivity : AppCompatActivity() {
                     .map { it.copy(isMuted = mutedIds.contains(it.id)) }
                     .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
 
-                // 4. Add favorites placeholder (actual data comes from server via GetChats)
-                val newChats = mutableListOf(
-                    ChatInfo(
-                        id = "favorites",
-                        name = getString(R.string.favorites),
-                        type = "favorites",
-                        lastMessageText = "",
-                        lastMessageTime = 0L
-                    )
-                )
+                // 4. Server returns favorites via GetChats, no client-side placeholder needed
+                val newChats = mutableListOf<ChatInfo>()
                 newChats.addAll(filteredChats)
 
                 // 5. Update local cache in background
