@@ -48,6 +48,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import java.io.File
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -543,7 +544,9 @@ class ChatListActivity : AppCompatActivity() {
         intent.getStringExtra("DELETING_CHAT_ID")?.let { chatId ->
             chatAdapter.setChatDeleting(chatId, true)
         }
-        if (!isChatsLoaded) loadChats()
+        // Don't load chats here — wait for connectionStatus READY in the collector below.
+        // Loading before connection is ready causes suspendCancellableCoroutine to hang
+        // until the coroutine is cancelled (e.g. activity recreation after registration).
     }
 
     private fun performDirectDeletion(chatId: String) {
@@ -862,11 +865,16 @@ class ChatListActivity : AppCompatActivity() {
                         loadChatsFromCache(fetchedChats)
                     }
                 }
+            } catch (e: CancellationException) {
+                // Activity was destroyed — don't touch UI
+                Log.d("ChatListActivity", "loadChats cancelled (activity destroyed)")
             } catch (e: Exception) {
                 Log.e("ChatListActivity", "Error loading chats", e)
-                withContext(Dispatchers.Main) {
-                    loadTimeout.cancel()
-                    binding.swipeRefreshLayout.isRefreshing = false
+                if (isActive) {
+                    withContext(Dispatchers.Main) {
+                        loadTimeout.cancel()
+                        binding.swipeRefreshLayout.isRefreshing = false
+                    }
                 }
             }
         }
