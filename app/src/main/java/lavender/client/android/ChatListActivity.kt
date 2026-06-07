@@ -326,6 +326,20 @@ class ChatListActivity : AppCompatActivity() {
             adapter = chatAdapter
         }
 
+        // Add Favorites placeholder immediately — always visible, no flicker
+        if (username.isNotEmpty()) {
+            chats.add(
+                ChatInfo(
+                    id = "favorites_$username",
+                    name = getString(R.string.favorites),
+                    type = "favorites",
+                    lastMessageText = "",
+                    lastMessageTime = 0L
+                )
+            )
+            chatAdapter.setChats(chats.toList())
+        }
+
         // Handle bottom navigation bar insets
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
