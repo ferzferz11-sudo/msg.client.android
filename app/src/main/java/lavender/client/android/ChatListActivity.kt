@@ -1432,15 +1432,14 @@ class ChatListActivity : AppCompatActivity() {
         isChatsLoaded = false
         SessionManager.logout(this)
 
-        // Synchronously clear UI — remove chats from screen immediately
-        if (::chatAdapter.isInitialized) {
-            chatAdapter.setChats(emptyList())
-        }
-        binding.chatsRecyclerView.isVisible = false
-        binding.loadingContainer.isVisible = false
+        // Synchronously clear local cache — Room DB must be wiped before
+        // the new Activity instance starts (lifecycleScope is cancelled by finish())
+        clearLocalCacheSync()
 
-        // Clear local cache — remove all user data from device (async)
-        clearLocalCache()
+        // Clear Glide memory cache on main thread
+        try {
+            com.bumptech.glide.Glide.get(this).clearMemory()
+        } catch (_: Exception) { }
 
         // Save current theme to SharedPreferences before logout
         val currentTheme = ThemeStore.currentTheme()
@@ -1453,8 +1452,13 @@ class ChatListActivity : AppCompatActivity() {
         username = ""
         password = ""
 
-        // Show auth choice dialog
-        showAuthChoiceDialog()
+        // Restart ChatListActivity cleanly — new instance will show
+        // auth dialog on empty screen (no stale chats visible)
+        val intent = Intent(this, ChatListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun checkManualUpdate() {
