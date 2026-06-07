@@ -1432,7 +1432,14 @@ class ChatListActivity : AppCompatActivity() {
         isChatsLoaded = false
         SessionManager.logout(this)
 
-        // Clear local cache — remove all user data from device
+        // Synchronously clear UI — remove chats from screen immediately
+        if (::chatAdapter.isInitialized) {
+            chatAdapter.setChats(emptyList())
+        }
+        binding.chatsRecyclerView.isVisible = false
+        binding.loadingContainer.isVisible = false
+
+        // Clear local cache — remove all user data from device (async)
         clearLocalCache()
 
         // Save current theme to SharedPreferences before logout
