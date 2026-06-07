@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import lavender.client.android.data.db.AppDatabase
+import lavender.client.android.data.db.ChatEntity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.*
 import lavender.client.android.data.repository.HermesRepository
@@ -17,6 +19,7 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
 
     private val repository = HermesRepository()
     private val prefs = application.getSharedPreferences("hermes_prefs", Context.MODE_PRIVATE)
+    private val chatDao = AppDatabase.getDatabase(application).chatDao()
 
     // Current session
     private val _currentSession = MutableStateFlow<HermesSession?>(null)
@@ -66,6 +69,25 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
                 if (agentId.isNotEmpty()) {
                     _currentSession.value = session.copy(activeAgentId = agentId)
                 }
+                // Save the new chat to the database
+                val chatEntity = ChatEntity(
+                    id = session.id,
+                    name = "Lava AI",
+                    type = "hermes",
+                    participants = "[\"$userId\"]",
+                    createdAt = System.currentTimeMillis(),
+                    lastMessageTime = System.currentTimeMillis(),
+                    creator = userId,
+                    lastMessageText = "New chat with Lava AI",
+                    unreadCount = 0,
+                    avatarUrl = "",
+                    fullAvatarUrl = "",
+                    lastMessageUsername = "",
+                    muted = false,
+                    activeAgentId = agentId,
+                    agentMode = mode
+                )
+                chatDao.insertChats(listOf(chatEntity))
             }.onFailure { e ->
                 android.util.Log.e("HermesChatVM", "createSession FAILED: ${e.message}", e)
                 _error.value = e.message ?: "Failed to create session"

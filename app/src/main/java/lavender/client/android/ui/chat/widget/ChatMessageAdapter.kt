@@ -34,7 +34,7 @@ class ChatMessageAdapter(
     }
 
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    private val dateFormat = SimpleDateFormat("d MMMM", Locale("ru"))
+    private val dateFormat = SimpleDateFormat("d MMMM", Locale.forLanguageTag("ru"))
 
     override fun getItemViewType(position: Int): Int {
         val item = getItem(position)

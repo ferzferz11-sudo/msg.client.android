@@ -71,6 +71,17 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/actionLogs"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_logs" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="Logs" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/actionAdmin"
         style="@style/MenuActionItemStyle"
         android:visibility="gone">

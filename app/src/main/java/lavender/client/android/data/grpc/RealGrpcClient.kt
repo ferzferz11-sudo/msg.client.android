@@ -717,6 +717,24 @@ object RealGrpcClient {
 
             override fun onError(t: Throwable) {
                 Log.e(TAG, "Chat stream error", t)
+
+                // Do not retry on authentication errors
+                if (t is io.grpc.StatusRuntimeException) {
+                    val description = t.status.description ?: ""
+                    if (description.contains("user not found", ignoreCase = true) ||
+                        description.contains("auth failed", ignoreCase = true) ||
+                        t.status.code == io.grpc.Status.Code.UNAUTHENTICATED) {
+
+                        Log.w(TAG, "Authentication error, not retrying: $description")
+                        _authStatus.value = if (description.contains("user not found")) "USER_NOT_FOUND" else "AUTH_FAILED"
+                        _connectionStatus.value = ConnectionStatus.FAILED
+                        requestObserver = null
+                        // We don't call disconnect() here to allow the user to see the error and decide
+                        // what to do next, e.g., try to register. Calling disconnect() would kill the channel.
+                        return
+                    }
+                }
+
                 _connectionStatus.value = ConnectionStatus.FAILED
                 
                 // Clear observer immediately to prevent broken stream reuse

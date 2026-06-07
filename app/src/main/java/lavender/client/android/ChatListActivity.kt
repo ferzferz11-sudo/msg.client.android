@@ -1868,6 +1868,11 @@ class ChatListActivity : AppCompatActivity() {
             sheet.dismiss()
             settingsActivityLauncher.launch(Intent(this, NotificationActivity::class.java))
         }
+        sheet.findViewById<View>(R.id.actionLogs)?.setOnClickListener {
+            isNavigatingDeeper = true
+            sheet.dismiss()
+            settingsActivityLauncher.launch(Intent(this, lavender.client.android.ui.LogViewerActivity::class.java))
+        }
         sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
             sheet.dismiss()
             clearLocalCache()
@@ -2321,13 +2326,16 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
+        var isTransitioning = false
+
         btnCancel?.setOnClickListener {
+            isTransitioning = true
             sheet.dismiss()
             showAuthChoiceDialog()
         }
 
         sheet.setOnDismissListener {
-            if (username.isEmpty() || password.isEmpty()) {
+            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
                 showAuthChoiceDialog()
             }
         }
@@ -2363,6 +2371,7 @@ class ChatListActivity : AppCompatActivity() {
                                 }
                                 clearLocalCacheSync()
                                 Toast.makeText(this@ChatListActivity, R.string.login_success, Toast.LENGTH_LONG).show()
+                                isTransitioning = true
                                 sheet.dismiss()
                                 recreate()
                             }
@@ -2371,15 +2380,16 @@ class ChatListActivity : AppCompatActivity() {
                                 btnJoin?.text = getString(R.string.join)
                                 btnJoin?.isEnabled = true
                                 
-                                AlertDialog.Builder(this)
+                                AlertDialog.Builder(this@ChatListActivity)
                                     .setTitle(R.string.user_not_found)
                                     .setMessage(getString(R.string.register_confirm, u))
                                     .setPositiveButton(R.string.yes) { _, _ ->
+                                        isTransitioning = true
                                         sheet.dismiss()
-                                        showRegisterBottomSheet()
+                                        showRegisterBottomSheet(u, p)
                                     }
                                     .setNegativeButton(R.string.no) { _, _ ->
-                                        sheet.dismiss()
+                                        // Keep login sheet open
                                     }
                                     .show()
                             }
@@ -2406,6 +2416,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         forgotPasswordButton?.setOnClickListener {
+            isTransitioning = true
             sheet.dismiss()
             showForgotPasswordBottomSheet()
         }
@@ -2413,7 +2424,7 @@ class ChatListActivity : AppCompatActivity() {
         sheet.show()
     }
 
-    private fun showRegisterBottomSheet() {
+    private fun showRegisterBottomSheet(prefillUser: String = "", prefillPass: String = "") {
         val customTheme = getAuthTheme()
         val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_register, customTheme)
 
@@ -2431,6 +2442,14 @@ class ChatListActivity : AppCompatActivity() {
         val registerProgressBar = sheet.findViewById<ProgressBar>(R.id.registerProgressBar)
         val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
+
+        if (prefillUser.isNotEmpty()) {
+            editText?.setText(prefillUser)
+        }
+        if (prefillPass.isNotEmpty()) {
+            editTextPassword?.setText(prefillPass)
+            editTextConfirmPassword?.setText(prefillPass)
+        }
 
         // Setup server address spinner — fetch from gRPC (public, no auth)
         val serverList = mutableListOf<String>()
@@ -2461,13 +2480,16 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
+        var isTransitioning = false
+
         btnCancel?.setOnClickListener {
+            isTransitioning = true
             sheet.dismiss()
             showAuthChoiceDialog()
         }
 
         sheet.setOnDismissListener {
-            if (username.isEmpty() || password.isEmpty()) {
+            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
                 showAuthChoiceDialog()
             }
         }
@@ -2515,6 +2537,7 @@ class ChatListActivity : AppCompatActivity() {
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
                                 val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
                                 prefs.edit { putBoolean("onboarding_completed_$u", false); putLong("first_login_$u", System.currentTimeMillis()) }
+                                isTransitioning = true
                                 sheet.dismiss()
                                 val intent = Intent(this@ChatListActivity, ChatListActivity::class.java)
                                 intent.putExtra("is_newly_registered", true)
@@ -2563,9 +2586,17 @@ class ChatListActivity : AppCompatActivity() {
         val editTextToken = sheet.findViewById<EditText>(R.id.editTextToken)
         val editTextNewPassword = sheet.findViewById<EditText>(R.id.editTextNewPassword)
 
+        var isTransitioning = false
         btnCancel?.setOnClickListener {
+            isTransitioning = true
             sheet.dismiss()
             showAuthChoiceDialog()
+        }
+
+        sheet.setOnDismissListener {
+            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
+                showAuthChoiceDialog()
+            }
         }
 
         var isStep2 = false
@@ -2651,6 +2682,7 @@ class ChatListActivity : AppCompatActivity() {
                             btnSend.isEnabled = true
                             if (success) {
                                 Toast.makeText(this@ChatListActivity, "Пароль успешно изменен", Toast.LENGTH_LONG).show()
+                                isTransitioning = true
                                 sheet.dismiss()
                             } else {
                                 Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
@@ -2682,14 +2714,24 @@ class ChatListActivity : AppCompatActivity() {
             } catch (_: Exception) {}
         }
 
+        var isTransitioning = false
         btnLogin?.setOnClickListener {
+            isTransitioning = true
             sheet.dismiss()
             showLoginBottomSheet()
         }
 
         btnRegister?.setOnClickListener {
+            isTransitioning = true
             sheet.dismiss()
             showRegisterBottomSheet()
+        }
+
+        sheet.setOnDismissListener {
+            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
+                // If it was closed by swiping and we aren't transitioning, reopen it
+                showAuthChoiceDialog()
+            }
         }
 
         sheet.setCancelable(false)

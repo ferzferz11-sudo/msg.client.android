@@ -123,13 +123,6 @@ class SuperAdminActivity : AppCompatActivity() {
         loadData()
     }
 
-    // ======= Log Viewer =======
-
-    private fun showLogViewer() {
-        val intent = Intent(this, lavender.client.android.ui.LogViewerActivity::class.java)
-        startActivity(intent)
-    }
-
     private fun setupRecyclerView() {
         adapter = SuperAdminAdapter(
             onUserClick = { user ->
@@ -199,6 +192,9 @@ class SuperAdminActivity : AppCompatActivity() {
         // Hide tabs from menu, now using TabLayout
         menu.findItem(R.id.action_show_users)?.isVisible = false
         menu.findItem(R.id.action_show_groups)?.isVisible = false
+
+        // Remove action_logs if it's there
+        menu.removeItem(R.id.action_logs)
         
         val hasSelection = selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()
         if (hasSelection) {
@@ -249,10 +245,6 @@ class SuperAdminActivity : AppCompatActivity() {
                     searchEditText.text.clear()
                     filterCurrentList("")
                 }
-                return true
-            }
-            R.id.action_logs -> {
-                showLogViewer()
                 return true
             }
         }

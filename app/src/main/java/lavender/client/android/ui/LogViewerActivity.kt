@@ -16,6 +16,8 @@ import com.google.android.material.appbar.MaterialToolbar
 import lavender.client.android.R
 import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.models.LogEntry
+import lavender.client.android.data.session.SessionManager
+import lavender.client.android.theme.ui.ThemeUi
 
 /**
  * Activity для просмотра логов ошибок
@@ -32,7 +34,7 @@ class LogViewerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_log_viewer)
 
-        // Тему применяем без ThemeUi.bind — он вызывает ClassCastException при возврате на предыдущий Activity
+        ThemeUi.bind(this, SessionManager.session.value.username)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
