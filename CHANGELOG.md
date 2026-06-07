@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.1.1
+### OWL Bot — AI чат с бот-командами
+- 🤖 **OwlChatActivity**: новый экран чата с OWL AI ассистентом
+- 🤖 **OwlChatViewModel**: ViewModel для управления состоянием OWL чата
+- 🤖 **OWL AI кнопка**: добавлена в bottom sheet меню ChatListActivity
+- 🤖 **Slash command detection**: при вводе `/` в поле ввода показываются подсказки команд
+- 🤖 **Bot Commands UI**: диалог со списком доступных команд (/status, /deploy, /logs, /restart, /ai, /help, /version)
+- 📡 **gRPC**: добавлены processBotCommand, getBotCommands, getOWLStatus методы
+- 📡 **Proto**: добавлены BotCommandRequest/Response/Info, OWLStatusRequest/Response, ServerNotification классы
+- 🔔 **Server Notifications**: добавлены SubscribeNotifications, GetNotificationHistory, MarkNotificationsRead proto классы
+- 🆕 **OwlMessage**: новая data class для сообщений OWL чата
+
 ## 1.1.0.15
 ### Исправления
 - 🐛 **Force reconnect убивал стримы**: `connect(force=true)` при живом канале (READY) вызывал `shutdownNow()`, что приводило к `UNAVAILABLE: Channel shutdownNow invoked` в активных стримах. Теперь если канал живой и адрес совпадает — `force` не убивает канал, а просто возвращается. Force переподключение срабатывает только когда канал мёртв или адрес изменился.
