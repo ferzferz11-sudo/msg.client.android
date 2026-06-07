@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 1.1.0.15
+### Исправления
+- 🐛 **Force reconnect убивал стримы**: `connect(force=true)` при живом канале (READY) вызывал `shutdownNow()`, что приводило к `UNAVAILABLE: Channel shutdownNow invoked` в активных стримах. Теперь если канал живой и адрес совпадает — `force` не убивает канал, а просто возвращается. Force переподключение срабатывает только когда канал мёртв или адрес изменился.
+
 ## 1.1.0.14
 ### Hermes AI — сессии в списке чатов + полный функционал ChatWidget
 - 🤖 **Hermes сессии в чатах**: чаты с Hermes AI теперь появляются в едином списке чатов как `type="hermes"` с полями `active_agent_id` и `agent_mode`

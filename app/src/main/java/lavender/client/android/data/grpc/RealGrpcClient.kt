@@ -238,8 +238,13 @@ object RealGrpcClient {
         Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${_connectionStatus.value}")
 
         val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
-        if (!forceReconnect && currentServerAddress == serverAddress && channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY) {
-            Log.d(TAG, "Connection already ready, skipping connect")
+        val addressMatch = currentServerAddress == serverAddress
+        val channelAlive = channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY
+
+        // If channel is alive and address matches, keep it — active streams must not be killed.
+        // Force reconnect should only rebuild when channel is dead or address changed.
+        if (addressMatch && channelAlive) {
+            Log.d(TAG, "Connection already READY (force=$forceReconnect), keeping active streams")
             return
         }
         
