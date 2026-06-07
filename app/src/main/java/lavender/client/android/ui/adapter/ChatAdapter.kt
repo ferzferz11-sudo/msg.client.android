@@ -181,7 +181,7 @@ class ChatAdapter(
 
         // Position 0 is Favorites (static, never changes)
         if (position == 0 && favoritesItem != null) {
-            holder.bind(favoritesItem!!, currentUsername, isSelected, false)
+            holder.bind(favoritesItem!!, currentUsername, isSelected, false) {}
             holder.loadParticipantAvatars(favoritesItem!!.participants, favoritesItem!!.type, currentUsername, avatarCache, onlineUsers, favoritesItem!!.avatarUrl)
             return
         }
@@ -298,21 +298,6 @@ class ChatAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_chat, parent, false)
         return ChatViewHolder(view, onChatClick)
-    }
-
-    override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-        initColors(holder.itemView)
-        val isSelected = selectedPositions.contains(position)
-        val chat = displayedChats[position]
-        holder.bind(chat, currentUsername, isSelected, deletingChatIds.contains(chat.id)) {
-            val currentPos = holder.bindingAdapterPosition
-            if (currentPos == RecyclerView.NO_POSITION) return@bind
-            if (selectedPositions.contains(currentPos)) selectedPositions.remove(currentPos)
-            else selectedPositions.add(currentPos)
-            notifyItemChanged(currentPos)
-            onSelectionChanged(selectedPositions.size)
-        }
-        holder.loadParticipantAvatars(chat.participants, chat.type, currentUsername, avatarCache, onlineUsers, chat.avatarUrl)
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int, payloads: MutableList<Any>) {

@@ -237,9 +237,6 @@ class ChatListActivity : AppCompatActivity() {
         // Show onboarding tips for new users (within 24 hours of registration)
         setupOnboardingTips()
 
-        // Setup static Favorites item (outside RecyclerView, never flickers)
-        setupFavoritesItem()
-
         chatAdapter = ChatAdapter(
             lifecycleScope,
             onChatClick = { chat ->
@@ -328,9 +325,6 @@ class ChatListActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@ChatListActivity)
             adapter = chatAdapter
         }
-
-        // Setup static Favorites item (outside RecyclerView, never flickers)
-        setupFavoritesItem()
 
         // Handle bottom navigation bar insets
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
@@ -1106,22 +1100,6 @@ class ChatListActivity : AppCompatActivity() {
             }
         } else {
             hideOnboardingTips()
-        }
-    }
-
-    private fun setupFavoritesItem() {
-        if (username.isEmpty()) return
-        binding.favoritesContainer.isVisible = true
-        binding.favoritesItem.setOnClickListener {
-            val intent = Intent(this, NewChatActivity::class.java).apply {
-                putExtra("USERNAME", username)
-                putExtra("CHAT_NAME", getString(R.string.favorites))
-                putExtra("ROOM_ID", "_$username")
-                putExtra("IS_DIRECT", false)
-                putExtra("PARTICIPANTS", "[\"$username\"]")
-                putExtra("CREATOR", username)
-            }
-            startActivity(intent)
         }
     }
 
