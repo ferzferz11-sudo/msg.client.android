@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [1.1.1.2] - 2026-07-17
-### OWL Bot — исправления
-- 🔧 **Отдельный OWL streaming:** `owlTyping`/`owlResponses` SharedFlows — больше не переиспользуют Hermes orchestrator flows
-- 🔧 **ChatWithOWL gRPC:** добавлен `chatWithOwl()` — реальный вызов серверного streaming RPC вместо пустого stub
+### OWL Bot — исправления и разделение архитектуры
+- 🔧 **Полное разделение OWL/Hermes:** создан отдельный `OwlGrpc.kt` — все OWL-методы вынесены из `HermesGrpc.kt`
+- 🔧 **OwlGrpc.kt:** `processBotCommand`, `getBotCommands`, `getOWLStatus`, `chatWithOwl` — все в отдельном файле
+- 🔧 **OwlGrpc.kt:** `OwlRequestMarshaller`/`OwlResponseMarshaller`, `OwlRequestProto`/`OwlResponseProto`
+- 🔧 **HermesGrpc.kt:** очищен от OWL-кода — только orchestrator-методы и agent management
+- 🔧 **Отдельный OWL streaming:** `owlTyping`/`owlResponses` SharedFlows — изолированы от Hermes orchestrator
+- 🔧 **ChatWithOWL gRPC:** реальный вызов серверного streaming RPC вместо пустого stub
 - 🔧 **Streaming chunks:** OwlChatViewModel аккумулирует стриминговые чанки в полный ответ
-- 📡 **OwlRequestProto/OwlResponseProto:** новые data classes для OWL gRPC коммуникации
-- 📡 **GrpcClient:** добавлены `owlResponses`/`owlTyping` свойства
 
 ## [1.1.1.1] - 2026-07-17
 ### OWL Bot — AI чат с бот-командами
