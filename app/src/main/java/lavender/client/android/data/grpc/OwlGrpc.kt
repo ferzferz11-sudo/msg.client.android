@@ -829,17 +829,18 @@ suspend fun getOwlSettings(chatId: String, userId: String): GetOwlSettingsRespon
             override fun stream(v: GetOwlSettingsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
             override fun parse(s: java.io.InputStream): GetOwlSettingsResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var apiKey = ""; var model = ""
+                var apiKey = ""; var model = ""; var isUsingCustomKey = false
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                         1 -> apiKey = cis.readString()
                         2 -> model = cis.readString()
+                        3 -> isUsingCustomKey = cis.readBool()
                         else -> cis.skipField(tag)
                     }
                 }
-                return GetOwlSettingsResponseProto(apiKey, model)
+                return GetOwlSettingsResponseProto(apiKey, model, isUsingCustomKey)
             }
         })
         .build()

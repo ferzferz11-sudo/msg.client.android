@@ -1174,7 +1174,33 @@ data class GetOwlSettingsRequestProto(
 
 data class GetOwlSettingsResponseProto(
     val apiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false
+)
+
+// ======= Hermes Settings =======
+
+data class GetHermesSettingsRequestProto(
+    val sessionId: String = "",
+    val userId: String = ""
+)
+
+data class GetHermesSettingsResponseProto(
+    val apiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false
+)
+
+data class UpdateHermesSettingsRequestProto(
+    val sessionId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
     val model: String = ""
+)
+
+data class UpdateHermesSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
 )
 
 // ======= OWL Chat creation =======
@@ -1201,7 +1227,9 @@ data class AIChatInfoProto(
     val id: String = "",
     val name: String = "",
     val type: String = "",
-    val createdAt: String = ""
+    val createdAt: String = "",
+    val isUsingCustomKey: Boolean = false,
+    val model: String = ""
 )
 
 data class GetAIChatsResponseProto(

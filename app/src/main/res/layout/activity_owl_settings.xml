@@ -49,11 +49,12 @@
                 android:id="@+id/apiKeyLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Введите API ключ"
+                android:hint="Введите API ключ (OpenRouter)"
                 app:boxBackgroundMode="outline"
                 app:boxStrokeColor="?attr/colorOnSurfaceVariant"
                 app:hintTextColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginBottom="24dp">
+                app:endIconMode="password_toggle"
+                android:layout_marginBottom="8dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/apiKeyInput"
@@ -64,6 +65,26 @@
                     android:textSize="14sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Key source info -->
+            <TextView
+                android:id="@+id/keySourceText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Rate limit info -->
+            <TextView
+                android:id="@+id/rateLimitText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
 
             <!-- Model selector section -->
             <TextView

@@ -3368,6 +3368,7 @@ class GetAIChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAICh
                 val b = cis.readRawBytes(len)
                 val inner = com.google.protobuf.CodedInputStream.newInstance(b)
                 var id = ""; var name = ""; var type = ""; var createdAt = ""
+                var isUsingCustomKey = false; var model = ""
                 while (!inner.isAtEnd) {
                     val t2 = inner.readTag()
                     if (t2 == 0) break
@@ -3376,10 +3377,12 @@ class GetAIChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAICh
                         2 -> name = inner.readString()
                         3 -> type = inner.readString()
                         4 -> createdAt = inner.readString()
+                        5 -> isUsingCustomKey = inner.readBool()
+                        6 -> model = inner.readString()
                         else -> inner.skipField(t2)
                     }
                 }
-                chats.add(AIChatInfoProto(id, name, type, createdAt))
+                chats.add(AIChatInfoProto(id, name, type, createdAt, isUsingCustomKey, model))
             } else {
                 cis.skipField(tag)
             }
