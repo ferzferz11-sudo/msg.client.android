@@ -272,11 +272,12 @@
             android:layout_marginTop="16dp" />
     </LinearLayout>
 
-    <lavender.client.android.ui.widget.LavenderFab
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/aiFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_hermes"
+        android:layout_marginBottom="72dp"
+        android:src="@drawable/ic_ai"
         app:tint="?attr/colorOnPrimary"
         app:backgroundTint="?attr/colorPrimary"
         app:layout_constraintBottom_toTopOf="@id/addChatFab"
