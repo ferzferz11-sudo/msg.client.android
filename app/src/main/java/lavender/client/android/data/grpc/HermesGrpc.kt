@@ -83,55 +83,119 @@ fun chatWithOrchestrator(
     scope: CoroutineScope,
     onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
 ) {
-    val channel = RealGrpcClient.getChannel() ?: run { Log.w("HermesGrpc", "chatWithOrchestrator: channel is null"); return }
-    val methodDesc = MethodDescriptor.newBuilder<OrchestratorRequestProto, OrchestratorResponseProto>()
-        .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
-        .setFullMethodName("messenger.ChatService/ChatWithOrchestrator")
-        .setRequestMarshaller(OrchestratorRequestMarshaller())
-        .setResponseMarshaller(OrchestratorResponseMarshaller())
-        .build()
-
-    val request = OrchestratorRequestProto(
-        userId = userId,
-        sessionId = sessionId,
-        message = message,
-        agentId = agentId,
-        mode = mode
-    )
-
     scope.launch(Dispatchers.IO) {
-        try {
-            _hermesTyping.emit(true)
-            val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        var retryDelay = 3000L
+        val maxRetryDelay = 30000L
+        var attempt = 0
+        val maxRetries = 10
 
-            call.start(object : io.grpc.ClientCall.Listener<OrchestratorResponseProto>() {
-                override fun onMessage(message: OrchestratorResponseProto) {
-                    _hermesResponses.tryEmit(message)
-                    onResponse(message.token, message.finished, message.error.takeIf { it.isNotEmpty() }, message.agentId, message.agentName)
-                }
+        while (attempt < maxRetries && isActive) {
+            val channel = RealGrpcClient.getChannel()
+            if (channel == null || channel.isShutdown || channel.isTerminated) {
+                Log.w("HermesGrpc", "chatWithOrchestrator: channel dead, waiting ${retryDelay}ms...")
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                attempt++
+                continue
+            }
 
-                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    _hermesTyping.tryEmit(false)
-                    if (!status.isOk) {
-                        val errorResp = OrchestratorResponseProto(
-                            token = "",
-                            finished = true,
-                            error = status.description ?: "Connection error: ${status.code}",
-                            agentId = "",
-                            agentName = ""
-                        )
-                        _hermesResponses.tryEmit(errorResp)
-                        onResponse("", true, errorResp.error, "", "")
+            try {
+                val methodDesc = MethodDescriptor.newBuilder<OrchestratorRequestProto, OrchestratorResponseProto>()
+                    .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
+                    .setFullMethodName("messenger.ChatService/ChatWithOrchestrator")
+                    .setRequestMarshaller(OrchestratorRequestMarshaller())
+                    .setResponseMarshaller(OrchestratorResponseMarshaller())
+                    .build()
+
+                val request = OrchestratorRequestProto(
+                    userId = userId,
+                    sessionId = sessionId,
+                    message = message,
+                    agentId = agentId,
+                    mode = mode
+                )
+
+                _hermesTyping.emit(true)
+                val streamDone = kotlinx.coroutines.CompletableDeferred<Boolean>()
+                var hadError = false
+
+                val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+                call.start(object : io.grpc.ClientCall.Listener<OrchestratorResponseProto>() {
+                    override fun onMessage(message: OrchestratorResponseProto) {
+                        _hermesResponses.tryEmit(message)
+                        onResponse(message.token, message.finished, message.error.takeIf { it.isNotEmpty() }, message.agentId, message.agentName)
+                        // Reset retry on successful message
+                        retryDelay = 3000L
+                        attempt = 0
                     }
-                }
-            }, io.grpc.Metadata())
+                    override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                        _hermesTyping.tryEmit(false)
+                        if (!status.isOk) {
+                            Log.w("HermesGrpc", "chatWithOrchestrator closed: ${status.code} ${status.description}")
+                            hadError = true
+                            val errorResp = OrchestratorResponseProto(
+                                token = "",
+                                finished = true,
+                                error = status.description ?: "Connection error: ${status.code}",
+                                agentId = "",
+                                agentName = ""
+                            )
+                            _hermesResponses.tryEmit(errorResp)
+                            onResponse("", true, errorResp.error, "", "")
+                        }
+                        streamDone.complete(hadError)
+                    }
+                }, io.grpc.Metadata())
+                call.sendMessage(request)
+                call.halfClose()
+                call.request(Int.MAX_VALUE)
 
-            call.sendMessage(request)
-            call.halfClose()
-            call.request(Int.MAX_VALUE)
-        } catch (e: Exception) {
-            _hermesTyping.emit(false)
-            val errorResp = OrchestratorResponseProto(token = "", finished = true, error = e.message ?: "Unknown error")
+                val streamHadError = streamDone.await()
+                if (!streamHadError) {
+                    // Stream completed normally — no retry needed
+                    return@launch
+                }
+
+                // Stream had error — retry
+                attempt++
+                if (attempt < maxRetries) {
+                    Log.d("HermesGrpc", "Retrying chatWithOrchestrator in ${retryDelay}ms (attempt $attempt/$maxRetries)")
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                }
+
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("HermesGrpc", "chatWithOrchestrator error: ${e.message}")
+                _hermesTyping.tryEmit(false)
+                val errorResp = OrchestratorResponseProto(
+                    token = "",
+                    finished = true,
+                    error = e.message ?: "Unknown error",
+                    agentId = "",
+                    agentName = ""
+                )
+                _hermesResponses.tryEmit(errorResp)
+                onResponse("", true, errorResp.error, "", "")
+
+                attempt++
+                if (attempt < maxRetries) {
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                }
+            }
+        }
+
+        if (attempt >= maxRetries) {
+            Log.e("HermesGrpc", "chatWithOrchestrator: max retries exceeded")
+            val errorResp = OrchestratorResponseProto(
+                token = "",
+                finished = true,
+                error = "Connection lost after $maxRetries attempts",
+                agentId = "",
+                agentName = ""
+            )
             _hermesResponses.tryEmit(errorResp)
             onResponse("", true, errorResp.error, "", "")
         }

@@ -1,5 +1,17 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.1.9] - 2026-06-08
+### Graceful Reconnect
+- **ConnectionStatus:** добавлено новое состояние `RECONNECTING` — промежуточный статус между READY и FAILED
+- **RealGrpcClient.connect():** при повторном подключении после разрыва показывает RECONNECTING вместо CONNECTING
+- **RealGrpcClient:** экспоненциальный backoff (5s → 60s) для reconnect с автоматическим сбросом при успехе
+- **RealGrpcClient:** keepAliveTime уменьшен до 10s, keepAliveTimeout до 5s — быстрее обнаруживаем разрыв
+- **subscribeNotifications:** автоматический retry с exponential backoff (3s → 30s) — уведомления больше не теряются при разрыве
+- **chatWithOwl:** автоматический retry (до 10 попыток, 3s → 30s backoff) — OWL стрим переживает кратковременные разрывы
+- **chatWithOrchestrator:** автоматический retry (до 10 попыток, 3s → 30s backoff) — Hermes стрим переживает кратковременные разрывы
+- **onError stream:** FAILED заменён на RECONNECTING, меньше retry (50 вместо 100), быстрый backoff (3s → 30s)
+- **disconnect():** отменяет reconnect job и сбрасывает backoff
+
 ## [1.1.1.8] - 2026-06-08
 ### AI Chats Separation
 - **AIBottomSheet:** добавлен selection mode (долгий тап → режим выбора с тулбаром удаления/переименования)

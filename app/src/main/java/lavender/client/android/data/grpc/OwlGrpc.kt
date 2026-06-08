@@ -297,86 +297,114 @@ fun subscribeNotifications(
     types: List<String> = emptyList(),
     scope: CoroutineScope
 ) {
-    val channel = RealGrpcClient.getChannel() ?: run { Log.w("OwlGrpc", "subscribeNotifications: channel is null"); return }
-    val methodDesc = MethodDescriptor.newBuilder<SubscribeNotificationsRequestProto, ServerNotificationProto>()
-        .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
-        .setFullMethodName("messenger.ChatService/SubscribeNotifications")
-        .setRequestMarshaller(object : MethodDescriptor.Marshaller<SubscribeNotificationsRequestProto> {
-            override fun stream(v: SubscribeNotificationsRequestProto): java.io.InputStream {
-                val baos = ByteArrayOutputStream()
-                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-                if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
-                v.types.forEach { t -> cos.writeString(2, t) }
-                cos.flush()
-                return ByteArrayInputStream(baos.toByteArray())
+    scope.launch(Dispatchers.IO) {
+        var retryDelay = 3000L
+        val maxRetryDelay = 30000L
+        while (isActive) {
+            val channel = RealGrpcClient.getChannel()
+            if (channel == null || channel.isShutdown || channel.isTerminated) {
+                Log.w("OwlGrpc", "subscribeNotifications: channel dead, waiting...")
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                continue
             }
-            override fun parse(s: java.io.InputStream): SubscribeNotificationsRequestProto = SubscribeNotificationsRequestProto()
-        })
-        .setResponseMarshaller(object : MethodDescriptor.Marshaller<ServerNotificationProto> {
-            override fun stream(v: ServerNotificationProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
-            override fun parse(s: java.io.InputStream): ServerNotificationProto {
-                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var id = ""; var type = ""; var title = ""; var message = ""; var timestamp = ""
-                var isRead = false
-                val metadata = mutableMapOf<String, String>()
-                while (!cis.isAtEnd) {
-                    val tag = cis.readTag()
-                    if (tag == 0) break
-                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> id = cis.readString()
-                        2 -> type = cis.readString()
-                        3 -> title = cis.readString()
-                        4 -> message = cis.readString()
-                        5 -> timestamp = cis.readString()
-                        6 -> {
-                            val len = cis.readRawVarint32()
-                            val entryBytes = cis.readRawBytes(len)
-                            if (entryBytes.isNotEmpty()) {
-                                try {
-                                    val inner = com.google.protobuf.CodedInputStream.newInstance(entryBytes)
-                                    var key = ""; var value = ""
-                                    while (!inner.isAtEnd) {
-                                        val innerTag = inner.readTag()
-                                        if (innerTag == 0) break
-                                        when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
-                                            1 -> key = inner.readString()
-                                            2 -> value = inner.readString()
-                                            else -> inner.skipField(innerTag)
+
+            try {
+                val methodDesc = MethodDescriptor.newBuilder<SubscribeNotificationsRequestProto, ServerNotificationProto>()
+                    .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
+                    .setFullMethodName("messenger.ChatService/SubscribeNotifications")
+                    .setRequestMarshaller(object : MethodDescriptor.Marshaller<SubscribeNotificationsRequestProto> {
+                        override fun stream(v: SubscribeNotificationsRequestProto): java.io.InputStream {
+                            val baos = ByteArrayOutputStream()
+                            val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                            if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+                            v.types.forEach { t -> cos.writeString(2, t) }
+                            cos.flush()
+                            return ByteArrayInputStream(baos.toByteArray())
+                        }
+                        override fun parse(s: java.io.InputStream): SubscribeNotificationsRequestProto = SubscribeNotificationsRequestProto()
+                    })
+                    .setResponseMarshaller(object : MethodDescriptor.Marshaller<ServerNotificationProto> {
+                        override fun stream(v: ServerNotificationProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+                        override fun parse(s: java.io.InputStream): ServerNotificationProto {
+                            val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                            var id = ""; var type = ""; var title = ""; var message = ""; var timestamp = ""
+                            var isRead = false
+                            val metadata = mutableMapOf<String, String>()
+                            while (!cis.isAtEnd) {
+                                val tag = cis.readTag()
+                                if (tag == 0) break
+                                when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                                    1 -> id = cis.readString()
+                                    2 -> type = cis.readString()
+                                    3 -> title = cis.readString()
+                                    4 -> message = cis.readString()
+                                    5 -> timestamp = cis.readString()
+                                    6 -> {
+                                        val len = cis.readRawVarint32()
+                                        val entryBytes = cis.readRawBytes(len)
+                                        if (entryBytes.isNotEmpty()) {
+                                            try {
+                                                val inner = com.google.protobuf.CodedInputStream.newInstance(entryBytes)
+                                                var key = ""; var value = ""
+                                                while (!inner.isAtEnd) {
+                                                    val innerTag = inner.readTag()
+                                                    if (innerTag == 0) break
+                                                    when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                                        1 -> key = inner.readString()
+                                                        2 -> value = inner.readString()
+                                                        else -> inner.skipField(innerTag)
+                                                    }
+                                                }
+                                                if (key.isNotEmpty()) metadata[key] = value
+                                            } catch (_: Exception) {}
                                         }
                                     }
-                                    if (key.isNotEmpty()) metadata[key] = value
-                                } catch (_: Exception) {}
+                                    7 -> isRead = cis.readBool()
+                                    else -> cis.skipField(tag)
+                                }
                             }
+                            return ServerNotificationProto(id, type, title, message, timestamp, metadata, isRead)
                         }
-                        7 -> isRead = cis.readBool()
-                        else -> cis.skipField(tag)
+                    })
+                    .build()
+
+                val request = SubscribeNotificationsRequestProto(userId = userId, types = types)
+
+                Log.d("OwlGrpc", "Subscribing to notifications (retryDelay=${retryDelay}ms)")
+                retryDelay = 3000L // Reset on successful subscribe
+
+                val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+                val streamDone = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+                call.start(object : io.grpc.ClientCall.Listener<ServerNotificationProto>() {
+                    override fun onMessage(msg: ServerNotificationProto) {
+                        _serverNotifications.tryEmit(msg)
                     }
-                }
-                return ServerNotificationProto(id, type, title, message, timestamp, metadata, isRead)
+                    override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                        if (!status.isOk) {
+                            Log.w("OwlGrpc", "subscribeNotifications closed: ${status.code} ${status.description}")
+                        }
+                        streamDone.complete(Unit)
+                    }
+                }, io.grpc.Metadata())
+                call.sendMessage(request)
+                call.halfClose()
+                call.request(Int.MAX_VALUE)
+
+                // Block until stream closes, then retry
+                streamDone.await()
+                Log.w("OwlGrpc", "Notification stream ended, reconnecting in ${retryDelay}ms...")
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+
+            } catch (e: CancellationException) {
+                throw e // Don't swallow cancellation
+            } catch (e: Exception) {
+                Log.e("OwlGrpc", "subscribeNotifications error, retrying in ${retryDelay}ms", e)
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
             }
-        })
-        .build()
-
-    val request = SubscribeNotificationsRequestProto(userId = userId, types = types)
-
-    scope.launch(Dispatchers.IO) {
-        try {
-            val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
-            call.start(object : io.grpc.ClientCall.Listener<ServerNotificationProto>() {
-                override fun onMessage(msg: ServerNotificationProto) {
-                    _serverNotifications.tryEmit(msg)
-                }
-                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    if (!status.isOk) {
-                        Log.w("OwlGrpc", "subscribeNotifications closed: ${status.code} ${status.description}")
-                    }
-                }
-            }, io.grpc.Metadata())
-            call.sendMessage(request)
-            call.halfClose()
-            call.request(Int.MAX_VALUE)
-        } catch (e: Exception) {
-            Log.e("OwlGrpc", "subscribeNotifications error", e)
         }
     }
 }
@@ -677,48 +705,97 @@ fun chatWithOwl(
     scope: CoroutineScope,
     onResponse: (text: String, finished: Boolean, error: String) -> Unit
 ) {
-    val channel = RealGrpcClient.getChannel() ?: run { Log.w("OwlGrpc", "chatWithOwl: channel is null"); return }
-    val methodDesc = MethodDescriptor.newBuilder<OwlRequestProto, OwlResponseProto>()
-        .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
-        .setFullMethodName("messenger.ChatService/ChatWithOWL")
-        .setRequestMarshaller(OwlRequestMarshaller())
-        .setResponseMarshaller(OwlResponseMarshaller())
-        .build()
-
-    val request = OwlRequestProto(
-        userId = userId,
-        message = message,
-        sessionId = sessionId
-    )
-
     scope.launch(Dispatchers.IO) {
-        try {
-            _owlTyping.emit(true)
-            val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        var retryDelay = 3000L
+        val maxRetryDelay = 30000L
+        var attempt = 0
+        val maxRetries = 10
 
-            call.start(object : io.grpc.ClientCall.Listener<OwlResponseProto>() {
-                override fun onMessage(msg: OwlResponseProto) {
-                    _owlResponses.tryEmit(msg)
-                    onResponse(msg.text, msg.finished, msg.error)
-                }
+        while (attempt < maxRetries && isActive) {
+            val channel = RealGrpcClient.getChannel()
+            if (channel == null || channel.isShutdown || channel.isTerminated) {
+                Log.w("OwlGrpc", "chatWithOwl: channel dead, waiting ${retryDelay}ms...")
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                attempt++
+                continue
+            }
 
-                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    _owlTyping.tryEmit(false)
-                    if (!status.isOk) {
-                        val errResp = OwlResponseProto(text = "", finished = true,
-                            error = status.description ?: "Connection error: ${status.code}")
-                        _owlResponses.tryEmit(errResp)
-                        onResponse("", true, errResp.error)
+            try {
+                val methodDesc = MethodDescriptor.newBuilder<OwlRequestProto, OwlResponseProto>()
+                    .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
+                    .setFullMethodName("messenger.ChatService/ChatWithOWL")
+                    .setRequestMarshaller(OwlRequestMarshaller())
+                    .setResponseMarshaller(OwlResponseMarshaller())
+                    .build()
+
+                val request = OwlRequestProto(
+                    userId = userId,
+                    message = message,
+                    sessionId = sessionId
+                )
+
+                _owlTyping.emit(true)
+                val streamDone = kotlinx.coroutines.CompletableDeferred<Boolean>()
+                var hadError = false
+
+                val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+                call.start(object : io.grpc.ClientCall.Listener<OwlResponseProto>() {
+                    override fun onMessage(msg: OwlResponseProto) {
+                        _owlResponses.tryEmit(msg)
+                        onResponse(msg.text, msg.finished, msg.error)
+                        retryDelay = 3000L
+                        attempt = 0
                     }
-                }
-            }, io.grpc.Metadata())
+                    override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                        _owlTyping.tryEmit(false)
+                        if (!status.isOk) {
+                            Log.w("OwlGrpc", "chatWithOwl closed: ${status.code} ${status.description}")
+                            hadError = true
+                            val errResp = OwlResponseProto(text = "", finished = true,
+                                error = status.description ?: "Connection error: ${status.code}")
+                            _owlResponses.tryEmit(errResp)
+                            onResponse("", true, errResp.error)
+                        }
+                        streamDone.complete(hadError)
+                    }
+                }, io.grpc.Metadata())
+                call.sendMessage(request)
+                call.halfClose()
+                call.request(Int.MAX_VALUE)
 
-            call.sendMessage(request)
-            call.halfClose()
-            call.request(Int.MAX_VALUE)
-        } catch (e: Exception) {
-            _owlTyping.emit(false)
-            val errResp = OwlResponseProto(text = "", finished = true, error = e.message ?: "Unknown error")
+                val streamHadError = streamDone.await()
+                if (!streamHadError) {
+                    return@launch
+                }
+
+                attempt++
+                if (attempt < maxRetries) {
+                    Log.d("OwlGrpc", "Retrying chatWithOwl in ${retryDelay}ms (attempt $attempt/$maxRetries)")
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                }
+
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("OwlGrpc", "chatWithOwl error: ${e.message}")
+                _owlTyping.tryEmit(false)
+                val errResp = OwlResponseProto(text = "", finished = true, error = e.message ?: "Unknown error")
+                _owlResponses.tryEmit(errResp)
+                onResponse("", true, errResp.error)
+
+                attempt++
+                if (attempt < maxRetries) {
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                }
+            }
+        }
+
+        if (attempt >= maxRetries) {
+            Log.e("OwlGrpc", "chatWithOwl: max retries exceeded")
+            val errResp = OwlResponseProto(text = "", finished = true, error = "Connection lost after $maxRetries attempts")
             _owlResponses.tryEmit(errResp)
             onResponse("", true, errResp.error)
         }

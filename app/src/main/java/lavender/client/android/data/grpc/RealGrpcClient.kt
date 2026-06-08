@@ -25,6 +25,7 @@ enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
     READY,
+    RECONNECTING,  // Transient state: channel lost, auto-retry in progress
     FAILED
 }
 
@@ -243,12 +244,11 @@ object RealGrpcClient {
         val channelAlive = channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY
 
         // If channel is alive and address matches, keep it — active streams must not be killed.
-        // Force reconnect should only rebuild when channel is dead or address changed.
         if (addressMatch && channelAlive) {
             Log.d(TAG, "Connection already READY (force=$forceReconnect), keeping active streams")
             return
         }
-        
+
         // CRITICAL: Do not reset channel if a call is in progress
         if (lavender.client.android.data.calls.CallManager.currentCall.value != null) {
             Log.w(TAG, "Call in progress, preventing channel reset")
@@ -257,11 +257,14 @@ object RealGrpcClient {
 
         appContext = context?.applicationContext
         currentServerAddress = serverAddress
-        _isSuperAdmin.value = false // Reset status for new connection
+        _isSuperAdmin.value = false
         loadDeletedMessages()
 
         Log.d(TAG, "Connecting to $serverAddress:$port (TLS: $useTls)")
-        _connectionStatus.value = ConnectionStatus.CONNECTING
+        // Use RECONNECTING for transient state (was already connected before)
+        val wasConnected = _connectionStatus.value == ConnectionStatus.READY ||
+                           _connectionStatus.value == ConnectionStatus.RECONNECTING
+        _connectionStatus.value = if (wasConnected) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING
 
         try {
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
@@ -270,38 +273,56 @@ object RealGrpcClient {
             } else {
                 builder.usePlaintext()
             }
-            
-            // Adjust keep-alive to be more robust on mobile networks and match server params
-            builder.keepAliveTime(15, TimeUnit.SECONDS) // Send ping every 15s (server permits min 5s)
-            builder.keepAliveTimeout(10, TimeUnit.SECONDS) // Wait 10s for ping ack
+
+            // Aggressive keep-alive for fast detection of dead connections on mobile
+            builder.keepAliveTime(10, TimeUnit.SECONDS)    // Ping every 10s
+            builder.keepAliveTimeout(5, TimeUnit.SECONDS)   // 5s to detect dead connection
             builder.keepAliveWithoutCalls(true)
+            // Max idle — allow server to clean up (server MaxConnectionAge = 30min)
+            builder.maxInboundMessageSize(64 * 1024 * 1024)
 
             channel?.shutdownNow()
             val newChannel = builder.build()
             channel = newChannel
-            
-            // Note: In gRPC READY doesn't mean server is reached yet,
-            // but for our UI we'll use it to mean "Channel is active"
+
             _connectionStatus.value = ConnectionStatus.READY
+            resetReconnectBackoff()
             Log.d(TAG, "Channel built successfully to $serverAddress")
-            
+
             // Auto-resume last chat if it exists
-            lastChatRequest?.let { 
+            lastChatRequest?.let {
                 Log.d(TAG, "Resuming last chat for ${it.u}")
                 startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
-            _connectionStatus.value = ConnectionStatus.FAILED
+            _connectionStatus.value = ConnectionStatus.RECONNECTING
             _error.value = e.message
-            
-            // Retry connection after delay
-            scope.launch {
-                delay(10000)
-                Log.d(TAG, "Retrying connection to $serverAddress...")
-                connect(serverAddress, useTls, port, context)
-            }
+
+            // Graceful retry with exponential backoff
+            scheduleReconnect(serverAddress, useTls, port, context)
         }
+    }
+
+    private var reconnectJob: Job? = null
+
+    private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            val delayMs = reconnectDelayMs.coerceAtMost(30000L)
+            Log.d(TAG, "Scheduling reconnect in ${delayMs}ms...")
+            delay(delayMs)
+            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
+            Log.d(TAG, "Retrying connection to $serverAddress...")
+            connect(serverAddress, useTls, port, context)
+        }
+    }
+
+    private var reconnectDelayMs = 5000L
+
+    // Reset reconnect backoff on successful connection
+    private fun resetReconnectBackoff() {
+        reconnectDelayMs = 5000L
     }
 
     fun reconnect() {
@@ -313,6 +334,9 @@ object RealGrpcClient {
     }
 
     fun disconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
+        resetReconnectBackoff()
         channel?.shutdown()
         channel = null
         requestObserver = null
@@ -741,27 +765,27 @@ object RealGrpcClient {
                     }
                 }
 
-                _connectionStatus.value = ConnectionStatus.FAILED
-                
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
+
                 // Clear observer immediately to prevent broken stream reuse
                 requestObserver = null
-                
+
                 if (isRetrying) return // Already in retry loop
 
                 scope.launch {
                     isRetrying = true
-                    var retryDelay = 5000L // Start with 5 seconds to not spam server
-                    val maxRetryDelay = 60000L // Max 60 seconds
+                    var retryDelay = 3000L // Start with 3 seconds for stream reconnect
+                    val maxRetryDelay = 30000L // Max 30 seconds for streams
                     var retryCount = 0
-                    val maxRetries = 100 // Almost indefinite retries while app is active
-                    
+                    val maxRetries = 50
+
                     try {
                         while (retryCount < maxRetries && requestObserver == null) {
                             delay(retryDelay)
-                            
-                            // Don't retry if app is in background for too long or channel is gone
+
+                            // Don't retry if app is in background for too long
                             if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
-                                 Log.d(TAG, "App in background for too long, stopping retry loop")
+                                 Log.d(TAG, "App in background for too long, stopping stream retry loop")
                                  break
                             }
 
@@ -771,27 +795,26 @@ object RealGrpcClient {
                                 currentServerAddress?.let { connect(it, forceReconnect = true) }
                             }
 
-                            Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
-                            
+                            Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1}, delay=${retryDelay}ms)...")
+
                             lastChatRequest?.let { req ->
                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                                // If connection was successful, break out of retry loop
                                 if (_connectionStatus.value == ConnectionStatus.READY) {
                                     Log.d(TAG, "Stream reconnection successful")
                                     return@launch
                                 }
                             }
-                            
+
                             retryCount++
-                            // Slower exponential backoff for long-running issues
-                            retryDelay = (retryDelay * 2.0).toLong().coerceAtMost(maxRetryDelay)
+                            retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
                         }
                     } finally {
                         isRetrying = false
                     }
-                    
+
                     if (retryCount >= maxRetries) {
                         Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
+                        _connectionStatus.value = ConnectionStatus.FAILED
                         _error.value = "Connection lost. Please check your internet connection."
                     }
                 }
