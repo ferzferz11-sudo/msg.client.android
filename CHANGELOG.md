@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.1.1.4] - 2026-07-17
+### [AI] кнопка в списке чатов
+- **[AI] FAB:** добавлена кнопка [AI] рядом с [+] в ChatListActivity
+- **AIBottomSheet:** новая шторка с группировкой AI-сервисов (Оркестратор / OWL) и разделителем
+- **Группа Оркестратор:** Lava AI → HermesChatActivity, Агенты → AgentListActivity, Уведомления → NotificationActivity
+- **Группа OWL:** OWL AI → OwlChatActivity, Настройки OWL → (TODO)
+- **AI-пункты перенесены** из [+] шторки в [AI] шторку
+- **Новые файлы:** AIBottomSheet.kt, widget_ai_bottom_sheet.xml, widget_section_header.xml, widget_section_divider.xml
+
+## [1.1.1.3] - 2026-07-17
+### Server Notifications UI
+- **NotificationActivity:** экран просмотра серверных уведомлений с историей и real-time подпиской
+- **NotificationAdapter:** адаптер с иконками по типу (🚀 deploy, ✅ deploy_done, ❌ deploy_error, 🔄 restart, ⚠️ warning, ℹ️ info)
+- **OwlGrpc.kt:** subscribeNotifications (server streaming), getNotificationHistory, markNotificationsRead
+- **OwlGrpc.kt:** serverNotifications SharedFlow для real-time уведомлений
+- **ChatListActivity:** кнопка "Уведомления" в ActionBottomSheet
+- **Layouts:** activity_notification.xml, item_notification.xml
+- **Drawables:** ic_notifications.xml, ic_arrow_back.xml, circle_background.xml
+
 ## [1.1.1.2] - 2026-07-17
 ### OWL Bot — исправления и разделение архитектуры
 - 🔧 **Полное разделение OWL/Hermes:** создан отдельный `OwlGrpc.kt` — все OWL-методы вынесены из `HermesGrpc.kt`
