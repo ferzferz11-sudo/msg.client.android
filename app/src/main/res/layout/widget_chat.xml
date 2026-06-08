@@ -99,6 +99,18 @@
                         android:maxLines="1"
                         tools:text="Chat Title" />
 
+                    <!-- Key/model info banner for AI chats -->
+                    <TextView
+                        android:id="@+id/toolbarInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:textSize="11sp"
+                        android:alpha="0.7"
+                        android:visibility="gone"
+                        tools:text="Общий ключ · 20 запросов/час"
+                        tools:visibility="visible" />
+
                     <!-- Group participants row -->
                     <LinearLayout
                         android:id="@+id/groupHeader"

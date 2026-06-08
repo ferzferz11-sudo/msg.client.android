@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.data.grpc.getHermesSettings
 import lavender.client.android.data.models.AgentInfo
 import lavender.client.android.data.models.HermesMessage
 import lavender.client.android.data.session.SessionManager
@@ -110,6 +111,7 @@ class HermesChatActivity : AppCompatActivity() {
             val mode = intent.getStringExtra("AGENT_MODE") ?: "single"
             viewModel.setExistingSession(chatId, userId, agentId, mode)
             viewModel.loadHistory()
+            loadChatSettings()
         }
 
         intent.getStringExtra("PREFILL_MESSAGE")?.let {
@@ -370,6 +372,11 @@ class HermesChatActivity : AppCompatActivity() {
                         if (chatId.isNotEmpty() && it.id.isNotEmpty()) {
                             viewModel.loadHistory()
                         }
+                        // Load settings when session is available
+                        if (it.id.isNotEmpty()) {
+                            chatId = it.id
+                            loadChatSettings()
+                        }
                     }
                 }
             }
@@ -445,6 +452,23 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     // ===== Public API =====
+
+    private fun loadChatSettings() {
+        lifecycleScope.launch {
+            try {
+                val settings = getHermesSettings(chatId, userId)
+                val info = if (settings.isUsingCustomKey) {
+                    if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
+                } else {
+                    "Общий ключ · 20 запросов/час"
+                }
+                chatWidget.setToolbarInfo(info, true)
+                android.util.Log.d("HermesChatActivity", "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model}")
+            } catch (e: Exception) {
+                android.util.Log.e("HermesChatActivity", "Failed to load chat settings", e)
+            }
+        }
+    }
 
     fun addAgent(agent: AgentInfo) {
         if (agents.none { it.id == agent.id }) {

@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.getBotCommands
+import lavender.client.android.data.grpc.getOwlSettings
 import lavender.client.android.data.grpc.getOWLStatus
 import lavender.client.android.data.grpc.processBotCommand
 import lavender.client.android.data.grpc.createOwlChat
@@ -87,6 +88,7 @@ class OwlChatActivity : AppCompatActivity() {
                 if (response.success) {
                     chatId = response.chatId
                     Log.d(TAG, "Created OWL chat: $chatId name=${response.name}")
+                    loadChatSettings()
                 } else {
                     Log.e(TAG, "Failed to create OWL chat: ${response.message}")
                     Toast.makeText(this@OwlChatActivity, "Failed to create chat: ${response.message}", Toast.LENGTH_LONG).show()
@@ -113,6 +115,11 @@ class OwlChatActivity : AppCompatActivity() {
 
         // Check OWL status
         checkOwlStatus()
+
+        // Load key/model info for header
+        if (chatId.isNotEmpty()) {
+            loadChatSettings()
+        }
     }
 
     private fun setupToolbar() {
@@ -340,6 +347,23 @@ class OwlChatActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Log.e("OwlChatActivity", "Failed to check OWL status", e)
+            }
+        }
+    }
+
+    private fun loadChatSettings() {
+        lifecycleScope.launch {
+            try {
+                val settings = getOwlSettings(chatId, userId)
+                val info = if (settings.isUsingCustomKey) {
+                    if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
+                } else {
+                    "Общий ключ · 20 запросов/час"
+                }
+                chatWidget.setToolbarInfo(info, true)
+                Log.d(TAG, "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load chat settings", e)
             }
         }
     }
