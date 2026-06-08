@@ -1,5 +1,16 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.1.8] - 2026-06-08
+### AI Chats Separation
+- **AIBottomSheet:** добавлен selection mode (долгий тап → режим выбора с тулбаром удаления/переименования)
+- **ChatListActivity:** refreshAiChats() теперь загружает через GetAIChats RPC вместо фильтрации из getAllChats
+- **ChatListActivity:** showAIActionSheet() — подключены кнопки удаления и переименования AI-чатов
+- **GrpcClient:** добавлены getAIChats(), renameAIChat(), deleteChat() overload с userId
+- **RealGrpcClient:** новые RPC методы + marshallers для GetAIChats, RenameAIChat
+- **AIChatInfo:** новый data class для доменной модели AI-чатов
+- **MessengerProto.kt:** добавлены GetAIChatsRequest/Response, AIChatInfo, RenameAIChatRequest/Response proto классы
+- **widget_ai_bottom_sheet.xml:** добавлен selection toolbar с кнопками удаления и переименования
+
 ## [1.1.1.7] - 2026-07-18
 ### Notification Badge
 - **ServerNotificationProto:** добавлено поле isRead: Boolean
