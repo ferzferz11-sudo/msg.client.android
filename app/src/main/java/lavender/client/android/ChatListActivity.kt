@@ -99,6 +99,7 @@ class ChatListActivity : AppCompatActivity() {
     private var isChatsLoaded = false // prevent reload flicker on resume
     private var isNewUser = false // track new user for loading indicator
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
+    private var unreadNotifCount = 0 // badge count for server notifications
 
     private var syncJob: Job? = null
     
@@ -908,6 +909,7 @@ class ChatListActivity : AppCompatActivity() {
             delay(500)
             loadChats(skipCache = true)
             refreshAiChats()
+            refreshUnreadCount()
         }
     }
 
@@ -2034,7 +2036,8 @@ class ChatListActivity : AppCompatActivity() {
             val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
             startActivity(intent)
         })
-        hermesActions.add(SheetAction(R.id.actionNotifications, R.drawable.ic_notifications, "Уведомления") {
+        // Notifications with badge
+        hermesActions.add(SheetAction(R.id.actionNotifications, R.drawable.ic_notifications, "Уведомления", badge = unreadNotifCount) {
             val intent = Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java)
             startActivity(intent)
         })
@@ -2084,6 +2087,20 @@ class ChatListActivity : AppCompatActivity() {
         // Sort by name descending so newest numbers appear first (#3, #2, #1)
         currentOwlChats.sortByDescending { it.name }
         currentHermesChats.sortByDescending { it.name }
+    }
+
+    private fun refreshUnreadCount() {
+        val session = SessionManager.session.value
+        if (session.userId.isNotEmpty()) {
+            lifecycleScope.launch {
+                try {
+                    unreadNotifCount = grpcClient.getUnreadCount(session.userId)
+                    Log.d("ChatListActivity", "Unread notifications: $unreadNotifCount")
+                } catch (e: Exception) {
+                    Log.e("ChatListActivity", "Failed to get unread count", e)
+                }
+            }
+        }
     }
 
     private fun showCreateConferenceDialog() {

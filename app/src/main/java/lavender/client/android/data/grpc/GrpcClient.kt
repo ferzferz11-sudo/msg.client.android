@@ -425,6 +425,9 @@ object GrpcClient {
     suspend fun markNotificationsRead(userId: String, notificationIds: List<String>): Boolean =
         lavender.client.android.data.grpc.markNotificationsRead(userId, notificationIds)
 
+    suspend fun getUnreadCount(userId: String): Int =
+        lavender.client.android.data.grpc.getUnreadCount(userId)
+
     // Unary методы
     suspend fun listAgents(userId: String = ""): List<lavender.client.android.data.proto.AgentInfoProto> =
         lavender.client.android.data.grpc.listAgents(userId)

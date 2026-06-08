@@ -20,10 +20,26 @@
 
     <TextView
         android:id="@+id/actionText"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
+        android:layout_weight="1"
         android:textSize="16sp"
         android:textColor="?attr/colorOnSurface" />
+
+    <TextView
+        android:id="@+id/actionBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="20dp"
+        android:gravity="center"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:textSize="12sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/badge_background"
+        android:visibility="gone" />
 
 </LinearLayout>

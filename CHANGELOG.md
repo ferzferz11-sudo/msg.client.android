@@ -1,5 +1,20 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.1.7] - 2026-07-18
+### Notification Badge
+- **ServerNotificationProto:** добавлено поле isRead: Boolean
+- **OwlGrpc.kt:** getUnreadCount() — новый unary RPC для получения количества непрочитанных
+- **OwlGrpc.kt:** парсеры getNotificationHistory и subscribeNotifications теперь читают isRead (field 7)
+- **GrpcClient.kt:** getUnreadCount() — новый метод
+- **NotificationAdapter:** bold title + accent background для непрочитанных; клик → mark as read
+- **NotificationActivity:** отмечает все загруженные уведомления как прочитанные при открытии
+- **SheetAction:** добавлено поле badge: Int для отображения счётчика
+- **AIBottomSheet + ActionBottomSheet:** показывают badge (красный кружок с числом)
+- **ChatListActivity:** unreadNotifCount + refreshUnreadCount() + badge на пункте "Уведомления"
+- **Layouts:** widget_action_item.xml — добавлен actionBadge TextView
+- **Drawables:** badge_background.xml — красный круг для badge
+- **Colors:** notification_unread_bg — полупрозрачный accent для непрочитанных
+
 ## [1.1.1.5] - 2026-07-18
 ### OWL Settings
 - **OwlSettingsActivity:** экран настроек OWL AI (API key input, model selector dropdown)

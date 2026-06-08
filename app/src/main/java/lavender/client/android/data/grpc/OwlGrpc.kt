@@ -317,6 +317,7 @@ fun subscribeNotifications(
             override fun parse(s: java.io.InputStream): ServerNotificationProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
                 var id = ""; var type = ""; var title = ""; var message = ""; var timestamp = ""
+                var isRead = false
                 val metadata = mutableMapOf<String, String>()
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
@@ -347,10 +348,11 @@ fun subscribeNotifications(
                                 } catch (_: Exception) {}
                             }
                         }
+                        7 -> isRead = cis.readBool()
                         else -> cis.skipField(tag)
                     }
                 }
-                return ServerNotificationProto(id, type, title, message, timestamp, metadata)
+                return ServerNotificationProto(id, type, title, message, timestamp, metadata, isRead)
             }
         })
         .build()
@@ -419,6 +421,7 @@ suspend fun getNotificationHistory(
                                 try {
                                     val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
                                     var id = ""; var type = ""; var title = ""; var message = ""; var timestamp = ""
+                                    var isRead = false
                                     val metadata = mutableMapOf<String, String>()
                                     while (!inner.isAtEnd) {
                                         val innerTag = inner.readTag()
@@ -449,10 +452,11 @@ suspend fun getNotificationHistory(
                                                     } catch (_: Exception) {}
                                                 }
                                             }
+                                            7 -> isRead = inner.readBool()
                                             else -> inner.skipField(innerTag)
                                         }
                                     }
-                                    notifications.add(ServerNotificationProto(id, type, title, message, timestamp, metadata))
+                                    notifications.add(ServerNotificationProto(id, type, title, message, timestamp, metadata, isRead))
                                 } catch (_: Exception) {}
                             }
                         }
@@ -542,6 +546,63 @@ suspend fun markNotificationsRead(
     call.request(1)
 
     return@withContext withTimeoutOrNull(10000) { result.await() } ?: false
+}
+
+suspend fun getUnreadCount(userId: String): Int = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "getUnreadCount: channel dead")
+        return@withContext 0
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<GetUnreadCountRequestProto, GetUnreadCountResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GetUnreadCount")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetUnreadCountRequestProto> {
+            override fun stream(v: GetUnreadCountRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GetUnreadCountRequestProto = GetUnreadCountRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetUnreadCountResponseProto> {
+            override fun stream(v: GetUnreadCountResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetUnreadCountResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var count = 0
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> count = cis.readInt32()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetUnreadCountResponseProto(count)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<Int>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetUnreadCountResponseProto>() {
+        override fun onMessage(message: GetUnreadCountResponseProto) {
+            result.complete(message.count)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(0)
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetUnreadCountRequestProto(userId = userId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: 0
 }
 
 // ======= OWL Chat creation =======

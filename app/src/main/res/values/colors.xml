@@ -65,4 +65,7 @@
     <color name="green">#4CAF50</color>
 
     <color name="ic_launcher_background">#1E1E1E</color>
+
+    <!-- Notification colors -->
+    <color name="notification_unread_bg">#1A5F9EA0</color> <!-- Semi-transparent primary -->
 </resources>

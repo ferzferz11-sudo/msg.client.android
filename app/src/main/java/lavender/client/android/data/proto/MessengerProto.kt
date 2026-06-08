@@ -1118,7 +1118,8 @@ data class ServerNotificationProto(
     val title: String = "",
     val message: String = "",
     val timestamp: String = "",
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
+    val isRead: Boolean = false
 )
 
 data class SubscribeNotificationsRequestProto(
@@ -1142,6 +1143,14 @@ data class MarkNotificationReadRequestProto(
 
 data class MarkNotificationReadResponseProto(
     val success: Boolean = false
+)
+
+data class GetUnreadCountRequestProto(
+    val userId: String = ""
+)
+
+data class GetUnreadCountResponseProto(
+    val count: Int = 0
 )
 
 // ======= OWL Settings =======

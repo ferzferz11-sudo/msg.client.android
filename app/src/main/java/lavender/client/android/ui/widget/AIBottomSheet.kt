@@ -41,12 +41,21 @@ class AIBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) 
                 val itemView = LayoutInflater.from(context).inflate(R.layout.widget_action_item, contentContainer, false)
                 val icon = itemView.findViewById<ImageView>(R.id.actionIcon)
                 val text = itemView.findViewById<TextView>(R.id.actionText)
+                val badge = itemView.findViewById<TextView>(R.id.actionBadge)
 
                 icon.setImageResource(action.iconRes)
                 icon.imageTintList = ColorStateList.valueOf(primColor)
 
                 text.text = action.text
                 text.setTextColor(if (action.isPrimary) primColor else txtColor)
+
+                // Show badge if count > 0
+                if (action.badge > 0) {
+                    badge.text = if (action.badge > 99) "99+" else action.badge.toString()
+                    badge.visibility = View.VISIBLE
+                } else {
+                    badge.visibility = View.GONE
+                }
 
                 itemView.setOnClickListener {
                     action.onClick()

@@ -21,6 +21,7 @@ import lavender.client.android.theme.ui.ThemeUi
  *
  * Показывает историю уведомлений и real-time обновления через SubscribeNotifications.
  * Поддерживает отметку всех уведомлений как прочитанных.
+ * Непрочитанные уведомления выделяются визуально (bold title + accent background).
  */
 class NotificationActivity : AppCompatActivity() {
 
@@ -56,7 +57,18 @@ class NotificationActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = NotificationAdapter()
+        adapter = NotificationAdapter { notif ->
+            // Mark as read when clicked
+            if (!notif.isRead) {
+                lifecycleScope.launch {
+                    try {
+                        GrpcClient.markNotificationsRead(userId, listOf(notif.id))
+                    } catch (e: Exception) {
+                        Log.e("NotificationActivity", "Failed to mark notification as read", e)
+                    }
+                }
+            }
+        }
         recyclerView = findViewById(R.id.notificationsRecyclerView)
         emptyState = findViewById(R.id.emptyState)
 
@@ -70,7 +82,20 @@ class NotificationActivity : AppCompatActivity() {
                 val history = GrpcClient.getNotificationHistory(userId)
                 adapter.submitList(history)
                 updateEmptyState(history.isEmpty())
-                Log.d("NotificationActivity", "Loaded ${history.size} notifications")
+
+                // Mark all loaded notifications as read
+                val unreadIds = history.filter { !it.isRead }.map { it.id }
+                if (unreadIds.isNotEmpty()) {
+                    launch {
+                        try {
+                            GrpcClient.markNotificationsRead(userId, unreadIds)
+                        } catch (e: Exception) {
+                            Log.e("NotificationActivity", "Failed to mark notifications as read", e)
+                        }
+                    }
+                }
+
+                Log.d("NotificationActivity", "Loaded ${history.size} notifications (${unreadIds.size} unread)")
             } catch (e: Exception) {
                 Log.e("NotificationActivity", "Failed to load notification history", e)
                 updateEmptyState(true)
