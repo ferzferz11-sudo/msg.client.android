@@ -399,11 +399,17 @@ object GrpcClient {
         )
     }
 
-    // StateFlow для Hermес ответов
+    // StateFlow для Hermes ответов
     val hermesResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.OrchestratorResponseProto> =
         lavender.client.android.data.grpc.hermesResponses
     val hermesTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
         lavender.client.android.data.grpc.hermesTyping
+
+    // StateFlow для OWL ответов (отдельный поток от Hermes)
+    val owlResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.OwlResponseProto> =
+        lavender.client.android.data.grpc.owlResponses
+    val owlTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
+        lavender.client.android.data.grpc.owlTyping
 
     // Unary методы
     suspend fun listAgents(userId: String = ""): List<lavender.client.android.data.proto.AgentInfoProto> =

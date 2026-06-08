@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.1.1.2] - 2026-07-17
+### OWL Bot — исправления
+- 🔧 **Отдельный OWL streaming:** `owlTyping`/`owlResponses` SharedFlows — больше не переиспользуют Hermes orchestrator flows
+- 🔧 **ChatWithOWL gRPC:** добавлен `chatWithOwl()` — реальный вызов серверного streaming RPC вместо пустого stub
+- 🔧 **Streaming chunks:** OwlChatViewModel аккумулирует стриминговые чанки в полный ответ
+- 📡 **OwlRequestProto/OwlResponseProto:** новые data classes для OWL gRPC коммуникации
+- 📡 **GrpcClient:** добавлены `owlResponses`/`owlTyping` свойства
+
 ## [1.1.1.1] - 2026-07-17
 ### OWL Bot — AI чат с бот-командами
 - 🤖 **OwlChatActivity**: новый экран чата с OWL AI ассистентом

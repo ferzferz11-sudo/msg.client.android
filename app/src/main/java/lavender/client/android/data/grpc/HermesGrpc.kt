@@ -72,6 +72,13 @@ val hermesResponses: SharedFlow<OrchestratorResponseProto> = _hermesResponses
 private val _hermesTyping = MutableSharedFlow<Boolean>(extraBufferCapacity = 8)
 val hermesTyping: SharedFlow<Boolean> = _hermesTyping
 
+// OWL streaming state (separate from Hermes orchestrator)
+private val _owlResponses = MutableSharedFlow<OwlResponseProto>(extraBufferCapacity = 64)
+val owlResponses: SharedFlow<OwlResponseProto> = _owlResponses
+
+private val _owlTyping = MutableSharedFlow<Boolean>(extraBufferCapacity = 8)
+val owlTyping: SharedFlow<Boolean> = _owlTyping
+
 // ======= Main streaming method: ChatWithOrchestrator =======
 
 fun chatWithOrchestrator(
@@ -134,6 +141,104 @@ fun chatWithOrchestrator(
             val errorResp = OrchestratorResponseProto(token = "", finished = true, error = e.message ?: "Unknown error")
             _hermesResponses.tryEmit(errorResp)
             onResponse("", true, errorResp.error, "", "")
+        }
+    }
+}
+
+// ======= OWL streaming: ChatWithOWL =======
+
+class OwlRequestMarshaller : MethodDescriptor.Marshaller<OwlRequestProto> {
+    override fun stream(v: OwlRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+        if (v.message.isNotEmpty()) cos.writeString(2, v.message)
+        if (v.sessionId.isNotEmpty()) cos.writeString(3, v.sessionId)
+        cos.flush()
+        return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): OwlRequestProto = OwlRequestProto()
+}
+
+class OwlResponseMarshaller : MethodDescriptor.Marshaller<OwlResponseProto> {
+    override fun stream(v: OwlResponseProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.text.isNotEmpty()) cos.writeString(1, v.text)
+        if (v.finished) cos.writeBool(2, v.finished)
+        if (v.error.isNotEmpty()) cos.writeString(3, v.error)
+        cos.flush()
+        return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): OwlResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var text = ""
+        var finished = false
+        var error = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> text = cis.readString()
+                2 -> finished = cis.readBool()
+                3 -> error = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return OwlResponseProto(text, finished, error)
+    }
+}
+
+fun chatWithOwl(
+    userId: String,
+    sessionId: String,
+    message: String,
+    scope: CoroutineScope,
+    onResponse: (text: String, finished: Boolean, error: String) -> Unit
+) {
+    val channel = RealGrpcClient.getChannel() ?: run { Log.w("HermesGrpc", "chatWithOwl: channel is null"); return }
+    val methodDesc = MethodDescriptor.newBuilder<OwlRequestProto, OwlResponseProto>()
+        .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
+        .setFullMethodName("messenger.ChatService/ChatWithOWL")
+        .setRequestMarshaller(OwlRequestMarshaller())
+        .setResponseMarshaller(OwlResponseMarshaller())
+        .build()
+
+    val request = OwlRequestProto(
+        userId = userId,
+        message = message,
+        sessionId = sessionId
+    )
+
+    scope.launch(Dispatchers.IO) {
+        try {
+            _owlTyping.emit(true)
+            val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+
+            call.start(object : io.grpc.ClientCall.Listener<OwlResponseProto>() {
+                override fun onMessage(msg: OwlResponseProto) {
+                    _owlResponses.tryEmit(msg)
+                    onResponse(msg.text, msg.finished, msg.error)
+                }
+
+                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                    _owlTyping.tryEmit(false)
+                    if (!status.isOk) {
+                        val errResp = OwlResponseProto(text = "", finished = true, error = status.description ?: "Connection error: ${status.code}")
+                        _owlResponses.tryEmit(errResp)
+                        onResponse("", true, errResp.error)
+                    }
+                }
+            }, io.grpc.Metadata())
+
+            call.sendMessage(request)
+            call.halfClose()
+            call.request(Int.MAX_VALUE)
+        } catch (e: Exception) {
+            _owlTyping.emit(false)
+            val errResp = OwlResponseProto(text = "", finished = true, error = e.message ?: "Unknown error")
+            _owlResponses.tryEmit(errResp)
+            onResponse("", true, errResp.error)
         }
     }
 }

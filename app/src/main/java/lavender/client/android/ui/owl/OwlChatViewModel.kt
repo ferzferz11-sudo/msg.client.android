@@ -8,15 +8,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.models.OwlMessage
-import lavender.client.android.data.grpc.hermesTyping
-import lavender.client.android.data.grpc.hermesResponses
+import lavender.client.android.data.grpc.owlTyping
+import lavender.client.android.data.grpc.owlResponses
+import lavender.client.android.data.grpc.chatWithOwl
 
 /**
  * OwlChatViewModel — ViewModel для чата с OWL AI.
  *
  * Управляет:
  * - Сообщениями OWL
- * - Отправкой запросов к OWL через gRPC ChatWithOWL
+ * - Отправкой запросов к OWL через gRPC ChatWithOWL (отдельный поток от Hermes)
  * - Typing indicator
  */
 class OwlChatViewModel : ViewModel() {
@@ -33,19 +34,27 @@ class OwlChatViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Accumulate streaming response text
+    private var currentOwlResponse = StringBuilder()
+
     init {
-        // Collect typing state from HermesGrpc (shared flow)
+        // Collect OWL typing state (separate from Hermes orchestrator)
         viewModelScope.launch {
-            hermesTyping.collect { typing ->
+            owlTyping.collect { typing ->
                 _isTyping.value = typing
             }
         }
 
-        // Collect responses from HermesGrpc (shared flow)
+        // Collect OWL responses (separate from Hermes orchestrator)
         viewModelScope.launch {
-            hermesResponses.collect { response ->
+            owlResponses.collect { response ->
+                if (response.text.isNotEmpty() && !response.finished) {
+                    // Accumulate streaming chunks
+                    currentOwlResponse.append(response.text)
+                }
                 if (response.finished) {
                     _isTyping.value = false
+                    _isLoading.value = false
                     if (response.error.isNotEmpty()) {
                         addMessage(
                             id = "owl-error-${System.currentTimeMillis()}",
@@ -54,6 +63,15 @@ class OwlChatViewModel : ViewModel() {
                             senderName = "🦉 OWL",
                             isCurrentUser = false
                         )
+                    } else if (currentOwlResponse.isNotEmpty()) {
+                        addMessage(
+                            id = "owl-${System.currentTimeMillis()}",
+                            content = currentOwlResponse.toString(),
+                            senderId = "owl",
+                            senderName = "🦉 OWL",
+                            isCurrentUser = false
+                        )
+                        currentOwlResponse = StringBuilder()
                     }
                 }
             }
@@ -61,19 +79,28 @@ class OwlChatViewModel : ViewModel() {
     }
 
     /**
-     * Отправить сообщение к OWL AI.
+     * Отправить сообщение к OWL AI через ChatWithOWL gRPC.
      */
     fun sendToOwl(message: String, userId: String, chatId: String) {
         _isLoading.value = true
         _isTyping.value = true
+        currentOwlResponse = StringBuilder()
 
-        // For now, we use the existing ChatWithOWL gRPC method
-        // This is a simplified version — in production we'd have a dedicated OWL streaming call
         viewModelScope.launch {
             try {
-                // Use the existing OWL session manager approach
-                // The actual gRPC call is handled by the activity for simplicity
-                _isLoading.value = false
+                chatWithOwl(
+                    userId = userId,
+                    sessionId = chatId,
+                    message = message,
+                    scope = viewModelScope,
+                    onResponse = { text, finished, error ->
+                        // Responses are collected via owlResponses SharedFlow
+                        // This callback is for logging/debugging
+                        if (error.isNotEmpty()) {
+                            Log.e("OwlChatViewModel", "OWL error: $error")
+                        }
+                    }
+                )
             } catch (e: Exception) {
                 Log.e("OwlChatViewModel", "sendToOwl error", e)
                 _error.value = "Ошибка отправки: ${e.message}"

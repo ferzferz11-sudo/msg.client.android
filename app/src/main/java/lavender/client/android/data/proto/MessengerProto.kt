@@ -1095,6 +1095,20 @@ data class OWLStatusResponseProto(
     val status: String = ""
 )
 
+// ======= OWL streaming proto =======
+
+data class OwlRequestProto(
+    val userId: String = "",
+    val message: String = "",
+    val sessionId: String = ""
+)
+
+data class OwlResponseProto(
+    val text: String = "",
+    val finished: Boolean = false,
+    val error: String = ""
+)
+
 // ======= Server Notification proto classes =======
 
 data class ServerNotificationProto(
