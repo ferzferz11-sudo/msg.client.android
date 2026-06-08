@@ -273,6 +273,17 @@
     </LinearLayout>
 
     <lavender.client.android.ui.widget.LavenderFab
+        android:id="@+id/aiFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_hermes"
+        app:tint="?attr/colorOnPrimary"
+        app:backgroundTint="?attr/colorPrimary"
+        app:layout_constraintBottom_toTopOf="@id/addChatFab"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:contentDescription="AI" />
+
+    <lavender.client.android.ui.widget.LavenderFab
         android:id="@+id/addChatFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

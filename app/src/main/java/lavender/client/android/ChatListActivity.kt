@@ -79,6 +79,7 @@ import java.net.URL
 import java.util.Locale
 
 import lavender.client.android.theme.Theme
+import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SearchableListBottomSheet
@@ -341,12 +342,22 @@ class ChatListActivity : AppCompatActivity() {
                 bottomMargin = systemBars.bottom + (16 * resources.displayMetrics.density).toInt()
                 marginEnd = (16 * resources.displayMetrics.density).toInt()
             }
+
+            // Adjust AI FAB margin (above addChatFab)
+            binding.aiFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = systemBars.bottom + (80 * resources.displayMetrics.density).toInt()
+                marginEnd = (16 * resources.displayMetrics.density).toInt()
+            }
             
             insets
         }
 
         binding.addChatFab.setOnClickListener {
             showChatActionSheet()
+        }
+
+        binding.aiFab.setOnClickListener {
+            showAIActionSheet()
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -1989,23 +2000,37 @@ class ChatListActivity : AppCompatActivity() {
                 },
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
-                },
-                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Lava AI") {
-                    val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
-                    startActivity(intent)
-                },
-                SheetAction(R.id.actionHermesAgents, R.drawable.ic_agents, "Агенты") {
-                    val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
-                    startActivity(intent)
-                },
-                SheetAction(R.id.actionOwlChat, R.drawable.ic_owl, "OWL AI") {
-                    val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
-                    startActivity(intent)
-                },
-                SheetAction(R.id.actionNotifications, R.drawable.ic_notifications, "Уведомления") {
-                    val intent = Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java)
-                    startActivity(intent)
                 }
+            )).show()
+    }
+
+    private fun showAIActionSheet() {
+        AIBottomSheet(this)
+            .setSections(listOf(
+                AIBottomSheet.AISection("Оркестратор", listOf(
+                    SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Lava AI") {
+                        val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
+                        startActivity(intent)
+                    },
+                    SheetAction(R.id.actionHermesAgents, R.drawable.ic_agents, "Агенты") {
+                        val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
+                        startActivity(intent)
+                    },
+                    SheetAction(R.id.actionNotifications, R.drawable.ic_notifications, "Уведомления") {
+                        val intent = Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java)
+                        startActivity(intent)
+                    }
+                )),
+                AIBottomSheet.AISection("OWL", listOf(
+                    SheetAction(R.id.actionOwlChat, R.drawable.ic_owl, "OWL AI") {
+                        val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
+                        startActivity(intent)
+                    },
+                    SheetAction(R.id.action_owl_settings, R.drawable.ic_settings, "Настройки OWL") {
+                        // TODO: OWL settings activity (future)
+                        Toast.makeText(this, "Настройки OWL — скоро", Toast.LENGTH_SHORT).show()
+                    }
+                ))
             )).show()
     }
 
