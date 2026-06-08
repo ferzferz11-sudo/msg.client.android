@@ -544,6 +544,69 @@ suspend fun markNotificationsRead(
     return@withContext withTimeoutOrNull(10000) { result.await() } ?: false
 }
 
+// ======= OWL Chat creation =======
+
+suspend fun createOwlChat(userId: String, name: String = ""): CreateOwlChatResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "createOwlChat: channel dead")
+        return@withContext CreateOwlChatResponseProto()
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<CreateOwlChatRequestProto, CreateOwlChatResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/CreateOwlChat")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<CreateOwlChatRequestProto> {
+            override fun stream(v: CreateOwlChatRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+                if (v.name.isNotEmpty()) cos.writeString(2, v.name)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): CreateOwlChatRequestProto = CreateOwlChatRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<CreateOwlChatResponseProto> {
+            override fun stream(v: CreateOwlChatResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): CreateOwlChatResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var chatId = ""; var name = ""; var success = false; var message = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> chatId = cis.readString()
+                        2 -> success = cis.readBool()
+                        3 -> message = cis.readString()
+                        4 -> name = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return CreateOwlChatResponseProto(chatId, name, success, message)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<CreateOwlChatResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<CreateOwlChatResponseProto>() {
+        override fun onMessage(message: CreateOwlChatResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(CreateOwlChatResponseProto())
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(CreateOwlChatRequestProto(userId = userId, name = name))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: CreateOwlChatResponseProto()
+}
+
 // ======= OWL Chat streaming =======
 
 fun chatWithOwl(

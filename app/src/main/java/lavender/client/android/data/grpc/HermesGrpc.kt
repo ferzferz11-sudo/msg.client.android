@@ -631,7 +631,7 @@ suspend fun createHermesSession(
             override fun stream(v: CreateHermesSessionResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
             override fun parse(s: java.io.InputStream): CreateHermesSessionResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var sessionId = ""; var success = false; var message = ""
+                var sessionId = ""; var success = false; var message = ""; var name = ""
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
@@ -639,10 +639,11 @@ suspend fun createHermesSession(
                         1 -> sessionId = cis.readString()  // field 1 = session_id (string)
                         2 -> success = cis.readBool()      // field 2 = success (bool)
                         3 -> message = cis.readString()    // field 3 = message (string)
+                        4 -> name = cis.readString()       // field 4 = name (string)
                         else -> cis.skipField(tag)
                     }
                 }
-                return CreateHermesSessionResponseProto(sessionId, success, message)
+                return CreateHermesSessionResponseProto(sessionId, success, message, name)
             }
         })
         .build()

@@ -989,7 +989,8 @@ data class CreateHermesSessionRequestProto(
 data class CreateHermesSessionResponseProto(
     val sessionId: String = "",
     val success: Boolean = false,
-    val message: String = ""
+    val message: String = "",
+    val name: String = ""
 )
 
 data class DeleteHermesSessionRequestProto(
@@ -1165,4 +1166,18 @@ data class GetOwlSettingsRequestProto(
 data class GetOwlSettingsResponseProto(
     val apiKey: String = "",
     val model: String = ""
+)
+
+// ======= OWL Chat creation =======
+
+data class CreateOwlChatRequestProto(
+    val userId: String = "",
+    val name: String = ""
+)
+
+data class CreateOwlChatResponseProto(
+    val chatId: String = "",
+    val name: String = "",
+    val success: Boolean = false,
+    val message: String = ""
 )

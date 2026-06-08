@@ -21,6 +21,7 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.getBotCommands
 import lavender.client.android.data.grpc.getOWLStatus
 import lavender.client.android.data.grpc.processBotCommand
+import lavender.client.android.data.grpc.createOwlChat
 import lavender.client.android.data.models.OwlMessage
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
@@ -38,6 +39,10 @@ import androidx.appcompat.app.AppCompatActivity
  * - Получать ответы в реальном времени
  */
 class OwlChatActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "OwlChatActivity"
+    }
 
     private lateinit var viewModel: OwlChatViewModel
     private lateinit var adapter: ChatMessageAdapter
@@ -58,7 +63,9 @@ class OwlChatActivity : AppCompatActivity() {
 
         userId = SessionManager.session.value.userId
         username = SessionManager.session.value.username
-        chatId = "owl-$userId"
+
+        // Get chatId from intent (passed from AIBottomSheet or ChatListActivity)
+        chatId = intent.getStringExtra("CHAT_ID") ?: ""
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(OwlChatViewModel::class.java)
@@ -72,6 +79,20 @@ class OwlChatActivity : AppCompatActivity() {
         setupSlashCommandDetection()
         observeState()
         ThemeUi.bind(this, userId)
+
+        // If no chatId passed, create a new OWL chat via server
+        if (chatId.isEmpty()) {
+            lifecycleScope.launch {
+                val response = createOwlChat(userId)
+                if (response.success) {
+                    chatId = response.chatId
+                    Log.d(TAG, "Created OWL chat: $chatId name=${response.name}")
+                } else {
+                    Log.e(TAG, "Failed to create OWL chat: ${response.message}")
+                    Toast.makeText(this@OwlChatActivity, "Failed to create chat: ${response.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
 
         // Window insets
         val rootView = findViewById<View>(android.R.id.content)

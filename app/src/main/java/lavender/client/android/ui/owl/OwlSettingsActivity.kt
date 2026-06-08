@@ -51,7 +51,9 @@ class OwlSettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_owl_settings)
 
         userId = SessionManager.session.value.userId
-        chatId = "owl-$userId"
+
+        // Get chatId from intent if passed from chat screen, otherwise use first existing OWL chat
+        chatId = intent.getStringExtra("chatId") ?: ""
 
         initViews()
         setupToolbar()
@@ -59,9 +61,10 @@ class OwlSettingsActivity : AppCompatActivity() {
         setupSaveButton()
         ThemeUi.bind(this, userId)
 
-        // Get chatId from intent if passed from chat screen
-        intent.getStringExtra("chatId")?.let {
-            if (it.isNotEmpty()) chatId = it
+        // If no chatId passed, we need to find or create one
+        if (chatId.isEmpty()) {
+            // Try to get existing OWL chat from intent extra (CHAT_ID)
+            chatId = intent.getStringExtra("CHAT_ID") ?: ""
         }
 
         Log.d(TAG, "onCreate: userId=$userId chatId=$chatId")
