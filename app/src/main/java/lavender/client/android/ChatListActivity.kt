@@ -2001,6 +2001,10 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionOwlChat, R.drawable.ic_owl, "OWL AI") {
                     val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
                     startActivity(intent)
+                },
+                SheetAction(R.id.actionNotifications, R.drawable.ic_notifications, "Уведомления") {
+                    val intent = Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java)
+                    startActivity(intent)
                 }
             )).show()
     }

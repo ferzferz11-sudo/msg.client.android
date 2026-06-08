@@ -411,6 +411,20 @@ object GrpcClient {
     val owlTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
         lavender.client.android.data.grpc.owlTyping
 
+    // Server Notifications
+    val serverNotifications: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.ServerNotificationProto> =
+        lavender.client.android.data.grpc.serverNotifications
+
+    fun subscribeNotifications(userId: String, types: List<String> = emptyList()) {
+        lavender.client.android.data.grpc.subscribeNotifications(userId, types, scope)
+    }
+
+    suspend fun getNotificationHistory(userId: String, limit: Int = 50): List<lavender.client.android.data.proto.ServerNotificationProto> =
+        lavender.client.android.data.grpc.getNotificationHistory(userId, limit)
+
+    suspend fun markNotificationsRead(userId: String, notificationIds: List<String>): Boolean =
+        lavender.client.android.data.grpc.markNotificationsRead(userId, notificationIds)
+
     // Unary методы
     suspend fun listAgents(userId: String = ""): List<lavender.client.android.data.proto.AgentInfoProto> =
         lavender.client.android.data.grpc.listAgents(userId)
