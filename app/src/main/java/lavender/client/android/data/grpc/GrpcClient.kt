@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
@@ -168,6 +169,14 @@ object GrpcClient {
         realGrpcClient.getAllChats(callback)
     }
 
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
+        realGrpcClient.getAIChats(userId, callback)
+    }
+
+    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.renameAIChat(chatId, userId, newName, callback)
+    }
+
     fun updateUsername(oldUsername: String, newUsername: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.updateUsername(oldUsername, newUsername, callback)
     }
@@ -222,6 +231,11 @@ object GrpcClient {
 
     fun deleteChat(chatId: String, requesterUsername: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.deleteChat(chatId, requesterUsername, callback)
+    }
+
+    // Overload with userId for AI chats
+    fun deleteChat(chatId: String, userId: String, username: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteChatWithUserId(chatId, userId, username, callback)
     }
 
     fun requestPasswordReset(email: String, callback: (Boolean, String) -> Unit) {

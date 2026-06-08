@@ -1190,3 +1190,31 @@ data class CreateOwlChatResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )
+
+// ======= AI Chats Management =======
+
+data class GetAIChatsRequestProto(
+    var userId: String = ""
+)
+
+data class AIChatInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val type: String = "",
+    val createdAt: String = ""
+)
+
+data class GetAIChatsResponseProto(
+    val chats: List<AIChatInfoProto> = emptyList()
+)
+
+data class RenameAIChatRequestProto(
+    var chatId: String = "",
+    var userId: String = "",
+    var newName: String = ""
+)
+
+data class RenameAIChatResponseProto(
+    val success: Boolean = false,
+    val error: String = ""
+)

@@ -85,6 +85,7 @@ import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.widget.WidgetManager
+import lavender.client.android.data.models.AIChatInfo
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -2009,63 +2010,115 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAIActionSheet() {
-        val existingOwlChats = currentOwlChats
-        val existingHermesChats = currentHermesChats
+        val existingOwlChats = currentOwlChats.toList()
+        val existingHermesChats = currentHermesChats.toList()
 
         val sections = mutableListOf<AIBottomSheet.AISection>()
 
         // Orchestrator section
         val hermesActions = mutableListOf<SheetAction>()
-        // Show existing Hermes chats with numbers
         existingHermesChats.forEach { chat ->
-            hermesActions.add(SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, chat.name) {
-                val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
-                intent.putExtra("CHAT_ID", chat.id)
-                intent.putExtra("ACTIVE_AGENT_ID", chat.activeAgentId)
-                intent.putExtra("AGENT_MODE", chat.agentMode)
-                intent.putExtra("CHAT_NAME", chat.name)
-                startActivity(intent)
+            hermesActions.add(SheetAction(chat.id.hashCode(), R.drawable.ic_hermes, chat.name) {
+                openHermesChat(chat.id, chat.name)
             })
         }
-        // "Create new" button for Hermes
         hermesActions.add(SheetAction(R.id.actionHermesChat, R.drawable.ic_add, getString(R.string.hermes_chat_title) + " +") {
-            val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
-            startActivity(intent)
+            openHermesChat("", "")
         })
         hermesActions.add(SheetAction(R.id.actionHermesAgents, R.drawable.ic_agents, "Агенты") {
-            val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java))
         })
-        // Notifications with badge
         hermesActions.add(SheetAction(R.id.actionNotifications, R.drawable.ic_notifications, "Уведомления", badge = unreadNotifCount) {
-            val intent = Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
         })
         sections.add(AIBottomSheet.AISection("Оркестратор", hermesActions))
 
         // OWL section
         val owlActions = mutableListOf<SheetAction>()
-        // Show existing OWL chats with numbers
         existingOwlChats.forEach { chat ->
-            owlActions.add(SheetAction(R.id.actionOwlChat, R.drawable.ic_owl, chat.name) {
-                val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
-                intent.putExtra("CHAT_ID", chat.id)
-                intent.putExtra("CHAT_NAME", chat.name)
-                startActivity(intent)
+            owlActions.add(SheetAction(chat.id.hashCode(), R.drawable.ic_owl, chat.name) {
+                openOwlChat(chat.id, chat.name)
             })
         }
-        // "Create new" button for OWL
         owlActions.add(SheetAction(R.id.actionOwlChat, R.drawable.ic_add, "OWL AI +") {
-            val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
-            startActivity(intent)
+            openOwlChat("", "")
         })
         owlActions.add(SheetAction(R.id.action_owl_settings, R.drawable.ic_settings, "Настройки OWL") {
-            val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java))
         })
         sections.add(AIBottomSheet.AISection("OWL", owlActions))
 
-        AIBottomSheet(this).setSections(sections).show()
+        val sheet = AIBottomSheet(this)
+        sheet.setOnSelectionChangedListener { selectedIds ->
+            // Selection state updated
+        }
+        sheet.setOnDeleteListener { selectedIds ->
+            val userId = SessionManager.session.value.userId
+            val username = SessionManager.session.value.username
+            if (userId.isNotEmpty()) {
+                var deleted = 0
+                val total = selectedIds.size
+                selectedIds.forEach { hashId ->
+                    val chat = (existingOwlChats + existingHermesChats).find { it.id.hashCode() == hashId }
+                    if (chat != null) {
+                        GrpcClient.deleteChat(chat.id, userId, username) { success, _ ->
+                            deleted++
+                            if (deleted == total) {
+                                sheet.dismiss()
+                                refreshAiChats()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        sheet.setOnRenameListener { hashId ->
+            // Rename single selected chat
+            val chat = (existingOwlChats + existingHermesChats).find { it.id.hashCode() == hashId }
+            if (chat != null) {
+                showRenameDialog(chat.id, chat.name)
+            }
+        }
+        sheet.setSections(sections).show()
+    }
+
+    private fun showRenameDialog(chatId: String, currentName: String) {
+        val editText = android.widget.EditText(this).apply {
+            setText(currentName)
+            setSingleLine()
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Переименовать чат")
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                val newName = editText.text.toString().trim()
+                if (newName.isNotEmpty() && newName != currentName) {
+                    val userId = SessionManager.session.value.userId
+                    if (userId.isNotEmpty()) {
+                        GrpcClient.renameAIChat(chatId, userId, newName) { success, error ->
+                            if (success) {
+                                refreshAiChats()
+                            }
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun openHermesChat(chatId: String, chatName: String) {
+        val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
+        intent.putExtra("CHAT_ID", chatId)
+        intent.putExtra("CHAT_NAME", chatName)
+        startActivity(intent)
+    }
+
+    private fun openOwlChat(chatId: String, chatName: String) {
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
+        intent.putExtra("CHAT_ID", chatId)
+        intent.putExtra("CHAT_NAME", chatName)
+        startActivity(intent)
     }
 
     // Data classes for existing AI chats
@@ -2077,16 +2130,20 @@ class ChatListActivity : AppCompatActivity() {
     private fun refreshAiChats() {
         currentOwlChats.clear()
         currentHermesChats.clear()
-        // Filter chats by type from the main chats list
-        chats.forEach { chat ->
-            when (chat.type) {
-                "owl" -> currentOwlChats.add(ExistingAiChat(chat.id, chat.name))
-                "hermes" -> currentHermesChats.add(ExistingAiChat(chat.id, chat.name, chat.activeAgentId, chat.agentMode))
+        // Load AI chats via dedicated RPC (separate from regular chat list)
+        val userId = SessionManager.session.value.userId
+        if (userId.isNotEmpty()) {
+            GrpcClient.getAIChats(userId) { aiChats ->
+                aiChats.forEach { chat ->
+                    when (chat.type) {
+                        "owl" -> currentOwlChats.add(ExistingAiChat(chat.id, chat.name))
+                        "hermes" -> currentHermesChats.add(ExistingAiChat(chat.id, chat.name, "", ""))
+                    }
+                }
+                currentOwlChats.sortByDescending { it.name }
+                currentHermesChats.sortByDescending { it.name }
             }
         }
-        // Sort by name descending so newest numbers appear first (#3, #2, #1)
-        currentOwlChats.sortByDescending { it.name }
-        currentHermesChats.sortByDescending { it.name }
     }
 
     private fun refreshUnreadCount() {

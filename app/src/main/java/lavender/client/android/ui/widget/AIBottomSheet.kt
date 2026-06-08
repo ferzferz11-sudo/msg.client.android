@@ -5,6 +5,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -16,6 +17,10 @@ import lavender.client.android.theme.ThemeUtils
 /**
  * AI Bottom Sheet with grouped actions and section dividers.
  * Shows AI services organized in groups (Orchestrator, OWL).
+ *
+ * Supports two modes:
+ * - Normal mode: tap opens chat, long-press enters selection mode
+ * - Selection mode: checkboxes appear, toolbar with delete/rename actions
  */
 class AIBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) : StandardBottomSheet(context, R.layout.widget_ai_bottom_sheet, theme) {
 
@@ -24,8 +29,25 @@ class AIBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) 
         val actions: List<SheetAction>
     )
 
+    private var selectionMode = false
+    private val selectedIds = mutableSetOf<Int>()
+    private var onSelectionChanged: ((Set<Int>) -> Unit)? = null
+    private var selectionToolbar: LinearLayout? = null
+    private var btnRename: ImageButton? = null
+    private var btnDelete: ImageButton? = null
+
+    // Store item views for checkbox toggling
+    private val chatItemViews = mutableMapOf<Int, View>()
+
+    init {
+        selectionToolbar = root?.findViewById(R.id.selectionToolbar)
+        btnRename = root?.findViewById(R.id.btnRename)
+        btnDelete = root?.findViewById(R.id.btnDelete)
+    }
+
     fun setSections(sections: List<AISection>): AIBottomSheet {
         contentContainer?.removeAllViews()
+        chatItemViews.clear()
         val theme = ThemeStore.currentTheme()
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
@@ -57,10 +79,33 @@ class AIBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) 
                     badge.visibility = View.GONE
                 }
 
+                // Tap: open chat (or toggle selection in selection mode)
                 itemView.setOnClickListener {
-                    action.onClick()
-                    dismiss()
+                    if (selectionMode) {
+                        toggleSelection(action.id)
+                        updateCheckboxes()
+                    } else {
+                        action.onClick()
+                        dismiss()
+                    }
                 }
+
+                // Long tap: enter selection mode (only for chat items with hashCode IDs)
+                // Chat items use hashCode IDs which are typically large numbers
+                // Action items use R.id.* which are positive and < 0x7f000000
+                if (action.id < 0x7f000000 && action.id != 0) {
+                    itemView.setOnLongClickListener {
+                        if (!selectionMode) {
+                            enterSelectionMode()
+                            toggleSelection(action.id)
+                            updateCheckboxes()
+                        }
+                        true
+                    }
+                    // Store reference for checkbox toggling
+                    chatItemViews[action.id] = itemView
+                }
+
                 contentContainer?.addView(itemView)
             }
 
@@ -72,6 +117,83 @@ class AIBottomSheet(context: Context, theme: Theme = ThemeStore.currentTheme()) 
         }
         return this
     }
+
+    private fun enterSelectionMode() {
+        selectionMode = true
+        selectionToolbar?.visibility = View.VISIBLE
+        titleView?.text = "Выберите чаты"
+    }
+
+    private fun exitSelectionMode() {
+        selectionMode = false
+        selectedIds.clear()
+        selectionToolbar?.visibility = View.GONE
+        titleView?.text = "AI Сервисы"
+        updateCheckboxes()
+    }
+
+    private fun toggleSelection(id: Int) {
+        if (selectedIds.contains(id)) {
+            selectedIds.remove(id)
+        } else {
+            selectedIds.add(id)
+        }
+        if (selectedIds.isEmpty()) {
+            exitSelectionMode()
+        }
+        onSelectionChanged?.invoke(selectedIds)
+    }
+
+    private fun updateCheckboxes() {
+        chatItemViews.forEach { (id, view) ->
+            val icon = view.findViewById<ImageView>(R.id.actionIcon)
+            val theme = ThemeStore.currentTheme()
+            val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            if (selectedIds.contains(id)) {
+                // Show checked state — change icon background or alpha
+                icon.alpha = 0.5f
+            } else {
+                icon.alpha = 1.0f
+            }
+        }
+    }
+
+    fun getSelectedChatIds(): List<String> {
+        // Map hashCode back to original chat IDs
+        // We need to find the original IDs from the chat name lookup
+        return selectedIds.map { it.toString() }
+    }
+
+    fun setSelectedIds(ids: Set<Int>) {
+        selectedIds.clear()
+        selectedIds.addAll(ids)
+        updateCheckboxes()
+    }
+
+    fun setOnSelectionChangedListener(listener: (Set<Int>) -> Unit): AIBottomSheet {
+        onSelectionChanged = listener
+        return this
+    }
+
+    fun setOnDeleteListener(listener: (Set<Int>) -> Unit): AIBottomSheet {
+        btnDelete?.setOnClickListener {
+            if (selectedIds.isNotEmpty()) {
+                listener(selectedIds)
+            }
+        }
+        return this
+    }
+
+    fun setOnRenameListener(listener: (Int) -> Unit): AIBottomSheet {
+        btnRename?.setOnClickListener {
+            if (selectedIds.size == 1) {
+                listener(selectedIds.first())
+            }
+        }
+        return this
+    }
+
+    fun getSelectedIds(): Set<Int> = selectedIds.toSet()
 
     override fun setTitle(title: CharSequence?): AIBottomSheet {
         super.setTitle(title)

@@ -17,6 +17,7 @@ import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
 
@@ -1698,6 +1699,32 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteChat")
+            .setRequestMarshaller(DeleteChatRequestMarshaller())
+            .setResponseMarshaller(DeleteChatResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
+            override fun onMessage(message: DeleteChatResponseProto) {
+                if (message.success) {
+                    scope.launch(Dispatchers.IO) {
+                        db()?.messageDao()?.clearRoom(cid)
+                        Log.d(TAG, "Cleared local messages for deleted chat: $cid")
+                    }
+                }
+                cb(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(DeleteChatRequestProto(cid, username, userId))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateDirectChatRequestProto, CreateDirectChatResponseProto>()
@@ -1968,6 +1995,66 @@ object RealGrpcClient {
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllChatsRequestProto())
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAIChatsRequestProto, GetAIChatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetAIChats")
+            .setRequestMarshaller(GetAIChatsRequestMarshaller())
+            .setResponseMarshaller(GetAIChatsResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetAIChatsResponseProto>() {
+            override fun onMessage(message: GetAIChatsResponseProto) {
+                Log.d(TAG, "GetAIChats: received ${message.chats.size} chats")
+                callback(message.chats.map { proto ->
+                    AIChatInfo(
+                        id = proto.id,
+                        name = proto.name,
+                        type = proto.type,
+                        createdAt = proto.createdAt
+                    )
+                })
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.e(TAG, "GetAIChats failed: ${status.code} - ${status.description}")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(GetAIChatsRequestProto().apply { this.userId = userId })
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RenameAIChatRequestProto, RenameAIChatResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RenameAIChat")
+            .setRequestMarshaller(RenameAIChatRequestMarshaller())
+            .setResponseMarshaller(RenameAIChatResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RenameAIChatResponseProto>() {
+            override fun onMessage(message: RenameAIChatResponseProto) {
+                callback(message.success, message.error)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(RenameAIChatRequestProto().apply {
+            this.chatId = chatId
+            this.userId = userId
+            this.newName = newName
+        })
         call.halfClose()
         call.request(1)
     }
@@ -3218,4 +3305,107 @@ class CallMessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<CallMessa
 
     // Flag to control E2EE support based on client version
     var isE2EEMessageEnabled: Boolean = true
+}
+
+// ======= AI Chats Marshallers =======
+
+class GetAIChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAIChatsRequestProto> {
+    override fun stream(v: GetAIChatsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAIChatsRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> userId = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetAIChatsRequestProto(userId)
+    }
+}
+
+class GetAIChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAIChatsResponseProto> {
+    override fun stream(v: GetAIChatsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIChatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val chats = mutableListOf<AIChatInfoProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val len = cis.readUInt32()
+                val b = cis.readRawBytes(len)
+                val inner = com.google.protobuf.CodedInputStream.newInstance(b)
+                var id = ""; var name = ""; var type = ""; var createdAt = ""
+                while (!inner.isAtEnd) {
+                    val t2 = inner.readTag()
+                    if (t2 == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) {
+                        1 -> id = inner.readString()
+                        2 -> name = inner.readString()
+                        3 -> type = inner.readString()
+                        4 -> createdAt = inner.readString()
+                        else -> inner.skipField(t2)
+                    }
+                }
+                chats.add(AIChatInfoProto(id, name, type, createdAt))
+            } else {
+                cis.skipField(tag)
+            }
+        }
+        return GetAIChatsResponseProto(chats)
+    }
+}
+
+class RenameAIChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RenameAIChatRequestProto> {
+    override fun stream(v: RenameAIChatRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+        if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.newName.isNotEmpty()) cos.writeString(3, v.newName)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RenameAIChatRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var chatId = ""; var userId = ""; var newName = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> chatId = cis.readString()
+                2 -> userId = cis.readString()
+                3 -> newName = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RenameAIChatRequestProto(chatId, userId, newName)
+    }
+}
+
+class RenameAIChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RenameAIChatResponseProto> {
+    override fun stream(v: RenameAIChatResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RenameAIChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var error = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> error = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RenameAIChatResponseProto(success, error)
+    }
 }
