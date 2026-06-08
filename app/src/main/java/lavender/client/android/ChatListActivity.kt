@@ -2027,8 +2027,8 @@ class ChatListActivity : AppCompatActivity() {
                         startActivity(intent)
                     },
                     SheetAction(R.id.action_owl_settings, R.drawable.ic_settings, "Настройки OWL") {
-                        // TODO: OWL settings activity (future)
-                        Toast.makeText(this, "Настройки OWL — скоро", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java)
+                        startActivity(intent)
                     }
                 ))
             )).show()

@@ -600,3 +600,128 @@ fun chatWithOwl(
         }
     }
 }
+
+// ======= OWL Settings =======
+
+suspend fun getOwlSettings(chatId: String, userId: String): GetOwlSettingsResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "getOwlSettings: channel dead")
+        return@withContext GetOwlSettingsResponseProto()
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<GetOwlSettingsRequestProto, GetOwlSettingsResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GetOwlSettings")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetOwlSettingsRequestProto> {
+            override fun stream(v: GetOwlSettingsRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GetOwlSettingsRequestProto = GetOwlSettingsRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetOwlSettingsResponseProto> {
+            override fun stream(v: GetOwlSettingsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetOwlSettingsResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var apiKey = ""; var model = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> apiKey = cis.readString()
+                        2 -> model = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetOwlSettingsResponseProto(apiKey, model)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<GetOwlSettingsResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetOwlSettingsResponseProto>() {
+        override fun onMessage(message: GetOwlSettingsResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(GetOwlSettingsResponseProto())
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetOwlSettingsRequestProto(chatId = chatId, userId = userId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: GetOwlSettingsResponseProto()
+}
+
+suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, model: String): UpdateOwlSettingsResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "updateOwlSettings: channel dead")
+        return@withContext UpdateOwlSettingsResponseProto(success = false, message = "Connection lost")
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<UpdateOwlSettingsRequestProto, UpdateOwlSettingsResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/UpdateOwlSettings")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<UpdateOwlSettingsRequestProto> {
+            override fun stream(v: UpdateOwlSettingsRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+                if (v.apiKey.isNotEmpty()) cos.writeString(3, v.apiKey)
+                if (v.model.isNotEmpty()) cos.writeString(4, v.model)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): UpdateOwlSettingsRequestProto = UpdateOwlSettingsRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<UpdateOwlSettingsResponseProto> {
+            override fun stream(v: UpdateOwlSettingsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): UpdateOwlSettingsResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var message = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> message = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return UpdateOwlSettingsResponseProto(success, message)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<UpdateOwlSettingsResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<UpdateOwlSettingsResponseProto>() {
+        override fun onMessage(message: UpdateOwlSettingsResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                UpdateOwlSettingsResponseProto(success = false, message = "Connection error: ${status.code}")
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(UpdateOwlSettingsRequestProto(chatId = chatId, userId = userId, apiKey = apiKey, model = model))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: UpdateOwlSettingsResponseProto(success = false, message = "Timeout")
+}
