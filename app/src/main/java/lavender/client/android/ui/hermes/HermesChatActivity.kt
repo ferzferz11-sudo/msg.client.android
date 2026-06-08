@@ -65,7 +65,7 @@ class HermesChatActivity : AppCompatActivity() {
         setContentView(R.layout.activity_hermes_chat)
 
         chatId = intent.getStringExtra("CHAT_ID") ?: ""
-        userId = SessionManager.session.value.username
+        userId = SessionManager.session.value.userId
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(HermesChatViewModel::class.java)
@@ -78,7 +78,7 @@ class HermesChatActivity : AppCompatActivity() {
         setupInput()
         setupMentionListener()
         observeState()
-        ThemeUi.bind(this, userId)
+        ThemeUi.bind(this, SessionManager.session.value.username)
 
         // Handle window insets
         val rootView = findViewById<View>(android.R.id.content)
