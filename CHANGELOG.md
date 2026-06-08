@@ -4,8 +4,10 @@
 ### OWL Settings
 - **OwlSettingsActivity:** экран настроек OWL AI (API key input, model selector dropdown)
 - **activity_owl_settings.xml:** layout с MaterialToolbar, TextInput, AutoCompleteTextView, save button
-- **MessengerProto.kt:** добавлены `UpdateOwlSettingsRequestProto`, `UpdateOwlSettingsResponseProto`, `GetOwlSettingsRequestProto`, `GetOwlSettingsResponseProto`
-- **НЕ ДОДЕЛАНО:** getOwlSettings()/updateOwlSettings() в OwlGrpc.kt, регистрация в AndroidManifest, подключение из AIBottomSheet → будет в v1.1.1.6
+- **MessengerProto.kt:** добавлены proto классы для OWL settings
+- **OwlGrpc.kt:** getOwlSettings() и updateOwlSettings() unary RPC методы
+- **AndroidManifest.xml:** регистрация OwlSettingsActivity
+- **ChatListActivity.kt:** AIBottomSheet → OwlSettingsActivity (вместо Toast)
 
 ## [1.1.1.4] - 2026-07-17
 ### [AI] кнопка в списке чатов
