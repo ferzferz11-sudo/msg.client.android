@@ -272,14 +272,16 @@
             android:layout_marginTop="16dp" />
     </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/aiFab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="72dp"
-        android:src="@drawable/ic_ai"
-        app:tint="?attr/colorOnPrimary"
-        app:backgroundTint="?attr/colorPrimary"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="80dp"
+        android:text="AI"
+        android:textSize="11sp"
+        android:textColor="?attr/colorOnPrimary"
+        android:backgroundTint="?attr/colorPrimary"
+        app:cornerRadius="24dp"
         app:layout_constraintBottom_toTopOf="@id/addChatFab"
         app:layout_constraintEnd_toEndOf="parent"
         android:contentDescription="AI" />
