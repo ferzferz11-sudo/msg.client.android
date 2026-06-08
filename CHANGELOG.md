@@ -1,5 +1,12 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.1.5] - 2026-07-18
+### OWL Settings
+- **OwlSettingsActivity:** экран настроек OWL AI (API key input, model selector dropdown)
+- **activity_owl_settings.xml:** layout с MaterialToolbar, TextInput, AutoCompleteTextView, save button
+- **MessengerProto.kt:** добавлены `UpdateOwlSettingsRequestProto`, `UpdateOwlSettingsResponseProto`, `GetOwlSettingsRequestProto`, `GetOwlSettingsResponseProto`
+- **НЕ ДОДЕЛАНО:** getOwlSettings()/updateOwlSettings() в OwlGrpc.kt, регистрация в AndroidManifest, подключение из AIBottomSheet → будет в v1.1.1.6
+
 ## [1.1.1.4] - 2026-07-17
 ### [AI] кнопка в списке чатов
 - **[AI] FAB:** добавлена кнопка [AI] рядом с [+] в ChatListActivity

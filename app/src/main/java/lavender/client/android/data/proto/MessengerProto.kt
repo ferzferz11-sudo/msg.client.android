@@ -1142,3 +1142,27 @@ data class MarkNotificationReadRequestProto(
 data class MarkNotificationReadResponseProto(
     val success: Boolean = false
 )
+
+// ======= OWL Settings =======
+
+data class UpdateOwlSettingsRequestProto(
+    val chatId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateOwlSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetOwlSettingsRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class GetOwlSettingsResponseProto(
+    val apiKey: String = "",
+    val model: String = ""
+)
