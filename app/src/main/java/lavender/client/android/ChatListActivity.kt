@@ -345,7 +345,7 @@ class ChatListActivity : AppCompatActivity() {
 
             // Adjust AI FAB margin (above addChatFab)
             binding.aiFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = systemBars.bottom + (80 * resources.displayMetrics.density).toInt()
+                bottomMargin = systemBars.bottom + (40 * resources.displayMetrics.density).toInt()
                 marginEnd = (16 * resources.displayMetrics.density).toInt()
             }
             
