@@ -1,12 +1,22 @@
 # Lavender Messenger — Известные проблемы и задачи в работе
 
-**Последнее обновление:** 2026-07-16
-**Ветка:** feat/1.1.0.x
-**Версия:** 1.1.0.14
+**Последнее обновление:** 2026-07-18
+**Ветка:** feat/1.1.1.x
+**Версия:** 1.1.1.6
 
 ---
 
-## 🔴 В процессе
+## ✅ Сделано (v1.1.1.6)
+
+### Multiple OWL/Hermes chats with numbering
+- ✅ createOwlChat() unary RPC
+- ✅ OwlChatActivity: CHAT_ID from intent, create if empty
+- ✅ OwlSettingsActivity: CHAT_ID from intent
+- ✅ AIBottomSheet: shows existing numbered chats + create-new button
+- ✅ refreshAiChats(): filters owl/hermes from main chat list
+- ✅ MessengerProto: CreateOwlChatRequestProto, CreateOwlChatResponseProto
+- ✅ HermesGrpc: name parsing in CreateHermesSessionResponseProto
+- ✅ compileDebugKotlin passes
 
 ### 1. HermesChatActivity — полный функционал чата
 - **Стус:** в работе
