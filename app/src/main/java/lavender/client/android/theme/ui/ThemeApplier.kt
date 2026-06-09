@@ -42,6 +42,9 @@ object ThemeApplier {
             isAppearanceLightNavigationBars = isLightMode
         }
 
+        // v1.1.1.14: Ensure status bar color matches theme for AI screens
+        activity.window.statusBarColor = bgColor
+
         val root = activity.findViewById<View>(android.R.id.content)
         activity.window.decorView.setBackgroundColor(bgColor)
         root?.setBackgroundColor(bgColor)
@@ -227,7 +230,7 @@ object ThemeApplier {
         }
 
         // FABs
-        listOf(R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
+        listOf(R.id.aiFab, R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
             (activity.findViewById<View>(id) as? com.google.android.material.floatingactionbutton.FloatingActionButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)

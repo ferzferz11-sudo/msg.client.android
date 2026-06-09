@@ -269,10 +269,9 @@
                 android:id="@+id/typingText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="●●●"
-                android:textSize="14sp"
-                android:textColor="?attr/colorPrimary"
-                android:fontFamily="monospace" />
+                android:text=""
+                android:textSize="13sp"
+                android:textColor="?attr/colorPrimary" />
         </LinearLayout>
     </LinearLayout>
 

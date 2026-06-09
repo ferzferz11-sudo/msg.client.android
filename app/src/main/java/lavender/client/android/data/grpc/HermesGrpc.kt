@@ -83,55 +83,119 @@ fun chatWithOrchestrator(
     scope: CoroutineScope,
     onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
 ) {
-    val channel = RealGrpcClient.getChannel() ?: run { Log.w("HermesGrpc", "chatWithOrchestrator: channel is null"); return }
-    val methodDesc = MethodDescriptor.newBuilder<OrchestratorRequestProto, OrchestratorResponseProto>()
-        .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
-        .setFullMethodName("messenger.ChatService/ChatWithOrchestrator")
-        .setRequestMarshaller(OrchestratorRequestMarshaller())
-        .setResponseMarshaller(OrchestratorResponseMarshaller())
-        .build()
-
-    val request = OrchestratorRequestProto(
-        userId = userId,
-        sessionId = sessionId,
-        message = message,
-        agentId = agentId,
-        mode = mode
-    )
-
     scope.launch(Dispatchers.IO) {
-        try {
-            _hermesTyping.emit(true)
-            val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        var retryDelay = 3000L
+        val maxRetryDelay = 30000L
+        var attempt = 0
+        val maxRetries = 10
 
-            call.start(object : io.grpc.ClientCall.Listener<OrchestratorResponseProto>() {
-                override fun onMessage(message: OrchestratorResponseProto) {
-                    _hermesResponses.tryEmit(message)
-                    onResponse(message.token, message.finished, message.error.takeIf { it.isNotEmpty() }, message.agentId, message.agentName)
-                }
+        while (attempt < maxRetries && isActive) {
+            val channel = RealGrpcClient.getChannel()
+            if (channel == null || channel.isShutdown || channel.isTerminated) {
+                Log.w("HermesGrpc", "chatWithOrchestrator: channel dead, waiting ${retryDelay}ms...")
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                attempt++
+                continue
+            }
 
-                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    _hermesTyping.tryEmit(false)
-                    if (!status.isOk) {
-                        val errorResp = OrchestratorResponseProto(
-                            token = "",
-                            finished = true,
-                            error = status.description ?: "Connection error: ${status.code}",
-                            agentId = "",
-                            agentName = ""
-                        )
-                        _hermesResponses.tryEmit(errorResp)
-                        onResponse("", true, errorResp.error, "", "")
+            try {
+                val methodDesc = MethodDescriptor.newBuilder<OrchestratorRequestProto, OrchestratorResponseProto>()
+                    .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
+                    .setFullMethodName("messenger.ChatService/ChatWithOrchestrator")
+                    .setRequestMarshaller(OrchestratorRequestMarshaller())
+                    .setResponseMarshaller(OrchestratorResponseMarshaller())
+                    .build()
+
+                val request = OrchestratorRequestProto(
+                    userId = userId,
+                    sessionId = sessionId,
+                    message = message,
+                    agentId = agentId,
+                    mode = mode
+                )
+
+                _hermesTyping.emit(true)
+                val streamDone = kotlinx.coroutines.CompletableDeferred<Boolean>()
+                var hadError = false
+
+                val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+                call.start(object : io.grpc.ClientCall.Listener<OrchestratorResponseProto>() {
+                    override fun onMessage(message: OrchestratorResponseProto) {
+                        _hermesResponses.tryEmit(message)
+                        onResponse(message.token, message.finished, message.error.takeIf { it.isNotEmpty() }, message.agentId, message.agentName)
+                        // Reset retry on successful message
+                        retryDelay = 3000L
+                        attempt = 0
                     }
-                }
-            }, io.grpc.Metadata())
+                    override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                        _hermesTyping.tryEmit(false)
+                        if (!status.isOk) {
+                            Log.w("HermesGrpc", "chatWithOrchestrator closed: ${status.code} ${status.description}")
+                            hadError = true
+                            val errorResp = OrchestratorResponseProto(
+                                token = "",
+                                finished = true,
+                                error = status.description ?: "Connection error: ${status.code}",
+                                agentId = "",
+                                agentName = ""
+                            )
+                            _hermesResponses.tryEmit(errorResp)
+                            onResponse("", true, errorResp.error, "", "")
+                        }
+                        streamDone.complete(hadError)
+                    }
+                }, io.grpc.Metadata())
+                call.sendMessage(request)
+                call.halfClose()
+                call.request(Int.MAX_VALUE)
 
-            call.sendMessage(request)
-            call.halfClose()
-            call.request(Int.MAX_VALUE)
-        } catch (e: Exception) {
-            _hermesTyping.emit(false)
-            val errorResp = OrchestratorResponseProto(token = "", finished = true, error = e.message ?: "Unknown error")
+                val streamHadError = streamDone.await()
+                if (!streamHadError) {
+                    // Stream completed normally — no retry needed
+                    return@launch
+                }
+
+                // Stream had error — retry
+                attempt++
+                if (attempt < maxRetries) {
+                    Log.d("HermesGrpc", "Retrying chatWithOrchestrator in ${retryDelay}ms (attempt $attempt/$maxRetries)")
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                }
+
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("HermesGrpc", "chatWithOrchestrator error: ${e.message}")
+                _hermesTyping.tryEmit(false)
+                val errorResp = OrchestratorResponseProto(
+                    token = "",
+                    finished = true,
+                    error = e.message ?: "Unknown error",
+                    agentId = "",
+                    agentName = ""
+                )
+                _hermesResponses.tryEmit(errorResp)
+                onResponse("", true, errorResp.error, "", "")
+
+                attempt++
+                if (attempt < maxRetries) {
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                }
+            }
+        }
+
+        if (attempt >= maxRetries) {
+            Log.e("HermesGrpc", "chatWithOrchestrator: max retries exceeded")
+            val errorResp = OrchestratorResponseProto(
+                token = "",
+                finished = true,
+                error = "Connection lost after $maxRetries attempts",
+                agentId = "",
+                agentName = ""
+            )
             _hermesResponses.tryEmit(errorResp)
             onResponse("", true, errorResp.error, "", "")
         }
@@ -631,7 +695,7 @@ suspend fun createHermesSession(
             override fun stream(v: CreateHermesSessionResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
             override fun parse(s: java.io.InputStream): CreateHermesSessionResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var sessionId = ""; var success = false; var message = ""
+                var sessionId = ""; var success = false; var message = ""; var name = ""
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
@@ -639,10 +703,11 @@ suspend fun createHermesSession(
                         1 -> sessionId = cis.readString()  // field 1 = session_id (string)
                         2 -> success = cis.readBool()      // field 2 = success (bool)
                         3 -> message = cis.readString()    // field 3 = message (string)
+                        4 -> name = cis.readString()       // field 4 = name (string)
                         else -> cis.skipField(tag)
                     }
                 }
-                return CreateHermesSessionResponseProto(sessionId, success, message)
+                return CreateHermesSessionResponseProto(sessionId, success, message, name)
             }
         })
         .build()
@@ -831,4 +896,130 @@ suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseP
     // FUTURE — placeholder
     Log.d("HermesGrpc", "getRemoteAgentStatus: FUTURE — not yet implemented")
     return@withContext GetRemoteAgentStatusResponseProto()
+}
+
+// ======= Hermes Settings =======
+
+suspend fun getHermesSettings(sessionId: String, userId: String): GetHermesSettingsResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("HermesGrpc", "getHermesSettings: channel dead")
+        return@withContext GetHermesSettingsResponseProto()
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<GetHermesSettingsRequestProto, GetHermesSettingsResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GetHermesSettings")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetHermesSettingsRequestProto> {
+            override fun stream(v: GetHermesSettingsRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.sessionId.isNotEmpty()) cos.writeString(1, v.sessionId)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GetHermesSettingsRequestProto = GetHermesSettingsRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetHermesSettingsResponseProto> {
+            override fun stream(v: GetHermesSettingsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetHermesSettingsResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var apiKey = ""; var model = ""; var isUsingCustomKey = false
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> apiKey = cis.readString()
+                        2 -> model = cis.readString()
+                        3 -> isUsingCustomKey = cis.readBool()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetHermesSettingsResponseProto(apiKey, model, isUsingCustomKey)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<GetHermesSettingsResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetHermesSettingsResponseProto>() {
+        override fun onMessage(message: GetHermesSettingsResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(GetHermesSettingsResponseProto())
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetHermesSettingsRequestProto(sessionId = sessionId, userId = userId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: GetHermesSettingsResponseProto()
+}
+
+suspend fun updateHermesSettings(sessionId: String, userId: String, apiKey: String, model: String): UpdateHermesSettingsResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("HermesGrpc", "updateHermesSettings: channel dead")
+        return@withContext UpdateHermesSettingsResponseProto(success = false, message = "Connection lost")
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<UpdateHermesSettingsRequestProto, UpdateHermesSettingsResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/UpdateHermesSettings")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<UpdateHermesSettingsRequestProto> {
+            override fun stream(v: UpdateHermesSettingsRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.sessionId.isNotEmpty()) cos.writeString(1, v.sessionId)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+                if (v.apiKey.isNotEmpty()) cos.writeString(3, v.apiKey)
+                if (v.model.isNotEmpty()) cos.writeString(4, v.model)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): UpdateHermesSettingsRequestProto = UpdateHermesSettingsRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<UpdateHermesSettingsResponseProto> {
+            override fun stream(v: UpdateHermesSettingsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): UpdateHermesSettingsResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var message = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> message = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return UpdateHermesSettingsResponseProto(success, message)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<UpdateHermesSettingsResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<UpdateHermesSettingsResponseProto>() {
+        override fun onMessage(message: UpdateHermesSettingsResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                UpdateHermesSettingsResponseProto(success = false, message = "Connection error: ${status.code}")
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(UpdateHermesSettingsRequestProto(sessionId = sessionId, userId = userId, apiKey = apiKey, model = model))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: UpdateHermesSettingsResponseProto(success = false, message = "Timeout")
 }

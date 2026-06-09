@@ -1,15 +1,22 @@
 package lavender.client.android
 
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.animation.doOnEnd
 import androidx.core.content.edit
 import lavender.client.android.data.session.SessionManager
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -36,6 +43,99 @@ class SplashActivity : AppCompatActivity() {
 
         Log.d("SplashActivity", "roomIdFromPush: $roomIdFromPush, callIdFromPush: $callIdFromPush")
 
+        // Show splash animation, then navigate
+        animateAndNavigate(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+    }
+
+    private fun animateAndNavigate(
+        shouldProceed: Boolean,
+        roomIdFromPush: String?,
+        callIdFromPush: String?,
+        session: lavender.client.android.data.session.UserSession,
+        prefs: android.content.SharedPreferences
+    ) {
+        // Create a simple splash view programmatically
+        val splashView = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(resources.getColor(R.color.splash_background, null))
+            layoutParams = android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // Logo image from drawable (same as auth sheet)
+        val logoImage = ImageView(this).apply {
+            setImageResource(R.drawable.ic_notification_logo)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            alpha = 0f
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                (68 * resources.displayMetrics.density).toInt(),
+                (68 * resources.displayMetrics.density).toInt(),
+                android.view.Gravity.CENTER
+            ).apply {
+                bottomMargin = (20 * resources.displayMetrics.density).toInt()
+            }
+        }
+
+        // App name — localized
+        val appNameText = TextView(this).apply {
+            val lang = prefs.getString("language", "ru")
+            text = if (lang == "en") "Lava" else "Лава"
+            textSize = 28f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(resources.getColor(R.color.lavender_mist, null))
+            gravity = android.view.Gravity.CENTER
+            alpha = 0f
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            ).apply {
+                topMargin = 60
+            }
+        }
+
+        splashView.addView(logoImage)
+        splashView.addView(appNameText)
+        setContentView(splashView)
+
+        // Animate logo fade-in + scale
+        logoImage.animate()
+            .alpha(1f)
+            .scaleX(1.1f)
+            .scaleY(1.1f)
+            .setDuration(500)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .withEndAction {
+                // Then scale back + show app name
+                logoImage.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(300)
+                    .withEndAction {
+                        appNameText.animate()
+                            .alpha(1f)
+                            .setDuration(300)
+                            .withEndAction {
+                                // Wait a bit, then navigate
+                                splashView.postDelayed({
+                                    navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+                                }, 400)
+                            }
+                            .start()
+                    }
+                    .start()
+            }
+            .start()
+    }
+
+    private fun navigateToTarget(
+        shouldProceed: Boolean,
+        roomIdFromPush: String?,
+        callIdFromPush: String?,
+        session: lavender.client.android.data.session.UserSession,
+        prefs: android.content.SharedPreferences
+    ) {
         val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {
@@ -48,22 +148,21 @@ class SplashActivity : AppCompatActivity() {
                     }
                 }
                 roomIdFromPush != null -> {
-                    // Check if it's a conference signal or just a message
                     val isConference = intent.getStringExtra("IS_CONFERENCE")?.toBoolean() ?: false
                     if (isConference) {
-                         Log.d("SplashActivity", "Directing to ConferenceLobbyActivity")
-                         Intent(this, ConferenceLobbyActivity::class.java).apply {
+                        Log.d("SplashActivity", "Directing to ConferenceLobbyActivity")
+                        Intent(this, ConferenceLobbyActivity::class.java).apply {
                             putExtra("ROOM_ID", roomIdFromPush)
                             putExtra("from_notification", true)
-                         }
+                        }
                     } else {
-                         Log.d("SplashActivity", "Directing to NewChatActivity")
-                         Intent(this, NewChatActivity::class.java).apply {
+                        Log.d("SplashActivity", "Directing to NewChatActivity")
+                        Intent(this, NewChatActivity::class.java).apply {
                             putExtra("USERNAME", session.username)
                             putExtra("SERVER_ADDRESS", prefs.getString("server_address", ""))
                             putExtra("ROOM_ID", roomIdFromPush)
                             putExtra("from_notification", true)
-                         }
+                        }
                     }
                 }
                 else -> {
@@ -76,10 +175,11 @@ class SplashActivity : AppCompatActivity() {
             Intent(this, ChatListActivity::class.java)
         }
 
-        // Пробрасываем все остальные флаги и данные (flags, extras)
         intent.extras?.let { targetIntent.putExtras(it) }
 
         startActivity(targetIntent)
         finish()
+        // Fade out transition
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 }

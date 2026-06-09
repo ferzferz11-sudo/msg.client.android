@@ -124,6 +124,8 @@ message ChatInfo {
   bool is_secret = 15;
   string peer_public_key = 16;
   bool e2ee_ready = 17;
+  string active_agent_id = 20;  // For hermes sessions: current active agent
+  string agent_mode = 21;       // For hermes sessions: single/parallel/pipeline
 }
 
 message GetChatsRequest {
@@ -696,8 +698,13 @@ service ChatService {
 
   // OWL AI Assistant
   rpc ChatWithOWL(OWLRequest) returns (stream OWLResponse);
+  rpc CreateOwlChat(CreateOwlChatRequest) returns (CreateOwlChatResponse);
+  rpc DeleteOwlChat(DeleteOwlChatRequest) returns (DeleteOwlChatResponse);
+  rpc GetOwlHistory(GetOwlHistoryRequest) returns (GetOwlHistoryResponse);
+  rpc UpdateOwlSettings(UpdateOwlSettingsRequest) returns (UpdateOwlSettingsResponse);
+  rpc GetOwlSettings(GetOwlSettingsRequest) returns (GetOwlSettingsResponse);
 
-  // ======= Hermes Multi-Agent Orchestrator =======
+  // Hermes Multi-Agent Orchestrator
   rpc ChatWithOrchestrator(OrchestratorRequest) returns (stream OrchestratorResponse);
   rpc GetOrchestratorHistory(GetOrchestratorHistoryRequest) returns (GetOrchestratorHistoryResponse);
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
@@ -711,6 +718,41 @@ service ChatService {
   rpc ListRemoteAgents(ListRemoteAgentsRequest) returns (ListRemoteAgentsResponse);
   rpc DeployAgentTask(DeployAgentTaskRequest) returns (DeployAgentTaskResponse);
   rpc GetRemoteAgentStatus(GetRemoteAgentStatusRequest) returns (GetRemoteAgentStatusResponse);
+
+  // AI Chats management (unified list for OWL + Hermes)
+  rpc GetAIChats(GetAIChatsRequest) returns (GetAIChatsResponse);
+  rpc RenameAIChat(RenameAIChatRequest) returns (RenameAIChatResponse);
+
+  // Hermes AI Pipeline (RAG + LLM + Tool Calling)
+  rpc ChatWithPipeline(PipelineRequest) returns (stream PipelineResponse);
+
+  // Bot Commands
+  rpc ProcessBotCommand(BotCommandRequest) returns (BotCommandResponse);
+  rpc GetBotCommands(GetBotCommandsRequest) returns (GetBotCommandsResponse);
+  rpc GetOWLStatus(OWLStatusRequest) returns (OWLStatusResponse);
+
+  // Server Notifications
+  rpc SubscribeNotifications(SubscribeNotificationsRequest) returns (stream ServerNotification);
+  rpc GetNotificationHistory(GetNotificationHistoryRequest) returns (GetNotificationHistoryResponse);
+  rpc MarkNotificationsRead(MarkNotificationReadRequest) returns (MarkNotificationReadResponse);
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
+}
+
+// ======= AI Pipeline Messages =======
+
+message PipelineRequest {
+  string user_id = 1;
+  string session_id = 2;
+  string message = 3;
+  repeated bytes images = 4; // Raw image bytes for multimodal RAG
+  string model_hint = 5;     // "openrouter/auto", "local/hermes", etc.
+}
+
+message PipelineResponse {
+  string token = 1;
+  bool finished = 2;
+  string error = 3;
+  bool has_rag_context = 4;  // Indicates if RAG context was used
 }
 
 // ======= Secret Chat Messages =======
@@ -751,10 +793,71 @@ message GetSecretChatKeyResponse {
 
 // ======= OWL AI Assistant =======
 
+message CreateOwlChatRequest {
+  string user_id = 1;
+  string name = 2;
+}
+
+message CreateOwlChatResponse {
+  string chat_id = 1;
+  string name = 4;
+  bool success = 2;
+  string message = 3;
+}
+
+message DeleteOwlChatRequest {
+  string chat_id = 1;
+  string user_id = 2;
+}
+
+message DeleteOwlChatResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetOwlHistoryRequest {
+  string chat_id = 1;
+  string user_id = 2;
+}
+
+message OwlHistoryMessage {
+  string role = 1;
+  string content = 2;
+  string created_at = 3;
+}
+
+message GetOwlHistoryResponse {
+  repeated OwlHistoryMessage messages = 1;
+}
+
+message UpdateOwlSettingsRequest {
+  string chat_id = 1;
+  string user_id = 2;
+  string api_key = 3;
+  string model = 4;
+}
+
+message GetOwlSettingsRequest {
+  string chat_id = 1;
+  string user_id = 2;
+}
+
+message GetOwlSettingsResponse {
+  string api_key = 1;
+  string model = 2;
+}
+
+message UpdateOwlSettingsResponse {
+  bool success = 1;
+  string message = 2;
+}
+
 message OWLRequest {
   string user_id = 1;
   string message = 2;
   string session_id = 3;
+  string model = 4;
+  string api_key = 5;
 }
 
 message OWLResponse {
@@ -769,47 +872,51 @@ message OrchestratorRequest {
   string user_id = 1;
   string session_id = 2;
   string message = 3;
-  string agent_id = 4;
-  string mode = 5;
+  string agent_id = 4; // Optional: force specific agent
 }
 
 message OrchestratorResponse {
   string token = 1;
   bool finished = 2;
   string error = 3;
-  string agent_id = 4;
-  string agent_name = 5;
+}
+
+message HermesChatMessage {
+  string role = 1; // "user", "assistant", "system"
+  string content = 2;
+  string created_at = 3;
 }
 
 message GetOrchestratorHistoryRequest {
-  string session_id = 1;
-  int32 limit = 2;
-}
-
-message OrchestratorHistoryMessage {
-  string role = 1;
-  string content = 2;
-  string agent_id = 3;
-  string agent_name = 4;
-  string created_at = 5;
+  string user_id = 1;
+  string session_id = 2;
 }
 
 message GetOrchestratorHistoryResponse {
-  repeated OrchestratorHistoryMessage messages = 1;
-}
-
-message ListAgentsRequest {
-  string user_id = 1;
+  repeated HermesChatMessage messages = 1;
 }
 
 message AgentInfo {
   string id = 1;
   string name = 2;
   string description = 3;
-  string role = 4;
-  bool is_preset = 5;
-  string icon = 6;
-  string model = 7;
+  bool is_preset = 4;
+  string system_prompt = 5;
+  string model = 6;
+  int32 max_tokens = 7;
+}
+
+message AgentPresetInfo {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+  string description = 4;
+  string icon = 5; // emoji
+  int32 max_tokens = 6;
+}
+
+message ListAgentsRequest {
+  string user_id = 1;
 }
 
 message ListAgentsResponse {
@@ -818,15 +925,6 @@ message ListAgentsResponse {
 
 message ListAgentPresetsRequest {}
 
-message AgentPresetInfo {
-  string id = 1;
-  string name = 2;
-  string role = 3;
-  string description = 4;
-  string icon = 5;
-  int32 max_tokens = 6;
-}
-
 message ListAgentPresetsResponse {
   repeated AgentPresetInfo presets = 1;
 }
@@ -834,17 +932,16 @@ message ListAgentPresetsResponse {
 message CreateAgentRequest {
   string user_id = 1;
   string preset_id = 2;
-  string custom_name = 3;
-  string custom_prompt = 4;
+  string name = 3;
+  string system_prompt = 4;
   string model = 5;
   int32 max_tokens = 6;
 }
 
 message CreateAgentResponse {
-  string agent_id = 1;
-  bool success = 2;
-  string message = 3;
-  AgentInfo agent = 4;
+  bool success = 1;
+  string agent_id = 2;
+  string error = 3;
 }
 
 message UpdateAgentRequest {
@@ -858,7 +955,7 @@ message UpdateAgentRequest {
 
 message UpdateAgentResponse {
   bool success = 1;
-  string message = 2;
+  string error = 2;
 }
 
 message DeleteAgentRequest {
@@ -868,7 +965,7 @@ message DeleteAgentRequest {
 
 message DeleteAgentResponse {
   bool success = 1;
-  string message = 2;
+  string error = 2;
 }
 
 message ListUserAgentsRequest {
@@ -881,14 +978,14 @@ message ListUserAgentsResponse {
 
 message CreateHermesSessionRequest {
   string user_id = 1;
-  string agent_id = 2;
-  string mode = 3;
+  string name = 2;
 }
 
 message CreateHermesSessionResponse {
-  string session_id = 1;
-  bool success = 2;
-  string message = 3;
+  bool success = 1;
+  string session_id = 2;
+  string name = 4;
+  string error = 3;
 }
 
 message DeleteHermesSessionRequest {
@@ -898,13 +995,7 @@ message DeleteHermesSessionRequest {
 
 message DeleteHermesSessionResponse {
   bool success = 1;
-  string message = 2;
-}
-
-// ======= Remote Agent messages (FUTURE) =======
-
-message ListRemoteAgentsRequest {
-  string filter_status = 1;
+  string error = 2;
 }
 
 message RemoteAgentInfo {
@@ -919,6 +1010,8 @@ message RemoteAgentInfo {
   string last_heartbeat = 9;
 }
 
+message ListRemoteAgentsRequest {}
+
 message ListRemoteAgentsResponse {
   repeated RemoteAgentInfo agents = 1;
 }
@@ -932,9 +1025,9 @@ message DeployAgentTaskRequest {
 }
 
 message DeployAgentTaskResponse {
-  string task_id = 1;
-  bool success = 2;
-  string message = 3;
+  bool success = 1;
+  string task_id = 2;
+  string error = 3;
 }
 
 message GetRemoteAgentStatusRequest {
@@ -942,11 +1035,121 @@ message GetRemoteAgentStatusRequest {
 }
 
 message GetRemoteAgentStatusResponse {
+  string status = 1;
+  int32 active_tasks = 2;
+  string last_heartbeat = 3;
+}
+
+// ======= AI Chats Management =======
+
+message GetAIChatsRequest {
+  string user_id = 1;
+}
+
+message AIChatInfo {
   string id = 1;
   string name = 2;
-  string status = 3;
-  string host = 4;
-  repeated string capabilities = 5;
-  int32 active_tasks = 6;
-  string last_heartbeat = 7;
+  string type = 3; // "owl" or "hermes"
+  string created_at = 4;
+}
+
+message GetAIChatsResponse {
+  repeated AIChatInfo chats = 1;
+}
+
+message RenameAIChatRequest {
+  string chat_id = 1;
+  string user_id = 2;
+  string new_name = 3;
+}
+
+message RenameAIChatResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// ======= Bot Commands =======
+
+message BotCommandRequest {
+  string user_id = 1;
+  string username = 2;
+  string chat_id = 3;
+  string command = 4; // "/status", "/deploy", "/help"
+  repeated string args = 5;
+}
+
+message BotCommandResponse {
+  bool success = 1;
+  string response_text = 2;
+  bool is_error = 3;
+  string error_message = 4;
+}
+
+message BotCommandInfo {
+  string command = 1; // "/status"
+  string description = 2;
+  string usage = 3;
+  string category = 4; // "server", "ai", "system"
+}
+
+message GetBotCommandsRequest {
+  string user_id = 1;
+}
+
+message GetBotCommandsResponse {
+  repeated BotCommandInfo commands = 1;
+}
+
+message OWLStatusRequest {
+  string user_id = 1;
+}
+
+message OWLStatusResponse {
+  bool available = 1;
+  string model = 2;
+  int32 queue_length = 3;
+  string status = 4; // "ready", "busy", "offline"
+}
+
+// ======= Server Notifications =======
+
+message ServerNotification {
+  string id = 1;
+  string type = 2; // "deploy", "error", "info", "warning"
+  string title = 3;
+  string message = 4;
+  string timestamp = 5;
+  map<string, string> metadata = 6;
+  bool is_read = 7;
+}
+
+message SubscribeNotificationsRequest {
+  string user_id = 1;
+  repeated string types = 2; // filter by types
+}
+
+message GetNotificationHistoryRequest {
+  string user_id = 1;
+  int32 limit = 2;
+}
+
+message GetNotificationHistoryResponse {
+  repeated ServerNotification notifications = 1;
+}
+
+message MarkNotificationReadRequest {
+  string user_id = 1;
+  repeated string notification_ids = 2;
+}
+
+message MarkNotificationReadResponse {
+  bool success = 1;
+}
+
+message GetUnreadCountRequest {
+  string user_id = 1;
+}
+
+message GetUnreadCountResponse {
+  int32 count = 1;
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  activity_owl_chat.xml — чат с OWL AI ассистентом.
+  Использует ChatWidget как основной компонент.
+  ChatWidget содержит свой собственный toolbar.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.owl.OwlChatActivity">
+
+    <lavender.client.android.ui.chat.widget.ChatWidget
+        android:id="@+id/chatWidget"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:elevation="10dp"
+        tools:visibility="gone" />
+
+</FrameLayout>

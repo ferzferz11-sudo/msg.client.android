@@ -17,6 +17,7 @@ import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
 
@@ -24,6 +25,7 @@ enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
     READY,
+    RECONNECTING,  // Transient state: channel lost, auto-retry in progress
     FAILED
 }
 
@@ -242,12 +244,11 @@ object RealGrpcClient {
         val channelAlive = channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY
 
         // If channel is alive and address matches, keep it — active streams must not be killed.
-        // Force reconnect should only rebuild when channel is dead or address changed.
         if (addressMatch && channelAlive) {
             Log.d(TAG, "Connection already READY (force=$forceReconnect), keeping active streams")
             return
         }
-        
+
         // CRITICAL: Do not reset channel if a call is in progress
         if (lavender.client.android.data.calls.CallManager.currentCall.value != null) {
             Log.w(TAG, "Call in progress, preventing channel reset")
@@ -256,11 +257,14 @@ object RealGrpcClient {
 
         appContext = context?.applicationContext
         currentServerAddress = serverAddress
-        _isSuperAdmin.value = false // Reset status for new connection
+        _isSuperAdmin.value = false
         loadDeletedMessages()
 
         Log.d(TAG, "Connecting to $serverAddress:$port (TLS: $useTls)")
-        _connectionStatus.value = ConnectionStatus.CONNECTING
+        // Use RECONNECTING for transient state (was already connected before)
+        val wasConnected = _connectionStatus.value == ConnectionStatus.READY ||
+                           _connectionStatus.value == ConnectionStatus.RECONNECTING
+        _connectionStatus.value = if (wasConnected) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING
 
         try {
             val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
@@ -269,38 +273,56 @@ object RealGrpcClient {
             } else {
                 builder.usePlaintext()
             }
-            
-            // Adjust keep-alive to be more robust on mobile networks and match server params
-            builder.keepAliveTime(15, TimeUnit.SECONDS) // Send ping every 15s (server permits min 5s)
-            builder.keepAliveTimeout(10, TimeUnit.SECONDS) // Wait 10s for ping ack
+
+            // Aggressive keep-alive for fast detection of dead connections on mobile
+            builder.keepAliveTime(10, TimeUnit.SECONDS)    // Ping every 10s
+            builder.keepAliveTimeout(5, TimeUnit.SECONDS)   // 5s to detect dead connection
             builder.keepAliveWithoutCalls(true)
+            // Max idle — allow server to clean up (server MaxConnectionAge = 30min)
+            builder.maxInboundMessageSize(64 * 1024 * 1024)
 
             channel?.shutdownNow()
             val newChannel = builder.build()
             channel = newChannel
-            
-            // Note: In gRPC READY doesn't mean server is reached yet,
-            // but for our UI we'll use it to mean "Channel is active"
+
             _connectionStatus.value = ConnectionStatus.READY
+            resetReconnectBackoff()
             Log.d(TAG, "Channel built successfully to $serverAddress")
-            
+
             // Auto-resume last chat if it exists
-            lastChatRequest?.let { 
+            lastChatRequest?.let {
                 Log.d(TAG, "Resuming last chat for ${it.u}")
                 startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
-            _connectionStatus.value = ConnectionStatus.FAILED
+            _connectionStatus.value = ConnectionStatus.RECONNECTING
             _error.value = e.message
-            
-            // Retry connection after delay
-            scope.launch {
-                delay(10000)
-                Log.d(TAG, "Retrying connection to $serverAddress...")
-                connect(serverAddress, useTls, port, context)
-            }
+
+            // Graceful retry with exponential backoff
+            scheduleReconnect(serverAddress, useTls, port, context)
         }
+    }
+
+    private var reconnectJob: Job? = null
+
+    private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            val delayMs = reconnectDelayMs.coerceAtMost(30000L)
+            Log.d(TAG, "Scheduling reconnect in ${delayMs}ms...")
+            delay(delayMs)
+            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
+            Log.d(TAG, "Retrying connection to $serverAddress...")
+            connect(serverAddress, useTls, port, context)
+        }
+    }
+
+    private var reconnectDelayMs = 5000L
+
+    // Reset reconnect backoff on successful connection
+    private fun resetReconnectBackoff() {
+        reconnectDelayMs = 5000L
     }
 
     fun reconnect() {
@@ -312,6 +334,9 @@ object RealGrpcClient {
     }
 
     fun disconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
+        resetReconnectBackoff()
         channel?.shutdown()
         channel = null
         requestObserver = null
@@ -740,27 +765,27 @@ object RealGrpcClient {
                     }
                 }
 
-                _connectionStatus.value = ConnectionStatus.FAILED
-                
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
+
                 // Clear observer immediately to prevent broken stream reuse
                 requestObserver = null
-                
+
                 if (isRetrying) return // Already in retry loop
 
                 scope.launch {
                     isRetrying = true
-                    var retryDelay = 5000L // Start with 5 seconds to not spam server
-                    val maxRetryDelay = 60000L // Max 60 seconds
+                    var retryDelay = 3000L // Start with 3 seconds for stream reconnect
+                    val maxRetryDelay = 30000L // Max 30 seconds for streams
                     var retryCount = 0
-                    val maxRetries = 100 // Almost indefinite retries while app is active
-                    
+                    val maxRetries = 50
+
                     try {
                         while (retryCount < maxRetries && requestObserver == null) {
                             delay(retryDelay)
-                            
-                            // Don't retry if app is in background for too long or channel is gone
+
+                            // Don't retry if app is in background for too long
                             if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
-                                 Log.d(TAG, "App in background for too long, stopping retry loop")
+                                 Log.d(TAG, "App in background for too long, stopping stream retry loop")
                                  break
                             }
 
@@ -770,27 +795,26 @@ object RealGrpcClient {
                                 currentServerAddress?.let { connect(it, forceReconnect = true) }
                             }
 
-                            Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1})...")
-                            
+                            Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1}, delay=${retryDelay}ms)...")
+
                             lastChatRequest?.let { req ->
                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                                // If connection was successful, break out of retry loop
                                 if (_connectionStatus.value == ConnectionStatus.READY) {
                                     Log.d(TAG, "Stream reconnection successful")
                                     return@launch
                                 }
                             }
-                            
+
                             retryCount++
-                            // Slower exponential backoff for long-running issues
-                            retryDelay = (retryDelay * 2.0).toLong().coerceAtMost(maxRetryDelay)
+                            retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
                         }
                     } finally {
                         isRetrying = false
                     }
-                    
+
                     if (retryCount >= maxRetries) {
                         Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
+                        _connectionStatus.value = ConnectionStatus.FAILED
                         _error.value = "Connection lost. Please check your internet connection."
                     }
                 }
@@ -1698,6 +1722,32 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteChat")
+            .setRequestMarshaller(DeleteChatRequestMarshaller())
+            .setResponseMarshaller(DeleteChatResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
+            override fun onMessage(message: DeleteChatResponseProto) {
+                if (message.success) {
+                    scope.launch(Dispatchers.IO) {
+                        db()?.messageDao()?.clearRoom(cid)
+                        Log.d(TAG, "Cleared local messages for deleted chat: $cid")
+                    }
+                }
+                cb(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
+        }, io.grpc.Metadata())
+        call.sendMessage(DeleteChatRequestProto(cid, username, userId))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateDirectChatRequestProto, CreateDirectChatResponseProto>()
@@ -1968,6 +2018,66 @@ object RealGrpcClient {
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllChatsRequestProto())
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAIChatsRequestProto, GetAIChatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetAIChats")
+            .setRequestMarshaller(GetAIChatsRequestMarshaller())
+            .setResponseMarshaller(GetAIChatsResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<GetAIChatsResponseProto>() {
+            override fun onMessage(message: GetAIChatsResponseProto) {
+                Log.d(TAG, "GetAIChats: received ${message.chats.size} chats")
+                callback(message.chats.map { proto ->
+                    AIChatInfo(
+                        id = proto.id,
+                        name = proto.name,
+                        type = proto.type,
+                        createdAt = proto.createdAt
+                    )
+                })
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    Log.e(TAG, "GetAIChats failed: ${status.code} - ${status.description}")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(GetAIChatsRequestProto().apply { this.userId = userId })
+        call.halfClose()
+        call.request(1)
+    }
+
+    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
+        val currentChannel = channel ?: return
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RenameAIChatRequestProto, RenameAIChatResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/RenameAIChat")
+            .setRequestMarshaller(RenameAIChatRequestMarshaller())
+            .setResponseMarshaller(RenameAIChatResponseMarshaller())
+            .build()
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RenameAIChatResponseProto>() {
+            override fun onMessage(message: RenameAIChatResponseProto) {
+                callback(message.success, message.error)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Unknown error")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(RenameAIChatRequestProto().apply {
+            this.chatId = chatId
+            this.userId = userId
+            this.newName = newName
+        })
         call.halfClose()
         call.request(1)
     }
@@ -3218,4 +3328,110 @@ class CallMessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<CallMessa
 
     // Flag to control E2EE support based on client version
     var isE2EEMessageEnabled: Boolean = true
+}
+
+// ======= AI Chats Marshallers =======
+
+class GetAIChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAIChatsRequestProto> {
+    override fun stream(v: GetAIChatsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAIChatsRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> userId = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetAIChatsRequestProto(userId)
+    }
+}
+
+class GetAIChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAIChatsResponseProto> {
+    override fun stream(v: GetAIChatsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIChatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val chats = mutableListOf<AIChatInfoProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
+                val len = cis.readUInt32()
+                val b = cis.readRawBytes(len)
+                val inner = com.google.protobuf.CodedInputStream.newInstance(b)
+                var id = ""; var name = ""; var type = ""; var createdAt = ""
+                var isUsingCustomKey = false; var model = ""
+                while (!inner.isAtEnd) {
+                    val t2 = inner.readTag()
+                    if (t2 == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) {
+                        1 -> id = inner.readString()
+                        2 -> name = inner.readString()
+                        3 -> type = inner.readString()
+                        4 -> createdAt = inner.readString()
+                        5 -> isUsingCustomKey = inner.readBool()
+                        6 -> model = inner.readString()
+                        else -> inner.skipField(t2)
+                    }
+                }
+                chats.add(AIChatInfoProto(id, name, type, createdAt, isUsingCustomKey, model))
+            } else {
+                cis.skipField(tag)
+            }
+        }
+        return GetAIChatsResponseProto(chats)
+    }
+}
+
+class RenameAIChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RenameAIChatRequestProto> {
+    override fun stream(v: RenameAIChatRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+        if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.newName.isNotEmpty()) cos.writeString(3, v.newName)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RenameAIChatRequestProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var chatId = ""; var userId = ""; var newName = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> chatId = cis.readString()
+                2 -> userId = cis.readString()
+                3 -> newName = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RenameAIChatRequestProto(chatId, userId, newName)
+    }
+}
+
+class RenameAIChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RenameAIChatResponseProto> {
+    override fun stream(v: RenameAIChatResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RenameAIChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var error = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> error = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RenameAIChatResponseProto(success, error)
+    }
 }

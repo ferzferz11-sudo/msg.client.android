@@ -16,10 +16,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.data.grpc.getHermesSettings
 import lavender.client.android.data.models.AgentInfo
 import lavender.client.android.data.models.HermesMessage
 import lavender.client.android.data.session.SessionManager
@@ -65,7 +64,7 @@ class HermesChatActivity : AppCompatActivity() {
         setContentView(R.layout.activity_hermes_chat)
 
         chatId = intent.getStringExtra("CHAT_ID") ?: ""
-        userId = SessionManager.session.value.username
+        userId = SessionManager.session.value.userId
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(HermesChatViewModel::class.java)
@@ -78,7 +77,7 @@ class HermesChatActivity : AppCompatActivity() {
         setupInput()
         setupMentionListener()
         observeState()
-        ThemeUi.bind(this, userId)
+        ThemeUi.bind(this, SessionManager.session.value.username)
 
         // Handle window insets
         val rootView = findViewById<View>(android.R.id.content)
@@ -110,6 +109,7 @@ class HermesChatActivity : AppCompatActivity() {
             val mode = intent.getStringExtra("AGENT_MODE") ?: "single"
             viewModel.setExistingSession(chatId, userId, agentId, mode)
             viewModel.loadHistory()
+            loadChatSettings()
         }
 
         intent.getStringExtra("PREFILL_MESSAGE")?.let {
@@ -207,19 +207,7 @@ class HermesChatActivity : AppCompatActivity() {
                 return@setOnSendMessageListener
             }
 
-            // Add user message immediately
-            val userMessage = ChatMessageItem(
-                id = java.util.UUID.randomUUID().toString(),
-                content = text,
-                senderId = userId,
-                senderName = "Вы",
-                isCurrentUser = true,
-                timestamp = System.currentTimeMillis()
-            )
-            adapter.submitList(adapter.currentList + userMessage)
-            chatWidget.scrollToBottom()
-
-            // Send via ViewModel
+            // Send via ViewModel — it handles user message + streaming
             val currentAgent = viewModel.currentAgent.value
             viewModel.sendMessage(
                 text = text,
@@ -230,22 +218,29 @@ class HermesChatActivity : AppCompatActivity() {
 
     private fun showCommandMenu() {
         val commands = listOf(
-            HermesCommand("/status", "Get current agent status")
+            lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
+                command = "/help",
+                description = "Показать справку"
+            ),
+            lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
+                command = "/status",
+                description = "Статус агента"
+            )
         )
 
-        val dialog = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_hermes_commands, null)
-        val recyclerView = view.findViewById<RecyclerView>(R.id.commandsRecyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = HermesCommandAdapter(commands) { command ->
-            chatWidget.messageInput.setText(command.command)
-            dialog.dismiss()
-        }
-        dialog.setContentView(view)
-        dialog.show()
+        val sheet = lavender.client.android.ui.widget.CommandBottomSheet(
+            context = this,
+            commands = commands,
+            onCommandSelected = { cmd ->
+                chatWidget.messageInput.setText(cmd.command + " ")
+                chatWidget.messageInput.setSelection(cmd.command.length + 1)
+            }
+        )
+        sheet.buildAndShow()
     }
 
-    // ===== Mention logic =====
+    // Keep HermesCommand and HermesCommandAdapter for backward compat
+    data class HermesCommand(val command: String, val description: String)
 
     private fun setupMentionListener() {
         // Track @ in input
@@ -370,6 +365,11 @@ class HermesChatActivity : AppCompatActivity() {
                         if (chatId.isNotEmpty() && it.id.isNotEmpty()) {
                             viewModel.loadHistory()
                         }
+                        // Load settings when session is available
+                        if (it.id.isNotEmpty()) {
+                            chatId = it.id
+                            loadChatSettings()
+                        }
                     }
                 }
             }
@@ -445,6 +445,23 @@ class HermesChatActivity : AppCompatActivity() {
     }
 
     // ===== Public API =====
+
+    private fun loadChatSettings() {
+        lifecycleScope.launch {
+            try {
+                val settings = getHermesSettings(chatId, userId)
+                val info = if (settings.isUsingCustomKey) {
+                    if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
+                } else {
+                    "Общий ключ · 20 запросов/час"
+                }
+                chatWidget.setToolbarInfo(info, true)
+                android.util.Log.d("HermesChatActivity", "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model}")
+            } catch (e: Exception) {
+                android.util.Log.e("HermesChatActivity", "Failed to load chat settings", e)
+            }
+        }
+    }
 
     fun addAgent(agent: AgentInfo) {
         if (agents.none { it.id == agent.id }) {

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
@@ -168,6 +169,14 @@ object GrpcClient {
         realGrpcClient.getAllChats(callback)
     }
 
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
+        realGrpcClient.getAIChats(userId, callback)
+    }
+
+    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.renameAIChat(chatId, userId, newName, callback)
+    }
+
     fun updateUsername(oldUsername: String, newUsername: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.updateUsername(oldUsername, newUsername, callback)
     }
@@ -222,6 +231,11 @@ object GrpcClient {
 
     fun deleteChat(chatId: String, requesterUsername: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.deleteChat(chatId, requesterUsername, callback)
+    }
+
+    // Overload with userId for AI chats
+    fun deleteChat(chatId: String, userId: String, username: String, callback: (Boolean, String) -> Unit) {
+        realGrpcClient.deleteChatWithUserId(chatId, userId, username, callback)
     }
 
     fun requestPasswordReset(email: String, callback: (Boolean, String) -> Unit) {
@@ -399,11 +413,34 @@ object GrpcClient {
         )
     }
 
-    // StateFlow для Hermес ответов
+    // StateFlow для Hermes ответов
     val hermesResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.OrchestratorResponseProto> =
         lavender.client.android.data.grpc.hermesResponses
     val hermesTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
         lavender.client.android.data.grpc.hermesTyping
+
+    // StateFlow для OWL ответов (отдельный поток от Hermes)
+    val owlResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.OwlResponseProto> =
+        lavender.client.android.data.grpc.owlResponses
+    val owlTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
+        lavender.client.android.data.grpc.owlTyping
+
+    // Server Notifications
+    val serverNotifications: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.ServerNotificationProto> =
+        lavender.client.android.data.grpc.serverNotifications
+
+    fun subscribeNotifications(userId: String, types: List<String> = emptyList()) {
+        lavender.client.android.data.grpc.subscribeNotifications(userId, types, scope)
+    }
+
+    suspend fun getNotificationHistory(userId: String, limit: Int = 50): List<lavender.client.android.data.proto.ServerNotificationProto> =
+        lavender.client.android.data.grpc.getNotificationHistory(userId, limit)
+
+    suspend fun markNotificationsRead(userId: String, notificationIds: List<String>): Boolean =
+        lavender.client.android.data.grpc.markNotificationsRead(userId, notificationIds)
+
+    suspend fun getUnreadCount(userId: String): Int =
+        lavender.client.android.data.grpc.getUnreadCount(userId)
 
     // Unary методы
     suspend fun listAgents(userId: String = ""): List<lavender.client.android.data.proto.AgentInfoProto> =

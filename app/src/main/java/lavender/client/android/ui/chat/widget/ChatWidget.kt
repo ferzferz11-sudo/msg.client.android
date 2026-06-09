@@ -52,6 +52,7 @@ class ChatWidget @JvmOverloads constructor(
     val audioButton: ImageButton get() = binding.audioButton
     val toolbarTitle: TextView get() = binding.toolbarTitle
     val toolbarSubtitle: TextView get() = binding.toolbarSubtitle
+    val toolbarInfo: TextView get() = binding.toolbarInfo
     val toolbarAvatar: CircleImageView get() = binding.toolbarAvatar
     val toolbarAgentIcon: TextView get() = binding.toolbarAgentIcon
     val groupHeader: LinearLayout get() = binding.groupHeader
@@ -266,6 +267,11 @@ class ChatWidget @JvmOverloads constructor(
         toolbarSubtitle.text = subtitle
         toolbarSubtitle.visibility = if (visible) View.VISIBLE else View.GONE
         groupHeader.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    fun setToolbarInfo(text: String, visible: Boolean = true) {
+        toolbarInfo.text = text
+        toolbarInfo.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     fun setToolbarAvatar(visible: Boolean) {

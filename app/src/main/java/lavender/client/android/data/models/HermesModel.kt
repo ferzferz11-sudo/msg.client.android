@@ -52,3 +52,15 @@ data class HermesSession(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+// ======= OWL Bot Models =======
+
+data class OwlMessage(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val content: String = "",
+    val senderId: String = "",
+    val senderName: String = "",
+    val senderEmoji: String = "🦉",
+    val timestamp: Long = System.currentTimeMillis(),
+    val isCurrentUser: Boolean = false
+)

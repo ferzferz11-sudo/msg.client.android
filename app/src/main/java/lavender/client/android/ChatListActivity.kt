@@ -79,11 +79,13 @@ import java.net.URL
 import java.util.Locale
 
 import lavender.client.android.theme.Theme
+import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.widget.WidgetManager
+import lavender.client.android.data.models.AIChatInfo
 
 class ChatListActivity : AppCompatActivity() {
 
@@ -98,6 +100,8 @@ class ChatListActivity : AppCompatActivity() {
     private var isChatsLoaded = false // prevent reload flicker on resume
     private var isNewUser = false // track new user for loading indicator
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
+    private var unreadNotifCount = 0 // badge count for server notifications
+    private var shouldShowAiSheetOnResume = false // flag to reopen AI sheet after returning from AI activity
 
     private var syncJob: Job? = null
     
@@ -341,12 +345,22 @@ class ChatListActivity : AppCompatActivity() {
                 bottomMargin = systemBars.bottom + (16 * resources.displayMetrics.density).toInt()
                 marginEnd = (16 * resources.displayMetrics.density).toInt()
             }
+
+            // Adjust AI FAB margin (above addChatFab)
+            binding.aiFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = systemBars.bottom + (40 * resources.displayMetrics.density).toInt()
+                marginEnd = (16 * resources.displayMetrics.density).toInt()
+            }
             
             insets
         }
 
         binding.addChatFab.setOnClickListener {
             showChatActionSheet()
+        }
+
+        binding.aiFab.setOnClickListener {
+            showAIActionSheet()
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -806,10 +820,10 @@ class ChatListActivity : AppCompatActivity() {
                     .map { it.copy(isMuted = mutedIds.contains(it.id)) }
                     .sortedByDescending { it.lastMessageTime } // sort all chats by time, OWL included
 
-                // 4. Add favorites placeholder (actual data comes from server via GetChats)
+                // 4. Prepend Favorites as first item (static, never changes)
                 val newChats = mutableListOf(
                     ChatInfo(
-                        id = "favorites",
+                        id = "favorites_$username",
                         name = getString(R.string.favorites),
                         type = "favorites",
                         lastMessageText = "",
@@ -896,6 +910,8 @@ class ChatListActivity : AppCompatActivity() {
         refreshDebounceJob = lifecycleScope.launch {
             delay(500)
             loadChats(skipCache = true)
+            refreshAiChats()
+            refreshUnreadCount()
         }
     }
 
@@ -1230,38 +1246,42 @@ class ChatListActivity : AppCompatActivity() {
                 delay(5000) // Poll every 5 seconds
 
                 val currentUserId = GrpcClient.getUserId() ?: ""
-                
+
                 grpcClient.getChats(username, skipCache = true) { fetchedChats ->
                     if (currentUserId.isNotEmpty()) {
                         grpcClient.getMutedChats { mutedChatIds ->
                             grpcClient.getFavorites(currentUserId) { _ ->
-                                val newFullList = mutableListOf<ChatInfo>()
-
                                 val chatsWithMute = fetchedChats
                                     .filter { !pendingDeletions.contains(it.id) }
                                     .map { chat ->
                                         chat.copy(isMuted = mutedChatIds.contains(chat.id))
                                     }
-                                
+
                                 // Clean up pendingDeletions
                                 val serverIds = fetchedChats.map { it.id }.toSet()
                                 pendingDeletions.removeAll { !serverIds.contains(it) }
-                                
-                                newFullList.addAll(chatsWithMute)
 
-                                // Check for actual changes including Favorites and Mute status
-                                val hasChanges = newFullList.size != chats.size ||
-                                        newFullList.indices.any { i ->
-                                            val n = newFullList[i]
-                                            val c = chats.getOrNull(i)
+                                // Check for actual changes (excluding Favorites — it's static)
+                                val hasChanges = chatsWithMute.size != chats.size ||
+                                        chatsWithMute.indices.any { i ->
+                                            val n = chatsWithMute[i]
+                                            val c = chats.getOrNull(i + 1) // +1 offset for Favorites at position 0
                                             c == null || n.id != c.id || n.lastMessageTime != c.lastMessageTime ||
                                                     n.unreadCount != c.unreadCount || n.isMuted != c.isMuted
                                         }
 
                                 if (hasChanges) {
                                     runOnUiThread {
+                                        // Rebuild chats list: Favorites at position 0 + updated chats
                                         chats.clear()
-                                        chats.addAll(newFullList)
+                                        chats.add(ChatInfo(
+                                            id = "favorites_$username",
+                                            name = getString(R.string.favorites),
+                                            type = "favorites",
+                                            lastMessageText = "",
+                                            lastMessageTime = 0L
+                                        ))
+                                        chats.addAll(chatsWithMute)
                                         chatAdapter.setChats(chats.toList())
                                         updateAppIconBadge(chats.sumOf { it.unreadCount })
                                     }
@@ -1270,18 +1290,25 @@ class ChatListActivity : AppCompatActivity() {
                         }
                     } else {
                         // Fallback if no userId
-                        val newFullList = mutableListOf<ChatInfo>()
-
                         val filteredFetched = fetchedChats.filter { !pendingDeletions.contains(it.id) }
-                        newFullList.addAll(filteredFetched)
 
-                        if (newFullList.size != chats.size || newFullList.indices.any { i -> chats.getOrNull(i)?.id != newFullList[i].id }) {
-                            runOnUiThread {
-                                chats.clear()
-                                chats.addAll(newFullList)
-                                chatAdapter.setChats(chats.toList())
-                                updateAppIconBadge(chats.sumOf { it.unreadCount })
-                            }
+                        if (filteredFetched.size != chats.size || filteredFetched.indices.any { i -> chats.getOrNull(i + 1)?.id != filteredFetched[i].id }) {
+                        runOnUiThread {
+                        chats.clear()
+                        // Always prepend Favorites if it was previously shown
+                        if (::chatAdapter.isInitialized && chatAdapter.hasFavorites()) {
+                            chats.add(ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            ))
+                        }
+                        chats.addAll(filteredFetched)
+                        chatAdapter.setChats(chats.toList())
+                        updateAppIconBadge(chats.sumOf { it.unreadCount })
+                        }
                         }
                     }
                 }
@@ -1363,6 +1390,8 @@ class ChatListActivity : AppCompatActivity() {
                         // may have created a new session that should appear in the list)
                         loadChats(skipCache = true)
                     }
+                    refreshAiChats()
+                    refreshUnreadCount()
                     return@launch
                 }
             }
@@ -1374,6 +1403,14 @@ class ChatListActivity : AppCompatActivity() {
                     val parts = serverAddress.split(":")
                     grpcClient.connect(parts[0], false, parts.getOrNull(1)?.toIntOrNull() ?: 50051, this@ChatListActivity, true)
                 }
+            }
+        }
+
+        // Show AI sheet on return from AI activity
+        if (shouldShowAiSheetOnResume) {
+            shouldShowAiSheetOnResume = false
+            if (::chatAdapter.isInitialized) {
+                showAIActionSheet()
             }
         }
     }
@@ -1989,16 +2026,146 @@ class ChatListActivity : AppCompatActivity() {
                 },
                 SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
                     showCreateConferenceDialog()
-                },
-                SheetAction(R.id.actionHermesChat, R.drawable.ic_hermes, "Lava AI") {
-                    val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
-                    startActivity(intent)
-                },
-                SheetAction(R.id.actionHermesAgents, R.drawable.ic_agents, "Агенты") {
-                    val intent = Intent(this, lavender.client.android.ui.hermes.AgentListActivity::class.java)
-                    startActivity(intent)
                 }
             )).show()
+    }
+
+    private fun showAIActionSheet() {
+        val allChats = currentAiChats.toMutableList().sortedBy { it.createdAt }.toMutableList()
+
+        var sheet: AIBottomSheet? = null
+        sheet = AIBottomSheet(
+            context = this,
+            existingChats = allChats,
+            onChatClick = { chat ->
+                if (chat.type == "hermes") {
+                    openHermesChat(chat.id, chat.name)
+                } else {
+                    openOwlChat(chat.id, chat.name)
+                }
+            },
+            onDeleteChat = { chat ->
+                val userId = SessionManager.session.value.userId
+                val username = SessionManager.session.value.username
+                if (userId.isNotEmpty()) {
+                    GrpcClient.deleteChat(chat.id, userId, username) { success, _ ->
+                        if (success) {
+                            refreshAiChats()
+                            // Rebuild the sheet to reflect deleted chat, keep it open
+                            runOnUiThread {
+                                sheet?.updateChats(currentAiChats.toList())
+                                sheet?.rebuildContent()
+                            }
+                        }
+                    }
+                }
+            },
+            onSettingsClick = { chat ->
+                if (chat.type == "hermes") {
+                    openHermesSettings(chat.id)
+                } else {
+                    openOwlSettings(chat.id)
+                }
+            },
+            onCreateHermesChat = {
+                openHermesChat("", "")
+            },
+            onCreateOwlChat = {
+                openOwlChat("", "")
+            },
+            onOpenNotifications = {
+                shouldShowAiSheetOnResume = true
+                startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
+            },
+            unreadNotifCount = unreadNotifCount
+        )
+        sheet.buildAndShow()
+    }
+
+    private fun openOwlSettings(chatId: String) {
+        shouldShowAiSheetOnResume = true
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java)
+        intent.putExtra("chatId", chatId)
+        startActivity(intent)
+    }
+
+    private fun openHermesSettings(sessionId: String) {
+        shouldShowAiSheetOnResume = true
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java)
+        intent.putExtra("sessionId", sessionId)
+        intent.putExtra("isHermes", true)
+        startActivity(intent)
+    }
+
+    private fun showRenameDialog(chatId: String, currentName: String) {
+        val editText = android.widget.EditText(this).apply {
+            setText(currentName)
+            setSingleLine()
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Переименовать чат")
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                val newName = editText.text.toString().trim()
+                if (newName.isNotEmpty() && newName != currentName) {
+                    val userId = SessionManager.session.value.userId
+                    if (userId.isNotEmpty()) {
+                        GrpcClient.renameAIChat(chatId, userId, newName) { success, error ->
+                            if (success) {
+                                refreshAiChats()
+                            }
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun openHermesChat(chatId: String, chatName: String) {
+        shouldShowAiSheetOnResume = true
+        val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
+        intent.putExtra("CHAT_ID", chatId)
+        intent.putExtra("CHAT_NAME", chatName)
+        startActivity(intent)
+    }
+
+    private fun openOwlChat(chatId: String, chatName: String) {
+        shouldShowAiSheetOnResume = true
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
+        intent.putExtra("CHAT_ID", chatId)
+        intent.putExtra("CHAT_NAME", chatName)
+        startActivity(intent)
+    }
+
+    // Data classes for existing AI chats
+    data class ExistingAiChat(val id: String, val name: String, val activeAgentId: String = "", val agentMode: String = "single")
+
+    // Unified AI chats list (OWL + Hermes)
+    private val currentAiChats = mutableListOf<AIChatInfo>()
+
+    private fun refreshAiChats() {
+        currentAiChats.clear()
+        val userId = SessionManager.session.value.userId
+        if (userId.isNotEmpty()) {
+            GrpcClient.getAIChats(userId) { aiChats ->
+                currentAiChats.addAll(aiChats)
+            }
+        }
+    }
+
+    private fun refreshUnreadCount() {
+        val session = SessionManager.session.value
+        if (session.userId.isNotEmpty()) {
+            lifecycleScope.launch {
+                try {
+                    unreadNotifCount = grpcClient.getUnreadCount(session.userId)
+                    Log.d("ChatListActivity", "Unread notifications: $unreadNotifCount")
+                } catch (e: Exception) {
+                    Log.e("ChatListActivity", "Failed to get unread count", e)
+                }
+            }
+        }
     }
 
     private fun showCreateConferenceDialog() {

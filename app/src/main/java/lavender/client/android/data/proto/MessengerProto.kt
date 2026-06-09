@@ -989,7 +989,8 @@ data class CreateHermesSessionRequestProto(
 data class CreateHermesSessionResponseProto(
     val sessionId: String = "",
     val success: Boolean = false,
-    val message: String = ""
+    val message: String = "",
+    val name: String = ""
 )
 
 data class DeleteHermesSessionRequestProto(
@@ -1050,4 +1051,213 @@ data class GetRemoteAgentStatusResponseProto(
     val capabilities: List<String> = emptyList(),
     val activeTasks: Int = 0,
     val lastHeartbeat: String = ""
+)
+
+// ======= Bot Command proto classes =======
+
+data class BotCommandRequestProto(
+    val userId: String = "",
+    val username: String = "",
+    val chatId: String = "",
+    val command: String = "",
+    val args: List<String> = emptyList()
+)
+
+data class BotCommandResponseProto(
+    val success: Boolean = false,
+    val responseText: String = "",
+    val isError: Boolean = false,
+    val errorMessage: String = ""
+)
+
+data class BotCommandInfoProto(
+    val command: String = "",
+    val description: String = "",
+    val usage: String = "",
+    val category: String = ""
+)
+
+data class GetBotCommandsRequestProto(
+    val userId: String = ""
+)
+
+data class GetBotCommandsResponseProto(
+    val commands: List<BotCommandInfoProto> = emptyList()
+)
+
+data class OWLStatusRequestProto(
+    val userId: String = ""
+)
+
+data class OWLStatusResponseProto(
+    val available: Boolean = false,
+    val model: String = "",
+    val queueLength: Int = 0,
+    val status: String = ""
+)
+
+// ======= OWL streaming proto =======
+
+data class OwlRequestProto(
+    val userId: String = "",
+    val message: String = "",
+    val sessionId: String = ""
+)
+
+data class OwlResponseProto(
+    val text: String = "",
+    val finished: Boolean = false,
+    val error: String = ""
+)
+
+// ======= Server Notification proto classes =======
+
+data class ServerNotificationProto(
+    val id: String = "",
+    val type: String = "",
+    val title: String = "",
+    val message: String = "",
+    val timestamp: String = "",
+    val metadata: Map<String, String> = emptyMap(),
+    val isRead: Boolean = false
+)
+
+data class SubscribeNotificationsRequestProto(
+    val userId: String = "",
+    val types: List<String> = emptyList()
+)
+
+data class GetNotificationHistoryRequestProto(
+    val userId: String = "",
+    val limit: Int = 0
+)
+
+data class GetNotificationHistoryResponseProto(
+    val notifications: List<ServerNotificationProto> = emptyList()
+)
+
+data class MarkNotificationReadRequestProto(
+    val userId: String = "",
+    val notificationIds: List<String> = emptyList()
+)
+
+data class MarkNotificationReadResponseProto(
+    val success: Boolean = false
+)
+
+data class GetUnreadCountRequestProto(
+    val userId: String = ""
+)
+
+data class GetUnreadCountResponseProto(
+    val count: Int = 0
+)
+
+// ======= OWL Settings =======
+
+data class UpdateOwlSettingsRequestProto(
+    val chatId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateOwlSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetOwlSettingsRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class GetOwlSettingsResponseProto(
+    val apiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false,
+    val freeModels: List<FreeModelInfoProto> = emptyList()
+)
+
+// ======= Free OpenRouter Models =======
+
+data class FreeModelInfoProto(
+    val modelId: String = "",
+    val displayName: String = "",
+    val sortOrder: Int = 0
+)
+
+data class GetFreeModelsRequestProto(val dummy: Boolean = false)
+
+data class GetFreeModelsResponseProto(
+    val models: List<FreeModelInfoProto> = emptyList()
+)
+
+// ======= Hermes Settings =======
+
+data class GetHermesSettingsRequestProto(
+    val sessionId: String = "",
+    val userId: String = ""
+)
+
+data class GetHermesSettingsResponseProto(
+    val apiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false
+)
+
+data class UpdateHermesSettingsRequestProto(
+    val sessionId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateHermesSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// ======= OWL Chat creation =======
+
+data class CreateOwlChatRequestProto(
+    val userId: String = "",
+    val name: String = ""
+)
+
+data class CreateOwlChatResponseProto(
+    val chatId: String = "",
+    val name: String = "",
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// ======= AI Chats Management =======
+
+data class GetAIChatsRequestProto(
+    var userId: String = ""
+)
+
+data class AIChatInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val type: String = "",
+    val createdAt: String = "",
+    val isUsingCustomKey: Boolean = false,
+    val model: String = ""
+)
+
+data class GetAIChatsResponseProto(
+    val chats: List<AIChatInfoProto> = emptyList()
+)
+
+data class RenameAIChatRequestProto(
+    var chatId: String = "",
+    var userId: String = "",
+    var newName: String = ""
+)
+
+data class RenameAIChatResponseProto(
+    val success: Boolean = false,
+    val error: String = ""
 )

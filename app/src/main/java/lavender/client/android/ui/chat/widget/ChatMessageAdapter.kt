@@ -1,8 +1,13 @@
 package lavender.client.android.ui.chat.widget
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -19,6 +24,8 @@ import java.util.*
  * Unified chat message adapter.
  * Supports: user messages, agent/participant messages, typing indicators, date separators.
  * Used by both NewChatActivity (group chat) and HermesChatActivity (agents as participants).
+ *
+ * v1.1.1.14: Added fade-in + slide animations for new messages, animated typing dots.
  */
 class ChatMessageAdapter(
     private val currentUserId: String = "",
@@ -31,10 +38,14 @@ class ChatMessageAdapter(
         private const val VIEW_TYPE_AGENT = 1
         private const val VIEW_TYPE_TYPING = 2
         private const val VIEW_TYPE_DATE = 3
+        private const val ANIM_DURATION = 220L
     }
 
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val dateFormat = SimpleDateFormat("d MMMM", Locale.forLanguageTag("ru"))
+
+    // Track which positions have been animated to avoid re-animating on scroll
+    private val animatedPositions = mutableSetOf<Int>()
 
     override fun getItemViewType(position: Int): Int {
         val item = getItem(position)
@@ -76,6 +87,25 @@ class ChatMessageAdapter(
             is UserMessageHolder -> holder.bind(item)
             is AgentMessageHolder -> holder.bind(item)
         }
+
+        // Fade-in + slide animation for new messages (not typing, not date separator)
+        if (!item.isTyping && !item.isDateSeparator && position !in animatedPositions) {
+            animatedPositions.add(position)
+            animateMessageIn(holder.itemView, item.isCurrentUser)
+        }
+    }
+
+    private fun animateMessageIn(view: View, isUser: Boolean) {
+        view.alpha = 0f
+        val slideDir = if (isUser) 30f else -30f
+        view.translationY = slideDir
+
+        view.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(ANIM_DURATION)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .start()
     }
 
     // ===== Holders =====
@@ -96,6 +126,7 @@ class ChatMessageAdapter(
     inner class TypingHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val typingContainer: LinearLayout = itemView.findViewById(R.id.typingContainer)
         private val typingText: TextView = itemView.findViewById(R.id.typingText)
+        private var dotAnimator: ValueAnimator? = null
 
         fun bind(item: ChatMessageItem) {
             typingContainer.isVisible = true
@@ -104,7 +135,29 @@ class ChatMessageAdapter(
             itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
 
             val name = item.senderName.ifEmpty { "Агент" }
-            typingText.text = "$name печатает..."
+            // Start animated dots
+            startAnimatedDots(name)
+        }
+
+        private fun startAnimatedDots(name: String) {
+            dotAnimator?.cancel()
+            dotAnimator = ValueAnimator.ofInt(0, 3).apply {
+                duration = 900
+                repeatCount = ValueAnimator.INFINITE
+                repeatMode = ValueAnimator.RESTART
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener { anim ->
+                    val dotCount = anim.animatedValue as Int
+                    val dots = ".".repeat(dotCount).padEnd(3, ' ')
+                    typingText.text = "$name печатает $dots"
+                }
+                start()
+            }
+        }
+
+        fun stopAnimation() {
+            dotAnimator?.cancel()
+            dotAnimator = null
         }
     }
 
