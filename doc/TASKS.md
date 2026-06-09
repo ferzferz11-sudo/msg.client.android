@@ -1,8 +1,20 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.1.15
+**Версия:** 1.1.1.16
 **Обновлено:** 2026-06-09
 **Ветка:** feat/1.1.1.x
+
+---
+
+## ✅ v1.1.1.16 — Багфикс + полировка
+- SplashActivity: логотип 🦞 → ic_notification_logo
+- SplashActivity: надпись "Лава" (ru) / "Lava" (en)
+- AIBottomSheet: rebuildContent() + updateChats() для перестройки без закрытия
+- AIBottomSheet: popup menu delete/settings не закрывает шторку
+- ChatListActivity: shouldShowAiSheetOnResume — return из AI активити открывает шторку
+- ThemeApplier: aiFab добавлен в список FAB для кастомных тем
+- Save button в OWL settings: style="@style/PrimaryButton"
+- compileDebugKotlin ✅
 
 ---
 
@@ -15,6 +27,8 @@
 - compileDebugKotlin ✅
 
 ---
+
+## ✅ v1.1.1.14 — Дизайн + полировка
 - Анимации сообщений (fade-in + slide), typing indicator (ValueAnimator)
 - Bottom sheets: MaterialCardView, hover-эффекты, per-command иконки
 - Splash screen анимация, statusBarColor = bgColor
@@ -23,6 +37,9 @@
 ---
 
 ## 📋 Бэклог
+
+### Высокий приоритет
+- [ ] Деплой на prod → v1.1.2.0
 
 ### Средний приоритет
 - [ ] Graceful shutdown сервера
@@ -39,8 +56,6 @@
 
 ### Favorites — мерцание при обновлении списка чатов
 - **Статус:** исправлено в c873fbc (v1.1.1.15)
-- **Причина:** startSync() вызывал setChats() без Favorites, что вызывало remove/insert каждые 5 секунд
-- **Исправление:** startSync() всегда включает Favorites; updateAvatarCache() использует offset +1
 
 ---
 
@@ -52,6 +67,7 @@
 | Room migration 8→9 | ALTER TABLE вместо destructive migration |
 | ChatWidget-подход | Общий функционал через виджет, не копипаст |
 | setExistingSession | Передача существующей сессии через intent |
+| ThemeApplier FAB list | Новые FAB добавлять в список для кастомных тем |
 
 ---
 
@@ -65,3 +81,5 @@
 | `ChatListActivity.kt` | onChatClick hermes + onResume fix |
 | `ChatMessageAdapter.kt` | highlightPosition(), анимации |
 | `Entities.kt` | ChatEntity + Room DB v9 |
+| `ThemeApplier.kt` | Применение кастомных тем к UI |
+| `AIBottomSheet.kt` | AI шторка с чатами |
