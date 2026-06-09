@@ -14,10 +14,12 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.data.grpc.getFreeModels
 import lavender.client.android.data.grpc.getHermesSettings
 import lavender.client.android.data.grpc.getOwlSettings
 import lavender.client.android.data.grpc.updateHermesSettings
 import lavender.client.android.data.grpc.updateOwlSettings
+import lavender.client.android.data.proto.FreeModelInfoProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 
@@ -31,14 +33,20 @@ import lavender.client.android.theme.ui.ThemeUi
  *
  * Shows:
  * - API key input (masked) with indicator if using own key or shared server key
- * - Model dropdown (all models for own key, free-only for shared key)
+ * - Model selector: free models (from server) + paid models (if custom key) + "Own model" text input
  * - Save button
+ *
+ * Logic:
+ * - No custom key: only free models dropdown, OWL Alpha first
+ * - Has custom key: free models + "Other model" text input for any OpenRouter model
  */
 class OwlSettingsActivity : AppCompatActivity() {
 
     private lateinit var apiKeyInput: TextInputEditText
     private lateinit var apiKeyLayout: TextInputLayout
     private lateinit var modelDropdown: AutoCompleteTextView
+    private lateinit var modelCustomInput: TextInputEditText
+    private lateinit var modelCustomLayout: TextInputLayout
     private lateinit var saveButton: MaterialButton
     private lateinit var statusText: TextView
     private lateinit var keySourceText: TextView
@@ -50,28 +58,11 @@ class OwlSettingsActivity : AppCompatActivity() {
     private var isHermes = false
     private var isUsingCustomKey = false
 
-    // Full model list (available with own API key)
-    private val allModels = listOf(
-        "openrouter/auto" to "OpenRouter Auto",
-        "openai/gpt-4o" to "GPT-4o",
-        "openai/gpt-4o-mini" to "GPT-4o Mini",
-        "anthropic/claude-3-5-sonnet" to "Claude 3.5 Sonnet",
-        "anthropic/claude-3-haiku" to "Claude 3 Haiku",
-        "google/gemini-1.5-pro" to "Gemini 1.5 Pro",
-        "google/gemini-1.5-flash" to "Gemini 1.5 Flash",
-        "meta-llama/llama-3.1-70b-instruct" to "Llama 3.1 70B",
-        "meta-llama/llama-3.1-8b-instruct" to "Llama 3.1 8B",
-        "mistralai/mistral-large" to "Mistral Large",
-        "mistralai/mistral-7b-instruct" to "Mistral 7B"
-    )
+    // Models loaded from server
+    private var freeModels: List<FreeModelInfoProto> = emptyList()
 
-    // Free tier models (no own key needed)
-    private val freeModels = listOf(
-        "openrouter/auto" to "OpenRouter Auto",
-        "google/gemini-1.5-flash" to "Gemini 1.5 Flash",
-        "meta-llama/llama-3.1-8b-instruct" to "Llama 3.1 8B",
-        "mistralai/mistral-7b-instruct" to "Mistral 7B"
-    )
+    // "Own model" option — always available with custom key
+    private val ownModelOption = "Своя модель (ввести вручную)"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,6 +90,8 @@ class OwlSettingsActivity : AppCompatActivity() {
         apiKeyInput = findViewById(R.id.apiKeyInput)
         apiKeyLayout = findViewById(R.id.apiKeyLayout)
         modelDropdown = findViewById(R.id.modelDropdown)
+        modelCustomInput = findViewById(R.id.modelCustomInput)
+        modelCustomLayout = findViewById(R.id.modelCustomLayout)
         saveButton = findViewById(R.id.saveButton)
         statusText = findViewById(R.id.statusText)
         keySourceText = findViewById(R.id.keySourceText)
@@ -113,10 +106,30 @@ class OwlSettingsActivity : AppCompatActivity() {
     private fun setupSaveButton() {
         saveButton.setOnClickListener {
             val apiKey = apiKeyInput.text?.toString()?.trim() ?: ""
-            val selectedModelName = modelDropdown.text.toString()
-            val modelsList = if (apiKey.isNotEmpty()) allModels else freeModels
-            val selectedModel = modelsList.find { it.second == selectedModelName }
-                ?.first ?: "openrouter/auto"
+            val hasCustomKey = apiKey.isNotEmpty()
+
+            val selectedModel: String
+            if (hasCustomKey && modelDropdown.text?.toString() == ownModelOption) {
+                // User selected "Own model" — read from text input
+                selectedModel = modelCustomInput.text?.toString()?.trim() ?: ""
+                if (selectedModel.isEmpty()) {
+                    showStatus("Введите ID модели", false)
+                    return@setOnClickListener
+                }
+            } else {
+                // User selected a model from dropdown — find its modelId
+                val displayName = modelDropdown.text.toString()
+                if (hasCustomKey && displayName == ownModelOption) {
+                    selectedModel = modelCustomInput.text?.toString()?.trim() ?: ""
+                    if (selectedModel.isEmpty()) {
+                        showStatus("Введите ID модели", false)
+                        return@setOnClickListener
+                    }
+                } else {
+                    // Find modelId by display name
+                    selectedModel = freeModels.find { it.displayName == displayName }?.modelId ?: "openrouter/auto"
+                }
+            }
             saveSettings(apiKey, selectedModel)
         }
     }
@@ -124,6 +137,20 @@ class OwlSettingsActivity : AppCompatActivity() {
     private fun loadSettings() {
         lifecycleScope.launch {
             try {
+                // 1. Load free models from server
+                freeModels = getFreeModels()
+                if (freeModels.isEmpty()) {
+                    // Fallback: hardcoded list if server returns empty
+                    freeModels = listOf(
+                        FreeModelInfoProto("openrouter/owl-alpha", "OWL Alpha (free)", 0),
+                        FreeModelInfoProto("google/gemini-2.0-flash-001", "Gemini 2.0 Flash (free)", 1),
+                        FreeModelInfoProto("meta-llama/llama-3.3-70b-instruct:free", "Llama 3.3 70B (free)", 2),
+                        FreeModelInfoProto("mistralai/mistral-7b-instruct:free", "Mistral 7B (free)", 3)
+                    )
+                }
+                Log.d(TAG, "Loaded ${freeModels.size} free models from server")
+
+                // 2. Load chat-specific settings
                 var loadedApiKey = ""
                 var loadedModel = ""
                 var loadedIsCustom = false
@@ -138,6 +165,10 @@ class OwlSettingsActivity : AppCompatActivity() {
                     loadedApiKey = s.apiKey
                     loadedModel = s.model
                     loadedIsCustom = s.isUsingCustomKey
+                    // If server returned free_models in response, prefer them
+                    if (s.freeModels.isNotEmpty()) {
+                        freeModels = s.freeModels
+                    }
                 }
 
                 isUsingCustomKey = loadedIsCustom
@@ -148,33 +179,60 @@ class OwlSettingsActivity : AppCompatActivity() {
 
                 setupModelDropdown(loadedApiKey.isNotEmpty())
 
-                if (loadedModel.isNotEmpty() && loadedModel != "openrouter/auto") {
-                    val displayList = if (loadedApiKey.isNotEmpty()) allModels else freeModels
-                    val modelDisplay = displayList.find { it.first == loadedModel }?.second
-                    if (modelDisplay != null) {
-                        modelDropdown.setText(modelDisplay, false)
+                // Set current model
+                if (loadedModel.isNotEmpty()) {
+                    val displayName = freeModels.find { it.modelId == loadedModel }?.displayName
+                    if (displayName != null) {
+                        modelDropdown.setText(displayName, false)
+                    } else if (isUsingCustomKey) {
+                        // Model is not in free list — it's a custom/paid model
+                        modelDropdown.setText(ownModelOption, false)
+                        modelCustomInput.setText(loadedModel)
                     }
                 }
 
                 updateKeySourceInfo(loadedApiKey.isNotEmpty())
-                Log.d(TAG, "Settings loaded: model=$loadedModel customKey=$loadedIsCustom")
+                Log.d(TAG, "Settings loaded: model=$loadedModel customKey=$loadedIsCustom freeModels=${freeModels.size}")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load settings", e)
                 showStatus("Ошибка загрузки настроек: ${e.message}", false)
+                // Fallback to hardcoded free models
+                freeModels = listOf(
+                    FreeModelInfoProto("openrouter/owl-alpha", "OWL Alpha (free)", 0),
+                    FreeModelInfoProto("google/gemini-2.0-flash-001", "Gemini 2.0 Flash (free)", 1)
+                )
                 setupModelDropdown(false)
             }
         }
     }
 
     private fun setupModelDropdown(hasCustomKey: Boolean) {
-        val models = if (hasCustomKey) allModels else freeModels
+        // Build dropdown items: always show free models, add "Own model" option if custom key
+        val displayItems = mutableListOf<String>()
+        // Free models first, sorted by sortOrder
+        freeModels.sortedBy { it.sortOrder }.forEach { displayItems.add(it.displayName) }
+        if (hasCustomKey) {
+            displayItems.add(ownModelOption)
+        }
+
         val adapter = ArrayAdapter(
             this,
             android.R.layout.simple_dropdown_item_1line,
-            models.map { it.second }
+            displayItems
         )
         modelDropdown.setAdapter(adapter)
-        modelDropdown.setText(models[0].second, false)
+
+        // Default: first free model (owl-alpha)
+        if (freeModels.isNotEmpty()) {
+            val first = freeModels.minByOrNull { it.sortOrder }?.displayName ?: freeModels[0].displayName
+            modelDropdown.setText(first, false)
+        }
+
+        // Show/hide custom model input based on dropdown selection
+        modelDropdown.setOnItemClickListener { _, _, position, _ ->
+            val selected = displayItems.getOrNull(position) ?: ""
+            modelCustomLayout.visibility = if (selected == ownModelOption) View.VISIBLE else View.GONE
+        }
 
         // When API key changes, update model list
         apiKeyInput.setOnFocusChangeListener { _, hasFocus ->
@@ -185,9 +243,15 @@ class OwlSettingsActivity : AppCompatActivity() {
                     isUsingCustomKey = newHasKey
                     setupModelDropdown(newHasKey)
                     updateKeySourceInfo(newHasKey)
+                    // Reset custom input
+                    modelCustomInput.text?.clear()
+                    modelCustomLayout.visibility = View.GONE
                 }
             }
         }
+
+        // Initially hide custom input
+        modelCustomLayout.visibility = View.GONE
     }
 
     private fun updateKeySourceInfo(hasCustomKey: Boolean) {
@@ -195,6 +259,7 @@ class OwlSettingsActivity : AppCompatActivity() {
             keySourceText.text = "Ваш ключ: все модели, без ограничений"
             keySourceText.setTextColor(getColor(android.R.color.holo_green_dark))
             rateLimitText.visibility = View.GONE
+            modelCustomLayout.hint = "Введите ID модели (например: openai/gpt-4o)"
         } else {
             keySourceText.text = "Общий ключ: бесплатные модели, 20 запросов/час"
             keySourceText.setTextColor(getColor(android.R.color.holo_orange_dark))

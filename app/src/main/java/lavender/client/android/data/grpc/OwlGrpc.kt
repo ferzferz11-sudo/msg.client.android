@@ -830,6 +830,7 @@ suspend fun getOwlSettings(chatId: String, userId: String): GetOwlSettingsRespon
             override fun parse(s: java.io.InputStream): GetOwlSettingsResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
                 var apiKey = ""; var model = ""; var isUsingCustomKey = false
+                val freeModels = mutableListOf<FreeModelInfoProto>()
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
@@ -837,10 +838,33 @@ suspend fun getOwlSettings(chatId: String, userId: String): GetOwlSettingsRespon
                         1 -> apiKey = cis.readString()
                         2 -> model = cis.readString()
                         3 -> isUsingCustomKey = cis.readBool()
+                        4 -> {
+                            val len = cis.readRawVarint32()
+                            val msgBytes = cis.readRawBytes(len)
+                            if (msgBytes.isNotEmpty()) {
+                                try {
+                                    val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                                    var modelId = ""; var displayName = ""; var sortOrder = 0
+                                    while (!inner.isAtEnd) {
+                                        val innerTag = inner.readTag()
+                                        if (innerTag == 0) break
+                                        when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                            1 -> modelId = inner.readString()
+                                            2 -> displayName = inner.readString()
+                                            3 -> sortOrder = inner.readInt32()
+                                            else -> inner.skipField(innerTag)
+                                        }
+                                    }
+                                    if (modelId.isNotEmpty()) {
+                                        freeModels.add(FreeModelInfoProto(modelId, displayName, sortOrder))
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
                         else -> cis.skipField(tag)
                     }
                 }
-                return GetOwlSettingsResponseProto(apiKey, model, isUsingCustomKey)
+                return GetOwlSettingsResponseProto(apiKey, model, isUsingCustomKey, freeModels)
             }
         })
         .build()
@@ -926,4 +950,79 @@ suspend fun updateOwlSettings(chatId: String, userId: String, apiKey: String, mo
 
     return@withContext withTimeoutOrNull(10000) { result.await() }
         ?: UpdateOwlSettingsResponseProto(success = false, message = "Timeout")
+}
+
+// ======= Free OpenRouter Models =======
+
+suspend fun getFreeModels(): List<FreeModelInfoProto> = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "getFreeModels: channel dead")
+        return@withContext emptyList()
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<GetFreeModelsRequestProto, GetFreeModelsResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GetFreeModels")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetFreeModelsRequestProto> {
+            override fun stream(v: GetFreeModelsRequestProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetFreeModelsRequestProto = GetFreeModelsRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetFreeModelsResponseProto> {
+            override fun stream(v: GetFreeModelsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetFreeModelsResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                val models = mutableListOf<FreeModelInfoProto>()
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> {
+                            val len = cis.readRawVarint32()
+                            val msgBytes = cis.readRawBytes(len)
+                            if (msgBytes.isNotEmpty()) {
+                                try {
+                                    val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                                    var modelId = ""; var displayName = ""; var sortOrder = 0
+                                    while (!inner.isAtEnd) {
+                                        val innerTag = inner.readTag()
+                                        if (innerTag == 0) break
+                                        when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                            1 -> modelId = inner.readString()
+                                            2 -> displayName = inner.readString()
+                                            3 -> sortOrder = inner.readInt32()
+                                            else -> inner.skipField(innerTag)
+                                        }
+                                    }
+                                    if (modelId.isNotEmpty()) {
+                                        models.add(FreeModelInfoProto(modelId, displayName, sortOrder))
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetFreeModelsResponseProto(models)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<List<FreeModelInfoProto>>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetFreeModelsResponseProto>() {
+        override fun onMessage(message: GetFreeModelsResponseProto) {
+            result.complete(message.models)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(emptyList())
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetFreeModelsRequestProto())
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList()
 }

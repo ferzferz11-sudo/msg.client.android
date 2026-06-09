@@ -117,6 +117,28 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Custom model input (shown only when "Own model" selected with custom key) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/modelCustomLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Введите ID модели"
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="?attr/colorOnSurfaceVariant"
+                app:hintTextColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                android:layout_marginBottom="24dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/modelCustomInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="14sp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Save button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveButton"
