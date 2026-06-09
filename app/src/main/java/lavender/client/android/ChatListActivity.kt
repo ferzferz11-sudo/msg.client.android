@@ -101,6 +101,7 @@ class ChatListActivity : AppCompatActivity() {
     private var isNewUser = false // track new user for loading indicator
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
     private var unreadNotifCount = 0 // badge count for server notifications
+    private var shouldShowAiSheetOnResume = false // flag to reopen AI sheet after returning from AI activity
 
     private var syncJob: Job? = null
     
@@ -1404,6 +1405,14 @@ class ChatListActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // Show AI sheet on return from AI activity
+        if (shouldShowAiSheetOnResume) {
+            shouldShowAiSheetOnResume = false
+            if (::chatAdapter.isInitialized) {
+                showAIActionSheet()
+            }
+        }
     }
 
     override fun onPause() {
@@ -2022,9 +2031,10 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAIActionSheet() {
-        val allChats = currentAiChats.toList().sortedBy { it.createdAt }
+        val allChats = currentAiChats.toMutableList().sortedBy { it.createdAt }.toMutableList()
 
-        val sheet = AIBottomSheet(
+        var sheet: AIBottomSheet? = null
+        sheet = AIBottomSheet(
             context = this,
             existingChats = allChats,
             onChatClick = { chat ->
@@ -2039,7 +2049,14 @@ class ChatListActivity : AppCompatActivity() {
                 val username = SessionManager.session.value.username
                 if (userId.isNotEmpty()) {
                     GrpcClient.deleteChat(chat.id, userId, username) { success, _ ->
-                        if (success) refreshAiChats()
+                        if (success) {
+                            refreshAiChats()
+                            // Rebuild the sheet to reflect deleted chat, keep it open
+                            runOnUiThread {
+                                sheet?.updateChats(currentAiChats.toList())
+                                sheet?.rebuildContent()
+                            }
+                        }
                     }
                 }
             },
@@ -2065,12 +2082,14 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun openOwlSettings(chatId: String) {
+        shouldShowAiSheetOnResume = true
         val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java)
         intent.putExtra("chatId", chatId)
         startActivity(intent)
     }
 
     private fun openHermesSettings(sessionId: String) {
+        shouldShowAiSheetOnResume = true
         val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java)
         intent.putExtra("sessionId", sessionId)
         intent.putExtra("isHermes", true)
@@ -2103,6 +2122,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun openHermesChat(chatId: String, chatName: String) {
+        shouldShowAiSheetOnResume = true
         val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java)
         intent.putExtra("CHAT_ID", chatId)
         intent.putExtra("CHAT_NAME", chatName)
@@ -2110,6 +2130,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun openOwlChat(chatId: String, chatName: String) {
+        shouldShowAiSheetOnResume = true
         val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java)
         intent.putExtra("CHAT_ID", chatId)
         intent.putExtra("CHAT_NAME", chatName)

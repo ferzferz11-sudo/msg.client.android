@@ -28,7 +28,7 @@ import lavender.client.android.theme.ThemeUtils
  */
 class AIBottomSheet(
     context: Context,
-    private val existingChats: List<AIChatInfo> = emptyList(),
+    private val existingChats: MutableList<AIChatInfo> = mutableListOf(),
     private val onChatClick: (AIChatInfo) -> Unit = {},
     private val onDeleteChat: (AIChatInfo) -> Unit = {},
     private val onSettingsClick: (AIChatInfo) -> Unit = {},
@@ -42,6 +42,17 @@ class AIBottomSheet(
     fun buildAndShow() {
         buildContent()
         show()
+    }
+
+    fun rebuildContent() {
+        if (isShowing()) {
+            buildContent()
+        }
+    }
+
+    fun updateChats(chats: List<AIChatInfo>) {
+        existingChats.clear()
+        existingChats.addAll(chats)
     }
 
     private fun buildContent() {
@@ -196,12 +207,12 @@ class AIBottomSheet(
             when (item.itemId) {
                 1 -> {
                     onSettingsClick(chat)
-                    dismiss()
+                    // Do NOT dismiss — let the caller decide (rebuild or dismiss)
                     true
                 }
                 2 -> {
                     onDeleteChat(chat)
-                    dismiss()
+                    // Do NOT dismiss — let the caller decide (rebuild or dismiss)
                     true
                 }
                 else -> false

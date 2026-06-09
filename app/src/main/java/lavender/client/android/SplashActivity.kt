@@ -63,17 +63,18 @@ class SplashActivity : AppCompatActivity() {
             )
         }
 
-        // Logo text
-        val logoText = TextView(this).apply {
-            text = "🦞"
-            textSize = 64f
-            gravity = android.view.Gravity.CENTER
+        // Logo image from drawable (same as auth sheet)
+        val logoImage = ImageView(this).apply {
+            setImageResource(R.drawable.ic_notification_logo)
+            scaleType = ImageView.ScaleType.FIT_CENTER
             alpha = 0f
             layoutParams = android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                (68 * resources.displayMetrics.density).toInt(),
+                (68 * resources.displayMetrics.density).toInt(),
                 android.view.Gravity.CENTER
-            )
+            ).apply {
+                bottomMargin = (20 * resources.displayMetrics.density).toInt()
+            }
         }
 
         // App name
@@ -89,16 +90,16 @@ class SplashActivity : AppCompatActivity() {
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                 android.view.Gravity.CENTER
             ).apply {
-                topMargin = 80
+                topMargin = 60
             }
         }
 
-        splashView.addView(logoText)
+        splashView.addView(logoImage)
         splashView.addView(appNameText)
         setContentView(splashView)
 
         // Animate logo fade-in + scale
-        logoText.animate()
+        logoImage.animate()
             .alpha(1f)
             .scaleX(1.1f)
             .scaleY(1.1f)
@@ -106,7 +107,7 @@ class SplashActivity : AppCompatActivity() {
             .setInterpolator(AccelerateDecelerateInterpolator())
             .withEndAction {
                 // Then scale back + show app name
-                logoText.animate()
+                logoImage.animate()
                     .scaleX(1f)
                     .scaleY(1f)
                     .setDuration(300)
