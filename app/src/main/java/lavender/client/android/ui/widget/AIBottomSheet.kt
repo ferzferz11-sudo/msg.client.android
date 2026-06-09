@@ -34,6 +34,8 @@ class AIBottomSheet(
     private val onSettingsClick: (AIChatInfo) -> Unit = {},
     private val onCreateHermesChat: () -> Unit = {},
     private val onCreateOwlChat: () -> Unit = {},
+    private val onOpenNotifications: () -> Unit = {},
+    private var unreadNotifCount: Int = 0,
     theme: lavender.client.android.theme.Theme = ThemeStore.currentTheme()
 ) : StandardBottomSheet(context, R.layout.widget_ai_bottom_sheet, theme) {
 
@@ -47,6 +49,33 @@ class AIBottomSheet(
         val theme = ThemeStore.currentTheme()
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+
+        // === Section 0: Notifications with badge ===
+        val notifItem = LayoutInflater.from(context)
+            .inflate(R.layout.widget_action_item, contentContainer, false)
+        val notifIcon = notifItem.findViewById<ImageView>(R.id.actionIcon)
+        val notifText = notifItem.findViewById<TextView>(R.id.actionText)
+        val notifBadge = notifItem.findViewById<TextView>(R.id.actionBadge)
+        notifIcon.setImageResource(R.drawable.ic_notifications)
+        notifIcon.imageTintList = ColorStateList.valueOf(primColor)
+        notifText.text = "Уведомления"
+        notifText.setTextColor(txtColor)
+        if (unreadNotifCount > 0) {
+            notifBadge.text = if (unreadNotifCount > 99) "99+" else unreadNotifCount.toString()
+            notifBadge.visibility = View.VISIBLE
+        } else {
+            notifBadge.visibility = View.GONE
+        }
+        notifItem.setOnClickListener {
+            onOpenNotifications()
+            dismiss()
+        }
+        contentContainer?.addView(notifItem)
+
+        // Divider after notifications
+        val notifDivider = LayoutInflater.from(context)
+            .inflate(R.layout.widget_section_divider, contentContainer, false)
+        contentContainer?.addView(notifDivider)
 
         // === Section 1: Existing AI chats (unified list) ===
         if (existingChats.isNotEmpty()) {

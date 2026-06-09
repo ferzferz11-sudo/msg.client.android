@@ -111,6 +111,49 @@ class OwlChatViewModel : ViewModel() {
     }
 
     /**
+     * Add a user message to the list (called from Activity before sending to OWL).
+     */
+    fun addUserMessage(
+        id: String,
+        content: String,
+        senderId: String,
+        senderName: String,
+        isCurrentUser: Boolean
+    ) {
+        val message = OwlMessage(
+            id = id,
+            content = content,
+            senderId = senderId,
+            senderName = senderName,
+            senderEmoji = "",
+            timestamp = System.currentTimeMillis(),
+            isCurrentUser = isCurrentUser
+        )
+        _owlMessages.value = _owlMessages.value + message
+    }
+
+    /**
+     * Add a bot/system message to the list (called from Activity after bot command response).
+     */
+    fun addBotMessage(
+        id: String,
+        content: String,
+        senderId: String,
+        senderName: String
+    ) {
+        val message = OwlMessage(
+            id = id,
+            content = content,
+            senderId = senderId,
+            senderName = senderName,
+            senderEmoji = "🤖",
+            timestamp = System.currentTimeMillis(),
+            isCurrentUser = false
+        )
+        _owlMessages.value = _owlMessages.value + message
+    }
+
+    /**
      * Добавить сообщение в список.
      */
     fun addMessage(

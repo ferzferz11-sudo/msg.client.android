@@ -1379,6 +1379,7 @@ class ChatListActivity : AppCompatActivity() {
                         loadChats(skipCache = true)
                     }
                     refreshAiChats()
+                    refreshUnreadCount()
                     return@launch
                 }
             }
@@ -2043,7 +2044,11 @@ class ChatListActivity : AppCompatActivity() {
             },
             onCreateOwlChat = {
                 openOwlChat("", "")
-            }
+            },
+            onOpenNotifications = {
+                startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
+            },
+            unreadNotifCount = unreadNotifCount
         )
         sheet.buildAndShow()
     }

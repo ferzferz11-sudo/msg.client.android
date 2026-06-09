@@ -154,17 +154,15 @@ class OwlChatActivity : AppCompatActivity() {
                 return@setOnSendMessageListener
             }
 
-            // Regular message to OWL
-            val userMessage = ChatMessageItem(
-                id = java.util.UUID.randomUUID().toString(),
+            // Regular message to OWL — add to ViewModel so it survives recomposition
+            val msgId = java.util.UUID.randomUUID().toString()
+            viewModel.addUserMessage(
+                id = msgId,
                 content = text,
                 senderId = userId,
                 senderName = "Вы",
-                isCurrentUser = true,
-                timestamp = System.currentTimeMillis()
+                isCurrentUser = true
             )
-            adapter.submitList(adapter.currentList + userMessage)
-            chatWidget.scrollToBottom()
 
             viewModel.sendToOwl(text, userId, chatId)
         }
@@ -244,17 +242,15 @@ class OwlChatActivity : AppCompatActivity() {
         val command = parts[0]
         val args = if (parts.size > 1) parts.subList(1, parts.size) else emptyList()
 
-        // Add user command to chat
-        val userMessage = ChatMessageItem(
-            id = java.util.UUID.randomUUID().toString(),
+        // Add user command to ViewModel
+        val userMsgId = java.util.UUID.randomUUID().toString()
+        viewModel.addUserMessage(
+            id = userMsgId,
             content = text,
             senderId = userId,
             senderName = "Вы",
-            isCurrentUser = true,
-            timestamp = System.currentTimeMillis()
+            isCurrentUser = true
         )
-        adapter.submitList(adapter.currentList + userMessage)
-        chatWidget.scrollToBottom()
 
         // Send to server
         lifecycleScope.launch {
@@ -267,28 +263,22 @@ class OwlChatActivity : AppCompatActivity() {
                     args = args
                 )
 
-                val botMessage = ChatMessageItem(
-                    id = java.util.UUID.randomUUID().toString(),
+                val botMsgId = java.util.UUID.randomUUID().toString()
+                viewModel.addBotMessage(
+                    id = botMsgId,
                     content = if (response.isError) "⚠️ ${response.errorMessage}" else response.responseText,
                     senderId = "owl-bot",
-                    senderName = "🤖 OWL Bot",
-                    isCurrentUser = false,
-                    timestamp = System.currentTimeMillis()
+                    senderName = "🤖 OWL Bot"
                 )
-                adapter.submitList(adapter.currentList + botMessage)
-                chatWidget.scrollToBottom()
             } catch (e: Exception) {
                 Log.e("OwlChatActivity", "Bot command error", e)
-                val errorMessage = ChatMessageItem(
-                    id = java.util.UUID.randomUUID().toString(),
+                val errMsgId = java.util.UUID.randomUUID().toString()
+                viewModel.addBotMessage(
+                    id = errMsgId,
                     content = "⚠️ Ошибка: ${e.message}",
                     senderId = "owl-bot",
-                    senderName = "🤖 OWL Bot",
-                    isCurrentUser = false,
-                    timestamp = System.currentTimeMillis()
+                    senderName = "🤖 OWL Bot"
                 )
-                adapter.submitList(adapter.currentList + errorMessage)
-                chatWidget.scrollToBottom()
             }
         }
     }
@@ -300,12 +290,17 @@ class OwlChatActivity : AppCompatActivity() {
             return
         }
 
-        val items = availableCommands.map { "${it.command} — ${it.description}" }.toTypedArray()
+        val commandInfos = availableCommands.map { cmd ->
+            lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
+                command = cmd.command,
+                description = cmd.description
+            )
+        }
 
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("📋 Команды OWL Bot")
-            .setItems(items) { _, which ->
-                val cmd = availableCommands[which]
+        val sheet = lavender.client.android.ui.widget.CommandBottomSheet(
+            context = this,
+            commands = commandInfos,
+            onCommandSelected = { cmd ->
                 if (cmd.command == "/ai") {
                     chatWidget.messageInput.setText("/ai ")
                     chatWidget.messageInput.setSelection(4)
@@ -314,8 +309,8 @@ class OwlChatActivity : AppCompatActivity() {
                     chatWidget.messageInput.setSelection(cmd.command.length + 1)
                 }
             }
-            .setNegativeButton("Отмена", null)
-            .show()
+        )
+        sheet.buildAndShow()
     }
 
     private fun loadBotCommands() {

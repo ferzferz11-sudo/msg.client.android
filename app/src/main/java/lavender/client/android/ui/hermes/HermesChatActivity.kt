@@ -16,8 +16,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.getHermesSettings
@@ -209,19 +207,7 @@ class HermesChatActivity : AppCompatActivity() {
                 return@setOnSendMessageListener
             }
 
-            // Add user message immediately
-            val userMessage = ChatMessageItem(
-                id = java.util.UUID.randomUUID().toString(),
-                content = text,
-                senderId = userId,
-                senderName = "Вы",
-                isCurrentUser = true,
-                timestamp = System.currentTimeMillis()
-            )
-            adapter.submitList(adapter.currentList + userMessage)
-            chatWidget.scrollToBottom()
-
-            // Send via ViewModel
+            // Send via ViewModel — it handles user message + streaming
             val currentAgent = viewModel.currentAgent.value
             viewModel.sendMessage(
                 text = text,
@@ -232,22 +218,29 @@ class HermesChatActivity : AppCompatActivity() {
 
     private fun showCommandMenu() {
         val commands = listOf(
-            HermesCommand("/status", "Get current agent status")
+            lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
+                command = "/help",
+                description = "Показать справку"
+            ),
+            lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
+                command = "/status",
+                description = "Статус агента"
+            )
         )
 
-        val dialog = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.bottom_sheet_hermes_commands, null)
-        val recyclerView = view.findViewById<RecyclerView>(R.id.commandsRecyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = HermesCommandAdapter(commands) { command ->
-            chatWidget.messageInput.setText(command.command)
-            dialog.dismiss()
-        }
-        dialog.setContentView(view)
-        dialog.show()
+        val sheet = lavender.client.android.ui.widget.CommandBottomSheet(
+            context = this,
+            commands = commands,
+            onCommandSelected = { cmd ->
+                chatWidget.messageInput.setText(cmd.command + " ")
+                chatWidget.messageInput.setSelection(cmd.command.length + 1)
+            }
+        )
+        sheet.buildAndShow()
     }
 
-    // ===== Mention logic =====
+    // Keep HermesCommand and HermesCommandAdapter for backward compat
+    data class HermesCommand(val command: String, val description: String)
 
     private fun setupMentionListener() {
         // Track @ in input
