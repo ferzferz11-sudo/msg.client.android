@@ -77,9 +77,10 @@ class SplashActivity : AppCompatActivity() {
             }
         }
 
-        // App name
+        // App name — localized
         val appNameText = TextView(this).apply {
-            text = "Lavender"
+            val lang = prefs.getString("language", "ru")
+            text = if (lang == "en") "Lava" else "Лава"
             textSize = 28f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(resources.getColor(R.color.lavender_mist, null))
