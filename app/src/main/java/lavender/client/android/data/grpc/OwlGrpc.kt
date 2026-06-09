@@ -1026,3 +1026,83 @@ suspend fun getFreeModels(): List<FreeModelInfoProto> = withContext(Dispatchers.
 
     return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList()
 }
+
+// ======= OWL History =======
+
+suspend fun getOwlHistory(chatId: String, userId: String): List<OwlHistoryMessageProto> = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("OwlGrpc", "getOwlHistory: channel dead")
+        return@withContext emptyList()
+    }
+
+    val methodDesc = MethodDescriptor.newBuilder<GetOwlHistoryRequestProto, GetOwlHistoryResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GetOwlHistory")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetOwlHistoryRequestProto> {
+            override fun stream(v: GetOwlHistoryRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GetOwlHistoryRequestProto = GetOwlHistoryRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetOwlHistoryResponseProto> {
+            override fun stream(v: GetOwlHistoryResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetOwlHistoryResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                val messages = mutableListOf<OwlHistoryMessageProto>()
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> {
+                            val len = cis.readRawVarint32()
+                            val msgBytes = cis.readRawBytes(len)
+                            if (msgBytes.isNotEmpty()) {
+                                try {
+                                    val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                                    var role = ""; var content = ""; var createdAt = ""
+                                    while (!inner.isAtEnd) {
+                                        val innerTag = inner.readTag()
+                                        if (innerTag == 0) break
+                                        when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                            1 -> role = inner.readString()
+                                            2 -> content = inner.readString()
+                                            3 -> createdAt = inner.readString()
+                                            else -> inner.skipField(innerTag)
+                                        }
+                                    }
+                                    messages.add(OwlHistoryMessageProto(role = role, content = content, createdAt = createdAt))
+                                } catch (_: Exception) {}
+                            }
+                        }
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetOwlHistoryResponseProto(messagesList = messages)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<List<OwlHistoryMessageProto>>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetOwlHistoryResponseProto>() {
+        override fun onMessage(message: GetOwlHistoryResponseProto) {
+            result.complete(message.messagesList)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(emptyList())
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetOwlHistoryRequestProto(chatId = chatId, userId = userId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList()
+}

@@ -1263,3 +1263,20 @@ data class RenameAIChatResponseProto(
     val success: Boolean = false,
     val error: String = ""
 )
+
+// ======= OWL History =======
+
+data class GetOwlHistoryRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class OwlHistoryMessageProto(
+    var role: String = "",
+    var content: String = "",
+    var createdAt: String = ""
+)
+
+data class GetOwlHistoryResponseProto(
+    val messagesList: List<OwlHistoryMessageProto> = emptyList()
+)
