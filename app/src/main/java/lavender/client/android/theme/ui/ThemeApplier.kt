@@ -230,7 +230,7 @@ object ThemeApplier {
         }
 
         // FABs
-        listOf(R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
+        listOf(R.id.aiFab, R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
             (activity.findViewById<View>(id) as? com.google.android.material.floatingactionbutton.FloatingActionButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)
