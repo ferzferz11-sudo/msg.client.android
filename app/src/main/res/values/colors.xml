@@ -40,6 +40,12 @@
     <color name="message_agent_text">#FFE0E0E0</color>
     <color name="message_agent_time">#909090</color>
 
+    <!-- AI Chat specific colors (v1.1.1.14) -->
+    <color name="ai_chat_bg">#FF1A1A1A</color>
+    <color name="ai_message_user_bg">#FF2D2D2D</color>
+    <color name="ai_message_agent_bg">#FF252525</color>
+    <color name="ai_typing_dot">#FF5F9EA0</color>
+
     <!-- Chip colors for agent participants -->
     <color name="chip_background">#33FFFFFF</color>
     <color name="chip_text">#FFE0E0E0</color>

@@ -1,8 +1,29 @@
 # Lavender Messenger — Известные проблемы и задачи в работе
 
-**Последнее обновление:** 2026-07-18
+**Последнее обновление:** 2026-06-09
 **Ветка:** feat/1.1.1.x
-**Версия:** 1.1.1.13
+**Версия:** 1.1.1.14
+
+---
+
+## ✅ Сделано (v1.1.1.14 — Дизайн + полировка)
+
+### Android
+- **Анимации сообщений**: fade-in + slide при появлении нового сообщения в ChatMessageAdapter
+- **Typing indicator**: анимированные точки (ValueAnimator) вместо статичных `●●●`
+- **Bottom sheets полировка**:
+  - StandardBottomSheet обёрнут в MaterialCardView (elevation 8dp, cornerRadius 28dp)
+  - AIBottomSheet: иконки ic_hermes/ic_owl вместо ic_add, hover-эффекты (bg_action_item_hover)
+  - CommandBottomSheet: per-command иконки, hover-эффекты, единый стиль
+  - widget_action_item.xml: ripple background, увеличенные отступы
+- **Splash screen**: fade-in анимация логотипа + "Lavender" текста, fade-out переход
+- **Статус бар**: statusBarColor = bgColor в ThemeApplier
+- **Тёмная тема**: AI-экраны проверены, добавлены AI-специфичные цвета в colors.xml
+- **Новые drawable**: bg_action_item_hover.xml (ripple с закруглённым фоном)
+
+### Server
+- ServerVersion обновлена до "1.1.1.14"
+- Серверных изменений нет, все фичи v1.1.1.13 работают
 
 ---
 

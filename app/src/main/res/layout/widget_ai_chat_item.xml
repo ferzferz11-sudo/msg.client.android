@@ -7,7 +7,7 @@
     android:orientation="horizontal"
     android:padding="12dp"
     android:gravity="center_vertical"
-    android:background="?attr/selectableItemBackground"
+    android:background="@drawable/bg_action_item_hover"
     android:clickable="true"
     android:focusable="true">
 

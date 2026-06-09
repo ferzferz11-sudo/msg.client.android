@@ -15,6 +15,8 @@ import lavender.client.android.theme.ThemeUtils
  * Bottom sheet for bot commands in AI chats (OWL + Hermes).
  * Shows command name + description, tap sends command to input.
  * Styled like AIBottomSheet / ActionBottomSheet.
+ *
+ * v1.1.1.14: Added per-command icons, hover effects, unified padding.
  */
 class CommandBottomSheet(
     context: Context,
@@ -47,7 +49,7 @@ class CommandBottomSheet(
         headerView.text = "Команды"
         contentContainer?.addView(headerView)
 
-        // Command items
+        // Command items with per-command icons
         commands.forEach { cmd ->
             val itemView = LayoutInflater.from(context)
                 .inflate(R.layout.widget_action_item, contentContainer, false)
@@ -58,10 +60,15 @@ class CommandBottomSheet(
 
             icon.setImageResource(cmd.iconRes)
             icon.imageTintList = ColorStateList.valueOf(primColor)
+
+            // Show command name + description
             text.text = "${cmd.command} — ${cmd.description}"
             text.setTextColor(txtColor)
-            text.textSize = 13f
+            text.textSize = 14f
             badge.visibility = View.GONE
+
+            // Hover/ripple effect
+            itemView.setBackgroundResource(R.drawable.bg_action_item_hover)
 
             itemView.setOnClickListener {
                 onCommandSelected(cmd)

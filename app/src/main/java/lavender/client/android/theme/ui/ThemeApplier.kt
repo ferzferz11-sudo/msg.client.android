@@ -42,6 +42,9 @@ object ThemeApplier {
             isAppearanceLightNavigationBars = isLightMode
         }
 
+        // v1.1.1.14: Ensure status bar color matches theme for AI screens
+        activity.window.statusBarColor = bgColor
+
         val root = activity.findViewById<View>(android.R.id.content)
         activity.window.decorView.setBackgroundColor(bgColor)
         root?.setBackgroundColor(bgColor)

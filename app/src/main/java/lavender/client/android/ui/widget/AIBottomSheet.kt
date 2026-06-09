@@ -139,21 +139,24 @@ class AIBottomSheet(
         // === Section 2: Hermes (Лава ИИ) ===
         val hermesHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        hermesHeader.text = "Лава ИИ (Оркестратор)"
+        hermesHeader.text = "🎼 Лава ИИ (Оркестратор)"
         contentContainer?.addView(hermesHeader)
 
         val hermesCreate = LayoutInflater.from(context)
             .inflate(R.layout.widget_action_item, contentContainer, false)
         val hermesIcon = hermesCreate.findViewById<ImageView>(R.id.actionIcon)
         val hermesText = hermesCreate.findViewById<TextView>(R.id.actionText)
-        hermesIcon.setImageResource(R.drawable.ic_add)
+        val hermesBadge = hermesCreate.findViewById<TextView>(R.id.actionBadge)
+        hermesIcon.setImageResource(R.drawable.ic_hermes)
         hermesIcon.imageTintList = ColorStateList.valueOf(primColor)
         hermesText.text = "Создать новый чат"
         hermesText.setTextColor(primColor)
+        hermesBadge.visibility = View.GONE
         hermesCreate.setOnClickListener {
             onCreateHermesChat()
             dismiss()
         }
+        hermesCreate.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(hermesCreate)
 
         // === Section 3: OWL ===
@@ -163,21 +166,24 @@ class AIBottomSheet(
 
         val owlHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        owlHeader.text = "OWL агент"
+        owlHeader.text = "🦉 OWL агент"
         contentContainer?.addView(owlHeader)
 
         val owlCreate = LayoutInflater.from(context)
             .inflate(R.layout.widget_action_item, contentContainer, false)
         val owlIcon = owlCreate.findViewById<ImageView>(R.id.actionIcon)
         val owlText = owlCreate.findViewById<TextView>(R.id.actionText)
-        owlIcon.setImageResource(R.drawable.ic_add)
+        val owlBadge = owlCreate.findViewById<TextView>(R.id.actionBadge)
+        owlIcon.setImageResource(R.drawable.ic_owl)
         owlIcon.imageTintList = ColorStateList.valueOf(primColor)
         owlText.text = "Создать новый чат"
         owlText.setTextColor(primColor)
+        owlBadge.visibility = View.GONE
         owlCreate.setOnClickListener {
             onCreateOwlChat()
             dismiss()
         }
+        owlCreate.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(owlCreate)
     }
 
