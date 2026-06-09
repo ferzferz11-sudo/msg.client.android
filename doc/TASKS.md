@@ -1,12 +1,20 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.1.14
+**Версия:** 1.1.1.15
 **Обновлено:** 2026-06-09
 **Ветка:** feat/1.1.1.x
 
 ---
 
-## ✅ v1.1.1.14 — Дизайн + полировка
+## ✅ v1.1.1.15 — Бесплатные модели + своя модель
+- Бесплатные модели загружаются с сервера (GetFreeModels RPC)
+- Без ключа: только бесплатные модели, OWL Alpha первая
+- С ключом: бесплатные + «Своя модель» (текстовый ввод ID)
+- Поле «Своя модель» скрыто без ключа + подсказка
+- Favorites flickering fix: startSync() + updateAvatarCache() offset
+- compileDebugKotlin ✅
+
+---
 - Анимации сообщений (fade-in + slide), typing indicator (ValueAnimator)
 - Bottom sheets: MaterialCardView, hover-эффекты, per-command иконки
 - Splash screen анимация, statusBarColor = bgColor
@@ -30,8 +38,9 @@
 ## 🟡 Известные баги
 
 ### Favorites — мерцание при обновлении списка чатов
-- **Статус:** исправлено в c873fbc
+- **Статус:** исправлено в c873fbc (v1.1.1.15)
 - **Причина:** startSync() вызывал setChats() без Favorites, что вызывало remove/insert каждые 5 секунд
+- **Исправление:** startSync() всегда включает Favorites; updateAvatarCache() использует offset +1
 
 ---
 

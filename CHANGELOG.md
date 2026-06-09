@@ -1,5 +1,22 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.1.15] - 2026-06-09
+### Free Models + Custom Model Input
+- **OwlSettingsActivity:** бесплатные модели загружаются с сервера (GetFreeModels RPC) вместо хардкода
+- **OwlSettingsActivity:** без своего ключа — только выпадающий список бесплатных моделей, OWL Alpha первая
+- **OwlSettingsActivity:** с ключом — бесплатные модели + опция «Своя модель (ввести вручную)»
+- **OwlSettingsActivity:** поле ввода собственной модели скрыто без ключа, показывается подсказка «Доступно только с заполненным полем API OpenRouter»
+- **OwlSettingsActivity:** если модель не из бесплатного списка — автоматически выбирается «Своя модель»
+- **OwlGrpc.kt:** парсер GetOwlSettingsResponse теперь читает free_models (field 4)
+- **OwlGrpc.kt:** новая функция getFreeModels() — unary RPC
+- **MessengerProto.kt:** добавлены FreeModelInfoProto, GetFreeModelsRequestProto, GetFreeModelsResponseProto
+- **activity_owl_settings.xml:** добавлены modelCustomInput (текстовое поле) и modelCustomHint (подсказка)
+
+### Favorites Flickering Fix
+- **ChatAdapter:** updateAvatarCache() теперь использует offset +1 при наличии Favorites (не перерисовывает position 0)
+- **ChatListActivity:** startSync() всегда включает Favorites в список, передаваемый в setChats()
+- **ChatListActivity:** добавлен метод hasFavorites() в ChatAdapter для безопасной проверки
+
 ## [1.1.1.9] - 2026-06-08
 ### Graceful Reconnect
 - **ConnectionStatus:** добавлено новое состояние `RECONNECTING` — промежуточный статус между READY и FAILED
