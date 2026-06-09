@@ -362,12 +362,9 @@ class HermesChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.currentSession.collect { session ->
                     session?.let {
-                        if (chatId.isNotEmpty() && it.id.isNotEmpty()) {
-                            viewModel.loadHistory()
-                        }
-                        // Load settings when session is available
                         if (it.id.isNotEmpty()) {
                             chatId = it.id
+                            viewModel.loadHistory()
                             loadChatSettings()
                         }
                     }
@@ -447,16 +444,20 @@ class HermesChatActivity : AppCompatActivity() {
     // ===== Public API =====
 
     private fun loadChatSettings() {
+        if (chatId.isEmpty()) return
         lifecycleScope.launch {
             try {
                 val settings = getHermesSettings(chatId, userId)
-                val info = if (settings.isUsingCustomKey) {
+                val keyInfo = if (settings.isUsingCustomKey) {
                     if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
                 } else {
-                    "Общий ключ · 20 запросов/час"
+                    "Общий ключ"
                 }
-                chatWidget.setToolbarInfo(info, true)
-                android.util.Log.d("HermesChatActivity", "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model}")
+                val countInfo = if (!settings.isUsingCustomKey && settings.limit > 0) {
+                    " · ${settings.remaining}/${settings.limit} запросов"
+                } else ""
+                chatWidget.setToolbarInfo("$keyInfo$countInfo", true)
+                android.util.Log.d("HermesChatActivity", "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model} remaining=${settings.remaining}/${settings.limit}")
             } catch (e: Exception) {
                 android.util.Log.e("HermesChatActivity", "Failed to load chat settings", e)
             }

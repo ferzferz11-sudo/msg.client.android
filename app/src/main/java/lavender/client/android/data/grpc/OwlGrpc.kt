@@ -830,6 +830,7 @@ suspend fun getOwlSettings(chatId: String, userId: String): GetOwlSettingsRespon
             override fun parse(s: java.io.InputStream): GetOwlSettingsResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
                 var apiKey = ""; var model = ""; var isUsingCustomKey = false
+                var remaining = 0; var limit = 0; var windowSeconds = 0
                 val freeModels = mutableListOf<FreeModelInfoProto>()
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
@@ -861,10 +862,13 @@ suspend fun getOwlSettings(chatId: String, userId: String): GetOwlSettingsRespon
                                 } catch (_: Exception) {}
                             }
                         }
+                        5 -> remaining = cis.readInt32()
+                        6 -> limit = cis.readInt32()
+                        7 -> windowSeconds = cis.readInt32()
                         else -> cis.skipField(tag)
                     }
                 }
-                return GetOwlSettingsResponseProto(apiKey, model, isUsingCustomKey, freeModels)
+                return GetOwlSettingsResponseProto(apiKey, model, isUsingCustomKey, freeModels, remaining, limit, windowSeconds)
             }
         })
         .build()

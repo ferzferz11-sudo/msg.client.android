@@ -926,6 +926,7 @@ suspend fun getHermesSettings(sessionId: String, userId: String): GetHermesSetti
             override fun parse(s: java.io.InputStream): GetHermesSettingsResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
                 var apiKey = ""; var model = ""; var isUsingCustomKey = false
+                var remaining = 0; var limit = 0; var windowSeconds = 0
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
@@ -933,10 +934,13 @@ suspend fun getHermesSettings(sessionId: String, userId: String): GetHermesSetti
                         1 -> apiKey = cis.readString()
                         2 -> model = cis.readString()
                         3 -> isUsingCustomKey = cis.readBool()
+                        4 -> remaining = cis.readInt32()
+                        5 -> limit = cis.readInt32()
+                        6 -> windowSeconds = cis.readInt32()
                         else -> cis.skipField(tag)
                     }
                 }
-                return GetHermesSettingsResponseProto(apiKey, model, isUsingCustomKey)
+                return GetHermesSettingsResponseProto(apiKey, model, isUsingCustomKey, remaining, limit, windowSeconds)
             }
         })
         .build()

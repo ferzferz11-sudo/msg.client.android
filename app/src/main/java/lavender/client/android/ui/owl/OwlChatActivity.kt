@@ -353,16 +353,20 @@ class OwlChatActivity : AppCompatActivity() {
     }
 
     private fun loadChatSettings() {
+        if (chatId.isEmpty()) return
         lifecycleScope.launch {
             try {
                 val settings = getOwlSettings(chatId, userId)
-                val info = if (settings.isUsingCustomKey) {
+                val keyInfo = if (settings.isUsingCustomKey) {
                     if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
                 } else {
-                    "Общий ключ · 20 запросов/час"
+                    "Общий ключ"
                 }
-                chatWidget.setToolbarInfo(info, true)
-                Log.d(TAG, "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model}")
+                val countInfo = if (!settings.isUsingCustomKey && settings.limit > 0) {
+                    " · ${settings.remaining}/${settings.limit} запросов"
+                } else ""
+                chatWidget.setToolbarInfo("$keyInfo$countInfo", true)
+                Log.d(TAG, "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model} remaining=${settings.remaining}/${settings.limit}")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load chat settings", e)
             }

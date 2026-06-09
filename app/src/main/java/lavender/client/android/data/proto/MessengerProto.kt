@@ -1178,7 +1178,10 @@ data class GetOwlSettingsResponseProto(
     val apiKey: String = "",
     val model: String = "",
     val isUsingCustomKey: Boolean = false,
-    val freeModels: List<FreeModelInfoProto> = emptyList()
+    val freeModels: List<FreeModelInfoProto> = emptyList(),
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
 )
 
 // ======= Free OpenRouter Models =======
@@ -1205,7 +1208,10 @@ data class GetHermesSettingsRequestProto(
 data class GetHermesSettingsResponseProto(
     val apiKey: String = "",
     val model: String = "",
-    val isUsingCustomKey: Boolean = false
+    val isUsingCustomKey: Boolean = false,
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
 )
 
 data class UpdateHermesSettingsRequestProto(
