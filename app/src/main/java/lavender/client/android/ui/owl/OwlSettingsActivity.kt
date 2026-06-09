@@ -47,6 +47,7 @@ class OwlSettingsActivity : AppCompatActivity() {
     private lateinit var modelDropdown: AutoCompleteTextView
     private lateinit var modelCustomInput: TextInputEditText
     private lateinit var modelCustomLayout: TextInputLayout
+    private lateinit var modelCustomHint: TextView
     private lateinit var saveButton: MaterialButton
     private lateinit var statusText: TextView
     private lateinit var keySourceText: TextView
@@ -92,6 +93,7 @@ class OwlSettingsActivity : AppCompatActivity() {
         modelDropdown = findViewById(R.id.modelDropdown)
         modelCustomInput = findViewById(R.id.modelCustomInput)
         modelCustomLayout = findViewById(R.id.modelCustomLayout)
+        modelCustomHint = findViewById(R.id.modelCustomHint)
         saveButton = findViewById(R.id.saveButton)
         statusText = findViewById(R.id.statusText)
         keySourceText = findViewById(R.id.keySourceText)
@@ -259,12 +261,15 @@ class OwlSettingsActivity : AppCompatActivity() {
             keySourceText.text = "Ваш ключ: все модели, без ограничений"
             keySourceText.setTextColor(getColor(android.R.color.holo_green_dark))
             rateLimitText.visibility = View.GONE
+            modelCustomHint.visibility = View.GONE
             modelCustomLayout.hint = "Введите ID модели (например: openai/gpt-4o)"
         } else {
             keySourceText.text = "Общий ключ: бесплатные модели, 20 запросов/час"
             keySourceText.setTextColor(getColor(android.R.color.holo_orange_dark))
             rateLimitText.visibility = View.VISIBLE
             rateLimitText.text = "Установите свой API ключ OpenRouter для доступа ко всем моделям и снятия ограничений"
+            // Show hint that custom model input is only available with own key
+            modelCustomHint.visibility = View.VISIBLE
         }
         keySourceText.visibility = View.VISIBLE
     }

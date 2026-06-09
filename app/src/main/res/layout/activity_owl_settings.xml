@@ -118,6 +118,16 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Custom model input (shown only when "Own model" selected with custom key) -->
+            <TextView
+                android:id="@+id/modelCustomHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Доступно только с заполненным полем API OpenRouter"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/modelCustomLayout"
                 android:layout_width="match_parent"
