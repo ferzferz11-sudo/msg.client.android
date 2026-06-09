@@ -152,11 +152,10 @@
             <!-- Save button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveButton"
+                style="@style/PrimaryButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Сохранить"
-                android:textColor="?attr/colorOnPrimary"
-                app:backgroundTint="?attr/colorPrimary"
                 android:layout_marginTop="8dp" />
 
             <!-- Status text -->

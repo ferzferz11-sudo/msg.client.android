@@ -2074,6 +2074,7 @@ class ChatListActivity : AppCompatActivity() {
                 openOwlChat("", "")
             },
             onOpenNotifications = {
+                shouldShowAiSheetOnResume = true
                 startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
             },
             unreadNotifCount = unreadNotifCount
