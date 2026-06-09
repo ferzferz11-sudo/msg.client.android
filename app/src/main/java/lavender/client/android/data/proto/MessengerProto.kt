@@ -908,7 +908,9 @@ data class AgentInfoProto(
     val description: String = "",
     val role: String = "",
     val isPreset: Boolean = false,
-    val icon: String = ""
+    val icon: String = "",
+    val systemPrompt: String = "",
+    val model: String = ""
 )
 
 data class ListAgentsResponseProto(
