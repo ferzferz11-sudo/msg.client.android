@@ -491,6 +491,50 @@ object GrpcClient {
     ): List<lavender.client.android.data.proto.OrchestratorHistoryMessageProto> =
         lavender.client.android.data.grpc.getOrchestratorHistory(sessionId, limit)
 
+    // ======= AI Chat (unified for OWL + Hermes) — v1.1.2.3 =======
+
+    // Unified streaming — replaces chatWithOwl + chatWithOrchestrator
+    fun chatWithAI(
+        userId: String,
+        sessionId: String,
+        message: String,
+        agentId: String = "",
+        scope: kotlinx.coroutines.CoroutineScope,
+        onResponse: (token: String, finished: Boolean, error: String) -> Unit
+    ) {
+        lavender.client.android.data.grpc.chatWithAI(
+            userId, sessionId, message, agentId, scope, onResponse
+        )
+    }
+
+    // Unified AI Chat response/typing flows
+    val aiChatResponses: kotlinx.coroutines.flow.SharedFlow<lavender.client.android.data.proto.AIChatResponseProto> =
+        lavender.client.android.data.grpc.aiChatResponses
+    val aiChatTyping: kotlinx.coroutines.flow.SharedFlow<Boolean> =
+        lavender.client.android.data.grpc.aiChatTyping
+
+    // Unified history/settings
+    suspend fun getAIChatHistory(
+        sessionId: String,
+        userId: String,
+        limit: Int = 50
+    ): List<lavender.client.android.data.proto.AIChatMessageProto> =
+        lavender.client.android.data.grpc.getAIChatHistory(sessionId, userId, limit)
+
+    suspend fun getAIChatSettings(
+        sessionId: String,
+        userId: String
+    ): lavender.client.android.data.proto.AIChatSettingsProto =
+        lavender.client.android.data.grpc.getAIChatSettings(sessionId, userId)
+
+    suspend fun updateAIChatSettings(
+        sessionId: String,
+        userId: String,
+        apiKey: String = "",
+        model: String = ""
+    ): lavender.client.android.data.proto.UpdateAIChatSettingsResponseProto =
+        lavender.client.android.data.grpc.updateAIChatSettings(sessionId, userId, apiKey, model)
+
     // Remote Agent методы (FUTURE)
     suspend fun listRemoteAgents(filterStatus: String = ""): List<lavender.client.android.data.proto.RemoteAgentInfoProto> =
         lavender.client.android.data.grpc.listRemoteAgents(filterStatus)
