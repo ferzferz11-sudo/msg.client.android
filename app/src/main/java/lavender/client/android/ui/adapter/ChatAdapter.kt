@@ -98,6 +98,8 @@ class ChatAdapter(
 
     private var favoritesItem: ChatInfo? = null
 
+    fun hasFavorites(): Boolean = favoritesItem != null
+
     fun setChats(newChats: List<ChatInfo>) {
         diffJob?.cancel()
 
@@ -263,14 +265,16 @@ class ChatAdapter(
         val snapshot = newCache.toMap()
         if (avatarCache == snapshot) return
         avatarCache = snapshot
-        
+
         if (isDiffing) return
 
         scope.launch(Dispatchers.Main) {
             val count = displayedChats.size
             if (count > 0 && !isDiffing) {
                 try {
-                    notifyItemRangeChanged(0, count, "avatar")
+                    // Offset by 1 if Favorites is present (position 0 is Favorites)
+                    val startPos = if (favoritesItem != null) 1 else 0
+                    notifyItemRangeChanged(startPos, count, "avatar")
                 } catch (_: Exception) {}
             }
         }
