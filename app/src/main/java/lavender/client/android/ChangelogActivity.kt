@@ -13,9 +13,9 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,6 +23,7 @@ import lavender.client.android.data.changelog.ChangelogRepository
 import lavender.client.android.ui.adapter.ChangelogAdapter
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
+import lavender.client.android.theme.ui.ThemeUi
 import com.google.android.material.appbar.MaterialToolbar
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -55,9 +56,12 @@ class ChangelogActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Apply theme directly (synchronous, no network wait)
+        // Apply theme synchronously BEFORE setContentView to avoid white flash
         val theme = ThemeStore.currentTheme()
         ThemeApplier.apply(this, theme)
+
+        // Also bind for future theme updates
+        ThemeUi.bind(this, "")
 
         setContentView(R.layout.activity_changelog)
 
@@ -116,7 +120,6 @@ class ChangelogActivity : AppCompatActivity() {
                             ?.alpha(1f)
                             ?.setDuration(300)
                             ?.withEndAction {
-                                // Start loading data after splash animation
                                 splashView.postDelayed({
                                     loadReleases()
                                 }, 400)
@@ -131,7 +134,7 @@ class ChangelogActivity : AppCompatActivity() {
     private fun loadReleases() {
         showLoading()
 
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
                     ChangelogRepository.fetchReleases(this@ChangelogActivity, false)
@@ -162,7 +165,7 @@ class ChangelogActivity : AppCompatActivity() {
     }
 
     private fun loadFallbackChangelog() {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch {
             try {
                 val text = withContext(Dispatchers.IO) {
                     val url = URL(CHANGELOG_URL)
