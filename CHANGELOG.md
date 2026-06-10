@@ -1,5 +1,15 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.2.3] - 2026-06-09
+### AI Chat Refactor — Unified AI Chat
+- **Новые proto классы:** AIChatRequestProto, AIChatResponseProto, AIChatMessageProto, AIChatSettingsProto + request/response wrappers
+- **AiChatGrpc.kt:** новый файл — chatWithAI (streaming), getAIChatHistory, getAIChatSettings, updateAIChatSettings
+- **GrpcClient.kt:** добавлены aiChatResponses, aiChatTyping SharedFlows + facade методы
+- **Unified streaming:** один chatWithAI RPC вместо отдельных chatWithOwl/chatWithOrchestrator
+- **version.txt:** 1.1.2.3
+- **compileDebugKotlin:** BUILD SUCCESSFUL
+- **Известные проблемы:** Hermes история не загружается, счётчик запросов off-by-one
+
 ## [1.1.1.15] - 2026-06-09
 ### Free Models + Custom Model Input
 - **OwlSettingsActivity:** бесплатные модели загружаются с сервера (GetFreeModels RPC) вместо хардкода
