@@ -92,22 +92,22 @@ ssh $SSH_OPTS "$SERVER" "VERSION='$VERSION' bash -c '
 
 # 3. Обновляем versions.json
 echo "→ Обновление versions.json..."
-ssh $SSH_OPTS "$SERVER" "VERSION='$VERSION' TODAY='$TODAY' python3 -c '
+ssh $SSH_OPTS "$SERVER" "VERSION='$VERSION' TODAY='$TODAY' python3 << 'PYEOF'
 import json, os, sys
-v = os.environ["VERSION"]
-t = os.environ["TODAY"]
-os.chdir("/var/www/lavender/archive")
+v = os.environ['VERSION']
+t = os.environ['TODAY']
+os.chdir('/var/www/lavender/archive')
 old = []
-if os.path.exists("versions.json"):
-    with open("versions.json","r") as f:
+if os.path.exists('versions.json'):
+    with open('versions.json', 'r') as f:
         old = json.load(f)
-entry = {"version": v, "date": t, "client": {"android": "/archive/android/" + v + "/lavender.apk"}}
-old = [e for e in old if e["version"] != v]
+entry = {'version': v, 'date': t, 'client': {'android': '/archive/android/' + v + '/lavender.apk'}}
+old = [e for e in old if e['version'] != v]
 old.insert(0, entry)
-with open("versions.json","w") as f:
+with open('versions.json', 'w') as f:
     json.dump(old, f, indent=2, ensure_ascii=False)
-print("OK:", [e["version"] for e in old])
-'"
+print('OK:', [e['version'] for e in old])
+PYEOF"
 
 echo "✅ Готово!"
 echo "   APK:   http://13.140.25.249/download"
