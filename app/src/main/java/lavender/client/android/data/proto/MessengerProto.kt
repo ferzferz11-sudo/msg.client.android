@@ -908,7 +908,9 @@ data class AgentInfoProto(
     val description: String = "",
     val role: String = "",
     val isPreset: Boolean = false,
-    val icon: String = ""
+    val icon: String = "",
+    val systemPrompt: String = "",
+    val model: String = ""
 )
 
 data class ListAgentsResponseProto(
@@ -1176,7 +1178,10 @@ data class GetOwlSettingsResponseProto(
     val apiKey: String = "",
     val model: String = "",
     val isUsingCustomKey: Boolean = false,
-    val freeModels: List<FreeModelInfoProto> = emptyList()
+    val freeModels: List<FreeModelInfoProto> = emptyList(),
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
 )
 
 // ======= Free OpenRouter Models =======
@@ -1203,7 +1208,10 @@ data class GetHermesSettingsRequestProto(
 data class GetHermesSettingsResponseProto(
     val apiKey: String = "",
     val model: String = "",
-    val isUsingCustomKey: Boolean = false
+    val isUsingCustomKey: Boolean = false,
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
 )
 
 data class UpdateHermesSettingsRequestProto(
@@ -1260,4 +1268,80 @@ data class RenameAIChatRequestProto(
 data class RenameAIChatResponseProto(
     val success: Boolean = false,
     val error: String = ""
+)
+
+// ======= OWL History =======
+
+data class GetOwlHistoryRequestProto(
+    val chatId: String = "",
+    val userId: String = ""
+)
+
+data class OwlHistoryMessageProto(
+    var role: String = "",
+    var content: String = "",
+    var createdAt: String = ""
+)
+
+data class GetOwlHistoryResponseProto(
+    val messagesList: List<OwlHistoryMessageProto> = emptyList()
+)
+
+// ======= AI Chat (unified for OWL + Hermes) — v1.1.2.3 =======
+
+data class AIChatRequestProto(
+    val userId: String = "",
+    val sessionId: String = "",
+    val message: String = "",
+    val agentId: String = ""
+)
+
+data class AIChatResponseProto(
+    val token: String = "",
+    val finished: Boolean = false,
+    val error: String = ""
+)
+
+data class AIChatMessageProto(
+    val role: String = "",
+    val content: String = "",
+    val agentId: String = "",
+    val createdAt: String = ""
+)
+
+data class AIChatSettingsProto(
+    val sessionId: String = "",
+    val userApiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false,
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
+)
+
+data class GetAIChatHistoryRequestProto(
+    val sessionId: String = "",
+    val userId: String = "",
+    val limit: Int = 0
+)
+
+data class GetAIChatHistoryResponseProto(
+    val messages: List<AIChatMessageProto> = emptyList()
+)
+
+data class GetAIChatSettingsRequestProto(
+    val sessionId: String = "",
+    val userId: String = ""
+)
+
+data class UpdateAIChatSettingsRequestProto(
+    val sessionId: String = "",
+    val userId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateAIChatSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
 )

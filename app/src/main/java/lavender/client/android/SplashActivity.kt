@@ -91,7 +91,7 @@ class SplashActivity : AppCompatActivity() {
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                 android.view.Gravity.CENTER
             ).apply {
-                topMargin = 60
+                topMargin = (90 * resources.displayMetrics.density).toInt()
             }
         }
 

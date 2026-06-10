@@ -98,7 +98,6 @@ class ChatListActivity : AppCompatActivity() {
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var isChatsLoaded = false // prevent reload flicker on resume
-    private var isNewUser = false // track new user for loading indicator
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
     private var unreadNotifCount = 0 // badge count for server notifications
     private var shouldShowAiSheetOnResume = false // flag to reopen AI sheet after returning from AI activity
@@ -137,13 +136,7 @@ class ChatListActivity : AppCompatActivity() {
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Logo tap → open website
-        binding.logoImage?.setOnClickListener {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://13.140.25.249/"))
-                startActivity(intent)
-            } catch (_: Exception) { }
-        }
+        // Logo tap removed — welcomeContainer deleted
 
         updateManager = UpdateManager(this)
         
@@ -188,15 +181,6 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
-        val previousUsername = prefs.getString("last_logged_username", "")
-        isNewUser = previousUsername != username
-
-        if (isNewUser) {
-            isChatsLoaded = false
-            // Save current username as last logged
-            prefs.edit { putString("last_logged_username", username) }
-        }
-
         if (SessionManager.session.value.username != username) {
             val savedUserId = prefs.getString("user_id", "") ?: ""
             SessionManager.updateSession(username = username, password = password, userId = savedUserId)
@@ -237,9 +221,6 @@ class ChatListActivity : AppCompatActivity() {
         
         checkForUpdatesSilently()
         checkAnnouncements()
-
-        // Show onboarding tips for new users (within 24 hours of registration)
-        setupOnboardingTips()
 
         chatAdapter = ChatAdapter(
             lifecycleScope,
@@ -464,11 +445,6 @@ class ChatListActivity : AppCompatActivity() {
                         // and no other room is active
                         grpcClient.startChat(username, password, "", register = false, deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
                         if (!isChatsLoaded) {
-                            // Show loading indicator for new users
-                            if (isNewUser) {
-                                binding.loadingContainer.isVisible = true
-                                binding.chatsRecyclerView.isVisible = false
-                            }
                             loadChats()
                         }
                     }
@@ -849,26 +825,18 @@ class ChatListActivity : AppCompatActivity() {
                     chats.addAll(newChats)
                     chatAdapter.setChats(newChats)
 
-                    // Mark onboarding completed
-                    if (fetchedChats.isNotEmpty()) {
-                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                        if (!prefs.getBoolean("onboarding_completed_$username", false)) {
-                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                            hideOnboardingTips()
-                        }
-                    }
-
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
                     isChatsLoaded = true
 
-                    // Hide loading indicator for new users
-                    if (isNewUser) {
-                        // Skip onboarding, directly show chat list (Favorites will be displayed)
-                        binding.loadingContainer.isVisible = false
-                        binding.chatsRecyclerView.isVisible = true
-                    }
-
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
+
+                    // Ensure Favorites is visible when chat list is empty
+                    if (newChats.size == 1 && newChats[0].type == "favorites") {
+                        binding.chatsRecyclerView.post {
+                            binding.chatsRecyclerView.visibility = View.VISIBLE
+                            chatAdapter.notifyDataSetChanged()
+                        }
+                    }
                 }
 
                 // Fetch favorites data in background (non-visual)
@@ -876,12 +844,6 @@ class ChatListActivity : AppCompatActivity() {
                     grpcClient.getFavorites(userId) { _ -> }
                 }
 
-                // Fallback: if server returned empty, try cache
-                if (fetchedChats.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        loadChatsFromCache(fetchedChats)
-                    }
-                }
             } catch (e: CancellationException) {
                 // Activity was destroyed — don't touch UI
                 Log.d("ChatListActivity", "loadChats cancelled (activity destroyed)")
@@ -891,11 +853,6 @@ class ChatListActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
                         binding.swipeRefreshLayout.isRefreshing = false
-                        // Hide loading indicator on error for new users
-                        if (isNewUser) {
-                            binding.loadingContainer.isVisible = false
-                            binding.chatsRecyclerView.isVisible = true
-                        }
                     }
                 } catch (_: CancellationException) {
                     // Activity destroyed during error handling
@@ -925,11 +882,11 @@ class ChatListActivity : AppCompatActivity() {
                 try {
                     val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
                     val cachedChats = db.chatDao().getAllChats()
-                    
+
                     runOnUiThread {
                         if (cachedChats.isNotEmpty()) {
                             val sorted = cachedChats.sortedByDescending { it.lastMessageTime }
-                            chats.addAll(sorted.map { dbChat ->
+                            val chatInfos = sorted.map { dbChat ->
                                 ChatInfo(
                                     id = dbChat.id,
                                     name = dbChat.name,
@@ -940,12 +897,28 @@ class ChatListActivity : AppCompatActivity() {
                                     participants = dbChat.participants,
                                     creator = dbChat.creator
                                 )
-                            })
+                            }
+                            // Always prepend Favorites
+                            val withFavorites = mutableListOf(ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            ))
+                            withFavorites.addAll(chatInfos)
+                            chats.addAll(withFavorites)
                         } else {
-                            // If no cache, use fetchedChats if available
-                            chats.addAll(fetchedChats)
+                            // No cache — show Favorites only
+                            chats.add(ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            ))
                         }
-                        
+
                         chatAdapter.setChats(chats.toList())
                         updateAppIconBadge(chats.sumOf { it.unreadCount })
                         Log.d("ChatListActivity", "Loaded ${chats.size} chats from cache")
@@ -954,8 +927,14 @@ class ChatListActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     Log.e("ChatListActivity", "Error loading from cache", e)
                     runOnUiThread {
-                        // Fallback to fetchedChats if cache fails
-                        chats.addAll(fetchedChats)
+                        // Fallback — show Favorites only
+                        chats.add(ChatInfo(
+                            id = "favorites_$username",
+                            name = getString(R.string.favorites),
+                            type = "favorites",
+                            lastMessageText = "",
+                            lastMessageTime = 0L
+                        ))
                         chatAdapter.setChats(chats.toList())
                         updateAppIconBadge(chats.sumOf { it.unreadCount })
                         Log.d("ChatListActivity", "Loaded ${chats.size} chats (fallback)")
@@ -1098,86 +1077,6 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         Log.d("ChatListActivity", "Update visibility: avail=$isAvailable, down=$isDownloaded, downloading=$isDownloading")
-    }
-
-    private fun setupOnboardingTips() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val firstLoginKey = "first_login_$username"
-        val registrationTime = prefs.getLong(firstLoginKey, 0)
-        val completed = prefs.getBoolean("onboarding_completed_$username", false)
-
-        // Only show tips within 24 hours of registration and if not completed
-        if (!completed && registrationTime > 0) {
-            val hoursSinceRegistration = (System.currentTimeMillis() - registrationTime) / (1000 * 60 * 60)
-            if (hoursSinceRegistration < 24) {
-                showOnboardingTips()
-            } else {
-                hideOnboardingTips()
-            }
-        } else {
-            hideOnboardingTips()
-        }
-    }
-
-    private fun showOnboardingTips() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val profileHintShown = prefs.getBoolean("onboarding_profile_shown_$username", false)
-        val fabHintShown = prefs.getBoolean("onboarding_fab_shown_$username", false)
-
-        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-        binding.welcomeVersionText.text = "v$versionName"
-
-        // Show welcome container for new users
-        binding.welcomeContainer.isVisible = true
-        binding.chatsRecyclerView.isVisible = false
-
-        // Dismiss welcome when user clicks anywhere
-        binding.welcomeContainer.setOnClickListener {
-            binding.welcomeContainer.isVisible = false
-            binding.chatsRecyclerView.isVisible = true
-
-            // Show profile hint after welcome dismissed
-            if (!profileHintShown) {
-                binding.onboardingProfileBubble.isVisible = true
-                prefs.edit { putBoolean("onboarding_profile_shown_$username", true) }
-
-                // Dismiss profile hint on click
-                binding.onboardingProfileBubble.setOnClickListener {
-                    binding.onboardingProfileBubble.isVisible = false
-
-                    // Show FAB hint after profile hint dismissed
-                    if (!fabHintShown) {
-                        binding.onboardingFabBubble.isVisible = true
-                        prefs.edit { putBoolean("onboarding_fab_shown_$username", true) }
-
-                        // Dismiss FAB hint on click
-                        binding.onboardingFabBubble.setOnClickListener {
-                            binding.onboardingFabBubble.isVisible = false
-                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                        }
-                    } else {
-                        prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                    }
-                }
-            } else if (!fabHintShown) {
-                binding.onboardingFabBubble.isVisible = true
-                prefs.edit { putBoolean("onboarding_fab_shown_$username", true) }
-
-                binding.onboardingFabBubble.setOnClickListener {
-                    binding.onboardingFabBubble.isVisible = false
-                    prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                }
-            } else {
-                prefs.edit { putBoolean("onboarding_completed_$username", true) }
-            }
-        }
-    }
-
-    private fun hideOnboardingTips() {
-        binding.welcomeContainer.isVisible = false
-        binding.onboardingProfileBubble.isVisible = false
-        binding.onboardingFabBubble.isVisible = false
-        binding.chatsRecyclerView.isVisible = true
     }
 
     private fun checkForUpdatesSilently() {
@@ -2378,6 +2277,7 @@ class ChatListActivity : AppCompatActivity() {
             .setActionButtonText(getString(R.string.add))
             .setExtraInputVisible(false)
             .setLoading(true)
+            .setCreateChatCheckboxVisible(true, getString(R.string.create_direct_chat_after))
 
         val currentContacts = mutableSetOf<String>()
 
@@ -2399,14 +2299,14 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.getContacts(username) { list ->
             currentContacts.clear()
             currentContacts.addAll(list)
-            
+
             // Now that we have contacts, load/collect all users
             val usersJob = lifecycleScope.launch {
                 grpcClient.allUsers.collect { users ->
                     val filteredUsers = users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username }
-                    withContext(Dispatchers.Main) { 
+                    withContext(Dispatchers.Main) {
                         sheet.setLoading(false)
-                        userAdapter.setUsers(filteredUsers) 
+                        userAdapter.setUsers(filteredUsers)
                     }
                 }
             }
@@ -2421,15 +2321,41 @@ class ChatListActivity : AppCompatActivity() {
         sheet.onActionClick {
             val selected = userAdapter.getSelectedUsers()
             if (selected.isNotEmpty()) {
+                val createChat = sheet.isCreateChatChecked()
                 var completed = 0
+                val total = selected.size
                 selected.forEach { contact ->
                     grpcClient.addContact(username, contact) { _, _ ->
                         completed++
-                        if (completed == selected.size) {
+                        if (completed == total) {
                             runOnUiThread {
                                 Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
                                 sheet.dismiss()
-                                refreshChatsDebounced()
+                                if (createChat && selected.size == 1) {
+                                    // Show splash and create direct chat, then navigate
+                                    try {
+                                        startActivity(Intent(this, SplashLoadingActivity::class.java))
+                                    } catch (_: Exception) {}
+                                    val targetUser = selected.first()
+                                    grpcClient.createDirectChat(username, targetUser) { chatId ->
+                                        runOnUiThread {
+                                            SplashLoadingActivity.finishIfShowing()
+                                            if (chatId != null && chatId.isNotEmpty()) {
+                                                Toast.makeText(this, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
+                                                val intent = Intent(this, NewChatActivity::class.java).apply {
+                                                    putExtra("USERNAME", username)
+                                                    putExtra("ROOM_ID", chatId)
+                                                }
+                                                startActivity(intent)
+                                            } else {
+                                                Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                                                refreshChatsDebounced()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    refreshChatsDebounced()
+                                }
                             }
                         }
                     }
@@ -2522,8 +2448,15 @@ class ChatListActivity : AppCompatActivity() {
                 btnJoin?.isEnabled = false
                 joinProgressBar?.isVisible = true
 
+                // Show splash overlay during login
+                try {
+                    startActivity(Intent(this, SplashLoadingActivity::class.java))
+                } catch (_: Exception) {}
+
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
                     runOnUiThread {
+                        // Dismiss splash overlay
+                        SplashLoadingActivity.finishIfShowing()
                         when (result) {
                             "SUCCESS" -> {
                                 // Store credentials securely via CredentialStore
@@ -2684,8 +2617,15 @@ class ChatListActivity : AppCompatActivity() {
                 btnRegister.isEnabled = false
                 registerProgressBar?.isVisible = true
 
+                // Show splash overlay during registration
+                try {
+                    startActivity(Intent(this, SplashLoadingActivity::class.java))
+                } catch (_: Exception) {}
+
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result ->
                     runOnUiThread {
+                        // Dismiss splash overlay
+                        SplashLoadingActivity.finishIfShowing()
                         when (result) {
                             "REGISTRATION_SUCCESS" -> {
                                 // Store credentials securely via CredentialStore
@@ -2701,8 +2641,6 @@ class ChatListActivity : AppCompatActivity() {
                                     lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
                                 }
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
-                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                                prefs.edit { putBoolean("onboarding_completed_$u", false); putLong("first_login_$u", System.currentTimeMillis()) }
                                 isTransitioning = true
                                 sheet.dismiss()
                                 recreate()  // consistent with login flow — no startActivity+finish race

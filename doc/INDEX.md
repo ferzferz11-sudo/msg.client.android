@@ -26,4 +26,6 @@
 Документация серверной части в репозитории `/root/msg/doc/`:
 - `INTEGRATION_SESSION.md` — текущий контекст интеграции
 - `TASKS.md` — серверный таск-трекер
+- `AI_SERVICES.md` — архитектура AI сервисов (OWL + Hermes), API, proto mapping
+- `PITFALLS.md` — подводные камни Android и сервера
 - `HERMES_ORCHESTRATOR_DOC.md` — архитектура Hermes

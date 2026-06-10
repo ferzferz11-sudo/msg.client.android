@@ -238,7 +238,7 @@ suspend fun listAgents(userId: String = ""): List<AgentInfoProto> = withContext(
                             if (msgBytes.isNotEmpty()) {
                                 try {
                                     val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
-                                    var id = ""; var name = ""; var description = ""; var role = ""; var isPreset = false; var icon = ""
+                                    var id = ""; var name = ""; var description = ""; var systemPrompt = ""; var isPreset = false; var model = ""
                                     while (!inner.isAtEnd) {
                                         val innerTag = inner.readTag()
                                         if (innerTag == 0) break
@@ -246,13 +246,13 @@ suspend fun listAgents(userId: String = ""): List<AgentInfoProto> = withContext(
                                             1 -> id = inner.readString()
                                             2 -> name = inner.readString()
                                             3 -> description = inner.readString()
-                                            4 -> role = inner.readString()
-                                            5 -> isPreset = inner.readBool()
-                                            6 -> icon = inner.readString()
+                                            4 -> isPreset = inner.readBool()       // field 4 = is_preset (bool)
+                                            5 -> systemPrompt = inner.readString()  // field 5 = system_prompt (string)
+                                            6 -> model = inner.readString()         // field 6 = model (string)
                                             else -> inner.skipField(innerTag)
                                         }
                                     }
-                                    agents.add(AgentInfoProto(id, name, description, role, isPreset, icon))
+                                    agents.add(AgentInfoProto(id, name, description, systemPrompt, isPreset, model))
                                 } catch (_: Exception) {}
                             }
                         }
@@ -403,9 +403,9 @@ suspend fun createAgent(
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> agentId = cis.readString()
-                        2 -> success = cis.readBool()
-                        3 -> message = cis.readString()
+                        1 -> success = cis.readBool()       // field 1 = success (bool)
+                        2 -> agentId = cis.readString()     // field 2 = agent_id (string)
+                        3 -> message = cis.readString()     // field 3 = error (string)
                         4 -> {
                             val len = cis.readRawVarint32()
                             val msgBytes = cis.readRawBytes(len)
@@ -611,7 +611,7 @@ suspend fun listUserAgents(userId: String): List<AgentInfoProto> = withContext(D
                             if (msgBytes.isNotEmpty()) {
                                 try {
                                     val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
-                                    var id = ""; var name = ""; var description = ""; var role = ""; var isPreset = false; var icon = ""
+                                    var id = ""; var name = ""; var description = ""; var systemPrompt = ""; var isPreset = false; var model = ""
                                     while (!inner.isAtEnd) {
                                         val innerTag = inner.readTag()
                                         if (innerTag == 0) break
@@ -619,13 +619,13 @@ suspend fun listUserAgents(userId: String): List<AgentInfoProto> = withContext(D
                                             1 -> id = inner.readString()
                                             2 -> name = inner.readString()
                                             3 -> description = inner.readString()
-                                            4 -> role = inner.readString()
-                                            5 -> isPreset = inner.readBool()
-                                            6 -> icon = inner.readString()
+                                            4 -> isPreset = inner.readBool()       // field 4 = is_preset (bool)
+                                            5 -> systemPrompt = inner.readString()  // field 5 = system_prompt (string)
+                                            6 -> model = inner.readString()         // field 6 = model (string)
                                             else -> inner.skipField(innerTag)
                                         }
                                     }
-                                    agents.add(AgentInfoProto(id, name, description, role, isPreset, icon))
+                                    agents.add(AgentInfoProto(id, name, description, systemPrompt, isPreset, model))
                                 } catch (_: Exception) {}
                             }
                         }
@@ -700,10 +700,10 @@ suspend fun createHermesSession(
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> sessionId = cis.readString()  // field 1 = session_id (string)
-                        2 -> success = cis.readBool()      // field 2 = success (bool)
-                        3 -> message = cis.readString()    // field 3 = message (string)
-                        4 -> name = cis.readString()       // field 4 = name (string)
+                        1 -> success = cis.readBool()       // field 1 = success (bool)
+                        2 -> sessionId = cis.readString()   // field 2 = session_id (string)
+                        3 -> message = cis.readString()     // field 3 = error (string)
+                        4 -> name = cis.readString()        // field 4 = name (string)
                         else -> cis.skipField(tag)
                     }
                 }
@@ -926,6 +926,7 @@ suspend fun getHermesSettings(sessionId: String, userId: String): GetHermesSetti
             override fun parse(s: java.io.InputStream): GetHermesSettingsResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
                 var apiKey = ""; var model = ""; var isUsingCustomKey = false
+                var remaining = 0; var limit = 0; var windowSeconds = 0
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
@@ -933,10 +934,13 @@ suspend fun getHermesSettings(sessionId: String, userId: String): GetHermesSetti
                         1 -> apiKey = cis.readString()
                         2 -> model = cis.readString()
                         3 -> isUsingCustomKey = cis.readBool()
+                        4 -> remaining = cis.readInt32()
+                        5 -> limit = cis.readInt32()
+                        6 -> windowSeconds = cis.readInt32()
                         else -> cis.skipField(tag)
                     }
                 }
-                return GetHermesSettingsResponseProto(apiKey, model, isUsingCustomKey)
+                return GetHermesSettingsResponseProto(apiKey, model, isUsingCustomKey, remaining, limit, windowSeconds)
             }
         })
         .build()

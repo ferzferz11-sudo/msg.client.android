@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.getBotCommands
+import lavender.client.android.data.grpc.getOwlHistory
 import lavender.client.android.data.grpc.getOwlSettings
 import lavender.client.android.data.grpc.getOWLStatus
 import lavender.client.android.data.grpc.processBotCommand
@@ -119,6 +120,11 @@ class OwlChatActivity : AppCompatActivity() {
         // Load key/model info for header
         if (chatId.isNotEmpty()) {
             loadChatSettings()
+        }
+
+        // Load message history from server
+        if (chatId.isNotEmpty()) {
+            loadOwlHistory()
         }
     }
 
@@ -347,16 +353,20 @@ class OwlChatActivity : AppCompatActivity() {
     }
 
     private fun loadChatSettings() {
+        if (chatId.isEmpty()) return
         lifecycleScope.launch {
             try {
                 val settings = getOwlSettings(chatId, userId)
-                val info = if (settings.isUsingCustomKey) {
+                val keyInfo = if (settings.isUsingCustomKey) {
                     if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
                 } else {
-                    "Общий ключ · 20 запросов/час"
+                    "Общий ключ"
                 }
-                chatWidget.setToolbarInfo(info, true)
-                Log.d(TAG, "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model}")
+                val countInfo = if (!settings.isUsingCustomKey && settings.limit > 0) {
+                    " · ${settings.remaining}/${settings.limit} запросов"
+                } else ""
+                chatWidget.setToolbarInfo("$keyInfo$countInfo", true)
+                Log.d(TAG, "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model} remaining=${settings.remaining}/${settings.limit}")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load chat settings", e)
             }
@@ -438,5 +448,36 @@ class OwlChatActivity : AppCompatActivity() {
         )
     }
 
-    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+    private fun loadOwlHistory() {
+        lifecycleScope.launch {
+            try {
+                val history = getOwlHistory(chatId, userId)
+                Log.d(TAG, "Loaded ${history.size} OWL history messages")
+                for (msg in history) {
+                    val isUser = msg.role == "user"
+                    val msgId = "owl-history-${msg.createdAt}"
+                    if (isUser) {
+                        viewModel.addUserMessage(
+                            id = msgId,
+                            content = msg.content,
+                            senderId = userId,
+                            senderName = "Вы",
+                            isCurrentUser = true
+                        )
+                    } else {
+                        viewModel.addMessage(
+                            id = msgId,
+                            content = msg.content,
+                            senderId = "owl",
+                            senderName = "🦉 OWL",
+                            isCurrentUser = false,
+                            senderEmoji = "🦉"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load OWL history", e)
+            }
+        }
+    }
 }
