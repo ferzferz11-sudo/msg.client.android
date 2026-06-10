@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import lavender.client.android.data.changelog.ChangelogRepository
 import lavender.client.android.ui.adapter.ChangelogAdapter
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import com.google.android.material.appbar.MaterialToolbar
@@ -222,6 +223,18 @@ class ChangelogActivity : AppCompatActivity() {
         contentView.visibility = View.GONE
         fallbackView.visibility = View.VISIBLE
         tvFallback.text = text
+
+        // Apply theme colors programmatically for consistent dark/light appearance
+        val theme = ThemeStore.currentTheme()
+        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, android.graphics.Color.BLACK)
+        val textColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor,
+            if (ThemeUtils.isLight(bgColor)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+        val secondaryTextColor = ThemeUtils.parseSafeColor(theme.textSecondaryColor,
+            if (ThemeUtils.isLight(bgColor)) android.graphics.Color.GRAY else android.graphics.Color.LTGRAY)
+
+        fallbackView.setBackgroundColor(bgColor)
+        tvFallback.setTextColor(textColor)
+        tvCacheIndicator.setTextColor(secondaryTextColor)
 
         if (isBundled) {
             tvCacheIndicator.text = getString(R.string.changelog_loading_from_cache)
