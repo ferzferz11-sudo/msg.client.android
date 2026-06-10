@@ -22,6 +22,8 @@ import lavender.client.android.theme.ui.ThemeApplier
 import java.util.concurrent.ConcurrentHashMap
 
 import android.widget.EditText
+import android.widget.CompoundButton
+import android.widget.CheckBox
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -137,7 +139,11 @@ open class StandardBottomSheet(
                 setSize((2 * context.resources.displayMetrics.density).toInt(), 0)
                 setColor(primaryColor)
             }
-        } else if (view is android.widget.Button) { // This covers MaterialButton too
+        } else if (view is android.widget.CompoundButton) {
+            // CheckBox, Switch, Toggle — themed text color + tint
+            view.buttonTintList = ColorStateList.valueOf(primaryColor)
+            view.setTextColor(textPrimaryColor)
+        } else if (view is android.widget.Button) {
             view.isAllCaps = false
             view.transformationMethod = null // Crucial to disable Caps
             
@@ -396,6 +402,7 @@ class SearchableListBottomSheet(context: Context, theme: Theme = ThemeStore.curr
     val extraInputLayout: TextInputLayout? = root?.findViewById(R.id.extraInputLayout)
     val actionButton: com.google.android.material.button.MaterialButton? = root?.findViewById(R.id.actionButton)
     val progressBar: android.widget.ProgressBar? = root?.findViewById(R.id.progressBar)
+    val createChatCheckbox: android.widget.CheckBox? = root?.findViewById(R.id.createChatCheckbox)
 
     override fun applyTheme(theme: Theme) {
         super.applyTheme(theme)
@@ -429,6 +436,14 @@ class SearchableListBottomSheet(context: Context, theme: Theme = ThemeStore.curr
         extraEditText?.hint = hint
         return this
     }
+
+    fun setCreateChatCheckboxVisible(visible: Boolean, text: String? = null): SearchableListBottomSheet {
+        createChatCheckbox?.isVisible = visible
+        if (text != null) createChatCheckbox?.text = text
+        return this
+    }
+
+    fun isCreateChatChecked(): Boolean = createChatCheckbox?.isChecked == true
 
     private var searchWatcher: android.text.TextWatcher? = null
 

@@ -243,6 +243,7 @@ class ContactsActivity : AppCompatActivity() {
             .setActionButtonText(getString(R.string.add))
             .setExtraInputVisible(false)
             .setLoading(true)
+            .setCreateChatCheckboxVisible(true, getString(R.string.create_direct_chat_after))
 
         val userAdapter = UserAdapter(
             lifecycleScope,
@@ -263,9 +264,9 @@ class ContactsActivity : AppCompatActivity() {
         val usersJob = lifecycleScope.launch {
             grpcClient.allUsers.collect { allUsers ->
                 val filteredUsersNames = allUsers.filter { it.username != username && !contacts.contains(it.username) }.map { it.username }
-                runOnUiThread { 
+                runOnUiThread {
                     sheet.setLoading(false)
-                    userAdapter.setUsers(filteredUsersNames) 
+                    userAdapter.setUsers(filteredUsersNames)
                 }
             }
         }
@@ -279,15 +280,40 @@ class ContactsActivity : AppCompatActivity() {
         sheet.onActionClick {
             val selected = userAdapter.getSelectedUsers()
             if (selected.isNotEmpty()) {
+                val createChat = sheet.isCreateChatChecked()
                 var completed = 0
+                val total = selected.size
                 selected.forEach { contact ->
                     grpcClient.addContact(username, contact) { _, _ ->
                         completed++
-                        if (completed == selected.size) {
+                        if (completed == total) {
                             runOnUiThread {
                                 Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
-                                loadContacts()
                                 sheet.dismiss()
+                                if (createChat && selected.size == 1) {
+                                    try {
+                                        startActivity(Intent(this, SplashLoadingActivity::class.java))
+                                    } catch (_: Exception) {}
+                                    val targetUser = selected.first()
+                                    grpcClient.createDirectChat(username, targetUser) { chatId ->
+                                        runOnUiThread {
+                                            SplashLoadingActivity.finishIfShowing()
+                                            if (chatId != null && chatId.isNotEmpty()) {
+                                                Toast.makeText(this, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
+                                                val intent = Intent(this, NewChatActivity::class.java).apply {
+                                                    putExtra("USERNAME", username)
+                                                    putExtra("ROOM_ID", chatId)
+                                                }
+                                                startActivity(intent)
+                                            } else {
+                                                Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                                                loadContacts()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    loadContacts()
+                                }
                             }
                         }
                     }

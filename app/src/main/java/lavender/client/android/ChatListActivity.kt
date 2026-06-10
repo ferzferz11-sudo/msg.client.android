@@ -2378,6 +2378,7 @@ class ChatListActivity : AppCompatActivity() {
             .setActionButtonText(getString(R.string.add))
             .setExtraInputVisible(false)
             .setLoading(true)
+            .setCreateChatCheckboxVisible(true, getString(R.string.create_direct_chat_after))
 
         val currentContacts = mutableSetOf<String>()
 
@@ -2399,14 +2400,14 @@ class ChatListActivity : AppCompatActivity() {
         grpcClient.getContacts(username) { list ->
             currentContacts.clear()
             currentContacts.addAll(list)
-            
+
             // Now that we have contacts, load/collect all users
             val usersJob = lifecycleScope.launch {
                 grpcClient.allUsers.collect { users ->
                     val filteredUsers = users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username }
-                    withContext(Dispatchers.Main) { 
+                    withContext(Dispatchers.Main) {
                         sheet.setLoading(false)
-                        userAdapter.setUsers(filteredUsers) 
+                        userAdapter.setUsers(filteredUsers)
                     }
                 }
             }
@@ -2421,15 +2422,41 @@ class ChatListActivity : AppCompatActivity() {
         sheet.onActionClick {
             val selected = userAdapter.getSelectedUsers()
             if (selected.isNotEmpty()) {
+                val createChat = sheet.isCreateChatChecked()
                 var completed = 0
+                val total = selected.size
                 selected.forEach { contact ->
                     grpcClient.addContact(username, contact) { _, _ ->
                         completed++
-                        if (completed == selected.size) {
+                        if (completed == total) {
                             runOnUiThread {
                                 Toast.makeText(this, R.string.contact_added, Toast.LENGTH_SHORT).show()
                                 sheet.dismiss()
-                                refreshChatsDebounced()
+                                if (createChat && selected.size == 1) {
+                                    // Show splash and create direct chat, then navigate
+                                    try {
+                                        startActivity(Intent(this, SplashLoadingActivity::class.java))
+                                    } catch (_: Exception) {}
+                                    val targetUser = selected.first()
+                                    grpcClient.createDirectChat(username, targetUser) { chatId ->
+                                        runOnUiThread {
+                                            SplashLoadingActivity.finishIfShowing()
+                                            if (chatId != null && chatId.isNotEmpty()) {
+                                                Toast.makeText(this, getString(R.string.chat_created_with, targetUser), Toast.LENGTH_SHORT).show()
+                                                val intent = Intent(this, NewChatActivity::class.java).apply {
+                                                    putExtra("USERNAME", username)
+                                                    putExtra("ROOM_ID", chatId)
+                                                }
+                                                startActivity(intent)
+                                            } else {
+                                                Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                                                refreshChatsDebounced()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    refreshChatsDebounced()
+                                }
                             }
                         }
                     }
@@ -2522,8 +2549,15 @@ class ChatListActivity : AppCompatActivity() {
                 btnJoin?.isEnabled = false
                 joinProgressBar?.isVisible = true
 
+                // Show splash overlay during login
+                try {
+                    startActivity(Intent(this, SplashLoadingActivity::class.java))
+                } catch (_: Exception) {}
+
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
                     runOnUiThread {
+                        // Dismiss splash overlay
+                        SplashLoadingActivity.finishIfShowing()
                         when (result) {
                             "SUCCESS" -> {
                                 // Store credentials securely via CredentialStore
@@ -2684,8 +2718,15 @@ class ChatListActivity : AppCompatActivity() {
                 btnRegister.isEnabled = false
                 registerProgressBar?.isVisible = true
 
+                // Show splash overlay during registration
+                try {
+                    startActivity(Intent(this, SplashLoadingActivity::class.java))
+                } catch (_: Exception) {}
+
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result ->
                     runOnUiThread {
+                        // Dismiss splash overlay
+                        SplashLoadingActivity.finishIfShowing()
                         when (result) {
                             "REGISTRATION_SUCCESS" -> {
                                 // Store credentials securely via CredentialStore
