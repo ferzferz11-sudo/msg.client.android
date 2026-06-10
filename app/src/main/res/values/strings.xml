@@ -552,4 +552,8 @@
     <string name="changelog_error">Failed to load changelog</string>
     <string name="changelog_open_github">Open on GitHub</string>
     <string name="open">Open</string>
+    <string name="changelog_server_full">Server Changelog (GitHub)</string>
+    <string name="changelog_client_full">Client Changelog (GitHub)</string>
+    <string name="changelog_full_description">Full changelog with all technical details</string>
+    <string name="changelog_loading_from_cache">Showing cached changelog</string>
 </resources>

@@ -1,19 +1,28 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.1.16
-**Обновлено:** 2026-06-09
-**Ветка:** feat/1.1.1.x
+**Версия:** 1.1.2.6
+**Обновлено:** 2026-06-10
+**Ветка:** feat/1.1.2.x
 
 ---
 
-## ✅ v1.1.1.16 — Багфикс + полировка
-- SplashActivity: логотип 🦞 → ic_notification_logo
-- SplashActivity: надпись "Лава" (ru) / "Lava" (en)
-- AIBottomSheet: rebuildContent() + updateChats() для перестройки без закрытия
-- AIBottomSheet: popup menu delete/settings не закрывает шторку
-- ChatListActivity: shouldShowAiSheetOnResume — return из AI активити открывает шторку
-- ThemeApplier: aiFab добавлен в список FAB для кастомных тем
-- Save button в OWL settings: style="@style/PrimaryButton"
+## ✅ v1.1.2.6 — ChangelogActivity: bundled changelog + ссылки на GitHub
+
+- **Bundled changelog**: добавлен `app/src/main/assets/changelog_bundled.txt` — встроенный ченджлог, показывается мгновенно без сети
+- **Новая логика загрузки**: сначала bundled → потом GitHub API → потом server fallback
+- **Содержание отображается сразу** — не нужно ждать загрузки с GitHub
+- **Ссылки на полные CHANGELOG.md**: кнопки «Ченджлог сервера (GitHub)» и «Ченджлог клиента (GitHub)» внизу экрана
+- **changelog.txt обновлён**: исправлен порядок версий, убраны дубли, актуализирован
+- **changelog.txt скопирован на сервер**: /var/www/lavender/changelog.txt
+- compileDebugKotlin ✅
+
+---
+
+## ✅ v1.1.2.5 — ChangelogActivity тема
+
+- ChangelogActivity: ThemeUi.bind добавлен (белый экран исправлен)
+- ChangelogActivity: splash-экран при загрузке
+- ChangelogActivity: fallback на changelog.txt если GitHub API не ответил
 - compileDebugKotlin ✅
 
 ---

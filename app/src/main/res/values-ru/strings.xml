@@ -546,4 +546,8 @@
     <string name="changelog_open_github">Открыть на GitHub</string>
     <string name="open">Открыть</string>
     <string name="hermes_chat_title">Лава ИИ</string>
+    <string name="changelog_server_full">Ченджлог сервера (GitHub)</string>
+    <string name="changelog_client_full">Ченджлог клиента (GitHub)</string>
+    <string name="changelog_full_description">Полный ченджлог со всеми техническими деталями</string>
+    <string name="changelog_loading_from_cache">Показан локальный ченджлог</string>
 </resources>

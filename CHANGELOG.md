@@ -1,5 +1,22 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.2.6] - 2026-06-10
+### ChangelogActivity — Bundled Changelog + GitHub Links
+- **Bundled changelog**: добавлен `app/src/main/assets/changelog_bundled.txt` — встроенный ченджлог показывается мгновенно без сети
+- **Новая логика загрузки**: bundled (мгновенно) → GitHub API → server fallback
+- **Ссылки на полные CHANGELOG.md**: кнопки «Ченджлог сервера» и «Ченджлог клиента» ведут на GitHub
+- **changelog.txt обновлён**: исправлен порядок версий, актуализирован
+- **strings.xml**: добавлены `changelog_server_full`, `changelog_client_full`, `changelog_full_description`, `changelog_loading_from_cache`
+- **activity_changelog.xml**: секция с ссылками на GitHub в fallback-виде
+- **ru strings**: локализация новых строк
+
+## [1.1.2.5] - 2026-06-10
+### ChangelogActivity — Theme Fix
+- **Белый экран**: добавлен ThemeUi.bind(this, "") в onCreate — кастомные темы применяются корректно
+- **Splash**: логотип + «Лава» с анимацией пока данные грузятся
+- **Fallback**: если GitHub API не ответил — загружает changelog.txt с сервера
+- ChangelogActivity: ThemeApplier.apply вызывается синхронно до setContentView
+
 ## [1.1.2.3] - 2026-06-09
 ### AI Chat Refactor — Unified AI Chat
 - **Новые proto классы:** AIChatRequestProto, AIChatResponseProto, AIChatMessageProto, AIChatSettingsProto + request/response wrappers

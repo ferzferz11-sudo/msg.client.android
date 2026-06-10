@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Splash screen (shown while loading) -->
+    <!-- Splash screen (shown while loading from network) -->
     <FrameLayout
         android:id="@+id/splashView"
         android:layout_width="match_parent"
@@ -35,7 +35,7 @@
             android:alpha="0" />
     </FrameLayout>
 
-    <!-- Main content -->
+    <!-- Main content: GitHub releases list -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contentView"
         android:layout_width="match_parent"
@@ -88,7 +88,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Fallback: changelog.txt from server -->
+    <!-- Fallback: bundled/server changelog -->
     <ScrollView
         android:id="@+id/fallbackView"
         android:layout_width="match_parent"
@@ -96,14 +96,73 @@
         android:visibility="gone"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/tvFallback"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:lineSpacingExtra="4dp"
-            android:textColor="?attr/colorOnSurface"
-            android:fontFamily="monospace" />
+            android:orientation="vertical">
+
+            <!-- Cache indicator -->
+            <TextView
+                android:id="@+id/tvCacheIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurface"
+                android:alpha="0.5"
+                android:paddingBottom="12dp"
+                android:visibility="gone" />
+
+            <!-- Changelog text -->
+            <TextView
+                android:id="@+id/tvFallback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="?attr/colorOnSurface"
+                android:fontFamily="monospace" />
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:background="?attr/colorOnSurface"
+                android:alpha="0.15" />
+
+            <!-- Section: Full changelogs on GitHub -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/changelog_full_description"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurface"
+                android:alpha="0.6"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Server changelog link -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnServerChangelog"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/changelog_server_full"
+                android:textSize="13sp"
+                android:gravity="start|center_vertical"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Client changelog link -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClientChangelog"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/changelog_client_full"
+                android:textSize="13sp"
+                android:gravity="start|center_vertical" />
+
+        </LinearLayout>
     </ScrollView>
 
 </FrameLayout>

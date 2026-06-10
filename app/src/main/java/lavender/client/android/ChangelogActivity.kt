@@ -25,6 +25,7 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -35,6 +36,13 @@ class ChangelogActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "ChangelogActivity"
         private const val CHANGELOG_URL = "http://13.140.25.249/changelog.txt"
+        private const val BUNDLED_ASSET = "changelog_bundled.txt"
+
+        // GitHub CHANGELOG.md links (full technical changelog)
+        private const val GITHUB_SERVER_CHANGELOG =
+            "https://github.com/ferzferz11-sudo/msg/blob/feat/1.1.2.x/CHANGELOG.md"
+        private const val GITHUB_CLIENT_CHANGELOG =
+            "https://github.com/ferzferz11-sudo/msg.client.android/blob/feat/1.1.2.x/CHANGELOG.md"
 
         fun createIntent(context: Context): Intent {
             return Intent(context, ChangelogActivity::class.java)
@@ -51,7 +59,13 @@ class ChangelogActivity : AppCompatActivity() {
     private lateinit var tvError: TextView
     private lateinit var fallbackView: ScrollView
     private lateinit var tvFallback: TextView
+    private lateinit var tvCacheIndicator: TextView
+    private lateinit var btnServerChangelog: MaterialButton
+    private lateinit var btnClientChangelog: MaterialButton
     private lateinit var adapter: ChangelogAdapter
+
+    // Track if we already showed bundled content to avoid flickering
+    private var bundledShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +89,9 @@ class ChangelogActivity : AppCompatActivity() {
         tvError = findViewById(R.id.tvError)
         fallbackView = findViewById(R.id.fallbackView)
         tvFallback = findViewById(R.id.tvFallback)
+        tvCacheIndicator = findViewById(R.id.tvCacheIndicator)
+        btnServerChangelog = findViewById(R.id.btnServerChangelog)
+        btnClientChangelog = findViewById(R.id.btnClientChangelog)
 
         // Setup toolbar
         setSupportActionBar(toolbar)
@@ -89,109 +106,106 @@ class ChangelogActivity : AppCompatActivity() {
         rvReleases.layoutManager = LinearLayoutManager(this)
         rvReleases.adapter = adapter
 
-        // Show splash and start loading
-        showSplashAndLoad()
+        // Setup GitHub changelog buttons
+        btnServerChangelog.setOnClickListener {
+            openUrl(GITHUB_SERVER_CHANGELOG)
+        }
+        btnClientChangelog.setOnClickListener {
+            openUrl(GITHUB_CLIENT_CHANGELOG)
+        }
+
+        // Step 1: Load bundled changelog instantly from assets
+        loadBundledChangelog()
+
+        // Step 2: Try to fetch from GitHub in background
+        fetchFromNetwork()
     }
 
-    private fun showSplashAndLoad() {
-        splashView.visibility = View.VISIBLE
-        contentView.visibility = View.GONE
-        fallbackView.visibility = View.GONE
-
-        // Get localized app name
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val lang = prefs.getString("language", "ru")
-        splashAppName.text = if (lang == "en") "Lava" else "Лава"
-
-        // Animate splash
-        splashLogo.animate()
-            ?.alpha(1f)
-            ?.scaleX(1.1f)
-            ?.scaleY(1.1f)
-            ?.setDuration(500)
-            ?.setInterpolator(AccelerateDecelerateInterpolator())
-            ?.withEndAction {
-                splashLogo.animate()
-                    ?.scaleX(1f)
-                    ?.scaleY(1f)
-                    ?.setDuration(300)
-                    ?.withEndAction {
-                        splashAppName.animate()
-                            ?.alpha(1f)
-                            ?.setDuration(300)
-                            ?.withEndAction {
-                                splashView.postDelayed({
-                                    loadReleases()
-                                }, 400)
-                            }
-                            ?.start()
-                    }
-                    ?.start()
-            }
-            ?.start()
-    }
-
-    private fun loadReleases() {
-        showLoading()
-
+    /**
+     * Load bundled changelog from assets — instant, no network needed.
+     * This is always shown first so the user sees content immediately.
+     */
+    private fun loadBundledChangelog() {
         lifecycleScope.launch {
             try {
+                val text = withContext(Dispatchers.IO) {
+                    assets.open(BUNDLED_ASSET).bufferedReader().use { it.readText() }
+                }
+                if (text.isNotEmpty()) {
+                    showFallback(text, isBundled = true)
+                    bundledShown = true
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load bundled changelog", e)
+                // Not critical — network fetch will handle it
+            }
+        }
+    }
+
+    /**
+     * Fetch from GitHub API (releases) or server fallback (changelog.txt).
+     * If GitHub succeeds, replaces the bundled view with the full release list.
+     */
+    private fun fetchFromNetwork() {
+        lifecycleScope.launch {
+            try {
+                // Try GitHub API first
                 val result = withContext(Dispatchers.IO) {
                     ChangelogRepository.fetchReleases(this@ChangelogActivity, false)
                 }
 
                 result.fold(
                     onSuccess = { releases ->
-                        hideLoading()
                         if (releases.isNotEmpty()) {
+                            // GitHub success — show full release list
                             showContent()
                             adapter.setReleases(releases)
-                        } else {
-                            loadFallbackChangelog()
                         }
+                        // If empty, keep bundled view (already shown)
                     },
                     onFailure = { error ->
-                        hideLoading()
-                        Log.e(TAG, "Failed to load changelog from GitHub", error)
-                        loadFallbackChangelog()
+                        Log.w(TAG, "GitHub API failed, trying server fallback", error)
+                        // Try server fallback
+                        tryServerFallback()
                     }
                 )
             } catch (e: Exception) {
-                hideLoading()
-                Log.e(TAG, "Unexpected error loading changelog", e)
-                loadFallbackChangelog()
+                Log.e(TAG, "Unexpected error fetching from network", e)
+                tryServerFallback()
             }
         }
     }
 
-    private fun loadFallbackChangelog() {
-        lifecycleScope.launch {
-            try {
-                val text = withContext(Dispatchers.IO) {
-                    val url = URL(CHANGELOG_URL)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.connectTimeout = 5000
-                    connection.readTimeout = 5000
+    /**
+     * Try loading changelog.txt from server as last resort.
+     */
+    private suspend fun tryServerFallback() {
+        try {
+            val text = withContext(Dispatchers.IO) {
+                val url = URL(CHANGELOG_URL)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
 
-                    val responseCode = connection.responseCode
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val reader = BufferedReader(InputStreamReader(connection.inputStream))
-                        val result = reader.use { it.readText() }
-                        connection.disconnect()
-                        result
-                    } else {
-                        connection.disconnect()
-                        ""
-                    }
-                }
-
-                if (text.isNotEmpty()) {
-                    showFallback(text)
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    val result = reader.use { it.readText() }
+                    connection.disconnect()
+                    result
                 } else {
-                    showError(getString(R.string.changelog_error))
+                    connection.disconnect()
+                    ""
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load fallback changelog", e)
+            }
+
+            if (text.isNotEmpty() && !bundledShown) {
+                showFallback(text, isBundled = false)
+            }
+            // If bundled was already shown, keep it — server text is the same
+        } catch (e: Exception) {
+            Log.e(TAG, "Server fallback also failed", e)
+            if (!bundledShown) {
                 showError(getString(R.string.changelog_error))
             }
         }
@@ -203,11 +217,18 @@ class ChangelogActivity : AppCompatActivity() {
         fallbackView.visibility = View.GONE
     }
 
-    private fun showFallback(text: String) {
+    private fun showFallback(text: String, isBundled: Boolean) {
         splashView.visibility = View.GONE
         contentView.visibility = View.GONE
         fallbackView.visibility = View.VISIBLE
         tvFallback.text = text
+
+        if (isBundled) {
+            tvCacheIndicator.text = getString(R.string.changelog_loading_from_cache)
+            tvCacheIndicator.visibility = View.VISIBLE
+        } else {
+            tvCacheIndicator.visibility = View.GONE
+        }
     }
 
     private fun showLoading() {
