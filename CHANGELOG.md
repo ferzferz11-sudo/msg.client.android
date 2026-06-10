@@ -1,5 +1,34 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.2.7] - 2026-06-11
+### SplashActivity — улучшения
+- **Расстояние логотип→текст**: увеличено с 60px до 90dp
+- **SplashLoadingActivity**: новый оверлей загрузки (логотип + анимация) для логина/регистрации
+- **Login/Register**: показывается SplashLoadingActivity во время запросов авторизации
+
+### Удаление онбординга
+- Удалён экран приветствия (welcomeContainer) с логотипом и описанием
+- Удалены подсказки профиля и FAB (onboardingProfileBubble, onboardingFabBubble)
+- Удалена установка `first_login_`/`onboarding_completed_` prefs
+- Удалена темизация онбординга из ThemeApplier
+- Удалены строки welcome_new_user_title/description, onboarding_profile_hint/fab_hint (en + ru)
+- Список чатов теперь показывается сразу при входе
+
+### Чекбокс "Создать чат" при добавлении контакта
+- Добавлен CheckBox "Сразу создать личный чат" в шторку добавления контакта
+- Чекбокс включён по умолчанию
+- При включении: создаётся прямой чат → переход в NewChatActivity через SplashLoadingActivity
+- Работает и в ChatListActivity и в ContactsActivity
+
+### Исправления
+- **Crash при выборе чатов с пустым списком**: `selectedPositions.clear()` в `setChats()`, `getSelectedChats()` защищён от IndexOutOfBoundsException
+- **getSelectedChats offset**: исправлен маппинг позиций с учётом Favorites на позиции 0
+- **loadingContainer удалён**: прелоадер "Загрузка" в центре экрана больше не блокирует интерфейс
+- **statusBarColor deprecation**: убран deprecated вызов в ThemeApplier
+
+### Известные проблемы
+- **Favorites при пустом списке**: при входе после очистки памяти Favorites может не отображаться если нет созданных чатов (см. PITFALLS.md)
+
 ## [1.1.2.6] - 2026-06-10
 ### ChangelogActivity — Bundled Changelog + GitHub Links
 - **Bundled changelog**: добавлен `app/src/main/assets/changelog_bundled.txt` — встроенный ченджлог показывается мгновенно без сети

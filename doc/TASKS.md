@@ -1,19 +1,46 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.2.6
-**Обновлено:** 2026-06-10
+**Версия:** 1.1.2.7
+**Обновлено:** 2026-06-11
 **Ветка:** feat/1.1.2.x
+
+---
+
+## ✅ v1.1.2.7 — Splash улучшения, удаление онбординга, чекбокс чата
+
+### SplashActivity
+- Увеличено расстояние логотип→текст (60px → 90dp)
+- Новый SplashLoadingActivity — оверлей загрузки для логина/регистрации
+- Login/Register: показывается SplashLoadingActivity во время авторизации
+
+### Онбординг удалён
+- Удалён welcomeContainer (логотип + описание)
+- Удалены onboardingProfileBubble, onboardingFabBubble
+- Удалена установка first_login_/onboarding_completed_ prefs
+- Удалена темизация онбординга из ThemeApplier
+- Список чатов показывается сразу при входе
+
+### Чекбокс "Создать чат"
+- CheckBox "Сразу создать личный чат" в шторке добавления контакта
+- Включён по умолчанию
+- Создаёт чат → переход в NewChatActivity через SplashLoadingActivity
+- Работает в ChatListActivity и ContactsActivity
+
+### Исправления
+- Crash при выборе чатов с пустым списком (selectedPositions.clear в setChats)
+- getSelectedChats offset для Favorites на позиции 0
+- Удалён loadingContainer (прелоадер "Загрузка" в центре)
+- Убран deprecated statusBarColor в ThemeApplier
+- compileDebugKotlin ✅
 
 ---
 
 ## ✅ v1.1.2.6 — ChangelogActivity: bundled changelog + ссылки на GitHub
 
-- **Bundled changelog**: добавлен `app/src/main/assets/changelog_bundled.txt` — встроенный ченджлог, показывается мгновенно без сети
-- **Новая логика загрузки**: сначала bundled → потом GitHub API → потом server fallback
-- **Содержание отображается сразу** — не нужно ждать загрузки с GitHub
-- **Ссылки на полные CHANGELOG.md**: кнопки «Ченджлог сервера (GitHub)» и «Ченджлог клиента (GitHub)» внизу экрана
-- **changelog.txt обновлён**: исправлен порядок версий, убраны дубли, актуализирован
-- **changelog.txt скопирован на сервер**: /var/www/lavender/changelog.txt
+- **Bundled changelog**: добавлен `app/src/main/assets/changelog_bundled.txt`
+- **Новая логика загрузки**: bundled → GitHub API → server fallback
+- **Ссылки на полные CHANGELOG.md**: кнопки «Ченджлог сервера» и «Ченджлог клиента»
+- **changelog.txt удалён** из проекта и деплоя
 - compileDebugKotlin ✅
 
 ---
@@ -21,26 +48,22 @@
 ## ✅ v1.1.2.5 — ChangelogActivity тема
 
 - ChangelogActivity: ThemeUi.bind добавлен (белый экран исправлен)
-- ChangelogActivity: splash-экран при загрузке
-- ChangelogActivity: fallback на changelog.txt если GitHub API не ответил
 - compileDebugKotlin ✅
 
 ---
 
 ## ✅ v1.1.1.15 — Бесплатные модели + своя модель
+
 - Бесплатные модели загружаются с сервера (GetFreeModels RPC)
-- Без ключа: только бесплатные модели, OWL Alpha первая
-- С ключом: бесплатные + «Своя модель» (текстовый ввод ID)
-- Поле «Своя модель» скрыто без ключа + подсказка
 - Favorites flickering fix: startSync() + updateAvatarCache() offset
 - compileDebugKotlin ✅
 
 ---
 
 ## ✅ v1.1.1.14 — Дизайн + полировка
-- Анимации сообщений (fade-in + slide), typing indicator (ValueAnimator)
-- Bottom sheets: MaterialCardView, hover-эффекты, per-command иконки
-- Splash screen анимация, statusBarColor = bgColor
+
+- Анимации сообщений, typing indicator
+- Bottom sheets: MaterialCardView, hover-эффекты
 - compileDebugKotlin ✅
 
 ---
@@ -48,7 +71,7 @@
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] Деплой на prod → v1.1.2.0
+- [ ] Favorites при пустом списке — не отображается при входе после очистки памяти
 
 ### Средний приоритет
 - [ ] Graceful shutdown сервера
@@ -62,6 +85,12 @@
 ---
 
 ## 🟡 Известные баги
+
+### Favorites — отображение при пустом списке чатов
+- **Статус:** не исправлено, v1.1.2.7
+- **Симптом:** при входе после очистки памяти Favorites не отображается если нет созданных чатов. Появляется после создания первого чата.
+- **Попытки:** selectedPositions.clear(), post{notifyDataSetChanged()}, удаление loadChatsFromCache — не помогли
+- **Нужно:** отладить почему getItemCount() возвращает 1 но RecyclerView не рендерит
 
 ### Favorites — мерцание при обновлении списка чатов
 - **Статус:** исправлено в c873fbc (v1.1.1.15)
@@ -77,6 +106,7 @@
 | ChatWidget-подход | Общий функционал через виджет, не копипаст |
 | setExistingSession | Передача существующей сессии через intent |
 | ThemeApplier FAB list | Новые FAB добавлять в список для кастомных тем |
+| SplashLoadingActivity | Отдельный оверлей вместо ProgressBar на кнопке |
 
 ---
 
@@ -92,3 +122,5 @@
 | `Entities.kt` | ChatEntity + Room DB v9 |
 | `ThemeApplier.kt` | Применение кастомных тем к UI |
 | `AIBottomSheet.kt` | AI шторка с чатами |
+| `SplashActivity.kt` | Сплеш-экран с анимацией |
+| `SplashLoadingActivity.kt` | Оверлей загрузки для авторизации |
