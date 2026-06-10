@@ -829,6 +829,14 @@ class ChatListActivity : AppCompatActivity() {
                     isChatsLoaded = true
 
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
+
+                    // Ensure Favorites is visible when chat list is empty
+                    if (newChats.size == 1 && newChats[0].type == "favorites") {
+                        binding.chatsRecyclerView.post {
+                            binding.chatsRecyclerView.visibility = View.VISIBLE
+                            chatAdapter.notifyDataSetChanged()
+                        }
+                    }
                 }
 
                 // Fetch favorites data in background (non-visual)
