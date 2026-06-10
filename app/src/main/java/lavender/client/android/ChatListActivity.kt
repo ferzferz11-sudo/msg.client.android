@@ -836,12 +836,6 @@ class ChatListActivity : AppCompatActivity() {
                     grpcClient.getFavorites(userId) { _ -> }
                 }
 
-                // Fallback: if server returned empty, try cache
-                if (fetchedChats.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        loadChatsFromCache(fetchedChats)
-                    }
-                }
             } catch (e: CancellationException) {
                 // Activity was destroyed — don't touch UI
                 Log.d("ChatListActivity", "loadChats cancelled (activity destroyed)")
@@ -880,11 +874,11 @@ class ChatListActivity : AppCompatActivity() {
                 try {
                     val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
                     val cachedChats = db.chatDao().getAllChats()
-                    
+
                     runOnUiThread {
                         if (cachedChats.isNotEmpty()) {
                             val sorted = cachedChats.sortedByDescending { it.lastMessageTime }
-                            chats.addAll(sorted.map { dbChat ->
+                            val chatInfos = sorted.map { dbChat ->
                                 ChatInfo(
                                     id = dbChat.id,
                                     name = dbChat.name,
@@ -895,12 +889,28 @@ class ChatListActivity : AppCompatActivity() {
                                     participants = dbChat.participants,
                                     creator = dbChat.creator
                                 )
-                            })
+                            }
+                            // Always prepend Favorites
+                            val withFavorites = mutableListOf(ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            ))
+                            withFavorites.addAll(chatInfos)
+                            chats.addAll(withFavorites)
                         } else {
-                            // If no cache, use fetchedChats if available
-                            chats.addAll(fetchedChats)
+                            // No cache — show Favorites only
+                            chats.add(ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            ))
                         }
-                        
+
                         chatAdapter.setChats(chats.toList())
                         updateAppIconBadge(chats.sumOf { it.unreadCount })
                         Log.d("ChatListActivity", "Loaded ${chats.size} chats from cache")
@@ -909,8 +919,14 @@ class ChatListActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     Log.e("ChatListActivity", "Error loading from cache", e)
                     runOnUiThread {
-                        // Fallback to fetchedChats if cache fails
-                        chats.addAll(fetchedChats)
+                        // Fallback — show Favorites only
+                        chats.add(ChatInfo(
+                            id = "favorites_$username",
+                            name = getString(R.string.favorites),
+                            type = "favorites",
+                            lastMessageText = "",
+                            lastMessageTime = 0L
+                        ))
                         chatAdapter.setChats(chats.toList())
                         updateAppIconBadge(chats.sumOf { it.unreadCount })
                         Log.d("ChatListActivity", "Loaded ${chats.size} chats (fallback)")
