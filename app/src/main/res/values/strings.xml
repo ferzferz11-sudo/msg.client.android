@@ -245,8 +245,6 @@
     <string name="clear">Clear</string>
     <string name="history_cleared">History cleared</string>
 
-    <string name="welcome_new_user_title">Welcome to Lava!</string>
-    <string name="welcome_new_user_description">This is the messaging system. Your privacy is our top priority, which is why all chats here are protected with end-to-end encryption.</string>
     <string name="loading">Loading…</string>
     <string name="change_bio">Save</string>
     <string name="bio_label">Bio</string>
@@ -354,8 +352,7 @@
     <string name="download_complete">Download complete!</string>
     <string name="manual_install_hint">If the installation doesn\'t start automatically, please click the button below.</string>
     <string name="install_now">Install Now</string>
-    <string name="onboarding_profile_hint">Set up your profile so friends can recognize you!</string>
-    <string name="onboarding_fab_hint">Add contacts of the people you want to message!\nCreate a new chat or join groups to stay always connected!</string>
+
     <string name="share_with_friends">Share Lava</string>
     <string name="apply">Apply</string>
     <string name="user_is_typing">%1$s typing…</string>

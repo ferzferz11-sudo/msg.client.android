@@ -137,13 +137,7 @@ class ChatListActivity : AppCompatActivity() {
         binding = ActivityChatListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Logo tap → open website
-        binding.logoImage?.setOnClickListener {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://13.140.25.249/"))
-                startActivity(intent)
-            } catch (_: Exception) { }
-        }
+        // Logo tap removed — welcomeContainer deleted
 
         updateManager = UpdateManager(this)
         
@@ -237,9 +231,6 @@ class ChatListActivity : AppCompatActivity() {
         
         checkForUpdatesSilently()
         checkAnnouncements()
-
-        // Show onboarding tips for new users (within 24 hours of registration)
-        setupOnboardingTips()
 
         chatAdapter = ChatAdapter(
             lifecycleScope,
@@ -849,15 +840,6 @@ class ChatListActivity : AppCompatActivity() {
                     chats.addAll(newChats)
                     chatAdapter.setChats(newChats)
 
-                    // Mark onboarding completed
-                    if (fetchedChats.isNotEmpty()) {
-                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                        if (!prefs.getBoolean("onboarding_completed_$username", false)) {
-                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                            hideOnboardingTips()
-                        }
-                    }
-
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
                     isChatsLoaded = true
 
@@ -1098,86 +1080,6 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         Log.d("ChatListActivity", "Update visibility: avail=$isAvailable, down=$isDownloaded, downloading=$isDownloading")
-    }
-
-    private fun setupOnboardingTips() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val firstLoginKey = "first_login_$username"
-        val registrationTime = prefs.getLong(firstLoginKey, 0)
-        val completed = prefs.getBoolean("onboarding_completed_$username", false)
-
-        // Only show tips within 24 hours of registration and if not completed
-        if (!completed && registrationTime > 0) {
-            val hoursSinceRegistration = (System.currentTimeMillis() - registrationTime) / (1000 * 60 * 60)
-            if (hoursSinceRegistration < 24) {
-                showOnboardingTips()
-            } else {
-                hideOnboardingTips()
-            }
-        } else {
-            hideOnboardingTips()
-        }
-    }
-
-    private fun showOnboardingTips() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val profileHintShown = prefs.getBoolean("onboarding_profile_shown_$username", false)
-        val fabHintShown = prefs.getBoolean("onboarding_fab_shown_$username", false)
-
-        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-        binding.welcomeVersionText.text = "v$versionName"
-
-        // Show welcome container for new users
-        binding.welcomeContainer.isVisible = true
-        binding.chatsRecyclerView.isVisible = false
-
-        // Dismiss welcome when user clicks anywhere
-        binding.welcomeContainer.setOnClickListener {
-            binding.welcomeContainer.isVisible = false
-            binding.chatsRecyclerView.isVisible = true
-
-            // Show profile hint after welcome dismissed
-            if (!profileHintShown) {
-                binding.onboardingProfileBubble.isVisible = true
-                prefs.edit { putBoolean("onboarding_profile_shown_$username", true) }
-
-                // Dismiss profile hint on click
-                binding.onboardingProfileBubble.setOnClickListener {
-                    binding.onboardingProfileBubble.isVisible = false
-
-                    // Show FAB hint after profile hint dismissed
-                    if (!fabHintShown) {
-                        binding.onboardingFabBubble.isVisible = true
-                        prefs.edit { putBoolean("onboarding_fab_shown_$username", true) }
-
-                        // Dismiss FAB hint on click
-                        binding.onboardingFabBubble.setOnClickListener {
-                            binding.onboardingFabBubble.isVisible = false
-                            prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                        }
-                    } else {
-                        prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                    }
-                }
-            } else if (!fabHintShown) {
-                binding.onboardingFabBubble.isVisible = true
-                prefs.edit { putBoolean("onboarding_fab_shown_$username", true) }
-
-                binding.onboardingFabBubble.setOnClickListener {
-                    binding.onboardingFabBubble.isVisible = false
-                    prefs.edit { putBoolean("onboarding_completed_$username", true) }
-                }
-            } else {
-                prefs.edit { putBoolean("onboarding_completed_$username", true) }
-            }
-        }
-    }
-
-    private fun hideOnboardingTips() {
-        binding.welcomeContainer.isVisible = false
-        binding.onboardingProfileBubble.isVisible = false
-        binding.onboardingFabBubble.isVisible = false
-        binding.chatsRecyclerView.isVisible = true
     }
 
     private fun checkForUpdatesSilently() {
@@ -2742,8 +2644,6 @@ class ChatListActivity : AppCompatActivity() {
                                     lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
                                 }
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
-                                val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                                prefs.edit { putBoolean("onboarding_completed_$u", false); putLong("first_login_$u", System.currentTimeMillis()) }
                                 isTransitioning = true
                                 sheet.dismiss()
                                 recreate()  // consistent with login flow — no startActivity+finish race

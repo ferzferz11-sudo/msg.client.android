@@ -255,17 +255,10 @@ object ThemeApplier {
             }
         }
 
-        // Onboarding and Welcome
-        activity.findViewById<TextView>(R.id.welcomeTitle)?.setTextColor(textPrimary)
-        activity.findViewById<TextView>(R.id.toolbarTitle)?.setTextColor(customOnPrimary)
-        (activity.findViewById<View>(R.id.toolbarSubtitle) as? TextView)?.setTextColor(adjustAlpha(customOnPrimary, 0.8f))
-        activity.findViewById<TextView>(R.id.updateProgressText)?.setTextColor(customOnPrimary)
-        activity.findViewById<TextView>(R.id.welcomeDescription)?.setTextColor(textSecondary)
-        
         // Settings/Edit Profile headers
         (activity.findViewById<View>(R.id.bioLabelText) as? TextView)?.setTextColor(customPrimary)
-        
-        listOf(R.id.onboardingProfileBubble, R.id.onboardingFabBubble, R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard).forEach { id ->
+
+        listOf(R.id.biometricCard, R.id.devicesCard, R.id.bioCard, R.id.avatarCard, R.id.settingsCard).forEach { id ->
             activity.findViewById<View>(id)?.let { view ->
                 if (view is MaterialCardView) {
                     view.setCardBackgroundColor(ColorStateList.valueOf(surfaceColor))
@@ -274,8 +267,6 @@ object ThemeApplier {
                 }
             }
         }
-        (activity.findViewById<View>(R.id.onboardingProfileText) as? TextView)?.setTextColor(onSurfaceColor)
-        (activity.findViewById<View>(R.id.onboardingFabText) as? TextView)?.setTextColor(onSurfaceColor)
     }
 
     fun applyToDialog(dialog: com.google.android.material.bottomsheet.BottomSheetDialog, theme: Theme) {

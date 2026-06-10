@@ -225,9 +225,6 @@
     <string name="edit">Изменить профиль</string>
     <string name="edit_theme_button">Редактировать</string>
 
-    <string name="welcome_new_user_title">Добро пожаловать в Лаву!</string>
-    <string name="welcome_new_user_description">Это система обмена сообщениями!\nВаша приватность — наш главный приоритет, поэтому все чаты здесь защищены сквозным шифрованием.</string>
-
     <!-- Notification History -->
     <string name="no_notifications">Нет уведомлений</string>
     <string name="token_copied">Токен скопирован в буфер обмена</string>
@@ -344,8 +341,7 @@
     <string name="download_complete">Загрузка завершена!</string>
     <string name="manual_install_hint">Если установка не началась автоматически, пожалуйста, нажмите на кнопку ниже.</string>
     <string name="install_now">Установить</string>
-    <string name="onboarding_profile_hint">Настройте профиль, чтобы друзья могли вас узнать!</string>
-    <string name="onboarding_fab_hint">Добавьте контакты людей, с которыми хотите общаться!\nСоздайте новый чат или присоединяйтесь к группам, чтобы всегда быть на связи!</string>
+
     <string name="share_with_friends">Поделиться Лавой</string>
     <string name="apply">Применить</string>
     <string name="user_is_typing">%1$s печатает…</string>
