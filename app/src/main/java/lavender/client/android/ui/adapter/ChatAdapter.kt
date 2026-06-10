@@ -81,7 +81,11 @@ class ChatAdapter(
         notifyDataSetChanged()
     }
 
-    fun getSelectedChats(): List<ChatInfo> = selectedPositions.filter { it < displayedChats.size }.map { displayedChats[it] }
+    fun getSelectedChats(): List<ChatInfo> {
+        val offset = if (favoritesItem != null) 1 else 0
+        return selectedPositions.filter { it >= offset }
+            .map { displayedChats[it - offset] }
+    }
 
     fun setChatDeleting(chatId: String, deleting: Boolean) {
         if (deleting) deletingChatIds.add(chatId) else deletingChatIds.remove(chatId)
