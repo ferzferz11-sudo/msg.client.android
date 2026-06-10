@@ -1,6 +1,5 @@
 package lavender.client.android
 
-import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -14,15 +13,16 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.animation.doOnEnd
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.changelog.ChangelogRepository
-import lavender.client.android.data.changelog.ReleaseInfo
 import lavender.client.android.ui.adapter.ChangelogAdapter
-import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ui.ThemeApplier
 import com.google.android.material.appbar.MaterialToolbar
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -55,7 +55,9 @@ class ChangelogActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        ThemeUi.bind(this, "")
+        // Apply theme directly (synchronous, no network wait)
+        val theme = ThemeStore.currentTheme()
+        ThemeApplier.apply(this, theme)
 
         setContentView(R.layout.activity_changelog)
 
@@ -129,9 +131,11 @@ class ChangelogActivity : AppCompatActivity() {
     private fun loadReleases() {
         showLoading()
 
-        lifecycleScope.launch {
+        CoroutineScope(Dispatchers.Main).launch {
             try {
-                val result = ChangelogRepository.fetchReleases(this@ChangelogActivity, false)
+                val result = withContext(Dispatchers.IO) {
+                    ChangelogRepository.fetchReleases(this@ChangelogActivity, false)
+                }
 
                 result.fold(
                     onSuccess = { releases ->
@@ -140,14 +144,12 @@ class ChangelogActivity : AppCompatActivity() {
                             showContent()
                             adapter.setReleases(releases)
                         } else {
-                            // Empty result — try fallback
                             loadFallbackChangelog()
                         }
                     },
                     onFailure = { error ->
                         hideLoading()
                         Log.e(TAG, "Failed to load changelog from GitHub", error)
-                        // Try fallback
                         loadFallbackChangelog()
                     }
                 )
@@ -160,38 +162,36 @@ class ChangelogActivity : AppCompatActivity() {
     }
 
     private fun loadFallbackChangelog() {
-        lifecycleScope.launch {
+        CoroutineScope(Dispatchers.Main).launch {
             try {
-                val url = URL(CHANGELOG_URL)
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 5000
-                connection.readTimeout = 5000
+                val text = withContext(Dispatchers.IO) {
+                    val url = URL(CHANGELOG_URL)
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.connectTimeout = 5000
+                    connection.readTimeout = 5000
 
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
-                    val text = reader.use { it.readText() }
-                    connection.disconnect()
-
-                    if (text.isNotEmpty()) {
-                        showFallback(text)
-                        return@launch
+                    val responseCode = connection.responseCode
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                        val result = reader.use { it.readText() }
+                        connection.disconnect()
+                        result
+                    } else {
+                        connection.disconnect()
+                        ""
                     }
                 }
-                connection.disconnect()
+
+                if (text.isNotEmpty()) {
+                    showFallback(text)
+                } else {
+                    showError(getString(R.string.changelog_error))
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load fallback changelog", e)
+                showError(getString(R.string.changelog_error))
             }
-
-            // If everything failed — show error
-            showError(getString(R.string.changelog_error))
         }
-    }
-
-    private fun showSplash() {
-        splashView.visibility = View.VISIBLE
-        contentView.visibility = View.GONE
-        fallbackView.visibility = View.GONE
     }
 
     private fun showContent() {
