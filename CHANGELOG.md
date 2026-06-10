@@ -5,10 +5,14 @@
 - **Bundled changelog**: добавлен `app/src/main/assets/changelog_bundled.txt` — встроенный ченджлог показывается мгновенно без сети
 - **Новая логика загрузки**: bundled (мгновенно) → GitHub API → server fallback
 - **Ссылки на полные CHANGELOG.md**: кнопки «Ченджлог сервера» и «Ченджлог клиента» ведут на GitHub
-- **changelog.txt обновлён**: исправлен порядок версий, актуализирован
+- **changelog.txt удалён** из проекта и из деплоя на сервер
 - **strings.xml**: добавлены `changelog_server_full`, `changelog_client_full`, `changelog_full_description`, `changelog_loading_from_cache`
 - **activity_changelog.xml**: секция с ссылками на GitHub в fallback-виде
 - **ru strings**: локализация новых строк
+- **Исправление цветов**: fallback теперь использует цвета из `ThemeStore` программно (не XML-атрибуты)
+- **deploy_android.sh обновлён**: убрана загрузка changelog.txt, добавлен комментарий про bundled
+- **Документация обновлена**: INDEX.md, PITFALLS.md, TASKS.md
+- compileDebugKotlin ✅
 
 ## [1.1.2.5] - 2026-06-10
 ### ChangelogActivity — Theme Fix
