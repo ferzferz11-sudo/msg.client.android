@@ -1,3 +1,9 @@
+🚀 Lavender 1.1.2.5: ChangelogActivity — кастомные темы
+
+— Исправлено: ChangelogActivity теперь применяет кастомные темы (ThemeUi.bind)
+— Исправлено: белый экран при тёмной/кастомной теме в списке релизов
+— Сервер: v1.1.2.4 (без изменений)
+
 🚀 Lavender 1.1.2.3: AI Chat Refactor — единый менеджер
 
 — НОВОЕ: единый AI Chat менеджер (ai_chat_sessions, ai_chat_messages, ai_chat_settings)
