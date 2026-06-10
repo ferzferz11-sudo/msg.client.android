@@ -98,7 +98,6 @@ class ChatListActivity : AppCompatActivity() {
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var isChatsLoaded = false // prevent reload flicker on resume
-    private var isNewUser = false // track new user for loading indicator
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
     private var unreadNotifCount = 0 // badge count for server notifications
     private var shouldShowAiSheetOnResume = false // flag to reopen AI sheet after returning from AI activity
@@ -180,15 +179,6 @@ class ChatListActivity : AppCompatActivity() {
         if (username.isEmpty() || password.isEmpty()) {
             showAuthChoiceDialog()
             return
-        }
-
-        val previousUsername = prefs.getString("last_logged_username", "")
-        isNewUser = previousUsername != username
-
-        if (isNewUser) {
-            isChatsLoaded = false
-            // Save current username as last logged
-            prefs.edit { putString("last_logged_username", username) }
         }
 
         if (SessionManager.session.value.username != username) {
@@ -455,11 +445,6 @@ class ChatListActivity : AppCompatActivity() {
                         // and no other room is active
                         grpcClient.startChat(username, password, "", register = false, deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
                         if (!isChatsLoaded) {
-                            // Show loading indicator for new users
-                            if (isNewUser) {
-                                binding.loadingContainer.isVisible = true
-                                binding.chatsRecyclerView.isVisible = false
-                            }
                             loadChats()
                         }
                     }
@@ -843,13 +828,6 @@ class ChatListActivity : AppCompatActivity() {
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
                     isChatsLoaded = true
 
-                    // Hide loading indicator for new users
-                    if (isNewUser) {
-                        // Skip onboarding, directly show chat list (Favorites will be displayed)
-                        binding.loadingContainer.isVisible = false
-                        binding.chatsRecyclerView.isVisible = true
-                    }
-
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
                 }
 
@@ -873,11 +851,6 @@ class ChatListActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
                         binding.swipeRefreshLayout.isRefreshing = false
-                        // Hide loading indicator on error for new users
-                        if (isNewUser) {
-                            binding.loadingContainer.isVisible = false
-                            binding.chatsRecyclerView.isVisible = true
-                        }
                     }
                 } catch (_: CancellationException) {
                     // Activity destroyed during error handling

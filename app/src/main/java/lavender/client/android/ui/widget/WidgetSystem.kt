@@ -440,6 +440,7 @@ class SearchableListBottomSheet(context: Context, theme: Theme = ThemeStore.curr
     fun setCreateChatCheckboxVisible(visible: Boolean, text: String? = null): SearchableListBottomSheet {
         createChatCheckbox?.isVisible = visible
         if (text != null) createChatCheckbox?.text = text
+        createChatCheckbox?.isChecked = true
         return this
     }
 
