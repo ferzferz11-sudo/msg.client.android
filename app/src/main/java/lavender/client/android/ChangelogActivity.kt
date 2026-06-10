@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.data.changelog.ChangelogRepository
 import lavender.client.android.data.changelog.ReleaseInfo
 import lavender.client.android.ui.adapter.ChangelogAdapter
+import lavender.client.android.theme.ui.ThemeUi
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.snackbar.Snackbar
 
@@ -37,6 +38,8 @@ class ChangelogActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        ThemeUi.bind(this, "")
 
         setContentView(R.layout.activity_changelog)
 
