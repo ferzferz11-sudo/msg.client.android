@@ -88,7 +88,7 @@ class OwlChatViewModel : ViewModel() {
     private fun updateTypingMessage(show: Boolean) {
         val current = _owlMessages.value.toMutableList()
         // Remove existing typing message
-        val filtered = current.filter { !it.isTyping }
+        val filtered = current.filter { !it.isTyping }.toMutableList()
         if (show) {
             // Don't add typing if we already have a real response streaming
             if (current.none { it.isTyping }) {

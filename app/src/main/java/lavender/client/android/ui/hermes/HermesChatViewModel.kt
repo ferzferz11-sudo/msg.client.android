@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.db.AppDatabase
 import lavender.client.android.data.db.ChatEntity
+import lavender.client.android.data.db.toHermesMessage
+import lavender.client.android.data.db.toMessageEntity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.*
 import lavender.client.android.data.repository.HermesRepository
@@ -122,7 +124,7 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _isLoading.value = true
             // 1. Load from local DB first
-            val localMessages = withContext(Dispatchers.IO) {
+            val localMessages: List<HermesMessage> = withContext(Dispatchers.IO) {
                 messageDao.getMessagesForRoom(session.id).map { it.toHermesMessage() }
             }
             if (localMessages.isNotEmpty()) {
