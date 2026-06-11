@@ -190,19 +190,20 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     /**
      * Send a task to the selected remote agent via DeployAgentTask
      */
-    fun sendMessage(text: String, userId: String) {
+    fun sendMessage(text: String, userId: String, taskType: String = "shell") {
         val agent = _selectedAgent.value
         if (agent == null) {
             _error.value = "Агент не выбран"
             return
         }
 
-        // Add user message
+        // Add user message with task type indicator
         val userMsg = RemoteAgentMessage(
             id = java.util.UUID.randomUUID().toString(),
             content = text,
             isUser = true,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            taskType = taskType
         )
         _messages.value = _messages.value + userMsg
 
@@ -212,11 +213,10 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 val response = GrpcClient.deployAgentTask(
                     agentId = agent.id,
-                    taskType = "shell",  // Default to shell for now
+                    taskType = taskType,
                     params = mapOf("command" to text)
                 )
                 if (response.success) {
-                    // Task accepted — show task ID
                     val agentMsg = RemoteAgentMessage(
                         id = java.util.UUID.randomUUID().toString(),
                         content = "✅ Задача отправлена (ID: ${response.taskId})",
@@ -295,5 +295,6 @@ data class RemoteAgentMessage(
     val content: String = "",
     val isUser: Boolean = false,
     val timestamp: Long = System.currentTimeMillis(),
-    val isStreaming: Boolean = false
+    val isStreaming: Boolean = false,
+    val taskType: String = ""
 )
