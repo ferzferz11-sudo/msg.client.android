@@ -19,7 +19,6 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
-import lavender.client.android.theme.ui.ThemeUi
 
 class RemoteAgentSettingsActivity : AppCompatActivity() {
 
@@ -37,8 +36,13 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
 
         userId = SessionManager.session.value.userId
 
-        // Apply theme
-        ThemeUi.bind(this, userId)
+        val theme = ThemeStore.currentTheme()
+        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+
+        // Apply background
+        window.decorView.setBackgroundColor(bgColor)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         tokenListContainer = findViewById(R.id.tokenListContainer)
@@ -46,7 +50,14 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         btnGenerateToken = findViewById(R.id.btnGenerateToken)
 
         // Toolbar
+        toolbar.setBackgroundColor(surfaceColor)
+        toolbar.setTitleTextColor(txtColor)
+        toolbar.setNavigationIconTint(txtColor)
         toolbar.setNavigationOnClickListener { finish() }
+
+        // Style the generate button
+        btnGenerateToken.setBackgroundColor(ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE))
+        btnGenerateToken.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
 
         // Generate token button
         btnGenerateToken.setOnClickListener {
@@ -96,6 +107,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
 
         if (activeTokens.isEmpty()) {
             emptyText.visibility = View.VISIBLE
+            emptyText.setTextColor(txtSecondary)
             tokenListContainer.visibility = View.GONE
         } else {
             emptyText.visibility = View.GONE
@@ -134,7 +146,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     confirmRevoke(token)
                 }
 
-                // Card background
                 val card = view as com.google.android.material.card.MaterialCardView
                 card.setCardBackgroundColor(surfaceColor)
 

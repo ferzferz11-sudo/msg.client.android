@@ -3,7 +3,6 @@ package lavender.client.android.ui.remote
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -47,7 +46,7 @@ class RemoteAgentActivity : AppCompatActivity() {
 
         userId = SessionManager.session.value.userId
 
-        // Apply theme
+        // Apply theme (before findView so ThemeApplier can style toolbar)
         ThemeUi.bind(this, userId)
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
@@ -59,12 +58,19 @@ class RemoteAgentActivity : AppCompatActivity() {
         chatWidget = findViewById(R.id.chatWidget)
         progressBar = findViewById(R.id.progressBar)
 
-        // Toolbar setup
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(true)
-        supportActionBar?.title = "Удалённые агенты"
+        // Toolbar setup — no setSupportActionBar, use menu directly
+        toolbar.title = "Удалённые агенты"
         toolbar.setNavigationOnClickListener { finish() }
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.inflateMenu(R.menu.remote_agent_menu)
+        toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_settings -> {
+                    startActivity(Intent(this, RemoteAgentSettingsActivity::class.java))
+                    true
+                }
+                else -> false
+            }
+        }
 
         // Status bar
         updateStatus(false)
@@ -87,22 +93,6 @@ class RemoteAgentActivity : AppCompatActivity() {
         viewModel.loadAgents()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.remote_agent_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                val intent = Intent(this, RemoteAgentSettingsActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     private fun setupChatWidget() {
         adapter = ChatMessageAdapter(
             currentUserId = userId,
@@ -120,7 +110,6 @@ class RemoteAgentActivity : AppCompatActivity() {
     }
 
     private fun observeState() {
-        // Messages
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.messages.collect { msgs ->
@@ -141,7 +130,6 @@ class RemoteAgentActivity : AppCompatActivity() {
             }
         }
 
-        // Typing
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
@@ -151,7 +139,6 @@ class RemoteAgentActivity : AppCompatActivity() {
             }
         }
 
-        // Loading
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.isLoading.collect { loading ->
@@ -160,7 +147,6 @@ class RemoteAgentActivity : AppCompatActivity() {
             }
         }
 
-        // Connection status
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.isConnected.collect { connected ->
@@ -169,7 +155,6 @@ class RemoteAgentActivity : AppCompatActivity() {
             }
         }
 
-        // Error
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.error.collect { error ->
