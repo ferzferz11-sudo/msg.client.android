@@ -1285,7 +1285,18 @@ suspend fun deployAgentTask(
                 val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
                 if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
                 if (v.taskType.isNotEmpty()) cos.writeString(2, v.taskType)
-                v.params.forEach { (k, v2) -> cos.writeString(3, "$k=$v2") }
+                v.params.forEach { (k, v2) ->
+                    // Encode map<string,string> entry: field 3, message with key(1) + value(2)
+                    val entryBaos = ByteArrayOutputStream()
+                    val entryCos = com.google.protobuf.CodedOutputStream.newInstance(entryBaos)
+                    entryCos.writeString(1, k)
+                    entryCos.writeString(2, v2)
+                    entryCos.flush()
+                    val entryBytes = entryBaos.toByteArray()
+                    cos.writeTag(3, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+                    cos.writeRawVarint32(entryBytes.size)
+                    cos.writeRawBytes(entryBytes)
+                }
                 if (v.workingDir.isNotEmpty()) cos.writeString(4, v.workingDir)
                 if (v.timeoutSec > 0) cos.writeInt32(5, v.timeoutSec)
                 cos.flush()
