@@ -238,7 +238,13 @@ class RemoteAgentActivity : AppCompatActivity() {
     private fun updateStatus(connected: Boolean) {
         val dotColor = if (connected) 0xFF4CAF50.toInt() else 0xFFF44336.toInt()
         statusIndicator.background.setTint(dotColor)
-        statusText.text = if (connected) "Агент подключён" else "Агент отключён"
+        val agent = viewModel.selectedAgent.value
+        val statusStr = if (connected) {
+            if (agent != null) "${agent.name} • подключён" else "Агент подключён"
+        } else {
+            if (agent != null) "${agent.name} • отключён" else "Агент отключён"
+        }
+        statusText.text = statusStr
         val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textSecondaryColor, Color.GRAY)
         statusText.setTextColor(txtColor)
     }
