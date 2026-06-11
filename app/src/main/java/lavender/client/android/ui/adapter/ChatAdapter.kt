@@ -113,12 +113,15 @@ class ChatAdapter(
         val newFavorites = newChats.firstOrNull { it.type == "favorites" }
         val actualChats = if (newFavorites != null) newChats.drop(1) else newChats
 
+        android.util.Log.d("ChatAdapter", "setChats: newChats=${newChats.size}, newFavorites=$newFavorites, displayedChats=${displayedChats.size}, favoritesItem=$favoritesItem")
+
         // If current list is empty, perform an immediate update
         if (displayedChats.isEmpty() && favoritesItem == null) {
             favoritesItem = newFavorites
             allChats = actualChats
             displayedChats = actualChats
             notifyDataSetChanged()
+            android.util.Log.d("ChatAdapter", "setChats: FIRST FAVORITES ADDED, calling onEmptyListUpdate")
             // Notify that empty list was updated — allows Activity to force re-layout
             onEmptyListUpdate?.invoke()
             return
@@ -129,6 +132,7 @@ class ChatAdapter(
         // This handles the case where startSync re-sends the same empty list
         // and the first notifyItemInserted was ignored by RecyclerView.
         if (displayedChats.isEmpty() && favoritesItem != null && actualChats.isEmpty()) {
+            android.util.Log.d("ChatAdapter", "setChats: RE-NOTIFY FAVORITES (sync re-send)")
             notifyDataSetChanged()
             return
         }
