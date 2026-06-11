@@ -11,16 +11,20 @@
 ### AI Чаты
 - **Убран прелоадер** во время ожидания ответа агента (HermesChatActivity, OwlChatActivity) — достаточно typing indicator
 - **Таймаут стрима 120 сек** с сбросом при каждом полученном сообщении (OwlGrpc, HermesGrpc) — показывает user-friendly ошибку на русском
-- **Шторка AI реорганизована**: чаты разделены по типам — Hermes чаты в секции "Лава ИИ", OWL чаты в секция "OWL агент". Больше нет смешанного списка "Все AI чаты"
+- **Шторка AI реорганизована**: чаты разделены по типам — Hermes чаты в секции "Лава ИИ", OWL чаты в секции "OWL агент". Больше нет смешанного списка "Все AI чаты"
 
-### Favorites
-- **Favorites при пустом списке**: используется `notifyItemInserted(0)` вместо `notifyDataSetChanged()` для надёжного рендеринга первого элемента
-- Добавлен guard для повторных вызовов `setChats` с пустым списком (sync race condition)
+### Favorites — исправлено
+- **Favorites отображается сразу при входе** — не нужно создавать чат чтобы увидеть Избранное
+- Показывается даже при недоступном сервере (offline-first)
+- Добавлен fallback при ошибке загрузки чатов
 
 ### Changelog
 - **ChangelogAdapter**: цвета из `ThemeStore` вместо `resolveColorAttr` — читаемый текст на кастомных тёмных темах
 - **Порядок загрузки**: сначала GitHub API, fallback (bundled) только через 3с если сеть не ответила
-- Убран `post{notifyDataSetChanged()}` костыль в `loadChats()`
+
+### Мелкие исправления
+- Убран deprecated `overridePendingTransition` в SplashActivity
+- Убран дебаг-логгинг из production кода
 
 ---
 
