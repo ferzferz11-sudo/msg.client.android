@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.ProgressBar
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -74,7 +76,7 @@ class RemoteAgentActivity : AppCompatActivity() {
         taskTypeChipGroup = findViewById(R.id.taskTypeChipGroup)
 
         // Toolbar setup
-        toolbar.title = "Агенты"
+        toolbar.title = ""
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.inflateMenu(R.menu.remote_agent_menu)
         toolbar.setOnMenuItemClickListener { item ->
@@ -87,11 +89,17 @@ class RemoteAgentActivity : AppCompatActivity() {
             }
         }
 
+        // Agent spinner in toolbar
+        setupAgentSpinner()
+
         // Status bar
         updateStatus(false)
 
         // Task type chips
         setupTaskTypeChips()
+
+        // Observe agents for spinner
+        observeAgents()
 
         // Chat
         setupChatWidget()
@@ -230,6 +238,64 @@ class RemoteAgentActivity : AppCompatActivity() {
                         Toast.makeText(this@RemoteAgentActivity, it, Toast.LENGTH_LONG).show()
                         viewModel.clearError()
                     }
+                }
+            }
+        }
+    }
+
+    private var agentSpinner: Spinner? = null
+
+    private fun setupAgentSpinner() {
+        val theme = ThemeStore.currentTheme()
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+
+        agentSpinner = Spinner(this, Spinner.MODE_DROPDOWN).apply {
+            setBackgroundColor(surfaceColor)
+            setPopupBackgroundDrawable(android.graphics.drawable.ColorDrawable(surfaceColor))
+        }
+        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, mutableListOf()) {
+            override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                val v = super.getView(position, convertView, parent)
+                (v as? TextView)?.setTextColor(txtColor)
+                return v
+            }
+            override fun getDropDownView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                val v = super.getDropDownView(position, convertView, parent)
+                (v as? TextView)?.setTextColor(txtColor)
+                (v as? TextView)?.setBackgroundColor(surfaceColor)
+                return v
+            }
+        }
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        agentSpinner?.adapter = adapter
+
+        agentSpinner?.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                val agents = viewModel.agents.value
+                if (position < agents.size) {
+                    viewModel.selectAgent(agents[position])
+                    updateStatus(agents[position].status == "connected")
+                }
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+
+        val params = androidx.appcompat.widget.Toolbar.LayoutParams(
+            androidx.appcompat.widget.Toolbar.LayoutParams.WRAP_CONTENT,
+            androidx.appcompat.widget.Toolbar.LayoutParams.WRAP_CONTENT
+        )
+        toolbar.addView(agentSpinner, params)
+    }
+
+    private fun observeAgents() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                viewModel.agents.collect { agents ->
+                    val adapter = agentSpinner?.adapter as? ArrayAdapter<String>
+                    adapter?.clear()
+                    agents.forEach { adapter?.add(it.name) }
+                    adapter?.notifyDataSetChanged()
                 }
             }
         }
