@@ -1,8 +1,5 @@
 package lavender.client.android.ui.remote
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -13,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -27,6 +23,7 @@ import lavender.client.android.R
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
+import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
@@ -46,13 +43,12 @@ class RemoteAgentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-
         setContentView(R.layout.activity_remote_agent)
 
         userId = SessionManager.session.value.userId
+
+        // Apply theme
+        ThemeUi.bind(this, userId)
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(RemoteAgentViewModel::class.java)
@@ -69,11 +65,6 @@ class RemoteAgentActivity : AppCompatActivity() {
         supportActionBar?.title = "Удалённые агенты"
         toolbar.setNavigationOnClickListener { finish() }
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        // Apply theme colors to toolbar
-        toolbar.setBackgroundColor(bgColor)
-        toolbar.setTitleTextColor(txtColor)
-        toolbar.setNavigationIconTint(txtColor)
 
         // Status bar
         updateStatus(false)
@@ -98,8 +89,6 @@ class RemoteAgentActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.remote_agent_menu, menu)
-        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
-        menu.findItem(R.id.action_settings)?.icon?.setTint(txtColor)
         return true
     }
 

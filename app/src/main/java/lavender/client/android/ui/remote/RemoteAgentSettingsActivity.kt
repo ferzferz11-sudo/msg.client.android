@@ -19,7 +19,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
-import lavender.client.android.ui.remote.RemoteAgentViewModel
+import lavender.client.android.theme.ui.ThemeUi
 
 class RemoteAgentSettingsActivity : AppCompatActivity() {
 
@@ -33,13 +33,12 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
-        window.decorView.setBackgroundColor(bgColor)
-
         setContentView(R.layout.activity_remote_agent_settings)
 
         userId = SessionManager.session.value.userId
+
+        // Apply theme
+        ThemeUi.bind(this, userId)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         tokenListContainer = findViewById(R.id.tokenListContainer)
@@ -47,10 +46,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         btnGenerateToken = findViewById(R.id.btnGenerateToken)
 
         // Toolbar
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-        toolbar.setBackgroundColor(ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY))
-        toolbar.setTitleTextColor(txtColor)
-        toolbar.setNavigationIconTint(txtColor)
         toolbar.setNavigationOnClickListener { finish() }
 
         // Generate token button
@@ -93,7 +88,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         val theme = ThemeStore.currentTheme()
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val txtSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.GRAY)
-        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
         val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
 
         tokenListContainer.removeAllViews()
@@ -139,6 +133,10 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 revokeBtn.setOnClickListener {
                     confirmRevoke(token)
                 }
+
+                // Card background
+                val card = view as com.google.android.material.card.MaterialCardView
+                card.setCardBackgroundColor(surfaceColor)
 
                 tokenListContainer.addView(view)
             }
