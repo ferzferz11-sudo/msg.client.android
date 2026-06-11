@@ -36,6 +36,7 @@ class ChatAdapter(
     private val currentUsername: String = "",
     initialAvatarCache: Map<String, String> = emptyMap(),
     private var onlineUsers: List<String> = emptyList(),
+    private val onEmptyListUpdate: (() -> Unit)? = null
 ) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
 
     private var allChats = listOf<ChatInfo>()
@@ -118,6 +119,8 @@ class ChatAdapter(
             allChats = actualChats
             displayedChats = actualChats
             notifyDataSetChanged()
+            // Notify that empty list was updated — allows Activity to force re-layout
+            onEmptyListUpdate?.invoke()
             return
         }
 

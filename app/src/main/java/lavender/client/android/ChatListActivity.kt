@@ -304,11 +304,20 @@ class ChatListActivity : AppCompatActivity() {
             },
             currentUsername = username,
             initialAvatarCache = grpcClient.getAvatarCache(),
-            onlineUsers = grpcClient.users.value
+            onlineUsers = grpcClient.users.value,
+            onEmptyListUpdate = {
+                // Force RecyclerView re-layout when Favorites is first added to empty list
+                binding.chatsRecyclerView.post {
+                    binding.chatsRecyclerView.requestLayout()
+                    chatAdapter.notifyDataSetChanged()
+                }
+            }
         )
         binding.chatsRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ChatListActivity)
             adapter = chatAdapter
+            setHasFixedSize(false)
+            isNestedScrollingEnabled = false
         }
 
         // Handle bottom navigation bar insets
