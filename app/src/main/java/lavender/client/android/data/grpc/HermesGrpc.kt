@@ -1141,7 +1141,7 @@ suspend fun generateAgentToken(
     }
     val methodDesc = MethodDescriptor.newBuilder<GenerateAgentTokenRequestProto, GenerateAgentTokenResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
-        .setFullMethodName("messenger.ChatService/GenerateAgentToken")
+        .setFullMethodName("hermes_agent.HermesAgentService/GenerateAgentToken")
         .setRequestMarshaller(object : MethodDescriptor.Marshaller<GenerateAgentTokenRequestProto> {
             override fun stream(v: GenerateAgentTokenRequestProto): java.io.InputStream {
                 val baos = ByteArrayOutputStream()
@@ -1206,7 +1206,7 @@ suspend fun revokeAgentToken(agentId: String, adminUserId: String): RevokeAgentT
     }
     val methodDesc = MethodDescriptor.newBuilder<RevokeAgentTokenRequestProto, RevokeAgentTokenResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
-        .setFullMethodName("messenger.ChatService/RevokeAgentToken")
+        .setFullMethodName("hermes_agent.HermesAgentService/RevokeAgentToken")
         .setRequestMarshaller(object : MethodDescriptor.Marshaller<RevokeAgentTokenRequestProto> {
             override fun stream(v: RevokeAgentTokenRequestProto): java.io.InputStream {
                 val baos = ByteArrayOutputStream()
@@ -1263,7 +1263,7 @@ suspend fun listAgentTokens(adminUserId: String): ListAgentTokensResponseProto =
     }
     val methodDesc = MethodDescriptor.newBuilder<ListAgentTokensRequestProto, ListAgentTokensResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
-        .setFullMethodName("messenger.ChatService/ListAgentTokens")
+        .setFullMethodName("hermes_agent.HermesAgentService/ListAgentTokens")
         .setRequestMarshaller(object : MethodDescriptor.Marshaller<ListAgentTokensRequestProto> {
             override fun stream(v: ListAgentTokensRequestProto): java.io.InputStream {
                 val baos = ByteArrayOutputStream()
