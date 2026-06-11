@@ -16,15 +16,18 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
 /**
- * AI Bottom Sheet — redesigned for v1.1.2.0.
+ * AI Bottom Sheet — redesigned for v1.1.2.8.
  *
  * Layout (top to bottom):
- * 1. Unified AI chats list (all types mixed, sorted by creation time)
- *    - Each item: icon, name, settings gear
- *    - Long press → popup menu with "Delete" and "Settings"
+ * 1. Notifications
  * 2. Divider
- * 3. "Лава ИИ" (Hermes Orchestrator) section — create new chat button
- * 4. "OWL агент" section — create new chat button
+ * 3. "Лава ИИ (Оркестратор)" section
+ *    - Create new chat button
+ *    - Existing Hermes chats list (if any)
+ * 4. Divider
+ * 5. "OWL агент" section
+ *    - Create new chat button
+ *    - Existing OWL chats list (if any)
  */
 class AIBottomSheet(
     context: Context,
@@ -88,71 +91,25 @@ class AIBottomSheet(
             .inflate(R.layout.widget_section_divider, contentContainer, false)
         contentContainer?.addView(notifDivider)
 
-        // === Section 1: Existing AI chats (unified list) ===
-        if (existingChats.isNotEmpty()) {
-            // Section header
-            val headerView = LayoutInflater.from(context)
-                .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-            headerView.text = "Мои AI чаты"
-            contentContainer?.addView(headerView)
+        // Separate chats by type
+        val hermesChats = existingChats.filter { it.type == "hermes" }
+        val owlChats = existingChats.filter { it.type == "owl" }
 
-            // Chat items
-            existingChats.forEach { chat ->
-                val itemView = LayoutInflater.from(context)
-                    .inflate(R.layout.widget_ai_chat_item, contentContainer, false)
-
-                val icon = itemView.findViewById<ImageView>(R.id.chatIcon)
-                val text = itemView.findViewById<TextView>(R.id.chatName)
-                val settingsBtn = itemView.findViewById<ImageView>(R.id.chatSettings)
-                val typeLabel = itemView.findViewById<TextView>(R.id.chatTypeLabel)
-
-                // Icon based on type
-                if (chat.type == "hermes") {
-                    icon.setImageResource(R.drawable.ic_hermes)
-                    typeLabel.text = "Лава ИИ"
-                } else {
-                    icon.setImageResource(R.drawable.ic_owl)
-                    typeLabel.text = "OWL"
-                }
-                icon.imageTintList = ColorStateList.valueOf(primColor)
-
-                text.text = chat.name
-                text.setTextColor(txtColor)
-
-                // Settings gear
-                settingsBtn.imageTintList = ColorStateList.valueOf(txtColor)
-                settingsBtn.setOnClickListener {
-                    onSettingsClick(chat)
-                    dismiss()
-                }
-
-                // Tap → open chat
-                itemView.setOnClickListener {
-                    onChatClick(chat)
-                    dismiss()
-                }
-
-                // Long press → popup menu with delete + settings
-                itemView.setOnLongClickListener { anchor ->
-                    showChatPopupMenu(anchor, chat, primColor, txtColor)
-                    true
-                }
-
-                contentContainer?.addView(itemView)
-            }
-
-            // Divider between chats and create sections
-            val divider = LayoutInflater.from(context)
-                .inflate(R.layout.widget_section_divider, contentContainer, false)
-            contentContainer?.addView(divider)
-        }
-
-        // === Section 2: Hermes (Лава ИИ) ===
+        // === Section 1: Hermes (Лава ИИ Оркестратор) ===
         val hermesHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
         hermesHeader.text = "🎼 Лава ИИ (Оркестратор)"
         contentContainer?.addView(hermesHeader)
 
+        // Hermes chat list
+        if (hermesChats.isNotEmpty()) {
+            hermesChats.forEach { chat ->
+                val itemView = buildChatItemView(chat, primColor, txtColor)
+                contentContainer?.addView(itemView)
+            }
+        }
+
+        // Create Hermes chat button
         val hermesCreate = LayoutInflater.from(context)
             .inflate(R.layout.widget_action_item, contentContainer, false)
         val hermesIcon = hermesCreate.findViewById<ImageView>(R.id.actionIcon)
@@ -170,7 +127,7 @@ class AIBottomSheet(
         hermesCreate.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(hermesCreate)
 
-        // === Section 3: OWL ===
+        // === Section 2: OWL агент ===
         val owlDivider = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_divider, contentContainer, false)
         contentContainer?.addView(owlDivider)
@@ -180,6 +137,15 @@ class AIBottomSheet(
         owlHeader.text = "🦉 OWL агент"
         contentContainer?.addView(owlHeader)
 
+        // OWL chat list
+        if (owlChats.isNotEmpty()) {
+            owlChats.forEach { chat ->
+                val itemView = buildChatItemView(chat, primColor, txtColor)
+                contentContainer?.addView(itemView)
+            }
+        }
+
+        // Create OWL chat button
         val owlCreate = LayoutInflater.from(context)
             .inflate(R.layout.widget_action_item, contentContainer, false)
         val owlIcon = owlCreate.findViewById<ImageView>(R.id.actionIcon)
@@ -196,6 +162,46 @@ class AIBottomSheet(
         }
         owlCreate.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(owlCreate)
+    }
+
+    private fun buildChatItemView(chat: AIChatInfo, primColor: Int, txtColor: Int): View {
+        val itemView = LayoutInflater.from(context)
+            .inflate(R.layout.widget_ai_chat_item, contentContainer, false)
+
+        val icon = itemView.findViewById<ImageView>(R.id.chatIcon)
+        val text = itemView.findViewById<TextView>(R.id.chatName)
+        val settingsBtn = itemView.findViewById<ImageView>(R.id.chatSettings)
+        val typeLabel = itemView.findViewById<TextView>(R.id.chatTypeLabel)
+
+        if (chat.type == "hermes") {
+            icon.setImageResource(R.drawable.ic_hermes)
+            typeLabel.text = "Лава ИИ"
+        } else {
+            icon.setImageResource(R.drawable.ic_owl)
+            typeLabel.text = "OWL"
+        }
+        icon.imageTintList = ColorStateList.valueOf(primColor)
+
+        text.text = chat.name
+        text.setTextColor(txtColor)
+
+        settingsBtn.imageTintList = ColorStateList.valueOf(txtColor)
+        settingsBtn.setOnClickListener {
+            onSettingsClick(chat)
+            dismiss()
+        }
+
+        itemView.setOnClickListener {
+            onChatClick(chat)
+            dismiss()
+        }
+
+        itemView.setOnLongClickListener { anchor ->
+            showChatPopupMenu(anchor, chat, primColor, txtColor)
+            true
+        }
+
+        return itemView
     }
 
     private fun showChatPopupMenu(anchor: View, chat: AIChatInfo, primColor: Int, txtColor: Int) {

@@ -710,6 +710,8 @@ fun chatWithOwl(
         val maxRetryDelay = 30000L
         var attempt = 0
         val maxRetries = 10
+        // Stream timeout: 120 seconds (reset on each message)
+        val streamTimeoutMs = 120_000L
 
         while (attempt < maxRetries && isActive) {
             val channel = RealGrpcClient.getChannel()
@@ -738,16 +740,34 @@ fun chatWithOwl(
                 _owlTyping.emit(true)
                 val streamDone = kotlinx.coroutines.CompletableDeferred<Boolean>()
                 var hadError = false
+                // Timeout job — cancelled when message received or stream closes
+                var timeoutJob: kotlinx.coroutines.Job? = null
 
                 val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
                 call.start(object : io.grpc.ClientCall.Listener<OwlResponseProto>() {
                     override fun onMessage(msg: OwlResponseProto) {
+                        // Reset timeout on each message
+                        timeoutJob?.cancel()
                         _owlResponses.tryEmit(msg)
                         onResponse(msg.text, msg.finished, msg.error)
                         retryDelay = 3000L
                         attempt = 0
+                        // Restart timeout
+                        timeoutJob = launch {
+                            delay(streamTimeoutMs)
+                            if (!msg.finished) {
+                                Log.w("OwlGrpc", "chatWithOwl: stream timeout after ${streamTimeoutMs}ms")
+                                hadError = true
+                                val errResp = OwlResponseProto(text = "", finished = true,
+                                    error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.")
+                                _owlResponses.tryEmit(errResp)
+                                onResponse("", true, errResp.error)
+                                streamDone.complete(true)
+                            }
+                        }
                     }
                     override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                        timeoutJob?.cancel()
                         _owlTyping.tryEmit(false)
                         if (!status.isOk) {
                             Log.w("OwlGrpc", "chatWithOwl closed: ${status.code} ${status.description}")
@@ -764,7 +784,20 @@ fun chatWithOwl(
                 call.halfClose()
                 call.request(Int.MAX_VALUE)
 
+                // Start initial timeout
+                timeoutJob = launch {
+                    delay(streamTimeoutMs)
+                    Log.w("OwlGrpc", "chatWithOwl: initial stream timeout after ${streamTimeoutMs}ms")
+                    hadError = true
+                    val errResp = OwlResponseProto(text = "", finished = true,
+                        error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.")
+                    _owlResponses.tryEmit(errResp)
+                    onResponse("", true, errResp.error)
+                    streamDone.complete(true)
+                }
+
                 val streamHadError = streamDone.await()
+                timeoutJob?.cancel()
                 if (!streamHadError) {
                     return@launch
                 }

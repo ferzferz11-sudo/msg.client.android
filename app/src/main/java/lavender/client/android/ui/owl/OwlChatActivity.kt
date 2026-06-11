@@ -413,11 +413,11 @@ class OwlChatActivity : AppCompatActivity() {
             }
         }
 
-        // Loading
+        // Loading — progress bar removed, typing indicator is sufficient
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isLoading.collect { isLoading ->
-                    progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+                    // No-op: typing indicator handles loading state
                 }
             }
         }

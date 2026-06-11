@@ -88,6 +88,8 @@ fun chatWithOrchestrator(
         val maxRetryDelay = 30000L
         var attempt = 0
         val maxRetries = 10
+        // Stream timeout: 120 seconds (reset on each message)
+        val streamTimeoutMs = 120_000L
 
         while (attempt < maxRetries && isActive) {
             val channel = RealGrpcClient.getChannel()
@@ -118,17 +120,34 @@ fun chatWithOrchestrator(
                 _hermesTyping.emit(true)
                 val streamDone = kotlinx.coroutines.CompletableDeferred<Boolean>()
                 var hadError = false
+                var timeoutJob: kotlinx.coroutines.Job? = null
 
                 val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
                 call.start(object : io.grpc.ClientCall.Listener<OrchestratorResponseProto>() {
                     override fun onMessage(message: OrchestratorResponseProto) {
+                        timeoutJob?.cancel()
                         _hermesResponses.tryEmit(message)
                         onResponse(message.token, message.finished, message.error.takeIf { it.isNotEmpty() }, message.agentId, message.agentName)
-                        // Reset retry on successful message
                         retryDelay = 3000L
                         attempt = 0
+                        timeoutJob = launch {
+                            delay(streamTimeoutMs)
+                            if (!message.finished) {
+                                Log.w("HermesGrpc", "chatWithOrchestrator: stream timeout after ${streamTimeoutMs}ms")
+                                hadError = true
+                                val errorResp = OrchestratorResponseProto(
+                                    token = "", finished = true,
+                                    error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.",
+                                    agentId = "", agentName = ""
+                                )
+                                _hermesResponses.tryEmit(errorResp)
+                                onResponse("", true, errorResp.error, "", "")
+                                streamDone.complete(true)
+                            }
+                        }
                     }
                     override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                        timeoutJob?.cancel()
                         _hermesTyping.tryEmit(false)
                         if (!status.isOk) {
                             Log.w("HermesGrpc", "chatWithOrchestrator closed: ${status.code} ${status.description}")
@@ -150,7 +169,22 @@ fun chatWithOrchestrator(
                 call.halfClose()
                 call.request(Int.MAX_VALUE)
 
+                timeoutJob = launch {
+                    delay(streamTimeoutMs)
+                    Log.w("HermesGrpc", "chatWithOrchestrator: initial stream timeout after ${streamTimeoutMs}ms")
+                    hadError = true
+                    val errorResp = OrchestratorResponseProto(
+                        token = "", finished = true,
+                        error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.",
+                        agentId = "", agentName = ""
+                    )
+                    _hermesResponses.tryEmit(errorResp)
+                    onResponse("", true, errorResp.error, "", "")
+                    streamDone.complete(true)
+                }
+
                 val streamHadError = streamDone.await()
+                timeoutJob?.cancel()
                 if (!streamHadError) {
                     // Stream completed normally — no retry needed
                     return@launch
