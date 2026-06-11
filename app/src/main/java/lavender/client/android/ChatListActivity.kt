@@ -2303,7 +2303,10 @@ class ChatListActivity : AppCompatActivity() {
             // Now that we have contacts, load/collect all users
             val usersJob = lifecycleScope.launch {
                 grpcClient.allUsers.collect { users ->
-                    val filteredUsers = users.filter { !currentContacts.contains(it.username) }.map { it.username }
+                    Log.d("ChatListActivity", "allUsers received: ${users.size} users: ${users.map { it.username }}")
+                    Log.d("ChatListActivity", "currentContacts: $currentContacts")
+                    val filteredUsers = users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username }
+                    Log.d("ChatListActivity", "filteredUsers: $filteredUsers")
                     withContext(Dispatchers.Main) {
                         sheet.setLoading(false)
                         userAdapter.setUsers(filteredUsers)
