@@ -11,12 +11,12 @@
 # 3. Создаёт git tag v<version>
 # 4. Деплоит APK на сервер (если APK уже собран)
 # 5. Обновляет version.txt и versions.json на сервере
-# 6. Создаёт GitHub Release с changelog
+# 6. Создаёт GitHub Release с changelog и APK
 #
 # Требования:
 # - APK уже собран и загружен на сервер: /var/www/lavender/lavender.apk
-# - SSH доступ на сервер (root@13.140.25.249)
-# - gh CLI для GitHub releases (опционально)
+# - SSH доступ на сервер через alias "lava" (без пароля)
+# - gh CLI для GitHub releases + авторизация (gh auth login)
 
 set -e
 
@@ -28,9 +28,10 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-SERVER="root@13.140.25.249"
+SERVER="lava"
 SERVER_DIR="/var/www/lavender"
 ARCHIVE_DIR="$SERVER_DIR/archive/android"
+APK_PATH="$SERVER_DIR/lavender.apk"
 
 echo "🚀 Выпуск релиза v$VERSION"
 echo ""
@@ -45,9 +46,9 @@ fi
 echo "✅ version.txt = $VERSION"
 
 # 2. Проверяем APK на сервере
-APK_SIZE=$(ssh "$SERVER" "du -h $SERVER_DIR/lavender.apk 2>/dev/null | cut -f1" 2>/dev/null)
+APK_SIZE=$(ssh "$SERVER" "du -h $APK_PATH 2>/dev/null | cut -f1" 2>/dev/null)
 if [ -z "$APK_SIZE" ]; then
-  echo "❌ APK не найден на сервере: $SERVER_DIR/lavender.apk"
+  echo "❌ APK не найден на сервере: $APK_PATH"
   exit 1
 fi
 echo "✅ APK на сервере: $APK_SIZE"
@@ -79,9 +80,8 @@ TODAY=$(date +%Y-%m-%d)
 
 ssh "$SERVER" "bash -c '
   mkdir -p $ARCHIVE_DIR/$VERSION
-  cp $SERVER_DIR/lavender.apk $ARCHIVE_DIR/$VERSION/lavender.apk
+  cp $APK_PATH $ARCHIVE_DIR/$VERSION/lavender.apk
   echo $VERSION > $SERVER_DIR/version.txt
-  echo \"  APK скопирован в архив\"
 '"
 
 # Обновляем versions.json
@@ -104,7 +104,7 @@ PYEOF"
 
 echo "✅ Сервер обновлён"
 
-# 6. GitHub Release (если есть gh CLI)
+# 6. GitHub Release с APK
 if command -v gh &> /dev/null; then
   echo "→ Создание GitHub Release..."
   # Извлекаем changelog для этой версии
@@ -112,15 +112,22 @@ if command -v gh &> /dev/null; then
   if [ -z "$CHANGELOG" ]; then
     CHANGELOG="См. CHANGELOG.md"
   fi
-  
+
+  # Создаём release и прикрепляем APK
+  cd "$PROJECT_DIR"
   gh release create "v$VERSION" \
+    "$APK_PATH" \
     --title "Lavender Android v$VERSION" \
     --notes "$CHANGELOG" \
-    2>/dev/null || echo "⚠️  GitHub Release уже существует или ошибка"
-  echo "✅ GitHub Release создан"
+    2>/dev/null || {
+      echo "  Release уже существует, пробуем загрузить APK..."
+      gh release upload "v$VERSION" "$APK_PATH" --clobber 2>/dev/null || echo "⚠️  Не удалось загрузить APK"
+    }
+  echo "✅ GitHub Release создан с APK"
 else
   echo "⚠️  gh CLI не найден, GitHub Release пропущен"
   echo "   Создай вручную: https://github.com/ferzferz11-sudo/msg.client.android/releases/new"
+  echo "   И прикрепи APK: $APK_PATH"
 fi
 
 echo ""
