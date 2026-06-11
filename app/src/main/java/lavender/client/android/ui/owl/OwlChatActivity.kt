@@ -344,7 +344,7 @@ class OwlChatActivity : AppCompatActivity() {
                         timestamp = System.currentTimeMillis()
                     )
                     adapter.submitList(adapter.currentList + warningMessage)
-                    chatWidget.scrollToBottom()
+                    // Auto-scroll removed — preserve scroll position
                 }
             } catch (e: Exception) {
                 Log.e("OwlChatActivity", "Failed to check OWL status", e)
@@ -380,9 +380,7 @@ class OwlChatActivity : AppCompatActivity() {
                 viewModel.owlMessages.collect { messages ->
                     val items = messages.map { it.toChatMessageItem() }
                     adapter.submitList(items)
-                    if (items.isNotEmpty()) {
-                        chatWidget.scrollToBottom()
-                    }
+                    // Auto-scroll removed — preserve scroll position
                 }
             }
         }

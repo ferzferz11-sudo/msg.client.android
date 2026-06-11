@@ -293,14 +293,6 @@ class ChatWidget @JvmOverloads constructor(
         replyPreview.visibility = View.GONE
     }
 
-    fun scrollToBottom() {
-        adapter?.let {
-            if (it.itemCount > 0) {
-                messagesRecyclerView.scrollToPosition(it.itemCount - 1)
-            }
-        }
-    }
-
     fun addParticipantChip(view: View) {
         groupParticipantsContainer.addView(view)
         groupParticipantsContainer.visibility = View.VISIBLE
