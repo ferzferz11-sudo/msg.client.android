@@ -1,11 +1,27 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.2.9
+**Версия:** 1.1.2.10
 **Обновлено:** 2026-06-11
 **Ветка:** feat/1.1.2.x
-**Тег:** v1.1.2.9 (выпущен)
+**Тег:** v1.1.2.10 (в работе)
 **APK:** /var/www/lavender/lavender.apk
 **GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.2.9
+
+---
+
+## ✅ v1.1.2.10 — AI шторка: новый чат виден сразу
+
+### AI BottomSheet — исправлено
+- **Новый чат с оркестратором отображается сразу** — не нужно переоткрывать шторку
+- Root cause: `refreshAiChats()` запускал асинхронный `getAIChats()` с коллбэком, но `showAIActionSheet()` читал `currentAiChats` мгновенно — данные ещё не пришли
+- Fix: добавлен `refreshAiChatsAwait()` — suspend-функция через `suspendCancellableCoroutine`, которая ждёт ответа сервера
+- `showAIActionSheet()` теперь suspend, вызывает `refreshAiChatsAwait()` перед построением списка
+- Все вызовы `showAIActionSheet()` обёрнуты в `lifecycleScope.launch`
+
+### Технические детали
+- `refreshAiChatsAwait()` — новый suspend-метод, обёртка над `GrpcClient.getAIChats()`
+- `showAIActionSheet()` — теперь `suspend fun` вместо `fun`
+- `AIBottomSheet.updateChats()` + `rebuildContent()` — уже были, работают корректно
 
 ---
 
@@ -74,13 +90,9 @@
 
 ### Средний приоритет
 - [ ] Модульные тесты для OWL streaming
-- [ ] Qdrant + CLIP (production RAG)
-- [ ] Structured logging на сервере
-- [ ] Рефакторинг server.go → пакеты
 
 ### Низкий приоритет
 - [ ] Кэширование запросов чатов
-- [ ] WebRTC — тестирование TURN
 
 ---
 
@@ -105,7 +117,8 @@
 | ThemeApplier FAB list | Новые FAB добавлять в список для кастомных тем |
 | SplashLoadingActivity | Отдельный оверлей вместо ProgressBar на кнопке |
 | Typing в ViewModel | Typing indicator часть единого списка, не мутация adapter |
-| Hermes DB persistence | Сообщения сохраняются в Room, не только в памяти |
+|| Hermes DB persistence | Сообщения сохраняются в Room, не только в памяти |
+|| AI sheet await refresh | suspendCancellableCoroutine для ожидания getAIChats перед показом шторки |
 
 ---
 

@@ -362,7 +362,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         binding.aiFab.setOnClickListener {
-            showAIActionSheet()
+            lifecycleScope.launch { showAIActionSheet() }
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -1334,7 +1334,7 @@ class ChatListActivity : AppCompatActivity() {
         if (shouldShowAiSheetOnResume) {
             shouldShowAiSheetOnResume = false
             if (::chatAdapter.isInitialized) {
-                showAIActionSheet()
+                lifecycleScope.launch { showAIActionSheet() }
             }
         }
     }
@@ -1954,7 +1954,10 @@ class ChatListActivity : AppCompatActivity() {
             )).show()
     }
 
-    private fun showAIActionSheet() {
+    private suspend fun showAIActionSheet() {
+        // Wait for fresh data from server before building the sheet
+        refreshAiChatsAwait()
+
         val allChats = currentAiChats.toMutableList().sortedBy { it.createdAt }.toMutableList()
 
         var sheet: AIBottomSheet? = null
@@ -2074,6 +2077,21 @@ class ChatListActivity : AppCompatActivity() {
         if (userId.isNotEmpty()) {
             GrpcClient.getAIChats(userId) { aiChats ->
                 currentAiChats.addAll(aiChats)
+            }
+        }
+    }
+
+    private suspend fun refreshAiChatsAwait(): Boolean {
+        return suspendCancellableCoroutine { cont ->
+            currentAiChats.clear()
+            val userId = SessionManager.session.value.userId
+            if (userId.isEmpty()) {
+                cont.resumeWith(Result.success(false))
+                return@suspendCancellableCoroutine
+            }
+            GrpcClient.getAIChats(userId) { aiChats ->
+                currentAiChats.addAll(aiChats)
+                cont.resumeWith(Result.success(true))
             }
         }
     }
