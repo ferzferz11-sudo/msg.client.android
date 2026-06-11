@@ -77,6 +77,7 @@ class RemoteAgentActivity : AppCompatActivity() {
 
         // Toolbar setup
         toolbar.title = ""
+        toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.inflateMenu(R.menu.remote_agent_menu)
         toolbar.setOnMenuItemClickListener { item ->
