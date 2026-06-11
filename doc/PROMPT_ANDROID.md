@@ -73,20 +73,34 @@ app/src/main/java/lavender/client/android/
 - ✅ gRPC методы в HermesGrpc.kt + GrpcClient.kt
 - ✅ Сервер: GenerateAgentToken, RevokeAgentToken, ListAgentTokens
 - ✅ TASK_AI добавлен в hermes_remote.proto
+- ✅ RemoteAgentActivity + layout (чат, статус, toolbar с меню)
+- ✅ RemoteAgentViewModel (loadAgents, sendMessage)
+- ✅ TokenDialog (генерация токена)
+- ✅ AIBottomSheet — пункт "🖥 Агенты"
+- ✅ RemoteAgentSettingsActivity (управление токенами)
+- ✅ Кастомные темы через ThemeUi.bind
 
 ### Что нужно сделать:
+- ⬜ Тестирование (после сборки APK локально)
+- ⬜ Интеграция чата с реальным агентом (сейчас echo-заглушка)
+
+### Правила:
 
 **RemoteAgentActivity** — отдельный экран (НЕ в списке чатов):
-- Toolbar: название агента + статус (подключён/отключён)
-- Чат: сообщения пользователя + ответы агента (stdout/stderr)
-- Кнопки: "Сгенерировать токен", "Отозвать токен"
-- Настройки: Agent Name, Capabilities, TTL
+- Toolbar: "Агенты" + статус (подключён/отключён) + шестерёнка → настройки
+- Чат: сообщения пользователя + ответы агента
+- Без кнопок токенов (вынесены в RemoteAgentSettingsActivity)
+
+**RemoteAgentSettingsActivity** — управление токенами:
+- Список активных токенов (card с именем, хэшем, capabilities, сроком)
+- Кнопка "Сгенерировать новый токен" → TokenDialog
+- Кнопка "Отозвать" на каждом токене
 
 **TokenDialog** — диалог генерации токена:
 - Поля: Agent Name, Capabilities (мультивыбор), TTL
 - Результат: токен (показать один раз + копировать в буфер)
 
-**AIBottomSheet** — добавить пункт "🖥 Удалённые агенты"
+**AIBottomSheet** — пункт "🖥 Агенты" → RemoteAgentActivity
 
 ### Правила:
 - Стиль кода как в существующих файлах

@@ -34,7 +34,7 @@
 
 - Не загружает список чатов
 - Содержит: чат с агентом, настройки, управление токенами
-- Доступна из шторки AI как пункт "Удалённые агенты"
+- Доступна из шторки AI как пункт "Агенты"
 
 ### 2. Управление токенами
 
@@ -80,7 +80,7 @@
 ## UI/UX
 
 ### Шторка AI (AIBottomSheet)
-- Добавить пункт "🖥 Удалённые агенты" → открывает `RemoteAgentActivity`
+- Добавить пункт "🖥 Агенты" → открывает `RemoteAgentActivity`
 
 ### RemoteAgentActivity
 - Toolbar: название агента + статус (подключён/отключён)
@@ -107,7 +107,7 @@
 - `data/proto/MessengerProto.kt` — добавлены proto классы для токенов ✅
 - `data/grpc/HermesGrpc.kt` — добавлены методы generate/revoke/list ✅
 - `data/grpc/GrpcClient.kt` — добавлены методы ✅
-- `ui/widget/AIBottomSheet.kt` — добавить пункт "Удалённые агенты"
+- `ui/widget/AIBottomSheet.kt` — добавить пункт "Агенты"
 - `ChatListActivity.kt` — обработка нажатия на пункт
 
 ### Сервер (уже сделано):
@@ -120,11 +120,33 @@
 1. ✅ Proto классы на клиенте
 2. ✅ gRPC методы на клиенте
 3. ✅ Серверная часть
-4. ✅ RemoteActivity + layout
-5. ✅ ViewModel + чат
-6. ✅ TokenDialog
-7. ✅ Интеграция с AIBottomSheet
-8. ⬜ Тестирование
+4. ✅ RemoteAgentActivity + layout (чат, статус, toolbar)
+5. ✅ RemoteAgentViewModel (loadAgents, sendMessage)
+6. ✅ TokenDialog (генерация токена)
+7. ✅ Интеграция с AIBottomSheet (пункт "🖥 Агенты")
+8. ✅ RemoteAgentSettingsActivity (управление токенами)
+9. ✅ Кастомные темы (ThemeUi.bind)
+10. ⬜ Тестирование (после сборки APK локально)
+11. ⬜ Интеграция чата с реальным агентом (сейчас echo-заглушка)
+
+## Структура файлов
+
+### Новые файлы:
+- `ui/remote/RemoteAgentActivity.kt` — основной экран (чат)
+- `ui/remote/RemoteAgentViewModel.kt` — ViewModel
+- `ui/remote/RemoteAgentSettingsActivity.kt` — настройки (токены)
+- `ui/remote/TokenDialog.kt` — диалог генерации токена
+- `layout/activity_remote_agent.xml` — layout чата
+- `layout/activity_remote_agent_settings.xml` — layout настроек
+- `layout/item_agent_token.xml` — item токена в списке
+- `menu/remote_agent_menu.xml` — меню toolbar (шестерёнка)
+- `drawable/ic_settings.xml` — иконка настроек
+- `drawable/ic_status_dot.xml` — индикатор статуса
+
+### Изменённые файлы:
+- `AIBottomSheet.kt` — секция "Агенты"
+- `ChatListActivity.kt` — обработчик onOpenRemoteAgents
+- `AndroidManifest.xml` — регистрация активити
 
 ## Будущие расширения
 

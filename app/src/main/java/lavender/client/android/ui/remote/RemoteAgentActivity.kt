@@ -59,7 +59,7 @@ class RemoteAgentActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBar)
 
         // Toolbar setup — no setSupportActionBar, use menu directly
-        toolbar.title = "Удалённые агенты"
+        toolbar.title = "Агенты"
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.inflateMenu(R.menu.remote_agent_menu)
         toolbar.setOnMenuItemClickListener { item ->

@@ -175,7 +175,7 @@ class AIBottomSheet(
 
         val remoteHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        remoteHeader.text = "🖥 Удалённые агенты"
+        remoteHeader.text = "🖥 Агенты"
         contentContainer?.addView(remoteHeader)
 
         // Open Remote Agents button
