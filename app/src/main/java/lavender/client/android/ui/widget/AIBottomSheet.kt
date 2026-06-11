@@ -58,6 +58,10 @@ class AIBottomSheet(
         existingChats.addAll(chats)
     }
 
+    fun removeChat(chatId: String) {
+        existingChats.removeAll { it.id == chatId }
+    }
+
     private fun buildContent() {
         contentContainer?.removeAllViews()
         val theme = ThemeStore.currentTheme()

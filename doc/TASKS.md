@@ -9,7 +9,7 @@
 
 ---
 
-## ✅ v1.1.2.10 — AI шторка: новый чат виден сразу
+## ✅ v1.1.2.10 — AI шторка: новый чат виден сразу + удаление не ломает список
 
 ### AI BottomSheet — исправлено
 - **Новый чат с оркестратором отображается сразу** — не нужно переоткрывать шторку
@@ -18,9 +18,16 @@
 - `showAIActionSheet()` теперь suspend, вызывает `refreshAiChatsAwait()` перед построением списка
 - Все вызовы `showAIActionSheet()` обёрнуты в `lifecycleScope.launch`
 
+### AI BottomSheet удаление — исправлено
+- **Удаление чата оркестратора не скрывает чат агента** — оба остаются на месте
+- Root cause: `onDeleteChat` вызывал `refreshAiChats()` (асинхронный коллбек), а затем сразу `updateChats(currentAiChats.toList())` — в момент когда `currentAiChats` уже очищен, но ответ ещё не пришёл → передавался пустой список
+- Fix: удаление из локального списка без сетевого запроса — `currentAiChats.removeAll { it.id == chat.id }` + `sheet.removeChat(chat.id)` + `rebuildContent()`
+- Добавлен `AIBottomSheet.removeChat(chatId)` — удаляет конкретный чат из `existingChats`
+
 ### Технические детали
 - `refreshAiChatsAwait()` — новый suspend-метод, обёртка над `GrpcClient.getAIChats()`
 - `showAIActionSheet()` — теперь `suspend fun` вместо `fun`
+- `AIBottomSheet.removeChat(chatId)` — новый метод для удаления одного чата
 - `AIBottomSheet.updateChats()` + `rebuildContent()` — уже были, работают корректно
 
 ---
@@ -119,6 +126,7 @@
 | Typing в ViewModel | Typing indicator часть единого списка, не мутация adapter |
 || Hermes DB persistence | Сообщения сохраняются в Room, не только в памяти |
 || AI sheet await refresh | suspendCancellableCoroutine для ожидания getAIChats перед показом шторки |
+|| AI sheet local delete | Удаление из локального списка без сетевого запроса — мгновенный rebuild |
 
 ---
 

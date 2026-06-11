@@ -1977,10 +1977,11 @@ class ChatListActivity : AppCompatActivity() {
                 if (userId.isNotEmpty()) {
                     GrpcClient.deleteChat(chat.id, userId, username) { success, _ ->
                         if (success) {
-                            refreshAiChats()
+                            // Remove from local list immediately, no network refresh needed
+                            currentAiChats.removeAll { it.id == chat.id }
                             // Rebuild the sheet to reflect deleted chat, keep it open
                             runOnUiThread {
-                                sheet?.updateChats(currentAiChats.toList())
+                                sheet?.removeChat(chat.id)
                                 sheet?.rebuildContent()
                             }
                         }
