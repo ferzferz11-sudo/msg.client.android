@@ -16,9 +16,10 @@ gRPC-мессенджер с E2EE шифрованием, кастомными �
 
 Сервер:       /root/msg/          (Go, gRPC + HTTP hub, PostgreSQL)
 Android:      /root/msg.client.android/  (Kotlin + ViewBinding)
+Агент:        /root/msg/hermes-agent/    (Python, gRPC Connect)
 Prod сервер:  13.140.25.249 (prod порт 50051, dev порт 50052)
 
-Ветка: feat/1.1.2.x
+Ветка: feat/1.1.3.x
 
 ---
 
@@ -34,8 +35,12 @@ app/src/main/java/lavender/client/android/
 ├── OwlSettingsActivity.kt       — Настройки OWL
 ├── SplashActivity.kt            — Сплеш
 ├── ui/
-│   ├── widget/AIBottomSheet.kt  — Шторка AI (Hermes/OWL секции)
-│   ├── remote/                  — Remote Agent (TODO)
+│   ├── widget/AIBottomSheet.kt  — Шторка AI (Hermes/OWL/Агенты секции)
+│   ├── remote/                  — Remote Agent
+│   │   ├── RemoteAgentActivity.kt       — Чат с агентом
+│   │   ├── RemoteAgentViewModel.kt      — ViewModel (sendMessage, loadAgents)
+│   │   ├── RemoteAgentSettingsActivity.kt — Управление токенами
+│   │   └── TokenDialog.kt               — Диалог генерации токена
 │   └── adapter/ChatAdapter.kt   — Адаптер чатов
 ├── data/
 │   ├── proto/MessengerProto.kt  — Все proto data classes (ручные)
@@ -55,46 +60,100 @@ app/src/main/java/lavender/client/android/
 - `doc/TASKS.md` — таск-трекер, бэклог
 - `doc/STRUCTURE.md` — справочник структуры кода
 - `doc/REMOTE_AGENT.md` — проект Remote Agent (ЧИТАТЬ ПЕРВЫМ)
+- `doc/REMOTE_AGENT_PLAN.md` — план работ по интеграции (ЧИТАТЬ ВТОРЫМ)
+- `doc/PROMPT_ANDROID.md` — этот файл
 
 ---
 
-## ТЕКУЩАЯ ЗАДАЧА: Интеграция агента с реальным бэкендом
+## ТЕКУЩАЯ ЗАДАЧА: Remote Agent v1.1.3 — Интеграция с реальным бэкендом
 
-### Что уже сделано (v1.1.2.x → merged in master):
-- ✅ Proto классы + gRPC методы (токены, агенты)
-- ✅ Серверная часть (Generate/Revoke/List tokens)
-- ✅ RemoteAgentActivity (чат, статус, toolbar)
+### Архитектура
+
+```
+┌─────────────┐  gRPC          ┌──────────────┐  gRPC           ┌─────────────┐
+│  Android    │ ──────────────→ │   Server     │ ←────────────── │   Hermes    │
+│  Client     │  DeployAgent    │   ChatService│  Connect        │   Agent     │
+│             │  Task           │              │  (streaming)    │   (Python)  │
+└─────────────┘                 └──────────────┘                 └─────────────┘
+                                       │
+                                       │ маршрутизация
+                                       ▼
+                                ┌──────────────┐
+                                │  Orchestrator│
+                                │  (server_ai) │
+                                └──────────────┘
+```
+
+### Что уже сделано
+
+**Android клиент:**
+- ✅ RemoteAgentActivity (чат, статус, toolbar с выбором агента)
 - ✅ RemoteAgentSettingsActivity (управление токенами)
-- ✅ TokenDialog, AIBottomSheet интеграция
-- ✅ Кастомные темы
+- ✅ TokenDialog (генерация токена с "Выбрать все")
+- ✅ AIBottomSheet секция "🖥 Агенты"
+- ✅ Task type selector (ChipGroup: shell, git, build, deploy, docker, ai)
+- ✅ Кастомные темы через ThemeUi.bind
+- ✅ Отправка задач через GrpcClient.deployAgentTask()
+- ✅ Выбор агента из списка (Spinner в toolbar)
 
-### Что нужно сделать в v1.1.3.x:
-- ⬜ Интеграция чата агента с реальным бэкендом (сейчас echo-заглушка в RemoteAgentViewModel.sendMessage)
-- ⬜ Отправка задач агенту через gRPC streaming (Connect + OrchestratorMessage)
-- ⬜ Получение результатов в реальном времени
-- ⬜ Отображение типов задач (shell, git, build, deploy, docker, ai)
-- ⬜ Статус подключения агента (heartbeat)
-- ⬜ Тестирование
+**Сервер (Go):**
+- ✅ hermes_remote.proto — Connect, RegistrationInfo, Task, TaskResult
+- ✅ messenger.proto — GenerateAgentToken, DeployAgentTask, ListRemoteAgents
+- ✅ hermes_agent_service.go — Connect streaming, регистрация агентов
+- ✅ server_ai.go — DeployAgentTask, GenerateAgentToken, GetRemoteAgentStatus
+- ✅ AgentID передаётся в RemoteTask (баг исправлен)
 
-### Правила:
+**Агент (Python):**
+- ✅ hermes-agent/hermes_remote_agent.py — gRPC Connect, выполнение задач
+- ✅ hermes-agent/hermes_remote_pb2.py — сгенерированные proto
+- ✅ JWT токен сгенерирован
 
-**RemoteAgentActivity** — отдельный экран (НЕ в списке чатов):
-- Toolbar: "Агенты" + статус (подключён/отключён) + шестерёнка → настройки
-- Чат: сообщения пользователя + ответы агента
-- Без кнопок токенов (вынесены в RemoteAgentSettingsActivity)
+### Что нужно сделать
 
-**RemoteAgentSettingsActivity** — управление токенами:
-- Список активных токенов (card с именем, хэшем, capabilities, сроком)
-- Кнопка "Сгенерировать новый токен" → TokenDialog
-- Кнопка "Отозвать" на каждом токене
+**Приоритет 1 — Завершить интеграцию:**
+1. Запустить сервер (`./run/lavender-server` на порту 50051)
+2. Сгенерировать токен через Go: `go run /tmp/gen_token.go`
+3. Записать токен в конфиг агента
+4. Запустить агент: `python3 hermes_remote_agent.py --server localhost:50051 --token <jwt>`
+5. Проверить что агент появляется в ListRemoteAgents
+6. Отправить задачу из Android приложения
+7. Получить результат в чате
 
-**TokenDialog** — диалог генерации токена:
-- Поля: Agent Name, Capabilities (мультивыбор), TTL
-- Результат: токен (показать один раз + копировать в буфер)
+**Приоритет 2 — Улучшить UI:**
+- Показывать stdout/stderr задачи в чате
+- Показывать exit_code и duration
+- Показывать лог выполнения задач
 
-**AIBottomSheet** — пункт "🖥 Агенты" → RemoteAgentActivity
+**Приоритет 3 — Тестирование:**
+- Тест всех типов задач (shell, git, build, file, docker)
+- Тест отключения/подключения агента
+- Тест нескольких агентов одновременно
 
-### Правила:
+### Критические файлы для чтения
+
+Перед началом работы прочитай:
+1. `doc/REMOTE_AGENT.md` — полная документация проекта
+2. `doc/REMOTE_AGENT_PLAN.md` — план работ с текущим статусом
+3. `ui/remote/RemoteAgentViewModel.kt` — текущая реализация sendMessage()
+4. `data/grpc/HermesGrpc.kt` — deployAgentTask(), getRemoteAgentStatus()
+5. `/root/msg/hermes-agent/hermes_remote_agent.py` — агент Python
+6. `/root/msg/server_ai.go` — DeployAgentTask, GenerateAgentToken
+7. `/root/msg/hermes_agent_service.go` — Connect streaming
+
+### Важные детали
+
+- Сервер запускается на порту 50051 (prod) и 50052 (dev)
+- Агент подключается к серверу через `Connect` (bidirectional streaming)
+- JWT токен генерируется через `GenerateAgentToken` на сервере
+- Токен передаётся агенту через `RegistrationInfo.auth_token`
+- Сервер валидирует токен в `validateToken()`
+- Задачи отправляются через `DeployAgentTask` → `SendTaskToAgent()`
+- Результаты отправляются через `AGENT_TASK_RESULT` в стриме
+
+---
+
+## ПРАВИЛА
+
 - Стиль кода как в существующих файлах
 - ViewBinding (не findViewById)
 - Корутины + lifecycleScope
@@ -104,6 +163,7 @@ app/src/main/java/lavender/client/android/
 - **НЕ запускать compileDebugKotlin без крайней необходимости** — сначала `free -h`, если < 2GB free → НЕ запускать
 - **НЕ запускать никакие ./gradlew задачи** если память < 2GB free
 - Если нужно проверить синтаксис — делай это через чтение файлов и анализ кода, а не через компиляцию на сервере
+- Коммитить и пушить после каждого значимого изменения
 
 ---
 
@@ -112,4 +172,5 @@ app/src/main/java/lavender/client/android/
 - Package: `lavender.client.android` (НЕ ru.lavender.messenger)
 - Proto: ручные data classes в MessengerProto.kt (НЕ генерируются)
 - version.txt обновлять ДО release.sh
-- Коммитить и пушить после каждого значимого изменения
+- Серверный код в `/root/msg/` — не изменять без необходимости
+- Агент в `/root/msg/hermes-agent/` — Python, gRPC Connect
