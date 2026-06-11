@@ -1,7 +1,7 @@
 # Android клиент — Промпт для новой сессии
 
-Текущая версия: v1.1.2.10 (прод)
-Следующая: v1.1.3.0
+Текущая версия: v1.1.3.0 (dev)
+Ветка: feat/1.1.3.x
 
 ---
 
@@ -58,31 +58,23 @@ app/src/main/java/lavender/client/android/
 
 ---
 
-## ТЕКУЩАЯ ЗАДАЧА: Remote Agent UI
+## ТЕКУЩАЯ ЗАДАЧА: Интеграция агента с реальным бэкендом
 
-Реализовать этапы 4-8 из `doc/REMOTE_AGENT.md`:
-
-4. RemoteAgentActivity + layout
-5. ViewModel + чат
-6. TokenDialog
-7. Интеграция с AIBottomSheet
-8. Тестирование
-
-### Что уже сделано:
-- ✅ Proto классы в MessengerProto.kt
-- ✅ gRPC методы в HermesGrpc.kt + GrpcClient.kt
-- ✅ Сервер: GenerateAgentToken, RevokeAgentToken, ListAgentTokens
-- ✅ TASK_AI добавлен в hermes_remote.proto
-- ✅ RemoteAgentActivity + layout (чат, статус, toolbar с меню)
-- ✅ RemoteAgentViewModel (loadAgents, sendMessage)
-- ✅ TokenDialog (генерация токена)
-- ✅ AIBottomSheet — пункт "🖥 Агенты"
+### Что уже сделано (v1.1.2.x → merged in master):
+- ✅ Proto классы + gRPC методы (токены, агенты)
+- ✅ Серверная часть (Generate/Revoke/List tokens)
+- ✅ RemoteAgentActivity (чат, статус, toolbar)
 - ✅ RemoteAgentSettingsActivity (управление токенами)
-- ✅ Кастомные темы через ThemeUi.bind
+- ✅ TokenDialog, AIBottomSheet интеграция
+- ✅ Кастомные темы
 
-### Что нужно сделать:
-- ⬜ Тестирование (после сборки APK локально)
-- ⬜ Интеграция чата с реальным агентом (сейчас echo-заглушка)
+### Что нужно сделать в v1.1.3.x:
+- ⬜ Интеграция чата агента с реальным бэкендом (сейчас echo-заглушка в RemoteAgentViewModel.sendMessage)
+- ⬜ Отправка задач агенту через gRPC streaming (Connect + OrchestratorMessage)
+- ⬜ Получение результатов в реальном времени
+- ⬜ Отображение типов задач (shell, git, build, deploy, docker, ai)
+- ⬜ Статус подключения агента (heartbeat)
+- ⬜ Тестирование
 
 ### Правила:
 
