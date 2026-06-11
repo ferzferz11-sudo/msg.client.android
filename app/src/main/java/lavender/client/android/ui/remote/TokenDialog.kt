@@ -46,6 +46,7 @@ class TokenDialog(
         }
         val nameInput = TextInputEditText(context).apply {
             hint = "Имя агента"
+            setText("Агент 1")
             setTextColor(txtColor)
             setHintTextColor(txtColor and 0x80FFFFFF.toInt())
             maxLines = 1

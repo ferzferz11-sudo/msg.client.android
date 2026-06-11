@@ -163,7 +163,7 @@ class RemoteAgentActivity : AppCompatActivity() {
         chatWidget.messageInput.hint = "Отправить задачу агенту..."
 
         // Hide ChatWidget's own toolbar — we have our own in the activity
-        chatWidget.toolbar.visibility = View.GONE
+        chatWidget.findViewById<View>(R.id.toolbar)?.visibility = View.GONE
 
         chatWidget.setOnSendMessageListener { text ->
             if (text.isNotBlank()) {
