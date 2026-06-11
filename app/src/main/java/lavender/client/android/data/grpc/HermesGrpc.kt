@@ -1131,7 +1131,7 @@ suspend fun generateAgentToken(
     ))
     call.halfClose()
     call.request(1)
-    return@withContext withTimeoutOrNull(15000) { result.await() }
+    return@withContext withTimeoutOrNull(15000) { result }
         ?: GenerateAgentTokenResponseProto(success = false, error = "Timeout")
 }
 
@@ -1188,7 +1188,7 @@ suspend fun revokeAgentToken(agentId: String, adminUserId: String): RevokeAgentT
     call.sendMessage(RevokeAgentTokenRequestProto(agentId = agentId, adminUserId = adminUserId))
     call.halfClose()
     call.request(1)
-    return@withContext withTimeoutOrNull(10000) { result.await() }
+    return@withContext withTimeoutOrNull(10000) { result }
         ?: RevokeAgentTokenResponseProto(success = false, error = "Timeout")
 }
 
@@ -1277,6 +1277,6 @@ suspend fun listAgentTokens(adminUserId: String): ListAgentTokensResponseProto =
     call.sendMessage(ListAgentTokensRequestProto(adminUserId = adminUserId))
     call.halfClose()
     call.request(1)
-    return@withContext withTimeoutOrNull(10000) { result.await() }
+    return@withContext withTimeoutOrNull(10000) { result }
         ?: ListAgentTokensResponseProto(success = false, error = "Timeout")
 }
