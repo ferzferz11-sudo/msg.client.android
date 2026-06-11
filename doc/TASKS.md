@@ -3,6 +3,9 @@
 **Версия:** 1.1.2.8
 **Обновлено:** 2026-06-11
 **Ветка:** feat/1.1.2.x
+**Тег:** v1.1.2.8 (выпущен)
+**APK:** /var/www/lavender/lavender.apk
+**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.2.8
 
 ---
 
