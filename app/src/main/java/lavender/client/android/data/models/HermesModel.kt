@@ -62,5 +62,6 @@ data class OwlMessage(
     val senderName: String = "",
     val senderEmoji: String = "🦉",
     val timestamp: Long = System.currentTimeMillis(),
-    val isCurrentUser: Boolean = false
+    val isCurrentUser: Boolean = false,
+    val isTyping: Boolean = false
 )

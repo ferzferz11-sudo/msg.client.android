@@ -117,6 +117,9 @@
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.owl.OwlSettingsActivity" android:exported="false" />
         <activity android:name=".ui.hermes.AgentSettingsActivity" android:exported="false" />
+        <activity android:name=".ui.remote.RemoteAgentActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.remote.RemoteAgentSettingsActivity" android:exported="false" />
         <activity android:name=".ui.LogViewerActivity" android:exported="false" />
 
         <activity

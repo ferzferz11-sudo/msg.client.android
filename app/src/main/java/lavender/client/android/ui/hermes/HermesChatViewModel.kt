@@ -9,8 +9,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.db.AppDatabase
 import lavender.client.android.data.db.ChatEntity
+import lavender.client.android.data.db.toHermesMessage
+import lavender.client.android.data.db.toMessageEntity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.*
 import lavender.client.android.data.repository.HermesRepository
@@ -19,7 +23,9 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
 
     private val repository = HermesRepository()
     private val prefs = application.getSharedPreferences("hermes_prefs", Context.MODE_PRIVATE)
-    private val chatDao = AppDatabase.getDatabase(application).chatDao()
+    private val db = AppDatabase.getDatabase(application)
+    private val chatDao = db.chatDao()
+    private val messageDao = db.messageDao()
 
     // Current session
     private val _currentSession = MutableStateFlow<HermesSession?>(null)
@@ -109,14 +115,30 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
-     * Load history for current session
+     * Load history for current session.
+     * 1. Load from local DB first (fast)
+     * 2. Then fetch from server and merge
      */
     fun loadHistory() {
         val session = _currentSession.value ?: return
         viewModelScope.launch {
             _isLoading.value = true
+            // 1. Load from local DB first
+            val localMessages: List<HermesMessage> = withContext(Dispatchers.IO) {
+                messageDao.getMessagesForRoom(session.id).map { it.toHermesMessage() }
+            }
+            if (localMessages.isNotEmpty()) {
+                _messages.value = localMessages
+            }
+            // 2. Fetch from server
             val history = repository.getHistory(session.id, 50)
-            _messages.value = history
+            if (history.isNotEmpty()) {
+                _messages.value = history
+                // Save to local DB
+                withContext(Dispatchers.IO) {
+                    messageDao.insertMessages(history.map { it.toMessageEntity(session.id) })
+                }
+            }
             _isLoading.value = false
         }
     }
@@ -128,6 +150,10 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
         val session = _currentSession.value ?: return
         viewModelScope.launch {
             repository.deleteSession(session.id, session.userId)
+            // Clear local messages for this session
+            withContext(Dispatchers.IO) {
+                messageDao.clearRoom(session.id)
+            }
             _currentSession.value = null
             _messages.value = emptyList()
         }
@@ -147,6 +173,10 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
             timestamp = System.currentTimeMillis()
         )
         _messages.value = _messages.value + userMessage
+        // Save to local DB
+        viewModelScope.launch(Dispatchers.IO) {
+            messageDao.insertMessages(listOf(userMessage.toMessageEntity(session.id)))
+        }
 
         // Reset streaming state
         streamingContent = ""
@@ -210,6 +240,16 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
 
             if (finished) {
                 _isTyping.value = false
+                // Save final agent message to local DB
+                val finalMessages = _messages.value
+                if (finalMessages.isNotEmpty()) {
+                    val lastMsg = finalMessages.last()
+                    if (!lastMsg.isStreaming && lastMsg.role == "assistant") {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            messageDao.insertMessages(listOf(lastMsg.toMessageEntity(session.id)))
+                        }
+                    }
+                }
                 streamingContent = ""
                 streamingAgentId = ""
                 streamingAgentName = ""

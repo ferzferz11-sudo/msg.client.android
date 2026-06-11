@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.changelog.ChangelogRepository
@@ -67,6 +68,8 @@ class ChangelogActivity : AppCompatActivity() {
 
     // Track if we already showed bundled content to avoid flickering
     private var bundledShown = false
+    // Track if network fetch completed (success or failure)
+    private var networkCompleted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,24 +118,31 @@ class ChangelogActivity : AppCompatActivity() {
             openUrl(GITHUB_CLIENT_CHANGELOG)
         }
 
-        // Step 1: Load bundled changelog instantly from assets
-        loadBundledChangelog()
-
-        // Step 2: Try to fetch from GitHub in background
+        // Step 1: Try to fetch from GitHub API first
         fetchFromNetwork()
+
+        // Step 2: Load bundled changelog as fallback after short delay
+        // (only shown if GitHub hasn't responded yet)
+        lifecycleScope.launch {
+            delay(3000)
+            if (!bundledShown && splashView.visibility == View.VISIBLE) {
+                loadBundledChangelog()
+            }
+        }
     }
 
     /**
      * Load bundled changelog from assets — instant, no network needed.
-     * This is always shown first so the user sees content immediately.
+     * Only shown if network fetch hasn't completed yet (as fallback).
      */
     private fun loadBundledChangelog() {
+        if (networkCompleted) return
         lifecycleScope.launch {
             try {
                 val text = withContext(Dispatchers.IO) {
                     assets.open(BUNDLED_ASSET).bufferedReader().use { it.readText() }
                 }
-                if (text.isNotEmpty()) {
+                if (text.isNotEmpty() && !networkCompleted) {
                     showFallback(text, isBundled = true)
                     bundledShown = true
                 }
@@ -157,6 +167,7 @@ class ChangelogActivity : AppCompatActivity() {
 
                 result.fold(
                     onSuccess = { releases ->
+                        networkCompleted = true
                         if (releases.isNotEmpty()) {
                             // GitHub success — show full release list
                             showContent()
@@ -166,12 +177,14 @@ class ChangelogActivity : AppCompatActivity() {
                     },
                     onFailure = { error ->
                         Log.w(TAG, "GitHub API failed, trying server fallback", error)
+                        networkCompleted = true
                         // Try server fallback
                         tryServerFallback()
                     }
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Unexpected error fetching from network", e)
+                networkCompleted = true
                 tryServerFallback()
             }
         }
@@ -200,7 +213,7 @@ class ChangelogActivity : AppCompatActivity() {
                 }
             }
 
-            if (text.isNotEmpty() && !bundledShown) {
+            if (text.isNotEmpty() && !bundledShown && splashView.visibility == View.VISIBLE) {
                 showFallback(text, isBundled = false)
             }
             // If bundled was already shown, keep it — server text is the same

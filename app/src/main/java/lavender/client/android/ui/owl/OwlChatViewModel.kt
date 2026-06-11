@@ -37,11 +37,16 @@ class OwlChatViewModel : ViewModel() {
     // Accumulate streaming response text
     private var currentOwlResponse = StringBuilder()
 
+    companion object {
+        private const val TYPING_ID = "owl-typing"
+    }
+
     init {
-        // Collect OWL typing state (separate from Hermes orchestrator)
+        // Collect OWL typing state — insert/remove typing placeholder in message list
         viewModelScope.launch {
             owlTyping.collect { typing ->
                 _isTyping.value = typing
+                updateTypingMessage(typing)
             }
         }
 
@@ -55,6 +60,8 @@ class OwlChatViewModel : ViewModel() {
                 if (response.finished) {
                     _isTyping.value = false
                     _isLoading.value = false
+                    // Remove typing message
+                    _owlMessages.value = _owlMessages.value.filter { !it.isTyping }
                     if (response.error.isNotEmpty()) {
                         addMessage(
                             id = "owl-error-${System.currentTimeMillis()}",
@@ -76,6 +83,28 @@ class OwlChatViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun updateTypingMessage(show: Boolean) {
+        val current = _owlMessages.value.toMutableList()
+        // Remove existing typing message
+        val filtered = current.filter { !it.isTyping }.toMutableList()
+        if (show) {
+            // Don't add typing if we already have a real response streaming
+            if (current.none { it.isTyping }) {
+                filtered.add(
+                    OwlMessage(
+                        id = TYPING_ID,
+                        content = "",
+                        senderId = "owl",
+                        senderName = "🦉 OWL",
+                        isCurrentUser = false,
+                        isTyping = true
+                    )
+                )
+            }
+        }
+        _owlMessages.value = filtered
     }
 
     /**

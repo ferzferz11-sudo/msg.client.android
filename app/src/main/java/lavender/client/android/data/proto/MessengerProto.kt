@@ -1055,6 +1055,55 @@ data class GetRemoteAgentStatusResponseProto(
     val lastHeartbeat: String = ""
 )
 
+// ======= Agent Token Management proto classes =======
+
+data class GenerateAgentTokenRequestProto(
+    val agentId: String = "",
+    val agentName: String = "",
+    val capabilities: List<String> = emptyList(),
+    val ttlHours: Int = 0,
+    val adminUserId: String = ""
+)
+
+data class GenerateAgentTokenResponseProto(
+    val success: Boolean = false,
+    val token: String = "",
+    val error: String = "",
+    val expiresAt: Long = 0
+)
+
+data class RevokeAgentTokenRequestProto(
+    val agentId: String = "",
+    val adminUserId: String = ""
+)
+
+data class RevokeAgentTokenResponseProto(
+    val success: Boolean = false,
+    val error: String = ""
+)
+
+data class ListAgentTokensRequestProto(
+    val adminUserId: String = ""
+)
+
+data class AgentTokenInfoProto(
+    val id: Long = 0,
+    val agentId: String = "",
+    val agentName: String = "",
+    val tokenHash: String = "",
+    val capabilities: List<String> = emptyList(),
+    val createdAt: String = "",
+    val expiresAt: String = "",
+    val revoked: Boolean = false,
+    val createdBy: String = ""
+)
+
+data class ListAgentTokensResponseProto(
+    val success: Boolean = false,
+    val tokens: List<AgentTokenInfoProto> = emptyList(),
+    val error: String = ""
+)
+
 // ======= Bot Command proto classes =======
 
 data class BotCommandRequestProto(

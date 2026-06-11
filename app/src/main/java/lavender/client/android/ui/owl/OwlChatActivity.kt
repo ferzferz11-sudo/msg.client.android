@@ -344,7 +344,7 @@ class OwlChatActivity : AppCompatActivity() {
                         timestamp = System.currentTimeMillis()
                     )
                     adapter.submitList(adapter.currentList + warningMessage)
-                    chatWidget.scrollToBottom()
+                    // Auto-scroll removed — preserve scroll position
                 }
             } catch (e: Exception) {
                 Log.e("OwlChatActivity", "Failed to check OWL status", e)
@@ -374,50 +374,32 @@ class OwlChatActivity : AppCompatActivity() {
     }
 
     private fun observeState() {
-        // OWL messages
+        // OWL messages + typing indicator — unified flow to avoid adapter.currentList mutation
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.owlMessages.collect { messages ->
                     val items = messages.map { it.toChatMessageItem() }
                     adapter.submitList(items)
-                    if (items.isNotEmpty()) {
-                        chatWidget.scrollToBottom()
-                    }
+                    // Auto-scroll removed — preserve scroll position
                 }
             }
         }
 
-        // Typing indicator
+        // Typing indicator — update subtitle only, don't mutate adapter list
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
                     val typingText = if (isTyping) "OWL печатает..." else ""
                     chatWidget.setToolbarSubtitle(typingText, isTyping)
-
-                    if (isTyping) {
-                        val typingItem = ChatMessageItem(
-                            id = "typing",
-                            content = "",
-                            senderId = "owl",
-                            senderName = "🦉 OWL",
-                            isTyping = true,
-                            timestamp = System.currentTimeMillis()
-                        )
-                        adapter.submitList(adapter.currentList + typingItem)
-                        chatWidget.scrollToBottom()
-                    } else {
-                        val filtered = adapter.currentList.filter { !it.isTyping }
-                        adapter.submitList(filtered)
-                    }
                 }
             }
         }
 
-        // Loading
+        // Loading — progress bar removed, typing indicator is sufficient
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isLoading.collect { isLoading ->
-                    progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+                    // No-op: typing indicator handles loading state
                 }
             }
         }
@@ -444,7 +426,8 @@ class OwlChatActivity : AppCompatActivity() {
             senderEmoji = this.senderEmoji,
             timestamp = this.timestamp,
             isCurrentUser = this.isCurrentUser,
-            isRead = true
+            isRead = true,
+            isTyping = this.isTyping
         )
     }
 

@@ -350,9 +350,7 @@ class HermesChatActivity : AppCompatActivity() {
                 viewModel.messages.collect { hermesMessages ->
                     val items = hermesMessages.map { it.toChatMessageItem() }
                     adapter.submitList(items)
-                    if (items.isNotEmpty()) {
-                        chatWidget.scrollToBottom()
-                    }
+                    // Auto-scroll removed — preserve scroll position
                 }
             }
         }
@@ -372,7 +370,7 @@ class HermesChatActivity : AppCompatActivity() {
             }
         }
 
-        // Typing
+        // Typing — update subtitle only, no auto-scroll
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
@@ -380,22 +378,7 @@ class HermesChatActivity : AppCompatActivity() {
                         "${viewModel.currentAgent.value?.name ?: "Агент"} печатает..."
                     } else ""
                     chatWidget.setToolbarSubtitle(typingText, isTyping)
-
-                    if (isTyping) {
-                        val typingItem = ChatMessageItem(
-                            id = "typing",
-                            content = "",
-                            senderId = "typing",
-                            senderName = viewModel.currentAgent.value?.name ?: "Агент",
-                            isTyping = true,
-                            timestamp = System.currentTimeMillis()
-                        )
-                        adapter.submitList(adapter.currentList + typingItem)
-                        chatWidget.scrollToBottom()
-                    } else {
-                        val filtered = adapter.currentList.filter { !it.isTyping }
-                        adapter.submitList(filtered)
-                    }
+                    // Auto-scroll removed — preserve scroll position
                 }
             }
         }
@@ -419,11 +402,11 @@ class HermesChatActivity : AppCompatActivity() {
             }
         }
 
-        // Loading state
+        // Loading state — progress bar removed, typing indicator is sufficient
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isLoading.collect { isLoading ->
-                    progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+                    // No-op: typing indicator handles loading state
                 }
             }
         }

@@ -649,22 +649,13 @@ class NewChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.messages.collect { roomMessages ->
-                    val layoutManager = messagesRecyclerView.layoutManager as? LinearLayoutManager
-                    val wasAtBottom = layoutManager?.let {
-                        it.findLastVisibleItemPosition() >= lastMessageCount - 2
-                    } ?: true
-
-                    val isFirstLoad = lastMessageCount == 0
                     val hasNewMessages = roomMessages.size > lastMessageCount
-                    
+
                     adapter.submitList(roomMessages) {
-                        val isFromMe = roomMessages.lastOrNull()?.user == username
-                        if (roomMessages.isNotEmpty() && (isFirstLoad || (hasNewMessages && isFromMe) || (hasNewMessages && wasAtBottom))) {
-                            messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
-                        }
+                        // Auto-scroll removed — preserve scroll position
                     }
 
-                    if ((isFirstLoad || hasNewMessages) && roomMessages.any { it.user != username && !it.isRead }) {
+                    if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) {
                         viewModel.markRead(username)
                     }
                     lastMessageCount = roomMessages.size

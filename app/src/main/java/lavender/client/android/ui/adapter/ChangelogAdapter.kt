@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView
 import lavender.client.android.R
 import lavender.client.android.data.changelog.MarkdownRenderer
 import lavender.client.android.data.changelog.ReleaseInfo
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -42,11 +44,15 @@ class ChangelogAdapter(
         val release = releases[position]
         val context = holder.itemView.context
 
-        // Resolve colors if not yet set
+        // Resolve colors from ThemeStore for consistent appearance on custom themes
         if (textColor == 0) {
-            textColor = resolveColorAttr(context, android.R.attr.textColorPrimary) ?: 0xFFCAC4D0.toInt()
-            headingColor = resolveColorAttr(context, android.R.attr.textColorPrimary) ?: 0xFFE0D4F5.toInt()
-            linkColor = 0xFFA78BDA.toInt()
+            val theme = ThemeStore.currentTheme()
+            val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, android.graphics.Color.BLACK)
+            textColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor,
+                if (ThemeUtils.isLight(bgColor)) android.graphics.Color.BLACK else 0xFFCAC4D0.toInt())
+            headingColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor,
+                if (ThemeUtils.isLight(bgColor)) android.graphics.Color.BLACK else 0xFFE0D4F5.toInt())
+            linkColor = ThemeUtils.parseSafeColor(theme.primaryColor, 0xFFA78BDA.toInt())
             tagOldColor = 0xFF94A3B8.toInt()
         }
 
@@ -139,12 +145,6 @@ class ChangelogAdapter(
         } catch (e: Exception) {
             isoDate
         }
-    }
-
-    private fun resolveColorAttr(context: android.content.Context, attr: Int): Int? {
-        val typedValue = android.util.TypedValue()
-        val resolved = context.theme.resolveAttribute(attr, typedValue, true)
-        return if (resolved) typedValue.data else null
     }
 
     class ReleaseViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

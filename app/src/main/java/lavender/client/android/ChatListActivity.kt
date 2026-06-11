@@ -304,12 +304,33 @@ class ChatListActivity : AppCompatActivity() {
             },
             currentUsername = username,
             initialAvatarCache = grpcClient.getAvatarCache(),
-            onlineUsers = grpcClient.users.value
+            onlineUsers = grpcClient.users.value,
+            onEmptyListUpdate = {
+                // Force RecyclerView re-layout when Favorites is first added to empty list
+                binding.chatsRecyclerView.post {
+                    binding.chatsRecyclerView.requestLayout()
+                    chatAdapter.notifyDataSetChanged()
+                }
+            }
         )
         binding.chatsRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@ChatListActivity)
             adapter = chatAdapter
+            setHasFixedSize(false)
+            isNestedScrollingEnabled = false
         }
+
+        // Show Favorites immediately — don't wait for network
+        // This ensures Favorites is visible even if server is unreachable
+        val favoritesChat = ChatInfo(
+            id = "favorites_$username",
+            name = getString(R.string.favorites),
+            type = "favorites",
+            lastMessageText = "",
+            lastMessageTime = 0L
+        )
+        chats.add(favoritesChat)
+        chatAdapter.setChats(chats.toList())
 
         // Handle bottom navigation bar insets
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
@@ -341,7 +362,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         binding.aiFab.setOnClickListener {
-            showAIActionSheet()
+            lifecycleScope.launch { showAIActionSheet() }
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -829,14 +850,6 @@ class ChatListActivity : AppCompatActivity() {
                     isChatsLoaded = true
 
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
-
-                    // Ensure Favorites is visible when chat list is empty
-                    if (newChats.size == 1 && newChats[0].type == "favorites") {
-                        binding.chatsRecyclerView.post {
-                            binding.chatsRecyclerView.visibility = View.VISIBLE
-                            chatAdapter.notifyDataSetChanged()
-                        }
-                    }
                 }
 
                 // Fetch favorites data in background (non-visual)
@@ -853,6 +866,18 @@ class ChatListActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
                         binding.swipeRefreshLayout.isRefreshing = false
+                        // Even on error, show Favorites if list is empty
+                        if (chats.isEmpty()) {
+                            val favoritesChat = ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            )
+                            chats.add(favoritesChat)
+                            chatAdapter.setChats(chats.toList())
+                        }
                     }
                 } catch (_: CancellationException) {
                     // Activity destroyed during error handling
@@ -1309,7 +1334,7 @@ class ChatListActivity : AppCompatActivity() {
         if (shouldShowAiSheetOnResume) {
             shouldShowAiSheetOnResume = false
             if (::chatAdapter.isInitialized) {
-                showAIActionSheet()
+                lifecycleScope.launch { showAIActionSheet() }
             }
         }
     }
@@ -1929,7 +1954,10 @@ class ChatListActivity : AppCompatActivity() {
             )).show()
     }
 
-    private fun showAIActionSheet() {
+    private suspend fun showAIActionSheet() {
+        // Wait for fresh data from server before building the sheet
+        refreshAiChatsAwait()
+
         val allChats = currentAiChats.toMutableList().sortedBy { it.createdAt }.toMutableList()
 
         var sheet: AIBottomSheet? = null
@@ -1949,10 +1977,11 @@ class ChatListActivity : AppCompatActivity() {
                 if (userId.isNotEmpty()) {
                     GrpcClient.deleteChat(chat.id, userId, username) { success, _ ->
                         if (success) {
-                            refreshAiChats()
+                            // Remove from local list immediately, no network refresh needed
+                            currentAiChats.removeAll { it.id == chat.id }
                             // Rebuild the sheet to reflect deleted chat, keep it open
                             runOnUiThread {
-                                sheet?.updateChats(currentAiChats.toList())
+                                sheet?.removeChat(chat.id)
                                 sheet?.rebuildContent()
                             }
                         }
@@ -1975,6 +2004,11 @@ class ChatListActivity : AppCompatActivity() {
             onOpenNotifications = {
                 shouldShowAiSheetOnResume = true
                 startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
+            },
+            onOpenRemoteAgents = {
+                shouldShowAiSheetOnResume = false
+                val intent = Intent(this, lavender.client.android.ui.remote.RemoteAgentActivity::class.java)
+                startActivity(intent)
             },
             unreadNotifCount = unreadNotifCount
         )
@@ -2049,6 +2083,21 @@ class ChatListActivity : AppCompatActivity() {
         if (userId.isNotEmpty()) {
             GrpcClient.getAIChats(userId) { aiChats ->
                 currentAiChats.addAll(aiChats)
+            }
+        }
+    }
+
+    private suspend fun refreshAiChatsAwait(): Boolean {
+        return suspendCancellableCoroutine { cont ->
+            currentAiChats.clear()
+            val userId = SessionManager.session.value.userId
+            if (userId.isEmpty()) {
+                cont.resumeWith(Result.success(false))
+                return@suspendCancellableCoroutine
+            }
+            GrpcClient.getAIChats(userId) { aiChats ->
+                currentAiChats.addAll(aiChats)
+                cont.resumeWith(Result.success(true))
             }
         }
     }
