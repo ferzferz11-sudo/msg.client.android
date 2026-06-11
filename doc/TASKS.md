@@ -1,8 +1,26 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.2.7
+**Версия:** 1.1.2.8
 **Обновлено:** 2026-06-11
 **Ветка:** feat/1.1.2.x
+
+---
+
+## ✅ v1.1.2.8 — AI чат улучшения, Favorites fix, Changelog fix
+
+### AI Чаты
+- **Убран прелоадер** во время ожидания ответа агента (HermesChatActivity, OwlChatActivity) — достаточно typing indicator
+- **Таймаут стрима 120 сек** с сбросом при каждом полученном сообщении (OwlGrpc, HermesGrpc) — показывает user-friendly ошибку на русском
+- **Шторка AI реорганизована**: чаты разделены по типам — Hermes чаты в секции "Лава ИИ", OWL чаты в секция "OWL агент". Больше нет смешанного списка "Все AI чаты"
+
+### Favorites
+- **Favorites при пустом списке**: используется `notifyItemInserted(0)` вместо `notifyDataSetChanged()` для надёжного рендеринга первого элемента
+- Добавлен guard для повторных вызовов `setChats` с пустым списком (sync race condition)
+
+### Changelog
+- **ChangelogAdapter**: цвета из `ThemeStore` вместо `resolveColorAttr` — читаемый текст на кастомных тёмных темах
+- **Порядок загрузки**: сначала GitHub API, fallback (bundled) только через 3с если сеть не ответила
+- Убран `post{notifyDataSetChanged()}` костыль в `loadChats()`
 
 ---
 
