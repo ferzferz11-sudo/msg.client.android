@@ -32,20 +32,22 @@
 ### Выпуск релиза
 
 ```bash
-# 1. Собери APK локально и загрузи на сервер
+# 1. Обнови version.txt (в корне проекта)
+echo "1.1.2.10" > version.txt
+
+# 2. Запусти скрипт релиза
+./scripts/release.sh 1.1.2.10
+
+# 3. Собери APK локально и загрузи на сервер
 scp app/build/outputs/apk/release/app-release.apk lava:/var/www/lavender/lavender.apk
-
-# 2. Обнови version.txt
-echo "1.1.2.9" > version.txt
-
-# 3. Запусти скрипт релиза
-./scripts/release.sh 1.1.2.9
 ```
+
+**Важно:** version.txt обновлять ДО запуска release.sh — скрипт читает его для определения версии.
 
 Скрипт автоматически:
 - Проверяет version.txt
 - Коммитит и пушит изменения
-- Создаёт git tag v1.1.2.9
+- Создаёт git tag v1.1.2.10
 - Скачивает APK с сервера, загружает в GitHub Release
 - Копирует APK в архив на сервере
 - Обновляет version.txt и versions.json
