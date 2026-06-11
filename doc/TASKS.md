@@ -1,11 +1,35 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.2.8
+**Версия:** 1.1.2.9
 **Обновлено:** 2026-06-11
 **Ветка:** feat/1.1.2.x
-**Тег:** v1.1.2.8 (выпущен)
+**Тег:** v1.1.2.9 (выпущен)
 **APK:** /var/www/lavender/lavender.apk
-**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.2.8
+**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.2.9
+
+---
+
+## ✅ v1.1.2.9 — Исправления чатов
+
+### OWL — исправлено
+- **Сообщения пользователя отображаются сразу** — не нужно ждать ответа агента
+- Root cause: typing indicator мутировал `adapter.currentList` напрямую, ломая DiffUtil
+- Fix: typing placeholder теперь часть единого списка в `OwlChatViewModel._owlMessages`
+- Убрана мутация `adapter.currentList` из `OwlChatActivity.observeState()`
+
+### Hermes — исправлено
+- **История чата сохраняется в локальную БД (Room)** — не теряется при перезапуске
+- Root cause: `HermesChatViewModel` хранил сообщения только в памяти
+- Fix: добавлен `messageDao`, `HermesMessage` ↔ `MessageEntity` mapping
+- Пользовательские сообщения сохраняются при отправке
+- Ответы агентов сохраняются при завершении стрима (`finished = true`)
+- История загружается из локальной БД сначала, потом обновляется с сервера
+- `deleteSession()` очищает локальные сообщения
+
+### Технические детали
+- `OwlMessage` — добавлено поле `isTyping: Boolean`
+- `HermesChatViewModel` — добавлены `messageDao`, `Dispatchers`, `withContext`
+- `Entities.kt` — добавлены `HermesMessage.toMessageEntity()` и `MessageEntity.toHermesMessage()`
 
 ---
 
@@ -149,3 +173,36 @@
 | `AIBottomSheet.kt` | AI шторка с чатами |
 | `SplashActivity.kt` | Сплеш-экран с анимацией |
 | `SplashLoadingActivity.kt` | Оверлей загрузки для авторизации |
+| `OwlChatActivity.kt` | Чат с OWL AI агентом |
+| `OwlChatViewModel.kt` | Состояние OWL чата + typing indicator |
+| `scripts/release.sh` | Скрипт выпуска релиза |
+
+---
+
+## 📋 Бэклог
+
+### Высокий приоритет
+- [ ] Favorites при пустом списке — не отображается при входе после очистки памяти
+
+### Средний приоритет
+- [ ] Graceful shutdown сервера
+- [ ] Structured logging (zap/logrus)
+- [ ] Рефакторинг server.go → пакеты
+- [ ] Модульные тесты для OWL streaming
+
+### Низкий приоритет
+- [ ] Кэширование запросов чатов
+- [ ] WebRTC — тестирование TURN
+
+---
+
+## 🟡 Известные баги
+
+### Favorites — отображение при пустом списке чатов
+- **Статус:** не исправлено, v1.1.2.7
+- **Симптом:** при входе после очистки памяти Favorites не отображается если нет созданных чатов. Появляется после создания первого чата.
+- **Попытки:** selectedPositions.clear(), post{notifyDataSetChanged()}, удаление loadChatsFromCache — не помогли
+- **Нужно:** отладить почему getItemCount() возвращает 1 но RecyclerView не рендерит
+
+### Favorites — мерцание при обновлении списка чатов
+- **Статус:** исправлено в c873fbc (v1.1.1.15)
