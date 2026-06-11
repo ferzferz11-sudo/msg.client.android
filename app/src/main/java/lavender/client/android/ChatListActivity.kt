@@ -2005,6 +2005,11 @@ class ChatListActivity : AppCompatActivity() {
                 shouldShowAiSheetOnResume = true
                 startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
             },
+            onOpenRemoteAgents = {
+                shouldShowAiSheetOnResume = false
+                val intent = Intent(this, lavender.client.android.ui.remote.RemoteAgentActivity::class.java)
+                startActivity(intent)
+            },
             unreadNotifCount = unreadNotifCount
         )
         sheet.buildAndShow()

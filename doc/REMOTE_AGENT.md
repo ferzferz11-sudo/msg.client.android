@@ -120,10 +120,10 @@
 1. ✅ Proto классы на клиенте
 2. ✅ gRPC методы на клиенте
 3. ✅ Серверная часть
-4. ⬜ RemoteActivity + layout
-5. ⬜ ViewModel + чат
-6. ⬜ TokenDialog
-7. ⬜ Интеграция с AIBottomSheet
+4. ✅ RemoteActivity + layout
+5. ✅ ViewModel + чат
+6. ✅ TokenDialog
+7. ✅ Интеграция с AIBottomSheet
 8. ⬜ Тестирование
 
 ## Будущие расширения

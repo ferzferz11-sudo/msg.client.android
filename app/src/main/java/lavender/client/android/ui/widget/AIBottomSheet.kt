@@ -38,6 +38,7 @@ class AIBottomSheet(
     private val onCreateHermesChat: () -> Unit = {},
     private val onCreateOwlChat: () -> Unit = {},
     private val onOpenNotifications: () -> Unit = {},
+    private val onOpenRemoteAgents: () -> Unit = {},
     private var unreadNotifCount: Int = 0,
     theme: lavender.client.android.theme.Theme = ThemeStore.currentTheme()
 ) : StandardBottomSheet(context, R.layout.widget_ai_bottom_sheet, theme) {
@@ -166,6 +167,34 @@ class AIBottomSheet(
         }
         owlCreate.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(owlCreate)
+
+        // === Section 3: Remote Agents ===
+        val remoteDivider = LayoutInflater.from(context)
+            .inflate(R.layout.widget_section_divider, contentContainer, false)
+        contentContainer?.addView(remoteDivider)
+
+        val remoteHeader = LayoutInflater.from(context)
+            .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
+        remoteHeader.text = "🖥 Удалённые агенты"
+        contentContainer?.addView(remoteHeader)
+
+        // Open Remote Agents button
+        val remoteOpen = LayoutInflater.from(context)
+            .inflate(R.layout.widget_action_item, contentContainer, false)
+        val remoteIcon = remoteOpen.findViewById<ImageView>(R.id.actionIcon)
+        val remoteText = remoteOpen.findViewById<TextView>(R.id.actionText)
+        val remoteBadge = remoteOpen.findViewById<TextView>(R.id.actionBadge)
+        remoteIcon.setImageResource(R.drawable.ic_agents)
+        remoteIcon.imageTintList = ColorStateList.valueOf(primColor)
+        remoteText.text = "Управление агентами"
+        remoteText.setTextColor(primColor)
+        remoteBadge.visibility = View.GONE
+        remoteOpen.setOnClickListener {
+            onOpenRemoteAgents()
+            dismiss()
+        }
+        remoteOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
+        contentContainer?.addView(remoteOpen)
     }
 
     private fun buildChatItemView(chat: AIChatInfo, primColor: Int, txtColor: Int): View {

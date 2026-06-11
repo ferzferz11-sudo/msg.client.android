@@ -69,7 +69,8 @@ scp app/build/outputs/apk/release/app-release.apk lava:/var/www/lavender/lavende
 ### Важно
 
 - **НЕ запускать `./gradlew assembleRelease` на сервере** — OOM kill (нужно 2GB+, на сервере не хватает)
-- `compileDebugKotlin` на сервере — OK (использует ~1GB)
+- **НЕ запускать `compileDebugKotlin` на сервере** — тоже рискованно (~1GB), памяти может не хватить
+- **НЕ запускать никакие ./gradlew задачи** — сначала `free -h`, если < 2GB free → НЕ запускать
 - APK собирать локально, затем загружать на сервер через SCP
 
 ---

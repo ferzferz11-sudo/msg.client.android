@@ -1,0 +1,240 @@
+package lavender.client.android.ui.remote
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.models.RemoteAgentInfo
+
+class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
+
+    // ===== Agent list =====
+    private val _agents = MutableStateFlow<List<RemoteAgentInfo>>(emptyList())
+    val agents: StateFlow<List<RemoteAgentInfo>> = _agents.asStateFlow()
+
+    // ===== Selected agent =====
+    private val _selectedAgent = MutableStateFlow<RemoteAgentInfo?>(null)
+    val selectedAgent: StateFlow<RemoteAgentInfo?> = _selectedAgent.asStateFlow()
+
+    // ===== Connection status =====
+    private val _isConnected = MutableStateFlow(false)
+    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+
+    // ===== Loading =====
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // ===== Error =====
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    // ===== Token list =====
+    private val _tokenList = MutableStateFlow<List<TokenInfo>>(emptyList())
+    val tokenList: StateFlow<List<TokenInfo>> = _tokenList.asStateFlow()
+
+    // ===== Generated token (one-shot display) =====
+    private val _generatedToken = MutableStateFlow<String?>(null)
+    val generatedToken: StateFlow<String?> = _generatedToken.asStateFlow()
+
+    // ===== Messages for chat =====
+    private val _messages = MutableStateFlow<List<RemoteAgentMessage>>(emptyList())
+    val messages: StateFlow<List<RemoteAgentMessage>> = _messages.asStateFlow()
+
+    // ===== Typing =====
+    private val _isTyping = MutableStateFlow(false)
+    val isTyping: StateFlow<Boolean> = _isTyping.asStateFlow()
+
+    /**
+     * Load remote agents from server
+     */
+    fun loadAgents() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val result = GrpcClient.listRemoteAgents()
+                _agents.value = result.map { proto ->
+                    RemoteAgentInfo(
+                        id = proto.id,
+                        name = proto.name,
+                        host = proto.host,
+                        ipAddress = proto.ipAddress,
+                        os = proto.os,
+                        status = proto.status,
+                        capabilities = proto.capabilities,
+                        activeTasks = proto.activeTasks,
+                        lastHeartbeat = proto.lastHeartbeat
+                    )
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to load agents"
+            }
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Select an agent to interact with
+     */
+    fun selectAgent(agent: RemoteAgentInfo) {
+        _selectedAgent.value = agent
+        _isConnected.value = agent.status == "connected"
+    }
+
+    /**
+     * Generate a new agent token
+     */
+    fun generateToken(
+        agentId: String,
+        agentName: String,
+        capabilities: List<String>,
+        ttlHours: Int,
+        adminUserId: String
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val response = GrpcClient.generateAgentToken(
+                    agentId = agentId,
+                    agentName = agentName,
+                    capabilities = capabilities,
+                    ttlHours = ttlHours,
+                    adminUserId = adminUserId
+                )
+                if (response.success) {
+                    _generatedToken.value = response.token
+                    // Reload token list
+                    loadTokens(adminUserId)
+                } else {
+                    _error.value = response.error.ifEmpty { "Failed to generate token" }
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to generate token"
+            }
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Revoke an agent token
+     */
+    fun revokeToken(agentId: String, adminUserId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val response = GrpcClient.revokeAgentToken(agentId, adminUserId)
+                if (response.success) {
+                    loadTokens(adminUserId)
+                } else {
+                    _error.value = response.error.ifEmpty { "Failed to revoke token" }
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to revoke token"
+            }
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Load token list for current user
+     */
+    fun loadTokens(adminUserId: String) {
+        viewModelScope.launch {
+            try {
+                val response = GrpcClient.listAgentTokens(adminUserId)
+                if (response.success) {
+                    _tokenList.value = response.tokens.map { proto ->
+                        TokenInfo(
+                            id = proto.id,
+                            agentId = proto.agentId,
+                            agentName = proto.agentName,
+                            tokenHash = proto.tokenHash,
+                            capabilities = proto.capabilities,
+                            createdAt = proto.createdAt,
+                            expiresAt = proto.expiresAt,
+                            revoked = proto.revoked,
+                            createdBy = proto.createdBy
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Silent — token list is optional
+            }
+        }
+    }
+
+    /**
+     * Clear generated token after user has seen it
+     */
+    fun clearGeneratedToken() {
+        _generatedToken.value = null
+    }
+
+    /**
+     * Clear error
+     */
+    fun clearError() {
+        _error.value = null
+    }
+
+    /**
+     * Send a message to the remote agent
+     */
+    fun sendMessage(text: String, userId: String) {
+        // Add user message
+        val userMsg = RemoteAgentMessage(
+            id = java.util.UUID.randomUUID().toString(),
+            content = text,
+            isUser = true,
+            timestamp = System.currentTimeMillis()
+        )
+        _messages.value = _messages.value + userMsg
+
+        // FUTURE: send via gRPC to remote agent
+        // For now just echo
+        _isTyping.value = true
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
+            val agentMsg = RemoteAgentMessage(
+                id = java.util.UUID.randomUUID().toString(),
+                content = "Получено: $text",
+                isUser = false,
+                timestamp = System.currentTimeMillis()
+            )
+            _messages.value = _messages.value + agentMsg
+            _isTyping.value = false
+        }
+    }
+}
+
+/**
+ * UI model for a token
+ */
+data class TokenInfo(
+    val id: Long = 0,
+    val agentId: String = "",
+    val agentName: String = "",
+    val tokenHash: String = "",
+    val capabilities: List<String> = emptyList(),
+    val createdAt: String = "",
+    val expiresAt: String = "",
+    val revoked: Boolean = false,
+    val createdBy: String = ""
+)
+
+/**
+ * UI model for remote agent chat message
+ */
+data class RemoteAgentMessage(
+    val id: String = "",
+    val content: String = "",
+    val isUser: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis(),
+    val isStreaming: Boolean = false
+)

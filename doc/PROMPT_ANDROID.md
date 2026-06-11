@@ -94,7 +94,10 @@ app/src/main/java/lavender/client/android/
 - Корутины + lifecycleScope
 - DiffUtil для адаптера чата
 - Тема через ThemeStore (программно, не XML ?attr)
-- НЕ запускать assembleRelease на сервере
+- **НЕ запускать assembleRelease на сервере** (OOM, нужно 2GB+)
+- **НЕ запускать compileDebugKotlin без крайней необходимости** — сначала `free -h`, если < 2GB free → НЕ запускать
+- **НЕ запускать никакие ./gradlew задачи** если память < 2GB free
+- Если нужно проверить синтаксис — делай это через чтение файлов и анализ кода, а не через компиляцию на сервере
 
 ---
 
