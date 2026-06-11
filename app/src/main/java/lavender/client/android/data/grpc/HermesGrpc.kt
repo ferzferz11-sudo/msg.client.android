@@ -1280,3 +1280,135 @@ suspend fun listAgentTokens(adminUserId: String): ListAgentTokensResponseProto =
     return@withContext withTimeoutOrNull(10000) { result }
         ?: ListAgentTokensResponseProto(success = false, error = "Timeout")
 }
+
+// ======= Remote Agent task deployment =======
+
+suspend fun deployAgentTask(
+    agentId: String,
+    taskType: String,
+    params: Map<String, String> = emptyMap(),
+    workingDir: String = "",
+    timeoutSec: Int = 60
+): DeployAgentTaskResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext DeployAgentTaskResponseProto(success = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<DeployAgentTaskRequestProto, DeployAgentTaskResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/DeployAgentTask")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskRequestProto> {
+            override fun stream(v: DeployAgentTaskRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                if (v.taskType.isNotEmpty()) cos.writeString(2, v.taskType)
+                v.params.forEach { (k, v2) -> cos.writeString(3, "$k=$v2") }
+                if (v.workingDir.isNotEmpty()) cos.writeString(4, v.workingDir)
+                if (v.timeoutSec > 0) cos.writeInt32(5, v.timeoutSec)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): DeployAgentTaskRequestProto = DeployAgentTaskRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskResponseProto> {
+            override fun stream(v: DeployAgentTaskResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): DeployAgentTaskResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var taskId = ""; var error = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> taskId = cis.readString()
+                        3 -> error = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return DeployAgentTaskResponseProto(success, taskId, error)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<DeployAgentTaskResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<DeployAgentTaskResponseProto>() {
+        override fun onMessage(message: DeployAgentTaskResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                DeployAgentTaskResponseProto(success = false, error = status.description ?: status.code.toString())
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(DeployAgentTaskRequestProto(agentId, taskType, params, workingDir, timeoutSec))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(15000) { result.await() }
+        ?: DeployAgentTaskResponseProto(success = false, error = "Timeout")
+}
+
+suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext GetRemoteAgentStatusResponseProto(status = "unavailable")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<GetRemoteAgentStatusRequestProto, GetRemoteAgentStatusResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GetRemoteAgentStatus")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetRemoteAgentStatusRequestProto> {
+            override fun stream(v: GetRemoteAgentStatusRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GetRemoteAgentStatusRequestProto = GetRemoteAgentStatusRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetRemoteAgentStatusResponseProto> {
+            override fun stream(v: GetRemoteAgentStatusResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetRemoteAgentStatusResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var status = ""; var activeTasks = 0; var lastHeartbeat = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> status = cis.readString()
+                        2 -> activeTasks = cis.readInt32()
+                        3 -> lastHeartbeat = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetRemoteAgentStatusResponseProto(status, activeTasks, lastHeartbeat)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<GetRemoteAgentStatusResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetRemoteAgentStatusResponseProto>() {
+        override fun onMessage(message: GetRemoteAgentStatusResponseProto) {
+            result.complete(message)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                GetRemoteAgentStatusResponseProto(status = "error: ${status.code}")
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetRemoteAgentStatusRequestProto(agentId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: GetRemoteAgentStatusResponseProto(status = "timeout")
+}

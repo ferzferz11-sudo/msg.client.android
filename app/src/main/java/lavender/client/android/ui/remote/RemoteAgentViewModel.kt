@@ -184,9 +184,15 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     /**
-     * Send a message to the remote agent
+     * Send a task to the selected remote agent via DeployAgentTask
      */
     fun sendMessage(text: String, userId: String) {
+        val agent = _selectedAgent.value
+        if (agent == null) {
+            _error.value = "Агент не выбран"
+            return
+        }
+
         // Add user message
         val userMsg = RemoteAgentMessage(
             id = java.util.UUID.randomUUID().toString(),
@@ -196,19 +202,68 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
         )
         _messages.value = _messages.value + userMsg
 
-        // FUTURE: send via gRPC to remote agent
-        // For now just echo
+        // Send task to agent
         _isTyping.value = true
         viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            val agentMsg = RemoteAgentMessage(
-                id = java.util.UUID.randomUUID().toString(),
-                content = "Получено: $text",
-                isUser = false,
-                timestamp = System.currentTimeMillis()
-            )
-            _messages.value = _messages.value + agentMsg
+            try {
+                val response = GrpcClient.deployAgentTask(
+                    agentId = agent.id,
+                    taskType = "shell",  // Default to shell for now
+                    params = mapOf("command" to text)
+                )
+                if (response.success) {
+                    // Task accepted — show task ID
+                    val agentMsg = RemoteAgentMessage(
+                        id = java.util.UUID.randomUUID().toString(),
+                        content = "✅ Задача отправлена (ID: ${response.taskId})",
+                        isUser = false,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    _messages.value = _messages.value + agentMsg
+                } else {
+                    val agentMsg = RemoteAgentMessage(
+                        id = java.util.UUID.randomUUID().toString(),
+                        content = "❌ Ошибка: ${response.error}",
+                        isUser = false,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    _messages.value = _messages.value + agentMsg
+                }
+            } catch (e: Exception) {
+                val agentMsg = RemoteAgentMessage(
+                    id = java.util.UUID.randomUUID().toString(),
+                    content = "❌ Ошибка: ${e.message}",
+                    isUser = false,
+                    timestamp = System.currentTimeMillis()
+                )
+                _messages.value = _messages.value + agentMsg
+            }
             _isTyping.value = false
+        }
+    }
+
+    /**
+     * Refresh agent status (heartbeat)
+     */
+    fun refreshAgentStatus() {
+        val agent = _selectedAgent.value ?: return
+        viewModelScope.launch {
+            try {
+                val status = GrpcClient.getRemoteAgentStatus(agent.id)
+                _isConnected.value = status.status == "connected"
+                // Update agent in list
+                val updated = _agents.value.map {
+                    if (it.id == agent.id) it.copy(
+                        status = status.status,
+                        activeTasks = status.activeTasks,
+                        lastHeartbeat = status.lastHeartbeat
+                    ) else it
+                }
+                _agents.value = updated
+                _selectedAgent.value = updated.find { it.id == agent.id }
+            } catch (e: Exception) {
+                // Silent
+            }
         }
     }
 }

@@ -89,9 +89,14 @@ class RemoteAgentActivity : AppCompatActivity() {
             insets
         }
 
-        // Load agents
+        // Load agents and refresh status
         viewModel.loadAgents()
+        viewModel.refreshAgentStatus()
     }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshAgentStatus()
 
     private fun setupChatWidget() {
         adapter = ChatMessageAdapter(

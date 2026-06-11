@@ -1394,3 +1394,97 @@ data class UpdateAIChatSettingsResponseProto(
     val success: Boolean = false,
     val message: String = ""
 )
+
+// ======= Remote Agent streaming (hermes_remote.proto) =======
+
+// AgentMessage — от агента к оркестратору
+data class AgentMessageProto(
+    val agentId: String = "",
+    val type: Int = 0,  // AgentMessageType enum
+    val payload: ByteArray = byteArrayOf(),
+    val timestampMs: Long = 0
+)
+
+// OrchestratorMessage — от оркестратору к агенту
+data class OrchestratorMessageProto(
+    val targetAgentId: String = "",
+    val type: Int = 0,  // OrchestratorMessageType enum
+    val payload: ByteArray = byteArrayOf(),
+    val timestampMs: Long = 0
+)
+
+// RegistrationInfo — данные при регистрации агента
+data class RegistrationInfoProto(
+    val agentId: String = "",
+    val agentName: String = "",
+    val version: String = "",
+    val host: String = "",
+    val ipAddress: String = "",
+    val os: String = "",
+    val capabilities: List<String> = emptyList(),
+    val authToken: String = ""
+)
+
+// Task — задача для удалённого агента
+data class TaskProto(
+    val taskId: String = "",
+    val taskType: Int = 0,  // TaskType enum
+    val params: Map<String, String> = emptyMap(),
+    val workingDir: String = "",
+    val timeoutSec: Int = 0,
+    val streamOutput: Boolean = false
+)
+
+// TaskResult — результат выполнения задачи
+data class TaskResultProto(
+    val taskId: String = "",
+    val status: Int = 0,  // TaskStatus enum
+    val stdout: String = "",
+    val stderr: String = "",
+    val exitCode: Int = 0,
+    val durationMs: Long = 0
+)
+
+// AgentMessageType enum values
+object AgentMessageType {
+    const val AGENT_MESSAGE_UNKNOWN = 0
+    const val AGENT_REGISTER = 1
+    const val AGENT_HEARTBEAT = 2
+    const val AGENT_TASK_RESULT = 3
+    const val AGENT_LOG = 4
+    const val AGENT_DISCONNECT = 5
+    const val AGENT_ERROR = 6
+}
+
+// OrchestratorMessageType enum values
+object OrchestratorMessageType {
+    const val ORCHESTRATOR_MESSAGE_UNKNOWN = 0
+    const val ORCHESTRATOR_TASK = 1
+    const val ORCHESTRATOR_CONFIG_UPDATE = 2
+    const val ORCHESTRATOR_PING = 3
+    const val ORCHESTRATOR_DISCONNECT = 4
+    const val ORCHESTRATOR_BROADCAST = 5
+}
+
+// TaskType enum values
+object TaskType {
+    const val TASK_UNKNOWN = 0
+    const val TASK_SHELL = 1
+    const val TASK_FILE_READ = 2
+    const val TASK_FILE_WRITE = 3
+    const val TASK_GIT = 4
+    const val TASK_BUILD = 5
+    const val TASK_DEPLOY = 6
+    const val TASK_DOCKER = 7
+    const val TASK_CUSTOM = 8
+    const val TASK_AI = 9
+}
+
+// TaskStatus enum values
+object TaskStatus {
+    const val TASK_STATUS_UNKNOWN = 0
+    const val TASK_SUCCESS = 1
+    const val TASK_ERROR = 2
+    const val TASK_TIMEOUT = 3
+    const val TASK_CANCELLED = 4
+}

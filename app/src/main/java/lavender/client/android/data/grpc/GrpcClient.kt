@@ -535,12 +535,21 @@ object GrpcClient {
     ): lavender.client.android.data.proto.UpdateAIChatSettingsResponseProto =
         lavender.client.android.data.grpc.updateAIChatSettings(sessionId, userId, apiKey, model)
 
-    // Remote Agent методы (FUTURE)
+    // Remote Agent методы
     suspend fun listRemoteAgents(filterStatus: String = ""): List<lavender.client.android.data.proto.RemoteAgentInfoProto> =
         lavender.client.android.data.grpc.listRemoteAgents(filterStatus)
 
     suspend fun getRemoteAgentStatus(agentId: String): lavender.client.android.data.proto.GetRemoteAgentStatusResponseProto =
         lavender.client.android.data.grpc.getRemoteAgentStatus(agentId)
+
+    suspend fun deployAgentTask(
+        agentId: String,
+        taskType: String,
+        params: Map<String, String> = emptyMap(),
+        workingDir: String = "",
+        timeoutSec: Int = 60
+    ): lavender.client.android.data.proto.DeployAgentTaskResponseProto =
+        lavender.client.android.data.grpc.deployAgentTask(agentId, taskType, params, workingDir, timeoutSec)
 
     // Agent Token Management
     suspend fun generateAgentToken(
