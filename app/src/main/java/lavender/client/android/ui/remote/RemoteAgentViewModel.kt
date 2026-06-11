@@ -227,7 +227,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 } else {
                     val agentMsg = RemoteAgentMessage(
                         id = java.util.UUID.randomUUID().toString(),
-                        content = "❌ Ошибка: ${response.error}",
+                        content = "❌ Ошибка: ${response.message}",
                         isUser = false,
                         timestamp = System.currentTimeMillis()
                     )

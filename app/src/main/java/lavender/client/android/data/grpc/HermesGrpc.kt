@@ -914,24 +914,6 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
     return@withContext emptyList<RemoteAgentInfoProto>()
 }
 
-suspend fun deployAgentTask(
-    agentId: String,
-    taskType: String,
-    params: Map<String, String>,
-    workingDir: String = "",
-    timeoutSec: Int = 0
-): DeployAgentTaskResponseProto = withContext(Dispatchers.IO) {
-    // FUTURE — placeholder
-    Log.d("HermesGrpc", "deployAgentTask: FUTURE — not yet implemented")
-    return@withContext DeployAgentTaskResponseProto()
-}
-
-suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseProto = withContext(Dispatchers.IO) {
-    // FUTURE — placeholder
-    Log.d("HermesGrpc", "getRemoteAgentStatus: FUTURE — not yet implemented")
-    return@withContext GetRemoteAgentStatusResponseProto()
-}
-
 // ======= Hermes Settings =======
 
 suspend fun getHermesSettings(sessionId: String, userId: String): GetHermesSettingsResponseProto = withContext(Dispatchers.IO) {
@@ -1292,7 +1274,7 @@ suspend fun deployAgentTask(
 ): DeployAgentTaskResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        return@withContext DeployAgentTaskResponseProto(success = false, error = "Channel dead")
+        return@withContext DeployAgentTaskResponseProto(taskId = "", success = false, message = "Channel dead")
     }
     val methodDesc = MethodDescriptor.newBuilder<DeployAgentTaskRequestProto, DeployAgentTaskResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -1326,7 +1308,7 @@ suspend fun deployAgentTask(
                         else -> cis.skipField(tag)
                     }
                 }
-                return DeployAgentTaskResponseProto(success, taskId, error)
+                return DeployAgentTaskResponseProto(taskId = taskId, success = success, message = error)
             }
         })
         .build()
@@ -1340,7 +1322,7 @@ suspend fun deployAgentTask(
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
             if (!result.isCompleted) result.complete(
-                DeployAgentTaskResponseProto(success = false, error = status.description ?: status.code.toString())
+                DeployAgentTaskResponseProto(taskId = "", success = false, message = status.description ?: status.code.toString())
             )
         }
     }, io.grpc.Metadata())
@@ -1350,7 +1332,7 @@ suspend fun deployAgentTask(
     call.request(1)
 
     return@withContext withTimeoutOrNull(15000) { result.await() }
-        ?: DeployAgentTaskResponseProto(success = false, error = "Timeout")
+        ?: DeployAgentTaskResponseProto(taskId = "", success = false, message = "Timeout")
 }
 
 suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseProto = withContext(Dispatchers.IO) {
@@ -1375,18 +1357,27 @@ suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseP
             override fun stream(v: GetRemoteAgentStatusResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
             override fun parse(s: java.io.InputStream): GetRemoteAgentStatusResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var status = ""; var activeTasks = 0; var lastHeartbeat = ""
+                var id = ""; var name = ""; var status = ""; var host = ""
+                val capabilities = mutableListOf<String>()
+                var activeTasks = 0; var lastHeartbeat = ""
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> status = cis.readString()
-                        2 -> activeTasks = cis.readInt32()
-                        3 -> lastHeartbeat = cis.readString()
+                        1 -> id = cis.readString()
+                        2 -> name = cis.readString()
+                        3 -> status = cis.readString()
+                        4 -> host = cis.readString()
+                        5 -> capabilities.add(cis.readString())
+                        6 -> activeTasks = cis.readInt32()
+                        7 -> lastHeartbeat = cis.readString()
                         else -> cis.skipField(tag)
                     }
                 }
-                return GetRemoteAgentStatusResponseProto(status, activeTasks, lastHeartbeat)
+                return GetRemoteAgentStatusResponseProto(
+                    id = id, name = name, status = status, host = host,
+                    capabilities = capabilities, activeTasks = activeTasks, lastHeartbeat = lastHeartbeat
+                )
             }
         })
         .build()
@@ -1398,9 +1389,9 @@ suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseP
         override fun onMessage(message: GetRemoteAgentStatusResponseProto) {
             result.complete(message)
         }
-        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+        override fun onClose(closeStatus: io.grpc.Status, trailers: io.grpc.Metadata) {
             if (!result.isCompleted) result.complete(
-                GetRemoteAgentStatusResponseProto(status = "error: ${status.code}")
+                GetRemoteAgentStatusResponseProto(status = "error: ${closeStatus.code}")
             )
         }
     }, io.grpc.Metadata())
