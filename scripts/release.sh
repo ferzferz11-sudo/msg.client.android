@@ -114,15 +114,31 @@ if command -v gh &> /dev/null; then
   fi
 
   # Создаём release и прикрепляем APK
+  # APK на сервере — скачиваем локально для gh
+  LOCAL_APK="/tmp/lavender-$VERSION.apk"
+  echo "  → Скачивание APK с сервера..."
+  scp "$SERVER:$APK_PATH" "$LOCAL_APK" 2>/dev/null || {
+    echo "⚠️  Не удалось скачать APK с сервера, пропускаем загрузку"
+    LOCAL_APK=""
+  }
+
   cd "$PROJECT_DIR"
-  gh release create "v$VERSION" \
-    "$APK_PATH" \
-    --title "Lavender Android v$VERSION" \
-    --notes "$CHANGELOG" \
-    2>/dev/null || {
-      echo "  Release уже существует, пробуем загрузить APK..."
-      gh release upload "v$VERSION" "$APK_PATH" --clobber 2>/dev/null || echo "⚠️  Не удалось загрузить APK"
-    }
+  if [ -n "$LOCAL_APK" ] && [ -f "$LOCAL_APK" ]; then
+    gh release create "v$VERSION" \
+      "$LOCAL_APK" \
+      --title "Lavender Android v$VERSION" \
+      --notes "$CHANGELOG" \
+      2>/dev/null || {
+        echo "  Release уже существует, пробуем загрузить APK..."
+        gh release upload "v$VERSION" "$LOCAL_APK" --clobber 2>/dev/null || echo "⚠️  Не удалось загрузить APK"
+      }
+    rm -f "$LOCAL_APK"
+  else
+    gh release create "v$VERSION" \
+      --title "Lavender Android v$VERSION" \
+      --notes "$CHANGELOG" \
+      2>/dev/null || echo "⚠️  GitHub Release уже существует"
+  fi
   echo "✅ GitHub Release создан с APK"
 else
   echo "⚠️  gh CLI не найден, GitHub Release пропущен"
