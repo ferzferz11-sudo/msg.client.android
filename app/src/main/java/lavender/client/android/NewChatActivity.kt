@@ -655,7 +655,7 @@ class NewChatActivity : AppCompatActivity() {
                         // Auto-scroll removed — preserve scroll position
                     }
 
-                    if ((isFirstLoad || hasNewMessages) && roomMessages.any { it.user != username && !it.isRead }) {
+                    if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) {
                         viewModel.markRead(username)
                     }
                     lastMessageCount = roomMessages.size
