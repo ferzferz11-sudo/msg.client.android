@@ -1,7 +1,7 @@
 # Android клиент — Промпт для новой сессии
 
-Текущая версия: v1.1.2.6 (prod)
-Следующая версия: v1.1.2.7
+Текущая версия: v1.1.2.9 (прод)
+Следующая: v1.1.3.0
 
 ---
 
@@ -28,42 +28,55 @@ Web:          http://13.140.25.249/ (APK download, log monitor)
 
 ```
 app/src/main/java/lavender/client/android/
-├── ChangelogActivity.kt       — экран «Что нового» (bundled + GitHub)
 ├── ChatListActivity.kt        — главный список чатов + AI шторка
+├── NewChatActivity.kt         — обычный чат (группы/личные)
 ├── HermesChatActivity.kt      — чат с Hermes оркестратором
-├── HermesChatViewModel.kt     — ViewModel Hermes чата
+├── HermesChatViewModel.kt     — ViewModel Hermes чата + локальная БД
 ├── OwlChatActivity.kt         — чат с OWL AI
-├── OwlChatViewModel.kt        — ViewModel OWL чата
+├── OwlChatViewModel.kt        — ViewModel OWL чата + typing indicator
 ├── AIBottomSheet.kt           — шторка AI (OWL + Hermes + уведомления)
-├── GrpcClient.kt              — единая точка доступа к gRPC
-├── HermesGrpc.kt              — gRPC методы Hermes
-├── OwlGrpc.kt                 — gRPC методы OWL
-├── RealGrpcClient.kt          — реализация gRPC клиента
+├── GrpcClient.kt              — единая точка доступа к gRPC (facade)
+├── HermesGrpc.kt              — gRPC методы Hermes (streaming, unary)
+├── OwlGrpc.kt                 — gRPC методы OWL (streaming, unary, bot commands)
+├── RealGrpcClient.kt          — реализация gRPC клиента (bidirectional streaming)
 ├── theme/
-│   ├── ThemeApplier.kt        — применение кастомных тем
+│   ├── ThemeApplier.kt        — применение кастомных тем (до setContentView!)
 │   ├── ThemeStore.kt          — хранилище текущей темы
 │   ├── ThemeUi.kt             — привязка темы к Activity
 │   ├── ThemeUtils.kt          — утилиты цветов
 │   └── Theme.kt               — data class темы
-├── data/changelog/
-│   ├── ChangelogRepository.kt  — загрузка релизов (GitHub API → cache)
-│   ├── ChangelogParser.kt      — парсинг JSON + ReleaseInfo
-│   ├── ReleaseInfo.kt          — модели данных релиза
-│   └── MarkdownRenderer.kt     — рендер markdown в Spannable
-└── ui/adapter/
-    └── ChangelogAdapter.kt     — адаптер списка релизов
+├── data/
+│   ├── db/
+│   │   ├── AppDatabase.kt     — Room DB (v9), MessageEntity + ChatEntity
+│   │   ├── Daos.kt            — MessageDao + ChatDao
+│   │   └── Entities.kt        — mapping Message↔Entity, HermesMessage↔Entity
+│   ├── models/
+│   │   ├── Message.kt         — модель сообщения (isSent, isE2EE, reactions...)
+│   │   ├── HermesModel.kt     — HermesMessage, OwlMessage, AgentInfo, HermesSession
+│   │   └── ChatInfo.kt        — модель чата (type, participants, unread...)
+│   ├── grpc/
+│   │   ├── GrpcClient.kt      — facade над RealGrpcClient
+│   │   ├── HermesGrpc.kt      — Hermes gRPC методы
+│   │   ├── OwlGrpc.kt         — OWL gRPC методы
+│   │   └── RealGrpcClient.kt  — реализация gRPC
+│   └── repository/
+│       └── HermesRepository.kt — репозиторий Hermes (session, history, agents)
+└── ui/
+    ├── chat/
+    │   ├── ChatViewModel.kt   — ViewModel обычного чата
+    │   └── widget/            — ChatWidget, ChatMessageAdapter, ChatMessageItem
+    ├── hermes/                — HermesChatActivity + ViewModel
+    ├── owl/                   — OwlChatActivity + ViewModel
+    └── adapter/               — MessageAdapter, ChatAdapter, MentionAdapter
 
 app/src/main/res/
-├── layout/
-│   ├── activity_changelog.xml  — layout экрана ченджлога
-│   ├── item_release.xml        — карточка релиза
-│   └── item_release_asset.xml  — файл релиза (APK)
+├── layout/                    — activity_*, item_*, widget_*, dialog_*
 ├── values/strings.xml          — строки (en)
 ├── values-ru/strings.xml       — строки (ru)
-└── drawable/                   — фоны, теги, иконки
+└── drawable/                   — фоны, иконки
 
 app/src/main/assets/
-└── changelog_bundled.txt       — встроенный ченджлог (fallback)
+└── changelog_bundled.txt       — встроенный ченджлог (user-facing)
 ```
 
 ---
@@ -75,14 +88,10 @@ app/src/main/assets/
 - Разные SharedFlows: owlTyping/owlResponses vs hermesTyping/hermesResponses
 - Разные Activity: OwlChatActivity / HermesChatActivity
 - Разные ViewModels: OwlChatViewModel / HermesChatViewModel
-- Разные rate limiters
 
 Единый AI Chat (v1.1.2.3+):
-- ai_chat_manager.go — единый менеджер на сервере
-- ai_chat_sessions, ai_chat_messages, ai_chat_settings таблицы
-- ChatWithAI RPC — единый стриминг
-- AiChatGrpc.kt — единый gRPC клиент
-- Старые RPC (ChatWithOWL, ChatWithOrchestrator) — deprecated
+- AiChatGrpc.kt — единый gRPC клиент (chatWithAI, getAIChatHistory, getAIChatSettings)
+- Старые RPC (ChatWithOWL, ChatWithOrchestrator) — работают параллельно
 
 ---
 
@@ -94,7 +103,7 @@ app/src/main/assets/
 - Цвета: backgroundColor, primaryColor, onPrimaryColor, textPrimaryColor,
   textSecondaryColor, surfaceColor, onSurfaceColor
 - FAB кнопки: добавлять в список в ThemeApplier (aiFab, addChatFab и т.д.)
-- ChangelogActivity: цвета fallback устанавливаются программно из ThemeStore
+- **Никогда** не использовать `?attr/colorOnSurface` в XML для текста на кастомных тёмных темах — может быть тёмный на тёмном. Всегда программно через ThemeStore.
 
 ---
 
@@ -130,19 +139,18 @@ cd /root/msg.client.android && ./gradlew compileDebugKotlin
 
 Деплой на сервер:
 ```bash
-cd /root/msg.client.android && ./scripts/deploy_android.sh
-# (скопирует APK + version.txt на 13.140.25.249)
+# Скопировать APK на сервер
+scp app/build/outputs/apk/release/app-release.apk lava:/var/www/lavender/lavender.apk
+
+# Полный релиз (tag + deploy + GitHub Release)
+./scripts/release.sh 1.1.2.9
 ```
 
 ---
 
 ## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
-1. **ChangelogAdapter** — на кастомных тёмных темах текст может быть нечитаемым
-   (resolveColorAttr возвращает тёмный цвет). Приоритет низкий.
-
-2. **Rate limiter** — счётчик показывает макс 19 вместо 20 для Hermes.
-   Причина не найдена, отложено.
+1. **Favorites при пустом списке** — при входе после очистки памяти Favorites может не отображаться если нет созданных чатов. Появляется после создания первого чата.
 
 ---
 
@@ -152,24 +160,28 @@ cd /root/msg.client.android && ./scripts/deploy_android.sh
 2. Не ломать существующий функционал
 3. `assembleRelease` НЕ запускать на сервере (OOM kill)
 4. Версия Android в `version.txt` — обновлять при релизе
-5. При релизе: git tag + push tag, CHANGELOG.md, bundled, version.txt
+5. При релизе: `./scripts/release.sh X.X.X.X` (git tag + deploy + GitHub Release)
 6. Дизайн — минималистичный, чистый, без лишнего декора
 7. `userId` (UUID) — всегда как ключ, НЕ username
 8. Для кастомных тем: новые FAB добавлять в ThemeApplier
+9. Сообщения пользователя должны быть видны сразу после отправки (не ждать ответа агента)
+10. История AI чатов должна сохраняться в локальную БД
 
 ---
 
 ## ДОКУМЕНТАЦИЯ (читать при старте)
+
+Android:
+- `/root/msg.client.android/doc/INDEX.md` — индекс документации
+- `/root/msg.client.android/doc/TASKS.md` — таск-трекер, бэклог, известные баги
+- `/root/msg.client.android/doc/PROMPT_ANDROID.md` — этот файл
+- `/root/msg.client.android/CHANGELOG.md` — история версий (dev-facing)
 
 Сервер:
 - `/root/msg/doc/INDEX.md`
 - `/root/msg/doc/INTEGRATION_SESSION.md`
 - `/root/msg/doc/TASKS.md`
 - `/root/msg/doc/PITFALLS.md`
-- `/root/msg/doc/CHANGELOG.md`
-
-Android:
-- `/root/msg.client.android/doc/TASKS.md`
 
 Memory pad:
 - `/root/.hermes/memory/pad.md`
