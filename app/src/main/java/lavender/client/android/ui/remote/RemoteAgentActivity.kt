@@ -91,7 +91,11 @@ class RemoteAgentActivity : AppCompatActivity() {
 
         // Load agents and refresh status
         viewModel.loadAgents()
-        viewModel.refreshAgentStatus()
+        // Refresh status after a short delay to let agents load
+        lifecycleScope.launch {
+            kotlinx.coroutines.delay(1000)
+            viewModel.refreshAgentStatus()
+        }
     }
 
     override fun onResume() {

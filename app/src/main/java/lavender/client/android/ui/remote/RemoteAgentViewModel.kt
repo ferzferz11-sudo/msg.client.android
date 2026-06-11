@@ -70,6 +70,10 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                         lastHeartbeat = proto.lastHeartbeat
                     )
                 }
+                // Auto-select first agent if none selected
+                if (_selectedAgent.value == null && _agents.value.isNotEmpty()) {
+                    selectAgent(_agents.value.first())
+                }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load agents"
             }
