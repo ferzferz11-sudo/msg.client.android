@@ -117,11 +117,7 @@ class ChatAdapter(
             favoritesItem = newFavorites
             allChats = actualChats
             displayedChats = actualChats
-            // Use notifyItemInserted instead of notifyDataSetChanged for reliability
-            // when RecyclerView is first populated with Favorites on empty list
-            if (newFavorites != null) {
-                notifyItemInserted(0)
-            }
+            notifyDataSetChanged()
             return
         }
 

@@ -829,6 +829,14 @@ class ChatListActivity : AppCompatActivity() {
                     isChatsLoaded = true
 
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
+
+                    // Force re-layout for empty list (Favorites only)
+                    // RecyclerView may skip layout when transitioning from empty to 1 item
+                    binding.chatsRecyclerView.post {
+                        if (chatAdapter.itemCount > 0) {
+                            chatAdapter.notifyDataSetChanged()
+                        }
+                    }
                 }
 
                 // Fetch favorites data in background (non-visual)
@@ -2295,7 +2303,7 @@ class ChatListActivity : AppCompatActivity() {
             // Now that we have contacts, load/collect all users
             val usersJob = lifecycleScope.launch {
                 grpcClient.allUsers.collect { users ->
-                    val filteredUsers = users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username }
+                    val filteredUsers = users.filter { !currentContacts.contains(it.username) }.map { it.username }
                     withContext(Dispatchers.Main) {
                         sheet.setLoading(false)
                         userAdapter.setUsers(filteredUsers)
