@@ -742,13 +742,13 @@ class ChatListActivity : AppCompatActivity() {
     private fun loadChats(skipCache: Boolean = false) {
         // Only load chats if user is authenticated and chatAdapter is initialized
         if (!::chatAdapter.isInitialized) {
-            Log.d("ChatListActivity", "chatAdapter not initialized, skipping loadChats")
+            Log.d("ChatListActivity", "loadChats: SKIP - chatAdapter not initialized")
             return
         }
 
         // Don't hammer the server if we're not connected — wait for READY status
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
-            Log.d("ChatListActivity", "loadChats: not connected (${grpcClient.connectionStatus.value}), skipping")
+            Log.d("ChatListActivity", "loadChats: SKIP - not connected (${grpcClient.connectionStatus.value})")
             return
         }
 
