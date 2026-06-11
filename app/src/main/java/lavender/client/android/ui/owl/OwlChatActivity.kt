@@ -374,7 +374,7 @@ class OwlChatActivity : AppCompatActivity() {
     }
 
     private fun observeState() {
-        // OWL messages
+        // OWL messages + typing indicator — unified flow to avoid adapter.currentList mutation
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.owlMessages.collect { messages ->
@@ -387,28 +387,12 @@ class OwlChatActivity : AppCompatActivity() {
             }
         }
 
-        // Typing indicator
+        // Typing indicator — update subtitle only, don't mutate adapter list
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
                     val typingText = if (isTyping) "OWL печатает..." else ""
                     chatWidget.setToolbarSubtitle(typingText, isTyping)
-
-                    if (isTyping) {
-                        val typingItem = ChatMessageItem(
-                            id = "typing",
-                            content = "",
-                            senderId = "owl",
-                            senderName = "🦉 OWL",
-                            isTyping = true,
-                            timestamp = System.currentTimeMillis()
-                        )
-                        adapter.submitList(adapter.currentList + typingItem)
-                        chatWidget.scrollToBottom()
-                    } else {
-                        val filtered = adapter.currentList.filter { !it.isTyping }
-                        adapter.submitList(filtered)
-                    }
                 }
             }
         }
@@ -444,7 +428,8 @@ class OwlChatActivity : AppCompatActivity() {
             senderEmoji = this.senderEmoji,
             timestamp = this.timestamp,
             isCurrentUser = this.isCurrentUser,
-            isRead = true
+            isRead = true,
+            isTyping = this.isTyping
         )
     }
 
