@@ -3,6 +3,7 @@ package lavender.client.android.ui.remote
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -46,9 +47,9 @@ class RemoteAgentActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor)
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor)
-        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor)
+        val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
 
         setContentView(R.layout.activity_remote_agent)
 
@@ -117,7 +118,7 @@ class RemoteAgentActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor)
+        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, Color.BLUE)
 
         btnGenerateToken.setOnClickListener {
             showTokenDialog()
@@ -207,7 +208,7 @@ class RemoteAgentActivity : AppCompatActivity() {
         val dotColor = if (connected) 0xFF4CAF50.toInt() else 0xFFF44336.toInt()
         statusIndicator.background.setTint(dotColor)
         statusText.text = if (connected) "Агент подключён" else "Агент отключён"
-        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textSecondaryColor)
+        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textSecondaryColor, Color.GRAY)
         statusText.setTextColor(txtColor)
     }
 
@@ -237,8 +238,8 @@ class RemoteAgentActivity : AppCompatActivity() {
      */
     private fun showTokenResultDialog(token: String) {
         val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor)
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor)
+        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
 
         val container = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL

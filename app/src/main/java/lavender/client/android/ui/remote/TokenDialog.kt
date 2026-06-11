@@ -1,7 +1,7 @@
 package lavender.client.android.ui.remote
 
 import android.content.Context
-import android.view.LayoutInflater
+import android.graphics.Color
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.button.MaterialButton
@@ -24,9 +24,9 @@ class TokenDialog(
     private var dialog: AlertDialog? = null
 
     fun show() {
-        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor)
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor)
-        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor)
+        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
 
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
