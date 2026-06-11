@@ -117,6 +117,19 @@ class ChatAdapter(
             favoritesItem = newFavorites
             allChats = actualChats
             displayedChats = actualChats
+            // Use notifyItemInserted instead of notifyDataSetChanged for reliability
+            // when RecyclerView is first populated with Favorites on empty list
+            if (newFavorites != null) {
+                notifyItemInserted(0)
+            }
+            return
+        }
+
+        // If list was empty before (Favorites only, no actual chats) and still empty,
+        // just re-notify to ensure RecyclerView renders the item.
+        // This handles the case where startSync re-sends the same empty list
+        // and the first notifyItemInserted was ignored by RecyclerView.
+        if (displayedChats.isEmpty() && favoritesItem != null && actualChats.isEmpty()) {
             notifyDataSetChanged()
             return
         }
