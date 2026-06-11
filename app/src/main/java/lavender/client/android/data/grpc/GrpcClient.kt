@@ -541,4 +541,17 @@ object GrpcClient {
 
     suspend fun getRemoteAgentStatus(agentId: String): lavender.client.android.data.proto.GetRemoteAgentStatusResponseProto =
         lavender.client.android.data.grpc.getRemoteAgentStatus(agentId)
+
+    // Agent Token Management
+    suspend fun generateAgentToken(
+        agentId: String, agentName: String, capabilities: List<String>,
+        ttlHours: Int, adminUserId: String
+    ): lavender.client.android.data.proto.GenerateAgentTokenResponseProto =
+        lavender.client.android.data.grpc.generateAgentToken(agentId, agentName, capabilities, ttlHours, adminUserId)
+
+    suspend fun revokeAgentToken(agentId: String, adminUserId: String): lavender.client.android.data.proto.RevokeAgentTokenResponseProto =
+        lavender.client.android.data.grpc.revokeAgentToken(agentId, adminUserId)
+
+    suspend fun listAgentTokens(adminUserId: String): lavender.client.android.data.proto.ListAgentTokensResponseProto =
+        lavender.client.android.data.grpc.listAgentTokens(adminUserId)
 }

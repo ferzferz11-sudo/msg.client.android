@@ -1061,3 +1061,222 @@ suspend fun updateHermesSettings(sessionId: String, userId: String, apiKey: Stri
     return@withContext withTimeoutOrNull(10000) { result.await() }
         ?: UpdateHermesSettingsResponseProto(success = false, message = "Timeout")
 }
+
+// ======= Agent Token Management =======
+
+suspend fun generateAgentToken(
+    agentId: String,
+    agentName: String,
+    capabilities: List<String>,
+    ttlHours: Int,
+    adminUserId: String
+): GenerateAgentTokenResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext GenerateAgentTokenResponseProto(success = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<GenerateAgentTokenRequestProto, GenerateAgentTokenResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/GenerateAgentToken")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GenerateAgentTokenRequestProto> {
+            override fun stream(v: GenerateAgentTokenRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                if (v.agentName.isNotEmpty()) cos.writeString(2, v.agentName)
+                v.capabilities.forEach { cos.writeString(3, it) }
+                if (v.ttlHours != 0) cos.writeInt32(4, v.ttlHours)
+                if (v.adminUserId.isNotEmpty()) cos.writeString(5, v.adminUserId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GenerateAgentTokenRequestProto = GenerateAgentTokenRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GenerateAgentTokenResponseProto> {
+            override fun stream(v: GenerateAgentTokenResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GenerateAgentTokenResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var token = ""; var error = ""; var expiresAt = 0L
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> token = cis.readString()
+                        3 -> error = cis.readString()
+                        4 -> expiresAt = cis.readInt64()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GenerateAgentTokenResponseProto(success = success, token = token, error = error, expiresAt = expiresAt)
+            }
+        })
+        .build()
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = suspendCancellableCoroutine<GenerateAgentTokenResponseProto> { cont ->
+        call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
+            override fun onMessage(message: GenerateAgentTokenResponseProto) {
+                cont.resumeWith(Result.success(message))
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (cont.isActive) {
+                    cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
+                }
+            }
+        }, io.grpc.Metadata())
+    }
+    call.sendMessage(GenerateAgentTokenRequestProto(
+        agentId = agentId, agentName = agentName, capabilities = capabilities,
+        ttlHours = ttlHours, adminUserId = adminUserId
+    ))
+    call.halfClose()
+    call.request(1)
+    return@withContext withTimeoutOrNull(15000) { result.await() }
+        ?: GenerateAgentTokenResponseProto(success = false, error = "Timeout")
+}
+
+suspend fun revokeAgentToken(agentId: String, adminUserId: String): RevokeAgentTokenResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext RevokeAgentTokenResponseProto(success = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<RevokeAgentTokenRequestProto, RevokeAgentTokenResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/RevokeAgentToken")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<RevokeAgentTokenRequestProto> {
+            override fun stream(v: RevokeAgentTokenRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                if (v.adminUserId.isNotEmpty()) cos.writeString(2, v.adminUserId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): RevokeAgentTokenRequestProto = RevokeAgentTokenRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<RevokeAgentTokenResponseProto> {
+            override fun stream(v: RevokeAgentTokenResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): RevokeAgentTokenResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var error = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> error = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return RevokeAgentTokenResponseProto(success = success, error = error)
+            }
+        })
+        .build()
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = suspendCancellableCoroutine<RevokeAgentTokenResponseProto> { cont ->
+        call.start(object : io.grpc.ClientCall.Listener<RevokeAgentTokenResponseProto>() {
+            override fun onMessage(message: RevokeAgentTokenResponseProto) {
+                cont.resumeWith(Result.success(message))
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (cont.isActive) {
+                    cont.resumeWith(Result.success(RevokeAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
+                }
+            }
+        }, io.grpc.Metadata())
+    }
+    call.sendMessage(RevokeAgentTokenRequestProto(agentId = agentId, adminUserId = adminUserId))
+    call.halfClose()
+    call.request(1)
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: RevokeAgentTokenResponseProto(success = false, error = "Timeout")
+}
+
+suspend fun listAgentTokens(adminUserId: String): ListAgentTokensResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext ListAgentTokensResponseProto(success = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<ListAgentTokensRequestProto, ListAgentTokensResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/ListAgentTokens")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<ListAgentTokensRequestProto> {
+            override fun stream(v: ListAgentTokensRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.adminUserId.isNotEmpty()) cos.writeString(1, v.adminUserId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): ListAgentTokensRequestProto = ListAgentTokensRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<ListAgentTokensResponseProto> {
+            override fun stream(v: ListAgentTokensResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): ListAgentTokensResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var error = ""
+                val tokens = mutableListOf<AgentTokenInfoProto>()
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> {
+                            val len = cis.readRawVarint32()
+                            val msgBytes = cis.readRawBytes(len)
+                            if (msgBytes.isNotEmpty()) {
+                                val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                                var id = 0L; var agentId = ""; var agentName = ""; var tokenHash = ""
+                                val capabilities = mutableListOf<String>()
+                                var createdAt = ""; var expiresAt = ""; var revoked = false; var createdBy = ""
+                                while (!inner.isAtEnd) {
+                                    val innerTag = inner.readTag()
+                                    if (innerTag == 0) break
+                                    when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                        1 -> id = inner.readInt64()
+                                        2 -> agentId = inner.readString()
+                                        3 -> agentName = inner.readString()
+                                        4 -> tokenHash = inner.readString()
+                                        5 -> capabilities.add(inner.readString())
+                                        6 -> createdAt = inner.readString()
+                                        7 -> expiresAt = inner.readString()
+                                        8 -> revoked = inner.readBool()
+                                        9 -> createdBy = inner.readString()
+                                        else -> inner.skipField(innerTag)
+                                    }
+                                }
+                                tokens.add(AgentTokenInfoProto(
+                                    id = id, agentId = agentId, agentName = agentName,
+                                    tokenHash = tokenHash, capabilities = capabilities,
+                                    createdAt = createdAt, expiresAt = expiresAt,
+                                    revoked = revoked, createdBy = createdBy
+                                ))
+                            }
+                        }
+                        3 -> error = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return ListAgentTokensResponseProto(success = success, tokens = tokens, error = error)
+            }
+        })
+        .build()
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = suspendCancellableCoroutine<ListAgentTokensResponseProto> { cont ->
+        call.start(object : io.grpc.ClientCall.Listener<ListAgentTokensResponseProto>() {
+            override fun onMessage(message: ListAgentTokensResponseProto) {
+                cont.resumeWith(Result.success(message))
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (cont.isActive) {
+                    cont.resumeWith(Result.success(ListAgentTokensResponseProto(success = false, error = status.description ?: status.code.toString())))
+                }
+            }
+        }, io.grpc.Metadata())
+    }
+    call.sendMessage(ListAgentTokensRequestProto(adminUserId = adminUserId))
+    call.halfClose()
+    call.request(1)
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: ListAgentTokensResponseProto(success = false, error = "Timeout")
+}
