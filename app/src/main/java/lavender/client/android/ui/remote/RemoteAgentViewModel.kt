@@ -57,6 +57,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
             _error.value = null
             try {
                 val result = GrpcClient.listRemoteAgents()
+                android.util.Log.d("RemoteAgentViewModel", "loadAgents: got ${result.size} agents")
                 _agents.value = result.map { proto ->
                     RemoteAgentInfo(
                         id = proto.id,
@@ -70,11 +71,14 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                         lastHeartbeat = proto.lastHeartbeat
                     )
                 }
-                // Auto-select first agent if none selected
                 if (_selectedAgent.value == null && _agents.value.isNotEmpty()) {
                     selectAgent(_agents.value.first())
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                android.util.Log.d("RemoteAgentViewModel", "loadAgents cancelled")
+                throw e // re-throw to keep structured concurrency
             } catch (e: Exception) {
+                android.util.Log.e("RemoteAgentViewModel", "loadAgents error", e)
                 _error.value = e.message ?: "Failed to load agents"
             }
             _isLoading.value = false

@@ -169,6 +169,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
         lifecycleScope.launch {
             try {
+                android.util.Log.d("RemoteAgentSettings", "generateToken: agentId=$agentId name=$agentName caps=$capabilities ttl=$ttlHours userId=$userId")
                 val response = GrpcClient.generateAgentToken(
                     agentId = agentId,
                     agentName = agentName,
@@ -176,14 +177,16 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     ttlHours = ttlHours,
                     adminUserId = userId
                 )
+                android.util.Log.d("RemoteAgentSettings", "generateToken response: success=${response.success} token=${response.token.take(20)} error=${response.error}")
                 if (response.success) {
                     showTokenResultDialog(response.token)
                     loadTokens()
                 } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                android.util.Log.e("RemoteAgentSettings", "generateToken error", e)
+                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
