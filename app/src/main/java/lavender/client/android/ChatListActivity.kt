@@ -331,7 +331,6 @@ class ChatListActivity : AppCompatActivity() {
         )
         chats.add(favoritesChat)
         chatAdapter.setChats(chats.toList())
-        Log.d("ChatListActivity", "onCreate: Favorites shown immediately")
 
         // Handle bottom navigation bar insets
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
@@ -755,13 +754,13 @@ class ChatListActivity : AppCompatActivity() {
     private fun loadChats(skipCache: Boolean = false) {
         // Only load chats if user is authenticated and chatAdapter is initialized
         if (!::chatAdapter.isInitialized) {
-            Log.d("ChatListActivity", "loadChats: SKIP - chatAdapter not initialized")
+            Log.d("ChatListActivity", "chatAdapter not initialized, skipping loadChats")
             return
         }
 
         // Don't hammer the server if we're not connected — wait for READY status
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
-            Log.d("ChatListActivity", "loadChats: SKIP - not connected (${grpcClient.connectionStatus.value})")
+            Log.d("ChatListActivity", "loadChats: not connected (${grpcClient.connectionStatus.value}), skipping")
             return
         }
 
@@ -845,21 +844,12 @@ class ChatListActivity : AppCompatActivity() {
 
                     chats.clear()
                     chats.addAll(newChats)
-                    Log.d("ChatListActivity", "loadChats: calling setChats with ${newChats.size} chats (newChats=$newChats)")
                     chatAdapter.setChats(newChats)
 
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
                     isChatsLoaded = true
 
-                    Log.d("ChatListActivity", "loadChats: isChatsLoaded=true, chats.size=${chats.size}")
-
-                    // Force re-layout for empty list (Favorites only)
-                    // RecyclerView may skip layout when transitioning from empty to 1 item
-                    binding.chatsRecyclerView.post {
-                        if (chatAdapter.itemCount > 0) {
-                            chatAdapter.notifyDataSetChanged()
-                        }
-                    }
+                    Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
                 }
 
                 // Fetch favorites data in background (non-visual)
@@ -887,7 +877,6 @@ class ChatListActivity : AppCompatActivity() {
                             )
                             chats.add(favoritesChat)
                             chatAdapter.setChats(chats.toList())
-                            Log.d("ChatListActivity", "loadChats: ERROR fallback - showing Favorites")
                         }
                     }
                 } catch (_: CancellationException) {
@@ -2339,10 +2328,7 @@ class ChatListActivity : AppCompatActivity() {
             // Now that we have contacts, load/collect all users
             val usersJob = lifecycleScope.launch {
                 grpcClient.allUsers.collect { users ->
-                    Log.d("ChatListActivity", "allUsers received: ${users.size} users: ${users.map { it.username }}")
-                    Log.d("ChatListActivity", "currentContacts: $currentContacts")
                     val filteredUsers = users.filter { it.username != username && !currentContacts.contains(it.username) }.map { it.username }
-                    Log.d("ChatListActivity", "filteredUsers: $filteredUsers")
                     withContext(Dispatchers.Main) {
                         sheet.setLoading(false)
                         userAdapter.setUsers(filteredUsers)
