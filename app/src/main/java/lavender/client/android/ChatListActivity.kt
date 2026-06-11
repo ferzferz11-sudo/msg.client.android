@@ -320,6 +320,19 @@ class ChatListActivity : AppCompatActivity() {
             isNestedScrollingEnabled = false
         }
 
+        // Show Favorites immediately — don't wait for network
+        // This ensures Favorites is visible even if server is unreachable
+        val favoritesChat = ChatInfo(
+            id = "favorites_$username",
+            name = getString(R.string.favorites),
+            type = "favorites",
+            lastMessageText = "",
+            lastMessageTime = 0L
+        )
+        chats.add(favoritesChat)
+        chatAdapter.setChats(chats.toList())
+        Log.d("ChatListActivity", "onCreate: Favorites shown immediately")
+
         // Handle bottom navigation bar insets
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -863,6 +876,19 @@ class ChatListActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
                         binding.swipeRefreshLayout.isRefreshing = false
+                        // Even on error, show Favorites if list is empty
+                        if (chats.isEmpty()) {
+                            val favoritesChat = ChatInfo(
+                                id = "favorites_$username",
+                                name = getString(R.string.favorites),
+                                type = "favorites",
+                                lastMessageText = "",
+                                lastMessageTime = 0L
+                            )
+                            chats.add(favoritesChat)
+                            chatAdapter.setChats(chats.toList())
+                            Log.d("ChatListActivity", "loadChats: ERROR fallback - showing Favorites")
+                        }
                     }
                 } catch (_: CancellationException) {
                     // Activity destroyed during error handling
