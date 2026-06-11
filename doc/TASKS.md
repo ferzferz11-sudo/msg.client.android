@@ -3,7 +3,7 @@
 **Версия:** 1.1.2.10
 **Обновлено:** 2026-06-11
 **Ветка:** feat/1.1.2.x
-**Тег:** v1.1.2.10 (в работе)
+**Тег:** v1.1.2.10 (выпущен)
 **APK:** /var/www/lavender/lavender.apk
 **GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.2.9
 
@@ -114,6 +114,7 @@
 || Hermes DB persistence | Сообщения сохраняются в Room, не только в памяти |
 || AI sheet await refresh | suspendCancellableCoroutine для ожидания getAIChats перед показом шторки |
 || AI sheet local delete | Удаление из локального списка без сетевого запроса — мгновенный rebuild |
+|| No auto-scroll | Автоскролл на последнее сообщение полностью убран — позиция сохраняется |
 
 ---
 
