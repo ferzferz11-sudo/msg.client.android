@@ -909,9 +909,91 @@ suspend fun getOrchestratorHistory(sessionId: String, limit: Int = 50): List<Orc
 }
 
 suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoProto> = withContext(Dispatchers.IO) {
-    // FUTURE — placeholder, server implements ListRemoteAgents
-    Log.d("HermesGrpc", "listRemoteAgents: FUTURE — not yet implemented")
-    return@withContext emptyList<RemoteAgentInfoProto>()
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        Log.w("HermesGrpc", "listRemoteAgents: channel dead")
+        return@withContext emptyList()
+    }
+    val methodDesc = MethodDescriptor.newBuilder<ListRemoteAgentsRequestProto, ListRemoteAgentsResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("messenger.ChatService/ListRemoteAgents")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<ListRemoteAgentsRequestProto> {
+            override fun stream(v: ListRemoteAgentsRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.filterStatus.isNotEmpty()) cos.writeString(1, v.filterStatus)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): ListRemoteAgentsRequestProto = ListRemoteAgentsRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<ListRemoteAgentsResponseProto> {
+            override fun stream(v: ListRemoteAgentsResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): ListRemoteAgentsResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                val agents = mutableListOf<RemoteAgentInfoProto>()
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> {
+                            val len = cis.readRawVarint32()
+                            val msgBytes = cis.readRawBytes(len)
+                            if (msgBytes.isNotEmpty()) {
+                                try {
+                                    val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                                    var id = ""; var name = ""; var host = ""; var ipAddress = ""; var os = ""
+                                    var status = ""; val capabilities = mutableListOf<String>()
+                                    var activeTasks = 0; var lastHeartbeat = ""
+                                    while (!inner.isAtEnd) {
+                                        val innerTag = inner.readTag()
+                                        if (innerTag == 0) break
+                                        when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                            1 -> id = inner.readString()
+                                            2 -> name = inner.readString()
+                                            3 -> host = inner.readString()
+                                            4 -> ipAddress = inner.readString()
+                                            5 -> os = inner.readString()
+                                            6 -> status = inner.readString()
+                                            7 -> capabilities.add(inner.readString())
+                                            8 -> activeTasks = inner.readInt32()
+                                            9 -> lastHeartbeat = inner.readString()
+                                            else -> inner.skipField(innerTag)
+                                        }
+                                    }
+                                    agents.add(RemoteAgentInfoProto(
+                                        id = id, name = name, host = host, ipAddress = ipAddress, os = os,
+                                        status = status, capabilities = capabilities,
+                                        activeTasks = activeTasks, lastHeartbeat = lastHeartbeat
+                                    ))
+                                } catch (_: Exception) {}
+                            }
+                        }
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return ListRemoteAgentsResponseProto(agents = agents)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<List<RemoteAgentInfoProto>>()
+
+    call.start(object : io.grpc.ClientCall.Listener<ListRemoteAgentsResponseProto>() {
+        override fun onMessage(message: ListRemoteAgentsResponseProto) {
+            result.complete(message.agents)
+        }
+        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(emptyList())
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(ListRemoteAgentsRequestProto(filterStatus = filterStatus))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList()
 }
 
 // ======= Hermes Settings =======
@@ -1368,26 +1450,20 @@ suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseP
             override fun stream(v: GetRemoteAgentStatusResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
             override fun parse(s: java.io.InputStream): GetRemoteAgentStatusResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var id = ""; var name = ""; var status = ""; var host = ""
-                val capabilities = mutableListOf<String>()
+                var status = ""
                 var activeTasks = 0; var lastHeartbeat = ""
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> id = cis.readString()
-                        2 -> name = cis.readString()
-                        3 -> status = cis.readString()
-                        4 -> host = cis.readString()
-                        5 -> capabilities.add(cis.readString())
-                        6 -> activeTasks = cis.readInt32()
-                        7 -> lastHeartbeat = cis.readString()
+                        1 -> status = cis.readString()
+                        2 -> activeTasks = cis.readInt32()
+                        3 -> lastHeartbeat = cis.readString()
                         else -> cis.skipField(tag)
                     }
                 }
                 return GetRemoteAgentStatusResponseProto(
-                    id = id, name = name, status = status, host = host,
-                    capabilities = capabilities, activeTasks = activeTasks, lastHeartbeat = lastHeartbeat
+                    status = status, activeTasks = activeTasks, lastHeartbeat = lastHeartbeat
                 )
             }
         })
