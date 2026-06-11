@@ -914,6 +914,7 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
         Log.w("HermesGrpc", "listRemoteAgents: channel dead")
         return@withContext emptyList()
     }
+    Log.d("HermesGrpc", "listRemoteAgents: calling messenger.ChatService/ListRemoteAgents")
     val methodDesc = MethodDescriptor.newBuilder<ListRemoteAgentsRequestProto, ListRemoteAgentsResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName("messenger.ChatService/ListRemoteAgents")
@@ -982,9 +983,11 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
 
     call.start(object : io.grpc.ClientCall.Listener<ListRemoteAgentsResponseProto>() {
         override fun onMessage(message: ListRemoteAgentsResponseProto) {
+            Log.d("HermesGrpc", "listRemoteAgents: received ${message.agents.size} agents")
             result.complete(message.agents)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            Log.d("HermesGrpc", "listRemoteAgents: onClose status=${status.code} desc=${status.description}")
             if (!result.isCompleted) result.complete(emptyList())
         }
     }, io.grpc.Metadata())
@@ -993,7 +996,9 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
     call.halfClose()
     call.request(1)
 
-    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList()
+    return@withContext withTimeoutOrNull(10000) { result.await() } ?: emptyList<RemoteAgentInfoProto>().also {
+        Log.w("HermesGrpc", "listRemoteAgents: timeout or empty result")
+    }
 }
 
 // ======= Hermes Settings =======
@@ -1180,9 +1185,11 @@ suspend fun generateAgentToken(
     val result = suspendCancellableCoroutine<GenerateAgentTokenResponseProto> { cont ->
         call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
             override fun onMessage(message: GenerateAgentTokenResponseProto) {
+                Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
                 cont.resumeWith(Result.success(message))
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
                 if (cont.isActive) {
                     cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
                 }
