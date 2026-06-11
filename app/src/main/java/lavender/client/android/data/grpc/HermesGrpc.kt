@@ -1376,7 +1376,7 @@ suspend fun deployAgentTask(
                     entryCos.flush()
                     val entryBytes = entryBaos.toByteArray()
                     cos.writeTag(3, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
-                    cos.writeUInt32(value = entryBytes.size)
+                    cos.writeUInt32NoTag(entryBytes.size)
                     cos.writeRawBytes(entryBytes)
                 }
                 if (v.workingDir.isNotEmpty()) cos.writeString(4, v.workingDir)
