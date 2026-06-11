@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   activity_remote_agent.xml — экран удалённого агента.
-  Toolbar: название + статус подключения.
+  Toolbar: название + статус подключения + шестерёнка настроек.
   Чат через ChatWidget.
-  Кнопки: сгенерировать токен, отозвать токен.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -62,36 +61,5 @@
             android:visibility="gone"
             tools:visibility="gone" />
     </FrameLayout>
-
-    <!-- Bottom action bar: токен + отзыв -->
-    <LinearLayout
-        android:id="@+id/actionBar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="8dp"
-        android:gravity="center_vertical">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnGenerateToken"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:text="Сгенерировать токен"
-            android:textSize="12sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRevokeToken"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:text="Отозвать токен"
-            android:textSize="12sp" />
-    </LinearLayout>
 
 </LinearLayout>

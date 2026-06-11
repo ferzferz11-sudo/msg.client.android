@@ -3,8 +3,11 @@ package lavender.client.android.ui.remote
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
@@ -18,7 +21,6 @@ import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.launch
 import lavender.client.android.R
@@ -37,8 +39,6 @@ class RemoteAgentActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     private lateinit var chatWidget: ChatWidget
     private lateinit var progressBar: ProgressBar
-    private lateinit var btnGenerateToken: com.google.android.material.button.MaterialButton
-    private lateinit var btnRevokeToken: com.google.android.material.button.MaterialButton
 
     private lateinit var adapter: ChatMessageAdapter
     private var userId: String = ""
@@ -49,7 +49,6 @@ class RemoteAgentActivity : AppCompatActivity() {
         val theme = ThemeStore.currentTheme()
         val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
 
         setContentView(R.layout.activity_remote_agent)
 
@@ -63,8 +62,6 @@ class RemoteAgentActivity : AppCompatActivity() {
         statusText = findViewById(R.id.statusText)
         chatWidget = findViewById(R.id.chatWidget)
         progressBar = findViewById(R.id.progressBar)
-        btnGenerateToken = findViewById(R.id.btnGenerateToken)
-        btnRevokeToken = findViewById(R.id.btnRevokeToken)
 
         // Toolbar setup
         setSupportActionBar(toolbar)
@@ -81,9 +78,8 @@ class RemoteAgentActivity : AppCompatActivity() {
         // Status bar
         updateStatus(false)
 
-        // RecyclerView via ChatWidget
+        // Chat
         setupChatWidget()
-        setupButtons()
         observeState()
 
         // Window insets
@@ -98,7 +94,24 @@ class RemoteAgentActivity : AppCompatActivity() {
 
         // Load agents
         viewModel.loadAgents()
-        viewModel.loadTokens(userId)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.remote_agent_menu, menu)
+        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
+        menu.findItem(R.id.action_settings)?.icon?.setTint(txtColor)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                val intent = Intent(this, RemoteAgentSettingsActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun setupChatWidget() {
@@ -114,18 +127,6 @@ class RemoteAgentActivity : AppCompatActivity() {
             if (text.isNotBlank()) {
                 viewModel.sendMessage(text.trim(), userId)
             }
-        }
-    }
-
-    private fun setupButtons() {
-        val primColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, Color.BLUE)
-
-        btnGenerateToken.setOnClickListener {
-            showTokenDialog()
-        }
-
-        btnRevokeToken.setOnClickListener {
-            showRevokeDialog()
         }
     }
 
@@ -179,18 +180,6 @@ class RemoteAgentActivity : AppCompatActivity() {
             }
         }
 
-        // Generated token — show one-time dialog
-        lifecycleScope.launch {
-            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-                viewModel.generatedToken.collect { token ->
-                    if (token != null) {
-                        showTokenResultDialog(token)
-                        viewModel.clearGeneratedToken()
-                    }
-                }
-            }
-        }
-
         // Error
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
@@ -210,111 +199,5 @@ class RemoteAgentActivity : AppCompatActivity() {
         statusText.text = if (connected) "Агент подключён" else "Агент отключён"
         val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textSecondaryColor, Color.GRAY)
         statusText.setTextColor(txtColor)
-    }
-
-    /**
-     * Show dialog to generate a new agent token
-     */
-    private fun showTokenDialog() {
-        val dialog = TokenDialog(
-            context = this,
-            theme = ThemeStore.currentTheme(),
-            onGenerate = { agentName, capabilities, ttlHours ->
-                val agentId = "agent_${System.currentTimeMillis()}"
-                viewModel.generateToken(
-                    agentId = agentId,
-                    agentName = agentName,
-                    capabilities = capabilities,
-                    ttlHours = ttlHours,
-                    adminUserId = userId
-                )
-            }
-        )
-        dialog.show()
-    }
-
-    /**
-     * Show token result with copy button
-     */
-    private fun showTokenResultDialog(token: String) {
-        val theme = ThemeStore.currentTheme()
-        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(48, 32, 48, 16)
-            setBackgroundColor(bgColor)
-        }
-
-        val label = TextView(this).apply {
-            text = "Токен агента (скопируйте — он показывается только  einmal):"
-            setTextColor(txtColor)
-            textSize = 14f
-        }
-
-        val tokenView = TextView(this).apply {
-            text = token
-            setTextColor(txtColor)
-            textSize = 13f
-            setPadding(0, 16, 0, 16)
-            setTextIsSelectable(true)
-            typeface = android.graphics.Typeface.MONOSPACE
-        }
-
-        container.addView(label)
-        container.addView(tokenView)
-
-        AlertDialog.Builder(this)
-            .setTitle("Токен сгенерирован")
-            .setView(container)
-            .setPositiveButton("Копировать") { _, _ ->
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token))
-                Toast.makeText(this, "Токен скопирован", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Закрыть", null)
-            .show()
-    }
-
-    /**
-     * Show dialog to select and revoke a token
-     */
-    private fun showRevokeDialog() {
-        lifecycleScope.launch {
-            val tokens = viewModel.tokenList.value
-            if (tokens.isEmpty()) {
-                Toast.makeText(this@RemoteAgentActivity, "Нет активных токенов", Toast.LENGTH_SHORT).show()
-                return@launch
-            }
-
-            val activeTokens = tokens.filter { !it.revoked }
-            if (activeTokens.isEmpty()) {
-                Toast.makeText(this@RemoteAgentActivity, "Нет активных токенов", Toast.LENGTH_SHORT).show()
-                return@launch
-            }
-
-            val items = activeTokens.map { "${it.agentName} (${it.tokenHash.take(8)}...)"}.toTypedArray()
-
-            AlertDialog.Builder(this@RemoteAgentActivity)
-                .setTitle("Отозвать токен")
-                .setItems(items) { _, which ->
-                    val token = activeTokens[which]
-                    confirmRevoke(token.agentId, token.agentName)
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
-        }
-    }
-
-    private fun confirmRevoke(agentId: String, agentName: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Отозвать токен?")
-            .setMessage("Токен для \"$agentName\" будет отозван. Агент потеряет доступ.")
-            .setPositiveButton("Отозвать") { _, _ ->
-                viewModel.revokeToken(agentId, userId)
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
     }
 }
