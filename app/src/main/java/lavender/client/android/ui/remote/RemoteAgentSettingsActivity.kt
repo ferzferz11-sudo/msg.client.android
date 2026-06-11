@@ -192,10 +192,11 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         val theme = ThemeStore.currentTheme()
         val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 32, 48, 16)
+            setPadding(48, 24, 48, 16)
             setBackgroundColor(bgColor)
         }
 
@@ -217,7 +218,10 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         container.addView(label)
         container.addView(tokenView)
 
-        AlertDialog.Builder(this)
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(
+            this,
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
+        )
             .setTitle("Токен сгенерирован")
             .setView(container)
             .setPositiveButton("Копировать") { _, _ ->
@@ -226,18 +230,40 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Токен скопирован", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Закрыть", null)
-            .show()
+            .create()
+
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(primColor)
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(txtColor)
+        val titleId = resources.getIdentifier("alertTitle", "id", "android")
+        dialog.findViewById<TextView>(titleId)?.setTextColor(txtColor)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
     }
 
     private fun confirmRevoke(token: TokenInfo) {
-        AlertDialog.Builder(this)
+        val theme = ThemeStore.currentTheme()
+        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(
+            this,
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
+        )
             .setTitle("Отозвать токен?")
             .setMessage("Токен для \"${token.agentName}\" будет отозван. Агент потеряет доступ.")
             .setPositiveButton("Отозвать") { _, _ ->
                 revokeToken(token.agentId)
             }
             .setNegativeButton("Отмена", null)
-            .show()
+            .create()
+
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.parseColor("#F44336"))
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(txtColor)
+        val titleId = resources.getIdentifier("alertTitle", "id", "android")
+        dialog.findViewById<TextView>(titleId)?.setTextColor(txtColor)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
     }
 
     private fun revokeToken(agentId: String) {

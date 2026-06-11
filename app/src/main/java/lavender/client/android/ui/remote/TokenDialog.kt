@@ -2,10 +2,12 @@ package lavender.client.android.ui.remote
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.LayoutInflater
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import lavender.client.android.R
@@ -14,7 +16,7 @@ import lavender.client.android.theme.ThemeUtils
 
 /**
  * Dialog for generating a new agent token.
- * Fields: Agent Name, Capabilities (multi-select), TTL (hours)
+ * Fields: Agent Name, Capabilities (multi-select with "Select All"), TTL (hours)
  */
 class TokenDialog(
     private val context: Context,
@@ -22,6 +24,7 @@ class TokenDialog(
     private val onGenerate: (agentName: String, capabilities: List<String>, ttlHours: Int) -> Unit
 ) {
     private var dialog: AlertDialog? = null
+    private val checkBoxes = mutableListOf<MaterialCheckBox>()
 
     fun show() {
         val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
@@ -30,7 +33,7 @@ class TokenDialog(
 
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 32, 48, 16)
+            setPadding(48, 24, 48, 16)
             setBackgroundColor(bgColor)
         }
 
@@ -39,6 +42,7 @@ class TokenDialog(
             setBoxBackgroundColor(bgColor)
             setBoxStrokeColor(primColor)
             defaultHintTextColor = android.content.res.ColorStateList.valueOf(txtColor)
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
         }
         val nameInput = TextInputEditText(context).apply {
             hint = "Имя агента"
@@ -49,14 +53,27 @@ class TokenDialog(
         nameLayout.addView(nameInput)
         container.addView(nameLayout)
 
-        // Capabilities label
+        // Capabilities label + "Select All" button
+        val capHeaderRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 24, 0, 8)
+        }
         val capLabel = TextView(context).apply {
             text = "Возможности:"
             setTextColor(txtColor)
             textSize = 14f
-            setPadding(0, 24, 0, 8)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
-        container.addView(capLabel)
+        val selectAllBtn = TextView(context).apply {
+            text = "Выбрать все"
+            setTextColor(primColor)
+            textSize = 13f
+            setPadding(16, 0, 0, 0)
+            setOnClickListener { toggleAllCapabilities() }
+        }
+        capHeaderRow.addView(capLabel)
+        capHeaderRow.addView(selectAllBtn)
+        container.addView(capHeaderRow)
 
         // Capability checkboxes
         val capabilities = listOf(
@@ -68,7 +85,7 @@ class TokenDialog(
             "docker" to "Docker",
             "ai" to "AI"
         )
-        val checkBoxes = mutableListOf<MaterialCheckBox>()
+        checkBoxes.clear()
 
         capabilities.forEach { (key, label) ->
             val cb = MaterialCheckBox(context).apply {
@@ -86,6 +103,7 @@ class TokenDialog(
             setBoxBackgroundColor(bgColor)
             setBoxStrokeColor(primColor)
             defaultHintTextColor = android.content.res.ColorStateList.valueOf(txtColor)
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
         }
         val ttlInput = TextInputEditText(context).apply {
             hint = "TTL (часы)"
@@ -98,7 +116,7 @@ class TokenDialog(
         ttlLayout.addView(ttlInput)
         container.addView(ttlLayout)
 
-        dialog = AlertDialog.Builder(context)
+        dialog = MaterialAlertDialogBuilder(context, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("Сгенерировать токен")
             .setView(container)
             .setPositiveButton("Сгенерировать") { _, _ ->
@@ -114,11 +132,25 @@ class TokenDialog(
                 onGenerate(agentName, selectedCaps, ttl)
             }
             .setNegativeButton("Отмена", null)
-            .show()
+            .create()
 
-        // Apply theme to dialog buttons
+        dialog?.show()
+
+        // Apply theme to dialog buttons and background
         dialog?.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(primColor)
         dialog?.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(txtColor)
+
+        // Fix title color
+        val titleId = context.resources.getIdentifier("alertTitle", "id", "android")
+        dialog?.findViewById<TextView>(titleId)?.setTextColor(txtColor)
+
+        // Set dialog window background
+        dialog?.window?.setBackgroundDrawable(ColorDrawable(bgColor))
+    }
+
+    private fun toggleAllCapabilities() {
+        val allChecked = checkBoxes.all { it.isChecked }
+        checkBoxes.forEach { it.isChecked = !allChecked }
     }
 
     fun dismiss() {
