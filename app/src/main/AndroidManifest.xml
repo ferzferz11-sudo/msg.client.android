@@ -101,6 +101,7 @@
         <activity android:name=".ThemePaletteActivity" android:exported="false" />
         <activity android:name=".SuperAdminActivity" android:exported="false" />
         <activity android:name=".ui.notification.NotificationActivity" android:exported="false" />
+        <activity android:name=".NotificationActivity" android:exported="false" />
         <activity android:name=".NotificationLogActivity" android:exported="false" />
         <activity android:name=".FCMLogsActivity" android:exported="false" />
         <activity android:name=".SecurityActivity" android:exported="false" />
