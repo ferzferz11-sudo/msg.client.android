@@ -1,5 +1,14 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.3] - 2026-06-12
+### Remote Agent — Task Results + Script Path Fix
+- **Task results in chat** — `DeployAgentTask` now returns stdout/stderr/exitCode/durationMs
+  - Android displays task output directly in RemoteAgent chat
+  - Error messages show exit code
+- **Script path updated** — agent script path changed from `/root/msg/hermes-agent/` to `/root/msg.remote.agent/`
+  - Configurable via `PREF_AGENT_SCRIPT_PATH` in lavender_prefs
+- **Proto updated** — `DeployAgentTaskResponseProto` extended with stdout, stderr, exitCode fields
+
 ## [1.1.3.2] - 2026-06-12
 ### Remote Agent — Token Management + UI
 - **Генерация JWT токенов** — работает через `hermes_agent.HermesAgentService/GenerateAgentToken`
