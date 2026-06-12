@@ -234,13 +234,19 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             android.util.Log.d("RemoteAgentSettings", "coroutine started (activityScope)")
             try {
                 android.util.Log.d("RemoteAgentSettings", "calling GrpcClient.generateAgentToken...")
-                val response = GrpcClient.generateAgentToken(
-                    agentId = agentId,
-                    agentName = agentName,
-                    capabilities = capabilities,
-                    ttlHours = ttlHours,
-                    adminUserId = userId
-                )
+                val response = try {
+                    GrpcClient.generateAgentToken(
+                        agentId = agentId,
+                        agentName = agentName,
+                        capabilities = capabilities,
+                        ttlHours = ttlHours,
+                        adminUserId = userId
+                    )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    android.util.Log.e("RemoteAgentSettings", "generateToken CANCELLED", e)
+                    Toast.makeText(this@RemoteAgentSettingsActivity, "Запрос отменён", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
                 android.util.Log.d("RemoteAgentSettings", "GrpcClient.generateAgentToken returned: success=${response.success} error=${response.error}")
                 if (response.success) {
                     selectedAgentId = agentId
