@@ -36,6 +36,13 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private var selectedAgentName: String = ""
     private var selectedToken: String = ""
 
+    // Keys for persisting agent selection across activity recreation
+    private companion object {
+        private const val PREF_AGENT_ID = "remote_agent_id"
+        private const val PREF_AGENT_NAME = "remote_agent_name"
+        private const val PREF_AGENT_TOKEN = "remote_agent_token"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -92,6 +99,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
 
         // Load tokens
         loadTokens()
+
+        // Restore previously selected agent from prefs
+        restoreSelectedAgent()
 
         // Check agent status
         checkAgentStatus()
@@ -223,9 +233,16 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     selectedAgentId = agentId
                     selectedAgentName = agentName
                     selectedToken = response.token
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.d("RemoteAgentSettings", "Token saved: agentId=$agentId token=${response.token.take(20)}...")
+                    }
+                    saveSelectedAgent()
                     showTokenResultDialog(response.token, agentId, agentName)
                     loadTokens()
                 } else {
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.e("RemoteAgentSettings", "Token generation failed: ${response.error}")
+                    }
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -377,6 +394,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     // ===== Agent Process Management (server-side) =====
 
     private fun startAgentOnServer() {
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("RemoteAgentSettings", "startAgentOnServer: selectedToken=${selectedToken.take(20)}... selectedAgentId=$selectedAgentId")
+        }
         if (selectedToken.isEmpty()) {
             Toast.makeText(this, "Сначала сгенерируйте токен", Toast.LENGTH_LONG).show()
             return
@@ -465,6 +485,24 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     "Статус: не запущен"
                 }
             } catch (_: Exception) {}
+        }
+    }
+
+    private fun saveSelectedAgent() {
+        getSharedPreferences("lavender_prefs", MODE_PRIVATE).edit()
+            .putString(PREF_AGENT_ID, selectedAgentId)
+            .putString(PREF_AGENT_NAME, selectedAgentName)
+            .putString(PREF_AGENT_TOKEN, selectedToken)
+            .apply()
+    }
+
+    private fun restoreSelectedAgent() {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        selectedAgentId = prefs.getString(PREF_AGENT_ID, "") ?: ""
+        selectedAgentName = prefs.getString(PREF_AGENT_NAME, "") ?: ""
+        selectedToken = prefs.getString(PREF_AGENT_TOKEN, "") ?: ""
+        if (selectedAgentId.isNotEmpty()) {
+            agentStatusText.text = "Статус: выбран агент $selectedAgentName"
         }
     }
 }
