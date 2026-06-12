@@ -1,5 +1,39 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.5] - 2026-06-13
+### Remote Agent — Persistent Background Connection
+- **Foreground Service** — `RemoteAgentService.kt` для фонового подключения
+  - Управляет SSH туннелем через HermesGatewayManager
+  - Держит gRPC подключение при переходе между Activity
+  - Notification со статусом (подключено/отключено)
+  - START_STICKY — перезапускается системой после убийства
+  - Кнопка "Отключить" в notification
+- **Singleton Manager** — `RemoteAgentManager.kt` для привязки UI к сервису
+  - bindService()/unbindService() из Activity
+  - RemoteAgentStateListener — callback для изменения состояния
+  - isConnected()/isTunnelActive()/getTunnelAddress()
+  - sendTask() — отправка задач через сервис
+- **Activity binding** — RemoteAgentSettingsActivity и RemoteAgentActivity
+  - Привязка к сервису через ServiceConnection
+  - onResume → bind, onPause → unbind (сервис продолжает работать)
+  - Статус подключения обновляется через RemoteAgentStateListener
+- **AndroidManifest.xml** — добавлен RemoteAgentService + FOREGROUND_SERVICE_CONNECTED_DEVICE
+- **Исправлено**: удалён невалидный `import HermesGrpc` из RemoteAgentService.kt
+- **Исправлено**: варнинг `stopForeground(true)` deprecated — добавлен @Suppress("DEPRECATION")
+
+## [1.1.3.4] - 2026-06-13
+### Remote Agent — Hermes Gateway (SSH Tunnel)
+- **HermesGatewayManager.kt** — управление SSH туннелем через JSch
+- **RemoteAgentSettingsActivity.kt** — UI секция "Подключение через шлюз"
+- **activity_remote_agent_settings.xml** — layout с полями SSH хоста, портов, кнопками
+- **MessengerProto.kt** — tunnel_mode поля в DeployAgentTaskRequestProto
+- **HermesGrpc.kt** — сериализация tunnel_mode (поля 6-13)
+- **GrpcClient.kt** — обёртка с tunnel параметрами
+- **RemoteAgentViewModel.kt** — передача tunnel_mode при отправке задачи
+- **JSch зависимость** — `com.jcraft:jsch:0.1.55`
+- **SharedPreferences** — сохранение настроек туннеля
+- **Понятные ошибки** — SSH alias vs IP, auth failed, timeout, port in use
+
 ## [1.1.3.3] - 2026-06-12
 ### Remote Agent — Task Results + Script Path Fix
 - **Task results in chat** — `DeployAgentTask` now returns stdout/stderr/exitCode/durationMs

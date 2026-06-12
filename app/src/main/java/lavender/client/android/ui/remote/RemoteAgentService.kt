@@ -328,6 +328,7 @@ class RemoteAgentService : Service() {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun stopForegroundService() {
         try {
             closeTunnel()

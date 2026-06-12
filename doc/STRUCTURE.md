@@ -12,7 +12,7 @@ lavender.client.android/           — Главный пакет (ChatListActivi
 │   ├── owl/                       — OWL чат (OwlChatActivity, OwlChatViewModel, OwlSettingsActivity)
 │   ├── notification/              — Уведомления (NotificationActivity)
 │   ├── widget/                    — Виджеты (AIBottomSheet, StandardBottomSheet, ActionBottomSheet)
-│   ├── remote/                    — Remote Agent (RemoteAgentActivity — TODO)
+│   │   ├── remote/                    — Remote Agent (RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService, RemoteAgentManager)
 │   └── adapter/                   — Адаптеры (ChatAdapter, UserAdapter)
 ├── data/
 │   ├── proto/                     — Proto data classes (MessengerProto.kt)
@@ -38,6 +38,11 @@ lavender.client.android/           — Главный пакет (ChatListActivi
 | `HermesChatViewModel.kt` | ViewModel Hermes + локальная БД |
 | `OwlChatActivity.kt` | Чат с OWL AI |
 | `OwlSettingsActivity.kt` | Настройки OWL (API key, model, удалённый агент) |
+| `RemoteAgentActivity.kt` | Чат с Remote Agent |
+| `RemoteAgentSettingsActivity.kt` | Настройки Remote Agent (токены, SSH туннель) |
+| `RemoteAgentService.kt` | Foreground service для persistent connection (v1.1.3.5) |
+| `RemoteAgentManager.kt` | Singleton manager для привязки UI к сервису (v1.1.3.5) |
+| `HermesGatewayManager.kt` | Управление SSH туннелем через JSch |
 | `GrpcClient.kt` | Единая точка доступа к gRPC (facade) |
 | `HermesGrpc.kt` | Hermes/Remote Agent gRPC методы |
 | `OwlGrpc.kt` | OWL gRPC методы |

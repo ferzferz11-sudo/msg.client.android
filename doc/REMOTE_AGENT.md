@@ -1,185 +1,331 @@
 # Remote Agent — Документация
 
-**Версия:** v1.1.3.1
-**Обновлено:** 2026-06-14
+**Версия:** v1.1.3.5
+**Дата:** 2026-06-13
+**Ветка:** feat/1.1.3.x
+
+---
+
+## Обзор
+
+Remote Agent — система удалённого управления сервером через Android клиент. Позволяет:
+- Генерировать JWT токены для аутентификации агентов
+- Запускать/останавливать агентов на сервере
+- Отправлять задачи (shell, git, build, deploy, file, docker, AI)
+- Получать результаты выполнения задач в реальном времени
+- Подключаться через SSH туннель (Hermes Gateway) для безопасного доступа
+
+---
 
 ## Архитектура
 
 ```
-┌─────────────┐  gRPC          ┌──────────────┐  gRPC           ┌─────────────┐
-│  Android    │ ──────────────→ │   Server     │ ←────────────── │   Remote    │
-│  Client     │  GenerateToken  │   (Go)       │  Connect        │   Agent     │
-│             │  ListTokens     │              │  (streaming)    │   (Python)  │
-│             │  DeployTask     │              │                 │             │
-└─────────────┘                 └──────────────┘                 └─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    RemoteAgentService                        │
+│                    (Foreground Service)                      │
+│                                                             │
+│  ┌─────────────────┐  ┌──────────────────┐                 │
+│  │ HermesGateway   │  │ GrpcClient       │                 │
+│  │ Manager         │  │ (persistent)     │                 │
+│  │ (SSH tunnel)    │  │                  │                 │
+│  └────────┬────────┘  └────────┬─────────┘                 │
+│           │                    │                            │
+│  ┌────────┴────────────────────┴─────────┐                 │
+│  │         RemoteAgentManager            │                 │
+│  │         (singleton, binds to App)      │                 │
+│  └───────────────────────────────────────┘                 │
+└─────────────────────────────────────────────────────────────┘
+           │                              │
+           │ ServiceConnection            │ ServiceConnection
+           ▼                              ▼
+┌──────────────────────┐    ┌──────────────────────────┐
+│ RemoteAgentSettings  │    │ RemoteAgentActivity      │
+│ Activity             │    │ (чат с агентом)          │
+│ (настройки туннеля)  │    │                          │
+└──────────────────────┘    └──────────────────────────┘
+           │                              │
+           ▼                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Server (Go)                             │
+│                                                             │
+│  ┌─────────────────┐  ┌──────────────────┐                 │
+│  │ ChatService     │  │ HermesAgent      │                 │
+│  │ (gRPC)          │  │ Service (gRPC)   │                 │
+│  │                 │  │                  │                 │
+│  │ DeployAgentTask │  │ GenerateToken    │                 │
+│  │ ListAgents      │  │ RevokeToken      │                 │
+│  │ GetAgentStatus  │  │ ListTokens       │                 │
+│  └────────┬────────┘  └────────┬─────────┘                 │
+│           │                    │                            │
+│  ┌────────┴────────────────────┴─────────┐                 │
+│  │         RemoteAgentManager            │                 │
+│  │         (server-side, Go)              │                 │
+│  └───────────────────────────────────────┘                 │
+└─────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Remote Agent (Python)                      │
+│                                                             │
+│  ┌─────────────────┐  ┌──────────────────┐                 │
+│  │ hermes_remote   │  │ adapter.py       │                 │
+│  │ _agent.py       │  │ (Platform        │                 │
+│  │                 │  │  Adapter)        │                 │
+│  │ Task execution  │  │                  │                 │
+│  │ Retry/reconnect │  │ Shell/Git/Build  │                 │
+│  └─────────────────┘  └──────────────────┘                 │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## Компоненты
 
-### 1. Token Management (HermesAgentService)
+### 1. RemoteAgentService (Foreground Service)
 
-| RPC | Сервис | Описание |
-|-----|--------|----------|
-| `GenerateAgentToken` | `hermes_agent.HermesAgentService` | Генерация JWT токена |
-| `RevokeAgentToken` | `hermes_agent.HermesAgentService` | Отзыв токена |
-| `ListAgentTokens` | `hermes_agent.HermesAgentService` | Список токенов |
+**Файл:** `ui/remote/RemoteAgentService.kt`
 
-**Важно:** Начиная с v1.1.3.0, token RPC доступны любому авторизованному пользователю (не только админам).
+Фоновый сервис для поддержания подключения к Remote Agent при переходе между Activity.
 
-### 2. Remote Agent Connection (HermesAgentService)
+**Ключевые особенности:**
+- `START_STICKY` — перезапускается системой после убийства
+- Управляет SSH туннелем через `HermesGatewayManager`
+- Уведомление с статусом подключения
+- Кнопка "Отключить" в уведомлении
 
-| RPC | Тип | Описание |
-|-----|-----|----------|
-| `Connect` | bidirectional streaming | Подключение агента |
-| `HealthCheck` | unary | Проверка связи |
+**Жизненный цикл:**
+1. `startService()` → `onCreate()` → `startForeground()`
+2. `bindService()` из Activity → `onBind()` → возврат `IBinder`
+3. `unbindService()` из Activity → `onUnbind()` (сервис продолжает работать)
+4. `stopService()` / `stopSelf()` → `onDestroy()`
 
-### 3. Task Management (ChatService)
+**Методы:**
+- `createTunnel(...)` — создание SSH туннеля
+- `closeTunnel()` — закрытие туннеля
+- `sendTask(...)` — отправка задачи агенту
+- `isConnected()` — проверка подключения
+- `getStatusText()` — текстовый статус
 
-| RPC | Сервис | Описание |
-|-----|--------|----------|
-| `ListRemoteAgents` | `messenger.ChatService` | Список подключённых агентов |
-| `DeployAgentTask` | `messenger.ChatService` | Отправка задачи агенту |
-| `GetRemoteAgentStatus` | `messenger.ChatService` | Статус агента |
+### 2. RemoteAgentManager (Singleton)
 
-## Android UI
+**Файл:** `ui/remote/RemoteAgentManager.kt`
 
-### Экраны
+Singleton для привязки UI к RemoteAgentService.
 
-| Activity | Назначение |
-|----------|-----------|
-| `RemoteAgentActivity` | Чат с агентом, отправка задач |
-| `RemoteAgentSettingsActivity` | Управление токенами |
-| `AgentListActivity` | Список AI агентов (Hermes) |
+**Ключевые особенности:**
+- `init(context)` — инициализация (вызвать один раз)
+- `bind(listener)` — привязка к сервису + запуск foreground
+- `unbind(listener)` — отвязка (сервис продолжает работать)
+- `stopService()` — полная остановка сервиса
+- `RemoteAgentStateListener` — callback для изменения состояния
 
-### Flow
-
-1. Пользователь открывает "Агенты" из AI шторки
-2. `RemoteAgentActivity` загружает список агентов (`ListRemoteAgents`)
-3. Пользователь может перейти в настройки (⚙) для управления токенами
-4. В настройках: генерация токена → копирование → запуск агента
-5. Агент подключается через `Connect` и выполняет задачи
-
-## Токены агентов
-
-### Генерация
-
-1. Открыть "Агенты" → ⚙ → "Сгенерировать токен"
-2. Заполнить: имя агента, возможности, TTL
-3. Нажать "Сгенерировать"
-4. Скопировать токен (показывается один раз!)
-
-### Подключение агента
-
-```bash
-python3 hermes_remote_agent.py --server host:port --token <jwt>
+**Состояния:**
+```kotlin
+data class AgentConnectionState(
+    val isConnected: Boolean,
+    val isTunnelActive: Boolean,
+    val tunnelAddress: String,
+    val statusText: String
+)
 ```
 
-### Токены в БД
+### 3. HermesGatewayManager (SSH Tunnel)
 
-- Хранится SHA-256 хеш токена
-- Токен показывается только при генерации
-- `RevokeAgentToken` помечает `revoked = TRUE`
+**Файл:** `ui/remote/HermesGatewayManager.kt`
 
-## Proto
+Управление SSH туннелем через JSch.
 
-### hermes_remote.proto
+**Ключевые особенности:**
+- Создание SSH туннеля: `localhost:localPort → serverHost:serverPort via sshHost:sshPort`
+- Типизированные ошибки: `UNKNOWN_HOST`, `CONNECTION_REFUSED`, `AUTH_FAILED`, `TIMEOUT`, `PORT_IN_USE`
+- Сохранение настроек в SharedPreferences
+- Авто-проверка активности туннеля
 
-```protobuf
-service HermesAgentService {
-    rpc Connect(stream AgentMessage) returns (stream OrchestratorMessage);
-    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
-    rpc GenerateAgentToken(GenerateAgentTokenRequest) returns (GenerateAgentTokenResponse);
-    rpc RevokeAgentToken(RevokeAgentTokenRequest) returns (RevokeAgentTokenResponse);
-    rpc ListAgentTokens(ListAgentTokensRequest) returns (ListAgentTokensResponse);
-}
-
-message GenerateAgentTokenRequest {
-    string agent_id = 1;
-    string agent_name = 2;
-    repeated string capabilities = 3;
-    int32 ttl_hours = 4;
-    string admin_user_id = 5;
-}
-
-message GenerateAgentTokenResponse {
-    bool success = 1;
-    string token = 2;
-    string error = 3;
-    int64 expires_at = 4;
-}
+**Настройки:**
+```kotlin
+data class GatewaySettings(
+    val sshHost: String,
+    val sshPort: Int = 22,
+    val sshUser: String,
+    val sshPassword: String,
+    val serverHost: String = "localhost",
+    val serverPort: Int = 50051,
+    val localPort: Int = 50052,
+    val autoConnect: Boolean = false
+)
 ```
 
-### messenger.proto (ChatService)
+### 4. RemoteAgentSettingsActivity
 
-```protobuf
-service ChatService {
-    // ... другие методы ...
-    rpc ListRemoteAgents(ListRemoteAgentsRequest) returns (ListRemoteAgentsResponse);
-    rpc DeployAgentTask(DeployAgentTaskRequest) returns (DeployAgentTaskResponse);
-    rpc GetRemoteAgentStatus(GetRemoteAgentStatusRequest) returns (GetRemoteAgentStatusResponse);
-}
+**Файл:** `ui/remote/RemoteAgentSettingsActivity.kt`
+
+Экран настроек Remote Agent.
+
+**Функции:**
+- Генерация JWT токенов
+- Список токенов с возможностью отзыва
+- Копирование токена/команды
+- Запуск/остановка агента на сервере
+- Настройка SSH туннеля (Hermes Gateway)
+- Индикатор состояния подключения
+
+**Привязка к сервису:**
+- `onResume()` → `RemoteAgentManager.bind(this)`
+- `onPause()` → `RemoteAgentManager.unbind(this)`
+- Реализует `RemoteAgentStateListener`
+
+### 5. RemoteAgentActivity
+
+**Файл:** `ui/remote/RemoteAgentActivity.kt`
+
+Чат с Remote Agent.
+
+**Функции:**
+- Отправка задач (shell, git, build, deploy, file, docker, AI)
+- Получение результатов в реальном времени
+- Выбор типа задачи (ChipGroup)
+- Индикатор подключения
+- Авто-рефреш статуса каждые 30 сек
+
+**Привязка к сервису:**
+- Аналогично RemoteAgentSettingsActivity
+
+### 6. RemoteAgentViewModel
+
+**Файл:** `ui/remote/RemoteAgentViewModel.kt`
+
+ViewModel для управления состоянием Remote Agent.
+
+**State:**
+- `agents: StateFlow<List<RemoteAgentInfo>>` — список агентов
+- `selectedAgent: StateFlow<RemoteAgentInfo?>` — выбранный агент
+- `isConnected: StateFlow<Boolean>` — статус подключения
+- `messages: StateFlow<List<RemoteAgentMessage>>` — сообщения чата
+- `isTyping: StateFlow<Boolean>` — индикатор выполнения
+- `error: StateFlow<String?>` — ошибки
+
+**Методы:**
+- `loadAgents()` — загрузка списка агентов
+- `selectAgent(agent)` — выбор агента
+- `sendMessage(text, userId, taskType)` — отправка задачи
+- `generateToken(...)` — генерация токена
+- `revokeToken(agentId, adminUserId)` — отзыв токена
+- `refreshAgentStatus()` — обновление статуса
+
+---
+
+## Протокол взаимодействия
+
+### 1. Генерация токена
+```
+Android → Server: GenerateAgentToken(agentId, agentName, capabilities, ttlHours, adminUserId)
+Server → Android: GenerateAgentTokenResponse(success, token, expiresAt)
 ```
 
-## Известные проблемы (v1.1.3.1)
-
-| Проблема | Статус | Workaround |
-|----------|--------|------------|
-| Токен не появляется в списке | ⚠️ Исследуется | Проверить логи сервера, возможно hermesDB == nil |
-| JobCancellationException при генерации | ✅ Исправлено v1.1.3.0 | — |
-| Token RPC на неправильном сервисе | ✅ Исправлено v1.1.3.0 | — |
-| Debug логи в production | ✅ Исправлено v1.1.3.1 | Обёрнуты в BuildConfig.DEBUG |
-
-## Изменения в v1.1.3.1
-
-- Debug логи обёрнуты в `if (BuildConfig.DEBUG)` / `if os.Getenv("DEBUG") != ""`
-- Убран Toast "Вход выполнен" после авторизации
-- Авто-прокрутка вниз при отправке сообщения
-- Версия приложения на SplashActivity
-- Шторка настроек: очистка кэша и журнал ошибок перемещены выше "Удалить профиль"
-
-## Отладка
-
-### Android логи
-
-```bash
-adb logcat -s "RemoteAgentSettings" "HermesGrpc" "RemoteAgentViewModel"
+### 2. Запуск агента
+```
+Android → Server: StartAgentOnServer(agentId, agentName, token, serverAddress, adminUserId)
+Server → Android: StartAgentResponse(success, pid, error)
 ```
 
-Ключевые теги:
-- `loadTokens: userId=...` — загрузка токенов
-- `generateToken response: success=...` — ответ сервера
-- `listRemoteAgents: received N agents` — список агентов
-
-### Сервер логи
-
-```bash
-journalctl -u lavender-server-dev -f | grep "HermesAgentService"
+### 3. Отправка задачи
+```
+Android → Server: DeployAgentTask(agentId, taskType, params, tunnelMode, tunnelHost, ...)
+Server → Agent: Connect + TaskRequest (streaming)
+Agent → Server: TaskResponse (streaming)
+Server → Android: DeployAgentTaskResponse(success, stdout, stderr, exitCode, durationMs)
 ```
 
-Ключевые сообщения:
-- `GenerateAgentToken: agentId=...` — запрос на генерацию
-- `token saved: agentId=... hash=...` — токен сохранён
-- `hermesDB is nil, token not persisted!` — проблема с БД
-- `ListAgentTokens: adminUser=...` — запрос списка
+### 4. SSH туннель (Hermes Gateway)
+```
+Android → SSH Server: JSch createTunnel(localPort, serverHost, serverPort)
+Android → localhost:localPort → SSH Server → serverHost:serverPort
+```
+
+---
+
+## Типы задач
+
+| Тип | Описание |
+|-----|----------|
+| shell | Выполнение shell команд |
+| git | Git операции |
+| build | Сборка проекта |
+| deploy | Деплой |
+| file | Операции с файлами |
+| docker | Docker операции |
+| AI | AI задачи |
+
+---
+
+## Безопасность
+
+- JWT токены с TTL
+- Токены показываются ОДИН РАЗ при генерации
+- Возможность отзыва токенов
+- SSH туннель для шифрования трафика
+- Проверка `created_by` для фильтрации токенов
+
+---
+
+## Известные проблемы
+
+- При повороте экрана Activity пересоздаётся, но сервис продолжает работать
+- SSH туннель может разрываться при потере сети (авто-реконнект через START_STICKY)
+- Android не резолвит SSH aliases — нужно использовать IP адрес
+
+---
+
+## Логи
+
+Все компоненты Remote Agent логируют с тегом `RemoteAgent*`:
+- `RemoteAgentService` — сервис
+- `RemoteAgentManager` — менеджер
+- `HermesGatewayManager` — SSH туннель
+- `RemoteAgentViewModel` — ViewModel
+
+---
 
 ## Тестирование
 
-### Тест 1: Генерация токена
+### Модульные тесты
+- `/root/msg.remote.agent/tests/` — 40 unit tests для hermes_remote_agent.py
 
-1. Открыть "Агенты" → ⚙
-2. Сгенерировать токен
-3. Проверить что токен показан в диалоге
-4. Скопировать токен
-5. Проверить что токен появился в списке
+### Интеграционные тесты
+1. Генерация токена → появление в списке
+2. Запуск агента → статус "подключён"
+3. Отправка задачи → получение результата
+4. SSH туннель → подключение через шлюз
+5. Отзыв токена → исчезновение из списка
 
-### Тест 2: Подключение агента
+---
 
-1. Запустить агент: `python3 hermes_remote_agent.py --server localhost:50052 --token <jwt>`
-2. Проверить что агент появился в списке (статус "connected")
-3. Отправить задачу: `ls -la`
-4. Проверить что результат получен
+## Деплой
 
-### Тест 3: Отзыв токена
+### Android
+```bash
+# ferz локально:
+git pull && ./gradlew assembleRelease
+```
 
-1. Отозвать токен из списка
-2. Проверить что агент потерял подключение
+### Сервер
+```bash
+# С сервера (ssh lava):
+./scripts/release.sh 1.1.3.5 --deploy
+
+# С Mac (удалённо):
+./scripts/release.sh 1.1.3.5 --deploy --remote
+```
+
+---
+
+## История версий
+
+| Версия | Дата | Описание |
+|--------|------|----------|
+| v1.1.3.5 | 2026-06-13 | Foreground service + singleton manager для persistent connection |
+| v1.1.3.4 | 2026-06-13 | Hermes Gateway (SSH туннель) |
+| v1.1.3.3 | 2026-06-12 | Task results + script path fix |
+| v1.1.3.2 | 2026-06-12 | Token management + UI |
+| v1.1.3.1 | 2026-06-12 | Мелкие исправления |
+| v1.1.3.0 | 2026-06-12 | Remote Agent UI + Token Management |
