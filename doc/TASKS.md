@@ -1,11 +1,26 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.3.1
-**Обновлено:** 2026-06-14
+**Версия:** 1.1.3.2
+**Обновлено:** 2026-06-12
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.1 (выпущен)
+**Тег:** v1.1.3.2 (выпущен)
 **APK:** /var/www/lavender/lavender.apk
-**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.1
+**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.2
+
+---
+
+## ✅ v1.1.3.2 — Remote Agent Token Management
+
+### Android
+- **Генерация JWT токенов** — работает через `hermes_agent.HermesAgentService/GenerateAgentToken`
+- **Список токенов** — отображается сразу после генерации (локальный кэш)
+- **Копирование токена/команды** — кнопки в каждом элементе списка
+- **Отзыв токена** — кнопка "Отозвать" с подтверждением
+- **Запуск/остановка агента** — StartAgent/StopAgent RPC
+- **UI статуса** — зелёный индикатор при запущенном агенте, белый текст для остальных
+- **Персистентность** — выбранный агент сохраняется в SharedPreferences
+- **Исправлено**: диалог токена не закрывается при копировании
+- **Исправлено**: ошибки сервера переведены на русский
 
 ---
 
@@ -35,91 +50,12 @@
 
 ---
 
-## ✅ v1.1.2.10 — AI шторка: новый чат виден сразу + удаление не ломает список
-
-### AI BottomSheet — исправлено
-- **Новый чат с оркестратором отображается сразу** — не нужно переоткрывать шторку
-- Root cause: `refreshAiChats()` запускал асинхронный `getAIChats()` с коллбэком, но `showAIActionSheet()` читал `currentAiChats` мгновенно — данные ещё не пришли
-- Fix: добавлен `refreshAiChatsAwait()` — suspend-функция через `suspendCancellableCoroutine`, которая ждёт ответа сервера
-- `showAIActionSheet()` теперь suspend, вызывает `refreshAiChatsAwait()` перед построением списка
-- Все вызовы `showAIActionSheet()` обёрнуты в `lifecycleScope.launch`
-
-### AI BottomSheet удаление — исправлено
-- **Удаление чата оркестратора не скрывает чат агента** — оба остаются на месте
-- Root cause: `onDeleteChat` вызывал `refreshAiChats()` (асинхронный коллбек), а затем сразу `updateChats(currentAiChats.toList())` — в момент когда `currentAiChats` уже очищен, но ответ ещё не пришёл → передавался пустой список
-- Fix: удаление из локального списка без сетевого запроса — `currentAiChats.removeAll { it.id == chat.id }` + `sheet.removeChat(chat.id)` + `rebuildContent()`
-- Добавлен `AIBottomSheet.removeChat(chatId)` — удаляет конкретный чат из `existingChats`
-
-### Технические детали
-- `refreshAiChatsAwait()` — новый suspend-метод, обёртка над `GrpcClient.getAIChats()`
-- `showAIActionSheet()` — теперь `suspend fun` вместо `fun`
-- `AIBottomSheet.removeChat(chatId)` — новый метод для удаления одного чата
-- `AIBottomSheet.updateChats()` + `rebuildContent()` — уже были, работают корректно
-
----
-
-## ✅ v1.1.2.9 — Исправления чатов
-
-### OWL — исправлено
-- **Сообщения пользователя отображаются сразу** — не нужно ждать ответа агента
-- Root cause: typing indicator мутировал `adapter.currentList` напрямую, ломая DiffUtil
-- Fix: typing placeholder теперь часть единого списка в `OwlChatViewModel._owlMessages`
-- Убрана мутация `adapter.currentList` из `OwlChatActivity.observeState()`
-
-### Hermes — исправлено
-- **История чата сохраняется в локальную БД (Room)** — не теряется при перезапуске
-- Root cause: `HermesChatViewModel` хранил сообщения только в памяти
-- Fix: добавлен `messageDao`, `HermesMessage` ↔ `MessageEntity` mapping
-- Пользовательские сообщения сохраняются при отправке
-- Ответы агентов сохраняются при завершении стрима (`finished = true`)
-- История загружается из локальной БД сначала, потом обновляется с сервера
-- `deleteSession()` очищает локальные сообщения
-
-### Технические детали
-- `OwlMessage` — добавлено поле `isTyping: Boolean`
-- `HermesChatViewModel` — добавлены `messageDao`, `Dispatchers`, `withContext`
-- `Entities.kt` — добавлены `HermesMessage.toMessageEntity()` и `MessageEntity.toHermesMessage()`
-
----
-
-## ✅ v1.1.2.8 — AI чат улучшения, Favorites fix, Changelog fix
-
-### AI Чаты
-- **Убран прелоадер** во время ожидания ответа агента — достаточно typing indicator
-- **Таймаут стрима 120 сек** с сбросом при каждом сообщении — показывает ошибку на русском
-- **Шторка AI реорганизована**: чаты разделены по типам — Hermes чаты в секции "Лава ИИ", OWL чаты в секции "OWL агент"
-
-### Favorites — исправлено
-- **Favorites отображается сразу при входе** — не нужно создавать чат чтобы увидеть Избранное
-- Показывается даже при недоступном сервере (offline-first)
-
-### Changelog
-- **Цвета текста** из ThemeStore вместо resolveColorAttr — читаемый текст на кастомных тёмных темах
-- **Порядок загрузки**: сначала GitHub API, fallback только через 3с при отсутствии сети
-
----
-
-## ✅ v1.1.2.7 — Splash улучшения, удаление онбординга
-
-- Увеличено расстояние логотип→текст (60px → 90dp)
-- Новый SplashLoadingActivity — оверлей загрузки для логина/регистрации
-- Онбординг полностью удалён
-- Чекбокс "Создать чат" при добавлении контакта
-
----
-
-## ✅ v1.1.2.6 — Bundled changelog + ссылки на GitHub
-
-- Встроенный changelog (`changelog_bundled.txt`) — показывается мгновенно
-- Ссылки на полные CHANGELOG.md на GitHub
-- `changelog.txt` удалён из проекта и деплоя
-
----
-
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [x] **Remote Agent v1.1.3** — интеграция с реальным бэкендом (gRPC, heartbeat, типы задач, выбор агента)
+- [ ] Исправить hermes_remote_agent.py (сервер) — агент падает при подключении
+- [ ] Фильтрация токенов по пользователю (сервер)
+- [ ] Streaming результатов задач агентом обратно клиенту
 
 ### Средний приоритет
 - [ ] Кэширование запросов чатов
@@ -137,10 +73,12 @@
 | ThemeApplier FAB list | Новые FAB добавлять в список для кастомных тем |
 | SplashLoadingActivity | Отдельный оверлей вместо ProgressBar на кнопке |
 | Typing в ViewModel | Typing indicator часть единого списка, не мутация adapter |
-|| Hermes DB persistence | Сообщения сохраняются в Room, не только в памяти |
-|| AI sheet await refresh | suspendCancellableCoroutine для ожидания getAIChats перед показом шторки |
-|| AI sheet local delete | Удаление из локального списка без сетевого запроса — мгновенный rebuild |
-|| No auto-scroll | Автоскролл на последнее сообщение полностью убран — позиция сохраняется |
+| Hermes DB persistence | Сообщения сохраняются в Room, не только в памяти |
+| AI sheet await refresh | suspendCancellableCoroutine для ожидания getAIChats перед показом шторки |
+| AI sheet local delete | Удаление из локального списка без сетевого запроса — мгновенный rebuild |
+| No auto-scroll | Автоскролл на последнее сообщение полностью убран — позиция сохраняется |
+| Token local cache | Токен добавляется в локальный список сразу после генерации |
+| activityScope | Независимый CoroutineScope для generateToken, переживает пересоздание Activity |
 
 ---
 
@@ -156,7 +94,7 @@
 | `OwlChatViewModel.kt` | ViewModel OWL + typing indicator |
 | `GrpcClient.kt` | Единая точка доступа к gRPC (facade) |
 | `RealGrpcClient.kt` | Реализация gRPC клиента |
-| `HermesGrpc.kt` | Hermes gRPC методы |
+| `HermesGrpc.kt` | Hermes/Remote Agent gRPC методы |
 | `OwlGrpc.kt` | OWL gRPC методы |
 | `ChatListActivity.kt` | Главный список чатов + AI шторка |
 | `AIBottomSheet.kt` | AI шторка с чатами |
@@ -167,4 +105,7 @@
 | `ThemeStore.kt` | Хранилище текущей темы |
 | `SplashActivity.kt` | Сплеш-экран |
 | `SplashLoadingActivity.kt` | Оверлей загрузки для авторизации |
+| `RemoteAgentSettingsActivity.kt` | Управление токенами и агентом |
+| `RemoteAgentActivity.kt` | Чат с remote agent |
+| `TokenDialog.kt` | Диалог генерации токена |
 | `scripts/release.sh` | Скрипт выпуска релиза |

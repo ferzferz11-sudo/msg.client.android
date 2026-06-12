@@ -1,47 +1,50 @@
 # Промпт для новой сессии — v1.1.3.x (Android)
 
-**Дата:** 2026-06-14
-**Версия:** v1.1.3.1
+**Дата:** 2026-06-12
+**Версия:** v1.1.3.2
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** 1.1.3.1 (выпущен)
+**Текущая версия APK:** 1.1.3.2 (выпущен)
+**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.2
 
 ---
 
 ## СТАТУС
 
 - Remote Agent UI реализован и работает
-- Token Management (генерация, список, отзыв) — есть
+- Token Management (генерация, список, отзыв, копирование) — работает
 - HermesGrpc — все методы реализованы
-- APK v1.1.3.1 собран и залит
-- Сервер v1.1.3.1 — выпущен (token flow fix, rate limit, proto dedup)
+- APK v1.1.3.2 собран и залит
+- Сервер v1.1.3.2 — выпущен
 
 ---
 
-## ЧТО СДЕЛАНО В v1.1.3.1
+## ЧТО СДЕЛАНО В v1.1.3.2
 
-- ✅ Убран Toast "Вход выполнен" после авторизации
-- ✅ Авто-прокрутка вниз при отправке сообщения (текст + изображения)
-- ✅ Версия приложения на SplashActivity (BuildConfig.VERSION_NAME)
-- ✅ Debug логи обёрнуты в BuildConfig.DEBUG
-- ✅ Шторка "Дополнительные настройки": Очистка кэша и Журнал ошибок перемещены выше "Удалить профиль"
-- ✅ "Logs" → "Журнал ошибок" (строковый ресурс error_log)
+- Генерация JWT токенов через `hermes_agent.HermesAgentService/GenerateAgentToken`
+- Список токенов отображается сразу после генерации
+- Копирование токена/команды в каждом элементе списка
+- Отзыв токена с подтверждением
+- Запуск/остановка агента через StartAgent/StopAgent RPC
+- Зелёный индикатор при запущенном агенте
+- Персистентность выбранного агента (SharedPreferences)
+- Ошибки сервера переведены на русский
 
 ---
 
 ## ЗАДАЧИ ДЛЯ НОВОЙ СЕССИИ
 
-### P1 — Android баги (исправить первыми)
-- Проверить все remote agent activity на краши и NPE
-- Проверить token list refresh после генерации
-- Проверить revoke token flow
-- **Файлы:** `RemoteAgentSettingsActivity.kt`, `RemoteAgentActivity.kt`, `TokenDialog.kt`
+### P1 — Исправить hermes_remote_agent.py (сервер)
+- Агент завершается сразу после запуска — падает в `connect()` при отправке `AgentMessage`
+- Root cause: protobuf marshaling в Python скрипте
+- Нужно исправить `/root/msg/hermes-agent/hermes_remote_agent.py`
 
-### P2 — Agent flow в Android
-- **Индикатор "агент не подключён"** в RemoteAgentActivity — показывать подсказку если агент offline
-- **Кнопка "Скопировать команду"** в TokenDialog: `python3 hermes_remote_agent.py --server host:port --token <jwt>`
-- **Авто-рефреш** списка агентов каждые 30 сек
-- **Объединить** AgentListActivity + RemoteAgentActivity (убрать дублирование)
-- **AgentSettingsActivity** — полноценные настройки агента (server URL, token, capabilities)
+### P2 — Фильтрация токенов по пользователю (сервер)
+- `ListAgentTokens` возвращает все токены из БД
+- Нужно добавить фильтр по `created_by = adminUserId`
+
+### P3 — Streaming результатов задач
+- Агент должен отправлять результаты выполнения задач обратно клиенту
+- Через bidirectional gRPC stream `Connect`
 
 ---
 
@@ -49,12 +52,11 @@
 
 | Файл | Назначение |
 |------|-----------|
-| `data/grpc/HermesGrpc.kt` | gRPC методы (token RPC, listRemoteAgents, deployTask) |
-| `ui/remote/RemoteAgentSettingsActivity.kt` | Управление токенами |
-| `ui/remote/RemoteAgentActivity.kt` | Чат с агентом, список агентов |
-| `ui/remote/RemoteAgentViewModel.kt` | Состояние агентов, сообщений |
+| `data/grpc/HermesGrpc.kt` | gRPC методы (token RPC, agent management) |
+| `ui/remote/RemoteAgentSettingsActivity.kt` | Управление токенами и агентом |
+| `ui/remote/RemoteAgentActivity.kt` | Чат с агентом |
 | `ui/remote/TokenDialog.kt` | Диалог генерации токена |
-| `data/proto/MessengerProto.kt` | Proto классы |
+| `hermes-agent/hermes_remote_agent.py` | Python агент (сервер) |
 
 ---
 
@@ -69,7 +71,9 @@
 │       └── ⚙ → RemoteAgentSettingsActivity                    │
 │            ├── generateToken() → GenerateAgentToken gRPC     │
 │            ├── loadTokens() → ListAgentTokens gRPC            │
-│            └── revokeToken() → RevokeAgentToken gRPC          │
+│            ├── revokeToken() → RevokeAgentToken gRPC          │
+│            ├── startAgent() → StartAgent gRPC                │
+│            └── stopAgent() → StopAgent gRPC                   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
