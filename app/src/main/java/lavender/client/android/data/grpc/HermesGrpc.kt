@@ -1525,3 +1525,197 @@ suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseP
     return@withContext withTimeoutOrNull(10000) { result.await() }
         ?: GetRemoteAgentStatusResponseProto(status = "timeout")
 }
+
+// ======= Agent Process Management (server-side) =======
+
+suspend fun startAgentOnServer(
+    agentId: String,
+    agentName: String,
+    token: String,
+    serverAddress: String = "",
+    capabilities: List<String> = listOf("shell", "git", "build", "file", "docker", "ai"),
+    adminUserId: String = ""
+): StartAgentResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext StartAgentResponseProto(success = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<StartAgentRequestProto, StartAgentResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("hermes_agent.HermesAgentService/StartAgent")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<StartAgentRequestProto> {
+            override fun stream(v: StartAgentRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                if (v.agentName.isNotEmpty()) cos.writeString(2, v.agentName)
+                if (v.token.isNotEmpty()) cos.writeString(3, v.token)
+                if (v.serverAddress.isNotEmpty()) cos.writeString(4, v.serverAddress)
+                v.capabilities.forEach { cos.writeString(5, it) }
+                if (v.adminUserId.isNotEmpty()) cos.writeString(6, v.adminUserId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): StartAgentRequestProto = StartAgentRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<StartAgentResponseProto> {
+            override fun stream(v: StartAgentResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): StartAgentResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var error = ""; var pid = 0
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> error = cis.readString()
+                        3 -> pid = cis.readInt32()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return StartAgentResponseProto(success = success, error = error, pid = pid)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<StartAgentResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<StartAgentResponseProto>() {
+        override fun onMessage(message: StartAgentResponseProto) { result.complete(message) }
+        override fun onClose(closeStatus: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                StartAgentResponseProto(success = false, error = closeStatus.description ?: closeStatus.code.toString())
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(StartAgentRequestProto(
+        agentId = agentId, agentName = agentName, token = token,
+        serverAddress = serverAddress, capabilities = capabilities, adminUserId = adminUserId
+    ))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(15000) { result.await() }
+        ?: StartAgentResponseProto(success = false, error = "Timeout")
+}
+
+suspend fun stopAgentOnServer(agentId: String, adminUserId: String = ""): StopAgentResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext StopAgentResponseProto(success = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<StopAgentRequestProto, StopAgentResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("hermes_agent.HermesAgentService/StopAgent")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<StopAgentRequestProto> {
+            override fun stream(v: StopAgentRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                if (v.adminUserId.isNotEmpty()) cos.writeString(2, v.adminUserId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): StopAgentRequestProto = StopAgentRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<StopAgentResponseProto> {
+            override fun stream(v: StopAgentResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): StopAgentResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var success = false; var error = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> success = cis.readBool()
+                        2 -> error = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return StopAgentResponseProto(success = success, error = error)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<StopAgentResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<StopAgentResponseProto>() {
+        override fun onMessage(message: StopAgentResponseProto) { result.complete(message) }
+        override fun onClose(closeStatus: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                StopAgentResponseProto(success = false, error = closeStatus.description ?: closeStatus.code.toString())
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(StopAgentRequestProto(agentId = agentId, adminUserId = adminUserId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: StopAgentResponseProto(success = false, error = "Timeout")
+}
+
+suspend fun getAgentProcessStatus(agentId: String, adminUserId: String = ""): GetAgentProcessStatusResponseProto = withContext(Dispatchers.IO) {
+    val channel = RealGrpcClient.getChannel()
+    if (channel == null || channel.isShutdown || channel.isTerminated) {
+        return@withContext GetAgentProcessStatusResponseProto(running = false, error = "Channel dead")
+    }
+    val methodDesc = MethodDescriptor.newBuilder<GetAgentProcessStatusRequestProto, GetAgentProcessStatusResponseProto>()
+        .setType(MethodDescriptor.MethodType.UNARY)
+        .setFullMethodName("hermes_agent.HermesAgentService/GetAgentProcessStatus")
+        .setRequestMarshaller(object : MethodDescriptor.Marshaller<GetAgentProcessStatusRequestProto> {
+            override fun stream(v: GetAgentProcessStatusRequestProto): java.io.InputStream {
+                val baos = ByteArrayOutputStream()
+                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                if (v.adminUserId.isNotEmpty()) cos.writeString(2, v.adminUserId)
+                cos.flush()
+                return ByteArrayInputStream(baos.toByteArray())
+            }
+            override fun parse(s: java.io.InputStream): GetAgentProcessStatusRequestProto = GetAgentProcessStatusRequestProto()
+        })
+        .setResponseMarshaller(object : MethodDescriptor.Marshaller<GetAgentProcessStatusResponseProto> {
+            override fun stream(v: GetAgentProcessStatusResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+            override fun parse(s: java.io.InputStream): GetAgentProcessStatusResponseProto {
+                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                var running = false; var pid = 0; var agentId = ""; var startedAt = ""; var error = ""
+                while (!cis.isAtEnd) {
+                    val tag = cis.readTag()
+                    if (tag == 0) break
+                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                        1 -> running = cis.readBool()
+                        2 -> pid = cis.readInt32()
+                        3 -> agentId = cis.readString()
+                        4 -> startedAt = cis.readString()
+                        5 -> error = cis.readString()
+                        else -> cis.skipField(tag)
+                    }
+                }
+                return GetAgentProcessStatusResponseProto(running = running, pid = pid, agentId = agentId, startedAt = startedAt, error = error)
+            }
+        })
+        .build()
+
+    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    val result = CompletableDeferred<GetAgentProcessStatusResponseProto>()
+
+    call.start(object : io.grpc.ClientCall.Listener<GetAgentProcessStatusResponseProto>() {
+        override fun onMessage(message: GetAgentProcessStatusResponseProto) { result.complete(message) }
+        override fun onClose(closeStatus: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (!result.isCompleted) result.complete(
+                GetAgentProcessStatusResponseProto(running = false, error = closeStatus.description ?: closeStatus.code.toString())
+            )
+        }
+    }, io.grpc.Metadata())
+
+    call.sendMessage(GetAgentProcessStatusRequestProto(agentId = agentId, adminUserId = adminUserId))
+    call.halfClose()
+    call.request(1)
+
+    return@withContext withTimeoutOrNull(10000) { result.await() }
+        ?: GetAgentProcessStatusResponseProto(running = false, error = "Timeout")
+}

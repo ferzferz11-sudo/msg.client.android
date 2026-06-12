@@ -26,9 +26,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private lateinit var tokenListContainer: LinearLayout
     private lateinit var emptyText: TextView
     private lateinit var btnGenerateToken: MaterialButton
+    private lateinit var btnStartAgent: MaterialButton
+    private lateinit var btnStopAgent: MaterialButton
+    private lateinit var agentStatusText: TextView
 
     private var userId: String = ""
     private val tokens = mutableListOf<TokenInfo>()
+    private var selectedAgentId: String = ""
+    private var selectedAgentName: String = ""
+    private var selectedToken: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +55,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         tokenListContainer = findViewById(R.id.tokenListContainer)
         emptyText = findViewById(R.id.emptyText)
         btnGenerateToken = findViewById(R.id.btnGenerateToken)
+        btnStartAgent = findViewById(R.id.btnStartAgent)
+        btnStopAgent = findViewById(R.id.btnStopAgent)
+        agentStatusText = findViewById(R.id.agentStatusText)
 
         // Toolbar
         toolbar.setBackgroundColor(surfaceColor)
@@ -60,13 +69,32 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         btnGenerateToken.setBackgroundColor(ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE))
         btnGenerateToken.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
 
+        // Style agent control buttons
+        btnStartAgent.setBackgroundColor(ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE))
+        btnStartAgent.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
+        btnStopAgent.setBackgroundColor(Color.parseColor("#F44336"))
+        btnStopAgent.setTextColor(Color.WHITE)
+
         // Generate token button
         btnGenerateToken.setOnClickListener {
             showTokenDialog()
         }
 
+        // Start agent button
+        btnStartAgent.setOnClickListener {
+            startAgentOnServer()
+        }
+
+        // Stop agent button
+        btnStopAgent.setOnClickListener {
+            stopAgentOnServer()
+        }
+
         // Load tokens
         loadTokens()
+
+        // Check agent status
+        checkAgentStatus()
     }
 
     private fun loadTokens() {
@@ -192,7 +220,10 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 android.util.Log.d("RemoteAgentSettings", "generateToken response: success=${response.success} token=${response.token.take(20)} error=${response.error}")
                 }
                 if (response.success) {
-                    showTokenResultDialog(response.token)
+                    selectedAgentId = agentId
+                    selectedAgentName = agentName
+                    selectedToken = response.token
+                    showTokenResultDialog(response.token, agentId, agentName)
                     loadTokens()
                 } else {
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
@@ -211,7 +242,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showTokenResultDialog(token: String) {
+    private fun showTokenResultDialog(token: String, agentId: String = "", agentName: String = "") {
         val theme = ThemeStore.currentTheme()
         val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
@@ -340,6 +371,100 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    // ===== Agent Process Management (server-side) =====
+
+    private fun startAgentOnServer() {
+        if (selectedToken.isEmpty()) {
+            Toast.makeText(this, "Сначала сгенерируйте токен", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (selectedAgentId.isEmpty()) {
+            selectedAgentId = "agent_${System.currentTimeMillis()}"
+        }
+        if (selectedAgentName.isEmpty()) {
+            selectedAgentName = selectedAgentId
+        }
+
+        btnStartAgent.isEnabled = false
+        agentStatusText.text = "Статус: запуск..."
+
+        val serverAddress = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            .getString("server_address", "") ?: ""
+
+        lifecycleScope.launch {
+            try {
+                val response = GrpcClient.startAgentOnServer(
+                    agentId = selectedAgentId,
+                    agentName = selectedAgentName,
+                    token = selectedToken,
+                    serverAddress = serverAddress + ":50052",
+                    adminUserId = userId
+                )
+                if (response.success) {
+                    Toast.makeText(this@RemoteAgentSettingsActivity,
+                        "Агент запущен (PID: ${response.pid})", Toast.LENGTH_LONG).show()
+                    agentStatusText.text = "Статус: запущен (PID: ${response.pid})"
+                } else {
+                    Toast.makeText(this@RemoteAgentSettingsActivity,
+                        "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
+                    agentStatusText.text = "Статус: ошибка — ${response.error}"
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@RemoteAgentSettingsActivity,
+                    "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                agentStatusText.text = "Статус: ошибка — ${e.message}"
+            }
+            btnStartAgent.isEnabled = true
+        }
+    }
+
+    private fun stopAgentOnServer() {
+        if (selectedAgentId.isEmpty()) {
+            Toast.makeText(this, "Нет запущенного агента", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        btnStopAgent.isEnabled = false
+        agentStatusText.text = "Статус: остановка..."
+
+        lifecycleScope.launch {
+            try {
+                val response = GrpcClient.stopAgentOnServer(
+                    agentId = selectedAgentId,
+                    adminUserId = userId
+                )
+                if (response.success) {
+                    Toast.makeText(this@RemoteAgentSettingsActivity,
+                        "Агент остановлен", Toast.LENGTH_SHORT).show()
+                    agentStatusText.text = "Статус: остановлен"
+                } else {
+                    Toast.makeText(this@RemoteAgentSettingsActivity,
+                        "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
+                    agentStatusText.text = "Статус: ошибка — ${response.error}"
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@RemoteAgentSettingsActivity,
+                    "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+            btnStopAgent.isEnabled = true
+        }
+    }
+
+    private fun checkAgentStatus() {
+        if (selectedAgentId.isEmpty()) return
+
+        lifecycleScope.launch {
+            try {
+                val response = GrpcClient.getAgentProcessStatus(selectedAgentId, userId)
+                agentStatusText.text = if (response.running) {
+                    "Статус: запущен (PID: ${response.pid}, с ${response.startedAt})"
+                } else {
+                    "Статус: не запущен"
+                }
+            } catch (_: Exception) {}
         }
     }
 }

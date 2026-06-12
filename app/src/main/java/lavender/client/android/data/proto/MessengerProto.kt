@@ -1488,3 +1488,43 @@ object TaskStatus {
     const val TASK_TIMEOUT = 3
     const val TASK_CANCELLED = 4
 }
+
+// ===== Agent Process Management (server-side) =====
+
+data class StartAgentRequestProto(
+    val agentId: String = "",
+    val agentName: String = "",
+    val token: String = "",
+    val serverAddress: String = "",
+    val capabilities: List<String> = emptyList(),
+    val adminUserId: String = ""
+)
+
+data class StartAgentResponseProto(
+    val success: Boolean = false,
+    val error: String = "",
+    val pid: Int = 0
+)
+
+data class StopAgentRequestProto(
+    val agentId: String = "",
+    val adminUserId: String = ""
+)
+
+data class StopAgentResponseProto(
+    val success: Boolean = false,
+    val error: String = ""
+)
+
+data class GetAgentProcessStatusRequestProto(
+    val agentId: String = "",
+    val adminUserId: String = ""
+)
+
+data class GetAgentProcessStatusResponseProto(
+    val running: Boolean = false,
+    val pid: Int = 0,
+    val agentId: String = "",
+    val startedAt: String = "",
+    val error: String = ""
+)

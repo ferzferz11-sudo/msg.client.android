@@ -563,4 +563,19 @@ object GrpcClient {
 
     suspend fun listAgentTokens(adminUserId: String): lavender.client.android.data.proto.ListAgentTokensResponseProto =
         lavender.client.android.data.grpc.listAgentTokens(adminUserId)
+
+    // ======= Agent Process Management (server-side) =======
+
+    suspend fun startAgentOnServer(
+        agentId: String, agentName: String, token: String,
+        serverAddress: String = "", capabilities: List<String> = listOf("shell", "git", "build", "file", "docker", "ai"),
+        adminUserId: String = ""
+    ): lavender.client.android.data.proto.StartAgentResponseProto =
+        lavender.client.android.data.grpc.startAgentOnServer(agentId, agentName, token, serverAddress, capabilities, adminUserId)
+
+    suspend fun stopAgentOnServer(agentId: String, adminUserId: String = ""): lavender.client.android.data.proto.StopAgentResponseProto =
+        lavender.client.android.data.grpc.stopAgentOnServer(agentId, adminUserId)
+
+    suspend fun getAgentProcessStatus(agentId: String, adminUserId: String = ""): lavender.client.android.data.proto.GetAgentProcessStatusResponseProto =
+        lavender.client.android.data.grpc.getAgentProcessStatus(agentId, adminUserId)
 }
