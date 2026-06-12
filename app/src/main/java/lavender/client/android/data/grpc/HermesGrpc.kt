@@ -1165,7 +1165,9 @@ suspend fun generateAgentToken(
     adminUserId: String
 ): GenerateAgentTokenResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
+    android.util.Log.d("HermesGrpc", "generateAgentToken: channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}")
     if (channel == null || channel.isShutdown || channel.isTerminated) {
+        android.util.Log.e("HermesGrpc", "generateAgentToken: CHANNEL IS NULL OR DEAD!")
         return@withContext GenerateAgentTokenResponseProto(success = false, error = "Channel dead")
     }
     val methodDesc = MethodDescriptor.newBuilder<GenerateAgentTokenRequestProto, GenerateAgentTokenResponseProto>()
