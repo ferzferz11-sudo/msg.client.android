@@ -3,7 +3,7 @@
 **Дата:** 2026-06-14
 **Версия:** v1.1.3.1
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** 1.1.3.1
+**Текущая версия APK:** 1.1.3.1 (выпущен)
 
 ---
 
@@ -12,38 +12,33 @@
 - Remote Agent UI реализован и работает
 - Token Management (генерация, список, отзыв) — есть
 - HermesGrpc — все методы реализованы
-- APK v1.1.3.0 собран и залит
+- APK v1.1.3.1 собран и залит
+
+---
+
+## ЧТО СДЕЛАНО В v1.1.3.1
+
+- ✅ Убран Toast "Вход выполнен" после авторизации
+- ✅ Авто-прокрутка вниз при отправке сообщения (текст + изображения)
+- ✅ Версия приложения на SplashActivity (BuildConfig.VERSION_NAME)
+- ✅ Debug логи обёрнуты в BuildConfig.DEBUG
+- ✅ Шторка "Дополнительные настройки": Очистка кэша и Журнал ошибок перемещены выше "Удалить профиль"
+- ✅ "Logs" → "Журнал ошибок" (строковый ресурс error_log)
 
 ---
 
 ## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
 ### P1: Токен не появляется в списке после генерации
+**Статус:** Требует отладки на сервере
 **Симптом:** Генерация проходит, но список токенов остаётся пустым
 **Логи:** `loadTokens: userId=ea577733-3f2c-4752-ac0e-1b2a88a6836b`, `generateToken error JobCancellationException`
-**Текущее состояние:** JobCancellationException исправлен, требует проверки после пересборки
-
-### P1: Debug логи в production коде
-**Где:**
-- `HermesGrpc.kt:914` — `Log.d("HermesGrpc", "listRemoteAgents: calling...")`
-- `HermesGrpc.kt:1186` — `Log.d("HermesGrpc", "generateAgentToken: onMessage...")`
-- `RemoteAgentSettingsActivity.kt:172` — `Log.d("RemoteAgentSettings", "generateToken:...")`
+**Текущее состояние:** JobCancellationException исправлен в Android. Вероятная причина — hermesDB == nil на сервере (SaveAgentToken молча пропускается).
+**Файлы:** `RemoteAgentSettingsActivity.kt:173`, `HermesGrpc.kt:1266`
 
 ---
 
-## ЗАДАЧИ
-
-### P1 — Критические
-
-#### 1.1 Проверить токен flow
-- Собрать debug APK
-- Протестировать: генерация → появление в списке
-- Если не работает — проверить логи `RemoteAgentSettings` и `HermesGrpc`
-- **Файлы:** `RemoteAgentSettingsActivity.kt:169-191`, `HermesGrpc.kt:1144-1210`
-
-#### 1.2 Убрать debug логи
-- `HermesGrpc.kt` — убрать все Log.d/Log.e (или обернуть в BuildConfig.DEBUG)
-- `RemoteAgentSettingsActivity.kt` — убрать логи из generateToken, loadTokens
+## ЗАДАЧИ ДЛЯ НОВОЙ СЕССИИ
 
 ### P2 — Важные
 

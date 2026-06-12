@@ -1,15 +1,30 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.3.0
-**Обновлено:** 2026-06-11
+**Версия:** 1.1.3.1
+**Обновлено:** 2026-06-14
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.2.10 (выпущен)
+**Тег:** v1.1.3.1 (выпущен)
 **APK:** /var/www/lavender/lavender.apk
-**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.2.9
+**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.1
 
 ---
 
-## 🔄 v1.1.3.0 — Интеграция агента с реальным бэкендом
+## ✅ v1.1.3.1 — Мелкие исправления и полировка
+
+### UI/UX
+- Убран Toast "Вход выполнен" после авторизации
+- Авто-прокрутка вниз при отправке сообщения (текст + изображения)
+- Версия приложения на SplashActivity (BuildConfig.VERSION_NAME)
+- Шторка "Дополнительные настройки": Очистка кэша и Журнал ошибок перемещены выше "Удалить профиль"
+- "Logs" → "Журнал ошибок" (строковый ресурс error_log)
+
+### Code quality
+- Debug логи обёрнуты в BuildConfig.DEBUG (HermesGrpc.kt, RemoteAgentSettingsActivity.kt)
+- Добавлен импорт BuildConfig в RemoteAgentSettingsActivity
+
+---
+
+## ✅ v1.1.3.0 — Remote Agent UI + Token Management
 
 ### Remote Agent — интеграция
 - **Интеграция чата с реальным агентом** — замена echo-заглушки на gRPC streaming
