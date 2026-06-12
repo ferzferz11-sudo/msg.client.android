@@ -6,6 +6,17 @@
 
 ---
 
+## ✅ v1.1.3.5 — Remote Agent: UI исправления (commit ee5e115)
+
+### Исправления чата с агентом
+- ✅ TextWatcher для send button — показывается только при наличии текста
+- ✅ CommandButton с CommandBottomSheet — 12 команд агента (help, status, logs, deploy, restart, git, docker, ps, df, uptime)
+- ✅ Авто-прокрутка чата при новых сообщениях
+- ✅ Исправлен баг: сообщения не отправлялись после ввода текста
+- ✅ Исправлен баг: иконка команд была без обработчика
+
+---
+
 ## ✅ v1.1.3.5 — Remote Agent: фоновое подключение (persistent connection)
 
 ### Foreground Service + Singleton Manager
