@@ -25,7 +25,8 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
-class RemoteAgentSettingsActivity : AppCompatActivity() {
+class RemoteAgentSettingsActivity : AppCompatActivity(),
+    RemoteAgentManager.RemoteAgentStateListener {
 
     private lateinit var tokenListContainer: LinearLayout
     private lateinit var emptyText: TextView
@@ -56,8 +57,11 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     // Independent coroutine scope that survives Activity recreation
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    // Hermes Gateway Manager
+    // Hermes Gateway Manager (для совместимости, основная логика через RemoteAgentManager)
     private lateinit var gatewayManager: HermesGatewayManager
+
+    // Remote Agent Service binding
+    private var serviceBound = false
 
     // Keys for persisting agent selection across activity recreation
     private companion object {
@@ -76,6 +80,10 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_remote_agent_settings)
 
         userId = SessionManager.session.value.userId
+
+        // Инициализация RemoteAgentManager (единоразово)
+        RemoteAgentManager.init(applicationContext)
+
         gatewayManager = HermesGatewayManager(this)
 
         val theme = ThemeStore.currentTheme()
@@ -185,7 +193,33 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Привязываемся к сервису
+        RemoteAgentManager.bind(this)
+        serviceBound = true
         updateTunnelStatusUI()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Отвязываемся от сервиса (сервис продолжает работать)
+        if (serviceBound) {
+            RemoteAgentManager.unbind(this)
+            serviceBound = false
+        }
+    }
+
+    // ===== RemoteAgentStateListener =====
+
+    override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
+        runOnUiThread {
+            updateTunnelStatusUI()
+            // Обновляем статус агента
+            if (state.isConnected) {
+                updateAgentStatusText("подключён", true)
+            } else {
+                updateAgentStatusText("отключён", false)
+            }
+        }
     }
 
     private fun loadTokens() {
@@ -711,43 +745,34 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         tvTunnelStatus.setTextColor(Color.parseColor("#FFA000"))
         btnCreateTunnel.isEnabled = false
 
-        // Run SSH tunnel creation in background
-        activityScope.launch(Dispatchers.IO) {
-            try {
-                val result = gatewayManager.createTunnel(
-                    sshHost = sshHost,
-                    sshPort = sshPort,
-                    sshUser = sshUser,
-                    sshPassword = sshPassword,
-                    serverHost = serverHost,
-                    serverPort = serverPort,
-                    localPort = localPort
-                )
-                // Update UI on main thread
-                activityScope.launch(Dispatchers.Main) {
-                    if (result.success) {
-                        Toast.makeText(this@RemoteAgentSettingsActivity,
-                            "Туннель создан: localhost:$localPort → $serverHost:$serverPort",
-                            Toast.LENGTH_LONG).show()
-                        // If server address is empty, pre-fill it with local tunnel
-                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-                        val curAddr = prefs.getString("server_address", "")
-                        if (curAddr.isNullOrEmpty()) {
-                            prefs.edit().putString("server_address", "localhost")
-                                .putString("server_port", localPort.toString()).apply()
-                        }
-                    } else {
-                        // Show detailed error message from TunnelResult
-                        showTunnelErrorDialog(result)
-                    }
-                    updateTunnelStatusUI()
-                }
-            } catch (e: Exception) {
-                activityScope.launch(Dispatchers.Main) {
+        // Создаём туннель через RemoteAgentManager (который работает через сервис)
+        RemoteAgentManager.createTunnel(
+            sshHost = sshHost,
+            sshPort = sshPort,
+            sshUser = sshUser,
+            sshPassword = sshPassword,
+            serverHost = serverHost,
+            serverPort = serverPort,
+            localPort = localPort
+        ) { success, errorMessage, errorType ->
+            runOnUiThread {
+                if (success) {
                     Toast.makeText(this@RemoteAgentSettingsActivity,
-                        "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
-                    updateTunnelStatusUI()
+                        "Туннель создан: localhost:$localPort → $serverHost:$serverPort",
+                        Toast.LENGTH_LONG).show()
+                    // If server address is empty, pre-fill it with local tunnel
+                    val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                    val curAddr = prefs.getString("server_address", "")
+                    if (curAddr.isNullOrEmpty()) {
+                        prefs.edit().putString("server_address", "localhost")
+                            .putString("server_port", localPort.toString()).apply()
+                    }
+                } else {
+                    showTunnelErrorDialog(
+                        HermesGatewayManager.TunnelResult(false, errorMessage, errorType)
+                    )
                 }
+                updateTunnelStatusUI()
             }
         }
     }
@@ -775,7 +800,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     }
 
     private fun closeTunnel() {
-        gatewayManager.closeTunnel()
+        RemoteAgentManager.closeTunnel()
         Toast.makeText(this, "Туннель закрыт", Toast.LENGTH_SHORT).show()
         updateTunnelStatusUI()
     }

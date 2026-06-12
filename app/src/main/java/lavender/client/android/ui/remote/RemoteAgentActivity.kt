@@ -31,7 +31,8 @@ import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
 
-class RemoteAgentActivity : AppCompatActivity() {
+class RemoteAgentActivity : AppCompatActivity(),
+    RemoteAgentManager.RemoteAgentStateListener {
 
     private lateinit var viewModel: RemoteAgentViewModel
     private lateinit var toolbar: MaterialToolbar
@@ -44,6 +45,7 @@ class RemoteAgentActivity : AppCompatActivity() {
     private lateinit var adapter: ChatMessageAdapter
     private var userId: String = ""
     private var selectedTaskType: String = "shell"
+    private var serviceBound = false
 
     private val taskTypes = listOf(
         "shell" to "Shell",
@@ -61,6 +63,9 @@ class RemoteAgentActivity : AppCompatActivity() {
         setContentView(R.layout.activity_remote_agent)
 
         userId = SessionManager.session.value.userId
+
+        // Инициализация RemoteAgentManager (единоразово, идемпотентна)
+        RemoteAgentManager.init(applicationContext)
 
         // Apply theme
         ThemeUi.bind(this, userId)
@@ -139,7 +144,27 @@ class RemoteAgentActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Привязываемся к сервису
+        RemoteAgentManager.bind(this)
+        serviceBound = true
         viewModel.refreshAgentStatus()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Отвязываемся от сервиса (сервис продолжает работать)
+        if (serviceBound) {
+            RemoteAgentManager.unbind(this)
+            serviceBound = false
+        }
+    }
+
+    // ===== RemoteAgentStateListener =====
+
+    override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
+        runOnUiThread {
+            updateStatus(state.isConnected)
+        }
     }
 
     private fun setupTaskTypeChips() {

@@ -12,6 +12,7 @@ import lavender.client.android.data.models.RemoteAgentInfo
 
 class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
 
+    // HermesGatewayManager оставляем для совместимости (используется в некоторых местах)
     private val gatewayManager = HermesGatewayManager(application.applicationContext)
 
     // ===== Agent list =====
@@ -217,17 +218,19 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
         _isTyping.value = true
         viewModelScope.launch {
             try {
+                val tunnelActive = RemoteAgentManager.isTunnelActive()
+                val settings = gatewayManager.loadSettings()
                 val response = GrpcClient.deployAgentTask(
                     agentId = agent.id,
                     taskType = taskType,
                     params = mapOf("command" to text),
-                    tunnelMode = if (gatewayManager.isTunnelActive()) 1 else 0,
-                    tunnelHost = gatewayManager.loadSettings().sshHost,
-                    tunnelPort = gatewayManager.loadSettings().sshPort,
-                    tunnelUser = gatewayManager.loadSettings().sshUser,
-                    tunnelServerHost = gatewayManager.loadSettings().serverHost,
-                    tunnelServerPort = gatewayManager.loadSettings().serverPort,
-                    tunnelLocalPort = gatewayManager.loadSettings().localPort
+                    tunnelMode = if (tunnelActive) 1 else 0,
+                    tunnelHost = settings.sshHost,
+                    tunnelPort = settings.sshPort,
+                    tunnelUser = settings.sshUser,
+                    tunnelServerHost = settings.serverHost,
+                    tunnelServerPort = settings.serverPort,
+                    tunnelLocalPort = settings.localPort
                 )
                 if (response.success) {
                     val output = if (response.stdout.isNotEmpty()) response.stdout else "(no output)"

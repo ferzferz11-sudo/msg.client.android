@@ -1,9 +1,9 @@
-# Промпт для новой сессии — v1.1.3.x (Android)
+# Промпт для новой сессии — v1.1.3.5 (Android)
 
-**Дата:** 2026-06-12
+**Дата:** 2026-06-13
 **Версия:** v1.1.3.4
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** 1.1.3.4 (выпущен)
+**Текущая версия APK:** v1.1.3.4 (выпущен)
 **GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.4
 
 ---
@@ -15,78 +15,83 @@
 - HermesGrpc — все методы реализованы
 - **Hermes Gateway** — SSH туннель работает (JSch)
 - **tunnel_mode** — передаётся в DeployAgentTask
-- APK v1.1.3.2 собран и залит
-- Сервер v1.1.3.2 — выпущен
+- **Проблема:** при входе/выходе из Activity подключение к агенту теряется
 
 ---
 
-## ЧТО СДЕЛАНО В v1.1.3.2
+## 🔴 Приоритетная задача: Remote Agent — фоновое подключение
 
-- Генерация JWT токенов через `hermes_agent.HermesAgentService/GenerateAgentToken`
-- Список токенов отображается сразу после генерации
-- Копирование токена/команды в каждом элементе списка
-- Отзыв токена с подтверждением
-- Запуск/остановка агента через StartAgent/StopAgent RPC
-- Зелёный индикатор при запущенном агенте
-- Персистентность выбранного агента (SharedPreferences)
-- Ошибки сервера переведены на русский
+### Проблема
+SSH туннель и gRPC подключение привязаны к Activity lifecycle.
+При переходе между Activity или повороте экрана — всё теряется.
+
+### Решение: Foreground Service + Singleton Manager
+
+1. **`RemoteAgentService.kt`** — foreground service
+   - Управляет SSH туннелем через `HermesGatewayManager`
+   - Держит gRPC подключение
+   - Уведомление с статусом подключения
+   - `START_STICKY` — перезапускается системой
+
+2. **`RemoteAgentManager.kt`** — singleton
+   - `bindService()` / `unbindService()` из Activity
+   - `isConnected()` / `sendTask()` / `getStatus()`
+   - Callback для результатов задач
+
+3. **Activity привязываются к сервису** через `ServiceConnection`
+   - `RemoteAgentSettingsActivity` — настройки + статус
+   - `RemoteAgentActivity` — чат + отправка задач
+
+### Файлы
+- `ui/remote/RemoteAgentService.kt` — НОВЫЙ
+- `ui/remote/RemoteAgentManager.kt` — НОВЫЙ (singleton)
+- `ui/remote/RemoteAgentSettingsActivity.kt` — обновить привязку
+- `ui/remote/RemoteAgentActivity.kt` — обновить привязку
+- `AndroidManifest.xml` — добавить сервис и разрешения
+
+### Ключевые моменты
+- `unbindService()` при уничтожении Activity, но сервис продолжает работать
+- Сервис останавливается явно через кнопку "Отключить"
+- Уведомление: "Агент подключён к 13.140.25.249:50051" / "Отключено"
 
 ---
 
-## ЗАДАЧИ ДЛЯ НОВОЙ СЕССИИ
+## ЧТО СДЕЛАНО В v1.1.3.4
 
-### P1 — Исправить hermes_remote_agent.py (сервер)
-- Агент завершается сразу после запуска — падает в `connect()` при отправке `AgentMessage`
-- Root cause: protobuf marshaling в Python скрипте
-- Нужно исправить `/root/msg/hermes-agent/hermes_remote_agent.py`
-
-### P2 — Фильтрация токенов по пользователю (сервер)
-- `ListAgentTokens` возвращает все токены из БД
-- Нужно добавить фильтр по `created_by = adminUserId`
-
-### P3 — Streaming результатов задач
-- Агент должен отправлять результаты выполнения задач обратно клиенту
-- Через bidirectional gRPC stream `Connect`
+- `HermesGatewayManager.kt` — SSH туннель через JSch
+- `RemoteAgentSettingsActivity.kt` — UI "Подключение через шлюз"
+- `activity_remote_agent_settings.xml` — layout с полями
+- `MessengerProto.kt` — tunnel_mode поля
+- `HermesGrpc.kt` — сериализация tunnel_mode
+- JSch зависимость (`com.jcraft:jsch:0.1.55`)
+- Понятные ошибки (SSH alias vs IP, auth failed, timeout)
 
 ---
 
 ## КРИТИЧЕСКИЕ ФАЙЛЫ
 
-| Файл | Назначение |
-|------|-----------|
-| `data/grpc/HermesGrpc.kt` | gRPC методы (token RPC, agent management) |
-| `ui/remote/RemoteAgentSettingsActivity.kt` | Управление токенами и агентом |
-| `ui/remote/RemoteAgentActivity.kt` | Чат с агентом |
-| `ui/remote/TokenDialog.kt` | Диалог генерации токена |
-| `hermes-agent/hermes_remote_agent.py` | Python агент (сервер) |
+### UI
+- `ui/remote/RemoteAgentActivity.kt` — чат с агентом
+- `ui/remote/RemoteAgentSettingsActivity.kt` — настройки + SSH туннель
+- `ui/remote/RemoteAgentViewModel.kt` — ViewModel
+
+### Сервисы (новые)
+- `ui/remote/RemoteAgentService.kt` — foreground service
+- `ui/remote/RemoteAgentManager.kt` — singleton manager
+
+### gRPC / Proto
+- `data/grpc/HermesGrpc.kt` — gRPC методы
+- `data/grpc/GrpcClient.kt` — фасад
+- `data/proto/MessengerProto.kt` — proto типы
 
 ---
 
-## АРХИТЕКТУРА
+## ПРАВИЛА
+- НЕ assembleRelease на сервере (OOM)
+- Коммитить/пушить после каждого изменения
+- Версию НЕ менять без указания пользователя
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ AIBottomSheet                                                │
-│  └── "🖥 Агенты" → RemoteAgentActivity                       │
-│       ├── loadAgents() → listRemoteAgents() gRPC             │
-│       ├── sendMessage() → deployAgentTask() gRPC             │
-│       └── ⚙ → RemoteAgentSettingsActivity                    │
-│            ├── generateToken() → GenerateAgentToken gRPC     │
-│            ├── loadTokens() → ListAgentTokens gRPC            │
-│            ├── revokeToken() → RevokeAgentToken gRPC          │
-│            ├── startAgent() → StartAgent gRPC                │
-│            └── stopAgent() → StopAgent gRPC                   │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ТЕСТОВЫЕ ДАННЫЕ
-
-**User (dev server):**
-- userId: `ea577733-3f2c-4752-ac0e-1b2a88a6836b`
-- username: `ferz11`
-
-**Сервер:**
-- Dev: `localhost:50052`
-- Prod: `13.140.25.249:50051`
+## ДОКУМЕНТАЦИЯ
+- `doc/PROMPT_ANDROID.md` → `doc/TASKS.md` → `doc/INDEX.md`
+- `doc/REMOTE_AGENT.md` — Remote Agent документация
+- `doc/STRUCTURE.md` — структура кода
