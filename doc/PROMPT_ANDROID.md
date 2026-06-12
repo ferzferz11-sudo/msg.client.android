@@ -13,6 +13,7 @@
 - Token Management (генерация, список, отзыв) — есть
 - HermesGrpc — все методы реализованы
 - APK v1.1.3.1 собран и залит
+- Сервер v1.1.3.1 — выпущен (token flow fix, rate limit, proto dedup)
 
 ---
 
@@ -27,46 +28,20 @@
 
 ---
 
-## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
-
-### P1: Токен не появляется в списке после генерации
-**Статус:** Требует отладки на сервере
-**Симптом:** Генерация проходит, но список токенов остаётся пустым
-**Логи:** `loadTokens: userId=ea577733-3f2c-4752-ac0e-1b2a88a6836b`, `generateToken error JobCancellationException`
-**Текущее состояние:** JobCancellationException исправлен в Android. Вероятная причина — hermesDB == nil на сервере (SaveAgentToken молча пропускается).
-**Файлы:** `RemoteAgentSettingsActivity.kt:173`, `HermesGrpc.kt:1266`
-
----
-
 ## ЗАДАЧИ ДЛЯ НОВОЙ СЕССИИ
 
-### P2 — Важные
+### P1 — Android баги (исправить первыми)
+- Проверить все remote agent activity на краши и NPE
+- Проверить token list refresh после генерации
+- Проверить revoke token flow
+- **Файлы:** `RemoteAgentSettingsActivity.kt`, `RemoteAgentActivity.kt`, `TokenDialog.kt`
 
-#### 2.1 Индикатор "агент не подключён"
-- В RemoteAgentActivity показывать подсказку если агент отключён
-- Отобразить инструкцию по запуску агента
-- **Файл:** `RemoteAgentActivity.kt:308-320`
-
-#### 2.2 Кнопка "Скопировать команду"
-- В токене диалоге: кнопка "Скопировать команду запуска"
-- Формат: `python3 hermes_remote_agent.py --server host:port --token <jwt>`
-- **Файл:** `TokenDialog.kt`, `RemoteAgentSettingsActivity.kt`
-
-#### 2.3 Объединить AgentListActivity + RemoteAgentActivity
-- Убрать дублирование экранов
-- RemoteAgentActivity — чат с remote agent (задачи)
-- AgentListActivity — список AI агентов (Hermes)
-
-### P3 — Средние
-
-#### 3.1 Автоматический рефреш агентов
-- Каждые 30 сек обновлять список агентов
-- **Файл:** `RemoteAgentActivity.kt:122-127`
-
-#### 3.2 Agent flow polish
-- Показывать toast "Токен скопирован" после копирования
-- Показывать прогресс при загрузке RemoteAgentSettingsActivity
-- Визуально разделять секции
+### P2 — Agent flow в Android
+- **Индикатор "агент не подключён"** в RemoteAgentActivity — показывать подсказку если агент offline
+- **Кнопка "Скопировать команду"** в TokenDialog: `python3 hermes_remote_agent.py --server host:port --token <jwt>`
+- **Авто-рефреш** списка агентов каждые 30 сек
+- **Объединить** AgentListActivity + RemoteAgentActivity (убрать дублирование)
+- **AgentSettingsActivity** — полноценные настройки агента (server URL, token, capabilities)
 
 ---
 
