@@ -1,10 +1,10 @@
 # Промпт для новой сессии — v1.1.3.x (Android)
 
 **Дата:** 2026-06-12
-**Версия:** v1.1.3.2
+**Версия:** v1.1.3.4
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** 1.1.3.2 (выпущен)
-**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.2
+**Текущая версия APK:** 1.1.3.4 (выпущен)
+**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.4
 
 ---
 
@@ -13,6 +13,8 @@
 - Remote Agent UI реализован и работает
 - Token Management (генерация, список, отзыв, копирование) — работает
 - HermesGrpc — все методы реализованы
+- **Hermes Gateway** — SSH туннель работает (JSch)
+- **tunnel_mode** — передаётся в DeployAgentTask
 - APK v1.1.3.2 собран и залит
 - Сервер v1.1.3.2 — выпущен
 
