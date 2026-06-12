@@ -107,13 +107,13 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             stopAgentOnServer()
         }
 
+        // Restore previously selected agent from prefs FIRST
+        restoreSelectedAgent()
+
         // Load tokens
         loadTokens()
 
-        // Restore previously selected agent from prefs
-        restoreSelectedAgent()
-
-        // Check agent status
+        // Check agent status AFTER restore
         checkAgentStatus()
     }
 
@@ -455,9 +455,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                         "Агент остановлен", Toast.LENGTH_SHORT).show()
                     updateAgentStatusText("остановлен", false)
                 } else {
+                    // Translate server error to Russian
+                    val errorMsg = when {
+                        response.error.contains("not found", ignoreCase = true) -> "Агент не найден"
+                        response.error.contains("already stopped", ignoreCase = true) -> "Агент уже остановлен"
+                        else -> response.error
+                    }
                     Toast.makeText(this@RemoteAgentSettingsActivity,
-                        "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
-                    updateAgentStatusText("ошибка — ${response.error}", false)
+                        "Ошибка: $errorMsg", Toast.LENGTH_LONG).show()
+                    updateAgentStatusText("ошибка — $errorMsg", false)
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity,
