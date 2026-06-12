@@ -306,6 +306,7 @@ class RemoteAgentActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.agents.collect { agents ->
+                    @Suppress("UNCHECKED_CAST")
                     val adapter = agentSpinner?.adapter as? ArrayAdapter<String>
                     adapter?.clear()
                     agents.forEach { adapter?.add(it.name) }
