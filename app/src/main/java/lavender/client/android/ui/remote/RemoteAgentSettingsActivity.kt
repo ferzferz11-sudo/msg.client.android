@@ -48,7 +48,11 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         private const val PREF_AGENT_ID = "remote_agent_id"
         private const val PREF_AGENT_NAME = "remote_agent_name"
         private const val PREF_AGENT_TOKEN = "remote_agent_token"
+        private const val PREF_AGENT_SCRIPT_PATH = "remote_agent_script_path"
     }
+
+    // Default agent script path (can be overridden in settings)
+    private val DEFAULT_AGENT_SCRIPT_PATH = "/root/msg.remote.agent/hermes_remote_agent.py"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -263,7 +267,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     val serverAddr = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "") ?: ""
                     val serverPort = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_port", "50051") ?: "50051"
                     val fullServer = if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
-                    val agentCmd = "python3 hermes_remote_agent.py --server $fullServer --token ${response.token}"
+                    val agentScript = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString(PREF_AGENT_SCRIPT_PATH, DEFAULT_AGENT_SCRIPT_PATH) ?: DEFAULT_AGENT_SCRIPT_PATH
+                    val agentCmd = "python3 $agentScript --server $fullServer --token ${response.token}"
                     tokens.add(TokenInfo(
                         id = 0,
                         agentId = agentId,
@@ -326,7 +331,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         val serverAddr = prefs.getString("server_address", "") ?: ""
         val serverPort = prefs.getString("server_port", "50051") ?: "50051"
         val fullServer = if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
-        val agentCmd = "python3 hermes_remote_agent.py --server $fullServer --token $token"
+        val agentScript = prefs.getString(PREF_AGENT_SCRIPT_PATH, DEFAULT_AGENT_SCRIPT_PATH) ?: DEFAULT_AGENT_SCRIPT_PATH
+        val agentCmd = "python3 $agentScript --server $fullServer --token $token"
 
         val cmdLabel = TextView(this).apply {
             text = "Команда для запуска агента:"
@@ -547,6 +553,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             .putString(PREF_AGENT_ID, selectedAgentId)
             .putString(PREF_AGENT_NAME, selectedAgentName)
             .putString(PREF_AGENT_TOKEN, selectedToken)
+            .putString(PREF_AGENT_SCRIPT_PATH, DEFAULT_AGENT_SCRIPT_PATH)
             .apply()
     }
 
