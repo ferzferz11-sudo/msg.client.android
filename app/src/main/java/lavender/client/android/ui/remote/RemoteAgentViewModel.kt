@@ -288,7 +288,9 @@ data class TokenInfo(
     val createdAt: String = "",
     val expiresAt: String = "",
     val revoked: Boolean = false,
-    val createdBy: String = ""
+    val createdBy: String = "",
+    val fullToken: String = "",
+    val command: String = ""
 )
 
 /**

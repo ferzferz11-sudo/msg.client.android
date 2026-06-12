@@ -197,9 +197,26 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 expires.text = if (token.expiresAt.isNotEmpty()) "Истёк: ${token.expiresAt}" else "Бессрочный"
                 expires.setTextColor(txtSecondary)
 
+                val copyTokenBtn = view.findViewById<MaterialButton>(R.id.btnCopyToken)
+                val copyCmdBtn = view.findViewById<MaterialButton>(R.id.btnCopyCmd)
+
                 revokeBtn.setTextColor(Color.parseColor("#F44336"))
                 revokeBtn.setOnClickListener {
                     confirmRevoke(token)
+                }
+
+                copyTokenBtn.setTextColor(primColor)
+                copyTokenBtn.setOnClickListener {
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token.fullToken))
+                    Toast.makeText(this@RemoteAgentSettingsActivity, "Токен скопирован", Toast.LENGTH_SHORT).show()
+                }
+
+                copyCmdBtn.setTextColor(primColor)
+                copyCmdBtn.setOnClickListener {
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Agent Command", token.command))
+                    Toast.makeText(this@RemoteAgentSettingsActivity, "Команда скопирована", Toast.LENGTH_SHORT).show()
                 }
 
                 val card = view as com.google.android.material.card.MaterialCardView
@@ -237,8 +254,31 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     selectedAgentName = agentName
                     selectedToken = response.token
                     saveSelectedAgent()
+                    
+                    // Add token to local list immediately
+                    val expiresAt = if (response.expiresAt > 0) {
+                        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date(response.expiresAt * 1000))
+                    } else ""
+                    val serverAddr = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "") ?: ""
+                    val serverPort = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_port", "50051") ?: "50051"
+                    val fullServer = if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
+                    val agentCmd = "python3 hermes_remote_agent.py --server $fullServer --token ${response.token}"
+                    tokens.add(TokenInfo(
+                        id = 0,
+                        agentId = agentId,
+                        agentName = agentName,
+                        tokenHash = response.token.take(16),
+                        capabilities = capabilities,
+                        createdAt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date()),
+                        expiresAt = expiresAt,
+                        revoked = false,
+                        createdBy = userId,
+                        fullToken = response.token,
+                        command = agentCmd
+                    ))
+                    renderTokens()
+                    
                     showTokenResultDialog(response.token, agentId, agentName)
-                    loadTokens()
                 } else {
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
                 }
