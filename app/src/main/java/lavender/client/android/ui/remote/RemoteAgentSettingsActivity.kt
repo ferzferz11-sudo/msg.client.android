@@ -156,6 +156,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val txtSecondary = ThemeUtils.parseSafeColor(theme.textSecondaryColor, Color.GRAY)
         val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
 
         tokenListContainer.removeAllViews()
 
