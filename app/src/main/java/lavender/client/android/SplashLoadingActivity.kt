@@ -69,8 +69,25 @@ class SplashLoadingActivity : AppCompatActivity() {
             }
         }
 
+        // Version text
+        val versionText = TextView(this).apply {
+            text = BuildConfig.VERSION_NAME
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.lavender_mist, null))
+            alpha = 0.5f
+            gravity = android.view.Gravity.CENTER
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            ).apply {
+                topMargin = (56 * resources.displayMetrics.density).toInt()
+            }
+        }
+
         splashView.addView(logoImage)
         splashView.addView(appNameText)
+        splashView.addView(versionText)
         setContentView(splashView)
 
         // Animate logo fade-in + scale
