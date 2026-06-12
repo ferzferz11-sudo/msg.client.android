@@ -35,6 +35,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private var selectedAgentId: String = ""
     private var selectedAgentName: String = ""
     private var selectedToken: String = ""
+    
+    // Independent coroutine scope that survives Activity recreation
+    private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // Keys for persisting agent selection across activity recreation
     private companion object {
@@ -107,8 +110,13 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         checkAgentStatus()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        activityScope.cancel()
+    }
+
     private fun loadTokens() {
-        lifecycleScope.launch {
+        activityScope.launch {
             try {
                 if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "loadTokens: userId=$userId")
@@ -218,8 +226,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
         android.util.Log.d("RemoteAgentSettings", "generateToken CALLED: agentId=$agentId name=$agentName userId=$userId caps=$capabilities ttl=$ttlHours")
         Toast.makeText(this@RemoteAgentSettingsActivity, "Отправка запроса на генерацию...", Toast.LENGTH_SHORT).show()
-        lifecycleScope.launch {
-            android.util.Log.d("RemoteAgentSettings", "coroutine started")
+        activityScope.launch {
+            android.util.Log.d("RemoteAgentSettings", "coroutine started (activityScope)")
             try {
                 android.util.Log.d("RemoteAgentSettings", "calling GrpcClient.generateAgentToken...")
                 val response = GrpcClient.generateAgentToken(
@@ -368,7 +376,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     }
 
     private fun revokeToken(agentId: String) {
-        lifecycleScope.launch {
+        activityScope.launch {
             try {
                 val response = GrpcClient.revokeAgentToken(agentId, userId)
                 if (response.success) {
