@@ -14,7 +14,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import lavender.client.android.R
-import lavender.client.android.HermesGrpc
 import lavender.client.android.data.grpc.GrpcClient
 
 /**
