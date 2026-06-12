@@ -206,6 +206,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             context = this,
             theme = ThemeStore.currentTheme(),
             onGenerate = { agentName, capabilities, ttlHours ->
+                android.util.Log.d("RemoteAgentSettings", "onGenerate CALLED: name=$agentName caps=$capabilities ttl=$ttlHours")
+                Toast.makeText(this@RemoteAgentSettingsActivity, "Генерация токена: $agentName", Toast.LENGTH_SHORT).show()
                 val agentId = "agent_${System.currentTimeMillis()}"
                 generateToken(agentId, agentName, capabilities, ttlHours)
             }
@@ -214,9 +216,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     }
 
     private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
-        if (BuildConfig.DEBUG) {
-            android.util.Log.d("RemoteAgentSettings", "generateToken CALLED: agentId=$agentId name=$agentName userId=$userId")
-        }
+        android.util.Log.d("RemoteAgentSettings", "generateToken CALLED: agentId=$agentId name=$agentName userId=$userId caps=$capabilities ttl=$ttlHours")
+        Toast.makeText(this@RemoteAgentSettingsActivity, "Отправка запроса на генерацию...", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             try {
                 if (BuildConfig.DEBUG) {
@@ -249,15 +250,11 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "generateToken cancelled")
-                }
                 throw e
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                android.util.Log.e("RemoteAgentSettings", "generateToken error", e)
-                }
-                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                android.util.Log.e("RemoteAgentSettings", "generateToken error: ${e.message}", e)
+                Toast.makeText(this@RemoteAgentSettingsActivity, "ОШИБКА: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
