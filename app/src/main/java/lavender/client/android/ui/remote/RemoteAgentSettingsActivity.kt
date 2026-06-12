@@ -241,22 +241,55 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         container.addView(label)
         container.addView(tokenView)
 
+        // Build agent command
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val serverAddr = prefs.getString("server_address", "") ?: ""
+        val serverPort = prefs.getString("server_port", "50051") ?: "50051"
+        val fullServer = if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
+        val agentCmd = "python3 hermes_remote_agent.py --server $fullServer --token $token"
+
+        val cmdLabel = TextView(this).apply {
+            text = "Команда для запуска агента:"
+            setTextColor(txtColor)
+            textSize = 14f
+            setPadding(0, 16, 0, 0)
+        }
+
+        val cmdView = TextView(this).apply {
+            text = agentCmd
+            setTextColor(txtColor)
+            textSize = 11f
+            setPadding(0, 8, 0, 8)
+            setTextIsSelectable(true)
+            typeface = android.graphics.Typeface.MONOSPACE
+            setBackgroundColor(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
+        }
+
+        container.addView(cmdLabel)
+        container.addView(cmdView)
+
         val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(
             this,
             com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
         )
             .setTitle("Токен сгенерирован")
             .setView(container)
-            .setPositiveButton("Копировать") { _, _ ->
+            .setPositiveButton("Копировать токен") { _, _ ->
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token))
                 Toast.makeText(this, "Токен скопирован", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("Копировать команду") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Agent Command", agentCmd))
+                Toast.makeText(this, "Команда скопирована", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Закрыть", null)
             .create()
 
         dialog.show()
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(primColor)
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(primColor)
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(txtColor)
         val titleId = resources.getIdentifier("alertTitle", "id", "android")
         dialog.findViewById<TextView>(titleId)?.setTextColor(txtColor)

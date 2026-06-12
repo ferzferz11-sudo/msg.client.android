@@ -125,6 +125,16 @@ class RemoteAgentActivity : AppCompatActivity() {
             kotlinx.coroutines.delay(1000)
             viewModel.refreshAgentStatus()
         }
+
+        // Auto-refresh agent status every 30 seconds
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                while (true) {
+                    kotlinx.coroutines.delay(30000)
+                    viewModel.refreshAgentStatus()
+                }
+            }
+        }
     }
 
     override fun onResume() {
