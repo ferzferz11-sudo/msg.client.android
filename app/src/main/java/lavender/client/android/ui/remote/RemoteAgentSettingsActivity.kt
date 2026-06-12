@@ -219,10 +219,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         android.util.Log.d("RemoteAgentSettings", "generateToken CALLED: agentId=$agentId name=$agentName userId=$userId caps=$capabilities ttl=$ttlHours")
         Toast.makeText(this@RemoteAgentSettingsActivity, "Отправка запроса на генерацию...", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
+            android.util.Log.d("RemoteAgentSettings", "coroutine started")
             try {
-                if (BuildConfig.DEBUG) {
-                android.util.Log.d("RemoteAgentSettings", "generateToken: agentId=$agentId name=$agentName caps=$capabilities ttl=$ttlHours userId=$userId")
-                }
+                android.util.Log.d("RemoteAgentSettings", "calling GrpcClient.generateAgentToken...")
                 val response = GrpcClient.generateAgentToken(
                     agentId = agentId,
                     agentName = agentName,
@@ -230,9 +229,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     ttlHours = ttlHours,
                     adminUserId = userId
                 )
-                if (BuildConfig.DEBUG) {
-                android.util.Log.d("RemoteAgentSettings", "generateToken response: success=${response.success} token=${response.token.take(20)} error=${response.error}")
-                }
+                android.util.Log.d("RemoteAgentSettings", "GrpcClient.generateAgentToken returned: success=${response.success} error=${response.error}")
                 if (response.success) {
                     selectedAgentId = agentId
                     selectedAgentName = agentName
