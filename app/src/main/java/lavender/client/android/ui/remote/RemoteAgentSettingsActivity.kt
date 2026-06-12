@@ -122,9 +122,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private fun loadTokens() {
         activityScope.launch {
             try {
-                if (BuildConfig.DEBUG) {
-                android.util.Log.d("RemoteAgentSettings", "loadTokens: userId=$userId")
-                }
                 val response = GrpcClient.listAgentTokens(userId)
                 tokens.clear()
                 if (response.success) {
@@ -144,9 +141,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 }
                 renderTokens()
             } catch (e: kotlinx.coroutines.CancellationException) {
-                if (BuildConfig.DEBUG) {
-                android.util.Log.d("RemoteAgentSettings", "loadTokens cancelled")
-                }
                 throw e
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка загрузки токенов: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -218,8 +212,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             context = this,
             theme = ThemeStore.currentTheme(),
             onGenerate = { agentName, capabilities, ttlHours ->
-                android.util.Log.d("RemoteAgentSettings", "onGenerate CALLED: name=$agentName caps=$capabilities ttl=$ttlHours")
-                Toast.makeText(this@RemoteAgentSettingsActivity, "Генерация токена: $agentName", Toast.LENGTH_SHORT).show()
                 val agentId = "agent_${System.currentTimeMillis()}"
                 generateToken(agentId, agentName, capabilities, ttlHours)
             }
@@ -228,48 +220,29 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     }
 
     private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
-        android.util.Log.d("RemoteAgentSettings", "generateToken CALLED: agentId=$agentId name=$agentName userId=$userId caps=$capabilities ttl=$ttlHours")
-        Toast.makeText(this@RemoteAgentSettingsActivity, "Отправка запроса на генерацию...", Toast.LENGTH_SHORT).show()
         activityScope.launch {
-            android.util.Log.d("RemoteAgentSettings", "coroutine started (activityScope)")
             try {
-                android.util.Log.d("RemoteAgentSettings", "calling GrpcClient.generateAgentToken...")
-                val response = try {
-                    GrpcClient.generateAgentToken(
-                        agentId = agentId,
-                        agentName = agentName,
-                        capabilities = capabilities,
-                        ttlHours = ttlHours,
-                        adminUserId = userId
-                    )
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    android.util.Log.e("RemoteAgentSettings", "generateToken CANCELLED", e)
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Запрос отменён", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-                android.util.Log.d("RemoteAgentSettings", "GrpcClient.generateAgentToken returned: success=${response.success} error=${response.error}")
+                val response = GrpcClient.generateAgentToken(
+                    agentId = agentId,
+                    agentName = agentName,
+                    capabilities = capabilities,
+                    ttlHours = ttlHours,
+                    adminUserId = userId
+                )
                 if (response.success) {
                     selectedAgentId = agentId
                     selectedAgentName = agentName
                     selectedToken = response.token
-                    if (BuildConfig.DEBUG) {
-                        android.util.Log.d("RemoteAgentSettings", "Token saved: agentId=$agentId token=${response.token.take(20)}... selectedToken=${selectedToken.take(20)}...")
-                    }
                     saveSelectedAgent()
                     showTokenResultDialog(response.token, agentId, agentName)
                     loadTokens()
                 } else {
-                    if (BuildConfig.DEBUG) {
-                        android.util.Log.e("RemoteAgentSettings", "Token generation failed: ${response.error}")
-                    }
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d("RemoteAgentSettings", "generateToken cancelled")
                 throw e
             } catch (e: Exception) {
-                android.util.Log.e("RemoteAgentSettings", "generateToken error: ${e.message}", e)
-                Toast.makeText(this@RemoteAgentSettingsActivity, "ОШИБКА: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -396,9 +369,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                if (BuildConfig.DEBUG) {
-                android.util.Log.d("RemoteAgentSettings", "revokeToken cancelled")
-                }
                 throw e
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -409,9 +379,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     // ===== Agent Process Management (server-side) =====
 
     private fun startAgentOnServer() {
-        if (BuildConfig.DEBUG) {
-            android.util.Log.d("RemoteAgentSettings", "startAgentOnServer: selectedToken=${selectedToken.take(20)}... selectedAgentId=$selectedAgentId")
-        }
         if (selectedToken.isEmpty()) {
             Toast.makeText(this, "Сначала сгенерируйте токен", Toast.LENGTH_LONG).show()
             return

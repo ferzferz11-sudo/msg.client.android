@@ -702,12 +702,10 @@ suspend fun createHermesSession(
     mode: String = ""
 ): CreateHermesSessionResponseProto = withContext(Dispatchers.IO) {
     if (lavender.client.android.BuildConfig.DEBUG) {
-    android.util.Log.d("HermesGrpc", "createHermesSession: userId=$userId agentId=$agentId mode=$mode")
     }
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
         if (lavender.client.android.BuildConfig.DEBUG) {
-        android.util.Log.e("HermesGrpc", "createHermesSession: CHANNEL IS NULL OR DEAD! channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}")
         }
         lavender.client.android.data.models.AppLog.error(
             "HermesGrpc:createHermesSession",
@@ -717,7 +715,6 @@ suspend fun createHermesSession(
     }
 
     if (lavender.client.android.BuildConfig.DEBUG) {
-    android.util.Log.d("HermesGrpc", "createHermesSession: channel OK, creating call...")
     }
 
     val methodDesc = MethodDescriptor.newBuilder<CreateHermesSessionRequestProto, CreateHermesSessionResponseProto>()
@@ -764,13 +761,11 @@ suspend fun createHermesSession(
     call.start(object : io.grpc.ClientCall.Listener<CreateHermesSessionResponseProto>() {
         override fun onMessage(message: CreateHermesSessionResponseProto) {
             if (lavender.client.android.BuildConfig.DEBUG) {
-            android.util.Log.d("HermesGrpc", "createHermesSession: response success=${message.success} sessionId=${message.sessionId} message=${message.message}")
             }
             result.complete(message)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
             if (lavender.client.android.BuildConfig.DEBUG) {
-            android.util.Log.d("HermesGrpc", "createHermesSession: onClose status=${status.code} desc=${status.description}")
             }
             if (!result.isCompleted) {
                 lavender.client.android.data.models.AppLog.error(
@@ -788,7 +783,6 @@ suspend fun createHermesSession(
 
     val response = withTimeoutOrNull(10000) { result.await() } ?: CreateHermesSessionResponseProto()
     if (lavender.client.android.BuildConfig.DEBUG) {
-    android.util.Log.d("HermesGrpc", "createHermesSession: final result success=${response.success} sessionId=${response.sessionId}")
     }
     return@withContext response
 }
@@ -1165,12 +1159,9 @@ suspend fun generateAgentToken(
     adminUserId: String
 ): GenerateAgentTokenResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
-    android.util.Log.d("HermesGrpc", "generateAgentToken: channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}")
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        android.util.Log.e("HermesGrpc", "generateAgentToken: CHANNEL IS NULL OR DEAD!")
         return@withContext GenerateAgentTokenResponseProto(success = false, error = "Channel dead")
     }
-    android.util.Log.d("HermesGrpc", "generateAgentToken: creating method descriptor...")
     val methodDesc = MethodDescriptor.newBuilder<GenerateAgentTokenRequestProto, GenerateAgentTokenResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName("hermes_agent.HermesAgentService/GenerateAgentToken")
@@ -1209,45 +1200,34 @@ suspend fun generateAgentToken(
         })
         .build()
     val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
-    android.util.Log.d("HermesGrpc", "generateAgentToken: call created, starting...")
     var earlyResult: GenerateAgentTokenResponseProto? = null
     val result = suspendCancellableCoroutine<GenerateAgentTokenResponseProto> { cont ->
         try {
             call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
                 override fun onMessage(message: GenerateAgentTokenResponseProto) {
-                    android.util.Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
                     cont.resumeWith(Result.success(message))
                 }
                 override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                    android.util.Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
                     if (cont.isActive) {
-                        android.util.Log.d("HermesGrpc", "generateAgentToken: resuming cont with error")
                         cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
                     } else {
-                        android.util.Log.d("HermesGrpc", "generateAgentToken: cont already inactive, saving early result")
                         earlyResult = GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())
                     }
                 }
             }, io.grpc.Metadata())
-            android.util.Log.d("HermesGrpc", "generateAgentToken: call.start() returned normally, sending message...")
             call.sendMessage(GenerateAgentTokenRequestProto(
                 agentId = agentId, agentName = agentName, capabilities = capabilities,
                 ttlHours = ttlHours, adminUserId = adminUserId
             ))
             call.halfClose()
             call.request(1)
-            android.util.Log.d("HermesGrpc", "generateAgentToken: message sent, waiting for response...")
         } catch (e: Exception) {
-            android.util.Log.e("HermesGrpc", "generateAgentToken: exception in start/send", e)
             if (cont.isActive) {
                 cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = "error: ${e.message}")))
             }
         }
     }
-    android.util.Log.d("HermesGrpc", "generateAgentToken: suspendCancellableCoroutine returned, result=$result, earlyResult=$earlyResult")
-    // Use result if it has success=true, otherwise fall back to earlyResult
     val response = if (result.success) result else (earlyResult ?: result)
-    android.util.Log.d("HermesGrpc", "generateAgentToken: final response=$response")
     return@withContext response
 }
 
