@@ -1245,11 +1245,10 @@ suspend fun generateAgentToken(
         }
     }
     android.util.Log.d("HermesGrpc", "generateAgentToken: suspendCancellableCoroutine returned, result=$result, earlyResult=$earlyResult")
-    val response = earlyResult ?: result
+    // Use result if it has success=true, otherwise fall back to earlyResult
+    val response = if (result.success) result else (earlyResult ?: result)
     android.util.Log.d("HermesGrpc", "generateAgentToken: final response=$response")
     return@withContext response
-    return@withContext response
-        ?: GenerateAgentTokenResponseProto(success = false, error = "Timeout")
 }
 
 suspend fun revokeAgentToken(agentId: String, adminUserId: String): RevokeAgentTokenResponseProto = withContext(Dispatchers.IO) {
