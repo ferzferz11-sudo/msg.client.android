@@ -2519,7 +2519,6 @@ class ChatListActivity : AppCompatActivity() {
                                 if (userId.isNotEmpty()) {
                                     lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
                                 }
-                                Toast.makeText(this@ChatListActivity, R.string.login_success, Toast.LENGTH_LONG).show()
                                 isTransitioning = true
                                 sheet.dismiss()
                                 recreate()

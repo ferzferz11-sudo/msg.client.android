@@ -117,6 +117,7 @@ class NewChatActivity : AppCompatActivity() {
     private var selectionMode = false
     private var replyingTo: Message? = null
     private var lastMessageCount = 0
+    private var shouldScrollToBottom = false
     private var currentPhotoUri: Uri? = null
 
     private lateinit var toolbar: com.google.android.material.appbar.MaterialToolbar
@@ -652,7 +653,12 @@ class NewChatActivity : AppCompatActivity() {
                     val hasNewMessages = roomMessages.size > lastMessageCount
 
                     adapter.submitList(roomMessages) {
-                        // Auto-scroll removed — preserve scroll position
+                        if (shouldScrollToBottom) {
+                            shouldScrollToBottom = false
+                            messagesRecyclerView.post {
+                                messagesRecyclerView.scrollToPosition(roomMessages.size - 1)
+                            }
+                        }
                     }
 
                     if (hasNewMessages && roomMessages.any { it.user != username && !it.isRead }) {
@@ -1093,6 +1099,7 @@ class NewChatActivity : AppCompatActivity() {
 
         val et = when { text.isEmpty() && imageUrl.isEmpty() -> "Message"; imageUrl.isNotEmpty() && text.isEmpty() -> ""; else -> text }
         val msg = Message(id = java.util.UUID.randomUUID().toString(), user = username, text = et, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrl, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "", userId = grpcClient.getUserId() ?: "", isSent = false)
+        shouldScrollToBottom = true
         grpcClient.addLocalMessage(msg); grpcClient.sendMessage(msg)
         if (roomId.startsWith("favorites_")) viewModel.markRead(username)
         grpcClient.deleteDraft(roomId); messageInput.text.clear(); hideReplyPreview(); sendButton.isVisible = false; audioButton.isVisible = true
@@ -1232,6 +1239,7 @@ class NewChatActivity : AppCompatActivity() {
         typingJob?.cancel(); if (isTypingSignalSent) { isTypingSignalSent = false; grpcClient.sendTypingSignal(username, false) }
         val et = when { text.isEmpty() && imageUrls.isEmpty() -> "Message"; imageUrls.isNotEmpty() && text.isEmpty() -> ""; else -> text }
         val msg = Message(id = java.util.UUID.randomUUID().toString(), user = username, text = et, timestamp = System.currentTimeMillis(), roomId = roomId, imageUrl = imageUrls.firstOrNull() ?: "", imageUrls = imageUrls, repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "", repliedToText = replyingTo?.text ?: "", userId = grpcClient.getUserId() ?: "", isSent = false)
+        shouldScrollToBottom = true
         grpcClient.addLocalMessage(msg); grpcClient.sendMessage(msg)
         if (roomId.startsWith("favorites_")) viewModel.markRead(username)
         grpcClient.deleteDraft(roomId); messageInput.text.clear(); selectedImageUris.clear(); imagePreviewScroll.isVisible = false; hideReplyPreview(); sendButton.isVisible = false; audioButton.isVisible = true
