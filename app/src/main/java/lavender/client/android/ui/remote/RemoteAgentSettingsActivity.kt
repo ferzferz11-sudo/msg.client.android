@@ -71,7 +71,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private fun loadTokens() {
         lifecycleScope.launch {
             try {
+                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "loadTokens: userId=$userId")
+                }
                 val response = GrpcClient.listAgentTokens(userId)
                 tokens.clear()
                 if (response.success) {
@@ -91,7 +93,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 }
                 renderTokens()
             } catch (e: kotlinx.coroutines.CancellationException) {
+                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "loadTokens cancelled")
+                }
                 throw e
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка загрузки токенов: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -173,7 +177,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
         lifecycleScope.launch {
             try {
+                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "generateToken: agentId=$agentId name=$agentName caps=$capabilities ttl=$ttlHours userId=$userId")
+                }
                 val response = GrpcClient.generateAgentToken(
                     agentId = agentId,
                     agentName = agentName,
@@ -181,7 +187,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     ttlHours = ttlHours,
                     adminUserId = userId
                 )
+                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "generateToken response: success=${response.success} token=${response.token.take(20)} error=${response.error}")
+                }
                 if (response.success) {
                     showTokenResultDialog(response.token)
                     loadTokens()
@@ -189,10 +197,14 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
+                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "generateToken cancelled")
+                }
                 throw e // re-throw to keep structured concurrency
             } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
                 android.util.Log.e("RemoteAgentSettings", "generateToken error", e)
+                }
                 Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
@@ -287,7 +299,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${response.error}", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
+                if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "revokeToken cancelled")
+                }
                 throw e
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()

@@ -193,7 +193,9 @@ fun chatWithOrchestrator(
                 // Stream had error — retry
                 attempt++
                 if (attempt < maxRetries) {
+                    if (lavender.client.android.BuildConfig.DEBUG) {
                     Log.d("HermesGrpc", "Retrying chatWithOrchestrator in ${retryDelay}ms (attempt $attempt/$maxRetries)")
+                    }
                     delay(retryDelay)
                     retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
                 }
@@ -201,7 +203,9 @@ fun chatWithOrchestrator(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (lavender.client.android.BuildConfig.DEBUG) {
                 Log.e("HermesGrpc", "chatWithOrchestrator error: ${e.message}")
+                }
                 _hermesTyping.tryEmit(false)
                 val errorResp = OrchestratorResponseProto(
                     token = "",
@@ -222,7 +226,9 @@ fun chatWithOrchestrator(
         }
 
         if (attempt >= maxRetries) {
+            if (lavender.client.android.BuildConfig.DEBUG) {
             Log.e("HermesGrpc", "chatWithOrchestrator: max retries exceeded")
+            }
             val errorResp = OrchestratorResponseProto(
                 token = "",
                 finished = true,
@@ -695,10 +701,14 @@ suspend fun createHermesSession(
     agentId: String = "",
     mode: String = ""
 ): CreateHermesSessionResponseProto = withContext(Dispatchers.IO) {
+    if (lavender.client.android.BuildConfig.DEBUG) {
     android.util.Log.d("HermesGrpc", "createHermesSession: userId=$userId agentId=$agentId mode=$mode")
+    }
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
+        if (lavender.client.android.BuildConfig.DEBUG) {
         android.util.Log.e("HermesGrpc", "createHermesSession: CHANNEL IS NULL OR DEAD! channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}")
+        }
         lavender.client.android.data.models.AppLog.error(
             "HermesGrpc:createHermesSession",
             "Channel is null or dead! userId=$userId channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}"
@@ -706,7 +716,9 @@ suspend fun createHermesSession(
         return@withContext CreateHermesSessionResponseProto()
     }
 
+    if (lavender.client.android.BuildConfig.DEBUG) {
     android.util.Log.d("HermesGrpc", "createHermesSession: channel OK, creating call...")
+    }
 
     val methodDesc = MethodDescriptor.newBuilder<CreateHermesSessionRequestProto, CreateHermesSessionResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
@@ -751,11 +763,15 @@ suspend fun createHermesSession(
 
     call.start(object : io.grpc.ClientCall.Listener<CreateHermesSessionResponseProto>() {
         override fun onMessage(message: CreateHermesSessionResponseProto) {
+            if (lavender.client.android.BuildConfig.DEBUG) {
             android.util.Log.d("HermesGrpc", "createHermesSession: response success=${message.success} sessionId=${message.sessionId} message=${message.message}")
+            }
             result.complete(message)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (lavender.client.android.BuildConfig.DEBUG) {
             android.util.Log.d("HermesGrpc", "createHermesSession: onClose status=${status.code} desc=${status.description}")
+            }
             if (!result.isCompleted) {
                 lavender.client.android.data.models.AppLog.error(
                     "HermesGrpc:createHermesSession",
@@ -771,7 +787,9 @@ suspend fun createHermesSession(
     call.request(1)
 
     val response = withTimeoutOrNull(10000) { result.await() } ?: CreateHermesSessionResponseProto()
+    if (lavender.client.android.BuildConfig.DEBUG) {
     android.util.Log.d("HermesGrpc", "createHermesSession: final result success=${response.success} sessionId=${response.sessionId}")
+    }
     return@withContext response
 }
 
@@ -914,7 +932,9 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
         Log.w("HermesGrpc", "listRemoteAgents: channel dead")
         return@withContext emptyList()
     }
+    if (lavender.client.android.BuildConfig.DEBUG) {
     Log.d("HermesGrpc", "listRemoteAgents: calling messenger.ChatService/ListRemoteAgents")
+    }
     val methodDesc = MethodDescriptor.newBuilder<ListRemoteAgentsRequestProto, ListRemoteAgentsResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName("messenger.ChatService/ListRemoteAgents")
@@ -983,11 +1003,15 @@ suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoPro
 
     call.start(object : io.grpc.ClientCall.Listener<ListRemoteAgentsResponseProto>() {
         override fun onMessage(message: ListRemoteAgentsResponseProto) {
+            if (lavender.client.android.BuildConfig.DEBUG) {
             Log.d("HermesGrpc", "listRemoteAgents: received ${message.agents.size} agents")
+            }
             result.complete(message.agents)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            if (lavender.client.android.BuildConfig.DEBUG) {
             Log.d("HermesGrpc", "listRemoteAgents: onClose status=${status.code} desc=${status.description}")
+            }
             if (!result.isCompleted) result.complete(emptyList())
         }
     }, io.grpc.Metadata())
@@ -1185,11 +1209,15 @@ suspend fun generateAgentToken(
     val result = suspendCancellableCoroutine<GenerateAgentTokenResponseProto> { cont ->
         call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
             override fun onMessage(message: GenerateAgentTokenResponseProto) {
+                if (lavender.client.android.BuildConfig.DEBUG) {
                 Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
+                }
                 cont.resumeWith(Result.success(message))
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (lavender.client.android.BuildConfig.DEBUG) {
                 Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
+                }
                 if (cont.isActive) {
                     cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
                 }
