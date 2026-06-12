@@ -1229,18 +1229,25 @@ suspend fun generateAgentToken(
                     }
                 }
             }, io.grpc.Metadata())
-            android.util.Log.d("HermesGrpc", "generateAgentToken: call.start() returned normally")
+            android.util.Log.d("HermesGrpc", "generateAgentToken: call.start() returned normally, sending message...")
+            call.sendMessage(GenerateAgentTokenRequestProto(
+                agentId = agentId, agentName = agentName, capabilities = capabilities,
+                ttlHours = ttlHours, adminUserId = adminUserId
+            ))
+            call.halfClose()
+            call.request(1)
+            android.util.Log.d("HermesGrpc", "generateAgentToken: message sent, waiting for response...")
         } catch (e: Exception) {
-            android.util.Log.e("HermesGrpc", "generateAgentToken: call.start() threw exception", e)
+            android.util.Log.e("HermesGrpc", "generateAgentToken: exception in start/send", e)
             if (cont.isActive) {
-                cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = "start() error: ${e.message}")))
+                cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = "error: ${e.message}")))
             }
         }
-        android.util.Log.d("HermesGrpc", "generateAgentToken: waiting for resume or early result...")
     }
     android.util.Log.d("HermesGrpc", "generateAgentToken: suspendCancellableCoroutine returned, result=$result, earlyResult=$earlyResult")
     val response = earlyResult ?: result
     android.util.Log.d("HermesGrpc", "generateAgentToken: final response=$response")
+    return@withContext response
     return@withContext response
         ?: GenerateAgentTokenResponseProto(success = false, error = "Timeout")
 }
