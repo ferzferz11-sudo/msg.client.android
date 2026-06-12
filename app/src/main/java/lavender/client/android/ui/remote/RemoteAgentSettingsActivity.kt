@@ -73,6 +73,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         btnStopAgent = findViewById(R.id.btnStopAgent)
         agentStatusText = findViewById(R.id.agentStatusText)
 
+        // Set initial status text color
+        agentStatusText.setTextColor(ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE))
+
         // Toolbar
         toolbar.setBackgroundColor(surfaceColor)
         toolbar.setTitleTextColor(txtColor)
@@ -310,18 +313,27 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         )
             .setTitle("Токен сгенерирован")
             .setView(container)
-            .setPositiveButton("Копировать токен") { _, _ ->
+            .setPositiveButton("Копировать токен", null)
+            .setNeutralButton("Копировать команду", null)
+            .setNegativeButton("Закрыть", null)
+            .create()
+
+        dialog.setOnShowListener {
+            // Override button clicks to prevent auto-dismiss
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token))
                 Toast.makeText(this, "Токен скопирован", Toast.LENGTH_SHORT).show()
             }
-            .setNeutralButton("Копировать команду") { _, _ ->
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Agent Command", agentCmd))
                 Toast.makeText(this, "Команда скопирована", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Закрыть", null)
-            .create()
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                dialog.dismiss()
+            }
+        }
 
         dialog.show()
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(primColor)
@@ -408,16 +420,16 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 if (response.success) {
                     Toast.makeText(this@RemoteAgentSettingsActivity,
                         "Агент запущен (PID: ${response.pid})", Toast.LENGTH_LONG).show()
-                    agentStatusText.text = "Статус: запущен (PID: ${response.pid})"
+                    updateAgentStatusText("подключён", true)
                 } else {
                     Toast.makeText(this@RemoteAgentSettingsActivity,
                         "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
-                    agentStatusText.text = "Статус: ошибка — ${response.error}"
+                    updateAgentStatusText("ошибка — ${response.error}", false)
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity,
                     "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
-                agentStatusText.text = "Статус: ошибка — ${e.message}"
+                updateAgentStatusText("ошибка — ${e.message}", false)
             }
             btnStartAgent.isEnabled = true
         }
@@ -441,11 +453,11 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 if (response.success) {
                     Toast.makeText(this@RemoteAgentSettingsActivity,
                         "Агент остановлен", Toast.LENGTH_SHORT).show()
-                    agentStatusText.text = "Статус: остановлен"
+                    updateAgentStatusText("остановлен", false)
                 } else {
                     Toast.makeText(this@RemoteAgentSettingsActivity,
                         "Ошибка: ${response.error}", Toast.LENGTH_LONG).show()
-                    agentStatusText.text = "Статус: ошибка — ${response.error}"
+                    updateAgentStatusText("ошибка — ${response.error}", false)
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@RemoteAgentSettingsActivity,
@@ -461,13 +473,26 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val response = GrpcClient.getAgentProcessStatus(selectedAgentId, userId)
-                agentStatusText.text = if (response.running) {
-                    "Статус: запущен (PID: ${response.pid}, с ${response.startedAt})"
+                if (response.running) {
+                    updateAgentStatusText("подключён", true)
                 } else {
-                    "Статус: не запущен"
+                    updateAgentStatusText("не запущен", false)
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                updateAgentStatusText("не запущен", false)
+            }
         }
+    }
+
+    private fun updateAgentStatusText(status: String, connected: Boolean) {
+        val theme = ThemeStore.currentTheme()
+        val txtColor = if (connected) {
+            Color.parseColor("#4CAF50") // green
+        } else {
+            ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        }
+        agentStatusText.text = "Статус: $status"
+        agentStatusText.setTextColor(txtColor)
     }
 
     private fun saveSelectedAgent() {
@@ -484,7 +509,19 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         selectedAgentName = prefs.getString(PREF_AGENT_NAME, "") ?: ""
         selectedToken = prefs.getString(PREF_AGENT_TOKEN, "") ?: ""
         if (selectedAgentId.isNotEmpty()) {
-            agentStatusText.text = "Статус: выбран агент $selectedAgentName"
+            // Check actual process status
+            lifecycleScope.launch {
+                try {
+                    val response = GrpcClient.getAgentProcessStatus(selectedAgentId, userId)
+                    if (response.running) {
+                        updateAgentStatusText("подключён", true)
+                    } else {
+                        updateAgentStatusText("не запущен", false)
+                    }
+                } catch (_: Exception) {
+                    updateAgentStatusText("не запущен", false)
+                }
+            }
         }
     }
 }
