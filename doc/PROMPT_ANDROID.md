@@ -1,10 +1,9 @@
 # Промпт для новой сессии — v1.1.3.5 (Android)
 
 **Дата:** 2026-06-13
-**Версия:** v1.1.3.4
+**Версия:** v1.1.3.5
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** v1.1.3.4 (выпущен)
-**GitHub релиз:** https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.4
+**Текущая версия APK:** v1.1.3.4 (выпущен, ferz собирает локально)
 
 ---
 
@@ -15,56 +14,48 @@
 - HermesGrpc — все методы реализованы
 - **Hermes Gateway** — SSH туннель работает (JSch)
 - **tunnel_mode** — передаётся в DeployAgentTask
-- **Проблема:** при входе/выходе из Activity подключение к агенту теряется
+- **RemoteAgentService** — foreground service создан и работает
+- **RemoteAgentManager** — singleton для привязки UI к сервису
 
 ---
 
-## 🔴 Приоритетная задача: Remote Agent — фоновое подключение
+## ✅ Что сделано в v1.1.3.5
 
-### Проблема
-SSH туннель и gRPC подключение привязаны к Activity lifecycle.
-При переходе между Activity или повороте экрана — всё теряется.
+### Foreground Service + Singleton Manager
+- `RemoteAgentService.kt` — foreground service с SSH туннелем + gRPC
+- `RemoteAgentManager.kt` — singleton для bind/unbind UI к сервису
+- `RemoteAgentSettingsActivity.kt` — привязка к сервису через ServiceConnection + RemoteAgentStateListener
+- `RemoteAgentActivity.kt` — привязка к сервису через ServiceConnection + RemoteAgentStateListener
+- `AndroidManifest.xml` — добавлен RemoteAgentService + FOREGROUND_SERVICE_CONNECTED_DEVICE
+- `RemoteAgentViewModel.kt` — tunnel check через RemoteAgentManager
 
-### Решение: Foreground Service + Singleton Manager
+### Архитектура persistent connection
 
-1. **`RemoteAgentService.kt`** — foreground service
-   - Управляет SSH туннелем через `HermesGatewayManager`
-   - Держит gRPC подключение
-   - Уведомление с статусом подключения
-   - `START_STICKY` — перезапускается системой
-
-2. **`RemoteAgentManager.kt`** — singleton
-   - `bindService()` / `unbindService()` из Activity
-   - `isConnected()` / `sendTask()` / `getStatus()`
-   - Callback для результатов задач
-
-3. **Activity привязываются к сервису** через `ServiceConnection`
-   - `RemoteAgentSettingsActivity` — настройки + статус
-   - `RemoteAgentActivity` — чат + отправка задач
-
-### Файлы
-- `ui/remote/RemoteAgentService.kt` — НОВЫЙ
-- `ui/remote/RemoteAgentManager.kt` — НОВЫЙ (singleton)
-- `ui/remote/RemoteAgentSettingsActivity.kt` — обновить привязку
-- `ui/remote/RemoteAgentActivity.kt` — обновить привязку
-- `AndroidManifest.xml` — добавить сервис и разрешения
-
-### Ключевые моменты
-- `unbindService()` при уничтожении Activity, но сервис продолжает работать
-- Сервис останавливается явно через кнопку "Отключить"
-- Уведомление: "Агент подключён к 13.140.25.249:50051" / "Отключено"
-
----
-
-## ЧТО СДЕЛАНО В v1.1.3.4
-
-- `HermesGatewayManager.kt` — SSH туннель через JSch
-- `RemoteAgentSettingsActivity.kt` — UI "Подключение через шлюз"
-- `activity_remote_agent_settings.xml` — layout с полями
-- `MessengerProto.kt` — tunnel_mode поля
-- `HermesGrpc.kt` — сериализация tunnel_mode
-- JSch зависимость (`com.jcraft:jsch:0.1.55`)
-- Понятные ошибки (SSH alias vs IP, auth failed, timeout)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    RemoteAgentService                        │
+│                    (Foreground Service)                      │
+│                                                             │
+│  ┌─────────────────┐  ┌──────────────────┐                 │
+│  │ HermesGateway   │  │ GrpcClient       │                 │
+│  │ Manager         │  │ (persistent)     │                 │
+│  │ (SSH tunnel)    │  │                  │                 │
+│  └────────┬────────┘  └────────┬─────────┘                 │
+│           │                    │                            │
+│  ┌────────┴────────────────────┴─────────┐                 │
+│  │         RemoteAgentManager            │                 │
+│  │         (singleton, binds to App)      │                 │
+│  └───────────────────────────────────────┘                 │
+└─────────────────────────────────────────────────────────────┘
+           │                              │
+           │ ServiceConnection            │ ServiceConnection
+           ▼                              ▼
+┌──────────────────────┐    ┌──────────────────────────┐
+│ RemoteAgentSettings  │    │ RemoteAgentActivity      │
+│ Activity             │    │ (чат с агентом)          │
+│ (настройки туннеля)  │    │                          │
+└──────────────────────┘    └──────────────────────────┘
+```
 
 ---
 
@@ -75,9 +66,9 @@ SSH туннель и gRPC подключение привязаны к Activity
 - `ui/remote/RemoteAgentSettingsActivity.kt` — настройки + SSH туннель
 - `ui/remote/RemoteAgentViewModel.kt` — ViewModel
 
-### Сервисы (новые)
-- `ui/remote/RemoteAgentService.kt` — foreground service
-- `ui/remote/RemoteAgentManager.kt` — singleton manager
+### Сервисы
+- `ui/remote/RemoteAgentService.kt` — foreground service (new in v1.1.3.5)
+- `ui/remote/RemoteAgentManager.kt` — singleton manager (new in v1.1.3.5)
 
 ### gRPC / Proto
 - `data/grpc/HermesGrpc.kt` — gRPC методы
