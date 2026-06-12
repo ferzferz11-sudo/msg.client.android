@@ -102,7 +102,7 @@ class RemoteAgentActivity : AppCompatActivity() {
         // Task type chips
         setupTaskTypeChips()
 
-        // Observe agents for spinner
+        // Observe agents for spinner and connection status
         observeAgents()
 
         // Chat
@@ -307,10 +307,24 @@ class RemoteAgentActivity : AppCompatActivity() {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.agents.collect { agents ->
                     @Suppress("UNCHECKED_CAST")
-                    val adapter = agentSpinner?.adapter as? ArrayAdapter<String>
-                    adapter?.clear()
-                    agents.forEach { adapter?.add(it.name) }
-                    adapter?.notifyDataSetChanged()
+                    val spinnerAdapter = agentSpinner?.adapter as? ArrayAdapter<String>
+                    spinnerAdapter?.clear()
+                    agents.forEach { spinnerAdapter?.add(it.name) }
+                    spinnerAdapter?.notifyDataSetChanged()
+                    
+                    // Update connection status based on selected agent
+                    val selectedAgent = viewModel.selectedAgent.value
+                    if (selectedAgent != null) {
+                        val agent = agents.find { it.id == selectedAgent.id }
+                        val isConnected = agent?.status == "connected"
+                        updateStatus(isConnected)
+                    } else if (agents.isNotEmpty()) {
+                        // Auto-select first agent if none selected
+                        viewModel.selectAgent(agents.first())
+                        updateStatus(agents.first().status == "connected")
+                    } else {
+                        updateStatus(false)
+                    }
                 }
             }
         }
