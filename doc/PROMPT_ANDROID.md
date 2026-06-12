@@ -16,6 +16,7 @@
 - **tunnel_mode** — передаётся в DeployAgentTask
 - **RemoteAgentService** — foreground service создан и работает
 - **RemoteAgentManager** — singleton для привязки UI к сервису
+- ✅ Исправлен баг: `import HermesGrpc` → удалён из RemoteAgentService.kt
 
 ---
 
