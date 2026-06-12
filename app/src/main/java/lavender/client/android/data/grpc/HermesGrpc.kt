@@ -1170,6 +1170,7 @@ suspend fun generateAgentToken(
         android.util.Log.e("HermesGrpc", "generateAgentToken: CHANNEL IS NULL OR DEAD!")
         return@withContext GenerateAgentTokenResponseProto(success = false, error = "Channel dead")
     }
+    android.util.Log.d("HermesGrpc", "generateAgentToken: creating method descriptor...")
     val methodDesc = MethodDescriptor.newBuilder<GenerateAgentTokenRequestProto, GenerateAgentTokenResponseProto>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName("hermes_agent.HermesAgentService/GenerateAgentToken")
@@ -1208,31 +1209,32 @@ suspend fun generateAgentToken(
         })
         .build()
     val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+    android.util.Log.d("HermesGrpc", "generateAgentToken: call created, starting...")
     val result = suspendCancellableCoroutine<GenerateAgentTokenResponseProto> { cont ->
         call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
             override fun onMessage(message: GenerateAgentTokenResponseProto) {
-                if (lavender.client.android.BuildConfig.DEBUG) {
-                Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
-                }
+                android.util.Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
                 cont.resumeWith(Result.success(message))
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (lavender.client.android.BuildConfig.DEBUG) {
-                Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
-                }
+                android.util.Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
                 if (cont.isActive) {
                     cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
                 }
             }
         }, io.grpc.Metadata())
     }
+    android.util.Log.d("HermesGrpc", "generateAgentToken: sending message...")
     call.sendMessage(GenerateAgentTokenRequestProto(
         agentId = agentId, agentName = agentName, capabilities = capabilities,
         ttlHours = ttlHours, adminUserId = adminUserId
     ))
     call.halfClose()
     call.request(1)
-    return@withContext withTimeoutOrNull(15000) { result }
+    android.util.Log.d("HermesGrpc", "generateAgentToken: waiting for response (timeout=15s)...")
+    val response = withTimeoutOrNull(15000) { result }
+    android.util.Log.d("HermesGrpc", "generateAgentToken: response=$response")
+    return@withContext response
         ?: GenerateAgentTokenResponseProto(success = false, error = "Timeout")
 }
 
