@@ -3,7 +3,8 @@ package lavender.client.android.ui.remote
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.view.MenuItem
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -30,6 +31,7 @@ import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
+import lavender.client.android.ui.widget.CommandBottomSheet
 
 class RemoteAgentActivity : AppCompatActivity(),
     RemoteAgentManager.RemoteAgentStateListener {
@@ -55,6 +57,22 @@ class RemoteAgentActivity : AppCompatActivity(),
         "file" to "Файлы",
         "docker" to "Docker",
         "ai" to "AI"
+    )
+
+    // Agent commands for the command button
+    private val agentCommands = listOf(
+        CommandBottomSheet.CommandInfo("/help", "Показать справку по командам"),
+        CommandBottomSheet.CommandInfo("/status", "Статус агента и подключения"),
+        CommandBottomSheet.CommandInfo("/logs", "Показать логи сервера"),
+        CommandBottomSheet.CommandInfo("/deploy", "Деплой проекта"),
+        CommandBottomSheet.CommandInfo("/restart", "Перезапустить сервис"),
+        CommandBottomSheet.CommandInfo("/git pull", "Обновить код из Git"),
+        CommandBottomSheet.CommandInfo("/git status", "Статус Git репозитория"),
+        CommandBottomSheet.CommandInfo("/docker ps", "Список запущенных контейнеров"),
+        CommandBottomSheet.CommandInfo("/docker logs", "Логи контейнера"),
+        CommandBottomSheet.CommandInfo("/ps", "Список процессов"),
+        CommandBottomSheet.CommandInfo("/df", "Свободное место на диске"),
+        CommandBottomSheet.CommandInfo("/uptime", "Время работы сервера")
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -212,11 +230,44 @@ class RemoteAgentActivity : AppCompatActivity(),
         // Hide ChatWidget's own toolbar — we have our own in the activity
         chatWidget.findViewById<View>(R.id.toolbar)?.visibility = View.GONE
 
+        // Send button listener
         chatWidget.setOnSendMessageListener { text ->
             if (text.isNotBlank()) {
                 viewModel.sendMessage(text.trim(), userId, selectedTaskType)
             }
         }
+
+        // Command button listener — show agent commands
+        chatWidget.commandButton.setOnClickListener {
+            showAgentCommandMenu()
+        }
+
+        // TextWatcher to show/hide send button based on input
+        chatWidget.messageInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val hasText = s?.toString()?.trim()?.isNotEmpty() == true
+                chatWidget.sendButton.visibility = if (hasText) View.VISIBLE else View.GONE
+                chatWidget.audioButton.visibility = if (hasText) View.GONE else View.VISIBLE
+            }
+        })
+
+        // Initial state — hide send button until user types
+        chatWidget.sendButton.visibility = View.GONE
+        chatWidget.audioButton.visibility = View.VISIBLE
+    }
+
+    private fun showAgentCommandMenu() {
+        val sheet = CommandBottomSheet(
+            context = this,
+            commands = agentCommands,
+            onCommandSelected = { cmd ->
+                chatWidget.messageInput.setText(cmd.command + " ")
+                chatWidget.messageInput.setSelection(cmd.command.length + 1)
+            }
+        )
+        sheet.buildAndShow()
     }
 
     private fun observeState() {
@@ -234,13 +285,17 @@ class RemoteAgentActivity : AppCompatActivity(),
                             content = content,
                             senderId = if (msg.isUser) userId else "remote_agent",
                             senderName = if (msg.isUser) "Вы" else "Агент",
-                            senderEmoji = if (msg.isUser) "" else "🖥",
+                            senderEmoji = if (msg.isUser) "" else "\uD83D\uDDC2",
                             timestamp = msg.timestamp,
                             isCurrentUser = msg.isUser,
                             isRead = true
                         )
                     }
                     adapter.submitList(items)
+                    // Auto-scroll to bottom
+                    if (items.isNotEmpty()) {
+                        chatWidget.messagesRecyclerView.scrollToPosition(items.size - 1)
+                    }
                 }
             }
         }
@@ -293,7 +348,7 @@ class RemoteAgentActivity : AppCompatActivity(),
             setBackgroundColor(surfaceColor)
             setPopupBackgroundDrawable(android.graphics.drawable.ColorDrawable(surfaceColor))
         }
-        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, mutableListOf()) {
+        val spinnerAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, mutableListOf()) {
             override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
                 val v = super.getView(position, convertView, parent)
                 (v as? TextView)?.setTextColor(txtColor)
@@ -306,8 +361,8 @@ class RemoteAgentActivity : AppCompatActivity(),
                 return v
             }
         }
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        agentSpinner?.adapter = adapter
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        agentSpinner?.adapter = spinnerAdapter
 
         agentSpinner?.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
@@ -336,7 +391,7 @@ class RemoteAgentActivity : AppCompatActivity(),
                     spinnerAdapter?.clear()
                     agents.forEach { spinnerAdapter?.add(it.name) }
                     spinnerAdapter?.notifyDataSetChanged()
-                    
+
                     // Update connection status based on selected agent
                     val selectedAgent = viewModel.selectedAgent.value
                     if (selectedAgent != null) {
