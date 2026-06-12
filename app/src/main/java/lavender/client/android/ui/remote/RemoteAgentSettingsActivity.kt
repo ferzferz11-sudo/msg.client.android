@@ -34,6 +34,18 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private lateinit var btnStopAgent: MaterialButton
     private lateinit var agentStatusText: TextView
 
+    // Hermes Gateway UI
+    private lateinit var etSshHost: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etSshPort: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etSshUser: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etServerHost: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etServerPort: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etLocalPort: com.google.android.material.textfield.TextInputEditText
+    private lateinit var tvTunnelStatus: TextView
+    private lateinit var cbAutoConnect: com.google.android.material.checkbox.MaterialCheckBox
+    private lateinit var btnCreateTunnel: MaterialButton
+    private lateinit var btnCloseTunnel: MaterialButton
+
     private var userId: String = ""
     private val tokens = mutableListOf<TokenInfo>()
     private var selectedAgentId: String = ""
@@ -42,6 +54,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     
     // Independent coroutine scope that survives Activity recreation
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    // Hermes Gateway Manager
+    private lateinit var gatewayManager: HermesGatewayManager
 
     // Keys for persisting agent selection across activity recreation
     private companion object {
@@ -60,6 +75,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_remote_agent_settings)
 
         userId = SessionManager.session.value.userId
+        gatewayManager = HermesGatewayManager(this)
 
         val theme = ThemeStore.currentTheme()
         val bgColor = ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK)
@@ -76,6 +92,18 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         btnStartAgent = findViewById(R.id.btnStartAgent)
         btnStopAgent = findViewById(R.id.btnStopAgent)
         agentStatusText = findViewById(R.id.agentStatusText)
+
+        // Hermes Gateway UI
+        etSshHost = findViewById(R.id.etSshHost)
+        etSshPort = findViewById(R.id.etSshPort)
+        etSshUser = findViewById(R.id.etSshUser)
+        etServerHost = findViewById(R.id.etServerHost)
+        etServerPort = findViewById(R.id.etServerPort)
+        etLocalPort = findViewById(R.id.etLocalPort)
+        tvTunnelStatus = findViewById(R.id.tvTunnelStatus)
+        cbAutoConnect = findViewById(R.id.cbAutoConnect)
+        btnCreateTunnel = findViewById(R.id.btnCreateTunnel)
+        btnCloseTunnel = findViewById(R.id.btnCloseTunnel)
 
         // Set initial status text color
         agentStatusText.setTextColor(ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE))
@@ -96,6 +124,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         btnStopAgent.setBackgroundColor(Color.parseColor("#F44336"))
         btnStopAgent.setTextColor(Color.WHITE)
 
+        // Style gateway buttons
+        btnCreateTunnel.setBackgroundColor(ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE))
+        btnCreateTunnel.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))
+        btnCloseTunnel.setBackgroundColor(Color.parseColor("#F44336"))
+        btnCloseTunnel.setTextColor(Color.WHITE)
+
+        // Restore gateway settings
+        restoreGatewaySettings()
+
         // Generate token button
         btnGenerateToken.setOnClickListener {
             showTokenDialog()
@@ -111,6 +148,21 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
             stopAgentOnServer()
         }
 
+        // Create tunnel button
+        btnCreateTunnel.setOnClickListener {
+            createTunnel()
+        }
+
+        // Close tunnel button
+        btnCloseTunnel.setOnClickListener {
+            closeTunnel()
+        }
+
+        // Auto-connect checkbox
+        cbAutoConnect.setOnCheckedChangeListener { _, isChecked ->
+            gatewayManager.setAutoConnect(isChecked)
+        }
+
         // Restore previously selected agent from prefs FIRST
         restoreSelectedAgent()
 
@@ -119,11 +171,19 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
 
         // Check agent status AFTER restore
         checkAgentStatus()
+
+        // Update tunnel status UI
+        updateTunnelStatusUI()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         activityScope.cancel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateTunnelStatusUI()
     }
 
     private fun loadTokens() {
@@ -264,10 +324,16 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     val expiresAt = if (response.expiresAt > 0) {
                         java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date(response.expiresAt * 1000))
                     } else ""
-                    val serverAddr = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "") ?: ""
-                    val serverPort = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_port", "50051") ?: "50051"
-                    val fullServer = if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
-                    val agentScript = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString(PREF_AGENT_SCRIPT_PATH, DEFAULT_AGENT_SCRIPT_PATH) ?: DEFAULT_AGENT_SCRIPT_PATH
+                    // Build server address for agent command — use tunnel if active
+                    val prefs2 = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                    val agentScript = prefs2.getString(PREF_AGENT_SCRIPT_PATH, DEFAULT_AGENT_SCRIPT_PATH) ?: DEFAULT_AGENT_SCRIPT_PATH
+                    val fullServer = if (gatewayManager.isTunnelActive()) {
+                        gatewayManager.getLocalAddress()
+                    } else {
+                        val serverAddr = prefs2.getString("server_address", "") ?: ""
+                        val serverPort = prefs2.getString("server_port", "50051") ?: "50051"
+                        if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
+                    }
                     val agentCmd = "python3 $agentScript --server $fullServer --token ${response.token}"
                     tokens.add(TokenInfo(
                         id = 0,
@@ -326,12 +392,16 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         container.addView(label)
         container.addView(tokenView)
 
-        // Build agent command
+        // Build agent command — use tunnel address if active
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val serverAddr = prefs.getString("server_address", "") ?: ""
-        val serverPort = prefs.getString("server_port", "50051") ?: "50051"
-        val fullServer = if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
         val agentScript = prefs.getString(PREF_AGENT_SCRIPT_PATH, DEFAULT_AGENT_SCRIPT_PATH) ?: DEFAULT_AGENT_SCRIPT_PATH
+        val fullServer = if (gatewayManager.isTunnelActive()) {
+            gatewayManager.getLocalAddress()
+        } else {
+            val serverAddr = prefs.getString("server_address", "") ?: ""
+            val serverPort = prefs.getString("server_port", "50051") ?: "50051"
+            if (serverAddr.isNotEmpty()) "$serverAddr:$serverPort" else "<server:port>"
+        }
         val agentCmd = "python3 $agentScript --server $fullServer --token $token"
 
         val cmdLabel = TextView(this).apply {
@@ -577,5 +647,101 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    // ===== Hermes Gateway (SSH Tunnel) =====
+
+    private fun restoreGatewaySettings() {
+        val settings = gatewayManager.loadSettings()
+        etSshHost.setText(settings.sshHost)
+        etSshPort.setText(settings.sshPort.toString())
+        etSshUser.setText(settings.sshUser)
+        etServerHost.setText(settings.serverHost)
+        etServerPort.setText(settings.serverPort.toString())
+        etLocalPort.setText(settings.localPort.toString())
+        cbAutoConnect.isChecked = settings.autoConnect
+        updateTunnelStatusUI()
+    }
+
+    private fun updateTunnelStatusUI() {
+        val theme = ThemeStore.currentTheme()
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val greenColor = Color.parseColor("#4CAF50")
+
+        if (gatewayManager.isTunnelActive()) {
+            val localAddr = gatewayManager.getLocalAddress()
+            tvTunnelStatus.text = "Туннель: АКТИВЕН → $localAddr"
+            tvTunnelStatus.setTextColor(greenColor)
+            btnCreateTunnel.isEnabled = false
+            btnCloseTunnel.isEnabled = true
+        } else {
+            tvTunnelStatus.text = "Туннель: не создан"
+            tvTunnelStatus.setTextColor(txtColor)
+            btnCreateTunnel.isEnabled = true
+            btnCloseTunnel.isEnabled = false
+        }
+    }
+
+    private fun createTunnel() {
+        val sshHost = etSshHost.text.toString().trim()
+        val sshPort = etSshPort.text.toString().trim().toIntOrNull() ?: 22
+        val sshUser = etSshUser.text.toString().trim()
+        val serverHost = etServerHost.text.toString().trim().ifEmpty { "localhost" }
+        val serverPort = etServerPort.text.toString().trim().toIntOrNull() ?: 50051
+        val localPort = etLocalPort.text.toString().trim().toIntOrNull() ?: 50052
+
+        if (sshHost.isEmpty()) {
+            Toast.makeText(this, "Укажите SSH хост", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        tvTunnelStatus.text = "Туннель: подключение..."
+        tvTunnelStatus.setTextColor(Color.parseColor("#FFA000")) // amber
+        btnCreateTunnel.isEnabled = false
+
+        // Run SSH tunnel creation in background
+        activityScope.launch(Dispatchers.IO) {
+            try {
+                val ok = gatewayManager.createTunnel(
+                    sshHost = sshHost,
+                    sshPort = sshPort,
+                    sshUser = sshUser,
+                    serverHost = serverHost,
+                    serverPort = serverPort,
+                    localPort = localPort
+                )
+                // Update UI on main thread
+                activityScope.launch(Dispatchers.Main) {
+                    if (ok) {
+                        Toast.makeText(this@RemoteAgentSettingsActivity,
+                            "Туннель создан: localhost:$localPort → $serverHost:$serverPort",
+                            Toast.LENGTH_LONG).show()
+                        // If server address is empty, pre-fill it with local tunnel
+                        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+                        val curAddr = prefs.getString("server_address", "")
+                        if (curAddr.isNullOrEmpty()) {
+                            prefs.edit().putString("server_address", "localhost")
+                                .putString("server_port", localPort.toString()).apply()
+                        }
+                    } else {
+                        Toast.makeText(this@RemoteAgentSettingsActivity,
+                            "Ошибка создания туннеля", Toast.LENGTH_LONG).show()
+                    }
+                    updateTunnelStatusUI()
+                }
+            } catch (e: Exception) {
+                activityScope.launch(Dispatchers.Main) {
+                    Toast.makeText(this@RemoteAgentSettingsActivity,
+                        "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                    updateTunnelStatusUI()
+                }
+            }
+        }
+    }
+
+    private fun closeTunnel() {
+        gatewayManager.closeTunnel()
+        Toast.makeText(this, "Туннель закрыт", Toast.LENGTH_SHORT).show()
+        updateTunnelStatusUI()
     }
 }

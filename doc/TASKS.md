@@ -9,6 +9,19 @@
 
 ---
 
+## 🔴 v1.1.3.4 — Текущие задачи
+
+### HIGH — Hermes Gateway (SSH туннель)
+- [x] `HermesGatewayManager.kt` — класс для управления SSH туннелем (JSch)
+- [x] `RemoteAgentSettingsActivity.kt` — UI секция "Подключение через шлюз"
+- [x] `activity_remote_agent_settings.xml` — layout с полями SSH хоста, портов, кнопками
+- [x] JSch зависимость `com.jcraft:jsch:0.1.55` в build.gradle.kts
+- [x] Сохранение настроек туннеля в SharedPreferences
+- [x] Команды агента используют туннельный адрес при активном туннеле
+- [ ] Протестировать подключение через туннель
+
+---
+
 ## ✅ v1.1.3.2 — Remote Agent Token Management
 
 ### Android
