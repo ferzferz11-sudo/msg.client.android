@@ -15,6 +15,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.BuildConfig
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
