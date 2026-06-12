@@ -71,6 +71,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private fun loadTokens() {
         lifecycleScope.launch {
             try {
+                android.util.Log.d("RemoteAgentSettings", "loadTokens: userId=$userId")
                 val response = GrpcClient.listAgentTokens(userId)
                 tokens.clear()
                 if (response.success) {
