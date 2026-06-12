@@ -214,6 +214,9 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     }
 
     private fun generateToken(agentId: String, agentName: String, capabilities: List<String>, ttlHours: Int) {
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("RemoteAgentSettings", "generateToken CALLED: agentId=$agentId name=$agentName userId=$userId")
+        }
         lifecycleScope.launch {
             try {
                 if (BuildConfig.DEBUG) {
@@ -234,7 +237,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                     selectedAgentName = agentName
                     selectedToken = response.token
                     if (BuildConfig.DEBUG) {
-                        android.util.Log.d("RemoteAgentSettings", "Token saved: agentId=$agentId token=${response.token.take(20)}...")
+                        android.util.Log.d("RemoteAgentSettings", "Token saved: agentId=$agentId token=${response.token.take(20)}... selectedToken=${selectedToken.take(20)}...")
                     }
                     saveSelectedAgent()
                     showTokenResultDialog(response.token, agentId, agentName)
@@ -249,7 +252,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 if (BuildConfig.DEBUG) {
                 android.util.Log.d("RemoteAgentSettings", "generateToken cancelled")
                 }
-                throw e // re-throw to keep structured concurrency
+                throw e
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                 android.util.Log.e("RemoteAgentSettings", "generateToken error", e)
