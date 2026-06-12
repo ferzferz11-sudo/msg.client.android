@@ -422,6 +422,7 @@
     <string name="error_loading_image">Error loading image</string>
     <string name="additional_settings">Additional Settings</string>
     <string name="clear_cache">Clear local cache</string>
+    <string name="error_log">Error Log</string>
     <string name="cache_cleared">Cache cleared successfully</string>
     <string name="servers">Servers</string>
     <string name="add_server">Add server</string>

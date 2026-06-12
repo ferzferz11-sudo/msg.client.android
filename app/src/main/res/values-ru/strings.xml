@@ -408,6 +408,7 @@
     <string name="error_loading_image">Ошибка загрузки изображения</string>
     <string name="additional_settings">Дополнительные настройки</string>
     <string name="clear_cache">Очистка локального кэша</string>
+    <string name="error_log">Журнал ошибок</string>
     <string name="cache_cleared">Кэш успешно очищен</string>
     <string name="servers">Серверы</string>
     <string name="add_server">Добавить сервер</string>
