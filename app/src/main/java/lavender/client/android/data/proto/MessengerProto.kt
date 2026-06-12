@@ -1038,7 +1038,10 @@ data class DeployAgentTaskRequestProto(
 data class DeployAgentTaskResponseProto(
     val taskId: String = "",
     val success: Boolean = false,
-    val message: String = ""
+    val message: String = "",
+    val stdout: String = "",
+    val stderr: String = "",
+    val exitCode: Int = 0
 )
 
 data class GetRemoteAgentStatusRequestProto(

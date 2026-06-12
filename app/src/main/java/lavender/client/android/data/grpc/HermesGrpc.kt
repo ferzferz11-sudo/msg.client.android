@@ -1423,6 +1423,7 @@ suspend fun deployAgentTask(
             override fun parse(s: java.io.InputStream): DeployAgentTaskResponseProto {
                 val cis = com.google.protobuf.CodedInputStream.newInstance(s)
                 var success = false; var taskId = ""; var error = ""
+                var stdout = ""; var stderr = ""; var exitCode = 0
                 while (!cis.isAtEnd) {
                     val tag = cis.readTag()
                     if (tag == 0) break
@@ -1430,10 +1431,16 @@ suspend fun deployAgentTask(
                         1 -> success = cis.readBool()
                         2 -> taskId = cis.readString()
                         3 -> error = cis.readString()
+                        4 -> stdout = cis.readString()
+                        5 -> stderr = cis.readString()
+                        6 -> exitCode = cis.readInt32()
                         else -> cis.skipField(tag)
                     }
                 }
-                return DeployAgentTaskResponseProto(taskId = taskId, success = success, message = error)
+                return DeployAgentTaskResponseProto(
+                    taskId = taskId, success = success, message = error,
+                    stdout = stdout, stderr = stderr, exitCode = exitCode
+                )
             }
         })
         .build()

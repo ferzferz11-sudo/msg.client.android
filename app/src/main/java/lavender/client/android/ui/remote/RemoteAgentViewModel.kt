@@ -221,17 +221,19 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     params = mapOf("command" to text)
                 )
                 if (response.success) {
+                    val output = if (response.stdout.isNotEmpty()) response.stdout else "(no output)"
                     val agentMsg = RemoteAgentMessage(
                         id = java.util.UUID.randomUUID().toString(),
-                        content = "✅ Задача отправлена (ID: ${response.taskId})",
+                        content = output,
                         isUser = false,
                         timestamp = System.currentTimeMillis()
                     )
                     _messages.value = _messages.value + agentMsg
                 } else {
+                    val errText = if (response.stderr.isNotEmpty()) response.stderr else response.message
                     val agentMsg = RemoteAgentMessage(
                         id = java.util.UUID.randomUUID().toString(),
-                        content = "❌ Ошибка: ${response.message}",
+                        content = "❌ Ошибка (exit=${response.exitCode}): $errText",
                         isUser = false,
                         timestamp = System.currentTimeMillis()
                     )
