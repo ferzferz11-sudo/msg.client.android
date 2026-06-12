@@ -555,8 +555,10 @@ object GrpcClient {
     suspend fun generateAgentToken(
         agentId: String, agentName: String, capabilities: List<String>,
         ttlHours: Int, adminUserId: String
-    ): lavender.client.android.data.proto.GenerateAgentTokenResponseProto =
-        lavender.client.android.data.grpc.generateAgentToken(agentId, agentName, capabilities, ttlHours, adminUserId)
+    ): lavender.client.android.data.proto.GenerateAgentTokenResponseProto {
+        android.util.Log.d("GrpcClient", "generateAgentToken CALLED: agentId=$agentId name=$agentName")
+        return lavender.client.android.data.grpc.generateAgentToken(agentId, agentName, capabilities, ttlHours, adminUserId)
+    }
 
     suspend fun revokeAgentToken(agentId: String, adminUserId: String): lavender.client.android.data.proto.RevokeAgentTokenResponseProto =
         lavender.client.android.data.grpc.revokeAgentToken(agentId, adminUserId)
