@@ -38,6 +38,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
     private lateinit var etSshHost: com.google.android.material.textfield.TextInputEditText
     private lateinit var etSshPort: com.google.android.material.textfield.TextInputEditText
     private lateinit var etSshUser: com.google.android.material.textfield.TextInputEditText
+    private lateinit var etSshPassword: com.google.android.material.textfield.TextInputEditText
     private lateinit var etServerHost: com.google.android.material.textfield.TextInputEditText
     private lateinit var etServerPort: com.google.android.material.textfield.TextInputEditText
     private lateinit var etLocalPort: com.google.android.material.textfield.TextInputEditText
@@ -97,6 +98,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         etSshHost = findViewById(R.id.etSshHost)
         etSshPort = findViewById(R.id.etSshPort)
         etSshUser = findViewById(R.id.etSshUser)
+        etSshPassword = findViewById(R.id.etSshPassword)
         etServerHost = findViewById(R.id.etServerHost)
         etServerPort = findViewById(R.id.etServerPort)
         etLocalPort = findViewById(R.id.etLocalPort)
@@ -686,33 +688,44 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
         val sshHost = etSshHost.text.toString().trim()
         val sshPort = etSshPort.text.toString().trim().toIntOrNull() ?: 22
         val sshUser = etSshUser.text.toString().trim()
+        val sshPassword = etSshPassword.text.toString()
         val serverHost = etServerHost.text.toString().trim().ifEmpty { "localhost" }
         val serverPort = etServerPort.text.toString().trim().toIntOrNull() ?: 50051
         val localPort = etLocalPort.text.toString().trim().toIntOrNull() ?: 50052
 
         if (sshHost.isEmpty()) {
-            Toast.makeText(this, "Укажите SSH хост", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Укажите SSH хост (IP адрес)", Toast.LENGTH_SHORT).show()
             return
         }
 
+        // Validate IP/hostname format — warn if looks like SSH alias
+        if (!sshHost.contains(".") && !sshHost.contains(":") && sshHost != "localhost") {
+            Toast.makeText(this,
+                "⚠️ «$sshHost» похоже на SSH alias, а не IP адрес.\n" +
+                "Android не резолвит SSH aliases из ~/.ssh/config.\n" +
+                "Введите IP адрес напрямую (напр. 13.140.25.249).",
+                Toast.LENGTH_LONG).show()
+        }
+
         tvTunnelStatus.text = "Туннель: подключение..."
-        tvTunnelStatus.setTextColor(Color.parseColor("#FFA000")) // amber
+        tvTunnelStatus.setTextColor(Color.parseColor("#FFA000"))
         btnCreateTunnel.isEnabled = false
 
         // Run SSH tunnel creation in background
         activityScope.launch(Dispatchers.IO) {
             try {
-                val ok = gatewayManager.createTunnel(
+                val result = gatewayManager.createTunnel(
                     sshHost = sshHost,
                     sshPort = sshPort,
                     sshUser = sshUser,
+                    sshPassword = sshPassword,
                     serverHost = serverHost,
                     serverPort = serverPort,
                     localPort = localPort
                 )
                 // Update UI on main thread
                 activityScope.launch(Dispatchers.Main) {
-                    if (ok) {
+                    if (result.success) {
                         Toast.makeText(this@RemoteAgentSettingsActivity,
                             "Туннель создан: localhost:$localPort → $serverHost:$serverPort",
                             Toast.LENGTH_LONG).show()
@@ -724,8 +737,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                                 .putString("server_port", localPort.toString()).apply()
                         }
                     } else {
-                        Toast.makeText(this@RemoteAgentSettingsActivity,
-                            "Ошибка создания туннеля", Toast.LENGTH_LONG).show()
+                        // Show detailed error message from TunnelResult
+                        showTunnelErrorDialog(result)
                     }
                     updateTunnelStatusUI()
                 }
@@ -737,6 +750,28 @@ class RemoteAgentSettingsActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showTunnelErrorDialog(result: HermesGatewayManager.TunnelResult) {
+        val theme = ThemeStore.currentTheme()
+        val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(
+            this,
+            com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
+        )
+            .setTitle("Ошибка SSH туннеля")
+            .setMessage(result.errorMessage)
+            .setPositiveButton("OK", null)
+            .create()
+
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(primColor)
+        val titleId = resources.getIdentifier("alertTitle", "id", "android")
+        dialog.findViewById<TextView>(titleId)?.setTextColor(Color.parseColor("#F44336"))
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bgColor))
     }
 
     private fun closeTunnel() {
