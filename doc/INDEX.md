@@ -1,85 +1,77 @@
-# Lavender Messenger (Android) — Документация
+# Лава — Документация
 
-Индекс документов Android-клиента.
+Индекс всех документов проекта. Читать при каждом старте новой сессии.
 
 ---
 
 ## Быстрый старт
 
-1. **doc/PROMPT_ANDROID.md** — промпт для новой сессии (читать первым)
-2. **CHANGELOG.md** (в корне) — история версий Android-клиента
-3. **doc/TASKS.md** — таск-трекер Android
+1. **INTEGRATION_SESSION.md** — текущий контекст интеграции (версии, архитектура, что сделано, что нет)
+2. **TASKS.md** — таск-трекер (сделано/не сделано по приоритетам)
+3. **CHANGELOG.md** (в корне) — история версий сервера
+4. **doc/PROMPT_ANDROID.md** (в `/root/msg.client.android/`) — обучающий промпт для Android-сессий
 
 ---
 
 ## Файлы документации
 
+### Текущая работа
+
 | Файл | Назначение | Когда читать |
 |------|-----------|-------------|
-| `doc/PROMPT_ANDROID.md` | Промпт для новой сессии — структура, правила, архитектура | В начале каждой сессии |
-| `doc/TASKS.md` | Известные проблемы, бэклог, ключевые решения | В начале сессии |
-|| `doc/INDEX.md` | Этот файл — индекс | Для навигации |
-|| `doc/REMOTE_AGENT.md` | Проект Remote Agent — архитектура, протокол, этапы | При работе над удалёнными агентами |
-|| `doc/STRUCTURE.md` | Справочник структуры — навигация по коду, gRPC, паттерны | При поиске файлов и методов |
+| `INTEGRATION_SESSION.md` | Интеграционная сессия: версии, архитектура, правила, промпт для следующей сессии | **Всегда в начале** |
+| `TASKS.md` | Таск-трекер: сделано по версиям, бэклог по приоритетам | В начале сессии |
+
+### Архитектура и дизайн
+
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `AI_SERVICES.md` | AI-сервисы: архитектура, API, потоки данных, proto mapping | **При работе с AI чатами** |
+| `PITFALLS.md` | Подводные камни и известные проблемы | **Перед началом работы** |
+| `HERMES_ORCHESTRATOR_DOC.md` | Документация Hermes Orchestrator: архитектура, API, агенты, маршрутизация | При работе с Hermes |
+| `HERMES_ORCHESTRATOR_PROMPT.md` | Промпт для сессий с Hermes Orchestrator | При деве Hermes |
+| `LAVENDER_CHAT_PROJECT.md` | Проект Lavender Chat — полноценная замена Telegram | При работе над ChatWidget |
+| `PROJECT_MEMORY.md` | Проектная память: ключевые решения, архитектурные принципы | Для общего контекста |
+|| `PROMPT.md` | Промпт для любых сессий (общий) | **При старте новой сессии** |
+|| `PROMPT_SERVER.md` | Промпт для серверных сессий | **При старте новой серверной сессии** |
+
+### DevOps и инфраструктура
+
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `LOG_MONITOR.md` | Log Monitor: сборка, деплой, API, web UI, известные проблемы | **При проблемах с логами** |
+| `TESTING.md` | Модульные тесты: запуск, покрытие, написание новых тестов | **При работе с тестами** |
+
+### Отчёты
+
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `REPORT.md` | Отчёт по Hermes Orchestrator (04.06.2026) | Для истории |
 
 ---
 
-## Скрипты
+### Web Client
 
-| Скрипт | Назначение |
-|--------|------------|
-| `scripts/release.sh` | Выпуск нового релиза Android (git tag, deploy, GitHub Release) |
-| `scripts/deploy_android.sh` | Деплой APK на сервер (SCP, архив, versions.json) |
-
-### Выпуск релиза
-
-```bash
-# 1. Обнови version.txt (в корне проекта)
-echo "1.1.2.10" > version.txt
-
-# 2. Запусти скрипт релиза
-./scripts/release.sh 1.1.2.10
-
-# 3. Собери APK локально и загрузи на сервер
-scp app/build/outputs/apk/release/app-release.apk lava:/var/www/lavender/lavender.apk
-```
-
-**Важно:** version.txt обновлять ДО запуска release.sh — скрипт читает его для определения версии.
-
-Скрипт автоматически:
-- Проверяет version.txt
-- Коммитит и пушит изменения
-- Создаёт git tag v1.1.2.10
-- Скачивает APK с сервера, загружает в GitHub Release
-- Копирует APK в архив на сервере
-- Обновляет version.txt и versions.json
-- Создаёт GitHub Release с changelog и APK
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `/root/msg.client.web/doc/INDEX.md` | Индекс документации веб-клиента | При работе над web |
+| `/root/msg.client.web/doc/ARCHITECTURE.md` | Архитектура веб-клиента | При работе над web |
+| `/root/msg.client.web/doc/TASKS.md` | Таск-трекер веб-клиента | При работе над web |
 
 ---
 
-## Процесс разработки
+## Правила
 
-### Коммит и пуш
-
-1. OWL вносит изменения в код
-2. `git add -A && git commit -m "описание" && git push`
-3. Пользователь локально: `git pull && ./gradlew assembleRelease`
-4. Проверяет APK, при необходимости — деплой на сервер
-
-### Важно
-
-- **НЕ запускать `./gradlew assembleRelease` на сервере** — OOM kill (нужно 2GB+, на сервере не хватает)
-- **НЕ запускать `compileDebugKotlin` на сервере** — тоже рискованно (~1GB), памяти может не хватить
-- **НЕ запускать никакие ./gradlew задачи** — сначала `free -h`, если < 2GB free → НЕ запускать
-- APK собирать локально, затем загружать на сервер через SCP
-
----
-
-## Связанные документы (сервер)
-
-Документация серверной части в репозитории `/root/msg/doc/`:
-- `INTEGRATION_SESSION.md` — текущий контекст интеграции
-- `TASKS.md` — серверный таск-трекер
-- `AI_SERVICES.md` — архитектура AI сервисов (OWL + Hermes), API, proto mapping
-- `PITFALLS.md` — подводные камни Android и сервера
-- `HERMES_ORCHESTRATOR_DOC.md` — архитектура Hermes
+- При старте новой сессии: читать цепочку INDEX.md → AI_SERVICES.md → INTEGRATION_SESSION.md → TASKS.md → PITFALLS.md → LOG_MONITOR.md
+- При работе над тестами: читать doc/TESTING.md
+- При работе над веб-клиентом: читать /root/msg.client/web/doc/INDEX.md → ARCHITECTURE.md → TASKS.md → PITFALLS.md
+- После каждого значимого изменения: обновлять INTEGRATION_SESSION.md + TASKS.md + соответствующие документы
+- При каждом релизе: обновлять CHANGELOG.md (сервер + Android), INTEGRATION_SESSION.md, TASKS.md, LOG_MONITOR.md, PITFALLS.md, AI_SERVICES.md
+- Промпт для следующей сессии всегда внизу INTEGRATION_SESSION.md
+- Промпт для Android-сессий: /root/msg.client.android/doc/PROMPT_ANDROID.md
+- Промпт для серверных сессий: /root/msg/doc/PROMPT_SERVER.md
+- CHANGELOG.md — серверные изменения в корне /root/msg/CHANGELOG.md, Android в /root/msg.client.android/CHANGELOG.md
+- Android bundled changelog: /root/msg.client.android/app/src/main/assets/changelog_bundled.txt (встроен в APK, показывается мгновенно)
+- changelog.txt БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — удалён из проекта и из деплоя
+- Версия сервера в server.go:33, версия Android в version.txt
+- Документация распределена по файлам и проиндексирована в INDEX.md
