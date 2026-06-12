@@ -1210,30 +1210,37 @@ suspend fun generateAgentToken(
         .build()
     val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
     android.util.Log.d("HermesGrpc", "generateAgentToken: call created, starting...")
+    var earlyResult: GenerateAgentTokenResponseProto? = null
     val result = suspendCancellableCoroutine<GenerateAgentTokenResponseProto> { cont ->
-        call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
-            override fun onMessage(message: GenerateAgentTokenResponseProto) {
-                android.util.Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
-                cont.resumeWith(Result.success(message))
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                android.util.Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
-                if (cont.isActive) {
-                    cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
+        try {
+            call.start(object : io.grpc.ClientCall.Listener<GenerateAgentTokenResponseProto>() {
+                override fun onMessage(message: GenerateAgentTokenResponseProto) {
+                    android.util.Log.d("HermesGrpc", "generateAgentToken: onMessage success=${message.success}")
+                    cont.resumeWith(Result.success(message))
                 }
+                override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                    android.util.Log.d("HermesGrpc", "generateAgentToken: onClose status=${status.code} desc=${status.description}")
+                    if (cont.isActive) {
+                        android.util.Log.d("HermesGrpc", "generateAgentToken: resuming cont with error")
+                        cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())))
+                    } else {
+                        android.util.Log.d("HermesGrpc", "generateAgentToken: cont already inactive, saving early result")
+                        earlyResult = GenerateAgentTokenResponseProto(success = false, error = status.description ?: status.code.toString())
+                    }
+                }
+            }, io.grpc.Metadata())
+            android.util.Log.d("HermesGrpc", "generateAgentToken: call.start() returned normally")
+        } catch (e: Exception) {
+            android.util.Log.e("HermesGrpc", "generateAgentToken: call.start() threw exception", e)
+            if (cont.isActive) {
+                cont.resumeWith(Result.success(GenerateAgentTokenResponseProto(success = false, error = "start() error: ${e.message}")))
             }
-        }, io.grpc.Metadata())
+        }
+        android.util.Log.d("HermesGrpc", "generateAgentToken: waiting for resume or early result...")
     }
-    android.util.Log.d("HermesGrpc", "generateAgentToken: sending message...")
-    call.sendMessage(GenerateAgentTokenRequestProto(
-        agentId = agentId, agentName = agentName, capabilities = capabilities,
-        ttlHours = ttlHours, adminUserId = adminUserId
-    ))
-    call.halfClose()
-    call.request(1)
-    android.util.Log.d("HermesGrpc", "generateAgentToken: waiting for response (timeout=15s)...")
-    val response = withTimeoutOrNull(15000) { result }
-    android.util.Log.d("HermesGrpc", "generateAgentToken: response=$response")
+    android.util.Log.d("HermesGrpc", "generateAgentToken: suspendCancellableCoroutine returned, result=$result, earlyResult=$earlyResult")
+    val response = earlyResult ?: result
+    android.util.Log.d("HermesGrpc", "generateAgentToken: final response=$response")
     return@withContext response
         ?: GenerateAgentTokenResponseProto(success = false, error = "Timeout")
 }
