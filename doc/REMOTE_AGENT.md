@@ -1,156 +1,177 @@
-# Remote Agent — Проект реализации
+# Remote Agent — Документация
 
-## Цель
-
-Позволить любому пользователю подключить своего удалённого агента (Hermes daemon или другой) к Лаве через токен аутентификации. Агент получает задачи от оркестратора и может выполнять их (shell, git, docker, AI).
-
-## Концепция
-
-- **Удалённый агент** — программа (Hermes daemon), запущенная на другой машине, которая подключается к серверу Лавы через gRPC с JWT токеном
-- **Токен** — генерируется в мобильном приложении, передаётся агенту (показывается один раз)
-- **Оркестратор** — серверный компонент, который маршрутизирует задачи на подключённых агентов
-- **Типы задач**: shell, file_read, file_write, git, build, deploy, docker, custom, ai
+**Версия:** v1.1.3.0
+**Обновлено:** 2026-06-12
 
 ## Архитектура
 
 ```
-┌─────────────┐     gRPC      ┌──────────────┐     gRPC      ┌─────────────┐
-│  Android    │ ───────────→  │   Server     │ ←───────────  │  Remote     │
-│  Client     │  Generate     │   ChatService│  Connect      │  Agent      │
-│             │  AgentToken   │              │  (streaming)  │  (daemon)   │
-└─────────────┘               └──────────────┘               └─────────────┘
-                                     │
-                                     │ маршрутизация
-                                     ▼
-                              ┌──────────────┐
-                              │  Orchestrator│
-                              │  (Hermes)    │
-                              └──────────────┘
+┌─────────────┐  gRPC          ┌──────────────┐  gRPC           ┌─────────────┐
+│  Android    │ ──────────────→ │   Server     │ ←────────────── │   Remote    │
+│  Client     │  GenerateToken  │   (Go)       │  Connect        │   Agent     │
+│             │  ListTokens     │              │  (streaming)    │   (Python)  │
+│             │  DeployTask     │              │                 │             │
+└─────────────┘                 └──────────────┘                 └─────────────┘
 ```
 
 ## Компоненты
 
-### 1. Отдельная активити — `RemoteAgentActivity`
+### 1. Token Management (HermesAgentService)
 
-- Не загружает список чатов
-- Содержит: чат с агентом, настройки, управление токенами
-- Доступна из шторки AI как пункт "Агенты"
+| RPC | Сервис | Описание |
+|-----|--------|----------|
+| `GenerateAgentToken` | `hermes_agent.HermesAgentService` | Генерация JWT токена |
+| `RevokeAgentToken` | `hermes_agent.HermesAgentService` | Отзыв токена |
+| `ListAgentTokens` | `hermes_agent.HermesAgentService` | Список токенов |
 
-### 2. Управление токенами
+**Важно:** Начиная с v1.1.3.0, token RPC доступны любому авторизованному пользователю (не только админам).
 
-- **Генерация токена**: `GenerateAgentToken(agentId, agentName, capabilities, ttlHours)`
-- **Отзыв токена**: `RevokeAgentToken(agentId)`
-- **Список токенов**: `ListAgentTokens()` — показывает все токены пользователя
-- Токен показывается ОДИН РАЗ после генерации
+### 2. Remote Agent Connection (HermesAgentService)
 
-### 3. Чат с агентом
+| RPC | Тип | Описание |
+|-----|-----|----------|
+| `Connect` | bidirectional streaming | Подключение агента |
+| `HealthCheck` | unary | Проверка связи |
 
-- Отправка сообщений агенту (задачи)
-- Получение результатов в реальном времени (streaming)
-- Поддержка типов задач: shell, file, git, docker, ai
+### 3. Task Management (ChatService)
 
-### 4. Настройки агента
+| RPC | Сервис | Описание |
+|-----|--------|----------|
+| `ListRemoteAgents` | `messenger.ChatService` | Список подключённых агентов |
+| `DeployAgentTask` | `messenger.ChatService` | Отправка задачи агенту |
+| `GetRemoteAgentStatus` | `messenger.ChatService` | Статус агента |
 
-- Agent ID, Agent Name
-- Capabilities (выбор из списка: shell, git, build, deploy, file, docker, ai)
-- TTL токена (часы)
-- Статус подключения
+## Android UI
 
-## Протокол (hermes_remote.proto)
+### Экраны
 
-### Агент подключается:
-1. `Connect(stream AgentMessage) → stream OrchestratorMessage`
-2. При подключении отправляет `RegistrationInfo` с `auth_token`
-3. Сервер валидирует JWT токен
+| Activity | Назначение |
+|----------|-----------|
+| `RemoteAgentActivity` | Чат с агентом, отправка задач |
+| `RemoteAgentSettingsActivity` | Управление токенами |
+| `AgentListActivity` | Список AI агентов (Hermes) |
 
-### Задачи от оркестратора:
-- `ORCHESTRATOR_TASK` → `Task` с типом (TASK_SHELL, TASK_AI, ...)
-- Агент выполняет и отправляет `TaskResult`
+### Flow
 
-### Типы задач:
-- `TASK_SHELL` — shell команда
-- `TASK_FILE_READ` / `TASK_FILE_WRITE` — файлы
-- `TASK_GIT` — git операции
-- `TASK_BUILD` — сборка
-- `TASK_DEPLOY` — деплой
-- `TASK_DOCKER` — docker
-- `TASK_CUSTOM` — пользовательский скрипт
-- `TASK_AI` — AI-ответ (агент сам решает)
+1. Пользователь открывает "Агенты" из AI шторки
+2. `RemoteAgentActivity` загружает список агентов (`ListRemoteAgents`)
+3. Пользователь может перейти в настройки (⚙) для управления токенами
+4. В настройках: генерация токена → копирование → запуск агента
+5. Агент подключается через `Connect` и выполняет задачи
 
-## UI/UX
+## Токены агентов
 
-### Шторка AI (AIBottomSheet)
-- Добавить пункт "🖥 Агенты" → открывает `RemoteAgentActivity`
+### Генерация
 
-### RemoteAgentActivity
-- Toolbar: название агента + статус (подключён/отключён)
-- Чат: сообщения пользователя + ответы агента
-- Настройки: токен, capabilities, TTL
-- Кнопки: "Сгенерировать токен", "Отозвать токен", "Подключить"
+1. Открыть "Агенты" → ⚙ → "Сгенерировать токен"
+2. Заполнить: имя агента, возможности, TTL
+3. Нажать "Сгенерировать"
+4. Скопировать токен (показывается один раз!)
 
-### Диалог генерации токена
-- Поля: Agent Name, Capabilities (мультивыбор), TTL
-- Результат: токен (копировать в буфер)
+### Подключение агента
 
-## Файлы для изменения
+```bash
+python3 hermes_remote_agent.py --server host:port --token <jwt>
+```
 
-### Новые файлы:
-- `ui/remote/RemoteAgentActivity.kt` — основной экран
-- `ui/remote/RemoteAgentViewModel.kt` — ViewModel
-- `ui/remote/RemoteAgentAdapter.kt` — адаптер чата
-- `ui/remote/TokenDialog.kt` — диалог генерации токена
-- `layout/activity_remote_agent.xml` — layout
-- `layout/dialog_token_generate.xml` — layout диалога
-- `layout/item_remote_agent_message.xml` — layout сообщения
+### Токены в БД
 
-### Существующие файлы (изменения):
-- `data/proto/MessengerProto.kt` — добавлены proto классы для токенов ✅
-- `data/grpc/HermesGrpc.kt` — добавлены методы generate/revoke/list ✅
-- `data/grpc/GrpcClient.kt` — добавлены методы ✅
-- `ui/widget/AIBottomSheet.kt` — добавить пункт "Агенты"
-- `ChatListActivity.kt` — обработка нажатия на пункт
+- Хранится SHA-256 хеш токена
+- Токен показывается только при генерации
+- `RevokeAgentToken` помечает `revoked = TRUE`
 
-### Сервер (уже сделано):
-- `hermes_remote.proto` — добавлен TASK_AI ✅
-- `messenger.proto` — добавлены RPC для токенов ✅
-- `server_ai.go` — реализация Generate/Revoke/List ✅
+## Proto
 
-## Этапы реализации
+### hermes_remote.proto
 
-1. ✅ Proto классы на клиенте
-2. ✅ gRPC методы на клиенте
-3. ✅ Серверная часть
-4. ✅ RemoteAgentActivity + layout (чат, статус, toolbar)
-5. ✅ RemoteAgentViewModel (loadAgents, sendMessage)
-6. ✅ TokenDialog (генерация токена)
-7. ✅ Интеграция с AIBottomSheet (пункт "🖥 Агенты")
-8. ✅ RemoteAgentSettingsActivity (управление токенами)
-9. ✅ Кастомные темы (ThemeUi.bind)
-10. ⬜ Тестирование (после сборки APK локально)
-11. ⬜ Интеграция чата с реальным агентом (сейчас echo-заглушка)
+```protobuf
+service HermesAgentService {
+    rpc Connect(stream AgentMessage) returns (stream OrchestratorMessage);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+    rpc GenerateAgentToken(GenerateAgentTokenRequest) returns (GenerateAgentTokenResponse);
+    rpc RevokeAgentToken(RevokeAgentTokenRequest) returns (RevokeAgentTokenResponse);
+    rpc ListAgentTokens(ListAgentTokensRequest) returns (ListAgentTokensResponse);
+}
 
-## Структура файлов
+message GenerateAgentTokenRequest {
+    string agent_id = 1;
+    string agent_name = 2;
+    repeated string capabilities = 3;
+    int32 ttl_hours = 4;
+    string admin_user_id = 5;
+}
 
-### Новые файлы:
-- `ui/remote/RemoteAgentActivity.kt` — основной экран (чат)
-- `ui/remote/RemoteAgentViewModel.kt` — ViewModel
-- `ui/remote/RemoteAgentSettingsActivity.kt` — настройки (токены)
-- `ui/remote/TokenDialog.kt` — диалог генерации токена
-- `layout/activity_remote_agent.xml` — layout чата
-- `layout/activity_remote_agent_settings.xml` — layout настроек
-- `layout/item_agent_token.xml` — item токена в списке
-- `menu/remote_agent_menu.xml` — меню toolbar (шестерёнка)
-- `drawable/ic_settings.xml` — иконка настроек
-- `drawable/ic_status_dot.xml` — индикатор статуса
+message GenerateAgentTokenResponse {
+    bool success = 1;
+    string token = 2;
+    string error = 3;
+    int64 expires_at = 4;
+}
+```
 
-### Изменённые файлы:
-- `AIBottomSheet.kt` — секция "Агенты"
-- `ChatListActivity.kt` — обработчик onOpenRemoteAgents
-- `AndroidManifest.xml` — регистрация активити
+### messenger.proto (ChatService)
 
-## Будущие расширения
+```protobuf
+service ChatService {
+    // ... другие методы ...
+    rpc ListRemoteAgents(ListRemoteAgentsRequest) returns (ListRemoteAgentsResponse);
+    rpc DeployAgentTask(DeployAgentTaskRequest) returns (DeployAgentTaskResponse);
+    rpc GetRemoteAgentStatus(GetRemoteAgentStatusRequest) returns (GetRemoteAgentStatusResponse);
+}
+```
 
-- Поддержка других типов агентов (не только Hermes daemon)
-- Мониторинг статуса агента (heartbeat, метрики)
-- Управление задачами (отмена, приоритеты)
-- Логирование выполнения задач
+## Известные проблемы (v1.1.3.0)
+
+| Проблема | Статус | Workaround |
+|----------|--------|------------|
+| Токен не появляется в списке | ⚠️ Исследуется | Проверить логи сервера |
+| JobCancellationException при генерации | ✅ Исправлено | — |
+| Token RPC на неправильном сервисе | ✅ Исправлено | — |
+| writeRawVarint32 deprecated | ✅ Исправлено | — |
+
+## Отладка
+
+### Android логи
+
+```bash
+adb logcat -s "RemoteAgentSettings" "HermesGrpc" "RemoteAgentViewModel"
+```
+
+Ключевые теги:
+- `loadTokens: userId=...` — загрузка токенов
+- `generateToken response: success=...` — ответ сервера
+- `listRemoteAgents: received N agents` — список агентов
+
+### Сервер логи
+
+```bash
+journalctl -u lavender-server-dev -f | grep "HermesAgentService"
+```
+
+Ключевые сообщения:
+- `GenerateAgentToken: agentId=...` — запрос на генерацию
+- `token saved: agentId=... hash=...` — токен сохранён
+- `hermesDB is nil, token not persisted!` — проблема с БД
+- `ListAgentTokens: adminUser=...` — запрос списка
+
+## Тестирование
+
+### Тест 1: Генерация токена
+
+1. Открыть "Агенты" → ⚙
+2. Сгенерировать токен
+3. Проверить что токен показан в диалоге
+4. Скопировать токен
+5. Проверить что токен появился в списке
+
+### Тест 2: Подключение агента
+
+1. Запустить агент: `python3 hermes_remote_agent.py --server localhost:50052 --token <jwt>`
+2. Проверить что агент появился в списке (статус "connected")
+3. Отправить задачу: `ls -la`
+4. Проверить что результат получен
+
+### Тест 3: Отзыв токена
+
+1. Отозвать токен из списка
+2. Проверить что агент потерял подключение

@@ -1,7 +1,30 @@
 # Android клиент — Промпт для новой сессии
 
-Текущая версия: v1.1.3.0 (dev)
+Текущая версия: v1.1.3.0
 Ветка: feat/1.1.3.x
+
+---
+
+## Remote Agent v1.1.3 — Patch Notes
+
+### Исправлено
+- Token RPC routing: `GenerateAgentToken`, `RevokeAgentToken`, `ListAgentTokens` → `hermes_agent.HermesAgentService` (было `messenger.ChatService`)
+- `writeRawVarint32` → `writeUInt32NoTag` (protobuf 4.x compatibility)
+- `CancellationException` обрабатывается отдельно в token operations
+- Добавлено логирование для отладки
+
+### Известные проблемы
+- Токен может не появляться в списке после генерации (JobCancellationException — исправлено, требует проверки)
+- `listRemoteAgents` возвращает 0 агентов если агент не подключён
+- Логи сервера не видны на Android (требует ручной проверки через journalctl)
+
+### Критические файлы
+- `data/grpc/HermesGrpc.kt` — gRPC методы (token RPC, listRemoteAgents)
+- `ui/remote/RemoteAgentSettingsActivity.kt` — управление токенами
+- `ui/remote/RemoteAgentViewModel.kt` — состояние агентов
+- `ui/remote/TokenDialog.kt` — диалог генерации токена
+
+---
 
 ---
 
