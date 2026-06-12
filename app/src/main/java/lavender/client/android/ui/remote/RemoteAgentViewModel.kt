@@ -12,6 +12,8 @@ import lavender.client.android.data.models.RemoteAgentInfo
 
 class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val gatewayManager = HermesGatewayManager(application.applicationContext)
+
     // ===== Agent list =====
     private val _agents = MutableStateFlow<List<RemoteAgentInfo>>(emptyList())
     val agents: StateFlow<List<RemoteAgentInfo>> = _agents.asStateFlow()
@@ -218,7 +220,14 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 val response = GrpcClient.deployAgentTask(
                     agentId = agent.id,
                     taskType = taskType,
-                    params = mapOf("command" to text)
+                    params = mapOf("command" to text),
+                    tunnelMode = if (gatewayManager.isTunnelActive()) 1 else 0,
+                    tunnelHost = gatewayManager.loadSettings().sshHost,
+                    tunnelPort = gatewayManager.loadSettings().sshPort,
+                    tunnelUser = gatewayManager.loadSettings().sshUser,
+                    tunnelServerHost = gatewayManager.loadSettings().serverHost,
+                    tunnelServerPort = gatewayManager.loadSettings().serverPort,
+                    tunnelLocalPort = gatewayManager.loadSettings().localPort
                 )
                 if (response.success) {
                     val output = if (response.stdout.isNotEmpty()) response.stdout else "(no output)"

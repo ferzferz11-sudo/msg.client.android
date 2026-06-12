@@ -1384,7 +1384,15 @@ suspend fun deployAgentTask(
     taskType: String,
     params: Map<String, String> = emptyMap(),
     workingDir: String = "",
-    timeoutSec: Int = 60
+    timeoutSec: Int = 60,
+    tunnelMode: Int = 0,
+    tunnelHost: String = "",
+    tunnelPort: Int = 22,
+    tunnelUser: String = "",
+    tunnelPassword: String = "",
+    tunnelServerHost: String = "localhost",
+    tunnelServerPort: Int = 50051,
+    tunnelLocalPort: Int = 50052
 ): DeployAgentTaskResponseProto = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
@@ -1400,7 +1408,6 @@ suspend fun deployAgentTask(
                 if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
                 if (v.taskType.isNotEmpty()) cos.writeString(2, v.taskType)
                 v.params.forEach { (k, v2) ->
-                    // Encode map<string,string> entry: field 3, message with key(1) + value(2)
                     val entryBaos = ByteArrayOutputStream()
                     val entryCos = com.google.protobuf.CodedOutputStream.newInstance(entryBaos)
                     entryCos.writeString(1, k)
@@ -1413,6 +1420,15 @@ suspend fun deployAgentTask(
                 }
                 if (v.workingDir.isNotEmpty()) cos.writeString(4, v.workingDir)
                 if (v.timeoutSec > 0) cos.writeInt32(5, v.timeoutSec)
+                // Tunnel mode fields (6-13)
+                if (v.tunnelMode != 0) cos.writeEnum(6, v.tunnelMode)
+                if (v.tunnelHost.isNotEmpty()) cos.writeString(7, v.tunnelHost)
+                if (v.tunnelPort != 22) cos.writeInt32(8, v.tunnelPort)
+                if (v.tunnelUser.isNotEmpty()) cos.writeString(9, v.tunnelUser)
+                if (v.tunnelPassword.isNotEmpty()) cos.writeString(10, v.tunnelPassword)
+                if (v.tunnelServerHost != "localhost") cos.writeString(11, v.tunnelServerHost)
+                if (v.tunnelServerPort != 50051) cos.writeInt32(12, v.tunnelServerPort)
+                if (v.tunnelLocalPort != 50052) cos.writeInt32(13, v.tunnelLocalPort)
                 cos.flush()
                 return ByteArrayInputStream(baos.toByteArray())
             }
@@ -1459,7 +1475,11 @@ suspend fun deployAgentTask(
         }
     }, io.grpc.Metadata())
 
-    call.sendMessage(DeployAgentTaskRequestProto(agentId, taskType, params, workingDir, timeoutSec))
+    call.sendMessage(DeployAgentTaskRequestProto(
+        agentId, taskType, params, workingDir, timeoutSec,
+        tunnelMode, tunnelHost, tunnelPort, tunnelUser, tunnelPassword,
+        tunnelServerHost, tunnelServerPort, tunnelLocalPort
+    ))
     call.halfClose()
     call.request(1)
 

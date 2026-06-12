@@ -1032,7 +1032,15 @@ data class DeployAgentTaskRequestProto(
     val taskType: String = "",
     val params: Map<String, String> = emptyMap(),
     val workingDir: String = "",
-    val timeoutSec: Int = 0
+    val timeoutSec: Int = 0,
+    val tunnelMode: Int = 0,          // 0 = TUNNEL_NONE, 1 = TUNNEL_SSH
+    val tunnelHost: String = "",      // SSH хост туннеля
+    val tunnelPort: Int = 22,         // SSH порт
+    val tunnelUser: String = "",      // SSH пользователь
+    val tunnelPassword: String = "",  // SSH пароль
+    val tunnelServerHost: String = "localhost",  // хост сервера за туннелем
+    val tunnelServerPort: Int = 50051,           // порт сервера за туннелем
+    val tunnelLocalPort: Int = 50052             // локальный порт для проброса
 )
 
 data class DeployAgentTaskResponseProto(
