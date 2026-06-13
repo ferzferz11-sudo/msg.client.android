@@ -2445,9 +2445,7 @@ class ChatListActivity : AppCompatActivity() {
         sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
         // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
-        sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent?.let { parent ->
-            if (parent instanceof android.view.ViewGroup) parent.visibility = View.GONE
-        }
+        (sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent as? ViewGroup)?.visibility = View.GONE
 
         var isTransitioning = false
 
@@ -2578,9 +2576,7 @@ class ChatListActivity : AppCompatActivity() {
         sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
         // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
-        sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent?.let { parent ->
-            if (parent instanceof android.view.ViewGroup) parent.visibility = View.GONE
-        }
+        (sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent as? ViewGroup)?.visibility = View.GONE
 
         var isTransitioning = false
 
