@@ -123,12 +123,15 @@ class RemoteAgentActivity : AppCompatActivity(),
     }
 
     private fun setupStatusBar() {
+        val theme = ThemeStore.currentTheme()
+        val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
+        binding.statusBar.setBackgroundColor(surfaceColor)
+
         btnStartAgent.setOnClickListener {
             viewModel.loadAgents()
             Toast.makeText(this, "Запуск агента...", Toast.LENGTH_SHORT).show()
         }
         btnStopAgent.setOnClickListener {
-            // Stop via ViewModel
             Toast.makeText(this, "Остановка агента...", Toast.LENGTH_SHORT).show()
         }
 
@@ -301,8 +304,18 @@ class RemoteAgentActivity : AppCompatActivity(),
 
     private fun updateStatus(connected: Boolean, customText: String? = null) {
         val dotColor = if (connected) 0xFF4CAF50.toInt() else 0xFFF44336.toInt()
-        statusIndicator.background.setTint(dotColor)
+        val dotDrawable = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(dotColor)
+            setSize(
+                (10 * resources.displayMetrics.density).toInt(),
+                (10 * resources.displayMetrics.density).toInt()
+            )
+        }
+        statusIndicator.background = dotDrawable
         statusText.text = customText ?: if (connected) "Агент подключён" else "Агент отключён"
+        val theme = ThemeStore.currentTheme()
+        statusText.setTextColor(ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE))
     }
 
     private fun updateStartStopButtons(connected: Boolean) {
