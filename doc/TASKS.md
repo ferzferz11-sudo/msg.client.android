@@ -1,34 +1,14 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.3.8
+**Версия:** 1.1.3.7
 **Обновлено:** 2026-06-13
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## ✅ v1.1.3.8 — P0: Agent selection + Status bar + Cancellation toast
-
-### Agent selection fix
-- ✅ `ensureAgentSelected()` — loads from server, falls back to default local agent
-- ✅ Removed recursive `sendMessageStreaming()` retry
-- ✅ `loadAgents()` no longer writes to `_error` (non-critical, only AppLog)
-- ✅ Added `_infoMessage` StateFlow for non-critical messages
-- ✅ `selectAgent()` marks 'local'/'restored' as connected
-
-### Status bar fix
-- ✅ `activity_remote_agent.xml` — ConstraintLayout with fixed 48dp buttons
-- ✅ Status text uses `?android:textColorPrimary` (contrast on all themes)
-
-### Cancellation toast fix
-- ✅ Removed duplicate `refreshAgentStatus()` from onCreate
-- ✅ Removed `loadAgents()` from `onStateChanged()` (too frequent)
-- ✅ `updateStatus()` no longer sets text color from theme (bug: invisible text)
-
-## ✅ v1.1.3.7 — Streaming результатов задач агентом + ErrorHandler
+## ✅ v1.1.3.7 — Streaming + ErrorHandler + P0 Bugfixes
 
 ### Server-side streaming: DeployAgentTaskStream
-- ✅ **Proto**: `DeployAgentTaskStream` RPC (server-side streaming) в `messenger.proto`
-  - `DeployAgentTaskStreamResponse` с полями: stdout_chunk, stderr_chunk, progress, status, done
   - Полный stdout/stderr + exit_code + duration_ms при done=true
 - ✅ **Сервер**: `server_ai.go` — `DeployAgentTaskStream` handler
   - Отправляет задачу через `SendTask` → подписывается на `onStream` callback
@@ -91,9 +71,21 @@ Exception → ErrorHandler.handle(source, throwable)
   └── Other → AppLog.error()
 ```
 
----
+### P0 Bugfixes
+- ✅ **"Агент не выбран"** — `ensureAgentSelected()` в `RemoteAgentViewModel`
+  - Автоматическая загрузка агентов с сервера при отправке
+  - Fallback: создание локального агента с именем из настроек шлюза (`sshHost`)
+  - Работает для обоих режимов (шлюз + токен)
+  - Убрана рекурсия в `sendMessageStreaming()`
+- ✅ **Status bar** — `ConstraintLayout` + фиксированные 48dp кнопки + `?android:textColorPrimary`
+  - Убрана установка цвета текста из `ThemeStore.textSecondaryColor` (был bug: невидимый текст)
+- ✅ **"Job was cancelled" тост** — `loadAgents()` не пишет в `_error`, только `AppLog.info()`
+  - Убраны дублирующие `refreshAgentStatus()` из `onCreate` и `onStateChanged()`
+- ✅ **Сервер** — Remote Agent RPC вынесен в `server_remote.go`
+  - Единый `ensureRemoteManager()`, graceful degradation, stale detection
+  - Проверка существования агента перед отправкой задачи
 
-## ✅ v1.1.3.5 — Remote Agent: фоновое подключение (persistent connection)
+---
 
 ### Foreground Service + Singleton Manager
 - ✅ `RemoteAgentService.kt` — foreground service с SSH туннелем + gRPC

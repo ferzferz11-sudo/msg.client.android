@@ -15,6 +15,29 @@
 - **AppLog** добавлен во все catch-блоки с Toast ошибками
 - **Bugfix**: "Job was cancelled" тост больше не появляется (CancellationException обрабатывается отдельно)
 
+### P0 Bugfixes
+- **"Агент не выбран" исправлен** — `ensureAgentSelected()` в `RemoteAgentViewModel`
+  - Автоматическая загрузка агентов с сервера при отправке сообщения
+  - Fallback: создание локального агента с именем из настроек шлюза (`sshHost`)
+  - Работает для обоих режимов (шлюз + токен)
+  - Убрана рекурсия в `sendMessageStreaming()`
+- **Status bar в RemoteAgentActivity**
+  - `ConstraintLayout` вместо `LinearLayout` — кнопки Start/Stop фиксированы 48dp
+  - Текст статуса использует `?android:textColorPrimary` (контрастный на любых темах)
+  - Убрана установка цвета текста из темы (был bug: невидимый текст на кастомных темах)
+- **"Job was cancelled" тост подавлен**
+  - `loadAgents()` не пишет в `_error` (только `AppLog.info`)
+  - Убраны дублирующие `refreshAgentStatus()` из `onCreate` и `onStateChanged()`
+- **Сборка**: ./gradlew compileDebugKotlin — OK
+
+### Server Changes
+- `server_remote.go` — все Remote Agent RPC вынесены из `server_ai.go`
+  - `ListRemoteAgents`, `GetRemoteAgentStatus`, `DeployAgentTask`, `DeployAgentTaskStream`
+  - `ensureRemoteManager()` — единая проверка зависимостей
+  - Graceful degradation: пустой список вместо ошибки если менеджер недоступен
+  - Stale detection для агентов (heartbeat > 120с → status="stale")
+  - Проверка существования агента перед отправкой задачи
+
 ## [1.1.3.6] - 2026-06-13
 ### Remote Agent — New Settings UI + Chat Improvements
 - **Tab-based Settings** — вкладки «Шлюз» (SSH туннель) и «Токен» (JWT + start/stop)
