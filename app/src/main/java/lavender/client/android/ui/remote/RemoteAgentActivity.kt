@@ -44,15 +44,7 @@ class RemoteAgentActivity : AppCompatActivity(),
     private var selectedTaskType: String = "shell"
     private var serviceBound = false
 
-    private val taskTypes = listOf(
-        "shell" to getString(R.string.task_shell),
-        "git" to getString(R.string.task_git),
-        "build" to getString(R.string.task_build),
-        "deploy" to getString(R.string.task_deploy),
-        "file" to getString(R.string.task_file),
-        "docker" to getString(R.string.task_docker),
-        "ai" to getString(R.string.task_ai)
-    )
+    private lateinit var taskTypes: List<Pair<String, String>>
 
     private val agentCommands = listOf(
         CommandBottomSheet.CommandInfo("/help", "Показать справку по командам"),
@@ -81,6 +73,15 @@ class RemoteAgentActivity : AppCompatActivity(),
         viewModel = ViewModelProvider(this, factory).get(RemoteAgentViewModel::class.java)
 
         initViews()
+        taskTypes = listOf(
+            "shell" to getString(R.string.task_shell),
+            "git" to getString(R.string.task_git),
+            "build" to getString(R.string.task_build),
+            "deploy" to getString(R.string.task_deploy),
+            "file" to getString(R.string.task_file),
+            "docker" to getString(R.string.task_docker),
+            "ai" to getString(R.string.task_ai)
+        )
         setupToolbar()
         setupStatusBar()
         setupTaskTypeChips()
