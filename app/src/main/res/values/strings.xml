@@ -540,6 +540,12 @@
     <string name="discuss_in_chat">Discuss in chat</string>
     <string name="reject_conference">Reject</string>
 
+    <!-- Remote Agent -->
+    <string name="agent_connected_via_gateway">Подключён через шлюз %s</string>
+    <string name="agent_connected_token">%s • подключён (токен)</string>
+    <string name="agent_disconnected_name">%s • отключён</string>
+    <string name="agent_not_connected">Агент не подключён</string>
+
     <!-- Changelog -->
     <string name="changelog_title">What\'s New</string>
     <string name="tag_latest">★ Latest</string>

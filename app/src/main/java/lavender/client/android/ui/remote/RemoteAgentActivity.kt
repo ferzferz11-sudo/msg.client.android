@@ -6,11 +6,8 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -124,7 +121,7 @@ class RemoteAgentActivity : AppCompatActivity(),
     private fun setupStatusBar() {
         val theme = ThemeStore.currentTheme()
         val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-        val statusBar = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.statusBar)
+        val statusBar = findViewById<LinearLayout>(R.id.statusBar)
         statusBar.setBackgroundColor(surfaceColor)
 
         btnStartAgent.setOnClickListener {
@@ -289,13 +286,13 @@ class RemoteAgentActivity : AppCompatActivity(),
 
                     if (tunnelActive) {
                         val settings = HermesGatewayManager(this@RemoteAgentActivity).loadSettings()
-                        updateStatus(true, "Подключён через шлюз ${settings.sshHost}")
+                        updateStatus(true, getString(R.string.agent_connected_via_gateway, settings.sshHost))
                     } else if (selectedAgent != null && isConnected) {
-                        updateStatus(true, "${selectedAgent.name} • подключён (токен)")
+                        updateStatus(true, getString(R.string.agent_connected_token, selectedAgent.name))
                     } else if (agents.isNotEmpty()) {
-                        updateStatus(false, "${agents.first().name} • отключён")
+                        updateStatus(false, getString(R.string.agent_disconnected_name, agents.first().name))
                     } else {
-                        updateStatus(false, "Агент не подключён")
+                        updateStatus(false, getString(R.string.agent_not_connected))
                     }
                 }
             }
