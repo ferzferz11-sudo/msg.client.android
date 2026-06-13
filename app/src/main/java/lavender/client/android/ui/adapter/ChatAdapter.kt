@@ -350,13 +350,13 @@ class ChatAdapter(
     }
 
     inner class ChatViewHolder(itemView: View, private val onChatClick: (ChatInfo) -> Unit) : RecyclerView.ViewHolder(itemView) {
-        private val chatName: TextView = itemView.findViewById(R.id.chatName)
-        private val chatType: TextView = itemView.findViewById(R.id.chatType)
-        private val unreadCount: TextView = itemView.findViewById(R.id.unreadCount)
-        private val adminIndicator: ImageView = itemView.findViewById(R.id.adminIndicator)
-        private val muteIndicator: ImageView = itemView.findViewById(R.id.muteIndicator)
+        private val chatName: TextView = itemView.findViewById(R.id.tvChatName)
+        private val chatType: TextView = itemView.findViewById(R.id.tvChatType)
+        private val unreadCount: TextView = itemView.findViewById(R.id.tvUnreadCount)
+        private val adminIndicator: ImageView = itemView.findViewById(R.id.ivAdminIndicator)
+        private val muteIndicator: ImageView = itemView.findViewById(R.id.ivMuteIndicator)
         private val btnEnterLobby: ImageView = itemView.findViewById(R.id.btnEnterLobby)
-        private val deleteProgressBar: android.widget.ProgressBar = itemView.findViewById(R.id.deleteProgressBar)
+        private val deleteProgressBar: android.widget.ProgressBar = itemView.findViewById(R.id.pbDeleteChat)
         val participantAvatars: LinearLayout = itemView.findViewById(R.id.participantAvatars)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 

@@ -177,8 +177,8 @@ class SuperAdminAdapter(
 
     inner class ChatViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val card = view as MaterialCardView
-        private val nameText = view.findViewById<TextView>(R.id.chatName)
-        private val typeText = view.findViewById<TextView>(R.id.chatType)
+        private val nameText = view.findViewById<TextView>(R.id.tvChatName)
+        private val typeText = view.findViewById<TextView>(R.id.tvChatType)
         private val participantAvatars = view.findViewById<LinearLayout>(R.id.participantAvatars)
 
         fun bind(chat: ChatInfo) {

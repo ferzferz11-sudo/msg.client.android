@@ -372,7 +372,7 @@ class SuperAdminActivity : AppCompatActivity() {
         val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats) // Reusing delete layout
         sheet.setTitle(getString(R.string.delete_profile))
         
-        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+        sheet.findViewById<TextView>(R.id.tvMessageText)?.text = 
             "${getString(R.string.delete_profile)}: $count ${getString(R.string.users)}?"
 
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
@@ -402,7 +402,7 @@ class SuperAdminActivity : AppCompatActivity() {
         val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats)
         sheet.setTitle(getString(R.string.delete_group))
 
-        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+        sheet.findViewById<TextView>(R.id.tvMessageText)?.text = 
             "${getString(R.string.delete_group)}: $count ${getString(R.string.chats)}?"
 
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }

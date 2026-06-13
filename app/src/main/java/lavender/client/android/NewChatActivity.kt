@@ -1027,7 +1027,7 @@ class NewChatActivity : AppCompatActivity() {
         val sheet = StandardBottomSheet(this, R.layout.dialog_delete_messages)
         sheet.setTitle(getString(R.string.delete_messages_title))
 
-        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+        sheet.findViewById<TextView>(R.id.tvMessageText)?.text = 
             getString(R.string.delete_messages_confirm, sm.size)
 
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }

@@ -207,8 +207,8 @@ class ChatListActivity : AppCompatActivity() {
                 }
                 launch {
                     updateManager.downloadProgressInstance.collect { progress ->
-                        binding.updateProgressText.text = getString(R.string.percent_format, progress)
-                        binding.updateProgressText.isVisible = progress > 0
+                        binding.tvUpdateProgress.text = getString(R.string.percent_format, progress)
+                        binding.tvUpdateProgress.isVisible = progress > 0
                     }
                 }
                 launch {
@@ -285,20 +285,20 @@ class ChatListActivity : AppCompatActivity() {
             },
             onSelectionChanged = { count ->
                 val hasSelection = count > 0
-                binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, count) else getString(R.string.chats)
+                binding.tvToolbarTitle.text = if (hasSelection) getString(R.string.selected_count, count) else getString(R.string.chats)
                 supportActionBar?.setDisplayHomeAsUpEnabled(hasSelection || binding.searchCard.isVisible)
                 supportActionBar?.setHomeAsUpIndicator(if (hasSelection || binding.searchCard.isVisible) R.drawable.ic_close else 0)
                 
-                binding.actionDelete.isVisible = hasSelection
-                binding.actionMute.isVisible = hasSelection
+                binding.ivActionDelete.isVisible = hasSelection
+                binding.ivActionMute.isVisible = hasSelection
                 
                 // Show edit icon only if ONE group chat is selected and user is creator
                 val selected = chatAdapter.getSelectedChats()
                 val canEdit = selected.size == 1 && (selected[0].type == "group" || selected[0].type == "general") && selected[0].creator == username
-                binding.actionEdit.isVisible = canEdit
+                binding.ivActionEdit.isVisible = canEdit
 
-                binding.actionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
-                binding.toolbarUserAvatar.isVisible = !hasSelection && !binding.searchCard.isVisible
+                binding.ivActionSearch.isVisible = !hasSelection && !binding.searchCard.isVisible
+                binding.ivToolbarUserAvatar.isVisible = !hasSelection && !binding.searchCard.isVisible
 
                 updateUpdateIndicatorVisibility()
             },
@@ -307,13 +307,13 @@ class ChatListActivity : AppCompatActivity() {
             onlineUsers = grpcClient.users.value,
             onEmptyListUpdate = {
                 // Force RecyclerView re-layout when Favorites is first added to empty list
-                binding.chatsRecyclerView.post {
-                    binding.chatsRecyclerView.requestLayout()
+                binding.rvChatList.post {
+                    binding.rvChatList.requestLayout()
                     chatAdapter.notifyDataSetChanged()
                 }
             }
         )
-        binding.chatsRecyclerView.apply {
+        binding.rvChatList.apply {
             layoutManager = LinearLayoutManager(this@ChatListActivity)
             adapter = chatAdapter
             setHasFixedSize(false)
@@ -338,18 +338,18 @@ class ChatListActivity : AppCompatActivity() {
             
             // Add padding to the bottom of the RecyclerView so the last item is visible
             // We add extra padding to account for the FAB
-            binding.chatsRecyclerView.updatePadding(
+            binding.rvChatList.updatePadding(
                 bottom = systemBars.bottom + (80 * resources.displayMetrics.density).toInt()
             )
             
             // Adjust FAB margin to be above the navigation bar
-            binding.addChatFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            binding.fabAddChat.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = systemBars.bottom + (16 * resources.displayMetrics.density).toInt()
                 marginEnd = (16 * resources.displayMetrics.density).toInt()
             }
 
             // Adjust AI FAB margin (above addChatFab)
-            binding.aiFab.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            binding.fabAi.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = systemBars.bottom + (40 * resources.displayMetrics.density).toInt()
                 marginEnd = (16 * resources.displayMetrics.density).toInt()
             }
@@ -357,11 +357,11 @@ class ChatListActivity : AppCompatActivity() {
             insets
         }
 
-        binding.addChatFab.setOnClickListener {
+        binding.fabAddChat.setOnClickListener {
             showChatActionSheet()
         }
 
-        binding.aiFab.setOnClickListener {
+        binding.fabAi.setOnClickListener {
             lifecycleScope.launch { showAIActionSheet() }
         }
 
@@ -369,11 +369,11 @@ class ChatListActivity : AppCompatActivity() {
             loadChats(skipCache = true)
         }
 
-        binding.toolbarUserAvatar.setOnClickListener {
+        binding.ivToolbarUserAvatar.setOnClickListener {
             showSettingsSheet()
         }
 
-        binding.toolbarTitle.setOnClickListener {
+        binding.tvToolbarTitle.setOnClickListener {
             showSettingsSheet()
         }
 
@@ -381,7 +381,7 @@ class ChatListActivity : AppCompatActivity() {
             showSettingsSheet()
         }
         
-        binding.actionSearch.setOnClickListener {
+        binding.ivActionSearch.setOnClickListener {
             showSearchBar()
         }
 
@@ -393,21 +393,21 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        binding.actionDelete.setOnClickListener {
+        binding.ivActionDelete.setOnClickListener {
             val selected = chatAdapter.getSelectedChats()
             if (selected.isNotEmpty()) {
                 confirmDeleteSelectedChats(selected)
             }
         }
 
-        binding.actionMute.setOnClickListener {
+        binding.ivActionMute.setOnClickListener {
             val selected = chatAdapter.getSelectedChats()
             if (selected.isNotEmpty()) {
                 toggleMuteSelectedChats(selected)
             }
         }
 
-        binding.actionEdit.setOnClickListener {
+        binding.ivActionEdit.setOnClickListener {
             val selected = chatAdapter.getSelectedChats()
             if (selected.size == 1) {
                 val chat = selected[0]
@@ -424,7 +424,7 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        binding.searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+        binding.etSearch.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 chatAdapter.filter(s.toString())
@@ -440,7 +440,7 @@ class ChatListActivity : AppCompatActivity() {
                 val isFailed = status == ConnectionStatus.FAILED
                 
                 if (chatAdapter.getSelectedChats().isEmpty()) {
-                    binding.toolbarTitle.text = getString(R.string.chats)
+                    binding.tvToolbarTitle.text = getString(R.string.chats)
                     
                     when {
                         isConnecting -> {
@@ -594,30 +594,30 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showSearchBar() {
         binding.searchCard.isVisible = true
-        binding.searchEditText.requestFocus()
+        binding.etSearch.requestFocus()
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.showSoftInput(binding.searchEditText, 0)
+        imm.showSoftInput(binding.etSearch, 0)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close)
         
-        binding.actionSearch.isVisible = false
-        binding.toolbarUserAvatar.isVisible = false
+        binding.ivActionSearch.isVisible = false
+        binding.ivToolbarUserAvatar.isVisible = false
         updateUpdateIndicatorVisibility()
     }
 
     private fun hideSearchBar() {
         binding.searchCard.isVisible = false
-        binding.searchEditText.text?.clear()
+        binding.etSearch.text?.clear()
         chatAdapter.filter("")
         val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.hideSoftInputFromWindow(binding.searchEditText.windowToken, 0)
+        imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
         
         val hasSelection = chatAdapter.getSelectedChats().isNotEmpty()
         supportActionBar?.setDisplayHomeAsUpEnabled(hasSelection)
         supportActionBar?.setHomeAsUpIndicator(if (hasSelection) R.drawable.ic_close else 0)
-        binding.actionSearch.isVisible = !hasSelection
-        binding.toolbarUserAvatar.isVisible = !hasSelection
-        binding.toolbarTitle.text = if (hasSelection) getString(R.string.selected_count, chatAdapter.getSelectedChats().size) else getString(R.string.chats)
+        binding.ivActionSearch.isVisible = !hasSelection
+        binding.ivToolbarUserAvatar.isVisible = !hasSelection
+        binding.tvToolbarTitle.text = if (hasSelection) getString(R.string.selected_count, chatAdapter.getSelectedChats().size) else getString(R.string.chats)
         updateUpdateIndicatorVisibility()
     }
 
@@ -703,25 +703,25 @@ class ChatListActivity : AppCompatActivity() {
                 .load(myAvatarUrl)
                 .placeholder(R.drawable.ic_default_avatar)
                 .circleCrop()
-                .into(binding.toolbarUserAvatar)
-            binding.toolbarUserAvatar.clearColorFilter()
+                .into(binding.ivToolbarUserAvatar)
+            binding.ivToolbarUserAvatar.clearColorFilter()
         } else {
             val avatarFile = File(filesDir, "avatars/$username.jpg")
             if (avatarFile.exists()) {
                 try {
                     val bitmap = BitmapFactory.decodeFile(avatarFile.absolutePath)
                     if (bitmap != null) {
-                        binding.toolbarUserAvatar.setImageBitmap(bitmap)
-                        binding.toolbarUserAvatar.clearColorFilter()
+                        binding.ivToolbarUserAvatar.setImageBitmap(bitmap)
+                        binding.ivToolbarUserAvatar.clearColorFilter()
                     } else {
-                        ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
+                        ThemeUtils.applyDefaultAvatar(binding.ivToolbarUserAvatar, currentTheme)
                     }
                 } catch (e: Exception) {
                     Log.e("ChatListActivity", "Error loading avatar for toolbar", e)
-                    ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
+                    ThemeUtils.applyDefaultAvatar(binding.ivToolbarUserAvatar, currentTheme)
                 }
             } else {
-                ThemeUtils.applyDefaultAvatar(binding.toolbarUserAvatar, currentTheme)
+                ThemeUtils.applyDefaultAvatar(binding.ivToolbarUserAvatar, currentTheme)
             }
         }
     }
@@ -1069,26 +1069,26 @@ class ChatListActivity : AppCompatActivity() {
         val isSearching = binding.searchCard.isVisible
         
         // Show container if update is ready or downloading
-        binding.updateContainer.isVisible = (isDownloaded || isDownloading) && !hasSelection && !isSearching
+        binding.llUpdateContainer.isVisible = (isDownloaded || isDownloading) && !hasSelection && !isSearching
         
         if (isDownloading) {
-            binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_rotating)
+            binding.ivUpdateAvailable.setImageResource(R.drawable.ic_update_rotating)
             val rotation = AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
-            binding.updateAvailableIcon.startAnimation(rotation)
-            binding.updateAvailableIcon.contentDescription = "Downloading..."
+            binding.ivUpdateAvailable.startAnimation(rotation)
+            binding.ivUpdateAvailable.contentDescription = "Downloading..."
         } else {
-            binding.updateAvailableIcon.clearAnimation()
-            binding.updateProgressText.isVisible = false
+            binding.ivUpdateAvailable.clearAnimation()
+            binding.tvUpdateProgress.isVisible = false
             if (isDownloaded) {
-                binding.updateAvailableIcon.setImageResource(R.drawable.ic_install_update)
-                binding.updateAvailableIcon.contentDescription = getString(R.string.install_update)
+                binding.ivUpdateAvailable.setImageResource(R.drawable.ic_install_update)
+                binding.ivUpdateAvailable.contentDescription = getString(R.string.install_update)
             } else {
-                binding.updateAvailableIcon.setImageResource(R.drawable.ic_update_available)
-                binding.updateAvailableIcon.contentDescription = getString(R.string.update_available)
+                binding.ivUpdateAvailable.setImageResource(R.drawable.ic_update_available)
+                binding.ivUpdateAvailable.contentDescription = getString(R.string.update_available)
             }
         }
         
-        binding.updateContainer.setOnClickListener {
+        binding.llUpdateContainer.setOnClickListener {
             if (isDownloaded) {
                 val apkPath = prefs.getString("apk_path", null)
                 if (apkPath != null) {

@@ -111,7 +111,7 @@ class ChatMessageAdapter(
     // ===== Holders =====
 
     inner class DateSeparatorHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dateText: TextView = itemView.findViewById(R.id.dateText)
+        private val dateText: TextView = itemView.findViewById(R.id.tvDateSeparator)
 
         fun bind(item: ChatMessageItem) {
             dateText.text = dateFormat.format(Date(item.timestamp))
@@ -132,7 +132,7 @@ class ChatMessageAdapter(
             typingContainer.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
             itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = false
-            itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
+            itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
             val name = item.senderName.ifEmpty { "Агент" }
             // Start animated dots
@@ -174,7 +174,7 @@ class ChatMessageAdapter(
             container.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = false
             itemView.findViewById<LinearLayout>(R.id.typingContainer)?.isVisible = false
-            itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
+            itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
             messageText.text = item.content
             messageTime.text = timeFormat.format(Date(item.timestamp))
@@ -208,7 +208,7 @@ class ChatMessageAdapter(
             container.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
             itemView.findViewById<LinearLayout>(R.id.typingContainer)?.isVisible = false
-            itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
+            itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
             messageText.text = item.content
             messageTime.text = timeFormat.format(Date(item.timestamp))

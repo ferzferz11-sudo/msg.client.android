@@ -154,19 +154,19 @@ class MessageAdapter(
     inner class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val messageContainer: LinearLayout = itemView.findViewById(R.id.messageContainer)
         val messageBubble: LinearLayout = itemView.findViewById(R.id.messageBubble)
-        private val dateText: TextView = itemView.findViewById(R.id.dateText)
-        private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
-        private val avatarImageView: com.google.android.material.imageview.ShapeableImageView = itemView.findViewById(R.id.avatarImageView)
-        private val userText: TextView = itemView.findViewById(R.id.userText)
-        private val messageText: TextView = itemView.findViewById(R.id.messageText)
-        private val timeText: TextView = itemView.findViewById(R.id.timeText)
-        private val editedText: TextView = itemView.findViewById(R.id.editedText)
-        private val readStatusIcon: ImageView = itemView.findViewById(R.id.readStatusIcon)
-        private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
-        private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
-        private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
-        private val replyQuoteBar: View = itemView.findViewById(R.id.replyQuoteBar)
-        private val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.messageImageView).apply {
+        private val dateText: TextView = itemView.findViewById(R.id.tvDateSeparator)
+        private val selectionIndicator: ImageView = itemView.findViewById(R.id.ivSelectionIndicator)
+        private val avatarImageView: com.google.android.material.imageview.ShapeableImageView = itemView.findViewById(R.id.ivAvatar)
+        private val userText: TextView = itemView.findViewById(R.id.tvUserName)
+        private val messageText: TextView = itemView.findViewById(R.id.tvMessageText)
+        private val timeText: TextView = itemView.findViewById(R.id.tvMessageTime)
+        private val editedText: TextView = itemView.findViewById(R.id.tvEditedLabel)
+        private val readStatusIcon: ImageView = itemView.findViewById(R.id.ivReadStatus)
+        private val replyQuoteContainer: View = itemView.findViewById(R.id.llReplyQuote)
+        private val replyQuoteUser: TextView = itemView.findViewById(R.id.tvReplyUser)
+        private val replyQuoteText: TextView = itemView.findViewById(R.id.tvReplyText)
+        private val replyQuoteBar: View = itemView.findViewById(R.id.vReplyBar)
+        private val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.ivMessageImage).apply {
             clipToOutline = true
             outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) {
@@ -175,10 +175,10 @@ class MessageAdapter(
                 }
             }
         }
-        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.galleryCountIndicator)
+        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.tvGalleryCount)
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
-        private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
+        private val reactionsText: TextView = itemView.findViewById(R.id.tvReactions)
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
         
         // Track pending image load requests to cancel them when ViewHolder is reused
@@ -269,7 +269,7 @@ class MessageAdapter(
                 } else {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_START)
                     if (isSelectionMode) {
-                        lp.addRule(RelativeLayout.END_OF, R.id.selectionIndicator)
+                        lp.addRule(RelativeLayout.END_OF, R.id.ivSelectionIndicator)
                     }
                     lp.marginStart = 0
                     lp.marginEnd = 40.dpToPx()

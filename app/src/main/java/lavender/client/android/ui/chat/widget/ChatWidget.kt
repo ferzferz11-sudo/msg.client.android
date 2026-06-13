@@ -44,12 +44,12 @@ class ChatWidget @JvmOverloads constructor(
     private val binding: WidgetChatBinding =
         WidgetChatBinding.inflate(LayoutInflater.from(context), this, true)
 
-    val messagesRecyclerView: RecyclerView get() = binding.messagesRecyclerView
-    val messageInput: EditText get() = binding.messageInput
-    val sendButton: ImageButton get() = binding.sendButton
-    val commandButton: ImageButton get() = binding.commandButton
-    val attachButton: ImageButton get() = binding.attachButton
-    val audioButton: ImageButton get() = binding.audioButton
+    val messagesRecyclerView: RecyclerView get() = binding.rvMessages
+    val messageInput: EditText get() = binding.etMessageInput
+    val sendButton: ImageButton get() = binding.btnSend
+    val commandButton: ImageButton get() = binding.btnCommand
+    val attachButton: ImageButton get() = binding.btnAttach
+    val audioButton: ImageButton get() = binding.btnAudio
     val toolbarTitle: TextView get() = binding.toolbarTitle
     val toolbarSubtitle: TextView get() = binding.toolbarSubtitle
     val toolbarInfo: TextView get() = binding.toolbarInfo
@@ -57,41 +57,41 @@ class ChatWidget @JvmOverloads constructor(
     val toolbarAgentIcon: TextView get() = binding.toolbarAgentIcon
     val groupHeader: LinearLayout get() = binding.groupHeader
     val groupParticipantsContainer: LinearLayout get() = binding.groupParticipantsContainer
-    val replyPreview: View get() = binding.replyPreview
-    val replyUser: TextView get() = binding.replyUser
-    val replyText: TextView get() = binding.replyText
-    val cancelReply: ImageButton get() = binding.cancelReply
-    val bottomPanel: View get() = binding.bottomPanel
+    val replyPreview: View get() = binding.cvReplyPreview
+    val replyUser: TextView get() = binding.tvReplyUser
+    val replyText: TextView get() = binding.tvReplyText
+    val cancelReply: ImageButton get() = binding.btnCancelReply
+    val bottomPanel: View get() = binding.cvBottomPanel
 
     // Search bar
-    val searchBar: LinearLayout get() = binding.searchBar
-    val searchInput: EditText get() = binding.searchInput
-    val searchResultsCount: TextView get() = binding.searchResultsCount
-    val searchPrev: ImageButton get() = binding.searchPrev
-    val searchNext: ImageButton get() = binding.searchNext
+    val searchBar: LinearLayout get() = binding.llSearchBar
+    val searchInput: EditText get() = binding.etSearchInput
+    val searchResultsCount: TextView get() = binding.tvSearchResultsCount
+    val searchPrev: ImageButton get() = binding.btnSearchPrev
+    val searchNext: ImageButton get() = binding.btnSearchNext
 
     // Selection toolbar
-    val selectionToolbar: LinearLayout get() = binding.selectionToolbar
-    val selectionCountText: TextView get() = binding.selectionCountText
-    val selectionClose: ImageButton get() = binding.selectionClose
-    val selectionReply: ImageButton get() = binding.selectionReply
-    val selectionCopy: ImageButton get() = binding.selectionCopy
-    val selectionForward: ImageButton get() = binding.selectionForward
-    val selectionDelete: ImageButton get() = binding.selectionDelete
-    val selectionStar: ImageButton get() = binding.selectionStar
+    val selectionToolbar: LinearLayout get() = binding.llSelectionToolbar
+    val selectionCountText: TextView get() = binding.tvSelectionCount
+    val selectionClose: ImageButton get() = binding.btnSelectionClose
+    val selectionReply: ImageButton get() = binding.btnSelectionReply
+    val selectionCopy: ImageButton get() = binding.btnSelectionCopy
+    val selectionForward: ImageButton get() = binding.btnSelectionForward
+    val selectionDelete: ImageButton get() = binding.btnSelectionDelete
+    val selectionStar: ImageButton get() = binding.btnSelectionStar
 
     // Image preview
-    val imagePreviewScroll: HorizontalScrollView get() = binding.imagePreviewScroll
-    val imagePreviewContainer: LinearLayout get() = binding.imagePreviewContainer
+    val imagePreviewScroll: HorizontalScrollView get() = binding.hsvImagePreview
+    val imagePreviewContainer: LinearLayout get() = binding.llImagePreviewContainer
 
     // Upload progress
-    val uploadProgressContainer: LinearLayout get() = binding.uploadProgressContainer
-    val uploadProgressBar: ProgressBar get() = binding.uploadProgressBar
-    val uploadProgressText: TextView get() = binding.uploadProgressText
+    val uploadProgressContainer: LinearLayout get() = binding.llUploadProgress
+    val uploadProgressBar: ProgressBar get() = binding.pbUpload
+    val uploadProgressText: TextView get() = binding.tvUploadProgress
 
     // Mention UI
     val mentionContainer: MaterialCardView get() = binding.mentionContainer
-    val mentionList: RecyclerView get() = binding.mentionList
+    val mentionList: RecyclerView get() = binding.rvMentionList
 
     // Listeners
     private var adapter: ChatMessageAdapter? = null

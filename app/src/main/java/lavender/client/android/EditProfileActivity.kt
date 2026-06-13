@@ -100,7 +100,7 @@ class EditProfileActivity : AppCompatActivity() {
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
-        val avatarImageView = findViewById<CircleImageView>(R.id.avatarImageView)
+        val avatarImageView = findViewById<CircleImageView>(R.id.ivAvatar)
         val editTextBio = findViewById<EditText>(R.id.editTextBio)
         val btnChangeUsername = findViewById<Button>(R.id.btnChangeUsername)
         val btnChangeBio = findViewById<Button>(R.id.btnChangeBio)
