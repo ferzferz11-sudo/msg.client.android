@@ -146,4 +146,3 @@ python3 hermes_remote_agent.py --server host:port --token <jwt>
 
 - Агент (hermes_remote_agent.py) ещё НЕ отправляет streaming updates — сервер готов, клиент готов, агент нужно обновить
 - Server migration warnings: `role "lavender" does not exist` (не критично)
-- Favorites мерцание при обновлении списка чатов (DiffUtil)
