@@ -15,10 +15,13 @@
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="@dimen/custom_toolbar_height"
+        android:background="@drawable/toolbar_background"
         android:elevation="4dp"
         app:title="Настройки агента"
-        app:navigationIcon="@drawable/ic_back_arrow" />
+        app:navigationIcon="@drawable/ic_back_arrow"
+        app:titleTextColor="?attr/colorOnPrimary"
+        app:navigationIconTint="?attr/colorOnPrimary" />
 
     <!-- TabLayout -->
     <com.google.android.material.tabs.TabLayout

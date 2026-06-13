@@ -22,10 +22,12 @@
         app:navigationIconTint="?attr/colorOnPrimary" />
 
     <!-- Status bar: подключен / отключён + тип подключения -->
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:id="@+id/statusBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
         android:paddingVertical="6dp">
 
@@ -33,61 +35,41 @@
             android:id="@+id/statusIndicator"
             android:layout_width="10dp"
             android:layout_height="10dp"
-            android:background="@drawable/ic_status_dot"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:background="@drawable/ic_status_dot" />
 
         <TextView
             android:id="@+id/statusText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Агент не подключён"
-            android:textSize="13sp"
-            android:textColor="?android:textColorPrimary"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btnStartAgent"
-            app:layout_constraintStart_toEndOf="@+id/statusIndicator"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:textSize="13sp" />
 
-        <!-- Start/Stop buttons — fixed 48dp width -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartAgent"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
+            android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:minWidth="48dp"
-            android:paddingStart="0dp"
-            android:paddingEnd="0dp"
             android:text="▶"
             android:textSize="16sp"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btnStopAgent"
-            app:layout_constraintTop_toTopOf="parent"
             tools:visibility="visible" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStopAgent"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
+            android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:minWidth="48dp"
-            android:paddingStart="0dp"
-            android:paddingEnd="0dp"
             android:text="⏹"
             android:textSize="16sp"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
             tools:visibility="visible" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
     <!-- Task type selector -->
     <HorizontalScrollView

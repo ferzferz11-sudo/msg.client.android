@@ -1,9 +1,41 @@
 # Lavender Messenger — Android Changelog
 
 ## [1.1.3.8] - 2026-06-13
+
+### Remote Agent — UI/UX улучшения и багфиксы
+
+**Тулбар в чате и настройках агента:**
+- Единый стиль тулбара с закругленными нижними углами (`toolbar_background`)
+- Фон тулбара из primary color темы, текст и иконки из `colorOnPrimary`
+- Высота `custom_toolbar_height` — единообразно с другими экранами
+- `ThemeUi.bind()` + `ThemeApplier` полностью стилизуют тулбар
+
+**Статус-бар в чате агента:**
+- Заменён `ConstraintLayout` на `LinearLayout` — кнопки Start/Stop больше не уезжают за экран
+- Фон статус-бара из `surfaceColor` темы
+- Индикатор подключения — программный `GradientDrawable` (надёжнее `setTint`)
+- Текст статуса из `textPrimaryColor` темы
+
+**Поля ввода в настройках (Шлюз):**
+- Все поля ввода (`etSshHost`, `etSshPort`, `etSshUser`, `etSshPassword`, `etServerHost`, `etServerPort`, `etLocalPort`) теперь получают цвета из темы
+- Текст и hint из `textPrimaryColor` / `hintColor`
+- Лейблы статуса (`tvGatewayStatus`, `tvTunnelAddress`) из `textPrimaryColor`
+
+**Исправления:**
+- `ChatAdapter.filter()` — `notifyItemRangeChanged` заменён на `diffResult.dispatchUpdatesTo` с offset +1 для Favorites → больше не крашится при фильтрации
+- `EditProfileActivity` — кнопка «Сохранить» появляется даже если профиль не загрузился с сервера
+- Убран ручной `setNavigationIconTint` из `RemoteAgentActivity.setupToolbar()` — `ThemeApplier` делает это автоматически
+
 ### Streaming fix
 - **RemoteAgentViewModel** — при финальном `done=True` использует полные буферы из `update.stdout`/`update.stderr` (из TaskResult на сервере), fallback на накопленные чанки
 - Сервер теперь отправляет **один** `done=True` с полными данными (исправлен двойной done=True)
+
+### Сервер v1.1.3.8
+- `server_remote.go` — исправлен `DeployAgentTaskStream`: done=True отправляется ровно один раз
+- `hermes_remote_manager.go` — StreamDone flag + ожидание TaskResult через close(streamCh)
+- `server_remote_test.go` — 6 unit-тестов для streaming логики
+
+---
 
 ## [1.1.3.7] - 2026-06-13
 ### Streaming результатов задач агентом
