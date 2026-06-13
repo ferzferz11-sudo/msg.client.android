@@ -27,6 +27,7 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.CredentialStore.ServerEntry
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.ui.widget.StandardBottomSheet
 import java.util.UUID
@@ -255,14 +256,14 @@ class ServersActivity : AppCompatActivity() {
 
             // Save server address and login
             CredentialStore.setServerAddress(this, serverAddress)
-            SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
+            SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
                 runOnUiThread {
                     when (result) {
                         "SUCCESS" -> {
-                            CredentialStore.setCredentials(this, u, p, serverAddress)
+                            CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
                             val userId = SessionManager.session.value.userId
                             if (userId.isNotEmpty()) {
-                                CredentialStore.setUserId(this, userId)
+                                CredentialStore.setUserId(this@ServersActivity, userId)
                             }
                             sheet.dismiss()
                             setResult(RESULT_OK)
@@ -272,7 +273,7 @@ class ServersActivity : AppCompatActivity() {
                             joinProgressBar?.visibility = View.GONE
                             btnJoin?.text = getString(R.string.join)
                             btnJoin?.isEnabled = true
-                            Toast.makeText(this, result, Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
                         }
                     }
                 }
