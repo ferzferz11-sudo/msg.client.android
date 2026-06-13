@@ -297,7 +297,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Job was cancelled — user left screen, not an error, don't show toast
                 AppLog.info("RemoteAgentVM.sendMessage", "Task cancelled by user (navigation)")
-                throw e // re-throw to keep structured concurrency
+                // Don't update messages on cancellation
             } catch (e: Exception) {
                 AppLog.error("RemoteAgentVM.sendMessage", "Task error: ${e.message}", e)
                 val agentMsg = RemoteAgentMessage(
@@ -323,7 +323,38 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 agent = agents.first()
                 selectAgent(agent)
             } else {
-                _error.value = "Агент не выбран"
+                // Auto-load agents from server, then retry
+                _isLoading.value = true
+                viewModelScope.launch {
+                    try {
+                        val result = GrpcClient.listRemoteAgents()
+                        _agents.value = result.map { proto ->
+                            RemoteAgentInfo(
+                                id = proto.id, name = proto.name,
+                                host = proto.host, ipAddress = proto.ipAddress,
+                                os = proto.os, status = proto.status,
+                                capabilities = proto.capabilities,
+                                activeTasks = proto.activeTasks,
+                                lastHeartbeat = proto.lastHeartbeat
+                            )
+                        }
+                        if (_selectedAgent.value == null && _agents.value.isNotEmpty()) {
+                            selectAgent(_agents.value.first())
+                        }
+                        // Retry sending with loaded agents
+                        val selectedAgent = _selectedAgent.value
+                        if (selectedAgent != null) {
+                            _isLoading.value = false
+                            sendMessageStreaming(text, userId, taskType)
+                        } else {
+                            _isLoading.value = false
+                            _error.value = "Агент не выбран"
+                        }
+                    } catch (e: Exception) {
+                        _isLoading.value = false
+                        _error.value = "Агент не выбран"
+                    }
+                }
                 return
             }
         }
@@ -426,8 +457,8 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                AppLog.info("RemoteAgentVM.sendMessageStreaming", "Stream cancelled by user")
-                throw e
+                AppLog.info("RemoteAgentVM.sendMessageStreaming", "Stream cancelled by user (navigation)")
+                // Don't update messages on cancellation — the user left the screen
             } catch (e: Exception) {
                 AppLog.error("RemoteAgentVM.sendMessageStreaming", "Stream error: ${e.message}", e)
                 val errMsg = RemoteAgentMessage(

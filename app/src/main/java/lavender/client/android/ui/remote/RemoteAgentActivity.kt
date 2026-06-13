@@ -348,6 +348,8 @@ class RemoteAgentActivity : AppCompatActivity(),
         runOnUiThread {
             updateStatus(state.isConnected)
             updateStartStopButtons(state.isConnected)
+            // Auto-load agents when connected (especially after gateway connect)
+            viewModel.loadAgents()
         }
     }
 }
