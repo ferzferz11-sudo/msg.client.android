@@ -390,7 +390,7 @@ class ChatAdapter(
                 if (chat.type == "favorites") {
                     chatType.text = context.getString(R.string.favorites_description)
                 } else {
-                    chatType.text = ""
+                    chatType.text = context.getString(R.string.no_messages)
                 }
                 chatType.setTextColor(cachedTextSecondary)
                 chatType.setTypeface(null, android.graphics.Typeface.NORMAL)

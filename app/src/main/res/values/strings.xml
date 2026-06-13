@@ -444,6 +444,7 @@
     <string name="under_development">In development</string>
     <string name="image_placeholder">Photo</string>
     <string name="favorites_description">Personal storage</string>
+    <string name="no_messages">No messages</string>
     <string name="direct_chat_type">Direct Chat</string>
     <string name="group_chat_type">Group Chat</string>
     <string name="share_to_lavender">Share to Lava</string>
