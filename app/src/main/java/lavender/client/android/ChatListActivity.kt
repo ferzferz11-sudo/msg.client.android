@@ -1997,12 +1997,12 @@ class ChatListActivity : AppCompatActivity() {
                 }
             },
             onCreateHermesChat = {
-                val hermesCount = existingChats.count { it.type == "hermes" }
+                val hermesCount = currentAiChats.count { it.type == "hermes" }
                 val chatName = "Лава ИИ #${hermesCount + 1}"
                 openHermesChat("", chatName)
             },
             onCreateOwlChat = {
-                val owlCount = existingChats.count { it.type == "owl" }
+                val owlCount = currentAiChats.count { it.type == "owl" }
                 val chatName = "Агент OWL #${owlCount + 1}"
                 openOwlChat("", chatName)
             },
