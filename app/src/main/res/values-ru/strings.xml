@@ -562,7 +562,7 @@
     <string name="notif_error">Ошибка: %s</string>
     <string name="notif_background_connection">Фоновое подключение Remote Agent</string>
     <string name="notif_disconnect">Отключить</string>
-    <string name name="error_exit_code">Ошибка (exit=%d): %s</string>
+    <string name="error_exit_code">Ошибка (exit=%d): %s</string>
     <string name="direct_chat_type">Личный чат</string>
     <string name="group_chat_type">Групповой чат</string>
     <string name="share_to_lavender">Поделиться в Лаве</string>
