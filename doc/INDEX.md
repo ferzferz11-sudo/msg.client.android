@@ -9,11 +9,43 @@
 ## Быстрый старт
 
 1. **PROMPT_ANDROID.md** — промпт для новой сессии (читать первым)
-2. **STRUCTURE.md** — структура проекта, ключевые файлы, паттерны
-3. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
-4. **PATTERNS.md** — паттерны и анти-patterns разработки
-5. **TASKS.md** — таск-трекер
-6. **CHANGELOG.md** — история изменений
+2. **TASKS.md** — таск-трекер (бэклог + сделано)
+3. **PATTERNS.md** — паттерны и анти-patterns разработки
+4. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
+5. **CHANGELOG.md** — история изменений
+
+---
+
+## Индекс документации
+
+### Текущая работа
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `PROMPT_ANDROID.md` | Промпт для новой сессии | **Всегда в начале** |
+| `TASKS.md` | Таск-трекер | В начале сессии |
+| `PATTERNS.md` | Паттерны и анти-patterns | Перед написанием кода |
+
+### Архитектура и дизайн
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `REMOTE_AGENT.md` | Remote Agent: архитектура, протокол, streaming | При работе с Remote Agent |
+| `/root/msg/doc/INTEGRATION_SESSION.md` | Интеграционная сессия: версии, архитектура | При работе с сервером |
+| `/root/msg/doc/AI_SERVICES.md` | AI-сервисы: OWL, Hermes | При работе с AI чатами |
+
+### Справочники
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
+| `/root/msg/doc/PITFALLS.md` | Подводные камни | **Перед началом работы** |
+| `/root/msg/doc/LOG_MONITOR.md` | Log Monitor | При проблемах с логами |
+| `/root/msg/doc/TESTING.md` | Модульные тесты | При работе с тестами |
+
+### Сервер
+| Файл | Назначение |
+|------|-----------|
+| `/root/msg/doc/INDEX.md` | Индекс серверной документации |
+| `/root/msg/doc/TASKS.md` | Серверный таск-трекер |
+| `/root/msg/doc/PROMPT.md` | Промпт для серверных сессий |
+| `/root/msg/doc/PROMPT_SERVER.md` | Промпт для серверных сессий (детальный) |
 
 ---
 
@@ -25,7 +57,7 @@ app/src/main/java/lavender/client/android/
 │   ├── remote/
 │   │   ├── RemoteAgentActivity.kt         — чат с агентом
 │   │   ├── RemoteAgentSettingsActivity.kt — настройки (шлюз + токен)
-│   │   ├── RemoteAgentViewModel.kt        — ViewModel (sendMessageStreaming)
+│   │   ├── RemoteAgentViewModel.kt        — ViewModel (AndroidViewModel)
 │   │   ├── RemoteAgentService.kt          — foreground service
 │   │   ├── RemoteAgentManager.kt          — singleton manager
 │   │   └── HermesGatewayManager.kt        — SSH туннель
@@ -36,7 +68,8 @@ app/src/main/java/lavender/client/android/
 │   ├── grpc/GrpcClient.kt                 — facade
 │   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
 │   ├── proto/MessengerProto.kt            — proto data classes
-│   └── ...
+│   ├── models/ErrorHandler.kt              — единый обработчик ошибок
+│   └── models/AppLog.kt                   — глобальный логгер
 └── theme/ui/
     ├── ThemeApplier.kt                    — применение тем
     └── ThemeUi.kt                         — ThemeUi.bind()
@@ -46,11 +79,17 @@ app/src/main/java/lavender/client/android/
 
 ## Ключевые паттерны
 
+### i18n (v1.1.3.9)
+- Activity: `getString(R.string.xxx)`
+- Adapter: `context.getString(R.string.xxx)`
+- ViewModel: `AndroidViewModel` + `getApplication<Application>().getString()`
+- НЕ инициализировать getString() в полях класса Activity
+- Несколько подстановок: позиционные форматтеры (%1$s, %2$d)
+
 ### Remote Agent
 - **Тулбар**: `toolbar_background` + `ThemeUi.bind()` единообразно
 - **Streaming**: `DeployAgentTaskStream` → `callbackFlow` → `flow.collect`
 - **done=True**: сервер отправляет ровно один раз с полными данными
-- **Кнопка Start**: скрыта если агент не настроен (нет туннеля/токена)
 
 ### Темы
 - `ThemeApplier.apply()` до `setContentView()`
@@ -59,7 +98,7 @@ app/src/main/java/lavender/client/android/
 
 ### Фильтрация чатов
 - `ChatAdapter.filter()` — `dispatchUpdatesTo` с offset +1 для Favorites
-- НЕ использовать `notifyItemRangeChanged` — не обновляет размер списка
+- НЕ использовать `notifyItemRangeChanged`
 
 ---
 
