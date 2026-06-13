@@ -12,6 +12,7 @@ import lavender.client.android.data.models.OwlMessage
 import lavender.client.android.data.grpc.owlTyping
 import lavender.client.android.data.grpc.owlResponses
 import lavender.client.android.data.grpc.chatWithOwl
+import lavender.client.android.R
 
 /**
  * OwlChatViewModel — ViewModel для чата с OWL AI.
