@@ -2441,34 +2441,26 @@ class ChatListActivity : AppCompatActivity() {
         val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
         val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
-        // Setup server address spinner — fetch from gRPC (public, no auth)
+        // Setup server address spinner — load from local CredentialStore
         val serverList = mutableListOf<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         serverAddressSpinner?.adapter = adapter
-        serverAddressSpinner?.visibility = View.GONE
-        serverStatusLayout?.visibility = View.GONE
-        serverAddressLabel?.visibility = View.GONE
-
-        lavender.client.android.data.grpc.GrpcClient.getServers(this) { servers ->
-            runOnUiThread {
-                serverList.clear()
-                if (servers.isNotEmpty()) {
-                    servers.forEach { serverList.add("${it.name} [${it.address}]") }
-                    serverAddressSpinner?.adapter = adapter
-                    serverAddressSpinner?.setSelection(0)
-                    if (servers.size > 1) {
-                        serverAddressSpinner?.visibility = View.VISIBLE
-                        serverStatusLayout?.visibility = View.VISIBLE
-                        serverAddressLabel?.visibility = View.VISIBLE
-                    }
-                    // Green indicator — we got servers
-                    sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
-                        android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
-                }
-                adapter.notifyDataSetChanged()
-            }
+        val savedServers = CredentialStore.getServerList(this)
+        if (savedServers.isNotEmpty()) {
+            savedServers.forEach { serverList.add("${it.name} [${it.host}:${it.port}]") }
+            serverAddressSpinner?.setSelection(0)
+            serverAddressSpinner?.visibility = View.VISIBLE
+            serverStatusLayout?.visibility = View.VISIBLE
+            serverAddressLabel?.visibility = View.VISIBLE
+            sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
+        } else {
+            serverAddressSpinner?.visibility = View.GONE
+            serverStatusLayout?.visibility = View.GONE
+            serverAddressLabel?.visibility = View.GONE
         }
+        adapter.notifyDataSetChanged()
 
         var isTransitioning = false
 
@@ -2600,34 +2592,26 @@ class ChatListActivity : AppCompatActivity() {
             editTextConfirmPassword?.setText(prefillPass)
         }
 
-        // Setup server address spinner — fetch from gRPC (public, no auth)
+        // Setup server address spinner — load from local CredentialStore
         val serverList = mutableListOf<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         serverAddressSpinner?.adapter = adapter
-        serverAddressSpinner?.visibility = View.GONE
-        serverStatusLayout?.visibility = View.GONE
-        serverAddressLabel?.visibility = View.GONE
-
-        lavender.client.android.data.grpc.GrpcClient.getServers(this) { servers ->
-            runOnUiThread {
-                serverList.clear()
-                if (servers.isNotEmpty()) {
-                    servers.forEach { serverList.add("${it.name} [${it.address}]") }
-                    serverAddressSpinner?.adapter = adapter
-                    serverAddressSpinner?.setSelection(0)
-                    if (servers.size > 1) {
-                        serverAddressSpinner?.visibility = View.VISIBLE
-                        serverStatusLayout?.visibility = View.VISIBLE
-                        serverAddressLabel?.visibility = View.VISIBLE
-                    }
-                    // Green indicator — we got servers
-                    sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
-                        android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
-                }
-                adapter.notifyDataSetChanged()
-            }
+        val savedServers = CredentialStore.getServerList(this)
+        if (savedServers.isNotEmpty()) {
+            savedServers.forEach { serverList.add("${it.name} [${it.host}:${it.port}]") }
+            serverAddressSpinner?.setSelection(0)
+            serverAddressSpinner?.visibility = View.VISIBLE
+            serverStatusLayout?.visibility = View.VISIBLE
+            serverAddressLabel?.visibility = View.VISIBLE
+            sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
+        } else {
+            serverAddressSpinner?.visibility = View.GONE
+            serverStatusLayout?.visibility = View.GONE
+            serverAddressLabel?.visibility = View.GONE
         }
+        adapter.notifyDataSetChanged()
 
         var isTransitioning = false
 
