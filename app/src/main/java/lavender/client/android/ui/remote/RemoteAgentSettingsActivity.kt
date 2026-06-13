@@ -174,11 +174,23 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
         val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+        val hintColor = ThemeUtils.adjustAlpha(txtColor, 0.6f)
 
         window.decorView.setBackgroundColor(bgColor)
         toolbar.setBackgroundColor(surfaceColor)
         toolbar.setTitleTextColor(txtColor)
         toolbar.setNavigationIconTint(txtColor)
+
+        // Theme input fields
+        val inputFields = listOf(etSshHost, etSshPort, etSshUser, etSshPassword, etServerHost, etServerPort, etLocalPort)
+        inputFields.forEach { field ->
+            field.setTextColor(txtColor)
+            field.setHintTextColor(hintColor)
+        }
+
+        // Theme labels
+        tvGatewayStatus?.setTextColor(txtColor)
+        tvTunnelAddress?.setTextColor(txtColor)
 
         btnGenerateToken.setBackgroundColor(primColor)
         btnGenerateToken.setTextColor(ThemeUtils.parseSafeColor(theme.onPrimaryColor, Color.WHITE))

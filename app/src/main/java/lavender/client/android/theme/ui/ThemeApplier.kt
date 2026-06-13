@@ -214,7 +214,10 @@ object ThemeApplier {
         val commonInputs = listOf(
             R.id.messageInput, R.id.searchInput, R.id.editMessageInput, 
             R.id.editTextBio, R.id.editTextUsername, R.id.editTextPassword,
-            R.id.editNewUsername, R.id.editTextOldPassword, R.id.editTextNewPassword
+            R.id.editNewUsername, R.id.editTextOldPassword, R.id.editTextNewPassword,
+            // Remote Agent settings fields
+            R.id.etSshHost, R.id.etSshPort, R.id.etSshUser, R.id.etSshPassword,
+            R.id.etServerHost, R.id.etServerPort, R.id.etLocalPort
         )
         commonInputs.forEach { id ->
             activity.findViewById<android.widget.EditText>(id)?.apply {
