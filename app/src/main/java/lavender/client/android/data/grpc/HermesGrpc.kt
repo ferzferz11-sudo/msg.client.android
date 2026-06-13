@@ -4,8 +4,12 @@ import android.util.Log
 import io.grpc.MethodDescriptor
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.callbackFlow
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collect
 import lavender.client.android.data.proto.*
 import lavender.client.android.data.models.AppLog
 import java.io.ByteArrayInputStream
@@ -1505,7 +1509,7 @@ fun deployAgentTaskStream(
 ): kotlinx.coroutines.flow.Flow<DeployAgentTaskStreamResponseProto> = kotlinx.coroutines.channels.callbackFlow {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        trySend(DeployAgentTaskStreamResponseProto(taskId = "", error = "Channel dead", done = true, status = "failed"))
+        trySendBlocking(DeployAgentTaskStreamResponseProto(taskId = "", error = "Channel dead", done = true, status = "failed"))
         close()
         return@callbackFlow
     }
@@ -1542,7 +1546,7 @@ fun deployAgentTaskStream(
                 cos.flush()
                 return ByteArrayInputStream(baos.toByteArray())
             }
-            override fun parse(s: java.io.InputStream): DeployAgentTaskStreamResponseProto = DeployAgentTaskStreamResponseProto()
+            override fun parse(s: java.io.InputStream): DeployAgentTaskRequestProto = DeployAgentTaskRequestProto()
         })
         .setResponseMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskStreamResponseProto> {
             override fun stream(v: DeployAgentTaskStreamResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
@@ -1582,11 +1586,11 @@ fun deployAgentTaskStream(
 
     call.start(object : io.grpc.ClientCall.Listener<DeployAgentTaskStreamResponseProto>() {
         override fun onMessage(message: DeployAgentTaskStreamResponseProto) {
-            trySend(message)
+            trySendBlocking(message)
         }
         override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
             if (!status.isOk) {
-                trySend(DeployAgentTaskStreamResponseProto(
+                trySendBlocking(DeployAgentTaskStreamResponseProto(
                     error = status.description ?: status.code.toString(), done = true, status = "failed"
                 ))
             }
