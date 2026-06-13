@@ -7,8 +7,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.models.RemoteAgentInfo
 
 class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
@@ -109,6 +111,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 throw e // re-throw to keep structured concurrency
             } catch (e: Exception) {
                 android.util.Log.e("RemoteAgentViewModel", "loadAgents error", e)
+                AppLog.error("RemoteAgentVM.loadAgents", "Failed to load agents: ${e.message}", e)
                 _error.value = e.message ?: "Failed to load agents"
             }
             _isLoading.value = false
@@ -151,8 +154,10 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     loadTokens(adminUserId)
                 } else {
                     _error.value = response.error.ifEmpty { "Failed to generate token" }
+                    AppLog.error("RemoteAgentVM.generateToken", "Server returned error: ${response.error}")
                 }
             } catch (e: Exception) {
+                AppLog.error("RemoteAgentVM.generateToken", "Failed to generate token: ${e.message}", e)
                 _error.value = e.message ?: "Failed to generate token"
             }
             _isLoading.value = false
@@ -172,8 +177,10 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     loadTokens(adminUserId)
                 } else {
                     _error.value = response.error.ifEmpty { "Failed to revoke token" }
+                    AppLog.error("RemoteAgentVM.revokeToken", "Server returned error: ${response.error}")
                 }
             } catch (e: Exception) {
+                AppLog.error("RemoteAgentVM.revokeToken", "Failed to revoke token: ${e.message}", e)
                 _error.value = e.message ?: "Failed to revoke token"
             }
             _isLoading.value = false
@@ -280,20 +287,159 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     val errText = if (response.stderr.isNotEmpty()) response.stderr else response.message
                     val agentMsg = RemoteAgentMessage(
                         id = java.util.UUID.randomUUID().toString(),
-                        content = "❌ Ошибка (exit=${response.exitCode}): $errText",
+                        content = "Ошибка (exit=${response.exitCode}): $errText",
                         isUser = false,
                         timestamp = System.currentTimeMillis()
                     )
                     _messages.value = _messages.value + agentMsg
+                    AppLog.error("RemoteAgentVM.sendMessage", "Task failed: $errText (exit=${response.exitCode})")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Job was cancelled — user left screen, not an error, don't show toast
+                AppLog.info("RemoteAgentVM.sendMessage", "Task cancelled by user (navigation)")
+                throw e // re-throw to keep structured concurrency
             } catch (e: Exception) {
+                AppLog.error("RemoteAgentVM.sendMessage", "Task error: ${e.message}", e)
                 val agentMsg = RemoteAgentMessage(
                     id = java.util.UUID.randomUUID().toString(),
-                    content = "❌ Ошибка: ${e.message}",
+                    content = "Ошибка: ${e.message}",
                     isUser = false,
                     timestamp = System.currentTimeMillis()
                 )
                 _messages.value = _messages.value + agentMsg
+            }
+            _isTyping.value = false
+        }
+    }
+
+    /**
+     * Send a task with streaming — collects stdout/stderr/progress in real-time
+     */
+    fun sendMessageStreaming(text: String, userId: String, taskType: String = "shell") {
+        var agent = _selectedAgent.value
+        if (agent == null) {
+            val agents = _agents.value
+            if (agents.isNotEmpty()) {
+                agent = agents.first()
+                selectAgent(agent)
+            } else {
+                _error.value = "Агент не выбран"
+                return
+            }
+        }
+
+        // Add user message
+        val userMsg = RemoteAgentMessage(
+            id = java.util.UUID.randomUUID().toString(),
+            content = text,
+            isUser = true,
+            timestamp = System.currentTimeMillis(),
+            taskType = taskType
+        )
+        _messages.value = _messages.value + userMsg
+
+        // Add placeholder for agent streaming response
+        val streamMsgId = java.util.UUID.randomUUID().toString()
+        val streamMsg = RemoteAgentMessage(
+            id = streamMsgId,
+            content = "",
+            isUser = false,
+            timestamp = System.currentTimeMillis(),
+            isStreaming = true
+        )
+        _messages.value = _messages.value + streamMsg
+
+        _isTyping.value = true
+        viewModelScope.launch {
+            try {
+                val tunnelActive = RemoteAgentManager.isTunnelActive()
+                val settings = gatewayManager.loadSettings()
+                val flow = GrpcClient.deployAgentTaskStream(
+                    agentId = agent.id,
+                    taskType = taskType,
+                    params = mapOf("command" to text),
+                    tunnelMode = if (tunnelActive) 1 else 0,
+                    tunnelHost = settings.sshHost,
+                    tunnelPort = settings.sshPort,
+                    tunnelUser = settings.sshUser,
+                    tunnelServerHost = settings.serverHost,
+                    tunnelServerPort = settings.serverPort,
+                    tunnelLocalPort = settings.localPort
+                )
+                var stdoutBuf = StringBuilder()
+                var stderrBuf = StringBuilder()
+                flow.collect { update ->
+                    if (update.done) {
+                        // Final message
+                        val finalContent = buildString {
+                            if (stdoutBuf.isNotEmpty()) append(stdoutBuf)
+                            if (stderrBuf.isNotEmpty()) {
+                                if (isNotEmpty()) append("\n")
+                                append(stderrBuf)
+                            }
+                            if (update.error.isNotEmpty()) {
+                                if (isNotEmpty()) append("\n")
+                                append("Ошибка: ${update.error}")
+                            }
+                            if (isEmpty()) append("(no output)")
+                        }
+                        val finalMsg = RemoteAgentMessage(
+                            id = streamMsgId,
+                            content = finalContent,
+                            isUser = false,
+                            timestamp = System.currentTimeMillis(),
+                            isStreaming = false
+                        )
+                        _messages.value = _messages.value.map {
+                            if (it.id == streamMsgId) finalMsg else it
+                        }
+                    } else {
+                        // Append chunks
+                        if (update.stdoutChunk.isNotEmpty()) {
+                            stdoutBuf.append(update.stdoutChunk)
+                        }
+                        if (update.stderrChunk.isNotEmpty()) {
+                            stderrBuf.append(update.stderrChunk)
+                        }
+                        // Update message with current buffer + progress
+                        val currentContent = buildString {
+                            if (stdoutBuf.isNotEmpty()) append(stdoutBuf)
+                            if (stderrBuf.isNotEmpty()) {
+                                if (isNotEmpty()) append("\n--- stderr ---\n")
+                                append(stderrBuf)
+                            }
+                            if (update.progress.isNotEmpty()) {
+                                if (isNotEmpty()) append("\n")
+                                append(update.progress)
+                            }
+                        }
+                        val updatedMsg = RemoteAgentMessage(
+                            id = streamMsgId,
+                            content = currentContent,
+                            isUser = false,
+                            timestamp = System.currentTimeMillis(),
+                            isStreaming = true
+                        )
+                        _messages.value = _messages.value.map {
+                            if (it.id == streamMsgId) updatedMsg else it
+                        }
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                AppLog.info("RemoteAgentVM.sendMessageStreaming", "Stream cancelled by user")
+                throw e
+            } catch (e: Exception) {
+                AppLog.error("RemoteAgentVM.sendMessageStreaming", "Stream error: ${e.message}", e)
+                val errMsg = RemoteAgentMessage(
+                    id = streamMsgId,
+                    content = "Ошибка: ${e.message}",
+                    isUser = false,
+                    timestamp = System.currentTimeMillis(),
+                    isStreaming = false
+                )
+                _messages.value = _messages.value.map {
+                    if (it.id == streamMsgId) errMsg else it
+                }
             }
             _isTyping.value = false
         }

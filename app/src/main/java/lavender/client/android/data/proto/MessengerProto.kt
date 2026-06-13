@@ -1052,6 +1052,20 @@ data class DeployAgentTaskResponseProto(
     val exitCode: Int = 0
 )
 
+data class DeployAgentTaskStreamResponseProto(
+    val taskId: String = "",
+    val stdoutChunk: String = "",
+    val stderrChunk: String = "",
+    val progress: String = "",
+    val status: String = "",
+    val stdout: String = "",
+    val stderr: String = "",
+    val exitCode: Int = 0,
+    val durationMs: Long = 0,
+    val error: String = "",
+    val done: Boolean = false
+)
+
 data class GetRemoteAgentStatusRequestProto(
     val agentId: String = ""
 )

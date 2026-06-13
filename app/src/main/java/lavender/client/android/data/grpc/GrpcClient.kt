@@ -563,6 +563,28 @@ object GrpcClient {
             tunnelServerHost, tunnelServerPort, tunnelLocalPort
         )
 
+    // Streaming version — returns Flow of task updates
+    fun deployAgentTaskStream(
+        agentId: String,
+        taskType: String,
+        params: Map<String, String> = emptyMap(),
+        workingDir: String = "",
+        timeoutSec: Int = 60,
+        tunnelMode: Int = 0,
+        tunnelHost: String = "",
+        tunnelPort: Int = 22,
+        tunnelUser: String = "",
+        tunnelPassword: String = "",
+        tunnelServerHost: String = "localhost",
+        tunnelServerPort: Int = 50051,
+        tunnelLocalPort: Int = 50052
+    ): kotlinx.coroutines.flow.Flow<lavender.client.android.data.proto.DeployAgentTaskStreamResponseProto> =
+        lavender.client.android.data.grpc.deployAgentTaskStream(
+            agentId, taskType, params, workingDir, timeoutSec,
+            tunnelMode, tunnelHost, tunnelPort, tunnelUser, tunnelPassword,
+            tunnelServerHost, tunnelServerPort, tunnelLocalPort
+        )
+
     // Agent Token Management
     suspend fun generateAgentToken(
         agentId: String, agentName: String, capabilities: List<String>,

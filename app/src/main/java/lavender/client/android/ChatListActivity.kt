@@ -493,6 +493,7 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             SessionManager.logoutEvent.collect {
                 runOnUiThread {
+                    AppLog.warn("ChatListActivity", "Session terminated by server")
                     Toast.makeText(this@ChatListActivity, "Сессия завершена", Toast.LENGTH_LONG).show()
                     logout()
                 }

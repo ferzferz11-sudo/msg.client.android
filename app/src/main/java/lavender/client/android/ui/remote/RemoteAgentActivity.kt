@@ -20,6 +20,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
@@ -196,7 +197,7 @@ class RemoteAgentActivity : AppCompatActivity(),
 
         chatWidget.setOnSendMessageListener { text ->
             if (text.isNotBlank()) {
-                viewModel.sendMessage(text.trim(), userId, selectedTaskType)
+                viewModel.sendMessageStreaming(text.trim(), userId, selectedTaskType)
             }
         }
 
@@ -284,6 +285,7 @@ class RemoteAgentActivity : AppCompatActivity(),
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.error.collect { error ->
                     error?.let {
+                        AppLog.error("RemoteAgentActivity", "Error: $it")
                         Toast.makeText(this@RemoteAgentActivity, it, Toast.LENGTH_LONG).show()
                         viewModel.clearError()
                     }

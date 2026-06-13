@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.models.AppLog
 
 /**
  * RemoteAgentService — foreground service для фонового подключения Remote Agent.
@@ -191,6 +192,7 @@ class RemoteAgentService : Service() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Tunnel creation error", e)
+                AppLog.error("RemoteAgentService.createTunnel", "SSH tunnel error: ${e.message}", e)
                 withContext(Dispatchers.Main) {
                     callback(false, "Ошибка: ${e.message}", HermesGatewayManager.TunnelErrorType.GENERIC)
                 }
@@ -264,6 +266,7 @@ class RemoteAgentService : Service() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "sendTask error", e)
+                AppLog.error("RemoteAgentService.sendTask", "Task execution error: ${e.message}", e)
                 callback(false, "", "Ошибка: ${e.message}")
             }
         }
