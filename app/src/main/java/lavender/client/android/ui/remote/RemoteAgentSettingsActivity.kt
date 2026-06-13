@@ -307,8 +307,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                 }
                 renderTokens()
             } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity,
-                    "Ошибка загрузки токенов: ${e.message}", Toast.LENGTH_SHORT).show()
+                // Token list load failed — not critical, log silently
+                android.util.Log.e("RemoteAgentSettings", "Failed to load tokens: ${e.message}")
             }
         }
     }

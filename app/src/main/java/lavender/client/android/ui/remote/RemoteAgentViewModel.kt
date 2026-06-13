@@ -385,18 +385,58 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 val tunnelActive = RemoteAgentManager.isTunnelActive()
                 val settings = gatewayManager.loadSettings()
-                val flow = GrpcClient.deployAgentTaskStream(
-                    agentId = agent.id,
-                    taskType = taskType,
-                    params = mapOf("command" to text),
-                    tunnelMode = if (tunnelActive) 1 else 0,
-                    tunnelHost = settings.sshHost,
-                    tunnelPort = settings.sshPort,
-                    tunnelUser = settings.sshUser,
-                    tunnelServerHost = settings.serverHost,
-                    tunnelServerPort = settings.serverPort,
-                    tunnelLocalPort = settings.localPort
-                )
+                // Try streaming first, fallback to unary if server doesn't support it
+                val flow = try {
+                    GrpcClient.deployAgentTaskStream(
+                        agentId = agent.id,
+                        taskType = taskType,
+                        params = mapOf("command" to text),
+                        tunnelMode = if (tunnelActive) 1 else 0,
+                        tunnelHost = settings.sshHost,
+                        tunnelPort = settings.sshPort,
+                        tunnelUser = settings.sshUser,
+                        tunnelServerHost = settings.serverHost,
+                        tunnelServerPort = settings.serverPort,
+                        tunnelLocalPort = settings.localPort
+                    )
+                } catch (e: Exception) {
+                    // Server may not support streaming (older versions) — use unary
+                    AppLog.info("RemoteAgentVM.sendMessageStreaming", "Streaming not supported, falling back to unary")
+                    val response = GrpcClient.deployAgentTask(
+                        agentId = agent.id,
+                        taskType = taskType,
+                        params = mapOf("command" to text),
+                        tunnelMode = if (tunnelActive) 1 else 0,
+                        tunnelHost = settings.sshHost,
+                        tunnelPort = settings.sshPort,
+                        tunnelUser = settings.sshUser,
+                        tunnelServerHost = settings.serverHost,
+                        tunnelServerPort = settings.serverPort,
+                        tunnelLocalPort = settings.localPort
+                    )
+                    // Convert unary response to streaming flow
+                    kotlinx.coroutines.flow.flow {
+                        if (response.success) {
+                            val output = if (response.stdout.isNotEmpty()) response.stdout else "(no output)"
+                            emit(lavender.client.android.data.proto.DeployAgentTaskStreamResponseProto(
+                                taskId = response.taskId,
+                                status = "completed",
+                                stdout = response.stdout,
+                                stderr = response.stderr,
+                                exitCode = response.exitCode,
+                                done = true
+                            ))
+                        } else {
+                            val errText = if (response.stderr.isNotEmpty()) response.stderr else response.message
+                            emit(lavender.client.android.data.proto.DeployAgentTaskStreamResponseProto(
+                                taskId = response.taskId,
+                                status = "failed",
+                                error = errText,
+                                done = true
+                            ))
+                        }
+                    }
+                }
                 var stdoutBuf = StringBuilder()
                 var stderrBuf = StringBuilder()
                 flow.collect { update ->
