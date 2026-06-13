@@ -198,10 +198,17 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
      * Send a task to the selected remote agent via DeployAgentTask
      */
     fun sendMessage(text: String, userId: String, taskType: String = "shell") {
-        val agent = _selectedAgent.value
+        var agent = _selectedAgent.value
         if (agent == null) {
-            _error.value = "Агент не выбран"
-            return
+            // Auto-select first available agent if none selected
+            val agents = _agents.value
+            if (agents.isNotEmpty()) {
+                agent = agents.first()
+                selectAgent(agent)
+            } else {
+                _error.value = "Агент не выбран"
+                return
+            }
         }
 
         // Add user message with task type indicator

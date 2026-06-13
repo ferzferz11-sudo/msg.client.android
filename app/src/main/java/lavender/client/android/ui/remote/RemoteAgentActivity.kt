@@ -392,16 +392,11 @@ class RemoteAgentActivity : AppCompatActivity(),
                     agents.forEach { spinnerAdapter?.add(it.name) }
                     spinnerAdapter?.notifyDataSetChanged()
 
-                    // Update connection status based on selected agent
+                    // Update connection status display
                     val selectedAgent = viewModel.selectedAgent.value
                     if (selectedAgent != null) {
                         val agent = agents.find { it.id == selectedAgent.id }
-                        val isConnected = agent?.status == "connected"
-                        updateStatus(isConnected)
-                    } else if (agents.isNotEmpty()) {
-                        // Auto-select first agent if none selected
-                        viewModel.selectAgent(agents.first())
-                        updateStatus(agents.first().status == "connected")
+                        updateStatus(agent?.status == "connected")
                     } else {
                         updateStatus(false)
                     }
