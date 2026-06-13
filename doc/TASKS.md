@@ -1,8 +1,24 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.8 (stable)
+**Версия:** v1.1.3.9 (stable)
 **Обновлено:** 2026-06-13
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.9 — Espresso Tests + Empty Chat Text Fix
+
+### Espresso Tests — написание тестов
+- ✅ **ChatListActivityTest** — 18 тестов: toolbar, FABs, search, navigation
+- ✅ **RemoteAgentActivityTest** — 12 тестов: toolbar, status bar, task types, agent controls
+- ✅ **ChatWidgetTest** — структура виджета, input/send behavior
+- ✅ **EmptyChatTextTest** — проверка текста пустых чатов
+
+### Исправления
+- ✅ **Empty chat text** — `favorites_description` показывался для ВСЕХ пустых чатов
+  - Favorites → "Personal storage" / "Личное хранилище"
+  - Обычные пустые чаты → "No messages" / "Нет сообщений"
+  - Добавлены строки `no_messages` в values/strings.xml + values-ru/strings.xml
 
 ---
 
@@ -179,11 +195,11 @@ Exception → ErrorHandler.handle(source, throwable)
 ### Средний приоритет
 - [ ] Модульные тесты для OWL streaming (owl_test.go — сервер)
 - [ ] Кэширование запросов чатов
-- [x] **Espresso-тесты для Android** — подготовка ID, система именования ✅ v1.1.3.8
+- [x] **Espresso-тесты для Android** — подготовка ID + написание тестов ✅ v1.1.3.9
   - Все XML ID переименованы в snake_case с префиксами
   - Динамические View используют `View.generateViewId()`
   - Код обновлён для совместимости с новыми ID
-- [ ] Написать Espresso-тесты (ChatListActivity, RemoteAgentActivity, ChatWidget)
+  - ChatListActivityTest (18), RemoteAgentActivityTest (12), ChatWidgetTest, EmptyChatTextTest
 - [ ] Unit-тесты для Android (RemoteAgentViewModel, ChatAdapter)
 
 ### Низкий приоритет

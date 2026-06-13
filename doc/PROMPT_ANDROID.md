@@ -1,14 +1,14 @@
-# Промпт для новой сессии — v1.1.3.8 (stable)
+# Промпт для новой сессии — v1.1.3.9 (stable)
 
 **Дата:** 2026-06-13
-**Версия:** 1.1.3.8
+**Версия:** 1.1.3.9
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.8 — СТАБИЛЬНАЯ ВЕРСИЯ
+## СТАТУС: v1.1.3.9 — СТАБИЛЬНАЯ ВЕРСИЯ
 
-Релиз выпущен: https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.8
+Релиз выпущен: https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.9
 
 ---
 
@@ -119,7 +119,7 @@ cd /root/msg.client.android
 # НЕ запускать assembleRelease на сервере (OOM)!
 
 # Релиз
-./scripts/release.sh 1.1.3.8
+./scripts/release.sh 1.1.3.9
 
 # SSH к серверу
 ssh lava

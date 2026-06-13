@@ -1,5 +1,21 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.9] - 2026-06-13
+
+### Espresso Tests — написание тестов
+- **ChatListActivityTest** — 18 тестов: toolbar, FABs, search, navigation
+- **RemoteAgentActivityTest** — 12 тестов: toolbar, status bar, task types, agent controls
+- **ChatWidgetTest** — структура виджета, input/send behavior (частично закомментировано)
+- **EmptyChatTextTest** — проверка текста пустых чатов
+
+### Исправления
+- **Empty chat text** — фикс: `favorites_description` показывался для ВСЕХ пустых чатов
+  - Теперь: Favorites → "Personal storage" / "Личное хранилище"
+  - Обычные пустые чаты → "No messages" / "Нет сообщений"
+  - Добавлены строки `no_messages` в values/strings.xml + values-ru/strings.xml
+
+---
+
 ## [1.1.3.8] - 2026-06-13
 
 ### Espresso Testing — подготовка ID
