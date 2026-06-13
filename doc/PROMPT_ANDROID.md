@@ -1,14 +1,14 @@
-# Промпт для новой сессии — v1.1.3.7 (stable)
+# Промпт для новой сессии — v1.1.3.8 (stable)
 
 **Дата:** 2026-06-13
-**Версия:** 1.1.3.7
+**Версия:** 1.1.3.8
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.7 — СТАБИЛЬНАЯ ВЕРСИЯ
+## СТАТУС: v1.1.3.8 — СТАБИЛЬНАЯ ВЕРСИЯ
 
-Прод и dev серверы обновлены, Android клиент протестирован.
+Релиз выпущен: https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.8
 
 ---
 
@@ -17,73 +17,46 @@
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server
-server.go                  — Структура server, общие методы (ServerVersion = "1.1.3.7")
-server_*.go                — Методы по доменам (chat, users, chats, messages, profile, push, contacts, themes, drafts, muted, favorites, ai)
-server_ai.go               — AI Chat + Hermes Orchestrator RPC
-server_remote.go           — Remote Agent RPC (ListRemoteAgents, GetRemoteAgentStatus, DeployAgentTask, DeployAgentTaskStream)
-ai_chat_manager.go         — Единый менеджер AI чатов
-owl.go                     — OWL AI: streaming через OpenRouter
-hermes_orchestrator.go     — Hermes: оркестрация агентов
-hermes_agent_service.go   — HermesAgentService: Connect, tokens
-hermes_remote_manager.go  — RemoteAgentManager: Register, SendTask, HandleTaskResult
-http_server.go             — HTTP сервер (файлы, аватары, /health)
-db.go / db_hermes.go       — Database layer
-auth_service.go            — AuthService (SignIn, SignUp)
-jwt.go                     — JWT генерация/валидация
-messenger.proto            — ChatService, AuthService, AI Chat, Remote Agent RPC
-hermes_remote.proto        — HermesAgentService
+server.go                  — Структура server (ServerVersion = "1.1.3.8")
+server_remote.go           — Remote Agent RPC (DeployAgentTaskStream fix)
+hermes_remote_manager.go   — HandleTaskStream, StreamDone flag
+server_remote_test.go      — 6 unit-тестов для streaming
+messenger.proto            — DeployAgentTaskStream RPC
 ```
 
-### Android (/root.msg.client.android)
+### Android (/root/msg.client.android)
 ```
-data/
-├── proto/MessengerProto.kt       — Все proto data classes
-├── grpc/GrpcClient.kt            — Единая точка доступа (facade)
-├── grpc/HermesGrpc.kt            — Hermes/Remote Agent gRPC (unary + streaming)
-├── grpc/OwlGrpc.kt               — OWL gRPC (streaming)
-├── grpc/RealGrpcClient.kt        — Реализация gRPC клиента
-├── db/AppDatabase.kt             — Room DB (version 9)
-├── db/Entities.kt                — ChatEntity, MessageEntity
-├── models/ErrorHandler.kt         — Единый обработчик ошибок
-├── models/AppLog.kt              — Глобальный логгер
-├── models/HermesModel.kt         — RemoteAgentInfo, AgentInfo, HermesSession
-├── session/CredentialStore.kt     — Credentials + Server list
-├── session/SessionManager.kt      — Управление сессией
-├── theme/ThemeStore.kt            — Темы
-└── updates/UpdateManager.kt       — Обновления
+ui/remote/
+├── RemoteAgentActivity.kt         — Чат с агентом (toolbar fix, status bar)
+├── RemoteAgentSettingsActivity.kt — Настройки (input fields theming)
+├── RemoteAgentViewModel.kt        — sendMessageStreaming (full stdout/stderr)
+├── RemoteAgentService.kt          — Foreground service
+├── RemoteAgentManager.kt          — Singleton manager
+└── HermesGatewayManager.kt        — SSH туннель
 
-ui/
-├── remote/
-│   ├── RemoteAgentActivity.kt     — Чат с агентом (streaming)
-│   ├── RemoteAgentViewModel.kt    — ViewModel (sendMessageStreaming)
-│   ├── RemoteAgentSettingsActivity.kt — Токены + SSH туннель
-│   ├── RemoteAgentService.kt      — Foreground service
-│   ├── RemoteAgentManager.kt      — Singleton manager
-│   └── HermesGatewayManager.kt    — SSH туннель (JSch)
-├── ServersActivity.kt             — Список серверов + логин на выбранный
-├── ChatListActivity.kt            — Главный экран + авторизация
-├── owl/OwlChatActivity.kt         — OWL AI чат
-├── hermes/HermesChatActivity.kt   — Hermes чат
-└── LogViewerActivity.kt           — Журнал ошибок (AppLog)
+ui/chat/widget/ChatWidget.kt       — Общий виджет чата
+ui/adapter/ChatAdapter.kt          — filter() fix (dispatchUpdatesTo)
+theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 ```
 
 ---
 
-## КЛЮЧЕВЫЕ РЕШЕНИЯ
+## КЛЮЧЕВЫЕ РЕШЕНИЯ (v1.1.3.8)
 
-### Сервер
-- **server_remote.go** — все Remote Agent RPC в отдельном файле (не в server_ai.go)
-- **ensureRemoteManager()** — единая проверка зависимостей для RPC
-- **Graceful degradation** — пустой список вместо ошибки если менеджер недоступен
-- **Stale detection** — heartbeat > 120с → status="stale"
+### Streaming fix
+- **Сервер**: DeployAgentTaskStream отправляет `done=True` ровно один раз с полными данными из TaskResult
+- **Android**: RemoteAgentViewModel при `done=True` использует полные буферы из `update.stdout`/`update.stderr`
+- **Anti-pattern**: НЕ отправлять done=True дважды (пустой + полный)
 
-### Android
-- **Нет выбора сервера в логине** — сервер всегда из CredentialStore (по умолчанию prod)
-- **Переключение сервера** — только через ServersActivity (сервер → login sheet)
-- **Fallback на prod** — `CredentialStore.getServerAddress().ifEmpty { "13.140.25.249:50051" }`
-- **Room DB migration 8→9** — defensive column addition для совместимости
-- **ErrorHandler.kt** — единый обработчик ошибок с AppLog
-- **ensureAgentSelected()** — авто-выбор агента с fallback
+### Remote Agent UI
+- **Тулбар**: `toolbar_background` + `ThemeUi.bind()` — единообразно с другими активити
+- **Status bar**: `LinearLayout` вместо `ConstraintLayout` — кнопки не уезжают
+- **Input fields**: All gateway fields в `ThemeApplier.commonInputs`
+- **Кнопка Start**: Скрыта если агент не настроен (нет туннеля/токена/агента)
+
+### ChatAdapter filter()
+- **Anti-pattern**: `notifyItemRangeChanged` не обновляет размер списка → crash
+- **Правило**: `diffResult.dispatchUpdatesTo()` с ListUpdateCallback и offset +1 для Favorites
 
 ---
 
@@ -91,10 +64,24 @@ ui/
 
 1. НЕ компилировать на сервере (OOM kill)
 2. Коммитить и пушить после каждого значимого изменения
-3. Версия сервера в `server.go:34`, версия Android в `version.txt`
+3. Версия сервера в `server.go:33`, версия Android в `version.txt`
 4. Разделение архитектуры — каждый домен в своём server_*.go файле
 5. userId (UUID) — всегда как ключ, НЕ username
 6. changelog.txt БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — использовать bundled changelog в APK
+7. Agent tokens: в БД хранится SHA-256 хеш, не сам токен
+8. JWT секрет: минимум 32 байта, НЕ коммитить
+9. Темы: цвета программно через `ThemeUtils.parseSafeColor()`, НЕ `?attr/` в XML
+10. ChatAdapter: при фильтрации с Favorites использовать `dispatchUpdatesTo` с offset +1
+11. Remote Agent: кнопка Start скрыта если нет туннеля/токена/агента
+12. String resources: НЕ конкатенировать в `setText`, использовать `getString` с placeholders
+13. `vala` SSH ключ: `~/.ssh/vala` для подключения к серверу (lava)
+
+---
+
+## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
+
+- Агент (hermes_remote_agent.py) ещё НЕ отправляет streaming updates — сервер готов, клиент готов
+- Server migration warnings: `role "lavender" does not exist` (не критично)
 
 ---
 
@@ -124,9 +111,11 @@ go test ./...
 cd /root/msg.client.android
 # НЕ запускать assembleRelease на сервере (OOM)!
 
-# === Remote Agent ===
-cd /root/msg.remote.agent
-python3 hermes_remote_agent.py --server host:port --token <jwt>
+# Релиз
+./scripts/release.sh 1.1.3.8
+
+# SSH к серверу
+ssh lava
 ```
 
 ---
@@ -142,7 +131,11 @@ python3 hermes_remote_agent.py --server host:port --token <jwt>
 
 ---
 
-## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
+## ДОКУМЕНТАЦИЯ
 
-- Агент (hermes_remote_agent.py) ещё НЕ отправляет streaming updates — сервер готов, клиент готов, агент нужно обновить
-- Server migration warnings: `role "lavender" does not exist` (не критично)
+- Индекс: `/root/msg.client.android/doc/INDEX.md`
+- Паттерны: `/root/msg.client.android/doc/PATTERNS.md`
+- Remote Agent: `/root/msg.client.android/doc/REMOTE_AGENT.md`
+- Сервер: `/root/msg/doc/INTEGRATION_SESSION.md`, `/root/msg/doc/TASKS.md`
+- Подводные камни: `/root/msg/doc/PITFALLS.md`
+- CHANGELOG: `/root/msg.client.android/CHANGELOG.md` (Android), `/root/msg/CHANGELOG.md` (сервер)

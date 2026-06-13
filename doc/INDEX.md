@@ -1,77 +1,86 @@
-# Лава — Документация
+# Lavender Messenger — Android Документация
 
-Индекс всех документов проекта. Читать при каждом старте новой сессии.
+**Версия:** v1.1.3.8
+**Обновлено:** 2026-06-13
+**Ветка:** feat/1.1.3.x
 
 ---
 
 ## Быстрый старт
 
-1. **INTEGRATION_SESSION.md** — текущий контекст интеграции (версии, архитектура, что сделано, что нет)
-2. **TASKS.md** — таск-трекер (сделано/не сделано по приоритетам)
-3. **CHANGELOG.md** (в корне) — история версий сервера
-4. **doc/PROMPT_ANDROID.md** (в `/root/msg.client.android/`) — обучающий промпт для Android-сессий
+1. **PROMPT_ANDROID.md** — промпт для новой сессии (читать первым)
+2. **STRUCTURE.md** — структура проекта, ключевые файлы, паттерны
+3. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
+4. **PATTERNS.md** — паттерны и анти-patterns разработки
+5. **TASKS.md** — таск-трекер
+6. **CHANGELOG.md** — история изменений
 
 ---
 
-## Файлы документации
+## Архитектура
 
-### Текущая работа
-
-| Файл | Назначение | Когда читать |
-|------|-----------|-------------|
-| `INTEGRATION_SESSION.md` | Интеграционная сессия: версии, архитектура, правила, промпт для следующей сессии | **Всегда в начале** |
-| `TASKS.md` | Таск-трекер: сделано по версиям, бэклог по приоритетам | В начале сессии |
-
-### Архитектура и дизайн
-
-| Файл | Назначение | Когда читать |
-|------|-----------|-------------|
-| `AI_SERVICES.md` | AI-сервисы: архитектура, API, потоки данных, proto mapping | **При работе с AI чатами** |
-| `PITFALLS.md` | Подводные камни и известные проблемы | **Перед началом работы** |
-| `HERMES_ORCHESTRATOR_DOC.md` | Документация Hermes Orchestrator: архитектура, API, агенты, маршрутизация | При работе с Hermes |
-| `HERMES_ORCHESTRATOR_PROMPT.md` | Промпт для сессий с Hermes Orchestrator | При деве Hermes |
-| `LAVENDER_CHAT_PROJECT.md` | Проект Lavender Chat — полноценная замена Telegram | При работе над ChatWidget |
-| `PROJECT_MEMORY.md` | Проектная память: ключевые решения, архитектурные принципы | Для общего контекста |
-|| `PROMPT.md` | Промпт для любых сессий (общий) | **При старте новой сессии** |
-|| `PROMPT_SERVER.md` | Промпт для серверных сессий | **При старте новой серверной сессии** |
-
-### DevOps и инфраструктура
-
-| Файл | Назначение | Когда читать |
-|------|-----------|-------------|
-| `LOG_MONITOR.md` | Log Monitor: сборка, деплой, API, web UI, известные проблемы | **При проблемах с логами** |
-| `TESTING.md` | Модульные тесты: запуск, покрытие, написание новых тестов | **При работе с тестами** |
-
-### Отчёты
-
-| Файл | Назначение | Когда читать |
-|------|-----------|-------------|
-| `REPORT.md` | Отчёт по Hermes Orchestrator (04.06.2026) | Для истории |
+```
+app/src/main/java/lavender/client/android/
+├── ui/
+│   ├── remote/
+│   │   ├── RemoteAgentActivity.kt         — чат с агентом
+│   │   ├── RemoteAgentSettingsActivity.kt — настройки (шлюз + токен)
+│   │   ├── RemoteAgentViewModel.kt        — ViewModel (sendMessageStreaming)
+│   │   ├── RemoteAgentService.kt          — foreground service
+│   │   ├── RemoteAgentManager.kt          — singleton manager
+│   │   └── HermesGatewayManager.kt        — SSH туннель
+│   ├── chat/widget/ChatWidget.kt          — общий виджет чата
+│   ├── adapter/ChatAdapter.kt             — адаптер списка чатов
+│   └── ...
+├── data/
+│   ├── grpc/GrpcClient.kt                 — facade
+│   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
+│   ├── proto/MessengerProto.kt            — proto data classes
+│   └── ...
+└── theme/ui/
+    ├── ThemeApplier.kt                    — применение тем
+    └── ThemeUi.kt                         — ThemeUi.bind()
+```
 
 ---
 
-### Web Client
+## Ключевые паттерны
 
-| Файл | Назначение | Когда читать |
-|------|-----------|-------------|
-| `/root/msg.client.web/doc/INDEX.md` | Индекс документации веб-клиента | При работе над web |
-| `/root/msg.client.web/doc/ARCHITECTURE.md` | Архитектура веб-клиента | При работе над web |
-| `/root/msg.client.web/doc/TASKS.md` | Таск-трекер веб-клиента | При работе над web |
+### Remote Agent
+- **Тулбар**: `toolbar_background` + `ThemeUi.bind()` единообразно
+- **Streaming**: `DeployAgentTaskStream` → `callbackFlow` → `flow.collect`
+- **done=True**: сервер отправляет ровно один раз с полными данными
+- **Кнопка Start**: скрыта если агент не настроен (нет туннеля/токена)
+
+### Темы
+- `ThemeApplier.apply()` до `setContentView()`
+- Цвета программно через `ThemeUtils.parseSafeColor()`
+- НЕ использовать `?attr/` в XML для текста на кастомных темах
+
+### Фильтрация чатов
+- `ChatAdapter.filter()` — `dispatchUpdatesTo` с offset +1 для Favorites
+- НЕ использовать `notifyItemRangeChanged` — не обновляет размер списка
 
 ---
 
-## Правила
+## Команды
 
-- При старте новой сессии: читать цепочку INDEX.md → AI_SERVICES.md → INTEGRATION_SESSION.md → TASKS.md → PITFALLS.md → LOG_MONITOR.md
-- При работе над тестами: читать doc/TESTING.md
-- При работе над веб-клиентом: читать /root/msg.client/web/doc/INDEX.md → ARCHITECTURE.md → TASKS.md → PITFALLS.md
-- После каждого значимого изменения: обновлять INTEGRATION_SESSION.md + TASKS.md + соответствующие документы
-- При каждом релизе: обновлять CHANGELOG.md (сервер + Android), INTEGRATION_SESSION.md, TASKS.md, LOG_MONITOR.md, PITFALLS.md, AI_SERVICES.md
-- Промпт для следующей сессии всегда внизу INTEGRATION_SESSION.md
-- Промпт для Android-сессий: /root/msg.client.android/doc/PROMPT_ANDROID.md
-- Промпт для серверных сессий: /root/msg/doc/PROMPT_SERVER.md
-- CHANGELOG.md — серверные изменения в корне /root/msg/CHANGELOG.md, Android в /root/msg.client.android/CHANGELOG.md
-- Android bundled changelog: /root/msg.client.android/app/src/main/assets/changelog_bundled.txt (встроен в APK, показывается мгновенно)
-- changelog.txt БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — удалён из проекта и из деплоя
-- Версия сервера в server.go:33, версия Android в version.txt
-- Документация распределена по файлам и проиндексирована в INDEX.md
+```bash
+# Сборка
+./gradlew assembleRelease    # ТОЛЬКО локально (OOM на сервере)
+
+# Релиз
+./scripts/release.sh 1.1.3.8
+
+# SSH к серверу
+ssh lava
+```
+
+---
+
+## Серверы
+
+| | Dev | Prod |
+|--|-----|------|
+| Порт | 50052 | 50051 |
+| SSH | lava (13.140.25.249) | same |
