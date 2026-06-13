@@ -2433,35 +2433,17 @@ class ChatListActivity : AppCompatActivity() {
         val passwordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
         val editText = sheet.findViewById<EditText>(R.id.editTextUsername)
         val editTextPassword = sheet.findViewById<EditText>(R.id.editTextPassword)
-        val serverAddressSpinner = sheet.findViewById<Spinner>(R.id.serverAddressSpinner)
-        val serverStatusLayout = sheet.findViewById<LinearLayout>(R.id.serverStatusLayout)
-        val serverAddressLabel = sheet.findViewById<TextView>(R.id.serverAddressLabel)
         val joinProgressBar = sheet.findViewById<ProgressBar>(R.id.joinProgressBar)
         val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
         val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
-        // Setup server address spinner — load from local CredentialStore
-        val serverList = mutableListOf<String>()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        serverAddressSpinner?.adapter = adapter
-        val savedServers = CredentialStore.getServerList(this)
-        if (savedServers.isNotEmpty()) {
-            savedServers.forEach { serverList.add("${it.name} [${it.host}:${it.port}]") }
-            serverAddressSpinner?.setSelection(0)
-            serverAddressSpinner?.visibility = View.VISIBLE
-            serverStatusLayout?.visibility = View.VISIBLE
-            serverAddressLabel?.visibility = View.VISIBLE
-            sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
-        } else {
-            serverAddressSpinner?.visibility = View.GONE
-            serverStatusLayout?.visibility = View.GONE
-            serverAddressLabel?.visibility = View.GONE
-            sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
-        }
-        adapter.notifyDataSetChanged()
+        // Server selector removed — server is always from CredentialStore (default: prod)
+        // Switch servers via ServersActivity
+        sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
 
         var isTransitioning = false
 
@@ -2480,12 +2462,7 @@ class ChatListActivity : AppCompatActivity() {
         btnJoin?.setOnClickListener {
             val u = editText?.text.toString().trim()
             val p = editTextPassword?.text.toString().trim()
-            val serverAddressRaw = serverAddressSpinner?.selectedItem?.toString() ?: ""
-            val serverAddress = if (serverAddressRaw.contains("[") && serverAddressRaw.contains("]")) {
-                serverAddressRaw.substringAfter("[").substringBefore("]")
-            } else {
-                serverAddressRaw
-            }.ifEmpty { "13.140.25.249:50051" }
+            val serverAddress = CredentialStore.getServerAddress(this)
             if (u.isNotEmpty() && p.isNotEmpty()) {
                 btnJoin?.text = ""
                 btnJoin?.isEnabled = false
@@ -2578,9 +2555,6 @@ class ChatListActivity : AppCompatActivity() {
         val editTextPassword = sheet.findViewById<EditText>(R.id.editTextPassword)
         val editTextConfirmPassword = sheet.findViewById<EditText>(R.id.editTextConfirmPassword)
         val editTextEmail = sheet.findViewById<EditText>(R.id.editTextEmail)
-        val serverAddressSpinner = sheet.findViewById<Spinner>(R.id.serverAddressSpinner)
-        val serverStatusLayout = sheet.findViewById<LinearLayout>(R.id.serverStatusLayout)
-        val serverAddressLabel = sheet.findViewById<TextView>(R.id.serverAddressLabel)
         val registerProgressBar = sheet.findViewById<ProgressBar>(R.id.registerProgressBar)
         val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
         val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
@@ -2593,27 +2567,12 @@ class ChatListActivity : AppCompatActivity() {
             editTextConfirmPassword?.setText(prefillPass)
         }
 
-        // Setup server address spinner — load from local CredentialStore
-        val serverList = mutableListOf<String>()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        serverAddressSpinner?.adapter = adapter
-        val savedServers = CredentialStore.getServerList(this)
-        if (savedServers.isNotEmpty()) {
-            savedServers.forEach { serverList.add("${it.name} [${it.host}:${it.port}]") }
-            serverAddressSpinner?.setSelection(0)
-            serverAddressSpinner?.visibility = View.VISIBLE
-            serverStatusLayout?.visibility = View.VISIBLE
-            serverAddressLabel?.visibility = View.VISIBLE
-            sheet.findViewById<View>(R.id.serverStatusIndicator)?.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
-        } else {
-            serverAddressSpinner?.visibility = View.GONE
-            serverStatusLayout?.visibility = View.GONE
-            serverAddressLabel?.visibility = View.GONE
-            sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
-        }
-        adapter.notifyDataSetChanged()
+        // Server selector removed — server is always from CredentialStore (default: prod)
+        // Switch servers via ServersActivity
+        sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
 
         var isTransitioning = false
 
@@ -2634,12 +2593,7 @@ class ChatListActivity : AppCompatActivity() {
             val p = editTextPassword?.text.toString().trim()
             val confirmPassword = editTextConfirmPassword?.text.toString().trim()
             val email = editTextEmail?.text.toString().trim()
-            val serverAddressRaw = serverAddressSpinner?.selectedItem?.toString() ?: ""
-            val serverAddress = if (serverAddressRaw.contains("[") && serverAddressRaw.contains("]")) {
-                serverAddressRaw.substringAfter("[").substringBefore("]")
-            } else {
-                serverAddressRaw
-            }.ifEmpty { "13.140.25.249:50051" }
+            val serverAddress = CredentialStore.getServerAddress(this)
 
             if (u.isEmpty()) {
                 Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
