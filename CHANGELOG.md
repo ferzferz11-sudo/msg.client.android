@@ -37,6 +37,18 @@
   - Graceful degradation: пустой список вместо ошибки если менеджер недоступен
   - Stale detection для агентов (heartbeat > 120с → status="stale")
   - Проверка существования агента перед отправкой задачи
+- **Prod сервер обновлён** (v1.1.3.7-stable)
+
+### UI/UX Changes
+- **Убран выбор сервера из шторок логина/регистрации** — сервер всегда берётся из CredentialStore (по умолчанию prod)
+- **Переключение сервера** — только через ServersActivity ( eingeben server → login sheet на выбранный сервер)
+- **ServersActivity** — при выборе сервера открывается шторка логина напрямую на этот сервер
+- **Скрыт dragHandle** в шторках логина/регистрации (белая полоска убрана)
+- **Fallback на prod** (`13.140.25.249:50051`) если CredentialStore пуст
+
+### Bugfixes
+- **Room DB migration 8→9** — добавлены все недостающие столбцы с `try/catch` для совместимости со старыми БД
+- **androidViewGroup parent** — исправлен `instanceof` → Kotlin `is` каст для скрытия контейнера spinner'а
 
 ## [1.1.3.6] - 2026-06-13
 ### Remote Agent — New Settings UI + Chat Improvements
