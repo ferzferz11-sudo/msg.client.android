@@ -204,7 +204,7 @@ class AIBottomSheet(
         val icon = itemView.findViewById<ImageView>(R.id.chatIcon)
         val text = itemView.findViewById<TextView>(R.id.tvChatName)
         val settingsBtn = itemView.findViewById<ImageView>(R.id.chatSettings)
-        val typeLabel = itemView.findViewById<TextView>(R.id.tvChatTypeLabel)
+        val typeLabel = itemView.findViewById<TextView>(R.id.tvChatType)
 
         if (chat.type == "hermes") {
             icon.setImageResource(R.drawable.ic_hermes)

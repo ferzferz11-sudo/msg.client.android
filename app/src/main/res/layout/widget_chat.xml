@@ -196,7 +196,7 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
         app:cardBackgroundColor="?attr/colorSurfaceVariant"
-        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
+        app:layout_constraintBottom_toTopOf="@id/cvBottomPanel"
         tools:visibility="visible">
 
         <LinearLayout
@@ -252,7 +252,7 @@
 
     <!-- Bottom input panel -->
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/bottomPanel"
+        android:id="@+id/cvBottomPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardCornerRadius="0dp"

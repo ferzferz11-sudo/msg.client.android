@@ -88,13 +88,13 @@ class OwlSettingsActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        apiKeyInput = findViewById(R.id.apiKeyInput)
-        apiKeyLayout = findViewById(R.id.apiKeyLayout)
-        modelDropdown = findViewById(R.id.modelDropdown)
-        modelCustomInput = findViewById(R.id.modelCustomInput)
-        modelCustomLayout = findViewById(R.id.modelCustomLayout)
-        modelCustomHint = findViewById(R.id.modelCustomHint)
-        saveButton = findViewById(R.id.saveButton)
+        apiKeyInput = findViewById(R.id.etApiKey)
+        apiKeyLayout = findViewById(R.id.tilApiKey)
+        modelDropdown = findViewById(R.id.actvModel)
+        modelCustomInput = findViewById(R.id.etModelCustom)
+        modelCustomLayout = findViewById(R.id.tilModelCustom)
+        modelCustomHint = findViewById(R.id.tvModelCustomHint)
+        saveButton = findViewById(R.id.btnSave)
         statusText = findViewById(R.id.statusText)
         keySourceText = findViewById(R.id.keySourceText)
         rateLimitText = findViewById(R.id.rateLimitText)

@@ -39,7 +39,7 @@ class ForwardChatAdapter(
         private val chatName: TextView = view.findViewById(R.id.chatName)
         private val chatType: TextView = view.findViewById(R.id.chatType)
         private val participantAvatars: LinearLayout = view.findViewById(R.id.participantAvatars)
-        private val unreadCount: TextView = view.findViewById(R.id.unreadCount)
+        private val unreadCount: TextView = view.findViewById(R.id.tvUnreadCount)
 
         fun bind(chat: ChatInfo) {
             val context = itemView.context

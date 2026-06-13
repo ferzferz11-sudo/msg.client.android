@@ -109,7 +109,7 @@ object ThemeApplier {
             setNavigationIconTint(customOnPrimary)
             
             // Tint toolbar icons
-            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby)
+            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.ivActionMute, R.id.actionEdit, R.id.ivActionSettings, R.id.ivUpdateAvailable, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby)
             toolbarActions.forEach { id ->
                 findViewById<ImageView>(id)?.let { iv ->
                     iv.imageTintList = ColorStateList.valueOf(customOnPrimary)
@@ -232,7 +232,7 @@ object ThemeApplier {
         }
 
         // FABs
-        listOf(R.id.aiFab, R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
+        listOf(R.id.fabAi, R.id.fabAddChat, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
             (activity.findViewById<View>(id) as? com.google.android.material.floatingactionbutton.FloatingActionButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)
