@@ -247,8 +247,14 @@ class AIBottomSheet(
                     true
                 }
                 2 -> {
+                    // Remove from local list immediately for instant UI update
+                    existingChats.removeAll { it.id == chat.id }
+                    // Notify caller to delete on server in background
                     onDeleteChat(chat)
-                    // Do NOT dismiss — let the caller decide (rebuild or dismiss)
+                    // Rebuild UI after popup is dismissed
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        rebuildContent()
+                    }, 300)
                     true
                 }
                 else -> false

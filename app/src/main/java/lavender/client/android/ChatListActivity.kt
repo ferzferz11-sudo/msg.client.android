@@ -1997,10 +1997,14 @@ class ChatListActivity : AppCompatActivity() {
                 }
             },
             onCreateHermesChat = {
-                openHermesChat("", "")
+                val hermesCount = existingChats.count { it.type == "hermes" }
+                val chatName = "Лава ИИ #${hermesCount + 1}"
+                openHermesChat("", chatName)
             },
             onCreateOwlChat = {
-                openOwlChat("", "")
+                val owlCount = existingChats.count { it.type == "owl" }
+                val chatName = "Агент OWL #${owlCount + 1}"
+                openOwlChat("", chatName)
             },
             onOpenNotifications = {
                 shouldShowAiSheetOnResume = true
