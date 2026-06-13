@@ -387,7 +387,7 @@ class ChatAdapter(
                 val prefix = if ((chat.type == "group" || chat.type == "general") && chat.lastMessageUsername != "SYSTEM" && chat.lastMessageUsername.isNotEmpty()) "${chat.lastMessageUsername}: " else ""
                 chatType.text = context.getString(R.string.chat_last_message_format, prefix, chat.lastMessageText)
             } else {
-                chatType.text = if (lang == "ru") "Нет сообщений" else "No messages"
+                chatType.text = context.getString(R.string.favorites_description)
                 chatType.setTextColor(cachedTextSecondary)
                 chatType.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
