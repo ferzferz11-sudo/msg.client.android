@@ -1,6 +1,7 @@
 package lavender.client.android.ui.remote
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,8 +13,8 @@ import lavender.client.android.data.models.RemoteAgentInfo
 
 class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
 
-    // HermesGatewayManager оставляем для совместимости (используется в некоторых местах)
     private val gatewayManager = HermesGatewayManager(application.applicationContext)
+    private val prefs = application.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
 
     // ===== Agent list =====
     private val _agents = MutableStateFlow<List<RemoteAgentInfo>>(emptyList())
@@ -22,6 +23,32 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     // ===== Selected agent =====
     private val _selectedAgent = MutableStateFlow<RemoteAgentInfo?>(null)
     val selectedAgent: StateFlow<RemoteAgentInfo?> = _selectedAgent.asStateFlow()
+
+    init {
+        // Restore previously selected agent from SharedPreferences
+        restoreSelectedAgent()
+    }
+
+    private fun restoreSelectedAgent() {
+        val agentId = prefs.getString("remote_agent_id", "") ?: ""
+        val agentName = prefs.getString("remote_agent_name", "") ?: ""
+        if (agentId.isNotEmpty() && agentName.isNotEmpty()) {
+            _selectedAgent.value = RemoteAgentInfo(
+                id = agentId, name = agentName,
+                host = prefs.getString("remote_agent_host", "") ?: "",
+                status = "restored"
+            )
+            android.util.Log.d("RemoteAgentVM", "Restored agent: $agentName ($agentId)")
+        }
+    }
+
+    fun persistSelectedAgent(agent: RemoteAgentInfo) {
+        prefs.edit()
+            .putString("remote_agent_id", agent.id)
+            .putString("remote_agent_name", agent.name)
+            .putString("remote_agent_host", agent.host)
+            .apply()
+    }
 
     // ===== Connection status =====
     private val _isConnected = MutableStateFlow(false)
@@ -94,6 +121,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     fun selectAgent(agent: RemoteAgentInfo) {
         _selectedAgent.value = agent
         _isConnected.value = agent.status == "connected"
+        persistSelectedAgent(agent)
     }
 
     /**

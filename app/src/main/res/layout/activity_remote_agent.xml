@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  activity_remote_agent.xml — экран агента.
-  Toolbar: название + статус подключения + шестерёнка настроек.
+  activity_remote_agent.xml — экран чата с удалённым агентом.
+  Тулбар: название + статус подключения (шлюз/токен) + кнопки управления.
   Типы задач + чат через ChatWidget.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -17,7 +17,7 @@
         android:layout_height="?attr/actionBarSize"
         android:elevation="4dp" />
 
-    <!-- Status bar: подключён / отключён -->
+    <!-- Status bar: подключен / отключён + тип подключения -->
     <LinearLayout
         android:id="@+id/statusBar"
         android:layout_width="match_parent"
@@ -35,11 +35,36 @@
 
         <TextView
             android:id="@+id/statusText"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:textSize="13sp"
-            tools:text="Агент подключён" />
+            tools:text="Агент подключён через шлюз 10.0.0.1" />
+
+        <!-- Start/Stop buttons in status bar -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStartAgent"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="▶"
+            android:textSize="18sp"
+            android:minWidth="40dp"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStopAgent"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="⏹"
+            android:textSize="18sp"
+            android:minWidth="40dp"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
     </LinearLayout>
 
     <!-- Task type selector -->
@@ -54,8 +79,7 @@
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/taskTypeChipGroup"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:checkedChip="@+id/chip_shell" />
+            android:layout_height="wrap_content" />
 
     </HorizontalScrollView>
 
@@ -77,6 +101,7 @@
             android:layout_gravity="center"
             android:visibility="gone"
             tools:visibility="gone" />
+
     </FrameLayout>
 
 </LinearLayout>

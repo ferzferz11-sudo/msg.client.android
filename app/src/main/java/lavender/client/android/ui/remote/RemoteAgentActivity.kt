@@ -7,11 +7,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.ProgressBar
-import android.widget.Spinner
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -43,6 +39,8 @@ class RemoteAgentActivity : AppCompatActivity(),
     private lateinit var chatWidget: ChatWidget
     private lateinit var progressBar: ProgressBar
     private lateinit var taskTypeChipGroup: ChipGroup
+    private lateinit var btnStartAgent: Button
+    private lateinit var btnStopAgent: Button
 
     private lateinit var adapter: ChatMessageAdapter
     private var userId: String = ""
@@ -59,7 +57,6 @@ class RemoteAgentActivity : AppCompatActivity(),
         "ai" to "AI"
     )
 
-    // Agent commands for the command button
     private val agentCommands = listOf(
         CommandBottomSheet.CommandInfo("/help", "Показать справку по командам"),
         CommandBottomSheet.CommandInfo("/status", "Статус агента и подключения"),
@@ -77,29 +74,53 @@ class RemoteAgentActivity : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_remote_agent)
 
         userId = SessionManager.session.value.userId
-
-        // Инициализация RemoteAgentManager (единоразово, идемпотентна)
         RemoteAgentManager.init(applicationContext)
-
-        // Apply theme
         ThemeUi.bind(this, userId)
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(RemoteAgentViewModel::class.java)
 
+        initViews()
+        setupToolbar()
+        setupStatusBar()
+        setupTaskTypeChips()
+        setupChatWidget()
+        observeState()
+
+        // Load agents
+        viewModel.loadAgents()
+        lifecycleScope.launch {
+            kotlinx.coroutines.delay(1000)
+            viewModel.refreshAgentStatus()
+        }
+
+        // Auto-refresh every 30s
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                while (true) {
+                    kotlinx.coroutines.delay(30000)
+                    viewModel.refreshAgentStatus()
+                }
+            }
+        }
+    }
+
+    private fun initViews() {
         toolbar = findViewById(R.id.toolbar)
         statusIndicator = findViewById(R.id.statusIndicator)
         statusText = findViewById(R.id.statusText)
         chatWidget = findViewById(R.id.chatWidget)
         progressBar = findViewById(R.id.progressBar)
         taskTypeChipGroup = findViewById(R.id.taskTypeChipGroup)
+        btnStartAgent = findViewById(R.id.btnStartAgent)
+        btnStopAgent = findViewById(R.id.btnStopAgent)
+    }
 
-        // Toolbar setup
-        toolbar.title = ""
+    private fun setupToolbar() {
+        toolbar.title = "Удалённый агент"
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.navigationIcon?.setTint(
             ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
@@ -115,74 +136,20 @@ class RemoteAgentActivity : AppCompatActivity(),
                 else -> false
             }
         }
-
-        // Agent spinner in toolbar
-        setupAgentSpinner()
-
-        // Status bar
-        updateStatus(false)
-
-        // Task type chips
-        setupTaskTypeChips()
-
-        // Observe agents for spinner and connection status
-        observeAgents()
-
-        // Chat
-        setupChatWidget()
-        observeState()
-
-        // Window insets
-        val rootView = findViewById<View>(android.R.id.content)
-        ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            chatWidget.bottomPanel.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = systemBars.bottom
-            }
-            insets
-        }
-
-        // Load agents and refresh status
-        viewModel.loadAgents()
-        lifecycleScope.launch {
-            kotlinx.coroutines.delay(1000)
-            viewModel.refreshAgentStatus()
-        }
-
-        // Auto-refresh agent status every 30 seconds
-        lifecycleScope.launch {
-            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
-                while (true) {
-                    kotlinx.coroutines.delay(30000)
-                    viewModel.refreshAgentStatus()
-                }
-            }
-        }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Привязываемся к сервису
-        RemoteAgentManager.bind(this)
-        serviceBound = true
-        viewModel.refreshAgentStatus()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // Отвязываемся от сервиса (сервис продолжает работать)
-        if (serviceBound) {
-            RemoteAgentManager.unbind(this)
-            serviceBound = false
+    private fun setupStatusBar() {
+        btnStartAgent.setOnClickListener {
+            viewModel.loadAgents()
+            Toast.makeText(this, "Запуск агента...", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    // ===== RemoteAgentStateListener =====
-
-    override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
-        runOnUiThread {
-            updateStatus(state.isConnected)
+        btnStopAgent.setOnClickListener {
+            // Stop via ViewModel
+            Toast.makeText(this, "Остановка агента...", Toast.LENGTH_SHORT).show()
         }
+
+        val isConnected = RemoteAgentManager.isConnected()
+        updateStatus(isConnected)
     }
 
     private fun setupTaskTypeChips() {
@@ -194,11 +161,11 @@ class RemoteAgentActivity : AppCompatActivity(),
         taskTypeChipGroup.removeAllViews()
         taskTypeChipGroup.isSingleSelection = true
 
-        taskTypes.forEachIndexed { index, (key, label) ->
+        taskTypes.forEachIndexed { _, (key, label) ->
             val chip = Chip(this).apply {
                 text = label
                 isCheckable = true
-                isChecked = key == "shell" // default
+                isChecked = key == "shell"
                 setTextColor(txtColor)
                 chipBackgroundColor = android.content.res.ColorStateList.valueOf(surfaceColor)
                 chipStrokeColor = android.content.res.ColorStateList.valueOf(primColor)
@@ -206,7 +173,6 @@ class RemoteAgentActivity : AppCompatActivity(),
                 setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         selectedTaskType = key
-                        // Uncheck others
                         for (i in 0 until taskTypeChipGroup.childCount) {
                             val other = taskTypeChipGroup.getChildAt(i) as? Chip
                             if (other != null && other != this) other.isChecked = false
@@ -226,23 +192,18 @@ class RemoteAgentActivity : AppCompatActivity(),
         )
         chatWidget.setAdapter(adapter)
         chatWidget.messageInput.hint = "Отправить задачу агенту..."
-
-        // Hide ChatWidget's own toolbar — we have our own in the activity
         chatWidget.findViewById<View>(R.id.toolbar)?.visibility = View.GONE
 
-        // Send button listener
         chatWidget.setOnSendMessageListener { text ->
             if (text.isNotBlank()) {
                 viewModel.sendMessage(text.trim(), userId, selectedTaskType)
             }
         }
 
-        // Command button listener — show agent commands
         chatWidget.commandButton.setOnClickListener {
             showAgentCommandMenu()
         }
 
-        // TextWatcher to show/hide send button based on input
         chatWidget.messageInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -253,7 +214,6 @@ class RemoteAgentActivity : AppCompatActivity(),
             }
         })
 
-        // Initial state — hide send button until user types
         chatWidget.sendButton.visibility = View.GONE
         chatWidget.audioButton.visibility = View.VISIBLE
     }
@@ -277,22 +237,16 @@ class RemoteAgentActivity : AppCompatActivity(),
                     val items = msgs.map { msg ->
                         val content = if (msg.isUser && msg.taskType.isNotEmpty()) {
                             "[${msg.taskType.uppercase()}] ${msg.content}"
-                        } else {
-                            msg.content
-                        }
+                        } else msg.content
                         ChatMessageItem(
-                            id = msg.id,
-                            content = content,
+                            id = msg.id, content = content,
                             senderId = if (msg.isUser) userId else "remote_agent",
                             senderName = if (msg.isUser) "Вы" else "Агент",
                             senderEmoji = if (msg.isUser) "" else "\uD83D\uDDC2",
-                            timestamp = msg.timestamp,
-                            isCurrentUser = msg.isUser,
-                            isRead = true
+                            timestamp = msg.timestamp, isCurrentUser = msg.isUser, isRead = true
                         )
                     }
                     adapter.submitList(items)
-                    // Auto-scroll to bottom
                     if (items.isNotEmpty()) {
                         chatWidget.messagesRecyclerView.scrollToPosition(items.size - 1)
                     }
@@ -321,6 +275,7 @@ class RemoteAgentActivity : AppCompatActivity(),
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.isConnected.collect { connected ->
                     updateStatus(connected)
+                    updateStartStopButtons(connected)
                 }
             }
         }
@@ -335,87 +290,62 @@ class RemoteAgentActivity : AppCompatActivity(),
                 }
             }
         }
-    }
 
-    private var agentSpinner: Spinner? = null
-
-    private fun setupAgentSpinner() {
-        val theme = ThemeStore.currentTheme()
-        val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-        val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-
-        agentSpinner = Spinner(this, Spinner.MODE_DROPDOWN).apply {
-            setBackgroundColor(surfaceColor)
-            setPopupBackgroundDrawable(android.graphics.drawable.ColorDrawable(surfaceColor))
-        }
-        val spinnerAdapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, mutableListOf()) {
-            override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
-                val v = super.getView(position, convertView, parent)
-                (v as? TextView)?.setTextColor(txtColor)
-                return v
-            }
-            override fun getDropDownView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
-                val v = super.getDropDownView(position, convertView, parent)
-                (v as? TextView)?.setTextColor(txtColor)
-                (v as? TextView)?.setBackgroundColor(surfaceColor)
-                return v
-            }
-        }
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        agentSpinner?.adapter = spinnerAdapter
-
-        agentSpinner?.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
-                val agents = viewModel.agents.value
-                if (position < agents.size) {
-                    viewModel.selectAgent(agents[position])
-                    updateStatus(agents[position].status == "connected")
-                }
-            }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-        }
-
-        val params = androidx.appcompat.widget.Toolbar.LayoutParams(
-            androidx.appcompat.widget.Toolbar.LayoutParams.WRAP_CONTENT,
-            androidx.appcompat.widget.Toolbar.LayoutParams.WRAP_CONTENT
-        )
-        toolbar.addView(agentSpinner, params)
-    }
-
-    private fun observeAgents() {
+        // Observe agents for gateway info
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.agents.collect { agents ->
-                    @Suppress("UNCHECKED_CAST")
-                    val spinnerAdapter = agentSpinner?.adapter as? ArrayAdapter<String>
-                    spinnerAdapter?.clear()
-                    agents.forEach { spinnerAdapter?.add(it.name) }
-                    spinnerAdapter?.notifyDataSetChanged()
-
-                    // Update connection status display
+                    val tunnelActive = RemoteAgentManager.isTunnelActive()
                     val selectedAgent = viewModel.selectedAgent.value
-                    if (selectedAgent != null) {
-                        val agent = agents.find { it.id == selectedAgent.id }
-                        updateStatus(agent?.status == "connected")
+                    val isConnected = viewModel.isConnected.value
+
+                    if (tunnelActive) {
+                        val settings = HermesGatewayManager(this@RemoteAgentActivity).loadSettings()
+                        updateStatus(true, "Подключён через шлюз ${settings.sshHost}")
+                    } else if (selectedAgent != null && isConnected) {
+                        updateStatus(true, "${selectedAgent.name} • подключён (токен)")
+                    } else if (agents.isNotEmpty()) {
+                        updateStatus(false, "${agents.first().name} • отключён")
                     } else {
-                        updateStatus(false)
+                        updateStatus(false, "Агент не подключён")
                     }
                 }
             }
         }
     }
 
-    private fun updateStatus(connected: Boolean) {
+    private fun updateStatus(connected: Boolean, customText: String? = null) {
         val dotColor = if (connected) 0xFF4CAF50.toInt() else 0xFFF44336.toInt()
         statusIndicator.background.setTint(dotColor)
-        val agent = viewModel.selectedAgent.value
-        val statusStr = if (connected) {
-            if (agent != null) "${agent.name} • подключён" else "Агент подключён"
-        } else {
-            if (agent != null) "${agent.name} • отключён" else "Агент отключён"
-        }
-        statusText.text = statusStr
+
+        statusText.text = customText ?: if (connected) "Агент подключён" else "Агент отключён"
         val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textSecondaryColor, Color.GRAY)
         statusText.setTextColor(txtColor)
+    }
+
+    private fun updateStartStopButtons(connected: Boolean) {
+        btnStartAgent.visibility = if (connected) View.GONE else View.VISIBLE
+        btnStopAgent.visibility = if (connected) View.VISIBLE else View.GONE
+    }
+
+    override fun onResume() {
+        super.onResume()
+        RemoteAgentManager.bind(this)
+        serviceBound = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (serviceBound) {
+            RemoteAgentManager.unbind(this)
+            serviceBound = false
+        }
+    }
+
+    override fun onStateChanged(state: RemoteAgentManager.AgentConnectionState) {
+        runOnUiThread {
+            updateStatus(state.isConnected)
+            updateStartStopButtons(state.isConnected)
+        }
     }
 }
