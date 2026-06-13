@@ -212,12 +212,12 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         val localPort = etLocalPort.text.toString().toIntOrNull() ?: 50052
 
         if (sshHost.isEmpty()) {
-            Toast.makeText(this, "Введите SSH хост", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.ssh_host_empty, Toast.LENGTH_SHORT).show()
             return
         }
 
         btnCreateTunnel.isEnabled = false
-        btnCreateTunnel.text = "Подключение..."
+        btnCreateTunnel.text = getString(R.string.connecting)
 
         RemoteAgentManager.createTunnel(
             sshHost = sshHost,
@@ -232,7 +232,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                 btnCreateTunnel.isEnabled = true
                 btnCreateTunnel.text = "Подключить"
                 if (success) {
-                    Toast.makeText(this, "Шлюз подключён", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.gateway_connected, Toast.LENGTH_SHORT).show()
                     updateTunnelStatusUI()
                 } else {
                     Toast.makeText(this, error, Toast.LENGTH_LONG).show()
@@ -244,7 +244,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
     private fun closeTunnel() {
         RemoteAgentManager.closeTunnel()
         updateTunnelStatusUI()
-        Toast.makeText(this, "Шлюз отключён", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.gateway_disconnected, Toast.LENGTH_SHORT).show()
     }
 
     private fun updateTunnelStatusUI() {
@@ -347,11 +347,11 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             activeTokens.forEach { token ->
                 val view = inflater.inflate(R.layout.item_agent_token, tokenListContainer, false)
 
-                val agentName = view.findViewById<TextView>(R.id.tokenAgentName)
-                val status = view.findViewById<TextView>(R.id.tokenStatus)
-                val hash = view.findViewById<TextView>(R.id.tokenHash)
-                val caps = view.findViewById<TextView>(R.id.tokenCapabilities)
-                val expires = view.findViewById<TextView>(R.id.tokenExpires)
+                val agentName = view.findViewById<TextView>(R.id.tvTokenAgentName)
+                val status = view.findViewById<TextView>(R.id.tvTokenStatus)
+                val hash = view.findViewById<TextView>(R.id.tvTokenHash)
+                val caps = view.findViewById<TextView>(R.id.tvTokenCapabilities)
+                val expires = view.findViewById<TextView>(R.id.tvTokenExpires)
                 val revokeBtn = view.findViewById<MaterialButton>(R.id.btnRevoke)
 
                 agentName.text = token.agentName
@@ -446,7 +446,6 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
     }
 
     private fun showTokenResultDialog(token: String, agentId: String, agentName: String) {
-        // ... same as before, shows token + copy command
         val theme = ThemeStore.currentTheme()
         val bgColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
@@ -456,51 +455,56 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             orientation = LinearLayout.VERTICAL
             setPadding(48, 24, 48, 16)
             setBackgroundColor(bgColor)
+            id = View.generateViewId()
         }
 
         val label = TextView(this).apply {
-            text = "Токен агента (скопируйте — он показывается только один раз):"
+            text = getString(R.string.token_generated_hint)
             setTextColor(txtColor); textSize = 14f
+            id = View.generateViewId()
         }
         val tokenView = TextView(this).apply {
             text = token; setTextColor(txtColor); textSize = 13f
             setPadding(0, 16, 0, 16); setTextIsSelectable(true)
             typeface = android.graphics.Typeface.MONOSPACE
+            id = View.generateViewId()
         }
         container.addView(label)
         container.addView(tokenView)
 
         val agentCmd = "python3 $DEFAULT_AGENT_SCRIPT_PATH --server <server:port> --token $token"
         val cmdLabel = TextView(this).apply {
-            text = "Команда для запуска агента:"; setTextColor(txtColor); textSize = 14f; setPadding(0, 16, 0, 0)
+            text = getString(R.string.agent_command_hint); setTextColor(txtColor); textSize = 14f; setPadding(0, 16, 0, 0)
+            id = View.generateViewId()
         }
         val cmdView = TextView(this).apply {
             text = agentCmd; setTextColor(txtColor); textSize = 11f
             setPadding(0, 8, 0, 8); setTextIsSelectable(true)
             typeface = android.graphics.Typeface.MONOSPACE
             setBackgroundColor(ThemeUtils.parseSafeColor(theme.backgroundColor, Color.BLACK))
+            id = View.generateViewId()
         }
         container.addView(cmdLabel)
         container.addView(cmdView)
 
         val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("Токен сгенерирован")
+            .setTitle(getString(R.string.token_generated_title))
             .setView(container)
-            .setPositiveButton("Копировать токен", null)
-            .setNeutralButton("Копировать команду", null)
-            .setNegativeButton("Закрыть", null)
+            .setPositiveButton(getString(R.string.copy_token), null)
+            .setNeutralButton(getString(R.string.copy_command), null)
+            .setNegativeButton(getString(R.string.close), null)
             .create()
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token))
-                Toast.makeText(this, "Токен скопирован", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.token_copied, Toast.LENGTH_SHORT).show()
             }
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Agent Command", agentCmd))
-                Toast.makeText(this, "Команда скопирована", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.command_copied, Toast.LENGTH_SHORT).show()
             }
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { dialog.dismiss() }
         }

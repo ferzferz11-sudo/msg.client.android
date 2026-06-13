@@ -8,7 +8,7 @@
     tools:context=".ChatListActivity">
 
     <ImageView
-        android:id="@+id/chatListBackground"
+        android:id="@+id/ivChatListBackground"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
@@ -35,7 +35,7 @@
             android:paddingVertical="8dp">
 
             <de.hdodenhof.circleimageview.CircleImageView
-                android:id="@+id/toolbarUserAvatar"
+                android:id="@+id/ivToolbarUserAvatar"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:layout_marginEnd="12dp"
@@ -45,6 +45,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless" />
 
             <LinearLayout
+                android:id="@+id/llToolbarTitleContainer"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -52,7 +53,7 @@
                 android:gravity="center_vertical">
 
                 <TextView
-                    android:id="@+id/toolbarTitle"
+                    android:id="@+id/tvToolbarTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/chats"
@@ -67,7 +68,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless" />
 
                 <TextView
-                    android:id="@+id/toolbarSubtitle"
+                    android:id="@+id/tvToolbarSubtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="?attr/colorOnPrimary"
@@ -82,7 +83,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/updateContainer"
+                android:id="@+id/llUpdateContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -94,7 +95,7 @@
                 android:focusable="true">
 
                 <TextView
-                    android:id="@+id/updateProgressText"
+                    android:id="@+id/tvUpdateProgress"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="?attr/colorOnPrimary"
@@ -105,7 +106,7 @@
                     tools:visibility="visible" />
 
                 <ImageView
-                    android:id="@+id/updateAvailableIcon"
+                    android:id="@+id/ivUpdateAvailable"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:padding="8dp"
@@ -115,9 +116,8 @@
 
             </LinearLayout>
 
-
             <ImageView
-                android:id="@+id/actionSearch"
+                android:id="@+id/ivActionSearch"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="8dp"
@@ -128,7 +128,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageView
-                android:id="@+id/actionMute"
+                android:id="@+id/ivActionMute"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="8dp"
@@ -140,7 +140,7 @@
                 android:contentDescription="@string/mute" />
 
             <ImageView
-                android:id="@+id/actionEdit"
+                android:id="@+id/ivActionEdit"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="8dp"
@@ -152,7 +152,7 @@
                 android:contentDescription="@string/edit" />
 
             <ImageView
-                android:id="@+id/actionSettings"
+                android:id="@+id/ivActionSettings"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="8dp"
@@ -164,7 +164,7 @@
                 android:contentDescription="@string/admin_label" />
 
             <ImageView
-                android:id="@+id/actionDelete"
+                android:id="@+id/ivActionDelete"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="8dp"
@@ -194,6 +194,7 @@
         app:layout_constraintTop_toBottomOf="@id/toolbar">
 
         <LinearLayout
+            android:id="@+id/llSearchContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
@@ -201,14 +202,14 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:id="@+id/searchIcon"
+                android:id="@+id/ivSearchIcon"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_search_custom"
                 app:tint="?attr/colorOnSurfaceVariant" />
 
             <EditText
-                android:id="@+id/searchEditText"
+                android:id="@+id/etSearch"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
@@ -225,7 +226,7 @@
     </com.google.android.material.card.MaterialCardView>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefreshLayout"
+        android:id="@+id/srlChatList"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:descendantFocusability="blocksDescendants"
@@ -235,7 +236,7 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/chatsRecyclerView"
+            android:id="@+id/rvChatList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scrollbars="vertical"
@@ -246,19 +247,19 @@
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <lavender.client.android.ui.widget.LavenderFab
-        android:id="@+id/aiFab"
+        android:id="@+id/fabAi"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="40dp"
         android:src="@drawable/ic_ai"
         app:tint="?attr/colorOnPrimary"
         app:backgroundTint="?attr/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@id/addChatFab"
+        app:layout_constraintBottom_toTopOf="@id/fabAddChat"
         app:layout_constraintEnd_toEndOf="parent"
         android:contentDescription="AI" />
 
     <lavender.client.android.ui.widget.LavenderFab
-        android:id="@+id/addChatFab"
+        android:id="@+id/fabAddChat"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@android:drawable/ic_input_add"
@@ -269,7 +270,7 @@
         android:contentDescription="@string/add_chat" />
 
     <FrameLayout
-        android:id="@+id/progressOverlay"
+        android:id="@+id/flProgressOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"
@@ -277,6 +278,7 @@
         android:clickable="true"
         android:focusable="true">
         <LinearLayout
+            android:id="@+id/llProgressContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -286,7 +288,7 @@
             android:background="@drawable/rounded_background"
             android:backgroundTint="?attr/colorSurfaceContainer">
             <TextView
-                android:id="@+id/progressTitle"
+                android:id="@+id/tvProgressTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/loading"
@@ -295,14 +297,14 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="16dp" />
             <ProgressBar
-                android:id="@+id/downloadProgressBar"
+                android:id="@+id/pbDownload"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="300dp"
                 android:layout_height="wrap_content"
                 android:max="100"
                 android:progress="0" />
             <TextView
-                android:id="@+id/downloadProgressText"
+                android:id="@+id/tvDownloadProgress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -310,7 +312,7 @@
                 android:textSize="14sp" />
 
             <TextView
-                android:id="@+id/manualInstallText"
+                android:id="@+id/tvManualInstall"
                 android:layout_width="260dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -321,13 +323,14 @@
                 android:visibility="gone" />
 
             <LinearLayout
+                android:id="@+id/llProgressButtons"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="24dp">
 
                 <Button
-                    android:id="@+id/cancelDownloadButton"
+                    android:id="@+id/btnCancelDownload"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -336,7 +339,7 @@
                     android:paddingEnd="16dp" />
 
                 <Button
-                    android:id="@+id/installNowButton"
+                    android:id="@+id/btnInstallNow"
                     style="@style/Widget.MaterialComponents.Button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

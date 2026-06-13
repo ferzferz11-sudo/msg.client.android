@@ -19,7 +19,7 @@
 
     <!-- Date separator -->
     <TextView
-        android:id="@+id/dateText"
+        android:id="@+id/tvDateSeparator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -47,6 +47,7 @@
         tools:visibility="visible">
 
         <LinearLayout
+            android:id="@+id/userBubble"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -75,6 +76,7 @@
                     android:layout_marginEnd="4dp" />
 
                 <LinearLayout
+                    android:id="@+id/userReplyContent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
@@ -109,6 +111,7 @@
                 tools:text="Привет, оркестратор!" />
 
             <LinearLayout
+                android:id="@+id/userMessageMeta"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -165,6 +168,7 @@
             tools:text="🤖" />
 
         <LinearLayout
+            android:id="@+id/agentBubble"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -204,6 +208,7 @@
                     android:layout_marginEnd="4dp" />
 
                 <LinearLayout
+                    android:id="@+id/agentReplyContent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
@@ -260,6 +265,7 @@
         tools:visibility="gone">
 
         <LinearLayout
+            android:id="@+id/typingBubble"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_message_agent"

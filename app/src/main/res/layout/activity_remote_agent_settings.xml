@@ -308,28 +308,29 @@
                             android:padding="12dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="✅ Подключено через шлюз"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="#4CAF50"
-                                android:layout_marginBottom="4dp" />
+                            android:id="@+id/tvGatewayTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/remote_agent_connected"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#4CAF50"
+                            android:layout_marginBottom="4dp" />
 
-                            <TextView
-                                android:id="@+id/tvGatewayStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Шлюз: —"
-                                android:textSize="13sp"
-                                android:layout_marginBottom="4dp" />
+                                    <TextView
+                                        android:id="@+id/tvGatewayStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/gateway_status_placeholder"
+                                        android:textSize="13sp"
+                                        android:layout_marginBottom="4dp" />
 
-                            <TextView
-                                android:id="@+id/tvTunnelAddress"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Туннель: —"
-                                android:textSize="13sp" />
+                                    <TextView
+                                        android:id="@+id/tvTunnelAddress"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/tunnel_status_placeholder"
+                                        android:textSize="13sp" />
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>

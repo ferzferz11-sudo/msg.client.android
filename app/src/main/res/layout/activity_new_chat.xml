@@ -286,7 +286,7 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/replyPreview_anchor"
+        android:id="@+id/barrierReplyPreview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="top"

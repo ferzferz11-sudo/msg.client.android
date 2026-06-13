@@ -179,6 +179,7 @@
             app:tint="?attr/colorOnSurface" />
 
         <TextView
+            android:id="@+id/tvEmptyContacts"
             android:layout_width="260dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"

@@ -12,6 +12,7 @@
     android:focusable="true">
 
     <LinearLayout
+        android:id="@+id/item_chat_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -19,6 +20,7 @@
         android:gravity="center_vertical">
 
         <FrameLayout
+            android:id="@+id/flAvatarContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp">
@@ -33,13 +35,14 @@
         </FrameLayout>
 
         <LinearLayout
+            android:id="@+id/llChatInfo"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_weight="1">
 
             <TextView
-                android:id="@+id/chatName"
+                android:id="@+id/tvChatName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 tools:text="Chat Name"
@@ -50,7 +53,7 @@
                 android:ellipsize="end" />
 
             <TextView
-                android:id="@+id/chatType"
+                android:id="@+id/tvChatType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 tools:text="General"
@@ -63,7 +66,7 @@
         </LinearLayout>
 
         <ImageView
-            android:id="@+id/muteIndicator"
+            android:id="@+id/ivMuteIndicator"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginStart="8dp"
@@ -77,13 +80,13 @@
 
         <!-- Admin settings moved to toolbar -->
         <ImageView
-            android:id="@+id/adminIndicator"
+            android:id="@+id/ivAdminIndicator"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:visibility="gone" />
 
         <TextView
-            android:id="@+id/unreadCount"
+            android:id="@+id/tvUnreadCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minWidth="24dp"
@@ -114,7 +117,7 @@
             android:contentDescription="@string/conference" />
 
         <ProgressBar
-            android:id="@+id/deleteProgressBar"
+            android:id="@+id/pbDeleteChat"
             style="?android:attr/progressBarStyleSmall"
             android:layout_width="24dp"
             android:layout_height="24dp"

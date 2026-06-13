@@ -19,7 +19,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@drawable/toolbar_background"
         android:elevation="4dp"
-        app:title="Уведомления"
+        app:title="@string/notifications"
         app:titleTextColor="?attr/colorOnPrimary"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
@@ -54,9 +54,10 @@
                 android:textSize="48sp" />
 
             <TextView
+                android:id="@+id/tvNoNotifications"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Нет уведомлений"
+                android:text="@string/no_notifications"
                 android:textSize="16sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginTop="12dp" />

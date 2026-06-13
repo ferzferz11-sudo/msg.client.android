@@ -561,4 +561,59 @@
     <string name="changelog_client_full">Client Changelog (GitHub)</string>
     <string name="changelog_full_description">Full changelog with all technical details</string>
     <string name="changelog_loading_from_cache">Showing cached changelog</string>
+    <!-- Remote Agent - Additional strings -->
+    <string name="remote_agent_title">Удалённый агент</string>
+    <string name="remote_agent_connected">✅ Подключено через шлюз</string>
+    <string name="gateway_status_placeholder">Шлюз: —</string>
+    <string name="tunnel_status_placeholder">Туннель: —</string>
+    <string name="token_generated_hint">Токен агента (скопируйте — он показывается только один раз):</string>
+    <string name="token_generated_title">Токен сгенерирован</string>
+    <string name="agent_command_hint">Команда для запуска агента:</string>
+    <string name="copy_token">Копировать токен</string>
+    <string name="copy_command">Копировать команду</string>
+    <string name="token_copied">Токен скопирован</string>
+    <string name="command_copied">Команда скопирована</string>
+    <string name="agent_name_hint">Имя агента</string>
+    <string name="agent_name_default">Агент 1</string>
+    <string name="agent_name_empty">Введите имя агента</string>
+    <string name="capabilities_label">Возможности:</string>
+    <string name="select_all">Выбрать все</string>
+    <string name="generate_token_title">Сгенерировать токен</string>
+    <string name="generate">Сгенерировать</string>
+    <string name="revoke">Отозвать</string>
+    <string name="cap_shell">Shell</string>
+    <string name="cap_git">Git</string>
+    <string name="cap_build">Сборка</string>
+    <string name="cap_deploy">Деплой</string>
+    <string name="cap_file">Файлы</string>
+    <string name="cap_docker">Docker</string>
+    <string name="cap_ai">AI</string>
+    <string name="ttl_hours_hint">TTL (часы)</string>
+
+    <!-- Remote Agent - SSH/Gateway -->
+    <string name="ssh_host_empty">Введите SSH хост</string>
+    <string name="gateway_connected">Шлюз подключён</string>
+    <string name="gateway_disconnected">Шлюз отключён</string>
+    <string name="connecting">Подключение...</string>
+
+    <!-- Remote Agent - Activity -->
+    <string name="agent_starting">Запуск агента...</string>
+    <string name="agent_stopping">Остановка агента...</string>
+
+    <!-- OWL Settings -->
+    <string name="owl_settings_title">Настройки OWL</string>
+    <string name="api_key_label">API Key</string>
+    <string name="api_key_hint">Введите API ключ (OpenRouter)</string>
+    <string name="model_label">Модель</string>
+    <string name="model_hint">Выберите модель</string>
+    <string name="model_custom_hint">Доступно только с заполненным полем API OpenRouter</string>
+    <string name="model_custom_input_hint">Введите ID модели</string>
+    <string name="save">Сохранить</string>
+
+    <!-- Log Viewer -->
+    <string name="logs_empty">Логи пусты</string>
+
+    <!-- Notifications -->
+    <string name="update_preview_content">Update Preview Content</string>
+
 </resources>

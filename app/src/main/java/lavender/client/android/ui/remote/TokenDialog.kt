@@ -35,6 +35,7 @@ class TokenDialog(
             orientation = LinearLayout.VERTICAL
             setPadding(48, 24, 48, 16)
             setBackgroundColor(bgColor)
+            id = View.generateViewId()
         }
 
         // Agent Name input
@@ -43,13 +44,15 @@ class TokenDialog(
             setBoxStrokeColor(primColor)
             defaultHintTextColor = android.content.res.ColorStateList.valueOf(txtColor)
             boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            id = View.generateViewId()
         }
         val nameInput = TextInputEditText(context).apply {
-            hint = "Имя агента"
-            setText("Агент 1")
+            hint = context.getString(R.string.agent_name_hint)
+            setText(context.getString(R.string.agent_name_default))
             setTextColor(txtColor)
             setHintTextColor(txtColor and 0x80FFFFFF.toInt())
             maxLines = 1
+            id = View.generateViewId()
         }
         nameLayout.addView(nameInput)
         container.addView(nameLayout)
@@ -58,19 +61,22 @@ class TokenDialog(
         val capHeaderRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, 24, 0, 8)
+            id = View.generateViewId()
         }
         val capLabel = TextView(context).apply {
-            text = "Возможности:"
+            text = context.getString(R.string.capabilities_label)
             setTextColor(txtColor)
             textSize = 14f
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            id = View.generateViewId()
         }
         val selectAllBtn = TextView(context).apply {
-            text = "Выбрать все"
+            text = context.getString(R.string.select_all)
             setTextColor(primColor)
             textSize = 13f
             setPadding(16, 0, 0, 0)
             setOnClickListener { toggleAllCapabilities() }
+            id = View.generateViewId()
         }
         capHeaderRow.addView(capLabel)
         capHeaderRow.addView(selectAllBtn)
@@ -78,13 +84,13 @@ class TokenDialog(
 
         // Capability checkboxes
         val capabilities = listOf(
-            "shell" to "Shell",
-            "git" to "Git",
-            "build" to "Сборка",
-            "deploy" to "Деплой",
-            "file" to "Файлы",
-            "docker" to "Docker",
-            "ai" to "AI"
+            "shell" to context.getString(R.string.cap_shell),
+            "git" to context.getString(R.string.cap_git),
+            "build" to context.getString(R.string.cap_build),
+            "deploy" to context.getString(R.string.cap_deploy),
+            "file" to context.getString(R.string.cap_file),
+            "docker" to context.getString(R.string.cap_docker),
+            "ai" to context.getString(R.string.cap_ai)
         )
         checkBoxes.clear()
 
@@ -94,6 +100,7 @@ class TokenDialog(
                 setTextColor(txtColor)
                 buttonTintList = android.content.res.ColorStateList.valueOf(primColor)
                 isChecked = key == "shell" // default
+                id = View.generateViewId()
             }
             checkBoxes.add(cb)
             container.addView(cb)
@@ -105,25 +112,27 @@ class TokenDialog(
             setBoxStrokeColor(primColor)
             defaultHintTextColor = android.content.res.ColorStateList.valueOf(txtColor)
             boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            id = View.generateViewId()
         }
         val ttlInput = TextInputEditText(context).apply {
-            hint = "TTL (часы)"
+            hint = context.getString(R.string.ttl_hours_hint)
             setTextColor(txtColor)
             setHintTextColor(txtColor and 0x80FFFFFF.toInt())
             maxLines = 1
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             setText("24")
+            id = View.generateViewId()
         }
         ttlLayout.addView(ttlInput)
         container.addView(ttlLayout)
 
         dialog = MaterialAlertDialogBuilder(context, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
-            .setTitle("Сгенерировать токен")
+            .setTitle(context.getString(R.string.generate_token_title))
             .setView(container)
-            .setPositiveButton("Сгенерировать") { _, _ ->
+            .setPositiveButton(context.getString(R.string.generate)) { _, _ ->
                 val agentName = nameInput.text?.toString()?.trim() ?: ""
                 if (agentName.isEmpty()) {
-                    Toast.makeText(context, "Введите имя агента", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.agent_name_empty, Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
                 val selectedCaps = checkBoxes
@@ -132,7 +141,7 @@ class TokenDialog(
                 val ttl = ttlInput.text?.toString()?.toIntOrNull() ?: 24
                 onGenerate(agentName, selectedCaps, ttl)
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .create()
 
         dialog?.show()

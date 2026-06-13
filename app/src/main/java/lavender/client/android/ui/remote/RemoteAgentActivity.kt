@@ -103,7 +103,7 @@ class RemoteAgentActivity : AppCompatActivity(),
     }
 
     private fun setupToolbar() {
-        toolbar.title = "Удалённый агент"
+        toolbar.title = getString(R.string.remote_agent_title)
         toolbar.setNavigationIcon(R.drawable.ic_back_arrow)
         toolbar.setNavigationOnClickListener { finish() }
         toolbar.inflateMenu(R.menu.remote_agent_menu)
@@ -126,10 +126,10 @@ class RemoteAgentActivity : AppCompatActivity(),
 
         btnStartAgent.setOnClickListener {
             viewModel.loadAgents()
-            Toast.makeText(this, "Запуск агента...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.agent_starting, Toast.LENGTH_SHORT).show()
         }
         btnStopAgent.setOnClickListener {
-            Toast.makeText(this, "Остановка агента...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.agent_stopping, Toast.LENGTH_SHORT).show()
         }
 
         val isConnected = RemoteAgentManager.isConnected()
@@ -155,6 +155,7 @@ class RemoteAgentActivity : AppCompatActivity(),
                 chipBackgroundColor = android.content.res.ColorStateList.valueOf(surfaceColor)
                 chipStrokeColor = android.content.res.ColorStateList.valueOf(primColor)
                 chipStrokeWidth = 2f
+                id = View.generateViewId()
                 setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         selectedTaskType = key

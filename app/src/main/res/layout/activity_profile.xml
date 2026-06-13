@@ -232,6 +232,7 @@
             android:backgroundTint="?attr/colorSurfaceContainer">
 
             <ProgressBar
+                android:id="@+id/pbProfileLoading"
                 android:layout_width="48dp"
                 android:layout_height="48dp" />
 
