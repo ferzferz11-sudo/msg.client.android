@@ -2438,12 +2438,12 @@ class ChatListActivity : AppCompatActivity() {
         val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
         val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
-        // Server selector removed — server is always from CredentialStore (default: prod)
-        // Switch servers via ServersActivity
+        // Hide server selector and drag handle — server is always from CredentialStore
         sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
 
         var isTransitioning = false
 
@@ -2462,7 +2462,7 @@ class ChatListActivity : AppCompatActivity() {
         btnJoin?.setOnClickListener {
             val u = editText?.text.toString().trim()
             val p = editTextPassword?.text.toString().trim()
-            val serverAddress = CredentialStore.getServerAddress(this)
+            val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
             if (u.isNotEmpty() && p.isNotEmpty()) {
                 btnJoin?.text = ""
                 btnJoin?.isEnabled = false
@@ -2567,12 +2567,12 @@ class ChatListActivity : AppCompatActivity() {
             editTextConfirmPassword?.setText(prefillPass)
         }
 
-        // Server selector removed — server is always from CredentialStore (default: prod)
-        // Switch servers via ServersActivity
+        // Hide server selector and drag handle — server is always from CredentialStore
         sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
 
         var isTransitioning = false
 
@@ -2593,7 +2593,7 @@ class ChatListActivity : AppCompatActivity() {
             val p = editTextPassword?.text.toString().trim()
             val confirmPassword = editTextConfirmPassword?.text.toString().trim()
             val email = editTextEmail?.text.toString().trim()
-            val serverAddress = CredentialStore.getServerAddress(this)
+            val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
 
             if (u.isEmpty()) {
                 Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
