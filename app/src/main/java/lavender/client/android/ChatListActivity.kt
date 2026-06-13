@@ -19,14 +19,8 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -2438,12 +2432,16 @@ class ChatListActivity : AppCompatActivity() {
         val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
         val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
-        // Hide server selector and drag handle — server is always from CredentialStore
+        // Hide server selector, status, and drag handle — server is always from CredentialStore
         sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
+        // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
+        sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent?.let { parent ->
+            if (parent instanceof android.view.ViewGroup) parent.visibility = View.GONE
+        }
 
         var isTransitioning = false
 
@@ -2567,12 +2565,16 @@ class ChatListActivity : AppCompatActivity() {
             editTextConfirmPassword?.setText(prefillPass)
         }
 
-        // Hide server selector and drag handle — server is always from CredentialStore
+        // Hide server selector, status, and drag handle — server is always from CredentialStore
         sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
         sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
+        // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
+        sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent?.let { parent ->
+            if (parent instanceof android.view.ViewGroup) parent.visibility = View.GONE
+        }
 
         var isTransitioning = false
 
