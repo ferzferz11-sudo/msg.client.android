@@ -4,12 +4,11 @@ import android.util.Log
 import io.grpc.MethodDescriptor
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.callbackFlow
-import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import lavender.client.android.data.proto.*
 import lavender.client.android.data.models.AppLog
 import java.io.ByteArrayInputStream
@@ -1491,7 +1490,7 @@ suspend fun deployAgentTask(
         ?: DeployAgentTaskResponseProto(taskId = "", success = false, message = "Timeout")
 }
 
-// Streaming version: returns a Flow of task updates
+// Streaming version: returns a Flow of task updates via Channel
 fun deployAgentTaskStream(
     agentId: String,
     taskType: String,
@@ -1506,107 +1505,121 @@ fun deployAgentTaskStream(
     tunnelServerHost: String = "localhost",
     tunnelServerPort: Int = 50051,
     tunnelLocalPort: Int = 50052
-): kotlinx.coroutines.flow.Flow<DeployAgentTaskStreamResponseProto> = kotlinx.coroutines.channels.callbackFlow {
+): kotlinx.coroutines.flow.Flow<DeployAgentTaskStreamResponseProto> = kotlinx.coroutines.flow.flow {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
-        trySendBlocking(DeployAgentTaskStreamResponseProto(taskId = "", error = "Channel dead", done = true, status = "failed"))
-        close()
-        return@callbackFlow
+        emit(DeployAgentTaskStreamResponseProto(taskId = "", error = "Channel dead", done = true, status = "failed"))
+        return@flow
     }
-    val methodDesc = MethodDescriptor.newBuilder<DeployAgentTaskRequestProto, DeployAgentTaskStreamResponseProto>()
-        .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
-        .setFullMethodName("messenger.ChatService/DeployAgentTaskStream")
-        .setRequestMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskRequestProto> {
-            override fun stream(v: DeployAgentTaskRequestProto): java.io.InputStream {
-                val baos = ByteArrayOutputStream()
-                val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-                if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
-                if (v.taskType.isNotEmpty()) cos.writeString(2, v.taskType)
-                v.params.forEach { (k, v2) ->
-                    val entryBaos = ByteArrayOutputStream()
-                    val entryCos = com.google.protobuf.CodedOutputStream.newInstance(entryBaos)
-                    entryCos.writeString(1, k)
-                    entryCos.writeString(2, v2)
-                    entryCos.flush()
-                    val entryBytes = entryBaos.toByteArray()
-                    cos.writeTag(3, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
-                    cos.writeUInt32NoTag(entryBytes.size)
-                    cos.writeRawBytes(entryBytes)
-                }
-                if (v.workingDir.isNotEmpty()) cos.writeString(4, v.workingDir)
-                if (v.timeoutSec > 0) cos.writeInt32(5, v.timeoutSec)
-                if (v.tunnelMode != 0) cos.writeEnum(6, v.tunnelMode)
-                if (v.tunnelHost.isNotEmpty()) cos.writeString(7, v.tunnelHost)
-                if (v.tunnelPort != 22) cos.writeInt32(8, v.tunnelPort)
-                if (v.tunnelUser.isNotEmpty()) cos.writeString(9, v.tunnelUser)
-                if (v.tunnelPassword.isNotEmpty()) cos.writeString(10, v.tunnelPassword)
-                if (v.tunnelServerHost != "localhost") cos.writeString(11, v.tunnelServerHost)
-                if (v.tunnelServerPort != 50051) cos.writeInt32(12, v.tunnelServerPort)
-                if (v.tunnelLocalPort != 50052) cos.writeInt32(13, v.tunnelLocalPort)
-                cos.flush()
-                return ByteArrayInputStream(baos.toByteArray())
-            }
-            override fun parse(s: java.io.InputStream): DeployAgentTaskRequestProto = DeployAgentTaskRequestProto()
-        })
-        .setResponseMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskStreamResponseProto> {
-            override fun stream(v: DeployAgentTaskStreamResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
-            override fun parse(s: java.io.InputStream): DeployAgentTaskStreamResponseProto {
-                val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-                var taskId = ""; var stdoutChunk = ""; var stderrChunk = ""
-                var progress = ""; var status = ""; var stdout = ""; var stderr = ""
-                var exitCode = 0; var durationMs = 0L; var error = ""; var done = false
-                while (!cis.isAtEnd) {
-                    val tag = cis.readTag()
-                    if (tag == 0) break
-                    when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
-                        1 -> taskId = cis.readString()
-                        2 -> stdoutChunk = cis.readString()
-                        3 -> stderrChunk = cis.readString()
-                        4 -> progress = cis.readString()
-                        5 -> status = cis.readString()
-                        6 -> stdout = cis.readString()
-                        7 -> stderr = cis.readString()
-                        8 -> exitCode = cis.readInt32()
-                        9 -> durationMs = cis.readInt64()
-                        10 -> error = cis.readString()
-                        11 -> done = cis.readBool()
-                        else -> cis.skipField(tag)
+    val responseChannel = Channel<DeployAgentTaskStreamResponseProto>(UNLIMITED)
+    var call: io.grpc.ClientCall<DeployAgentTaskRequestProto, DeployAgentTaskStreamResponseProto>? = null
+
+    try {
+        val methodDesc = MethodDescriptor.newBuilder<DeployAgentTaskRequestProto, DeployAgentTaskStreamResponseProto>()
+            .setType(MethodDescriptor.MethodType.SERVER_STREAMING)
+            .setFullMethodName("messenger.ChatService/DeployAgentTaskStream")
+            .setRequestMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskRequestProto> {
+                override fun stream(v: DeployAgentTaskRequestProto): java.io.InputStream {
+                    val baos = ByteArrayOutputStream()
+                    val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+                    if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+                    if (v.taskType.isNotEmpty()) cos.writeString(2, v.taskType)
+                    v.params.forEach { (k, v2) ->
+                        val entryBaos = ByteArrayOutputStream()
+                        val entryCos = com.google.protobuf.CodedOutputStream.newInstance(entryBaos)
+                        entryCos.writeString(1, k)
+                        entryCos.writeString(2, v2)
+                        entryCos.flush()
+                        val entryBytes = entryBaos.toByteArray()
+                        cos.writeTag(3, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+                        cos.writeUInt32NoTag(entryBytes.size)
+                        cos.writeRawBytes(entryBytes)
                     }
+                    if (v.workingDir.isNotEmpty()) cos.writeString(4, v.workingDir)
+                    if (v.timeoutSec > 0) cos.writeInt32(5, v.timeoutSec)
+                    if (v.tunnelMode != 0) cos.writeEnum(6, v.tunnelMode)
+                    if (v.tunnelHost.isNotEmpty()) cos.writeString(7, v.tunnelHost)
+                    if (v.tunnelPort != 22) cos.writeInt32(8, v.tunnelPort)
+                    if (v.tunnelUser.isNotEmpty()) cos.writeString(9, v.tunnelUser)
+                    if (v.tunnelPassword.isNotEmpty()) cos.writeString(10, v.tunnelPassword)
+                    if (v.tunnelServerHost != "localhost") cos.writeString(11, v.tunnelServerHost)
+                    if (v.tunnelServerPort != 50051) cos.writeInt32(12, v.tunnelServerPort)
+                    if (v.tunnelLocalPort != 50052) cos.writeInt32(13, v.tunnelLocalPort)
+                    cos.flush()
+                    return ByteArrayInputStream(baos.toByteArray())
                 }
-                return DeployAgentTaskStreamResponseProto(
-                    taskId = taskId, stdoutChunk = stdoutChunk, stderrChunk = stderrChunk,
-                    progress = progress, status = status, stdout = stdout, stderr = stderr,
-                    exitCode = exitCode, durationMs = durationMs, error = error, done = done
-                )
+                override fun parse(s: java.io.InputStream): DeployAgentTaskRequestProto = DeployAgentTaskRequestProto()
+            })
+            .setResponseMarshaller(object : MethodDescriptor.Marshaller<DeployAgentTaskStreamResponseProto> {
+                override fun stream(v: DeployAgentTaskStreamResponseProto): java.io.InputStream = ByteArrayInputStream(ByteArray(0))
+                override fun parse(s: java.io.InputStream): DeployAgentTaskStreamResponseProto {
+                    val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+                    var taskId = ""; var stdoutChunk = ""; var stderrChunk = ""
+                    var progress = ""; var status = ""; var stdout = ""; var stderr = ""
+                    var exitCode = 0; var durationMs = 0L; var error = ""; var done = false
+                    while (!cis.isAtEnd) {
+                        val tag = cis.readTag()
+                        if (tag == 0) break
+                        when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                            1 -> taskId = cis.readString()
+                            2 -> stdoutChunk = cis.readString()
+                            3 -> stderrChunk = cis.readString()
+                            4 -> progress = cis.readString()
+                            5 -> status = cis.readString()
+                            6 -> stdout = cis.readString()
+                            7 -> stderr = cis.readString()
+                            8 -> exitCode = cis.readInt32()
+                            9 -> durationMs = cis.readInt64()
+                            10 -> error = cis.readString()
+                            11 -> done = cis.readBool()
+                            else -> cis.skipField(tag)
+                        }
+                    }
+                    return DeployAgentTaskStreamResponseProto(
+                        taskId = taskId, stdoutChunk = stdoutChunk, stderrChunk = stderrChunk,
+                        progress = progress, status = status, stdout = stdout, stderr = stderr,
+                        exitCode = exitCode, durationMs = durationMs, error = error, done = done
+                    )
+                }
+            })
+            .build()
+
+        call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+
+        call.start(object : io.grpc.ClientCall.Listener<DeployAgentTaskStreamResponseProto>() {
+            override fun onMessage(message: DeployAgentTaskStreamResponseProto) {
+                responseChannel.trySend(message)
             }
-        })
-        .build()
-
-    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
-
-    call.start(object : io.grpc.ClientCall.Listener<DeployAgentTaskStreamResponseProto>() {
-        override fun onMessage(message: DeployAgentTaskStreamResponseProto) {
-            trySendBlocking(message)
-        }
-        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-            if (!status.isOk) {
-                trySendBlocking(DeployAgentTaskStreamResponseProto(
-                    error = status.description ?: status.code.toString(), done = true, status = "failed"
-                ))
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    responseChannel.trySend(DeployAgentTaskStreamResponseProto(
+                        error = status.description ?: status.code.toString(), done = true, status = "failed"
+                    ))
+                }
+                responseChannel.close()
             }
-            close()
+        }, io.grpc.Metadata())
+
+        call.sendMessage(DeployAgentTaskRequestProto(
+            agentId, taskType, params, workingDir, timeoutSec,
+            tunnelMode, tunnelHost, tunnelPort, tunnelUser, tunnelPassword,
+            tunnelServerHost, tunnelServerPort, tunnelLocalPort
+        ))
+        call.halfClose()
+        call.request(1)
+
+        // Consume channel and emit to flow
+        for (update in responseChannel) {
+            emit(update)
         }
-    }, io.grpc.Metadata())
-
-    call.sendMessage(DeployAgentTaskRequestProto(
-        agentId, taskType, params, workingDir, timeoutSec,
-        tunnelMode, tunnelHost, tunnelPort, tunnelUser, tunnelPassword,
-        tunnelServerHost, tunnelServerPort, tunnelLocalPort
-    ))
-    call.halfClose()
-    call.request(1)
-
-    awaitClose { call.cancel("Flow cancelled", null) }
+    } catch (e: Exception) {
+        emit(DeployAgentTaskStreamResponseProto(
+            error = e.message ?: "Stream error", done = true, status = "failed"
+        ))
+    } finally {
+        call?.cancel("Flow completed", null)
+        responseChannel.close()
+    }
 }
 
 suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseProto = withContext(Dispatchers.IO) {
