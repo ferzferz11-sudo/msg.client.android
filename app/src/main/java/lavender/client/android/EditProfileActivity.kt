@@ -194,8 +194,8 @@ class EditProfileActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val newBio = s?.toString()?.trim() ?: ""
-                // Only show save button if bio is different and it was already loaded from server
-                btnChangeBio.isVisible = initialBio.isNotEmpty() && newBio != initialBio.trim()
+                // Show save button if bio is different from initial (or if initial was empty and user typed something)
+                btnChangeBio.isVisible = newBio != initialBio.trim()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
