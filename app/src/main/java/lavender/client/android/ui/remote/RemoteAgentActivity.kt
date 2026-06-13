@@ -134,7 +134,7 @@ class RemoteAgentActivity : AppCompatActivity(),
 
         val isConnected = RemoteAgentManager.isConnected()
         updateStatus(isConnected)
-    }
+        updateStartStopButtons(isConnected)
 
     private fun setupTaskTypeChips() {
         val theme = ThemeStore.currentTheme()
@@ -316,7 +316,10 @@ class RemoteAgentActivity : AppCompatActivity(),
     }
 
     private fun updateStartStopButtons(connected: Boolean) {
-        btnStartAgent.visibility = if (connected) View.GONE else View.VISIBLE
+        val hasAgent = RemoteAgentManager.isTunnelActive()
+            || viewModel.selectedAgent.value != null
+            || viewModel.agents.value.isNotEmpty()
+        btnStartAgent.visibility = if (connected || !hasAgent) View.GONE else View.VISIBLE
         btnStopAgent.visibility = if (connected) View.VISIBLE else View.GONE
     }
 
