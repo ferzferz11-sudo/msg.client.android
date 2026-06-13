@@ -172,6 +172,11 @@ class UpdateManager(private val context: Context) {
                 }
 
                 finishDownload(true)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                Log.d(TAG, "Download cancelled (coroutine)")
+                file.delete()
+                finishDownload(false)
+                return@launch
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed", e)
                 file.delete()
