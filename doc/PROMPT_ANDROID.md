@@ -90,6 +90,25 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 - Агент (hermes_remote_agent.py) ещё НЕ отправляет streaming updates — сервер готов, клиент готов
 - Server migration warnings: `role "lavender" does not exist` (не критично)
 
+## i18n — НЕЗАВЕРШЁННАЯ РАБОТА (v1.1.3.9)
+
+Вынесено в strings.xml: AIBottomSheet, RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService, ChatListActivity, ConferenceLobbyActivity, OwlSettingsActivity, OwlChatActivity, LogViewerActivity, HermesChatActivity, AgentSettingsActivity/BottomSheet, AgentListActivity, ChatMessageAdapter, CommandBottomSheet.
+
+**Осталось вынести (средний приоритет):**
+- NewChatActivity: upload progress text, conference/call detection strings
+- MessageAdapter: call status strings ("Пропущенный вызов", "Входящий/Исходящий", "Вызов не принят")
+- HermesGatewayManager: SSH error messages (6 строк)
+- RemoteAgentManager: status text "Отключено", "Сервис не запущен"
+- HermesChatViewModel: error в data class (нет контекста — нужен другой подход)
+- SecurityActivity: Toast "Другие сеансы завершены", "Ошибка при завершении сеансов"
+- ThemesActivity: "Лавандовый ночной"
+- CallActivity: Toast "Не удалось соединиться"
+- AgentListActivity: PREFILL_MESSAGE "Расскажи подробнее о модели"
+- RemoteAgentActivity: agentCommands descriptions (12 строк команд)
+- ChatAdapter: "📷 Фото" / "📷 Photo" (уже есть lang check — можно оставить)
+
+**Правило:** Все новые строки добавлять ОДНОВРЕМЕННО в values/strings.xml (en) и values-ru/strings.xml. НЕ добавлять строки только в один файл.
+
 ---
 
 ## КОМАНДЫ
