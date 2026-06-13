@@ -461,11 +461,24 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 var stderrBuf = StringBuilder()
                 flow.collect { update ->
                     if (update.done) {
+                        // Сервер теперь при финальном done=True отправляет полные буферы
+                        // в полях stdout/stderr (из TaskResult). Используем их как основные,
+                        // а накопленные чанки — как fallback если сервер не прислал.
+                        val finalStdout = if (update.stdout.isNotEmpty()) {
+                            update.stdout
+                        } else {
+                            stdoutBuf.toString()
+                        }
+                        val finalStderr = if (update.stderr.isNotEmpty()) {
+                            update.stderr
+                        } else {
+                            stderrBuf.toString()
+                        }
                         val finalContent = buildString {
-                            if (stdoutBuf.isNotEmpty()) append(stdoutBuf)
-                            if (stderrBuf.isNotEmpty()) {
+                            if (finalStdout.isNotEmpty()) append(finalStdout)
+                            if (finalStderr.isNotEmpty()) {
                                 if (isNotEmpty()) append("\n")
-                                append(stderrBuf)
+                                append(finalStderr)
                             }
                             if (update.error.isNotEmpty()) {
                                 if (isNotEmpty()) append("\n")
