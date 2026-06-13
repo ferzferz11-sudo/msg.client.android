@@ -226,7 +226,7 @@ class ChatAdapter(
     fun filter(query: String) {
         currentFilter = query.lowercase()
         diffJob?.cancel()
-        
+
         isDiffing = true
         val oldChats = displayedChats
         diffJob = scope.launch(Dispatchers.Default) {
@@ -240,17 +240,30 @@ class ChatAdapter(
                 }
             }
             val diffResult = DiffUtil.calculateDiff(ChatDiffCallback(oldChats, filtered))
-            
+
             if (!isActive) {
                 isDiffing = false
                 return@launch
             }
-            
+
             withContext(Dispatchers.Main) {
                 displayedChats = filtered
-                // Offset by 1 if Favorites is present
+                // Apply diff with offset for Favorites at position 0
                 if (favoritesItem != null) {
-                    notifyItemRangeChanged(1, filtered.size, "status")
+                    diffResult.dispatchUpdatesTo(object : androidx.recyclerview.widget.ListUpdateCallback {
+                        override fun onInserted(position: Int, count: Int) {
+                            notifyItemRangeInserted(position + 1, count)
+                        }
+                        override fun onRemoved(position: Int, count: Int) {
+                            notifyItemRangeRemoved(position + 1, count)
+                        }
+                        override fun onMoved(fromPosition: Int, toPosition: Int) {
+                            notifyItemMoved(fromPosition + 1, toPosition + 1)
+                        }
+                        override fun onChanged(position: Int, count: Int, payload: Any?) {
+                            notifyItemRangeChanged(position + 1, count, payload)
+                        }
+                    })
                 } else {
                     diffResult.dispatchUpdatesTo(this@ChatAdapter)
                 }

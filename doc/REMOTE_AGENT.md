@@ -1,6 +1,6 @@
 # Remote Agent — Документация
 
-**Версия:** v1.1.3.5
+**Версия:** v1.1.3.8
 **Дата:** 2026-06-13
 **Ветка:** feat/1.1.3.x
 
@@ -276,6 +276,30 @@ Android → localhost:localPort → SSH Server → serverHost:serverPort
 
 ---
 
+## Streaming (v1.1.3.8)
+
+### Протокол
+```
+Агент → AGENT_TASK_STREAM_UPDATE(done=False) → onStream → streamCh → клиент (stdout_chunk)
+Агент → AGENT_TASK_STREAM_UPDATE(done=True)  → onStream → streamDone flag, continue
+Агент → AGENT_TASK_RESULT                    → onResult → close(streamCh)
+Сервер → клиент: один done=True с полными Stdout/Stderr/ExitCode/DurationMs
+```
+
+### Ключевые изменения (v1.1.3.8)
+- Сервер отправляет **один** `done=True` с полными данными из TaskResult
+- Раньше: два `done=True` (первый пустой из stream update, второй полный из TaskResult)
+- Android: при `done=True` использует `update.stdout`/`update.stderr` (полные буферы), fallback на чанки
+
+### Компоненты
+- `server_remote.go:DeployAgentTaskStream` — серверный handler
+- `hermes_remote_manager.go:HandleTaskStream` — callback для stream updates
+- `hermes_agent_service.go:handleTaskStreamUpdate` → `HandleTaskStream`
+- `RemoteAgentViewModel.kt:sendMessageStreaming` — клиентский Flow collector
+- `HermesGrpc.kt:deployAgentTaskStream` → callbackFlow с ClientCall.Listener
+
+---
+
 ## Логи
 
 Все компоненты Remote Agent логируют с тегом `RemoteAgent*`:
@@ -323,6 +347,8 @@ git pull && ./gradlew assembleRelease
 
 | Версия | Дата | Описание |
 |--------|------|----------|
+| v1.1.3.8 | 2026-06-13 | Streaming fix: single done=True with full TaskResult data. ChatAdapter filter() fix. |
+| v1.1.3.7 | 2026-06-13 | Streaming: DeployAgentTaskStream, sendMessageStreaming, HermesGrpc callbackFlow |
 | v1.1.3.5 | 2026-06-13 | Foreground service + singleton manager для persistent connection |
 | v1.1.3.4 | 2026-06-13 | Hermes Gateway (SSH туннель) |
 | v1.1.3.3 | 2026-06-12 | Task results + script path fix |
