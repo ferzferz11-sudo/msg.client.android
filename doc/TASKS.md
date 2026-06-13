@@ -1,8 +1,34 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.3.7
+**Версия:** v1.1.3.8 (stable)
 **Обновлено:** 2026-06-13
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.8 — Espresso Testing IDs + AI Sheet Improvements + Bugfixes
+
+### Espresso Testing — подготовка ID
+- ✅ Все XML ID переименованы в snake_case с префиксами (btn_, et_, tv_, iv_, rv_, srl_, fl_, ll_, pb_, fab_, cv_, til_, actv_, barrier_)
+- ✅ Динамические View в Kotlin используют `View.generateViewId()`
+- ✅ Код обновлён для совместимости с новыми ID (ChatAdapter, MessageAdapter, ChatMessageAdapter, ChatWidget, ThemeApplier, ForwardChatAdapter, SuperAdminAdapter, AIBottomSheet, OwlSettingsActivity, TokenDialog, EditProfileActivity)
+- ✅ Все строки на двух языках: values/strings.xml (en) + values-ru/strings.xml (ru), 560 строк каждое
+- ✅ PATTERNS.md содержит таблицу префиксов и примеры Espresso-тестов
+
+### AI Bottom Sheet улучшения
+- ✅ Названия новых чатов: "Лава ИИ #N" / "Агент OWL #N" с автоматической нумерацией
+- ✅ Удаление чата на ИИ шторке — удаление на фоне с перестройкой UI после закрытия popup
+- ✅ Заголовок шторки: "AI Сервисы (в разработке)"
+- ✅ Убран typeLabel из элементов чата (тип чата не нужен, чаты разбиты по секциям)
+
+### Исправления
+- ✅ **Favorites** — "Нет сообщений" → "Личное хранилище" (R.string.favorites_description)
+- ✅ **EditProfileActivity** — исправлен фатал `avatarImageView` → `ivProfileAvatar`
+- ✅ **AIBottomSheet** — исправлены ID `tvChatName` → `chatName`, `tvChatType` → `chatTypeLabel`
+- ✅ **ChatListActivity** — исправлены ID `swipeRefreshLayout` → `srlChatList`, `actionSettings` → `ivActionSettings`, `toolbarSubtitle` → `tvToolbarSubtitle`
+
+### Известные проблемы
+- Камера: Toast "Could not open camera" при вызове из шторки (возможно отсутствие камеры на устройстве)
 
 ---
 
