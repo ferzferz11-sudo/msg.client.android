@@ -5,6 +5,7 @@
   Типы задач + чат через ChatWidget.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -18,54 +19,72 @@
         android:elevation="4dp" />
 
     <!-- Status bar: подключен / отключён + тип подключения -->
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/statusBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="6dp"
-        android:gravity="center_vertical">
+        android:paddingVertical="6dp">
 
         <View
             android:id="@+id/statusIndicator"
             android:layout_width="10dp"
             android:layout_height="10dp"
-            android:background="@drawable/ic_status_dot" />
+            android:background="@drawable/ic_status_dot"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/statusText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Агент не подключён"
             android:textSize="13sp"
-            tools:text="Агент подключён через шлюз 10.0.0.1" />
+            android:textColor="?android:textColorPrimary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btnStartAgent"
+            app:layout_constraintStart_toEndOf="@+id/statusIndicator"
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Start/Stop buttons in status bar -->
+        <!-- Start/Stop buttons — fixed 48dp width -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartAgent"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
+            android:layout_width="48dp"
             android:layout_height="36dp"
+            android:minWidth="48dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
             android:text="▶"
-            android:textSize="18sp"
-            android:minWidth="40dp"
+            android:textSize="16sp"
             android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btnStopAgent"
+            app:layout_constraintTop_toTopOf="parent"
             tools:visibility="visible" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStopAgent"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
+            android:layout_width="48dp"
             android:layout_height="36dp"
+            android:minWidth="48dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
             android:text="⏹"
-            android:textSize="18sp"
-            android:minWidth="40dp"
+            android:textSize="16sp"
             android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             tools:visibility="visible" />
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Task type selector -->
     <HorizontalScrollView

@@ -27,7 +27,6 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     val selectedAgent: StateFlow<RemoteAgentInfo?> = _selectedAgent.asStateFlow()
 
     init {
-        // Restore previously selected agent from SharedPreferences
         restoreSelectedAgent()
     }
 
@@ -60,9 +59,13 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // ===== Error =====
+    // ===== Error (critical — shown as Toast) =====
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    // ===== Info message (non-critical — logged only, no Toast) =====
+    private val _infoMessage = MutableStateFlow<String?>(null)
+    val infoMessage: StateFlow<String?> = _infoMessage.asStateFlow()
 
     // ===== Token list =====
     private val _tokenList = MutableStateFlow<List<TokenInfo>>(emptyList())
@@ -80,13 +83,68 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     private val _isTyping = MutableStateFlow(false)
     val isTyping: StateFlow<Boolean> = _isTyping.asStateFlow()
 
+    // ===== Agent load flag =====
+    private var agentsLoaded = false
+
     /**
-     * Load remote agents from server
+     * Ensure an agent is selected. Tries loading from server first,
+     * falls back to default local agent if server unavailable.
+     * Must be called from a coroutine context.
+     */
+    private suspend fun ensureAgentSelected(): Boolean {
+        if (_selectedAgent.value != null) return true
+
+        if (!agentsLoaded) {
+            agentsLoaded = true
+            try {
+                val result = GrpcClient.listRemoteAgents()
+                val loadedAgents = result.map { proto ->
+                    RemoteAgentInfo(
+                        id = proto.id, name = proto.name,
+                        host = proto.host, ipAddress = proto.ipAddress,
+                        os = proto.os, status = proto.status,
+                        capabilities = proto.capabilities,
+                        activeTasks = proto.activeTasks,
+                        lastHeartbeat = proto.lastHeartbeat
+                    )
+                }
+                _agents.value = loadedAgents
+                if (loadedAgents.isNotEmpty()) {
+                    selectAgent(loadedAgents.first())
+                    return true
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.info("RemoteAgentVM.ensureAgentSelected",
+                    "Server agent list unavailable: ${e.message}")
+            }
+        }
+
+        if (_agents.value.isNotEmpty()) {
+            selectAgent(_agents.value.first())
+            return true
+        }
+
+        // Fallback: create default local agent
+        val defaultAgent = RemoteAgentInfo(
+            id = "default",
+            name = "Lava Agent",
+            host = prefs.getString("remote_agent_host", "") ?: "",
+            status = "local"
+        )
+        _agents.value = listOf(defaultAgent)
+        selectAgent(defaultAgent)
+        return true
+    }
+
+    /**
+     * Load remote agents from server.
+     * Non-critical: failures are logged but NOT shown to user as errors.
      */
     fun loadAgents() {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
             try {
                 val result = GrpcClient.listRemoteAgents()
                 android.util.Log.d("RemoteAgentViewModel", "loadAgents: got ${result.size} agents")
@@ -103,16 +161,17 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                         lastHeartbeat = proto.lastHeartbeat
                     )
                 }
+                agentsLoaded = true
                 if (_selectedAgent.value == null && _agents.value.isNotEmpty()) {
                     selectAgent(_agents.value.first())
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 android.util.Log.d("RemoteAgentViewModel", "loadAgents cancelled")
-                throw e // re-throw to keep structured concurrency
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("RemoteAgentViewModel", "loadAgents error", e)
-                AppLog.error("RemoteAgentVM.loadAgents", "Failed to load agents: ${e.message}", e)
-                _error.value = e.message ?: "Failed to load agents"
+                AppLog.info("RemoteAgentVM.loadAgents",
+                    "Agent list unavailable: ${e.message}")
             }
             _isLoading.value = false
         }
@@ -123,7 +182,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun selectAgent(agent: RemoteAgentInfo) {
         _selectedAgent.value = agent
-        _isConnected.value = agent.status == "connected"
+        _isConnected.value = agent.status == "connected" || agent.status == "local" || agent.status == "restored"
         persistSelectedAgent(agent)
     }
 
@@ -150,7 +209,6 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 if (response.success) {
                     _generatedToken.value = response.token
-                    // Reload token list
                     loadTokens(adminUserId)
                 } else {
                     _error.value = response.error.ifEmpty { "Failed to generate token" }
@@ -230,35 +288,30 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     /**
-     * Send a task to the selected remote agent via DeployAgentTask
+     * Send a task to the selected remote agent via DeployAgentTask.
+     * Ensures agent is selected before sending (loads from server or creates default).
      */
     fun sendMessage(text: String, userId: String, taskType: String = "shell") {
-        var agent = _selectedAgent.value
-        if (agent == null) {
-            // Auto-select first available agent if none selected
-            val agents = _agents.value
-            if (agents.isNotEmpty()) {
-                agent = agents.first()
-                selectAgent(agent)
-            } else {
-                _error.value = "Агент не выбран"
-                return
-            }
-        }
-
-        // Add user message with task type indicator
-        val userMsg = RemoteAgentMessage(
-            id = java.util.UUID.randomUUID().toString(),
-            content = text,
-            isUser = true,
-            timestamp = System.currentTimeMillis(),
-            taskType = taskType
-        )
-        _messages.value = _messages.value + userMsg
-
-        // Send task to agent
-        _isTyping.value = true
         viewModelScope.launch {
+            if (!ensureAgentSelected()) {
+                _error.value = "Агент не выбран"
+                return@launch
+            }
+            val agent = _selectedAgent.value ?: run {
+                _error.value = "Агент не выбран"
+                return@launch
+            }
+
+            val userMsg = RemoteAgentMessage(
+                id = java.util.UUID.randomUUID().toString(),
+                content = text,
+                isUser = true,
+                timestamp = System.currentTimeMillis(),
+                taskType = taskType
+            )
+            _messages.value = _messages.value + userMsg
+
+            _isTyping.value = true
             try {
                 val tunnelActive = RemoteAgentManager.isTunnelActive()
                 val settings = gatewayManager.loadSettings()
@@ -295,9 +348,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     AppLog.error("RemoteAgentVM.sendMessage", "Task failed: $errText (exit=${response.exitCode})")
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                // Job was cancelled — user left screen, not an error, don't show toast
                 AppLog.info("RemoteAgentVM.sendMessage", "Task cancelled by user (navigation)")
-                // Don't update messages on cancellation
             } catch (e: Exception) {
                 AppLog.error("RemoteAgentVM.sendMessage", "Task error: ${e.message}", e)
                 val agentMsg = RemoteAgentMessage(
@@ -313,79 +364,43 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     /**
-     * Send a task with streaming — collects stdout/stderr/progress in real-time
+     * Send a task with streaming — collects stdout/stderr/progress in real-time.
+     * Ensures agent is selected before sending (loads from server or creates default).
      */
     fun sendMessageStreaming(text: String, userId: String, taskType: String = "shell") {
-        var agent = _selectedAgent.value
-        if (agent == null) {
-            val agents = _agents.value
-            if (agents.isNotEmpty()) {
-                agent = agents.first()
-                selectAgent(agent)
-            } else {
-                // Auto-load agents from server, then retry
-                _isLoading.value = true
-                viewModelScope.launch {
-                    try {
-                        val result = GrpcClient.listRemoteAgents()
-                        _agents.value = result.map { proto ->
-                            RemoteAgentInfo(
-                                id = proto.id, name = proto.name,
-                                host = proto.host, ipAddress = proto.ipAddress,
-                                os = proto.os, status = proto.status,
-                                capabilities = proto.capabilities,
-                                activeTasks = proto.activeTasks,
-                                lastHeartbeat = proto.lastHeartbeat
-                            )
-                        }
-                        if (_selectedAgent.value == null && _agents.value.isNotEmpty()) {
-                            selectAgent(_agents.value.first())
-                        }
-                        // Retry sending with loaded agents
-                        val selectedAgent = _selectedAgent.value
-                        if (selectedAgent != null) {
-                            _isLoading.value = false
-                            sendMessageStreaming(text, userId, taskType)
-                        } else {
-                            _isLoading.value = false
-                            _error.value = "Агент не выбран"
-                        }
-                    } catch (e: Exception) {
-                        _isLoading.value = false
-                        _error.value = "Агент не выбран"
-                    }
-                }
-                return
-            }
-        }
-
-        // Add user message
-        val userMsg = RemoteAgentMessage(
-            id = java.util.UUID.randomUUID().toString(),
-            content = text,
-            isUser = true,
-            timestamp = System.currentTimeMillis(),
-            taskType = taskType
-        )
-        _messages.value = _messages.value + userMsg
-
-        // Add placeholder for agent streaming response
-        val streamMsgId = java.util.UUID.randomUUID().toString()
-        val streamMsg = RemoteAgentMessage(
-            id = streamMsgId,
-            content = "",
-            isUser = false,
-            timestamp = System.currentTimeMillis(),
-            isStreaming = true
-        )
-        _messages.value = _messages.value + streamMsg
-
-        _isTyping.value = true
         viewModelScope.launch {
+            if (!ensureAgentSelected()) {
+                _error.value = "Агент не выбран"
+                return@launch
+            }
+            val agent = _selectedAgent.value ?: run {
+                _error.value = "Агент не выбран"
+                return@launch
+            }
+
+            val userMsg = RemoteAgentMessage(
+                id = java.util.UUID.randomUUID().toString(),
+                content = text,
+                isUser = true,
+                timestamp = System.currentTimeMillis(),
+                taskType = taskType
+            )
+            _messages.value = _messages.value + userMsg
+
+            val streamMsgId = java.util.UUID.randomUUID().toString()
+            val streamMsg = RemoteAgentMessage(
+                id = streamMsgId,
+                content = "",
+                isUser = false,
+                timestamp = System.currentTimeMillis(),
+                isStreaming = true
+            )
+            _messages.value = _messages.value + streamMsg
+
+            _isTyping.value = true
             try {
                 val tunnelActive = RemoteAgentManager.isTunnelActive()
                 val settings = gatewayManager.loadSettings()
-                // Try streaming first, fallback to unary if server doesn't support it
                 val flow = try {
                     GrpcClient.deployAgentTaskStream(
                         agentId = agent.id,
@@ -400,7 +415,6 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                         tunnelLocalPort = settings.localPort
                     )
                 } catch (e: Exception) {
-                    // Server may not support streaming (older versions) — use unary
                     AppLog.info("RemoteAgentVM.sendMessageStreaming", "Streaming not supported, falling back to unary")
                     val response = GrpcClient.deployAgentTask(
                         agentId = agent.id,
@@ -414,10 +428,8 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                         tunnelServerPort = settings.serverPort,
                         tunnelLocalPort = settings.localPort
                     )
-                    // Convert unary response to streaming flow
                     kotlinx.coroutines.flow.flow {
                         if (response.success) {
-                            val output = if (response.stdout.isNotEmpty()) response.stdout else "(no output)"
                             emit(lavender.client.android.data.proto.DeployAgentTaskStreamResponseProto(
                                 taskId = response.taskId,
                                 status = "completed",
@@ -441,7 +453,6 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 var stderrBuf = StringBuilder()
                 flow.collect { update ->
                     if (update.done) {
-                        // Final message
                         val finalContent = buildString {
                             if (stdoutBuf.isNotEmpty()) append(stdoutBuf)
                             if (stderrBuf.isNotEmpty()) {
@@ -465,14 +476,12 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                             if (it.id == streamMsgId) finalMsg else it
                         }
                     } else {
-                        // Append chunks
                         if (update.stdoutChunk.isNotEmpty()) {
                             stdoutBuf.append(update.stdoutChunk)
                         }
                         if (update.stderrChunk.isNotEmpty()) {
                             stderrBuf.append(update.stderrChunk)
                         }
-                        // Update message with current buffer + progress
                         val currentContent = buildString {
                             if (stdoutBuf.isNotEmpty()) append(stdoutBuf)
                             if (stderrBuf.isNotEmpty()) {
@@ -498,7 +507,6 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 AppLog.info("RemoteAgentVM.sendMessageStreaming", "Stream cancelled by user (navigation)")
-                // Don't update messages on cancellation — the user left the screen
             } catch (e: Exception) {
                 AppLog.error("RemoteAgentVM.sendMessageStreaming", "Stream error: ${e.message}", e)
                 val errMsg = RemoteAgentMessage(
@@ -525,7 +533,6 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 val status = GrpcClient.getRemoteAgentStatus(agent.id)
                 _isConnected.value = status.status == "connected"
-                // Update agent in list
                 val updated = _agents.value.map {
                     if (it.id == agent.id) it.copy(
                         status = status.status,

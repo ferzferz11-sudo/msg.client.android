@@ -91,22 +91,8 @@ class RemoteAgentActivity : AppCompatActivity(),
         setupChatWidget()
         observeState()
 
-        // Load agents
+        // Load agents once on create
         viewModel.loadAgents()
-        lifecycleScope.launch {
-            kotlinx.coroutines.delay(1000)
-            viewModel.refreshAgentStatus()
-        }
-
-        // Auto-refresh every 30s
-        lifecycleScope.launch {
-            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
-                while (true) {
-                    kotlinx.coroutines.delay(30000)
-                    viewModel.refreshAgentStatus()
-                }
-            }
-        }
     }
 
     private fun initViews() {
@@ -319,10 +305,7 @@ class RemoteAgentActivity : AppCompatActivity(),
     private fun updateStatus(connected: Boolean, customText: String? = null) {
         val dotColor = if (connected) 0xFF4CAF50.toInt() else 0xFFF44336.toInt()
         statusIndicator.background.setTint(dotColor)
-
         statusText.text = customText ?: if (connected) "Агент подключён" else "Агент отключён"
-        val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textSecondaryColor, Color.GRAY)
-        statusText.setTextColor(txtColor)
     }
 
     private fun updateStartStopButtons(connected: Boolean) {
@@ -348,8 +331,6 @@ class RemoteAgentActivity : AppCompatActivity(),
         runOnUiThread {
             updateStatus(state.isConnected)
             updateStartStopButtons(state.isConnected)
-            // Auto-load agents when connected (especially after gateway connect)
-            viewModel.loadAgents()
         }
     }
 }
