@@ -204,14 +204,11 @@ class AIBottomSheet(
         val icon = itemView.findViewById<ImageView>(R.id.chatIcon)
         val text = itemView.findViewById<TextView>(R.id.chatName)
         val settingsBtn = itemView.findViewById<ImageView>(R.id.chatSettings)
-        val typeLabel = itemView.findViewById<TextView>(R.id.chatTypeLabel)
 
         if (chat.type == "hermes") {
             icon.setImageResource(R.drawable.ic_hermes)
-            typeLabel.text = "Лава ИИ"
         } else {
             icon.setImageResource(R.drawable.ic_owl)
-            typeLabel.text = "OWL"
         }
         icon.imageTintList = ColorStateList.valueOf(primColor)
 

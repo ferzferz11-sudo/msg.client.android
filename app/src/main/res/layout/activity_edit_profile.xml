@@ -54,13 +54,13 @@
                         android:layout_height="wrap_content">
 
                         <de.hdodenhof.circleimageview.CircleImageView
-                            android:id="@+id/avatarImageView"
-                            android:layout_width="120dp"
-                            android:layout_height="120dp"
+                            android:id="@+id/ivProfileAvatar"
+                            android:layout_width="100dp"
+                            android:layout_height="100dp"
                             android:src="@drawable/ic_default_avatar"
                             app:civ_border_width="2dp"
-                            app:civ_border_color="?attr/colorPrimary" />
-
+                            app:civ_border_color="?attr/colorPrimary"
+                            android:contentDescription="@string/profile" />
                         <ProgressBar
                             android:id="@+id/avatarProgressBar"
                             android:layout_width="48dp"
