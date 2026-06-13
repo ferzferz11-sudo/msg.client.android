@@ -2459,6 +2459,7 @@ class ChatListActivity : AppCompatActivity() {
             serverAddressSpinner?.visibility = View.GONE
             serverStatusLayout?.visibility = View.GONE
             serverAddressLabel?.visibility = View.GONE
+            sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
         }
         adapter.notifyDataSetChanged()
 
@@ -2610,6 +2611,7 @@ class ChatListActivity : AppCompatActivity() {
             serverAddressSpinner?.visibility = View.GONE
             serverStatusLayout?.visibility = View.GONE
             serverAddressLabel?.visibility = View.GONE
+            sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
         }
         adapter.notifyDataSetChanged()
 

@@ -218,18 +218,73 @@ class ServersActivity : AppCompatActivity() {
     }
 
     private fun selectServer(server: ServerEntry) {
-        val address = "${server.host}:${server.port}"
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.server_connect_title))
-            .setMessage(getString(R.string.server_connect_confirm, server.name))
-            .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                CredentialStore.setServerAddress(this, address)
-                Toast.makeText(this, getString(R.string.server_selected, server.name), Toast.LENGTH_SHORT).show()
-                setResult(RESULT_OK)
-                finish()
+        // Show login/register bottom sheet for the selected server
+        showServerLoginSheet(server)
+    }
+
+    private fun showServerLoginSheet(server: ServerEntry) {
+        val theme = ThemeStore.currentTheme()
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_login, theme)
+        sheet.setTitle(getString(R.string.login_to_server, server.name))
+
+        val editTextUsername = sheet.findViewById<android.widget.EditText>(R.id.editTextUsername)
+        val editTextPassword = sheet.findViewById<android.widget.EditText>(R.id.editTextPassword)
+        val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
+        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val joinProgressBar = sheet.findViewById<android.widget.ProgressBar>(R.id.joinProgressBar)
+        val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
+
+        // Hide server selector — we already know which server to connect to
+        sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
+        sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
+
+        val serverAddress = "${server.host}:${server.port}"
+
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+
+        btnJoin?.setOnClickListener {
+            val u = editTextUsername?.text.toString().trim()
+            val p = editTextPassword?.text.toString().trim()
+            if (u.isEmpty() || p.isEmpty()) return@setOnClickListener
+
+            btnJoin?.text = ""
+            btnJoin?.isEnabled = false
+            joinProgressBar?.visibility = View.VISIBLE
+
+            // Save server address and login
+            CredentialStore.setServerAddress(this, serverAddress)
+            SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
+                runOnUiThread {
+                    when (result) {
+                        "SUCCESS" -> {
+                            CredentialStore.setCredentials(this, u, p, serverAddress)
+                            val userId = SessionManager.session.value.userId
+                            if (userId.isNotEmpty()) {
+                                CredentialStore.setUserId(this, userId)
+                            }
+                            sheet.dismiss()
+                            setResult(RESULT_OK)
+                            finish()
+                        }
+                        else -> {
+                            joinProgressBar?.visibility = View.GONE
+                            btnJoin?.text = getString(R.string.join)
+                            btnJoin?.isEnabled = true
+                            Toast.makeText(this, result, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             }
-            .setNegativeButton(getString(R.string.no), null)
-            .show()
+        }
+
+        forgotPasswordButton?.setOnClickListener {
+            sheet.dismiss()
+            // TODO: show forgot password flow
+        }
+
+        sheet.show()
     }
 
     private fun showAddServerDialog() {
