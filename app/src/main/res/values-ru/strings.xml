@@ -239,7 +239,6 @@
     <string name="tell_about_yourself">Расскажите о себе</string>
     <string name="edit_profile_title">Редактировать профиль</string>
     <string name="fcm_token_label">Токен FCM:</string>
-    <string name="copy_token">Копировать токен</string>
     <string name="test_notification">Тестовое уведомление</string>
     <string name="notifications_label">Уведомления:</string>
     <string name="no_notifications_received">Уведомлений пока нет</string>
