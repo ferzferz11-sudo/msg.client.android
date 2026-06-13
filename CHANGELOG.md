@@ -2,17 +2,37 @@
 
 ## [1.1.3.9] - 2026-06-13
 
-### Espresso Tests — написание тестов
+### Новое: Espresso-тесты
 - **ChatListActivityTest** — 18 тестов: toolbar, FABs, search, navigation
 - **RemoteAgentActivityTest** — 12 тестов: toolbar, status bar, task types, agent controls
-- **ChatWidgetTest** — структура виджета, input/send behavior (частично закомментировано)
+- **ChatWidgetTest** — структура виджета, input/send behavior
 - **EmptyChatTextTest** — проверка текста пустых чатов
 
+### Новое: Мультиязычность (i18n)
+- Вынесено 100+ хардкодных русских строк в strings.xml (en + ru)
+- AI Bottom Sheet: секции, кнопки, popup menu — полностью локализованы
+- RemoteAgentActivity: task types, status, sender names, hints
+- RemoteAgentSettingsActivity: connect, token management, status
+- RemoteAgentService: notification строки
+- ChatListActivity: session, rename, password reset, system notification
+- ConferenceLobbyActivity: participants count
+- OwlSettingsActivity: model options, key info
+- OwlChatActivity: commands, errors, typing indicator
+- LogViewerActivity: title, copy/clear notifications
+- HermesChatActivity: agent switching, help, status
+- AgentSettingsActivity/BottomSheet: CRUD operations, delete dialog
+- AgentListActivity: delete dialog
+- ChatMessageAdapter: typing indicator
+- CommandBottomSheet: header
+- Добавлено 43 новых строки в values/strings.xml + values-ru/strings.xml
+
 ### Исправления
-- **Empty chat text** — фикс: `favorites_description` показывался для ВСЕХ пустых чатов
+- **Empty chat text** — `favorites_description` показывался для ВСЕХ пустых чатов
   - Теперь: Favorites → "Personal storage" / "Личное хранилище"
   - Обычные пустые чаты → "No messages" / "Нет сообщений"
-  - Добавлены строки `no_messages` в values/strings.xml + values-ru/strings.xml
+- **RemoteAgentActivity crash** — NPE при инициализации taskTypes до создания Activity
+- **Форматирование строк** — исправлены непозиционные форматтеры (%s/%d → %1$s/%2$d) в 8 строках
+- **Сборка** — исправлены ошибки компиляции getString() в Adapter, BottomSheet, ViewModel
 
 ---
 

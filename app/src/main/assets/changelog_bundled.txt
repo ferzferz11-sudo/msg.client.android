@@ -1,8 +1,10 @@
-🚀 Lavender 1.1.3.9: Espresso тесты + исправления
+🚀 Lavender 1.1.3.9: i18n + Espresso тесты + исправления
 
-— НОВОЕ: Espresso-тесты — ChatListActivityTest (18 тестов), RemoteAgentActivityTest (12 тестов), ChatWidgetTest, EmptyChatTextTest
-— Исправлено: "Personal storage" показывался под всеми пустыми чатами вместо "No messages"
-— Favorites → "Личное хранилище", пустые чаты → "Нет сообщений"
+— НОВОЕ: Мультиязычность — 100+ строк вынесены в strings.xml (en + ru)
+— НОВОЕ: Espresso-тесты — ChatListActivityTest (18), RemoteAgentActivityTest (12), ChatWidgetTest, EmptyChatTextTest
+— Исправлено: "Personal storage" показывался под всеми пустыми чатами
+— Исправлено: crash RemoteAgentActivity при запуске
+— Исправлено: форматирование строк с несколькими подстановками
 
 🚀 Lavender 1.1.3.8: Espresso Testing IDs + AI Sheet + Bugfixes
 
