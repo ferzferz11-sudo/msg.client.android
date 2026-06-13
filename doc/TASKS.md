@@ -1,10 +1,28 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** 1.1.3.7
+**Версия:** 1.1.3.8
 **Обновлено:** 2026-06-13
 **Ветка:** feat/1.1.3.x
 
 ---
+
+## ✅ v1.1.3.8 — P0: Agent selection + Status bar + Cancellation toast
+
+### Agent selection fix
+- ✅ `ensureAgentSelected()` — loads from server, falls back to default local agent
+- ✅ Removed recursive `sendMessageStreaming()` retry
+- ✅ `loadAgents()` no longer writes to `_error` (non-critical, only AppLog)
+- ✅ Added `_infoMessage` StateFlow for non-critical messages
+- ✅ `selectAgent()` marks 'local'/'restored' as connected
+
+### Status bar fix
+- ✅ `activity_remote_agent.xml` — ConstraintLayout with fixed 48dp buttons
+- ✅ Status text uses `?android:textColorPrimary` (contrast on all themes)
+
+### Cancellation toast fix
+- ✅ Removed duplicate `refreshAgentStatus()` from onCreate
+- ✅ Removed `loadAgents()` from `onStateChanged()` (too frequent)
+- ✅ `updateStatus()` no longer sets text color from theme (bug: invisible text)
 
 ## ✅ v1.1.3.7 — Streaming результатов задач агентом + ErrorHandler
 
