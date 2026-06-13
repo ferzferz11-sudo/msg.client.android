@@ -365,7 +365,7 @@ class ChatListActivity : AppCompatActivity() {
             lifecycleScope.launch { showAIActionSheet() }
         }
 
-        binding.swipeRefreshLayout.setOnRefreshListener {
+        binding.srlChatList.setOnRefreshListener {
             loadChats(skipCache = true)
         }
 
@@ -377,7 +377,7 @@ class ChatListActivity : AppCompatActivity() {
             showSettingsSheet()
         }
 
-        binding.actionSettings.setOnClickListener {
+        binding.ivActionSettings.setOnClickListener {
             showSettingsSheet()
         }
         
@@ -444,19 +444,19 @@ class ChatListActivity : AppCompatActivity() {
                     
                     when {
                         isConnecting -> {
-                            binding.toolbarSubtitle.text = getString(R.string.connecting)
-                            binding.toolbarSubtitle.isVisible = true
+                            binding.tvToolbarSubtitle.text = getString(R.string.connecting)
+                            binding.tvToolbarSubtitle.isVisible = true
                         }
                         isFailed -> {
-                            binding.toolbarSubtitle.text = getString(R.string.waiting_for_network)
-                            binding.toolbarSubtitle.isVisible = true
+                            binding.tvToolbarSubtitle.text = getString(R.string.waiting_for_network)
+                            binding.tvToolbarSubtitle.isVisible = true
                         }
                         else -> {
-                            binding.toolbarSubtitle.isVisible = false
+                            binding.tvToolbarSubtitle.isVisible = false
                         }
                     }
                 } else {
-                    binding.toolbarSubtitle.isVisible = false
+                    binding.tvToolbarSubtitle.isVisible = false
                 }
 
                 if (status == ConnectionStatus.READY) {
@@ -770,15 +770,15 @@ class ChatListActivity : AppCompatActivity() {
         // Show refresh indicator only for pull-to-refresh (list already has data)
         val isRefresh = chats.isNotEmpty()
         if (isRefresh) {
-            binding.swipeRefreshLayout.isRefreshing = true
+            binding.srlChatList.isRefreshing = true
         }
 
         // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
             delay(5000)
-            if (binding.swipeRefreshLayout.isRefreshing) {
+            if (binding.srlChatList.isRefreshing) {
                 Log.w("ChatListActivity", "Load chats timeout, stopping refresh")
-                runOnUiThread { binding.swipeRefreshLayout.isRefreshing = false }
+                runOnUiThread { binding.srlChatList.isRefreshing = false }
             }
         }
 
@@ -841,7 +841,7 @@ class ChatListActivity : AppCompatActivity() {
                 // 6. Apply to UI once — single update, no flicker
                 withContext(Dispatchers.Main) {
                     loadTimeout.cancel()
-                    binding.swipeRefreshLayout.isRefreshing = false
+                    binding.srlChatList.isRefreshing = false
 
                     chats.clear()
                     chats.addAll(newChats)
@@ -866,7 +866,7 @@ class ChatListActivity : AppCompatActivity() {
                 try {
                     withContext(Dispatchers.Main) {
                         loadTimeout.cancel()
-                        binding.swipeRefreshLayout.isRefreshing = false
+                        binding.srlChatList.isRefreshing = false
                         // Even on error, show Favorites if list is empty
                         if (chats.isEmpty()) {
                             val favoritesChat = ChatInfo(
@@ -900,7 +900,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun loadChatsFromCache(fetchedChats: List<ChatInfo>) {
         runOnUiThread {
-            binding.swipeRefreshLayout.isRefreshing = false
+            binding.srlChatList.isRefreshing = false
             chats.clear()
 
             // Load from local database if available
