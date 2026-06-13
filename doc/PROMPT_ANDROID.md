@@ -1,66 +1,113 @@
-# Промпт для новой сессии — v1.1.3.7 (Android)
+# Промпт для новой сессии — v1.1.3.8 (Android)
 
 **Дата:** 2026-06-13
-**Версия:** v1.1.3.7
+**Версия:** v1.1.3.8
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** v1.1.3.7 (выпущен, ferz собирает локально)
 
 ---
 
-## СТАТУС
+## ⚠️ ТЕКУЩЕЕ СОСТОЯНИЕ: НИЧЕГО НЕ РАБОТАЕТ КОРРЕКТНО
 
-- Streaming результатов задач работает (сервер + клиент)
-- ErrorHandler — единый обработчик ошибок с AppLog
-- AppLog.error() во всех catch-блоках с Toast
-- Fix: "Job was cancelled" тост больше не появляется
-- ✅ Исправлен баг: `import HermesGrpc` → удалён из RemoteAgentService.kt
+После сессии v1.1.3.7 клиент "собирается" но на устройстве следующие проблемы:
+
+### Критические (блокируют использование)
+
+1. **Переписка с агентом через ШЛЮЗ не работает** — при отправке сообщения:
+   - "Ошибка загрузки токенов" (хотя токены не используются, legacy код)
+   - "Job was cancelled" (системный тост Android при отмене корутины)
+   - Сообщение не отправляется, агент не отвечает
+
+2. **Переписка с агентом через ТОКЕН не работает** — не тестировалось но код тот же,
+   те же проблемы ожидаются
+
+3. **Панель статуса в чате с Удалёнными агентами не работает:**
+   - Текст невидимый (цвет текста = цвет фона)
+   - Кнопки Start/Stop агента уходят за экран, чуть видны
+   - Индикатор подключения неинформативный
+   - Всё выглядит сломанным
+
+4. **Список серверов при входе не отображался** — `GrpcClient.getServers()` вызывал
+   несуществующий RPC `messenger.ServerService/ListServers`. Исправлено заменой на
+   локальный CredentialStore, но НЕ ПРОВЕРЕНО на устройстве.
+
+### Некритические
+
+5. "Job was cancelled" тост — причина не найдена до конца. Подавление в
+   UpdateManager добавлено но не проверено.
+
+6. Не добавлен `import kotlinx.coroutines.flow.collect` — возможно не нужен если
+   используется другой импорт, проверить.
 
 ---
 
-## ✅ Что сделано в v1.1.3.7
+## ЗАДАЧИ НА ССЕССИЮ v1.1.3.8
 
-### Streaming
-- `MessengerProto.kt`: `DeployAgentTaskStreamResponseProto`
-- `HermesGrpc.kt`: `deployAgentTaskStream()` → callbackFlow
-- `GrpcClient.kt`: `deployAgentTaskStream()` facade
-- `RemoteAgentViewModel.kt`: `sendMessageStreaming()` — real-time Flow collection
-- `RemoteAgentActivity.kt`: использует sendMessageStreaming
+### 🔴 P0 — РАБОТА С АГЕНТОМ (БЛОКИРУЮЩЕЕ)
 
-### Error Handling
-- `ErrorHandler.kt` — единый обработчик (CancellationException→INFO, остальное→ERROR)
-- `AppLog.error()` / `AppLog.warn()` во всех catch-блоках с Toast ошибками
-- Fix: CancellationException в sendMessage → не показывает тост, логирует как INFO
+1. **Исправить отправку сообщений через шлюз**
+   - Найти почему "Job was cancelled" — возможно gRPC stream падает на старом
+     сервере или CancellationException всплывает как тост
+   - Проверить работает ли fallback на unary DeployAgentTask
+   - Убедиться что сообщение действительно отправляется и ответ приходит
+
+2. **Исправить отправку сообщений через токен**
+   - Проверить что тот же код работает для режима без шлюза
+
+3. **Исправить панель статуса в RemoteAgentActivity**
+   - Исправить цвет текста чтобы был видимым
+   - Исправить layout кнопок Start/Stop чтобы не уходили за экран
+   - Сделать нормальный индикатор подключения (зелёный/красный + текст)
+   - Проверить на визуально
+
+4. **Проверить список серверов при входе**
+   - Проверить что после исправления CredentialStore серверы отображаются
+   - Проверить что join/register sheet показывает "Lava (prod)" и "Lava (dev)"
+
+### 🟡 P1 — КАЧЕСТВО
+
+5. Убрать лишние импорты в HermesGrpc.kt если есть
+6. Убедиться что `GOOGLE_APPLICATION_CREDENTIALS` и другие чувствительные данные
+   не проскакивают в логах
 
 ---
 
 ## КРИТИЧЕСКИЕ ФАЙЛЫ
 
-### UI
-- `ui/remote/RemoteAgentActivity.kt` — чат с агентом (streaming mode)
-- `ui/remote/RemoteAgentSettingsActivity.kt` — настройки + SSH туннель
-- `ui/remote/RemoteAgentViewModel.kt` — ViewModel + sendMessageStreaming
+- `ui/remote/RemoteAgentActivity.kt` — чат с агентом (СЛОМАН UI)
+- `ui/remote/RemoteAgentViewModel.kt` — sendMessageStreaming + fallback
+- `data/grpc/HermesGrpc.kt` — gRPC методы, Channel-based streaming
+- `data/grpc/GrpcClient.kt` — facade (fine)
+- `ui/remote/RemoteAgentService.kt` — foreground service (fine)
+- `data/updates/UpdateManager.kt` — скачивание обновлений
+- `data/session/CredentialStore.kt` — локальное хранение серверов
 
-### Сервисы
-- `ui/remote/RemoteAgentService.kt` — foreground service
-- `ui/remote/RemoteAgentManager.kt` — singleton manager
+## КАК ПРОВЕРЯТЬ
 
-### gRPC / Proto
-- `data/grpc/HermesGrpc.kt` — gRPC методы (unary + streaming)
-- `data/grpc/GrpcClient.kt` — фасад
-- `data/proto/MessengerProto.kt` — proto типы
+1. `git pull && ./gradlew assembleRelease` — должно собраться без ошибок
+2. Установить APK на устройство
+3. Войти через шлюз → открыть "Удалённый агент" → отправить команду
+4. Ожидаемый результат: сообщение появляется в чате, ответ приходит,
+   панель статуса видна и понятна
 
-### Error Handling
-- `data/models/ErrorHandler.kt` — единый обработчик ошибок
-- `data/models/AppLog.kt` — глобальный логгер
+## ЧЕГО НЕ ДЕЛАТЬ
+
+- НЕ писать в CHANGELOG.md что "исправлено" — это неправда, пользователь
+  не может пользоваться приложением
+- НЕ добавлять фичи пока P0 не исправлены
+- НЕ бить на мелкие коммиты — одна задача = один коммит
 
 ---
 
-## ПРАВИЛА
-- НЕ assembleRelease на сервере (OOM)
-- Коммитить/пушить после каждого изменения
-- Версию НЕ менять без указания пользователя
+## КОНТЕКСТ
 
-## ДОКУМЕНТАЦИЯ
-- `doc/PROMPT_ANDROID.md` → `doc/TASKS.md` → `doc/INDEX.md`
-- `doc/REMOTE_AGENT.md` — Remote Agent документация
-- `doc/STRUCTURE.md` — структура кода
+- Сервер: `/root/msg`, dev порт 50052, prod порт 50051
+- Android: `/root/msg.client.android`
+- Remote Agent: `/root/msg.remote.agent`
+- Оба репозитория на ветке `feat/1.1.3.x`
+- Пользователь собирает APK локально: `git pull && ./gradlew assembleRelease`
+
+## ПРАВИЛА
+
+- НЕ assembleRelease на сервере (OOM)
+- Коммитить и пушить после каждого значимого изменения
+- Версию НЕ менять без указания пользователя
