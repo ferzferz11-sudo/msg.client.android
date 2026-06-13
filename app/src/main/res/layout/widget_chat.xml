@@ -172,7 +172,7 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="6dp"
         app:cardBackgroundColor="?attr/colorSurface"
-        app:layout_constraintBottom_toTopOf="@id/replyPreview"
+        app:layout_constraintBottom_toTopOf="@id/cvReplyPreview"
         app:layout_constrainedHeight="true"
         app:layout_constraintHeight_max="200dp"
         tools:visibility="gone">
