@@ -46,7 +46,7 @@ class CommandBottomSheet(
         // Section header
         val headerView = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        headerView.text = "Команды"
+        headerView.text = context.getString(R.string.commands)
         contentContainer?.addView(headerView)
 
         // Command items with per-command icons

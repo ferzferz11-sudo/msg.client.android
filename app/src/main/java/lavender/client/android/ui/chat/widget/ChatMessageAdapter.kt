@@ -134,7 +134,7 @@ class ChatMessageAdapter(
             itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = false
             itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
-            val name = item.senderName.ifEmpty { "Агент" }
+            val name = item.senderName.ifEmpty { context.getString(R.string.agent) }
             // Start animated dots
             startAnimatedDots(name)
         }
@@ -149,7 +149,7 @@ class ChatMessageAdapter(
                 addUpdateListener { anim ->
                     val dotCount = anim.animatedValue as Int
                     val dots = ".".repeat(dotCount).padEnd(3, ' ')
-                    typingText.text = "$name печатает $dots"
+                    typingText.text = $name + " " + context.getString(R.string.agent_typing_suffix) + $dots
                 }
                 start()
             }

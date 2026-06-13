@@ -76,7 +76,7 @@ class AgentSettingsBottomSheet(
         val maxTokens = maxTokensInput.text.toString().toIntOrNull() ?: 0
 
         if (name.isEmpty()) {
-            Toast.makeText(context, "Введите имя агента", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.enter_agent_name), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -93,15 +93,15 @@ class AgentSettingsBottomSheet(
                     maxTokens = maxTokens
                 )
                 result.onSuccess {
-                    Toast.makeText(context, "Агент обновлён", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.agent_updated), Toast.LENGTH_SHORT).show()
                     dismiss()
                     onSaved()
                 }.onFailure { e ->
-                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                     saveBtn.isEnabled = true
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                 saveBtn.isEnabled = true
             }
         }
@@ -109,25 +109,25 @@ class AgentSettingsBottomSheet(
 
     private fun confirmDelete() {
         MaterialAlertDialogBuilder(context)
-            .setTitle("Удалить агента?")
-            .setMessage("Это действие необратимо.")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle(getString(R.string.delete_agent_title))
+            .setMessage(getString(R.string.delete_agent_message))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 scope.launch {
                     try {
                         val result = repository.deleteAgent(agent.id, userId)
                         result.onSuccess {
-                            Toast.makeText(context, "Агент удалён", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, getString(R.string.agent_deleted), Toast.LENGTH_SHORT).show()
                             dismiss()
                             onSaved()
                         }.onFailure { e ->
-                            Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                     }
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 

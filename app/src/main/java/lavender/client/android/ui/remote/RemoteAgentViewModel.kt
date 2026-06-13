@@ -129,7 +129,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
         // Fallback: create default local agent with meaningful name
         val gwSettings = gatewayManager.loadSettings()
         val agentName = if (gwSettings.sshHost.isNotEmpty()) {
-            "Агент @ ${gwSettings.sshHost}"
+            "Agent @ ${gwSettings.sshHost}"
         } else if (prefs.getString("remote_agent_name", "")?.isNotEmpty() == true) {
             prefs.getString("remote_agent_name", "Lava Agent") ?: "Lava Agent"
         } else {
@@ -302,11 +302,11 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     fun sendMessage(text: String, userId: String, taskType: String = "shell") {
         viewModelScope.launch {
             if (!ensureAgentSelected()) {
-                _error.value = "Агент не выбран"
+                _error.value = getString(R.string.agent_not_selected)
                 return@launch
             }
             val agent = _selectedAgent.value ?: run {
-                _error.value = "Агент не выбран"
+                _error.value = getString(R.string.agent_not_selected)
                 return@launch
             }
 
@@ -348,7 +348,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                     val errText = if (response.stderr.isNotEmpty()) response.stderr else response.message
                     val agentMsg = RemoteAgentMessage(
                         id = java.util.UUID.randomUUID().toString(),
-                        content = "Ошибка (exit=${response.exitCode}): $errText",
+                        content = getString(R.string.error_exit_code, response.exitCode, errText),
                         isUser = false,
                         timestamp = System.currentTimeMillis()
                     )
@@ -361,7 +361,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 AppLog.error("RemoteAgentVM.sendMessage", "Task error: ${e.message}", e)
                 val agentMsg = RemoteAgentMessage(
                     id = java.util.UUID.randomUUID().toString(),
-                    content = "Ошибка: ${e.message}",
+                    content = getString(R.string.error_colon, e.message),
                     isUser = false,
                     timestamp = System.currentTimeMillis()
                 )
@@ -378,11 +378,11 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     fun sendMessageStreaming(text: String, userId: String, taskType: String = "shell") {
         viewModelScope.launch {
             if (!ensureAgentSelected()) {
-                _error.value = "Агент не выбран"
+                _error.value = getString(R.string.agent_not_selected)
                 return@launch
             }
             val agent = _selectedAgent.value ?: run {
-                _error.value = "Агент не выбран"
+                _error.value = getString(R.string.agent_not_selected)
                 return@launch
             }
 
@@ -532,7 +532,7 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                 AppLog.error("RemoteAgentVM.sendMessageStreaming", "Stream error: ${e.message}", e)
                 val errMsg = RemoteAgentMessage(
                     id = streamMsgId,
-                    content = "Ошибка: ${e.message}",
+                    content = getString(R.string.error_colon, e.message),
                     isUser = false,
                     timestamp = System.currentTimeMillis(),
                     isStreaming = false

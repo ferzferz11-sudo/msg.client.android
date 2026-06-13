@@ -494,7 +494,7 @@ class ChatListActivity : AppCompatActivity() {
             SessionManager.logoutEvent.collect {
                 runOnUiThread {
                     AppLog.warn("ChatListActivity", "Session terminated by server")
-                    Toast.makeText(this@ChatListActivity, "Сессия завершена", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ChatListActivity, R.string.session_terminated, Toast.LENGTH_LONG).show()
                     logout()
                 }
             }
@@ -543,7 +543,7 @@ class ChatListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             SessionManager.logoutEvent.collect {
                 runOnUiThread {
-                    Toast.makeText(this@ChatListActivity, "Сессия завершена", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ChatListActivity, R.string.session_terminated, Toast.LENGTH_LONG).show()
                     logout()
                 }
             }
@@ -1001,7 +1001,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_whats_new, null)
         dialogView.findViewById<TextView>(R.id.tvTitle).apply {
-            text = "Системное уведомление"
+            text = getString(R.string.system_notification)
             setTextColor(pColor)
         }
         dialogView.findViewById<TextView>(R.id.tvContent).apply {
@@ -1998,12 +1998,12 @@ class ChatListActivity : AppCompatActivity() {
             },
             onCreateHermesChat = {
                 val hermesCount = currentAiChats.count { it.type == "hermes" }
-                val chatName = "Лава ИИ #${hermesCount + 1}"
+                val chatName = getString(R.string.lava_ai_n, hermesCount + 1)
                 openHermesChat("", chatName)
             },
             onCreateOwlChat = {
                 val owlCount = currentAiChats.count { it.type == "owl" }
-                val chatName = "Агент OWL #${owlCount + 1}"
+                val chatName = getString(R.string.owl_agent_n, owlCount + 1)
                 openOwlChat("", chatName)
             },
             onOpenNotifications = {
@@ -2041,7 +2041,7 @@ class ChatListActivity : AppCompatActivity() {
             setSingleLine()
         }
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Переименовать чат")
+            .setTitle(getString(R.string.rename_chat))
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
                 val newName = editText.text.toString().trim()
@@ -2056,7 +2056,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -2739,8 +2739,8 @@ class ChatListActivity : AppCompatActivity() {
                                         emailInputLayout?.isVisible = false
                                         tokenInputLayout?.isVisible = true
                                         newPasswordInputLayout?.isVisible = true
-                                        btnSend.text = "Сбросить пароль"
-                                        Toast.makeText(this@ChatListActivity, "Код отправлен на ваш email", Toast.LENGTH_LONG).show()
+                                        btnSend.text = getString(R.string.reset_password)
+                                        Toast.makeText(this@ChatListActivity, R.string.code_sent_to_email, Toast.LENGTH_LONG).show()
                                     } else {
                                         Toast.makeText(this@ChatListActivity, message.takeIf { !it.isNullOrEmpty() } ?: getString(R.string.connection_failed), Toast.LENGTH_LONG).show()
                                     }
@@ -2762,7 +2762,7 @@ class ChatListActivity : AppCompatActivity() {
                 val newPw = editTextNewPassword?.text.toString().trim()
                 
                 if (token.isEmpty()) {
-                    Toast.makeText(this, "Введите код", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.enter_code, Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
                 if (newPw.isEmpty()) {
@@ -2779,7 +2779,7 @@ class ChatListActivity : AppCompatActivity() {
                             sendProgressBar?.isVisible = false
                             btnSend.isEnabled = true
                             if (success) {
-                                Toast.makeText(this@ChatListActivity, "Пароль успешно изменен", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ChatListActivity, R.string.password_changed, Toast.LENGTH_LONG).show()
                                 isTransitioning = true
                                 sheet.dismiss()
                             } else {

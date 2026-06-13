@@ -216,12 +216,12 @@ class AgentListActivity : AppCompatActivity() {
 
     private fun confirmDeleteAgent(agent: Any) {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Удалить агента?")
-            .setMessage("Это действие необратимо.")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle(getString(R.string.delete_agent_title))
+            .setMessage(getString(R.string.delete_agent_message))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 // viewModel.deleteAgent(agent.id, userId) { success -> ... }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 

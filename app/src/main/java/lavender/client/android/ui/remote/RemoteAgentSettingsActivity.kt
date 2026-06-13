@@ -135,8 +135,8 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
     }
 
     private fun setupTabs() {
-        tabLayout.addTab(tabLayout.newTab().setText("Шлюз"))
-        tabLayout.addTab(tabLayout.newTab().setText("Токен"))
+        tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_gateway)))
+        tabLayout.addTab(tabLayout.newTab().setText(getString(R.string.tab_token)))
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
@@ -230,7 +230,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
         ) { success, error, type ->
             runOnUiThread {
                 btnCreateTunnel.isEnabled = true
-                btnCreateTunnel.text = "Подключить"
+                btnCreateTunnel.text = getString(R.string.connect)
                 if (success) {
                     Toast.makeText(this, R.string.gateway_connected, Toast.LENGTH_SHORT).show()
                     updateTunnelStatusUI()
@@ -253,13 +253,13 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
             gatewayForm.visibility = View.GONE
             gatewayConnectedStatus.visibility = View.VISIBLE
             val settings = gatewayManager.loadSettings()
-            tvGatewayStatus.text = "Шлюз: ${settings.sshHost}:${settings.sshPort}"
-            tvTunnelAddress.text = "Туннель: ${RemoteAgentManager.getTunnelAddress()}"
+            tvGatewayStatus.text = getString(R.string.gateway_format, settings.sshHost, settings.sshPort)
+            tvTunnelAddress.text = getString(R.string.tunnel_format, RemoteAgentManager.getTunnelAddress())
             btnCloseTunnel.isEnabled = true
 
             // Persist connected agent
             selectedAgentId = "gateway_agent"
-            selectedAgentName = "Агент через шлюз (${settings.sshHost})"
+            selectedAgentName = getString(R.string.agent_via_gateway, settings.sshHost)
             saveSelectedAgent()
         } else {
             gatewayForm.visibility = View.VISIBLE
@@ -356,15 +356,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
 
                 agentName.text = token.agentName
                 agentName.setTextColor(txtColor)
-                status.text = "Активен"
+                status.text = getString(R.string.active)
                 status.setTextColor(Color.parseColor("#4CAF50"))
                 status.setBackgroundColor(Color.parseColor("#1A4CAF50"))
                 status.setPadding(12, 4, 12, 4)
-                hash.text = "Хэш: ${token.tokenHash.take(16)}..."
+                hash.text = getString(R.string.token_hash_format, token.tokenHash.take(16))
                 hash.setTextColor(txtSecondary)
-                caps.text = "Возможности: ${token.capabilities.joinToString(", ")}"
+                caps.text = getString(R.string.capabilities_format, token.capabilities.joinToString(", "))
                 caps.setTextColor(txtSecondary)
-                expires.text = if (token.expiresAt.isNotEmpty()) "Истёк: ${token.expiresAt}" else "Бессрочный"
+                expires.text = if (token.expiresAt.isNotEmpty()) getString(R.string.expires_format, token.expiresAt) else getString(R.string.no_expiry)
                 expires.setTextColor(txtSecondary)
 
                 val copyTokenBtn = view.findViewById<MaterialButton>(R.id.btnCopyToken)
@@ -377,14 +377,14 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                 copyTokenBtn.setOnClickListener {
                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("Agent Token", token.fullToken))
-                    Toast.makeText(this, "Токен скопирован", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.token_copied), Toast.LENGTH_SHORT).show()
                 }
 
                 copyCmdBtn.setTextColor(primColor)
                 copyCmdBtn.setOnClickListener {
                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("Agent Command", token.command))
-                    Toast.makeText(this, "Команда скопирована", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.command_copied), Toast.LENGTH_SHORT).show()
                 }
 
                 val card = view as com.google.android.material.card.MaterialCardView
@@ -437,10 +437,10 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                     renderTokens()
                     showTokenResultDialog(resp.token, agentId, agentName)
                 } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${resp.error}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, resp.error), Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -516,15 +516,15 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
 
     private fun confirmRevoke(token: TokenInfo) {
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Отозвать токен?")
-            .setMessage("Токен агента «${token.agentName}» будет отозван. Агент потеряет доступ.")
-            .setPositiveButton("Отозвать") { _, _ ->
+            .setTitle(getString(R.string.revoke_token_title))
+            .setMessage(getString(R.string.revoke_token_message, token.agentName))
+            .setPositiveButton(getString(R.string.revoke)) { _, _ ->
                 activityScope.launch {
                     try {
                         val resp = GrpcClient.revokeAgentToken(token.agentId, userId)
                         if (resp.success) { loadTokens() }
                     } catch (e: Exception) {
-                        Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -534,7 +534,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
 
     private fun startAgentOnServer() {
         if (selectedToken.isEmpty()) {
-            Toast.makeText(this, "Сначала сгенерируйте токен", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.generate_token_first), Toast.LENGTH_SHORT).show()
             return
         }
         activityScope.launch {
@@ -544,31 +544,31 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                     token = selectedToken, serverAddress = "", adminUserId = userId
                 )
                 if (resp.success) {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Агент запущен (PID: ${resp.pid})", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.agent_started, resp.pid), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${resp.error}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, resp.error), Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun stopAgentOnServer() {
         if (selectedAgentId.isEmpty()) {
-            Toast.makeText(this, "Агент не выбран", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.agent_not_selected), Toast.LENGTH_SHORT).show()
             return
         }
         activityScope.launch {
             try {
                 val resp = GrpcClient.stopAgentOnServer(selectedAgentId, userId)
                 if (resp.success) {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Агент остановлен", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.agent_stopped), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${resp.error}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, resp.error), Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@RemoteAgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@RemoteAgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -582,19 +582,19 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                         val txtColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().textPrimaryColor, Color.WHITE)
                         agentStatusText.setTextColor(txtColor)
                         if (status.status == "connected") {
-                            agentStatusText.text = "Статус: ✅ подключён"
+                            agentStatusText.text = getString(R.string.status_connected)
                         } else {
-                            agentStatusText.text = "Статус: ❌ ${status.status}"
+                            agentStatusText.text = getString(R.string.status_disconnected, status.status)
                         }
                     }
                 } else {
                     runOnUiThread {
-                        agentStatusText.text = "Статус: не запущен (сгенерируйте токен или подключите шлюз)"
+                        agentStatusText.text = getString(R.string.status_not_running)
                     }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    agentStatusText.text = "Статус: ошибка проверки"
+                    agentStatusText.text = getString(R.string.status_check_error)
                 }
             }
         }

@@ -65,7 +65,7 @@ class OwlChatViewModel : ViewModel() {
                     if (response.error.isNotEmpty()) {
                         addMessage(
                             id = "owl-error-${System.currentTimeMillis()}",
-                            content = "Ошибка: ${response.error}",
+                            content = getString(R.string.error_colon, response.error),
                             senderId = "owl",
                             senderName = "🦉 OWL",
                             isCurrentUser = false
@@ -132,7 +132,7 @@ class OwlChatViewModel : ViewModel() {
                 )
             } catch (e: Exception) {
                 Log.e("OwlChatViewModel", "sendToOwl error", e)
-                _error.value = "Ошибка отправки: ${e.message}"
+                _error.value = getString(R.string.error_sending, e.message)
                 _isLoading.value = false
                 _isTyping.value = false
             }

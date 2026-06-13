@@ -92,7 +92,7 @@ class RemoteAgentService : Service() {
             else -> {
                 // Обычный запуск — поднимаем foreground notification
                 if (!isStartedAsForeground) {
-                    val notification = buildNotification("Инициализация...", isConnected = false)
+                    val notification = buildNotification(getString(R.string.notif_initializing), isConnected = false)
                     startForeground(NOTIFICATION_ID, notification)
                     isStartedAsForeground = true
                 }
@@ -142,10 +142,10 @@ class RemoteAgentService : Service() {
         return when {
             gatewayManager.isTunnelActive() -> {
                 val addr = gatewayManager.getLocalAddress()
-                "Подключено через шлюз → $addr"
+                getString(R.string.notif_connected_via_gateway, addr)
             }
-            isGrpcConnected -> "Подключено"
-            else -> "Отключено"
+            isGrpcConnected -> getString(R.string.notif_connected)
+            else -> getString(R.string.notif_disconnected)
         }
     }
 
@@ -183,7 +183,7 @@ class RemoteAgentService : Service() {
                         isTunnelActive = true
                         currentTunnelAddress = gatewayManager.getLocalAddress()
                         updateNotification(
-                            "Подключено через шлюз → $currentTunnelAddress",
+                            getString(R.string.notif_connected_via_gateway, currentTunnelAddress),
                             isConnected = true
                         )
                         Log.d(TAG, "Tunnel created: $currentTunnelAddress")
@@ -194,7 +194,7 @@ class RemoteAgentService : Service() {
                 Log.e(TAG, "Tunnel creation error", e)
                 AppLog.error("RemoteAgentService.createTunnel", "SSH tunnel error: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    callback(false, "Ошибка: ${e.message}", HermesGatewayManager.TunnelErrorType.GENERIC)
+                    callback(false, getString(R.string.notif_error, e.message), HermesGatewayManager.TunnelErrorType.GENERIC)
                 }
             }
         }
@@ -207,7 +207,7 @@ class RemoteAgentService : Service() {
         gatewayManager.closeTunnel()
         isTunnelActive = false
         currentTunnelAddress = ""
-        updateNotification("Отключено", isConnected = false)
+        updateNotification(getString(R.string.notif_disconnected), isConnected = false)
         Log.d(TAG, "Tunnel closed")
     }
 
@@ -267,7 +267,7 @@ class RemoteAgentService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "sendTask error", e)
                 AppLog.error("RemoteAgentService.sendTask", "Task execution error: ${e.message}", e)
-                callback(false, "", "Ошибка: ${e.message}")
+                callback(false, "", getString(R.string.notif_error, e.message))
             }
         }
     }
@@ -281,7 +281,7 @@ class RemoteAgentService : Service() {
                 "Remote Agent",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Фоновое подключение Remote Agent"
+                description = getString(R.string.notif_background_connection)
                 setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
@@ -315,7 +315,7 @@ class RemoteAgentService : Service() {
             .setSmallIcon(iconRes)
             .setColor(tintColor)
             .setContentIntent(contentIntent)
-            .addAction(0, "Отключить", stopIntent)
+            .addAction(0, getString(R.string.notif_disconnect), stopIntent)
             .setOngoing(isConnected)
             .setOnlyAlertOnce(true)
             .build()

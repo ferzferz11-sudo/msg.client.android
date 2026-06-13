@@ -51,7 +51,7 @@ class AgentSettingsActivity : AppCompatActivity() {
     private fun setupToolbar() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener { finish() }
-        toolbar.title = if (mode == "create") "Новый агент" else "Редактирование"
+        toolbar.title = if (mode == "create") getString(R.string.new_agent) else getString(R.string.editing)
     }
 
     private fun setupViews() {
@@ -92,7 +92,7 @@ class AgentSettingsActivity : AppCompatActivity() {
                 )
                 presetSpinner.setAdapter(adapter)
             } catch (e: Exception) {
-                Toast.makeText(this@AgentSettingsActivity, "Ошибка загрузки пресетов", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@AgentSettingsActivity, getString(R.string.error_loading_presets), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -106,7 +106,7 @@ class AgentSettingsActivity : AppCompatActivity() {
             presetSpinner.text.toString().contains(it.name)
         }
         if (presetPosition < 0 && mode == "create") {
-            Toast.makeText(this, "Выберите пресет", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.select_preset), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -117,7 +117,7 @@ class AgentSettingsActivity : AppCompatActivity() {
         val maxTokens = maxTokensInput.text.toString().toIntOrNull() ?: 0
 
         if (name.isEmpty()) {
-            Toast.makeText(this, "Введите имя агента", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.enter_agent_name), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -128,24 +128,24 @@ class AgentSettingsActivity : AppCompatActivity() {
                 if (mode == "create" && presetId.isNotEmpty()) {
                     val result = repository.createAgent(userId, presetId, name, prompt, model, maxTokens)
                     result.onSuccess {
-                        Toast.makeText(this@AgentSettingsActivity, "Агент создан", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AgentSettingsActivity, getString(R.string.agent_created), Toast.LENGTH_SHORT).show()
                         finish()
                     }.onFailure { e ->
-                        Toast.makeText(this@AgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@AgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                         saveBtn.isEnabled = true
                     }
                 } else if (mode == "edit" && agentId.isNotEmpty()) {
                     val result = repository.updateAgent(agentId, userId, name, prompt, model, maxTokens)
                     result.onSuccess {
-                        Toast.makeText(this@AgentSettingsActivity, "Агент обновлён", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AgentSettingsActivity, getString(R.string.agent_updated), Toast.LENGTH_SHORT).show()
                         finish()
                     }.onFailure { e ->
-                        Toast.makeText(this@AgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@AgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                         saveBtn.isEnabled = true
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@AgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@AgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                 saveBtn.isEnabled = true
             }
         }
@@ -153,20 +153,20 @@ class AgentSettingsActivity : AppCompatActivity() {
 
     private fun confirmDelete() {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Удалить агента?")
-            .setMessage("Это действие необратимо.")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle(getString(R.string.delete_agent_title))
+            .setMessage(getString(R.string.delete_agent_message))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 lifecycleScope.launch {
                     val result = repository.deleteAgent(agentId, userId)
                     result.onSuccess {
-                        Toast.makeText(this@AgentSettingsActivity, "Агент удалён", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AgentSettingsActivity, getString(R.string.agent_deleted), Toast.LENGTH_SHORT).show()
                         finish()
                     }.onFailure { e ->
-                        Toast.makeText(this@AgentSettingsActivity, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@AgentSettingsActivity, getString(R.string.error_colon, e.message), Toast.LENGTH_LONG).show()
                     }
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 }

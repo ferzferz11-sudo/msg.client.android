@@ -183,7 +183,7 @@ class HermesChatActivity : AppCompatActivity() {
         chatWidget.setToolbarAgentIcon(agent.icon.ifEmpty { "🤖" }, true)
         chatWidget.setToolbarAvatar(false)
         updateAgentParticipants()
-        Toast.makeText(this, "Переключение на ${agent.name}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.switching_to_agent, agent.name), Toast.LENGTH_SHORT).show()
     }
 
     private fun setupRecyclerView() {
@@ -203,7 +203,7 @@ class HermesChatActivity : AppCompatActivity() {
         chatWidget.setOnSendMessageListener { text ->
             val session = viewModel.currentSession.value
             if (session == null) {
-                Toast.makeText(this, "Сессия не создана", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.session_not_created), Toast.LENGTH_SHORT).show()
                 return@setOnSendMessageListener
             }
 
@@ -220,11 +220,11 @@ class HermesChatActivity : AppCompatActivity() {
         val commands = listOf(
             lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
                 command = "/help",
-                description = "Показать справку"
+                description = getString(R.string.show_help)
             ),
             lavender.client.android.ui.widget.CommandBottomSheet.CommandInfo(
                 command = "/status",
-                description = "Статус агента"
+                description = getString(R.string.agent_status)
             )
         )
 
@@ -375,7 +375,7 @@ class HermesChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
                     val typingText = if (isTyping) {
-                        "${viewModel.currentAgent.value?.name ?: "Агент"} печатает..."
+                        "${viewModel.currentAgent.value?.name ?: getString(R.string.agent)} ${getString(R.string.agent_typing_suffix)}"
                     } else ""
                     chatWidget.setToolbarSubtitle(typingText, isTyping)
                     // Auto-scroll removed — preserve scroll position
@@ -432,12 +432,12 @@ class HermesChatActivity : AppCompatActivity() {
             try {
                 val settings = getHermesSettings(chatId, userId)
                 val keyInfo = if (settings.isUsingCustomKey) {
-                    if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
+                    if (settings.model.isNotEmpty()) getString(R.string.your_key_model, settings.model) else getString(R.string.your_key_all_models_short)
                 } else {
-                    "Общий ключ"
+                    getString(R.string.shared_key)
                 }
                 val countInfo = if (!settings.isUsingCustomKey && settings.limit > 0) {
-                    " · ${settings.remaining}/${settings.limit} запросов"
+                    getString(R.string.requests_count, settings.remaining, settings.limit)
                 } else ""
                 chatWidget.setToolbarInfo("$keyInfo$countInfo", true)
                 android.util.Log.d("HermesChatActivity", "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model} remaining=${settings.remaining}/${settings.limit}")

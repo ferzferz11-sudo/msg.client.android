@@ -45,13 +45,13 @@ class RemoteAgentActivity : AppCompatActivity(),
     private var serviceBound = false
 
     private val taskTypes = listOf(
-        "shell" to "Shell",
-        "git" to "Git",
-        "build" to "Сборка",
-        "deploy" to "Деплой",
-        "file" to "Файлы",
-        "docker" to "Docker",
-        "ai" to "AI"
+        "shell" to getString(R.string.task_shell),
+        "git" to getString(R.string.task_git),
+        "build" to getString(R.string.task_build),
+        "deploy" to getString(R.string.task_deploy),
+        "file" to getString(R.string.task_file),
+        "docker" to getString(R.string.task_docker),
+        "ai" to getString(R.string.task_ai)
     )
 
     private val agentCommands = listOf(
@@ -177,7 +177,7 @@ class RemoteAgentActivity : AppCompatActivity(),
             showNames = false
         )
         chatWidget.setAdapter(adapter)
-        chatWidget.messageInput.hint = "Отправить задачу агенту..."
+        chatWidget.messageInput.hint = getString(R.string.send_task_hint)
         chatWidget.findViewById<View>(R.id.toolbar)?.visibility = View.GONE
 
         chatWidget.setOnSendMessageListener { text ->
@@ -227,7 +227,7 @@ class RemoteAgentActivity : AppCompatActivity(),
                         ChatMessageItem(
                             id = msg.id, content = content,
                             senderId = if (msg.isUser) userId else "remote_agent",
-                            senderName = if (msg.isUser) "Вы" else "Агент",
+                            senderName = if (msg.isUser) getString(R.string.you) else getString(R.string.agent),
                             senderEmoji = if (msg.isUser) "" else "\uD83D\uDDC2",
                             timestamp = msg.timestamp, isCurrentUser = msg.isUser, isRead = true
                         )
@@ -243,7 +243,7 @@ class RemoteAgentActivity : AppCompatActivity(),
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
-                    val typingText = if (isTyping) "Агент выполняет..." else ""
+                    val typingText = if (isTyping) getString(R.string.agent_executing) else ""
                     chatWidget.setToolbarSubtitle(typingText, isTyping)
                 }
             }
@@ -312,7 +312,7 @@ class RemoteAgentActivity : AppCompatActivity(),
             )
         }
         statusIndicator.background = dotDrawable
-        statusText.text = customText ?: if (connected) "Агент подключён" else "Агент отключён"
+        statusText.text = customText ?: if (connected) getString(R.string.agent_connected) else getString(R.string.agent_disconnected)
         val theme = ThemeStore.currentTheme()
         statusText.setTextColor(ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE))
     }

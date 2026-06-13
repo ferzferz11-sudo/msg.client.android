@@ -281,7 +281,7 @@ class OwlChatActivity : AppCompatActivity() {
                 val errMsgId = java.util.UUID.randomUUID().toString()
                 viewModel.addBotMessage(
                     id = errMsgId,
-                    content = "⚠️ Ошибка: ${e.message}",
+                    content = "⚠️ " + getString(R.string.error_colon, e.message),
                     senderId = "owl-bot",
                     senderName = "🤖 OWL Bot"
                 )
@@ -291,7 +291,7 @@ class OwlChatActivity : AppCompatActivity() {
 
     private fun showCommandMenu() {
         if (availableCommands.isEmpty()) {
-            Toast.makeText(this, "Загрузка команд...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.loading_commands), Toast.LENGTH_SHORT).show()
             loadBotCommands()
             return
         }
@@ -337,9 +337,9 @@ class OwlChatActivity : AppCompatActivity() {
                 if (!status.available) {
                     val warningMessage = ChatMessageItem(
                         id = "owl-status-warning",
-                        content = "⚠️ OWL AI временно недоступен. Попробуйте позже.",
+                        content = getString(R.string.owl_unavailable),
                         senderId = "system",
-                        senderName = "Система",
+                        senderName = getString(R.string.system),
                         isCurrentUser = false,
                         timestamp = System.currentTimeMillis()
                     )
@@ -358,12 +358,12 @@ class OwlChatActivity : AppCompatActivity() {
             try {
                 val settings = getOwlSettings(chatId, userId)
                 val keyInfo = if (settings.isUsingCustomKey) {
-                    if (settings.model.isNotEmpty()) "Ваш ключ · ${settings.model}" else "Ваш ключ · все модели"
+                    if (settings.model.isNotEmpty()) getString(R.string.your_key_model, settings.model) else getString(R.string.your_key_all_models_short)
                 } else {
-                    "Общий ключ"
+                    getString(R.string.shared_key)
                 }
                 val countInfo = if (!settings.isUsingCustomKey && settings.limit > 0) {
-                    " · ${settings.remaining}/${settings.limit} запросов"
+                    getString(R.string.requests_count, settings.remaining, settings.limit)
                 } else ""
                 chatWidget.setToolbarInfo("$keyInfo$countInfo", true)
                 Log.d(TAG, "Chat settings: isCustom=${settings.isUsingCustomKey} model=${settings.model} remaining=${settings.remaining}/${settings.limit}")
@@ -389,7 +389,7 @@ class OwlChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.isTyping.collect { isTyping ->
-                    val typingText = if (isTyping) "OWL печатает..." else ""
+                    val typingText = if (isTyping) getString(R.string.owl_typing) else ""
                     chatWidget.setToolbarSubtitle(typingText, isTyping)
                 }
             }
