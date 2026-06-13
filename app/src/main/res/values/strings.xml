@@ -503,7 +503,7 @@
     <string name="left_conference">You left the conference</string>
     <string name="conference_participants">Participants in call: %d</string>
     <!-- Upload -->
-    <string name="uploading_images">Uploading images... (%d/%d)</string>
+    <string name="uploading_images">Uploading images... (%1$d/%2$d)</string>
     <!-- OWL Settings -->
     <string name="own_model_option">Custom model (enter manually)</string>
     <string name="enter_model_id">Enter model ID</string>
@@ -522,7 +522,7 @@
     <string name="your_key_model">Your key · %s</string>
     <string name="your_key_all_models_short">Your key · all models</string>
     <string name="shared_key">Shared key</string>
-    <string name="requests_count"> · %d/%d requests</string>
+    <string name="requests_count"> · %1$d/%2$d requests</string>
     <string name="owl_typing">OWL typing...</string>
     <!-- Log Viewer -->
     <string name="error_logs">Error Logs</string>
@@ -544,7 +544,7 @@
     <string name="delete_agent_message">This action is irreversible.</string>
     <!-- Remote Agent Settings -->
     <string name="connect">Connect</string>
-    <string name="gateway_format">Gateway: %s:%d</string>
+    <string name="gateway_format">Gateway: %1$s:%2$d</string>
     <string name="tunnel_format">Tunnel: %s</string>
     <string name="agent_via_gateway">Agent via gateway (%s)</string>
     <string name="active">Active</string>
@@ -573,7 +573,7 @@
     <string name="notif_error">Error: %s</string>
     <string name="notif_background_connection">Remote Agent background connection</string>
     <string name="notif_disconnect">Disconnect</string>
-    <string name="error_exit_code">Error (exit=%d): %s</string>
+    <string name="error_exit_code">Error (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Direct Chat</string>
     <string name="group_chat_type">Group Chat</string>
     <string name="share_to_lavender">Share to Lava</string>

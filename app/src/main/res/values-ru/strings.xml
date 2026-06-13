@@ -490,7 +490,7 @@
     <string name="left_conference">Вы покинули конференцию</string>
     <string name="conference_participants">Участников в звонке: %d</string>
     <!-- Upload -->
-    <string name="uploading_images">Загрузка изображений... (%d/%d)</string>
+    <string name="uploading_images">Загрузка изображений... (%1$d/%2$d)</string>
     <!-- OWL Settings -->
     <string name="own_model_option">Своя модель (ввести вручную)</string>
     <string name="enter_model_id">Введите ID модели</string>
@@ -509,7 +509,7 @@
     <string name="your_key_model">Ваш ключ · %s</string>
     <string name="your_key_all_models_short">Ваш ключ · все модели</string>
     <string name="shared_key">Общий ключ</string>
-    <string name="requests_count"> · %d/%d запросов</string>
+    <string name="requests_count"> · %1$d/%2$d запросов</string>
     <string name="owl_typing">OWL печатает...</string>
     <!-- Log Viewer -->
     <string name="error_logs">Логи ошибок</string>
@@ -531,7 +531,7 @@
     <string name="delete_agent_message">Это действие необратимо.</string>
     <!-- Remote Agent Settings -->
     <string name="connect">Подключить</string>
-    <string name="gateway_format">Шлюз: %s:%d</string>
+    <string name="gateway_format">Шлюз: %1$s:%2$d</string>
     <string name="tunnel_format">Туннель: %s</string>
     <string name="agent_via_gateway">Агент через шлюз (%s)</string>
     <string name="active">Активен</string>
@@ -559,7 +559,7 @@
     <string name="notif_error">Ошибка: %s</string>
     <string name="notif_background_connection">Фоновое подключение Remote Agent</string>
     <string name="notif_disconnect">Отключить</string>
-    <string name="error_exit_code">Ошибка (exit=%d): %s</string>
+    <string name="error_exit_code">Ошибка (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Личный чат</string>
     <string name="group_chat_type">Групповой чат</string>
     <string name="share_to_lavender">Поделиться в Лаве</string>
