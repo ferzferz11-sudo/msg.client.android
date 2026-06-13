@@ -17,7 +17,7 @@
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server
-server.go                  — Структура server (ServerVersion = "1.1.3.8")
+server.go                  — Структура server (ServerVersion = "1.1.3.9")
 server_remote.go           — Remote Agent RPC (DeployAgentTaskStream fix)
 hermes_remote_manager.go   — HandleTaskStream, StreamDone flag
 server_remote_test.go      — 6 unit-тестов для streaming
@@ -27,41 +27,45 @@ messenger.proto            — DeployAgentTaskStream RPC
 ### Android (/root/msg.client.android)
 ```
 ui/remote/
-├── RemoteAgentActivity.kt         — Чат с агентом (toolbar fix, status bar)
+├── RemoteAgentActivity.kt         — Чат с агентом (streaming)
 ├── RemoteAgentSettingsActivity.kt — Настройки (input fields theming)
-├── RemoteAgentViewModel.kt        — sendMessageStreaming (full stdout/stderr)
-├── RemoteAgentService.kt          — Foreground service
-├── RemoteAgentManager.kt          — Singleton manager
-└── HermesGatewayManager.kt        — SSH туннель
+├── RemoteAgentViewModel.kt        — ViewModel (sendMessageStreaming), AndroidViewModel
+├── RemoteAgentService.kt           — Foreground service
+├── RemoteAgentManager.kt           — Singleton manager
+└── HermesGatewayManager.kt         — SSH туннель
 
 ui/chat/widget/ChatWidget.kt       — Общий виджет чата
 ui/adapter/ChatAdapter.kt          — filter() fix (dispatchUpdatesTo)
 theme/ui/ThemeApplier.kt           — Remote Agent input fields added
+
+data/
+├── proto/MessengerProto.kt         — Proto data classes
+├── grpc/GrpcClient.kt              — Facade
+├── grpc/HermesGrpc.kt              — Remote Agent gRPC (unary + streaming)
+├── models/ErrorHandler.kt           — Единый обработчик ошибок
+└── models/AppLog.kt                — Глобальный логгер
 ```
 
 ---
 
-## КЛЮЧЕВЫЕ РЕШЕНИЯ (v1.1.3.8)
+## КЛЮЧЕВЫЕ РЕШЕНИЯ (v1.1.3.9)
 
-### Streaming fix
-- **Сервер**: DeployAgentTaskStream отправляет `done=True` ровно один раз с полными данными из TaskResult
-- **Android**: RemoteAgentViewModel при `done=True` использует полные буферы из `update.stdout`/`update.stderr`
-- **Anti-pattern**: НЕ отправлять done=True дважды (пустой + полный)
+### i18n — мультиязычность
+- Все пользовательские строки в values/strings.xml (en) + values-ru/strings.xml
+- Для новых строк: ОДНОВРЕМЕННО в оба файла
+- ViewModel → AndroidViewModel для доступа к getString()
+- Adapter/BottomSheet → context.getString()
+- НЕ инициализировать getString() в полях класса Activity (crash до onCreate)
 
-### Remote Agent UI
-- **Тулбар**: `toolbar_background` + `ThemeUi.bind()` — единообразно с другими активити
-- **Status bar**: `LinearLayout` вместо `ConstraintLayout` — кнопки не уезжают
-- **Input fields**: All gateway fields в `ThemeApplier.commonInputs`
-- **Кнопка Start**: Скрыта если агент не настроен (нет туннеля/токена/агента)
+### Espresso Testing
+- Все XML ID: snake_case + префиксы (btn_, et_, tv_, iv_, rv_, fab_, cv_, ll_, fl_, pb_, srl_, til_, actv_, barrier_)
+- Динамические View: View.generateViewId()
+- 4 тест-класса: ChatListActivityTest, RemoteAgentActivityTest, ChatWidgetTest, EmptyChatTextTest
 
-### ChatAdapter filter()
-- **Anti-pattern**: `notifyItemRangeChanged` не обновляет размер списка → crash
-- **Правило**: `diffResult.dispatchUpdatesTo()` с ListUpdateCallback и offset +1 для Favorites
-
-### Espresso Testing IDs
-- Все `android:id` в XML следуют системе именования `snake_case` с префиксами (`btn_`, `et_`, `tv_`, `iv_`, `rv_`, `fab_`, `cv_`, `ll_`, `fl_`, `pb_`, `srl_`, `til_`, `actv_`, `barrier_`)
-- Динамические View в Kotlin получают ID через `View.generateViewId()`
-- При переименовании ID в XML — обязательно обновлять все ссылки в Kotlin-коде
+### Empty chat text
+- Favorites → "Personal storage" / "Личное хранилище"
+- Обычные пустые чаты → "No messages" / "Нет сообщений"
+- Проверять chat.type == "favorites", не lastMessageText
 
 ---
 
@@ -69,7 +73,7 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 
 1. НЕ компилировать на сервере (OOM kill)
 2. Коммитить и пушить после каждого значимого изменения
-3. Версия сервера в `server.go:33`, версия Android в `version.txt`
+3. Версия сервера в `server.go:34`, версия Android в `version.txt`
 4. Разделение архитектуры — каждый домен в своём server_*.go файле
 5. userId (UUID) — всегда как ключ, НЕ username
 6. changelog.txt БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — использовать bundled changelog в APK
@@ -77,11 +81,12 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 8. JWT секрет: минимум 32 байта, НЕ коммитить
 9. Темы: цвета программно через `ThemeUtils.parseSafeColor()`, НЕ `?attr/` в XML
 10. ChatAdapter: при фильтрации с Favorites использовать `dispatchUpdatesTo` с offset +1
-11. Remote Agent: кнопка Start скрыта если нет туннеля/токена/агента
-12. String resources: НЕ конкатенировать в `setText`, использовать `getString` с placeholders
-13. `vala` SSH ключ: `~/.ssh/vala` для подключения к серверу (lava)
-14. **ID naming**: все новые ID в XML — snake_case с префиксом типа (`btn_`, `et_`, `tv_`, `iv_`, `rv_`, `fab_`, `cv_`, `ll_`, `fl_`, `pb_`, `srl_`, `til_`, `actv_`, `barrier_`)
-15. **Dynamic Views**: при создании View в Kotlin — использовать `View.generateViewId()` для Espresso-совместимости
+11. String resources: НЕ конкатенировать в `setText`, использовать `getString` с placeholders
+12. **i18n**: все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
+13. **getString() в ViewModel**: использовать AndroidViewModel + getApplication<Application>().getString()
+14. **getString() в Adapter/BottomSheet**: использовать context.getString()
+15. **НЕ инициализировать getString() в полях класса Activity** — только в onCreate()
+16. **Форматирование строк**: при нескольких подстановках использовать позиционные форматтеры (%1$s, %2$d)
 
 ---
 
@@ -90,9 +95,11 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 - Агент (hermes_remote_agent.py) ещё НЕ отправляет streaming updates — сервер готов, клиент готов
 - Server migration warnings: `role "lavender" does not exist` (не критично)
 
-## i18n — НЕЗАВЕРШЁННАЯ РАБОТА (v1.1.3.9)
+---
 
-Вынесено в strings.xml: AIBottomSheet, RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService, ChatListActivity, ConferenceLobbyActivity, OwlSettingsActivity, OwlChatActivity, LogViewerActivity, HermesChatActivity, AgentSettingsActivity/BottomSheet, AgentListActivity, ChatMessageAdapter, CommandBottomSheet.
+## i18n — НЕЗАВЕРШЁННАЯ РАБОТА
+
+**Вынесено (15 файлов):** AIBottomSheet, RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService, ChatListActivity, ConferenceLobbyActivity, OwlSettingsActivity, OwlChatActivity, LogViewerActivity, HermesChatActivity, AgentSettingsActivity/BottomSheet, AgentListActivity, ChatMessageAdapter, CommandBottomSheet, OwlChatViewModel.
 
 **Осталось вынести (средний приоритет):**
 - NewChatActivity: upload progress text, conference/call detection strings
@@ -106,8 +113,6 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 - AgentListActivity: PREFILL_MESSAGE "Расскажи подробнее о модели"
 - RemoteAgentActivity: agentCommands descriptions (12 строк команд)
 - ChatAdapter: "📷 Фото" / "📷 Photo" (уже есть lang check — можно оставить)
-
-**Правило:** Все новые строки добавлять ОДНОВРЕМЕННО в values/strings.xml (en) и values-ru/strings.xml. НЕ добавлять строки только в один файл.
 
 ---
 

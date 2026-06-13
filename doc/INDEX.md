@@ -70,7 +70,7 @@ app/src/main/java/lavender/client/android/
 ./gradlew assembleRelease    # ТОЛЬКО локально (OOM на сервере)
 
 # Релиз
-./scripts/release.sh 1.1.3.8
+./scripts/release.sh 1.1.3.9
 
 # SSH к серверу
 ssh lava

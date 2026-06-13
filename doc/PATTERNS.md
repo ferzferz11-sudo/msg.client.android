@@ -187,3 +187,25 @@ go test ./...
 cd /root/msg.client.android
 # assembleRelease ТОЛЬКО локально!
 ```
+
+---
+
+## Паттерны i18n (v1.1.3.9)
+
+### getString() в разных контекстах
+- **Activity/Fragment**: `getString(R.string.xxx)` — работает напрямую
+- **Adapter/ViewHolder**: `context.getString(R.string.xxx)` или `itemView.context.getString(R.string.xxx)`
+- **BottomSheet/Dialog**: `context.getString(R.string.xxx)`
+- **ViewModel**: НЕ использовать обычный ViewModel, только `AndroidViewModel` + `getApplication<Application>().getString(R.string.xxx)`
+- **НЕ инициализировать getString() в полях класса Activity** — crash до onCreate(), использовать lateinit + инициализацию в onCreate()
+
+### Форматирование строк
+- Одна подстановка: `"Text %s"` — OK
+- Несколько подстановок: использовать позиционные форматтеры `"Text %1$s %2$d"`
+- НЕ использовать непозиционные форматтеры с несколькими подстановками — ошибка сборки
+
+### Добавление новых строк
+1. Добавить в `values/strings.xml` (английский)
+2. Добавить в `values-ru/strings.xml` (русский)
+3. Проверить что нет дубликатов (поиск по имени в обоих файлах)
+4. Использовать `getString(R.string.xxx)` с правильным контекстом
