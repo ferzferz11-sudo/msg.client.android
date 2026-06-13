@@ -135,6 +135,7 @@ class RemoteAgentActivity : AppCompatActivity(),
         val isConnected = RemoteAgentManager.isConnected()
         updateStatus(isConnected)
         updateStartStopButtons(isConnected)
+    }
 
     private fun setupTaskTypeChips() {
         val theme = ThemeStore.currentTheme()
