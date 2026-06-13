@@ -149,7 +149,7 @@ class ChatMessageAdapter(
                 addUpdateListener { anim ->
                     val dotCount = anim.animatedValue as Int
                     val dots = ".".repeat(dotCount).padEnd(3, ' ')
-                    typingText.text = $name + " " + context.getString(R.string.agent_typing_suffix) + $dots
+                    typingText.text = "$name " + context.getString(R.string.agent_typing_suffix) + dots
                 }
                 start()
             }

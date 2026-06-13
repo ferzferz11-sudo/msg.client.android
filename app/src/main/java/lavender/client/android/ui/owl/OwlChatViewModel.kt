@@ -1,7 +1,8 @@
 package lavender.client.android.ui.owl
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,7 @@ import lavender.client.android.data.grpc.chatWithOwl
  * - Отправкой запросов к OWL через gRPC ChatWithOWL (отдельный поток от Hermes)
  * - Typing indicator
  */
-class OwlChatViewModel : ViewModel() {
+class OwlChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _owlMessages = MutableStateFlow<List<OwlMessage>>(emptyList())
     val owlMessages: StateFlow<List<OwlMessage>> = _owlMessages.asStateFlow()
@@ -65,7 +66,7 @@ class OwlChatViewModel : ViewModel() {
                     if (response.error.isNotEmpty()) {
                         addMessage(
                             id = "owl-error-${System.currentTimeMillis()}",
-                            content = getString(R.string.error_colon, response.error),
+                            content = getApplication<Application>().getString(R.string.error_colon, response.error),
                             senderId = "owl",
                             senderName = "🦉 OWL",
                             isCurrentUser = false
@@ -132,7 +133,7 @@ class OwlChatViewModel : ViewModel() {
                 )
             } catch (e: Exception) {
                 Log.e("OwlChatViewModel", "sendToOwl error", e)
-                _error.value = getString(R.string.error_sending, e.message)
+                _error.value = getApplication<Application>().getString(R.string.error_sending, e.message)
                 _isLoading.value = false
                 _isTyping.value = false
             }
