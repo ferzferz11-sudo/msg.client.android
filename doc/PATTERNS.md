@@ -52,7 +52,7 @@ Favorites всегда на position 0, не участвует в DiffUtil:
 - НЕ использовать `?attr/` в XML для текста на кастомных тёмных темах
 - Цвета устанавливать программно через ThemeUtils.parseSafeColor()
 - ThemeApplier.apply() ДО setContentView()
-- Новые FAB добавлять в ThemeApplier: listOf(R.id.aiFab, R.id.addChatFab, ...)
+- Новые FAB добавлять в ThemeApplier: listOf(R.id.fabAi, R.id.fabAddChat, ...)
 
 ### Сборка
 - НЕ компилировать на сервере (OOM kill)
@@ -65,6 +65,77 @@ Favorites всегда на position 0, не участвует в DiffUtil:
 - Версия Android в version.txt
 - НЕ менять версию без явного указания пользователя
 - changelog.txt УДАЛЁН — использовать bundled changelog в APK
+
+---
+
+## Espresso Testing
+
+### Система именования ID
+
+Все `android:id` в XML-разметке следуют единой системе именования:
+
+| Префикс | Тип элемента | Пример |
+|---------|-------------|--------|
+| `btn_` | Кнопки | `btnSend`, `btnCancelDownload`, `btnRevoke` |
+| `et_` | Поля ввода | `etSearch`, `etMessageInput`, `etApiKey` |
+| `tv_` | Текстовые поля | `tvChatName`, `tvMessageText`, `tvToolbarTitle` |
+| `iv_` | Изображения/Иконки | `ivAvatar`, `ivMuteIndicator`, `ivUpdateAvailable` |
+| `rv_` | RecyclerView | `rvChatList`, `rvMessages`, `rvMentionList` |
+| `srl_` | SwipeRefreshLayout | `srlChatList` |
+| `fl_` | FrameLayout | `flProgressOverlay`, `flAvatarContainer` |
+| `ll_` | LinearLayout | `llChatInfo`, `llInputRow`, `llSearchBar` |
+| `pb_` | ProgressBar | `pbDownload`, `pbUpload`, `pbDeleteChat` |
+| `fab_` | FAB | `fabAi`, `fabAddChat` |
+| `cv_` | CardView | `cvReplyPreview`, `cvBottomPanel` |
+| `til_` | TextInputLayout | `tilApiKey`, `tilModel` |
+| `actv_` | AutoCompleteTextView | `actvModel` |
+| `item_` | Контейнер элемента списка | `item_chat_container` |
+| `barrier_` | Barrier | `barrierReplyPreview` |
+
+### Правила
+
+1. **Все интерактивные элементы** должны иметь `android:id` с правильным префиксом
+2. **Все проверяемые элементы** (текст, состояния) должны иметь `android:id`
+3. **Динамические View** в Kotlin-коде получают ID через `View.generateViewId()`
+4. **ViewBinding** автоматически генерирует поля на основе XML ID
+5. **Stale ID** — при переименовании ID в XML обязательно обновлять все ссылки в Kotlin-коде
+
+### Примеры Espresso-тестов
+
+```kotlin
+// Проверка видимости элемента
+onView(withId(R.id.btnSend)).check(matches(isDisplayed()))
+
+// Ввод текста
+onView(withId(R.id.etMessageInput)).perform(typeText("Hello"))
+
+// Клик по кнопке
+onView(withId(R.id.btnSend)).perform(click())
+
+// Проверка текста
+onView(withId(R.id.tvChatName)).check(matches(withText("Pavel")))
+
+// RecyclerView — клик по элементу
+onView(withId(R.id.rvChatList))
+    .perform(RecyclerViewActions.actionOnItemAtPosition<ViewHolder>(0, click()))
+
+// RecyclerView — проверка элемента
+onView(withId(R.id.rvChatList))
+    .perform(RecyclerViewActions.scrollToPosition<ViewHolder>(5))
+```
+
+### Запуск тестов
+
+```bash
+# Unit-тесты
+./gradlew test
+
+# Instrumented-тесты (Espresso)
+./gradlew connectedAndroidTest
+
+# Конкретный тест
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=lavender.client.android.ChatListTest
+```
 
 ---
 

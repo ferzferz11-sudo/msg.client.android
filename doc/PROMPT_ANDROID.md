@@ -58,6 +58,11 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 - **Anti-pattern**: `notifyItemRangeChanged` не обновляет размер списка → crash
 - **Правило**: `diffResult.dispatchUpdatesTo()` с ListUpdateCallback и offset +1 для Favorites
 
+### Espresso Testing IDs
+- Все `android:id` в XML следуют системе именования `snake_case` с префиксами (`btn_`, `et_`, `tv_`, `iv_`, `rv_`, `fab_`, `cv_`, `ll_`, `fl_`, `pb_`, `srl_`, `til_`, `actv_`, `barrier_`)
+- Динамические View в Kotlin получают ID через `View.generateViewId()`
+- При переименовании ID в XML — обязательно обновлять все ссылки в Kotlin-коде
+
 ---
 
 ## ПРАВИЛА
@@ -75,6 +80,8 @@ theme/ui/ThemeApplier.kt           — Remote Agent input fields added
 11. Remote Agent: кнопка Start скрыта если нет туннеля/токена/агента
 12. String resources: НЕ конкатенировать в `setText`, использовать `getString` с placeholders
 13. `vala` SSH ключ: `~/.ssh/vala` для подключения к серверу (lava)
+14. **ID naming**: все новые ID в XML — snake_case с префиксом типа (`btn_`, `et_`, `tv_`, `iv_`, `rv_`, `fab_`, `cv_`, `ll_`, `fl_`, `pb_`, `srl_`, `til_`, `actv_`, `barrier_`)
+15. **Dynamic Views**: при создании View в Kotlin — использовать `View.generateViewId()` для Espresso-совместимости
 
 ---
 

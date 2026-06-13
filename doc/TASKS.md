@@ -153,6 +153,12 @@ Exception → ErrorHandler.handle(source, throwable)
 ### Средний приоритет
 - [ ] Модульные тесты для OWL streaming (owl_test.go — сервер)
 - [ ] Кэширование запросов чатов
+- [x] **Espresso-тесты для Android** — подготовка ID, система именования ✅ v1.1.3.8
+  - Все XML ID переименованы в snake_case с префиксами
+  - Динамические View используют `View.generateViewId()`
+  - Код обновлён для совместимости с новыми ID
+- [ ] Написать Espresso-тесты (ChatListActivity, RemoteAgentActivity, ChatWidget)
+- [ ] Unit-тесты для Android (RemoteAgentViewModel, ChatAdapter)
 
 ### Низкий приоритет
 - [ ] Qdrant + CLIP (production RAG)
