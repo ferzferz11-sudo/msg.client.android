@@ -1,5 +1,10 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.8] - 2026-06-13
+### Streaming fix
+- **RemoteAgentViewModel** — при финальном `done=True` использует полные буферы из `update.stdout`/`update.stderr` (из TaskResult на сервере), fallback на накопленные чанки
+- Сервер теперь отправляет **один** `done=True` с полными данными (исправлен двойной done=True)
+
 ## [1.1.3.7] - 2026-06-13
 ### Streaming результатов задач агентом
 - **DeployAgentTaskStream** — server-side streaming для real-time stdout/stderr/progress
