@@ -125,7 +125,8 @@ class RemoteAgentActivity : AppCompatActivity(),
     private fun setupStatusBar() {
         val theme = ThemeStore.currentTheme()
         val surfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-        binding.statusBar.setBackgroundColor(surfaceColor)
+        val statusBar = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.statusBar)
+        statusBar.setBackgroundColor(surfaceColor)
 
         btnStartAgent.setOnClickListener {
             viewModel.loadAgents()
