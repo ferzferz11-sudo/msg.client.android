@@ -1,80 +1,57 @@
-# Промпт для новой сессии — v1.1.3.5 (Android)
+# Промпт для новой сессии — v1.1.3.7 (Android)
 
 **Дата:** 2026-06-13
-**Версия:** v1.1.3.5
+**Версия:** v1.1.3.7
 **Ветка:** feat/1.1.3.x
-**Текущая версия APK:** v1.1.3.4 (выпущен, ferz собирает локально)
+**Текущая версия APK:** v1.1.3.7 (выпущен, ferz собирает локально)
 
 ---
 
 ## СТАТУС
 
-- Remote Agent UI реализован и работает
-- Token Management (генерация, список, отзыв, копирование) — работает
-- HermesGrpc — все методы реализованы
-- **Hermes Gateway** — SSH туннель работает (JSch)
-- **tunnel_mode** — передаётся в DeployAgentTask
-- **RemoteAgentService** — foreground service создан и работает
-- **RemoteAgentManager** — singleton для привязки UI к сервису
+- Streaming результатов задач работает (сервер + клиент)
+- ErrorHandler — единый обработчик ошибок с AppLog
+- AppLog.error() во всех catch-блоках с Toast
+- Fix: "Job was cancelled" тост больше не появляется
 - ✅ Исправлен баг: `import HermesGrpc` → удалён из RemoteAgentService.kt
 
 ---
 
-## ✅ Что сделано в v1.1.3.5
+## ✅ Что сделано в v1.1.3.7
 
-### Foreground Service + Singleton Manager
-- `RemoteAgentService.kt` — foreground service с SSH туннелем + gRPC
-- `RemoteAgentManager.kt` — singleton для bind/unbind UI к сервису
-- `RemoteAgentSettingsActivity.kt` — привязка к сервису через ServiceConnection + RemoteAgentStateListener
-- `RemoteAgentActivity.kt` — привязка к сервису через ServiceConnection + RemoteAgentStateListener
-- `AndroidManifest.xml` — добавлен RemoteAgentService + FOREGROUND_SERVICE_CONNECTED_DEVICE
-- `RemoteAgentViewModel.kt` — tunnel check через RemoteAgentManager
+### Streaming
+- `MessengerProto.kt`: `DeployAgentTaskStreamResponseProto`
+- `HermesGrpc.kt`: `deployAgentTaskStream()` → callbackFlow
+- `GrpcClient.kt`: `deployAgentTaskStream()` facade
+- `RemoteAgentViewModel.kt`: `sendMessageStreaming()` — real-time Flow collection
+- `RemoteAgentActivity.kt`: использует sendMessageStreaming
 
-### Архитектура persistent connection
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    RemoteAgentService                        │
-│                    (Foreground Service)                      │
-│                                                             │
-│  ┌─────────────────┐  ┌──────────────────┐                 │
-│  │ HermesGateway   │  │ GrpcClient       │                 │
-│  │ Manager         │  │ (persistent)     │                 │
-│  │ (SSH tunnel)    │  │                  │                 │
-│  └────────┬────────┘  └────────┬─────────┘                 │
-│           │                    │                            │
-│  ┌────────┴────────────────────┴─────────┐                 │
-│  │         RemoteAgentManager            │                 │
-│  │         (singleton, binds to App)      │                 │
-│  └───────────────────────────────────────┘                 │
-└─────────────────────────────────────────────────────────────┘
-           │                              │
-           │ ServiceConnection            │ ServiceConnection
-           ▼                              ▼
-┌──────────────────────┐    ┌──────────────────────────┐
-│ RemoteAgentSettings  │    │ RemoteAgentActivity      │
-│ Activity             │    │ (чат с агентом)          │
-│ (настройки туннеля)  │    │                          │
-└──────────────────────┘    └──────────────────────────┘
-```
+### Error Handling
+- `ErrorHandler.kt` — единый обработчик (CancellationException→INFO, остальное→ERROR)
+- `AppLog.error()` / `AppLog.warn()` во всех catch-блоках с Toast ошибками
+- Fix: CancellationException в sendMessage → не показывает тост, логирует как INFO
 
 ---
 
 ## КРИТИЧЕСКИЕ ФАЙЛЫ
 
 ### UI
-- `ui/remote/RemoteAgentActivity.kt` — чат с агентом
+- `ui/remote/RemoteAgentActivity.kt` — чат с агентом (streaming mode)
 - `ui/remote/RemoteAgentSettingsActivity.kt` — настройки + SSH туннель
-- `ui/remote/RemoteAgentViewModel.kt` — ViewModel
+- `ui/remote/RemoteAgentViewModel.kt` — ViewModel + sendMessageStreaming
 
 ### Сервисы
-- `ui/remote/RemoteAgentService.kt` — foreground service (new in v1.1.3.5)
-- `ui/remote/RemoteAgentManager.kt` — singleton manager (new in v1.1.3.5)
+- `ui/remote/RemoteAgentService.kt` — foreground service
+- `ui/remote/RemoteAgentManager.kt` — singleton manager
 
 ### gRPC / Proto
-- `data/grpc/HermesGrpc.kt` — gRPC методы
+- `data/grpc/HermesGrpc.kt` — gRPC методы (unary + streaming)
 - `data/grpc/GrpcClient.kt` — фасад
 - `data/proto/MessengerProto.kt` — proto типы
+
+### Error Handling
+- `data/models/ErrorHandler.kt` — единый обработчик ошибок
+- `data/models/AppLog.kt` — глобальный логгер
 
 ---
 
