@@ -2442,6 +2442,7 @@ class ChatListActivity : AppCompatActivity() {
         val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
 
         // Setup server address spinner — load from local CredentialStore
+        CredentialStore.ensureDefaultServers(this)
         val serverList = mutableListOf<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -2593,6 +2594,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         // Setup server address spinner — load from local CredentialStore
+        CredentialStore.ensureDefaultServers(this)
         val serverList = mutableListOf<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, serverList)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -2830,6 +2832,9 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAuthChoiceDialog() {
+        // Ensure default servers exist (first launch or after data wipe)
+        CredentialStore.ensureDefaultServers(this)
+
         val customTheme = getAuthTheme()
         val sheet = StandardBottomSheet(this, R.layout.dialog_auth_choice, customTheme)
         

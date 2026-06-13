@@ -278,4 +278,29 @@ object CredentialStore {
     fun getDefaultServer(context: Context): ServerEntry? {
         return getServerList(context).firstOrNull { it.isDefault }
     }
+
+    /**
+     * Ensure default servers exist in the list.
+     * Called on first launch or when server list is empty.
+     */
+    fun ensureDefaultServers(context: Context) {
+        if (getServerList(context).isNotEmpty()) return
+        val defaultServers = listOf(
+            ServerEntry(
+                id = "lava-prod",
+                name = "Lava (prod)",
+                host = "13.140.25.249",
+                port = 50051,
+                isDefault = true
+            ),
+            ServerEntry(
+                id = "lava-dev",
+                name = "Lava (dev)",
+                host = "13.140.25.249",
+                port = 50052,
+                isDefault = false
+            )
+        )
+        saveServerList(context, defaultServers)
+    }
 }
