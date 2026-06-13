@@ -126,11 +126,19 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
             return true
         }
 
-        // Fallback: create default local agent
+        // Fallback: create default local agent with meaningful name
+        val gwSettings = gatewayManager.loadSettings()
+        val agentName = if (gwSettings.sshHost.isNotEmpty()) {
+            "Агент @ ${gwSettings.sshHost}"
+        } else if (prefs.getString("remote_agent_name", "")?.isNotEmpty() == true) {
+            prefs.getString("remote_agent_name", "Lava Agent") ?: "Lava Agent"
+        } else {
+            "Lava Agent"
+        }
         val defaultAgent = RemoteAgentInfo(
             id = "default",
-            name = "Lava Agent",
-            host = prefs.getString("remote_agent_host", "") ?: "",
+            name = agentName,
+            host = gwSettings.sshHost.ifEmpty { "" },
             status = "local"
         )
         _agents.value = listOf(defaultAgent)
