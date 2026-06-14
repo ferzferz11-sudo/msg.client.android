@@ -311,6 +311,61 @@ object GrpcClient {
         realGrpcClient.updateProfile(username, bio, status, callback)
     }
 
+    // ======= ProfileService V2 (dev server) =======
+
+    /** Check if server supports ProfileService v2 (profile >= "2.0" in /info). */
+    val isProfileV2Supported: Boolean
+        get() = ProfileClient.isProfileV2Supported()
+
+    /** Cached ProfileService version from /info endpoint. */
+    val profileServiceVersion: String
+        get() = ProfileClient.serviceProfileVersion
+
+    /** Fetch server info to determine service versions. Called automatically on connect. */
+    suspend fun fetchServerInfo(context: android.content.Context, serverAddress: String, port: Int = 8083) {
+        ProfileClient.fetchServerInfo(context, serverAddress, port)
+    }
+
+    /** Get profile via ProfileService v2 (dev) or legacy ChatService (prod). */
+    suspend fun getProfileV2(context: android.content.Context): GetProfileResponseProto? {
+        return ProfileClient.getProfile(context)
+    }
+
+    /** Update profile via ProfileService v2 (dev) or legacy ChatService (prod). */
+    suspend fun updateProfileV2(
+        context: android.content.Context,
+        username: String = "",
+        bio: String = "",
+        status: String = "",
+        locale: String = ""
+    ): Boolean {
+        return ProfileClient.updateProfile(context, username, bio, status, locale)
+    }
+
+    /** Update avatar via ProfileService v2 (dev) or legacy v1 (prod). */
+    suspend fun updateAvatarV2(
+        context: android.content.Context,
+        avatarUrl: String,
+        fullAvatarUrl: String = ""
+    ): Boolean {
+        return ProfileClient.updateAvatar(context, avatarUrl, fullAvatarUrl)
+    }
+
+    /** Get user settings (locale, theme, push) via ProfileService v2. */
+    suspend fun getUserSettingsV2(context: android.content.Context): GetUserSettingsResponseProto? {
+        return ProfileClient.getUserSettings(context)
+    }
+
+    /** Update user settings via ProfileService v2. */
+    suspend fun updateUserSettingsV2(
+        context: android.content.Context,
+        locale: String = "",
+        themeId: String = "",
+        pushEnabled: Boolean? = null
+    ): Boolean {
+        return ProfileClient.updateUserSettings(context, locale, themeId, pushEnabled)
+    }
+
     fun addContact(username: String, contactUsername: String, callback: (Boolean, String) -> Unit) {
         realGrpcClient.addContact(username, contactUsername, callback)
     }

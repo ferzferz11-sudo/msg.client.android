@@ -296,6 +296,20 @@ object RealGrpcClient {
             resetReconnectBackoff()
             Log.d(TAG, "Channel built successfully to $serverAddress")
 
+            // Fetch /info to determine service versions (ProfileService v2 support)
+            if (context != null) {
+                scope.launch {
+                    try {
+                        // Determine HTTP port: dev uses 8083, prod uses 8082
+                        val httpPort = if (port == 50052) 8083 else 8082
+                        ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
+                        Log.d(TAG, "ProfileService version: ${ProfileClient.serviceProfileVersion}")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to fetch server info: ${e.message}")
+                    }
+                }
+            }
+
             // Auto-resume last chat if it exists
             lastChatRequest?.let {
                 Log.d(TAG, "Resuming last chat for ${it.u}")

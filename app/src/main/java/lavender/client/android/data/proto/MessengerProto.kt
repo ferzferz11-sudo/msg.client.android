@@ -1614,3 +1614,80 @@ data class SimpleAuthResponseProto(
 data class RevokeDeviceRequestProto(
     val deviceId: String = ""
 )
+
+// ======= ProfileService V2 Messages =======
+
+data class GetProfileRequestProto(
+    val placeholder: Boolean = false // empty message, user_id from JWT
+)
+
+data class GetProfileResponseProto(
+    val userId: String = "",
+    val username: String = "",
+    val email: String = "",
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = "",
+    val bio: String = "",
+    val status: String = "",
+    val locale: String = "en",
+    val isSuperAdmin: Boolean = false,
+    val createdAt: String = "",
+    val lastSeenAt: String = ""
+)
+
+data class UpdateProfileV2RequestProto(
+    val username: String = "",
+    val bio: String = "",
+    val status: String = "",
+    val locale: String = ""
+)
+
+data class UpdateProfileV2ResponseProto(
+    val success: Boolean = false,
+    val message: String = "",
+    val profile: GetProfileResponseProto? = null
+)
+
+data class UpdateAvatarV2RequestProto(
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = ""
+)
+
+data class UpdateAvatarV2ResponseProto(
+    val success: Boolean = false,
+    val message: String = "",
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = ""
+)
+
+data class DeleteProfileV2RequestProto(
+    val password: String = ""
+)
+
+data class DeleteProfileV2ResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetUserSettingsRequestProto(
+    val placeholder: Boolean = false // empty message, user_id from JWT
+)
+
+data class GetUserSettingsResponseProto(
+    val locale: String = "en",
+    val themeId: String = "",
+    val pushEnabled: Boolean = true,
+    val custom: Map<String, String> = emptyMap()
+)
+
+data class UpdateUserSettingsRequestProto(
+    val locale: String = "",
+    val themeId: String = "",
+    val pushEnabled: Boolean? = null,
+    val custom: Map<String, String> = emptyMap()
+)
+
+data class UpdateUserSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
