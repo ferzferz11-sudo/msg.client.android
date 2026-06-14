@@ -46,20 +46,7 @@ class RemoteAgentActivity : AppCompatActivity(),
 
     private lateinit var taskTypes: List<Pair<String, String>>
 
-    private val agentCommands = listOf(
-        CommandBottomSheet.CommandInfo("/help", getString(R.string.cmd_help)),
-        CommandBottomSheet.CommandInfo("/status", getString(R.string.cmd_status)),
-        CommandBottomSheet.CommandInfo("/logs", getString(R.string.cmd_logs)),
-        CommandBottomSheet.CommandInfo("/deploy", getString(R.string.cmd_deploy)),
-        CommandBottomSheet.CommandInfo("/restart", getString(R.string.cmd_restart)),
-        CommandBottomSheet.CommandInfo("/git pull", getString(R.string.cmd_git_pull)),
-        CommandBottomSheet.CommandInfo("/git status", getString(R.string.cmd_git_status)),
-        CommandBottomSheet.CommandInfo("/docker ps", getString(R.string.cmd_docker_ps)),
-        CommandBottomSheet.CommandInfo("/docker logs", getString(R.string.cmd_docker_logs)),
-        CommandBottomSheet.CommandInfo("/ps", getString(R.string.cmd_ps)),
-        CommandBottomSheet.CommandInfo("/df", getString(R.string.cmd_df)),
-        CommandBottomSheet.CommandInfo("/uptime", getString(R.string.cmd_uptime))
-    )
+    private lateinit var agentCommands: List<CommandBottomSheet.CommandInfo>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +55,21 @@ class RemoteAgentActivity : AppCompatActivity(),
         userId = SessionManager.session.value.userId
         RemoteAgentManager.init(applicationContext)
         ThemeUi.bind(this, userId)
+
+        agentCommands = listOf(
+            CommandBottomSheet.CommandInfo("/help", getString(R.string.cmd_help)),
+            CommandBottomSheet.CommandInfo("/status", getString(R.string.cmd_status)),
+            CommandBottomSheet.CommandInfo("/logs", getString(R.string.cmd_logs)),
+            CommandBottomSheet.CommandInfo("/deploy", getString(R.string.cmd_deploy)),
+            CommandBottomSheet.CommandInfo("/restart", getString(R.string.cmd_restart)),
+            CommandBottomSheet.CommandInfo("/git pull", getString(R.string.cmd_git_pull)),
+            CommandBottomSheet.CommandInfo("/git status", getString(R.string.cmd_git_status)),
+            CommandBottomSheet.CommandInfo("/docker ps", getString(R.string.cmd_docker_ps)),
+            CommandBottomSheet.CommandInfo("/docker logs", getString(R.string.cmd_docker_logs)),
+            CommandBottomSheet.CommandInfo("/ps", getString(R.string.cmd_ps)),
+            CommandBottomSheet.CommandInfo("/df", getString(R.string.cmd_df)),
+            CommandBottomSheet.CommandInfo("/uptime", getString(R.string.cmd_uptime))
+        )
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(RemoteAgentViewModel::class.java)
