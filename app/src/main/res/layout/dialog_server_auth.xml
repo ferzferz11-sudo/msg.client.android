@@ -9,6 +9,16 @@
     android:gravity="center"
     android:background="@drawable/dialog_background">
 
+    <!-- Drag handle -->
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
+
     <!-- Logo -->
     <ImageView
         android:id="@+id/serverAuthLogo"
@@ -22,46 +32,48 @@
         android:clickable="true"
         android:focusable="true" />
 
-    <!-- Server name -->
-    <TextView
-        android:id="@+id/serverAuthName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="?attr/colorOnSurface"
-        android:layout_marginBottom="4dp"
-        tools:text="Lava (dev)" />
-
-    <!-- Server address -->
-    <TextView
-        android:id="@+id/serverAuthAddress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:alpha="0.6"
-        android:textColor="?attr/colorOnSurface"
-        android:layout_marginBottom="8dp"
-        tools:text="13.140.25.249:50052" />
-
-    <!-- Status row: indicator + version -->
+    <!-- Server info row: indicator + name + address -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginBottom="16dp">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
         <!-- Online indicator (green/red circle) -->
         <View
             android:id="@+id/serverAuthStatusIndicator"
             android:layout_width="10dp"
             android:layout_height="10dp"
-            android:background="@drawable/circle_indicator" />
-    </LinearLayout>
+            android:background="@drawable/circle_indicator"
+            android:layout_marginEnd="8dp" />
 
-    <!-- Divider -->
-    <View style="@style/MenuDividerStyle" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Server name -->
+            <TextView
+                android:id="@+id/serverAuthName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                tools:text="Lava Germany" />
+
+            <!-- Server address -->
+            <TextView
+                android:id="@+id/serverAuthAddress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:alpha="0.6"
+                android:textColor="?attr/colorOnSurface"
+                tools:text="13.140.25.249:50051" />
+        </LinearLayout>
+    </LinearLayout>
 
     <!-- Login button -->
     <com.google.android.material.button.MaterialButton

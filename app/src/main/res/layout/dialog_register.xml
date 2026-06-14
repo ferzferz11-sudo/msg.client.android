@@ -7,6 +7,16 @@
     android:padding="24dp"
     android:background="@drawable/dialog_background">
 
+    <!-- Drag handle -->
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
+
     <!-- Username input -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/usernameInputLayout"
@@ -102,9 +112,6 @@
         android:textSize="12sp"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginBottom="12dp" />
-
-    <!-- Divider -->
-    <View style="@style/MenuDividerStyle" />
 
     <!-- Register button + progress -->
     <FrameLayout
