@@ -1,5 +1,15 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.11] - 2026-06-14
+
+### Исправлено
+- **Двойной вход при смене сервера** — исправлен баг с тремя последовательными входами при переключении между prod/dev серверами
+  - `ServersActivity`: `setServerAddress` вызывается только после успешного входа, а до него
+  - `ChatListActivity`: убран auto-login из `serversActivityLauncher` — пользователь уже вошёл через ServersActivity
+  - `ChatListActivity.onResume`: добавлен флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect
+
+---
+
 ## [1.1.3.10] - 2026-06-14
 
 ### Новое: Полная локализация (i18n)

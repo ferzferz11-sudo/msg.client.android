@@ -254,12 +254,13 @@ class ServersActivity : AppCompatActivity() {
             btnJoin?.isEnabled = false
             joinProgressBar?.visibility = View.VISIBLE
 
-            // Save server address and login
-            CredentialStore.setServerAddress(this, serverAddress)
+            // Login first, save server address ONLY on success
             SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
                 runOnUiThread {
                     when (result) {
                         "SUCCESS" -> {
+                            // Save server address ONLY after successful login
+                            CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
                             CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
                             val userId = SessionManager.session.value.userId
                             if (userId.isNotEmpty()) {

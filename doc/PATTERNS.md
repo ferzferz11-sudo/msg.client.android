@@ -1,11 +1,19 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.10
+**Версия:** v1.1.3.11
 **Обновлено:** 2026-06-14
 
 ---
 
 ## Паттерны
+
+### Server switch pattern (v1.1.3.11)
+При смене сервера через ServersActivity:
+- НЕ сохранять `serverAddress` в CredentialStore до успешного входа
+- Сохранять `serverAddress` ТОЛЬКО после успешного `SessionManager.login()` в SUCCESS callback
+- В `ChatListActivity.serversActivityLauncher` НЕ делать auto-login — пользователь уже вошёл
+- Использовать флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect в `onResume()`
+- Анти-pattern: `CredentialStore.setServerAddress()` до `SessionManager.login()` → двойной вход
 
 ### ChatWidget reuse pattern
 При использовании ChatWidget в кастомных Activity ОБЯЗАТЕЛЬНО:

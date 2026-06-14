@@ -1281,10 +1281,16 @@ class ChatListActivity : AppCompatActivity() {
         val currentStatus = grpcClient.connectionStatus.value
         Log.d("ChatListActivity", "onResume: connectionStatus=$currentStatus")
         val savedServerAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
-        val needsReconnect = currentStatus == ConnectionStatus.DISCONNECTED ||
+
+        // Skip reconnect if we just returned from ServersActivity — it handles connection itself
+        val needsReconnect = !justReturnedFromServersActivity && (
+                           currentStatus == ConnectionStatus.DISCONNECTED ||
                            currentStatus == ConnectionStatus.FAILED ||
                            grpcClient.shouldForceReconnect() ||
-                           (savedServerAddress.isNotEmpty() && savedServerAddress != grpcClient.currentServerAddress)
+                           (savedServerAddress.isNotEmpty() && savedServerAddress != grpcClient.currentServerAddress))
+
+        // Reset flag after first onResume
+        justReturnedFromServersActivity = false
 
         if (needsReconnect) {
             if (savedServerAddress.isNotEmpty()) {
@@ -1470,42 +1476,32 @@ class ChatListActivity : AppCompatActivity() {
         showAdditionalSettingsSheet { showSettingsSheet() }
     }
 
+    // Flag set when returning from ServersActivity after successful login
+    // Prevents onResume from doing redundant reconnect
+    private var justReturnedFromServersActivity = false
+
     private val serversActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        // When returning from ServersActivity, check if the server changed
-        val newServer = CredentialStore.getServerAddress(this)
-        if (newServer.isNotEmpty() && newServer != grpcClient.currentServerAddress) {
-            // Disconnect from current server first
-            grpcClient.disconnect()
+        // User already logged in via ServersActivity — just refresh UI
+        // Do NOT auto-login here, it causes double-login bug (v1.1.3.10)
+        justReturnedFromServersActivity = true
 
-            val parts = newServer.split(":")
-            val host = parts[0]
-            val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-
-            if (::username.isInitialized && ::password.isInitialized && username.isNotEmpty() && password.isNotEmpty()) {
-                // Try auto-login with saved credentials on the new server
-                SessionManager.login(this, username, password, newServer, register = false) { result ->
-                    runOnUiThread {
-                        when (result) {
-                            "SUCCESS", "REGISTRATION_SUCCESS", null -> {
-                                // Auto-login successful, load chats
-                                loadChats()
-                                startSync()
-                            }
-                            "USER_NOT_FOUND", "AUTH_FAILED" -> {
-                                // No account on this server or wrong password — show auth dialog
-                                logout()
-                            }
-                            else -> {
-                                // Connection error or other issue — show auth dialog
-                                logout()
-                            }
-                        }
-                    }
+        if (it.resultCode == RESULT_OK) {
+            // Update session from CredentialStore (already saved by ServersActivity)
+            val newServer = CredentialStore.getServerAddress(this)
+            if (newServer.isNotEmpty()) {
+                val parts = newServer.split(":")
+                val host = parts[0]
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                // Reconnect to new server if different from current
+                if (newServer != grpcClient.currentServerAddress) {
+                    grpcClient.disconnect()
+                    grpcClient.connect(host, false, port, this, true)
                 }
-            } else {
-                // No saved credentials — show auth dialog
-                showAuthChoiceDialog()
             }
+            // Reload chats from new server
+            isChatsLoaded = false
+            loadChats()
+            startSync()
         }
         showAdditionalSettingsSheet { showSettingsSheet() }
     }

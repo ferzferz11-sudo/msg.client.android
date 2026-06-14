@@ -1,12 +1,20 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.10 (stable)
+**Версия:** v1.1.3.11 (dev)
 **Обновлено:** 2026-06-14
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## ✅ v1.1.3.9 — i18n + Espresso Tests + Bugfixes
+## ✅ v1.1.3.11 — Double-login bugfix + Server switch fix
+
+### Исправления
+- ✅ **Двойной вход при смене сервера** (ServersActivity → ChatListActivity):
+  - Убран преждевременный `CredentialStore.setServerAddress()` из `ServersActivity.showServerLoginSheet` до успешного входа
+  - `setServerAddress` теперь вызывается только после успешного `SessionManager.login()`
+  - Убран auto-login из `ChatListActivity.serversActivityLauncher` — пользователь уже вошёл через ServersActivity
+  - Добавлен флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect в `onResume()`
+  - Лог подтверждал 3 входа подряд: ferz11→dev:50052, ferz→dev:50052, ferz→prod:50051
 
 ### Новое: Мультиязычность (i18n)
 - ✅ Вынесено 100+ хардкодных русских строк в strings.xml (en + ru)
