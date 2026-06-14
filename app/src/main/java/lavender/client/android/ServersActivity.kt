@@ -224,69 +224,94 @@ class ServersActivity : AppCompatActivity() {
     }
 
     private fun showServerLoginSheet(server: ServerEntry) {
-        val theme = ThemeStore.currentTheme()
-        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_login, theme)
-        sheet.setTitle(getString(R.string.login_to_server, server.name))
-
-        val editTextUsername = sheet.findViewById<android.widget.EditText>(R.id.editTextUsername)
-        val editTextPassword = sheet.findViewById<android.widget.EditText>(R.id.editTextPassword)
-        val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
-        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val joinProgressBar = sheet.findViewById<android.widget.ProgressBar>(R.id.joinProgressBar)
-        val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
-
-        // Hide server selector — we already know which server to connect to
-        sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
-
         val serverAddress = "${server.host}:${server.port}"
 
-        btnCancel?.setOnClickListener { sheet.dismiss() }
-
-        btnJoin?.setOnClickListener {
-            val u = editTextUsername?.text.toString().trim()
-            val p = editTextPassword?.text.toString().trim()
-            if (u.isEmpty() || p.isEmpty()) return@setOnClickListener
-
-            btnJoin?.text = ""
-            btnJoin?.isEnabled = false
-            joinProgressBar?.visibility = View.VISIBLE
-
-            // Login first, save server address ONLY on success
-            SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
-                runOnUiThread {
-                    when (result) {
-                        "SUCCESS" -> {
-                            // Save server address ONLY after successful login
-                            CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
-                            CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
-                            val userId = SessionManager.session.value.userId
-                            if (userId.isNotEmpty()) {
-                                CredentialStore.setUserId(this@ServersActivity, userId)
+        val loginSheet = LoginBottomSheet(
+            context = this,
+            onLogin = { u, p ->
+                SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS" -> {
+                                CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
+                                CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    CredentialStore.setUserId(this@ServersActivity, userId)
+                                }
+                                loginSheet.dismiss()
+                                setResult(RESULT_OK)
+                                finish()
                             }
-                            sheet.dismiss()
-                            setResult(RESULT_OK)
-                            finish()
-                        }
-                        else -> {
-                            joinProgressBar?.visibility = View.GONE
-                            btnJoin?.text = getString(R.string.join)
-                            btnJoin?.isEnabled = true
-                            Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                            "USER_NOT_FOUND" -> {
+                                loginSheet.setLoading(false)
+                                // Offer to register
+                                AlertDialog.Builder(this@ServersActivity)
+                                    .setTitle(R.string.user_not_found)
+                                    .setMessage(getString(R.string.register_confirm, u))
+                                    .setPositiveButton(R.string.yes) { _, _ ->
+                                        loginSheet.dismiss()
+                                        showServerRegisterSheet(server, u, p)
+                                    }
+                                    .setNegativeButton(R.string.no) { _, _ ->
+                                        // Keep login sheet open
+                                    }
+                                    .show()
+                            }
+                            else -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }
+            },
+            onCancel = {
+                // Do nothing, sheet already dismissed
             }
-        }
+        )
 
-        forgotPasswordButton?.setOnClickListener {
-            sheet.dismiss()
-            // TODO: show forgot password flow
-        }
+        loginSheet.setTitle(getString(R.string.login_to_server, server.name))
+        loginSheet.show()
+    }
 
-        sheet.show()
+    private fun showServerRegisterSheet(server: ServerEntry, prefillUser: String = "", prefillPass: String = "") {
+        val serverAddress = "${server.host}:${server.port}"
+
+        val registerSheet = RegisterBottomSheet(
+            context = this,
+            onRegister = { u, p, email ->
+                SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result: String? ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS", "REGISTRATION_SUCCESS" -> {
+                                CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
+                                CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    CredentialStore.setUserId(this@ServersActivity, userId)
+                                }
+                                registerSheet.dismiss()
+                                setResult(RESULT_OK)
+                                finish()
+                            }
+                            else -> {
+                                registerSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            },
+            onCancel = {
+                // Do nothing, sheet already dismissed
+            },
+            prefillUsername = prefillUser,
+            prefillPassword = prefillPass
+        )
+
+        registerSheet.setTitle(getString(R.string.register_to_server, server.name))
+        registerSheet.show()
     }
 
     private fun showAddServerDialog() {

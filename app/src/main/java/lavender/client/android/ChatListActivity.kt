@@ -1506,8 +1506,7 @@ class ChatListActivity : AppCompatActivity() {
                 if (newServer != grpcClient.currentServerAddress) {
                     // Server changed — clear old chats and reconnect
                     Log.d("ChatListActivity", "Server changed: ${grpcClient.currentServerAddress} → $newServer, clearing old chats")
-                    chats.clear()
-                    chatAdapter.setChats(listOf())
+                    chatAdapter.clearAll()
 
                     // Clear local cache for new server
                     lifecycleScope.launch(Dispatchers.IO) {
@@ -2467,48 +2466,13 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showLoginBottomSheet() {
         val customTheme = getAuthTheme()
-        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_login, customTheme)
-
-        val usernameInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
-        val passwordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
-        val editText = sheet.findViewById<EditText>(R.id.editTextUsername)
-        val editTextPassword = sheet.findViewById<EditText>(R.id.editTextPassword)
-        val joinProgressBar = sheet.findViewById<ProgressBar>(R.id.joinProgressBar)
-        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnJoin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnJoin)
-        val forgotPasswordButton = sheet.findViewById<TextView>(R.id.forgotPasswordButton)
-
-        // Hide server selector, status, and drag handle — server is always from CredentialStore
-        sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
-        // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
-        (sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent as? ViewGroup)?.visibility = View.GONE
 
         var isTransitioning = false
 
-        btnCancel?.setOnClickListener {
-            isTransitioning = true
-            sheet.dismiss()
-            showAuthChoiceDialog()
-        }
-
-        sheet.setOnDismissListener {
-            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
-                showAuthChoiceDialog()
-            }
-        }
-
-        btnJoin?.setOnClickListener {
-            val u = editText?.text.toString().trim()
-            val p = editTextPassword?.text.toString().trim()
-            val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
-            if (u.isNotEmpty() && p.isNotEmpty()) {
-                btnJoin?.text = ""
-                btnJoin?.isEnabled = false
-                joinProgressBar?.isVisible = true
+        val loginSheet = LoginBottomSheet(
+            context = this,
+            onLogin = { u, p ->
+                val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
 
                 // Show splash overlay during login
                 try {
@@ -2517,12 +2481,10 @@ class ChatListActivity : AppCompatActivity() {
 
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
                     runOnUiThread {
-                        // Dismiss splash overlay
                         SplashLoadingActivity.finishIfShowing()
                         when (result) {
                             "SUCCESS" -> {
-                                // Store credentials securely via CredentialStore
-                                lavender.client.android.data.session.CredentialStore.setCredentials(
+                                CredentialStore.setCredentials(
                                     context = this@ChatListActivity,
                                     username = u,
                                     password = p,
@@ -2530,139 +2492,72 @@ class ChatListActivity : AppCompatActivity() {
                                 )
                                 val userId = SessionManager.session.value.userId
                                 if (userId.isNotEmpty()) {
-                                    lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
+                                    CredentialStore.setUserId(this@ChatListActivity, userId)
                                 }
                                 isTransitioning = true
-                                sheet.dismiss()
+                                loginSheet.dismiss()
                                 recreate()
                             }
                             "USER_NOT_FOUND" -> {
-                                joinProgressBar?.isVisible = false
-                                btnJoin?.text = getString(R.string.join)
-                                btnJoin?.isEnabled = true
-                                
+                                loginSheet.setLoading(false)
                                 AlertDialog.Builder(this@ChatListActivity)
                                     .setTitle(R.string.user_not_found)
                                     .setMessage(getString(R.string.register_confirm, u))
                                     .setPositiveButton(R.string.yes) { _, _ ->
                                         isTransitioning = true
-                                        sheet.dismiss()
+                                        loginSheet.dismiss()
                                         showRegisterBottomSheet(u, p)
                                     }
-                                    .setNegativeButton(R.string.no) { _, _ ->
-                                        // Keep login sheet open
-                                    }
+                                    .setNegativeButton(R.string.no) { _, _ -> }
                                     .show()
                             }
                             "AUTH_FAILED" -> {
-                                joinProgressBar?.isVisible = false
-                                btnJoin.text = getString(R.string.join)
-                                btnJoin.isEnabled = true
+                                loginSheet.setLoading(false)
                                 Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
                             }
                             else -> {
-                                joinProgressBar?.isVisible = false
-                                btnJoin.text = getString(R.string.join)
-                                btnJoin.isEnabled = true
+                                loginSheet.setLoading(false)
                                 Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
                             }
                         }
                     }
                 }
-            } else if (u.isEmpty()) {
-                Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this, R.string.password_empty, Toast.LENGTH_LONG).show()
-            }
-        }
+            },
+            onCancel = {
+                isTransitioning = true
+                // Do nothing, sheet already dismissed
+            },
+            theme = customTheme
+        )
 
-        forgotPasswordButton?.setOnClickListener {
-            isTransitioning = true
-            sheet.dismiss()
-            showForgotPasswordBottomSheet()
-        }
-
-        sheet.show()
-    }
-
-    private fun showRegisterBottomSheet(prefillUser: String = "", prefillPass: String = "") {
-        val customTheme = getAuthTheme()
-        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_register, customTheme)
-
-        val usernameInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.usernameInputLayout)
-        val passwordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.passwordInputLayout)
-        val confirmPasswordInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.confirmPasswordInputLayout)
-        val emailInputLayout = sheet.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.emailInputLayout)
-        val editText = sheet.findViewById<EditText>(R.id.editTextUsername)
-        val editTextPassword = sheet.findViewById<EditText>(R.id.editTextPassword)
-        val editTextConfirmPassword = sheet.findViewById<EditText>(R.id.editTextConfirmPassword)
-        val editTextEmail = sheet.findViewById<EditText>(R.id.editTextEmail)
-        val registerProgressBar = sheet.findViewById<ProgressBar>(R.id.registerProgressBar)
-        val btnCancel = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
-        val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
-
-        if (prefillUser.isNotEmpty()) {
-            editText?.setText(prefillUser)
-        }
-        if (prefillPass.isNotEmpty()) {
-            editTextPassword?.setText(prefillPass)
-            editTextConfirmPassword?.setText(prefillPass)
-        }
-
-        // Hide server selector, status, and drag handle — server is always from CredentialStore
-        sheet.findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
-        sheet.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
-        // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
-        (sheet.findViewById<Spinner>(R.id.serverAddressSpinner)?.parent as? ViewGroup)?.visibility = View.GONE
-
-        var isTransitioning = false
-
-        btnCancel?.setOnClickListener {
-            isTransitioning = true
-            sheet.dismiss()
-            showAuthChoiceDialog()
-        }
-
-        sheet.setOnDismissListener {
+        loginSheet.setOnDismissListener {
             if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
                 showAuthChoiceDialog()
             }
         }
 
-        btnRegister?.setOnClickListener {
-            val u = editText?.text.toString().trim()
-            val p = editTextPassword?.text.toString().trim()
-            val confirmPassword = editTextConfirmPassword?.text.toString().trim()
-            val email = editTextEmail?.text.toString().trim()
-            val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
+        loginSheet.show()
+    }
 
-            if (u.isEmpty()) {
-                Toast.makeText(this, R.string.username_empty, Toast.LENGTH_LONG).show()
-            } else if (p.isEmpty()) {
-                Toast.makeText(this, R.string.password_empty, Toast.LENGTH_LONG).show()
-            } else if (p != confirmPassword) {
-                Toast.makeText(this, R.string.passwords_do_not_match, Toast.LENGTH_LONG).show()
-            } else {
-                btnRegister.text = ""
-                btnRegister.isEnabled = false
-                registerProgressBar?.isVisible = true
+    private fun showRegisterBottomSheet(prefillUser: String = "", prefillPass: String = "") {
+        val customTheme = getAuthTheme()
+        val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
 
-                // Show splash overlay during registration
+        var isTransitioning = false
+
+        val registerSheet = RegisterBottomSheet(
+            context = this,
+            onRegister = { u, p, email ->
                 try {
                     startActivity(Intent(this, SplashLoadingActivity::class.java))
                 } catch (_: Exception) {}
 
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result ->
                     runOnUiThread {
-                        // Dismiss splash overlay
                         SplashLoadingActivity.finishIfShowing()
                         when (result) {
                             "REGISTRATION_SUCCESS" -> {
-                                // Store credentials securely via CredentialStore
-                                lavender.client.android.data.session.CredentialStore.setCredentials(
+                                CredentialStore.setCredentials(
                                     context = this@ChatListActivity,
                                     username = u,
                                     password = p,
@@ -2671,39 +2566,48 @@ class ChatListActivity : AppCompatActivity() {
                                 )
                                 val userId = SessionManager.session.value.userId
                                 if (userId.isNotEmpty()) {
-                                    lavender.client.android.data.session.CredentialStore.setUserId(this@ChatListActivity, userId)
+                                    CredentialStore.setUserId(this@ChatListActivity, userId)
                                 }
                                 Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
                                 isTransitioning = true
-                                sheet.dismiss()
-                                recreate()  // consistent with login flow — no startActivity+finish race
+                                registerSheet.dismiss()
+                                recreate()
                             }
                             "USER_ALREADY_EXISTS" -> {
-                                registerProgressBar?.isVisible = false
-                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
+                                registerSheet.setLoading(false)
                                 Toast.makeText(this, R.string.user_already_exists, Toast.LENGTH_LONG).show()
                             }
                             "EMAIL_ALREADY_IN_USE" -> {
-                                registerProgressBar?.isVisible = false
-                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
+                                registerSheet.setLoading(false)
                                 Toast.makeText(this, R.string.email_already_in_use, Toast.LENGTH_LONG).show()
                             }
                             "AUTH_FAILED" -> {
-                                registerProgressBar?.isVisible = false
-                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
+                                registerSheet.setLoading(false)
                                 Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
                             }
                             else -> {
-                                registerProgressBar?.isVisible = false
-                                btnRegister.text = getString(R.string.register); btnRegister.isEnabled = true
+                                registerSheet.setLoading(false)
                                 Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
                             }
                         }
                     }
                 }
+            },
+            onCancel = {
+                isTransitioning = true
+            },
+            prefillUsername = prefillUser,
+            prefillPassword = prefillPass,
+            theme = customTheme
+        )
+
+        registerSheet.setOnDismissListener {
+            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
+                showAuthChoiceDialog()
             }
         }
-        sheet.show()
+
+        registerSheet.show()
     }
 
     private fun showForgotPasswordBottomSheet() {

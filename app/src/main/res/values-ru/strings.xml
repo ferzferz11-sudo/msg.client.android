@@ -711,6 +711,7 @@
     <string name="action_hermes_agents">Lava AI — Агенты</string>
     <string name="lava_ai_name">Lava AI</string>
     <string name="login_to_server">Вход на %s</string>
+    <string name="register_to_server">Регистрация на %s</string>
     <string name="delete_chat_confirmation">Удалить этот чат?</string>
     <string name="delete_message_confirmation">Удалить это сообщение?</string>
     <string name="delete_messages_confirmation">Удалить %d выбранных сообщений?</string>

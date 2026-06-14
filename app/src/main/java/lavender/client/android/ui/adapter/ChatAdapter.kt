@@ -101,6 +101,16 @@ class ChatAdapter(
         onSelectionChanged(0)
     }
 
+    /** Clear all chats (including Favorites) — used when switching servers */
+    fun clearAll() {
+        diffJob?.cancel()
+        selectedPositions.clear()
+        favoritesItem = null
+        allChats = emptyList()
+        displayedChats = emptyList()
+        notifyDataSetChanged()
+    }
+
     private var favoritesItem: ChatInfo? = null
 
     fun hasFavorites(): Boolean = favoritesItem != null
