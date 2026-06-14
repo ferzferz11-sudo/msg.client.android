@@ -60,7 +60,7 @@ class ServerAuthBottomSheet(
         // App version at bottom
         try {
             val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
-            findViewById<TextView>(R.id.serverAuthAppVersion)?.text = "Lava v$versionName"
+            findViewById<TextView>(R.id.serverAuthAppVersion)?.text = context.getString(R.string.app_version_format, versionName)
         } catch (_: Exception) {}
 
         findViewById<MaterialButton>(R.id.btnServerLogin)?.setOnClickListener {

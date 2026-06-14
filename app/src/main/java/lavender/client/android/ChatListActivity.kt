@@ -2781,9 +2781,11 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showAuthChoiceDialog() {
         val defaultServer = CredentialStore.getDefaultServer(this)
-        val serverName = defaultServer?.name ?: "Lava Germany"
+        val serverName = defaultServer?.name ?: getString(R.string.server_default_name)
         val serverHost = defaultServer?.host ?: "13.140.25.249"
         val serverPort = defaultServer?.port ?: 50051
+
+        var isTransitioning = false
 
         lateinit var authSheet: ServerAuthBottomSheet
 
@@ -2793,16 +2795,18 @@ class ChatListActivity : AppCompatActivity() {
             serverHost = serverHost,
             serverPort = serverPort,
             onLogin = {
+                isTransitioning = true
                 authSheet.dismiss()
                 showLoginBottomSheet()
             },
             onRegister = {
+                isTransitioning = true
                 authSheet.dismiss()
                 showRegisterBottomSheet()
             }
         )
         authSheet.setOnDismissListener {
-            if (username.isEmpty() || password.isEmpty()) {
+            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
                 showAuthChoiceDialog()
             }
         }
