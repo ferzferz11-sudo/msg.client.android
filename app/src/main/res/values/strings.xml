@@ -503,7 +503,6 @@
     <string name="left_conference">You left the conference</string>
     <string name="conference_participants">Participants in call: %d</string>
     <!-- Upload -->
-    <string name="uploading_images">Uploading images... (%1$d/%2$d)</string>
     <!-- OWL Settings -->
     <string name="own_model_option">Custom model (enter manually)</string>
     <string name="enter_model_id">Enter model ID</string>
