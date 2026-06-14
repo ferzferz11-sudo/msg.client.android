@@ -100,6 +100,39 @@ object GrpcClient {
         realGrpcClient.registerToken(user, token, pushEnabled)
     }
 
+    // ======= AuthService V2 (JWT) =======
+
+    fun signInV2(
+        username: String, password: String,
+        deviceId: String, deviceName: String,
+        deviceType: String = "android", clientVersion: String = "",
+        callback: (AuthResponseV2Proto?, String?) -> Unit
+    ) {
+        realGrpcClient.signInV2(username, password, deviceId, deviceName, deviceType, clientVersion, callback)
+    }
+
+    fun signUpV2(
+        username: String, password: String, email: String,
+        deviceId: String, deviceName: String,
+        deviceType: String = "android", clientVersion: String = "",
+        callback: (AuthResponseV2Proto?, String?) -> Unit
+    ) {
+        realGrpcClient.signUpV2(username, password, email, deviceId, deviceName, deviceType, clientVersion, callback)
+    }
+
+    fun refreshToken(refreshToken: String, callback: (RefreshTokenResponseProto?, String?) -> Unit) {
+        realGrpcClient.refreshToken(refreshToken, callback)
+    }
+
+    fun signOut(refreshToken: String = "", allDevices: Boolean = false, callback: (Boolean, String) -> Unit = { _, _ -> }) {
+        realGrpcClient.signOut(refreshToken, allDevices, callback)
+    }
+
+    fun revokeDevice(deviceId: String, callback: (Boolean, String) -> Unit = { _, _ -> }) {
+        realGrpcClient.revokeDevice(deviceId, callback)
+    }
+
+
     fun clearSystemNotification() {
         realGrpcClient.clearSystemNotification()
     }

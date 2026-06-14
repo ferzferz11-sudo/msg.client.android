@@ -68,6 +68,14 @@ object CredentialStore {
         return context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
     }
 
+    /**
+     * Returns EncryptedSharedPreferences for JWT auth tokens.
+     * Separate from credentials (password) to allow independent lifecycle.
+     */
+    fun getAuthPrefs(context: Context): SharedPreferences {
+        return getEncryptedPrefs(context)
+    }
+
     // --- Read credentials ---
 
     fun getUsername(context: Context): String {

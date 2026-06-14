@@ -1553,3 +1553,64 @@ data class GetAgentProcessStatusResponseProto(
     val startedAt: String = "",
     val error: String = ""
 )
+
+// ======= Auth V2 Proto Classes =======
+
+data class SignInRequestV2Proto(
+    val username: String = "",
+    val password: String = "",
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val deviceType: String = "android",
+    val clientVersion: String = ""
+)
+
+data class SignUpRequestV2Proto(
+    val username: String = "",
+    val password: String = "",
+    val email: String = "",
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val deviceType: String = "android",
+    val clientVersion: String = ""
+)
+
+data class AuthResponseV2Proto(
+    val success: Boolean = false,
+    val message: String = "",
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val accessExpiresAt: Long = 0L,
+    val refreshExpiresAt: Long = 0L,
+    val userId: String = "",
+    val username: String = "",
+    val email: String = "",
+    val avatarUrl: String = "",
+    val bio: String = "",
+    val status: String = ""
+)
+
+data class RefreshTokenRequestProto(
+    val refreshToken: String = ""
+)
+
+data class RefreshTokenResponseProto(
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val accessExpiresAt: Long = 0L,
+    val refreshExpiresAt: Long = 0L
+)
+
+data class SignOutRequestProto(
+    val refreshToken: String = "",
+    val allDevices: Boolean = false
+)
+
+data class SimpleAuthResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class RevokeDeviceRequestProto(
+    val deviceId: String = ""
+)

@@ -1191,6 +1191,220 @@ object RealGrpcClient {
         call.request(1)
     }
 
+    // ======= AuthService V2 Methods (JWT) =======
+
+    /**
+     * SignInV2 — authenticates via AuthService v2 with JWT tokens.
+     * Returns AuthResponseV2Proto with access_token + refresh_token.
+     * Passes device info for server-side device management.
+     */
+    fun signInV2(
+        username: String,
+        password: String,
+        deviceId: String,
+        deviceName: String,
+        deviceType: String = "android",
+        clientVersion: String = "",
+        callback: (AuthResponseV2Proto?, String?) -> Unit
+    ) {
+        val currentChannel = channel ?: run {
+            callback(null, "Not connected")
+            return
+        }
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SignInRequestV2Proto, AuthResponseV2Proto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AuthService/SignInV2")
+            .setRequestMarshaller(SignInRequestV2Marshaller())
+            .setResponseMarshaller(AuthResponseV2Marshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<AuthResponseV2Proto>() {
+            override fun onMessage(message: AuthResponseV2Proto) {
+                if (message.success) {
+                    callback(message, null)
+                } else {
+                    callback(null, message.message)
+                }
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(null, status.description ?: "Auth failed")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(SignInRequestV2Proto(
+            username = username,
+            password = password,
+            deviceId = deviceId,
+            deviceName = deviceName,
+            deviceType = deviceType,
+            clientVersion = clientVersion
+        ))
+        call.halfClose()
+        call.request(1)
+    }
+
+    /**
+     * SignUpV2 — registers a new user via AuthService v2 with JWT tokens.
+     */
+    fun signUpV2(
+        username: String,
+        password: String,
+        email: String,
+        deviceId: String,
+        deviceName: String,
+        deviceType: String = "android",
+        clientVersion: String = "",
+        callback: (AuthResponseV2Proto?, String?) -> Unit
+    ) {
+        val currentChannel = channel ?: run {
+            callback(null, "Not connected")
+            return
+        }
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SignUpRequestV2Proto, AuthResponseV2Proto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AuthService/SignUpV2")
+            .setRequestMarshaller(SignUpRequestV2Marshaller())
+            .setResponseMarshaller(AuthResponseV2Marshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<AuthResponseV2Proto>() {
+            override fun onMessage(message: AuthResponseV2Proto) {
+                if (message.success) {
+                    callback(message, null)
+                } else {
+                    callback(null, message.message)
+                }
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(null, status.description ?: "Registration failed")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(SignUpRequestV2Proto(
+            username = username,
+            password = password,
+            email = email,
+            deviceId = deviceId,
+            deviceName = deviceName,
+            deviceType = deviceType,
+            clientVersion = clientVersion
+        ))
+        call.halfClose()
+        call.request(1)
+    }
+
+    /**
+     * RefreshToken — exchanges a refresh token for a new access+refresh pair.
+     */
+    fun refreshToken(
+        refreshToken: String,
+        callback: (RefreshTokenResponseProto?, String?) -> Unit
+    ) {
+        val currentChannel = channel ?: run {
+            callback(null, "Not connected")
+            return
+        }
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RefreshTokenRequestProto, RefreshTokenResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AuthService/RefreshToken")
+            .setRequestMarshaller(RefreshTokenRequestMarshaller())
+            .setResponseMarshaller(RefreshTokenResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RefreshTokenResponseProto>() {
+            override fun onMessage(message: RefreshTokenResponseProto) {
+                callback(message, null)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(null, status.description ?: "Token refresh failed")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(RefreshTokenRequestProto(refreshToken = refreshToken))
+        call.halfClose()
+        call.request(1)
+    }
+
+    /**
+     * SignOut — revokes a device session or all sessions.
+     */
+    fun signOut(
+        refreshToken: String = "",
+        allDevices: Boolean = false,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val currentChannel = channel ?: run {
+            callback(false, "Not connected")
+            return
+        }
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SignOutRequestProto, SimpleAuthResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AuthService/SignOut")
+            .setRequestMarshaller(SignOutRequestMarshaller())
+            .setResponseMarshaller(SimpleAuthResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<SimpleAuthResponseProto>() {
+            override fun onMessage(message: SimpleAuthResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Sign out failed")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(SignOutRequestProto(refreshToken = refreshToken, allDevices = allDevices))
+        call.halfClose()
+        call.request(1)
+    }
+
+    /**
+     * RevokeDevice — deactivates a specific device for the authenticated user.
+     */
+    fun revokeDevice(
+        deviceId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val currentChannel = channel ?: run {
+            callback(false, "Not connected")
+            return
+        }
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RevokeDeviceRequestProto, SimpleAuthResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AuthService/RevokeDevice")
+            .setRequestMarshaller(RevokeDeviceRequestMarshaller())
+            .setResponseMarshaller(SimpleAuthResponseMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<SimpleAuthResponseProto>() {
+            override fun onMessage(message: SimpleAuthResponseProto) {
+                callback(message.success, message.message)
+            }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    callback(false, status.description ?: "Revoke failed")
+                }
+            }
+        }, io.grpc.Metadata())
+        call.sendMessage(RevokeDeviceRequestProto(deviceId = deviceId))
+        call.halfClose()
+        call.request(1)
+    }
+
     fun saveDraft(roomId: String, text: String, replyId: String, replyUser: String, replyText: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = channel ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveDraftRequestProto, SaveDraftResponseProto>()
@@ -3434,4 +3648,186 @@ class RenameAIChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Renam
         }
         return RenameAIChatResponseProto(success, error)
     }
+}
+
+// ======= Auth V2 Marshallers =======
+
+class SignInRequestV2Marshaller : io.grpc.MethodDescriptor.Marshaller<SignInRequestV2Proto> {
+    override fun stream(v: SignInRequestV2Proto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.password.isNotEmpty()) cos.writeString(2, v.password)
+        if (v.deviceId.isNotEmpty() || v.deviceName.isNotEmpty()) {
+            val deviceBytes = java.io.ByteArrayOutputStream()
+            val deviceCos = com.google.protobuf.CodedOutputStream.newInstance(deviceBytes)
+            if (v.deviceId.isNotEmpty()) deviceCos.writeString(1, v.deviceId)
+            if (v.deviceName.isNotEmpty()) deviceCos.writeString(2, v.deviceName)
+            deviceCos.flush()
+            cos.writeByteArray(3, deviceBytes.toByteArray())
+        }
+        if (v.clientVersion.isNotEmpty()) cos.writeString(4, v.clientVersion)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): SignInRequestV2Proto = SignInRequestV2Proto()
+}
+
+class AuthResponseV2Marshaller : io.grpc.MethodDescriptor.Marshaller<AuthResponseV2Proto> {
+    override fun stream(v: AuthResponseV2Proto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): AuthResponseV2Proto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false
+        var message = ""
+        var accessToken = ""
+        var refreshToken = ""
+        var accessExpiresAt = 0L
+        var refreshExpiresAt = 0L
+        var userId = ""
+        var username = ""
+        var email = ""
+        var avatarUrl = ""
+        var bio = ""
+        var status = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                3 -> accessToken = cis.readString()
+                4 -> refreshToken = cis.readString()
+                5 -> accessExpiresAt = cis.readInt64()
+                6 -> refreshExpiresAt = cis.readInt64()
+                7 -> {
+                    val userLen = cis.readRawVarint32()
+                    val userBytes = ByteArray(userLen)
+                    cis.readRawBytes(userBytes)
+                    val userCis = com.google.protobuf.CodedInputStream.newInstance(userBytes)
+                    while (!userCis.isAtEnd) {
+                        val utag = userCis.readTag()
+                        if (utag == 0) break
+                        when (com.google.protobuf.WireFormat.getTagFieldNumber(utag)) {
+                            1 -> userId = userCis.readString()
+                            2 -> username = userCis.readString()
+                            3 -> email = userCis.readString()
+                            5 -> avatarUrl = userCis.readString()
+                            6 -> bio = userCis.readString()
+                            7 -> status = userCis.readString()
+                            else -> userCis.skipField(utag)
+                        }
+                    }
+                }
+                else -> cis.skipField(tag)
+            }
+        }
+        return AuthResponseV2Proto(
+            success = success, message = message,
+            accessToken = accessToken, refreshToken = refreshToken,
+            accessExpiresAt = accessExpiresAt, refreshExpiresAt = refreshExpiresAt,
+            userId = userId, username = username, email = email,
+            avatarUrl = avatarUrl, bio = bio, status = status
+        )
+    }
+}
+
+class SignUpRequestV2Marshaller : io.grpc.MethodDescriptor.Marshaller<SignUpRequestV2Proto> {
+    override fun stream(v: SignUpRequestV2Proto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.password.isNotEmpty()) cos.writeString(2, v.password)
+        if (v.email.isNotEmpty()) cos.writeString(3, v.email)
+        if (v.deviceId.isNotEmpty() || v.deviceName.isNotEmpty()) {
+            val deviceBytes = java.io.ByteArrayOutputStream()
+            val deviceCos = com.google.protobuf.CodedOutputStream.newInstance(deviceBytes)
+            if (v.deviceId.isNotEmpty()) deviceCos.writeString(1, v.deviceId)
+            if (v.deviceName.isNotEmpty()) deviceCos.writeString(2, v.deviceName)
+            deviceCos.flush()
+            cos.writeByteArray(4, deviceBytes.toByteArray())
+        }
+        if (v.clientVersion.isNotEmpty()) cos.writeString(5, v.clientVersion)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): SignUpRequestV2Proto = SignUpRequestV2Proto()
+}
+
+class RefreshTokenRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RefreshTokenRequestProto> {
+    override fun stream(v: RefreshTokenRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.refreshToken.isNotEmpty()) cos.writeString(1, v.refreshToken)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RefreshTokenRequestProto = RefreshTokenRequestProto()
+}
+
+class RefreshTokenResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<RefreshTokenResponseProto> {
+    override fun stream(v: RefreshTokenResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RefreshTokenResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var accessToken = ""
+        var refreshToken = ""
+        var accessExpiresAt = 0L
+        var refreshExpiresAt = 0L
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> accessToken = cis.readString()
+                2 -> refreshToken = cis.readString()
+                3 -> accessExpiresAt = cis.readInt64()
+                4 -> refreshExpiresAt = cis.readInt64()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RefreshTokenResponseProto(
+            accessToken = accessToken, refreshToken = refreshToken,
+            accessExpiresAt = accessExpiresAt, refreshExpiresAt = refreshExpiresAt
+        )
+    }
+}
+
+class SignOutRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SignOutRequestProto> {
+    override fun stream(v: SignOutRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.refreshToken.isNotEmpty()) cos.writeString(1, v.refreshToken)
+        if (v.allDevices) cos.writeBool(2, v.allDevices)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): SignOutRequestProto = SignOutRequestProto()
+}
+
+class SimpleAuthResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SimpleAuthResponseProto> {
+    override fun stream(v: SimpleAuthResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): SimpleAuthResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false
+        var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag()
+            if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return SimpleAuthResponseProto(success = success, message = message)
+    }
+}
+
+class RevokeDeviceRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RevokeDeviceRequestProto> {
+    override fun stream(v: RevokeDeviceRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.deviceId.isNotEmpty()) cos.writeString(1, v.deviceId)
+        cos.flush()
+        return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RevokeDeviceRequestProto = RevokeDeviceRequestProto()
 }
