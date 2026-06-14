@@ -126,7 +126,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
             Log.w(TAG, "Connection timeout reached!")
             if (!isFinishing) {
                 soundManager.stop()
-                Toast.makeText(this@CallActivity, "Не удалось соединиться", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@CallActivity, getString(R.string.call_connection_failed), Toast.LENGTH_SHORT).show()
                 CallManager.hangup()
                 CallManager.clearCurrentCall()
                 finish()
@@ -300,7 +300,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                 PeerConnection.IceConnectionState.FAILED -> {
                     Log.e(TAG, "WebRTC connection FAILED!")
                     runOnUiThread {
-                        Toast.makeText(this@CallActivity, "Ошибка соединения", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@CallActivity, getString(R.string.call_connection_error), Toast.LENGTH_SHORT).show()
                         CallManager.hangup()
                         finish()
                     }
@@ -429,7 +429,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
         if (requestCode == PERMISSION_CODE && hasPermissions()) {
             if (!isIncoming || isConference) initWebRtc()
         } else if (requestCode == PERMISSION_CODE) {
-            Toast.makeText(this, "Camera and Microphone permissions are required", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.camera_mic_permissions_required), Toast.LENGTH_LONG).show()
             finish()
         }
     }

@@ -813,4 +813,25 @@
     <!-- i18n: AgentListActivity -->
     <string name="tell_more_about_model">Tell me more about %s model</string>
 
+    <!-- i18n: NewChatActivity -->
+    <string name="uploading_images">Uploading images... (%1$d/%2$d)</string>
+
+    <!-- i18n: CallActivity -->
+    <string name="call_connection_failed">Connection failed</string>
+    <string name="call_connection_error">Connection error</string>
+
+    <!-- i18n: English hardcoded strings -->
+    <string name="failed_to_resize_image">Failed to resize image</string>
+    <string name="failed_to_read_image">Failed to read image</string>
+    <string name="failed_to_parse_response">Failed to parse server response</string>
+    <string name="location_permission_denied">Location permission denied</string>
+    <string name="camera_mic_permissions_required">Camera and Microphone permissions are required</string>
+    <string name="error_user_id_not_found">Error: User ID not found. Please wait or log in again.</string>
+    <string name="failed_to_terminate_session">Failed to terminate session</string>
+    <string name="failed_to_upload_file">Failed to upload file</string>
+    <string name="download_started">Download started</string>
+    <string name="theme_saved_failed_to_set">Theme saved but failed to set as current</string>
+    <string name="failed_to_start_recording">Failed to start recording</string>
+    <string name="default_model_saved">Default model saved</string>
+
 </resources>

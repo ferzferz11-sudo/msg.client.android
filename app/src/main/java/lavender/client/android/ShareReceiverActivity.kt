@@ -427,7 +427,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 Toast.makeText(this@ShareReceiverActivity, R.string.loading, Toast.LENGTH_SHORT).show()
                 imageUrl = uploadFile(sharedUri!!) ?: ""
                 if (imageUrl.isEmpty()) {
-                    Toast.makeText(this@ShareReceiverActivity, "Failed to upload file", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ShareReceiverActivity, getString(R.string.failed_to_upload_file), Toast.LENGTH_SHORT).show()
                     binding.sendButton.isEnabled = true
                     return@launch
                 }

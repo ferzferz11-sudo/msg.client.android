@@ -70,7 +70,7 @@ class VideoPlayerActivity : AppCompatActivity() {
 
             val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             downloadManager.enqueue(request)
-            Toast.makeText(this, "Download started", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.download_started), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }

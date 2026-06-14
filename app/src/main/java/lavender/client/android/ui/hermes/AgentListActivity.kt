@@ -203,7 +203,7 @@ class AgentListActivity : AppCompatActivity() {
         saveButton.setOnClickListener {
             val newModel = input.text.toString()
             prefs.edit().putString("default_model", newModel).apply()
-            Toast.makeText(this, "Default model saved", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.default_model_saved), Toast.LENGTH_SHORT).show()
         }
     }
 

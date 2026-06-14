@@ -222,7 +222,7 @@ class ThemesActivity : AppCompatActivity() {
         val queryId = grpcClient.getUserId() ?: username
         
         if (queryId.isEmpty()) {
-            Toast.makeText(this, "Error: User ID not found. Please wait or log in again.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.error_user_id_not_found), Toast.LENGTH_LONG).show()
             return
         }
 

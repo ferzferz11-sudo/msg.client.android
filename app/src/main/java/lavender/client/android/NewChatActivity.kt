@@ -1214,7 +1214,7 @@ class NewChatActivity : AppCompatActivity() {
     
     private fun sendSelectedImages() {
         val text = messageInput.text.toString().trim(); val urls = mutableListOf<String>(); var count = 0; val total = selectedImageUris.size
-        uploadProgressContainer.isVisible = true; uploadProgressText.text = "Загрузка изображений... (0/$total)"; uploadProgressBar.progress = 0
+        uploadProgressContainer.isVisible = true; uploadProgressText.text = getString(R.string.uploading_images, 0, total); uploadProgressBar.progress = 0
         selectedImageUris.forEach { uri ->
             val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
@@ -1226,7 +1226,7 @@ class NewChatActivity : AppCompatActivity() {
                         val rb = response.body.string(); if (!response.isSuccessful || rb.contains("404")) { runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Server error: 404") }; return }
                         val url = if (rb.contains("\"url\":")) try { org.json.JSONObject(rb).getString("url") } catch (_: Exception) { "" } else if (rb.startsWith("http")) rb else ""
                         if (url.isNotEmpty() && !url.contains("404")) urls.add(url); count++
-                        runOnUiThread { uploadProgressBar.progress = ((count.toFloat() / total) * 100).toInt(); uploadProgressText.text = "Загрузка изображений... ($count/$total)"
+                        runOnUiThread { uploadProgressBar.progress = ((count.toFloat() / total) * 100).toInt(); uploadProgressText.text = getString(R.string.uploading_images, count, total)
                             if (count == total) { uploadProgressContainer.isVisible = false; if (urls.isNotEmpty()) sendGalleryMessage(text, urls) else showToast("Upload failed") }
                         }
                     }

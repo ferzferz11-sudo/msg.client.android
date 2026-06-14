@@ -282,7 +282,7 @@ class EditProfileActivity : AppCompatActivity() {
                         if (resizedBytes == null) {
                             runOnUiThread {
                                 currentAvatarProgressBar?.isVisible = false
-                                Toast.makeText(this@EditProfileActivity, "Failed to resize image", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_resize_image), Toast.LENGTH_SHORT).show()
                             }
                             return@withContext
                         }
@@ -295,7 +295,7 @@ class EditProfileActivity : AppCompatActivity() {
                     if (thumbBytes.isEmpty()) {
                         runOnUiThread {
                             currentAvatarProgressBar?.isVisible = false
-                            Toast.makeText(this@EditProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_read_image), Toast.LENGTH_SHORT).show()
                         }
                         return@withContext
                     }
@@ -354,7 +354,7 @@ class EditProfileActivity : AppCompatActivity() {
                         } else {
                             runOnUiThread {
                                 currentAvatarProgressBar?.isVisible = false
-                                Toast.makeText(this@EditProfileActivity, "Failed to parse server response", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {

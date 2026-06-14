@@ -264,7 +264,7 @@ class SecurityActivity : AppCompatActivity() {
                 if (success) {
                     loadDevices()
                 } else {
-                    Toast.makeText(this, "Failed to terminate session", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.failed_to_terminate_session), Toast.LENGTH_SHORT).show()
                 }
             }
         }

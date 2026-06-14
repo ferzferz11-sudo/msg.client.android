@@ -143,7 +143,7 @@ class AudioRecordingView @JvmOverloads constructor(
 
             updateUI()
         } else {
-            android.widget.Toast.makeText(context, "Failed to start recording", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, getString(R.string.failed_to_start_recording), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 

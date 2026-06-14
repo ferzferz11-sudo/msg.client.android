@@ -447,7 +447,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                                 setResult(RESULT_OK)
                             } else {
                                 saveButton.isVisible = true
-                                Toast.makeText(this, "Theme saved but failed to set as current", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, getString(R.string.theme_saved_failed_to_set), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
