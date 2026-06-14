@@ -811,11 +811,16 @@ class ChatListActivity : AppCompatActivity() {
         // Fetch everything on background thread, apply once on UI
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // 1. Fetch chats from server
-                val fetchedChats = suspendCancellableCoroutine<List<ChatInfo>> { cont ->
-                    grpcClient.getChats(username, skipCache = skipCache) { chats ->
-                        if (cont.isActive) cont.resumeWith(Result.success(chats))
+                // 1. Fetch chats from server (with timeout to prevent hanging)
+                val fetchedChats = withTimeoutOrNull(10000L) {
+                    suspendCancellableCoroutine<List<ChatInfo>> { cont ->
+                        grpcClient.getChats(username, skipCache = skipCache) { chats ->
+                            if (cont.isActive) cont.resumeWith(Result.success(chats))
+                        }
                     }
+                } ?: emptyList()
+                if (fetchedChats.isEmpty() && skipCache) {
+                    Log.w("ChatListActivity", "getChats returned empty after timeout")
                 }
 
                 // 2. Get muted chats IDs (non-blocking fire-and-forget on IO)

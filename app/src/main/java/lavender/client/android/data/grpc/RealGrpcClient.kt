@@ -1184,7 +1184,9 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
-                    Log.w(TAG, "getChats: onClose error: ${status.code}")
+                    Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
+                    // Resume the coroutine with empty list on error to prevent hanging
+                    scope.launch(Dispatchers.Main) { callback(emptyList()) }
                 }
             }
         }, io.grpc.Metadata())
