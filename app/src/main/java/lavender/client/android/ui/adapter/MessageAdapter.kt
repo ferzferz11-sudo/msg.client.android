@@ -335,13 +335,14 @@ class MessageAdapter(
                         else -> if (isOutgoing) "📞↗️" else "📹"
                     }
                     
+                    val ctx = itemView.context
                     val statusText = when {
-                        isMissed -> if (isOutgoing) "Вызов не принят" else "Пропущенный вызов"
+                        isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
                         isCompleted -> {
                              val duration = rawText.substringAfter("(").substringBefore(")")
-                             if (isOutgoing) "Исходящий ($duration)" else "Входящий ($duration)"
+                             if (isOutgoing) ctx.getString(R.string.call_outgoing_with_duration, duration) else ctx.getString(R.string.call_incoming_with_duration, duration)
                         }
-                        else -> if (isOutgoing) "Исходящий видеозвонок" else "Входящий видеозвонок"
+                        else -> if (isOutgoing) ctx.getString(R.string.call_outgoing_video) else ctx.getString(R.string.call_incoming_video)
                     }
                     
                     messageText.text = "$icon $statusText"

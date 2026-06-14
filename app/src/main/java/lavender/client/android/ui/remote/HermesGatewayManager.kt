@@ -124,7 +124,7 @@ class HermesGatewayManager(private val context: Context) {
             Log.e(TAG, "Unknown host: ${sshHost}", e)
             return TunnelResult(
                 false,
-                "Не удалось найти хост «${sshHost}». Введите IP адрес (например: 13.140.25.249), а не SSH alias.",
+                context.getString(R.string.ssh_unknown_host, sshHost),
                 TunnelErrorType.UNKNOWN_HOST
             )
         } catch (e: JSchException) {
@@ -134,28 +134,28 @@ class HermesGatewayManager(private val context: Context) {
                 errMsg.contains("Auth fail", ignoreCase = true) ||
                 errMsg.contains("authentication", ignoreCase = true) ||
                 errMsg.contains("password", ignoreCase = true) ->
-                    TunnelResult(false, "Ошибка авторизации SSH. Проверьте логин и пароль.", TunnelErrorType.AUTH_FAILED)
+                    TunnelResult(false, context.getString(R.string.ssh_auth_error), TunnelErrorType.AUTH_FAILED)
                 errMsg.contains("Connection refused", ignoreCase = true) ->
-                    TunnelResult(false, "Соединение отклонено на порту $sshPort. Проверьте SSH хост и порт.", TunnelErrorType.CONNECTION_REFUSED)
+                    TunnelResult(false, context.getString(R.string.ssh_connection_refused, sshPort), TunnelErrorType.CONNECTION_REFUSED)
                 errMsg.contains("timeout", ignoreCase = true) ->
-                    TunnelResult(false, "Таймаут подключения к $sshHost:$sshPort. Проверьте хост и порт.", TunnelErrorType.TIMEOUT)
+                    TunnelResult(false, context.getString(R.string.ssh_timeout, sshHost, sshPort), TunnelErrorType.TIMEOUT)
                 errMsg.contains("connect", ignoreCase = true) ->
-                    TunnelResult(false, "Не удалось подключиться к $sshHost:$sshPort", TunnelErrorType.CONNECTION_REFUSED)
+                    TunnelResult(false, context.getString(R.string.ssh_connect_error, sshHost, sshPort), TunnelErrorType.CONNECTION_REFUSED)
                 else ->
-                    TunnelResult(false, "SSH ошибка: $errMsg", TunnelErrorType.GENERIC)
+                    TunnelResult(false, context.getString(R.string.ssh_error, errMsg), TunnelErrorType.GENERIC)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create tunnel: ${e.message}", e)
             val errMsg = e.message ?: ""
             return when {
                 errMsg.contains("already in use", ignoreCase = true) ->
-                    TunnelResult(false, "Локальный порт $localPort уже занят. Выберите другой порт.", TunnelErrorType.PORT_IN_USE)
+                    TunnelResult(false, context.getString(R.string.ssh_port_in_use, localPort), TunnelErrorType.PORT_IN_USE)
                 errMsg.contains("Address already in use", ignoreCase = true) ->
-                    TunnelResult(false, "Локальный порт $localPort уже занят. Выберите другой порт.", TunnelErrorType.PORT_IN_USE)
+                    TunnelResult(false, context.getString(R.string.ssh_port_in_use, localPort), TunnelErrorType.PORT_IN_USE)
                 errMsg.contains("UnknownHostException", ignoreCase = true) ->
-                    TunnelResult(false, "Не удалось найти хост «${sshHost}». Введите IP адрес.", TunnelErrorType.UNKNOWN_HOST)
+                    TunnelResult(false, context.getString(R.string.ssh_unknown_host, sshHost), TunnelErrorType.UNKNOWN_HOST)
                 else ->
-                    TunnelResult(false, "Ошибка: $errMsg", TunnelErrorType.GENERIC)
+                    TunnelResult(false, context.getString(R.string.ssh_error, errMsg), TunnelErrorType.GENERIC)
             }
         }
     }

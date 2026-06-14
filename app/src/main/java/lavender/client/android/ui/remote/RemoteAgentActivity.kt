@@ -47,18 +47,18 @@ class RemoteAgentActivity : AppCompatActivity(),
     private lateinit var taskTypes: List<Pair<String, String>>
 
     private val agentCommands = listOf(
-        CommandBottomSheet.CommandInfo("/help", "Показать справку по командам"),
-        CommandBottomSheet.CommandInfo("/status", "Статус агента и подключения"),
-        CommandBottomSheet.CommandInfo("/logs", "Показать логи сервера"),
-        CommandBottomSheet.CommandInfo("/deploy", "Деплой проекта"),
-        CommandBottomSheet.CommandInfo("/restart", "Перезапустить сервис"),
-        CommandBottomSheet.CommandInfo("/git pull", "Обновить код из Git"),
-        CommandBottomSheet.CommandInfo("/git status", "Статус Git репозитория"),
-        CommandBottomSheet.CommandInfo("/docker ps", "Список запущенных контейнеров"),
-        CommandBottomSheet.CommandInfo("/docker logs", "Логи контейнера"),
-        CommandBottomSheet.CommandInfo("/ps", "Список процессов"),
-        CommandBottomSheet.CommandInfo("/df", "Свободное место на диске"),
-        CommandBottomSheet.CommandInfo("/uptime", "Время работы сервера")
+        CommandBottomSheet.CommandInfo("/help", getString(R.string.cmd_help)),
+        CommandBottomSheet.CommandInfo("/status", getString(R.string.cmd_status)),
+        CommandBottomSheet.CommandInfo("/logs", getString(R.string.cmd_logs)),
+        CommandBottomSheet.CommandInfo("/deploy", getString(R.string.cmd_deploy)),
+        CommandBottomSheet.CommandInfo("/restart", getString(R.string.cmd_restart)),
+        CommandBottomSheet.CommandInfo("/git pull", getString(R.string.cmd_git_pull)),
+        CommandBottomSheet.CommandInfo("/git status", getString(R.string.cmd_git_status)),
+        CommandBottomSheet.CommandInfo("/docker ps", getString(R.string.cmd_docker_ps)),
+        CommandBottomSheet.CommandInfo("/docker logs", getString(R.string.cmd_docker_logs)),
+        CommandBottomSheet.CommandInfo("/ps", getString(R.string.cmd_ps)),
+        CommandBottomSheet.CommandInfo("/df", getString(R.string.cmd_df)),
+        CommandBottomSheet.CommandInfo("/uptime", getString(R.string.cmd_uptime))
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -166,7 +166,7 @@ class OwlChatActivity : AppCompatActivity() {
                 id = msgId,
                 content = text,
                 senderId = userId,
-                senderName = "Вы",
+                senderName = getString(R.string.you),
                 isCurrentUser = true
             )
 
@@ -254,7 +254,7 @@ class OwlChatActivity : AppCompatActivity() {
             id = userMsgId,
             content = text,
             senderId = userId,
-            senderName = "Вы",
+            senderName = getString(R.string.you),
             isCurrentUser = true
         )
 
@@ -444,7 +444,7 @@ class OwlChatActivity : AppCompatActivity() {
                             id = msgId,
                             content = msg.content,
                             senderId = userId,
-                            senderName = "Вы",
+                            senderName = getString(R.string.you),
                             isCurrentUser = true
                         )
                     } else {

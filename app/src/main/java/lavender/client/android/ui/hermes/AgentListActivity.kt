@@ -252,7 +252,7 @@ class AgentListActivity : AppCompatActivity() {
 
     private fun openChatWithModelMention(agent: AgentInfo) {
         val intent = Intent(this, HermesChatActivity::class.java)
-        intent.putExtra("PREFILL_MESSAGE", "Расскажи подробнее о модели ${agent.model}")
+        intent.putExtra("PREFILL_MESSAGE", getString(R.string.tell_more_about_model, agent.model))
         startActivity(intent)
     }
 }

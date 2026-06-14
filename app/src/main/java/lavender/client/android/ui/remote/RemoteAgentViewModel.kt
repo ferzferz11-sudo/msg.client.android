@@ -483,9 +483,9 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
                             }
                             if (update.error.isNotEmpty()) {
                                 if (isNotEmpty()) append("\n")
-                                append("Ошибка: ${update.error}")
+                                append(getApplication<Application>().getString(R.string.error_colon, update.error))
                             }
-                            if (isEmpty()) append("(no output)")
+                            if (isEmpty()) append(getApplication<Application>().getString(R.string.no_output))
                         }
                         val finalMsg = RemoteAgentMessage(
                             id = streamMsgId,

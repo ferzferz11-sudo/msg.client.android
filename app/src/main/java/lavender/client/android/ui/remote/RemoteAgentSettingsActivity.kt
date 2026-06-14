@@ -528,7 +528,7 @@ class RemoteAgentSettingsActivity : AppCompatActivity(),
                     }
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 

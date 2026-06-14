@@ -759,7 +759,7 @@ fun chatWithOwl(
                                 Log.w("OwlGrpc", "chatWithOwl: stream timeout after ${streamTimeoutMs}ms")
                                 hadError = true
                                 val errResp = OwlResponseProto(text = "", finished = true,
-                                    error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.")
+                                    error = getString(R.string.stream_timeout, streamTimeoutMs / 1000))
                                 _owlResponses.tryEmit(errResp)
                                 onResponse("", true, errResp.error)
                                 streamDone.complete(true)
@@ -790,7 +790,7 @@ fun chatWithOwl(
                     Log.w("OwlGrpc", "chatWithOwl: initial stream timeout after ${streamTimeoutMs}ms")
                     hadError = true
                     val errResp = OwlResponseProto(text = "", finished = true,
-                        error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.")
+                        error = getString(R.string.stream_timeout, streamTimeoutMs / 1000))
                     _owlResponses.tryEmit(errResp)
                     onResponse("", true, errResp.error)
                     streamDone.complete(true)

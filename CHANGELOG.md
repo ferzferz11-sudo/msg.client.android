@@ -1,5 +1,36 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.10] - 2026-06-13
+
+### i18n — завершение локализации
+- Вынесено ~30 оставшихся hardcoded строк в strings.xml + values-ru/strings.xml
+- **EditProfileActivity**: bio_saved, error_colon, avatar_updated, enter_both_passwords
+- **FullScreenImageActivity**: image_saved_to_gallery, save_image_error
+- **SplashActivity / SplashLoadingActivity**: lavender_messenger (вместо if/else)
+- **OwlGrpc / HermesGrpc**: stream_timeout (4 места)
+- **CallController**: conference_ended, call_ended
+- **MessageAdapter**: call_not_accepted, call_missed, call_outgoing_with_duration, call_incoming_with_duration, call_outgoing_video, call_incoming_video
+- **HermesGatewayManager**: ssh_auth_error, ssh_connection_refused, ssh_timeout, ssh_connect_error, ssh_error, ssh_port_in_use, ssh_unknown_host
+- **SecurityActivity**: sessions_terminated, sessions_terminate_error
+- **RemoteAgentActivity**: cmd_help, cmd_status, cmd_logs, cmd_deploy, cmd_restart, cmd_git_pull, cmd_git_status, cmd_docker_ps, cmd_docker_logs, cmd_ps, cmd_df, cmd_uptime
+- **RemoteAgentSettingsActivity**: cancel
+- **RemoteAgentManager**: service_not_started, disconnected_status
+- **HermesChatViewModel**: error_colon
+- **ProtoUtils**: was_online_just_now, was_online_minutes, was_online_hours, was_online_days, was_online_date
+- **LavenderMessagingService**: new_message, incoming_call, call_from, lavender_calls_channel, lavender_messages_channel
+- **AgentListActivity**: tell_more_about_model
+- Всего: ~50 новых строк в values/strings.xml + values-ru/strings.xml
+
+### Новое: Unit-тесты
+- **ErrorHandlerTest** — 11 тестов: маршрутизация ошибок по уровням (INFO/WARN/ERROR), CancellationException, UnknownHostException, ConnectException, SocketTimeoutException, SecurityException
+- **ChatAdapterTest** — 15 тестов: фильтрация чатов, Favorites offset, getItemCount, filterQuery
+- **ProtoUtilsTest** — уже был (7 тестов, proto round-trip)
+
+### Проверено (уже было реализовано)
+- **Streaming end-to-end** — работает (агент → сервер → клиент), проверено код-ревью
+- **OWL streaming тесты** — 19 тестов в owl_test.go, все проходят
+- **Кэширование чатов** — реализовано через Room DB (getChats с skipCache)
+
 ## [1.1.3.9] - 2026-06-13
 
 ### Новое: Espresso-тесты

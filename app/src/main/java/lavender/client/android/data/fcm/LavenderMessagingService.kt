@@ -34,7 +34,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
 
         // Извлекаем данные (приоритет payload из data, затем notification)
-        val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "Новое сообщение"
+        val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: getString(R.string.new_message)
         val body = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: ""
         val roomId = remoteMessage.data["room_id"] ?: "general"
 
@@ -82,7 +82,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Звонки Lavender",
+                getString(R.string.lavender_calls_channel),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 setSound(null, null) // Use custom ringtone or handle in activity
@@ -93,8 +93,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification_small)
-            .setContentTitle("Входящий звонок")
-            .setContentText("Звонит $senderId")
+            .setContentTitle(getString(R.string.incoming_call))
+            .setContentText(getString(R.string.call_from, senderId))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
@@ -114,7 +114,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Сообщения Lavender",
+                getString(R.string.lavender_messages_channel),
                 NotificationManager.IMPORTANCE_DEFAULT
             )
             notificationManager.createNotificationChannel(channel)

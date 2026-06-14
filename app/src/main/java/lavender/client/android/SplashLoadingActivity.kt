@@ -53,8 +53,7 @@ class SplashLoadingActivity : AppCompatActivity() {
         }
 
         val appNameText = TextView(this).apply {
-            val lang = prefs.getString("language", "ru")
-            text = if (lang == "en") "Lava" else "Лава"
+            text = getString(R.string.lavender_messenger)
             textSize = 28f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(resources.getColor(R.color.lavender_mist, null))

@@ -211,7 +211,7 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
                 val errorMsg = _messages.value.toMutableList()
                 if (errorMsg.isNotEmpty()) {
                     errorMsg[errorMsg.size - 1] = errorMsg.last().copy(
-                        content = "Ошибка: $error",
+                        content = getApplication<Application>().getString(R.string.error_colon, error),
                         isStreaming = false
                     )
                 }

@@ -217,7 +217,7 @@ class EditProfileActivity : AppCompatActivity() {
                 Log.d("EditProfile", "Update bio result: success=$success, message=$message")
                 runOnUiThread {
                     if (success) {
-                        Toast.makeText(this, "Био сохранено", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.bio_saved), Toast.LENGTH_SHORT).show()
                         initialBio = newBio
                         btnChangeBio.isVisible = false
                         // Reload profile to verify
@@ -232,7 +232,7 @@ class EditProfileActivity : AppCompatActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Ошибка: $message", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, getString(R.string.error_colon, message), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -330,7 +330,7 @@ class EditProfileActivity : AppCompatActivity() {
                                 runOnUiThread {
                                     currentAvatarProgressBar?.isVisible = false
                                     if (success) {
-                                        Toast.makeText(this@EditProfileActivity, "Аватар обновлен", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@EditProfileActivity, getString(R.string.avatar_updated), Toast.LENGTH_SHORT).show()
                                         // Update current full avatar URL
                                         currentFullAvatarUrl = fullUrl.ifEmpty { url }
                                         // Explicitly update cache to ensure other parts of app see it
@@ -526,7 +526,7 @@ class EditProfileActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                Toast.makeText(this@EditProfileActivity, "Введите оба пароля", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@EditProfileActivity, getString(R.string.enter_both_passwords), Toast.LENGTH_SHORT).show()
             }
         }
 

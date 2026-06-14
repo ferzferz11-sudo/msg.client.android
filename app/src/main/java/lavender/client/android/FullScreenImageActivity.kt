@@ -160,11 +160,11 @@ class FullScreenImageActivity : AppCompatActivity() {
 
                 saveImageToGallery(bitmap)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@FullScreenImageActivity, "Изображение сохранено в галерею", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@FullScreenImageActivity, getString(R.string.image_saved_to_gallery), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@FullScreenImageActivity, "Ошибка при сохранении: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@FullScreenImageActivity, getString(R.string.save_image_error, e.message), Toast.LENGTH_SHORT).show()
                 }
             }
         }

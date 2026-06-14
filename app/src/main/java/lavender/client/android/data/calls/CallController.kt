@@ -83,7 +83,7 @@ class CallController(
                         }
                     }
                     CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP, CallMessageProto.Type.END_CONFERENCE -> {
-                        val reason = if (signal.type == CallMessageProto.Type.END_CONFERENCE) "Конференция завершена" else "Звонок завершен"
+                        val reason = if (signal.type == CallMessageProto.Type.END_CONFERENCE) getString(R.string.conference_ended) else getString(R.string.call_ended)
                         listener.onCallTerminated(reason)
                     }
                     CallMessageProto.Type.JOIN_CONFERENCE, CallMessageProto.Type.LEAVE_CONFERENCE -> {

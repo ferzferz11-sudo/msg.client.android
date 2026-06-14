@@ -548,7 +548,6 @@
     <string name="status_disconnected">Статус: ❌ %s</string>
     <string name="status_not_running">Статус: не запущен (сгенерируйте токен или подключите шлюз)</string>
     <string name="status_check_error">Статус: ошибка проверки</string>
-    <string name="error_colon">Ошибка: %s</string>
     <string name="error_loading_settings">Ошибка загрузки настроек: %s</string>
     <string name="error_sending">Ошибка отправки: %s</string>
     <string name="commands">Команды</string>
@@ -642,7 +641,6 @@
     <string name="participants_already_joined">%d участников уже в звонке</string>
     <string name="join_conference_action">Присоединиться к конференции</string>
     <string name="lobby_title">Лобби конференции</string>
-    <string name="conference_ended">Конференция завершена</string>
     <string name="new_conference_format">Конференция %s</string>
     <string name="edit_topic">Редактировать тему</string>
     <string name="plus_5_min">+5 мин</string>
@@ -727,4 +725,88 @@
 
 
     <string name="gateway_disconnected">Шлюз отключён</string>
+
+    <!-- i18n: EditProfileActivity -->
+    <string name="bio_saved">Био сохранено</string>
+    <string name="error_colon">Ошибка: %s</string>
+    <string name="avatar_updated">Аватар обновлен</string>
+    <string name="enter_both_passwords">Введите оба пароля</string>
+
+    <!-- i18n: FullScreenImageActivity -->
+    <string name="image_saved_to_gallery">Изображение сохранено в галерею</string>
+    <string name="save_image_error">Ошибка при сохранении: %s</string>
+
+    <!-- i18n: OwlGrpc / HermesGrpc streaming timeout -->
+    <string name="stream_timeout">Таймаут ожидания ответа (%dс). Попробуйте ещё раз.</string>
+
+    <!-- i18n: CallController -->
+    <string name="conference_ended">Конференция завершена</string>
+    <string name="call_ended">Звонок завершен</string>
+
+    <!-- i18n: ProtoUtils online status -->
+    <string name="was_online_just_now">был(а) в сети только что</string>
+    <string name="was_online_minutes">был(а) в сети %d мин назад</string>
+    <string name="was_online_hours">был(а) в сети %d ч назад</string>
+    <string name="was_online_days">был(а) в сети %d дн назад</string>
+    <string name="was_online_date">был(а) в сети %s</string>
+
+    <!-- i18n: FCM notifications -->
+    <string name="new_message">Новое сообщение</string>
+    <string name="incoming_call">Входящий звонок</string>
+    <string name="call_from">Звонит %s</string>
+    <string name="lavender_calls_channel">Звонки Lavender</string>
+    <string name="lavender_messages_channel">Сообщения Lavender</string>
+
+    <!-- i18n: BuiltInThemes theme names -->
+    <string name="theme_graphite_dark">Графит темный</string>
+    <string name="theme_lavender_night">Лавандовый ночной</string>
+    <string name="theme_graphite_gold">Графит и золото</string>
+    <string name="theme_modern_blue">Современный синий</string>
+    <string name="theme_green_forest">Зеленый лес</string>
+    <string name="theme_cyber_mint">Кибер Мята</string>
+
+    <!-- i18n: SecurityActivity -->
+    <string name="sessions_terminated">Другие сеансы завершены</string>
+    <string name="sessions_terminate_error">Ошибка при завершении сеансов</string>
+
+    <!-- i18n: RemoteAgentManager -->
+    <string name="service_not_started">Сервис не запущен. Попробуйте позже.</string>
+
+    <!-- i18n: HermesGatewayManager SSH errors -->
+    <string name="ssh_auth_error">Ошибка авторизации SSH. Проверьте логин и пароль.</string>
+    <string name="ssh_connection_refused">Соединение отклонено на порту %d. Проверьте SSH хост и порт.</string>
+    <string name="ssh_timeout">Таймаут подключения к %1$s:%2$d. Проверьте хост и порт.</string>
+    <string name="ssh_connect_error">Не удалось подключиться к %1$s:%2$d</string>
+    <string name="ssh_error">SSH ошибка: %s</string>
+    <string name="ssh_port_in_use">Локальный порт %d уже занят. Выберите другой порт.</string>
+    <string name="ssh_unknown_host">Не удалось найти хост «%s». Введите IP адрес.</string>
+
+    <!-- i18n: RemoteAgentViewModel -->
+    <string name="no_output">(нет вывода)</string>
+
+    <!-- i18n: MessageAdapter call status -->
+    <string name="call_not_accepted">Вызов не принят</string>
+    <string name="call_missed">Пропущенный вызов</string>
+    <string name="call_outgoing_with_duration">Исходящий (%s)</string>
+    <string name="call_incoming_with_duration">Входящий (%s)</string>
+    <string name="call_outgoing_video">Исходящий видеозвонок</string>
+    <string name="call_incoming_video">Входящий видеозвонок</string>
+
+    <!-- i18n: RemoteAgentActivity commands -->
+    <string name="cmd_help">Показать справку по командам</string>
+    <string name="cmd_status">Статус агента и подключения</string>
+    <string name="cmd_logs">Показать логи сервера</string>
+    <string name="cmd_deploy">Деплой проекта</string>
+    <string name="cmd_restart">Перезапустить сервис</string>
+    <string name="cmd_git_pull">Обновить код из Git</string>
+    <string name="cmd_git_status">Статус Git репозитория</string>
+    <string name="cmd_docker_ps">Список запущенных контейнеров</string>
+    <string name="cmd_docker_logs">Логи контейнера</string>
+    <string name="cmd_ps">Список процессов</string>
+    <string name="cmd_df">Свободное место на диске</string>
+    <string name="cmd_uptime">Время работы сервера</string>
+
+    <!-- i18n: AgentListActivity -->
+    <string name="tell_more_about_model">Расскажи подробнее о модели %s</string>
+
 </resources>

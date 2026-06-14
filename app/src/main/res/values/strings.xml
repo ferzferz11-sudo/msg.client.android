@@ -562,7 +562,6 @@
     <string name="status_disconnected">Status: ❌ %s</string>
     <string name="status_not_running">Status: not running (generate token or connect gateway)</string>
     <string name="status_check_error">Status: check error</string>
-    <string name="error_colon">Error: %s</string>
     <string name="error_loading_settings">Error loading settings: %s</string>
     <string name="error_sending">Sending error: %s</string>
     <string name="commands">Commands</string>
@@ -650,7 +649,6 @@
     <string name="participants_already_joined">%d participants already joined</string>
     <string name="join_conference_action">Join Conference</string>
     <string name="lobby_title">Conference Lobby</string>
-    <string name="conference_ended">Conference ended</string>
     <string name="new_conference_format">Conference %s</string>
     <string name="edit_topic">Edit Topic</string>
     <string name="plus_5_min">+5 min</string>
@@ -727,9 +725,92 @@
     <string name="model_custom_input_hint">Введите ID модели</string>
 
     <!-- Log Viewer -->
-    <string name="logs_empty">Логи пусты</string>
+    <string name="logs_empty">Logs empty</string>
 
     <!-- Notifications -->
     <string name="update_preview_content">Update Preview Content</string>
+
+    <!-- i18n: EditProfileActivity -->
+    <string name="bio_saved">Bio saved</string>
+    <string name="error_colon">Error: %s</string>
+    <string name="avatar_updated">Avatar updated</string>
+    <string name="enter_both_passwords">Enter both passwords</string>
+
+    <!-- i18n: FullScreenImageActivity -->
+    <string name="image_saved_to_gallery">Image saved to gallery</string>
+    <string name="save_image_error">Save error: %s</string>
+
+    <!-- i18n: OwlGrpc / HermesGrpc streaming timeout -->
+    <string name="stream_timeout">Response timeout (%ds). Please try again.</string>
+
+    <!-- i18n: CallController -->
+    <string name="conference_ended">Conference ended</string>
+    <string name="call_ended">Call ended</string>
+
+    <!-- i18n: ProtoUtils online status -->
+    <string name="was_online_just_now">was online just now</string>
+    <string name="was_online_minutes">was online %d min ago</string>
+    <string name="was_online_hours">was online %d h ago</string>
+    <string name="was_online_days">was online %d d ago</string>
+    <string name="was_online_date">was online %s</string>
+
+    <!-- i18n: FCM notifications -->
+    <string name="new_message">New message</string>
+    <string name="incoming_call">Incoming call</string>
+    <string name="call_from">Calling %s</string>
+    <string name="lavender_calls_channel">Lavender Calls</string>
+    <string name="lavender_messages_channel">Lavender Messages</string>
+
+    <!-- i18n: BuiltInThemes theme names -->
+    <string name="theme_graphite_dark">Graphite Dark</string>
+    <string name="theme_lavender_night">Lavender Night</string>
+    <string name="theme_graphite_gold">Graphite &amp; Gold</string>
+    <string name="theme_modern_blue">Modern Blue</string>
+    <string name="theme_green_forest">Green Forest</string>
+    <string name="theme_cyber_mint">Cyber Mint</string>
+
+    <!-- i18n: SecurityActivity -->
+    <string name="sessions_terminated">Other sessions terminated</string>
+    <string name="sessions_terminate_error">Failed to terminate sessions</string>
+
+    <!-- i18n: RemoteAgentManager -->
+    <string name="service_not_started">Service not started. Try again later.</string>
+
+    <!-- i18n: HermesGatewayManager SSH errors -->
+    <string name="ssh_auth_error">SSH authentication error. Check login and password.</string>
+    <string name="ssh_connection_refused">Connection refused on port %d. Check SSH host and port.</string>
+    <string name="ssh_timeout">Connection timeout to %1$s:%2$d. Check host and port.</string>
+    <string name="ssh_connect_error">Failed to connect to %1$s:%2$d</string>
+    <string name="ssh_error">SSH error: %s</string>
+    <string name="ssh_port_in_use">Local port %d already in use. Choose another port.</string>
+    <string name="ssh_unknown_host">Unknown host "%s". Enter IP address.</string>
+
+    <!-- i18n: RemoteAgentViewModel -->
+    <string name="no_output">(no output)</string>
+
+    <!-- i18n: MessageAdapter call status -->
+    <string name="call_not_accepted">Call not accepted</string>
+    <string name="call_missed">Missed call</string>
+    <string name="call_outgoing_with_duration">Outgoing (%s)</string>
+    <string name="call_incoming_with_duration">Incoming (%s)</string>
+    <string name="call_outgoing_video">Outgoing video call</string>
+    <string name="call_incoming_video">Incoming video call</string>
+
+    <!-- i18n: RemoteAgentActivity commands -->
+    <string name="cmd_help">Show command help</string>
+    <string name="cmd_status">Agent and connection status</string>
+    <string name="cmd_logs">Show server logs</string>
+    <string name="cmd_deploy">Deploy project</string>
+    <string name="cmd_restart">Restart service</string>
+    <string name="cmd_git_pull">Pull code from Git</string>
+    <string name="cmd_git_status">Git repository status</string>
+    <string name="cmd_docker_ps">List running containers</string>
+    <string name="cmd_docker_logs">Container logs</string>
+    <string name="cmd_ps">Process list</string>
+    <string name="cmd_df">Disk free space</string>
+    <string name="cmd_uptime">Server uptime</string>
+
+    <!-- i18n: AgentListActivity -->
+    <string name="tell_more_about_model">Tell me more about %s model</string>
 
 </resources>

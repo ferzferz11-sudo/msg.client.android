@@ -200,7 +200,7 @@ class ThemesActivity : AppCompatActivity() {
         BuiltInThemes.all.map { ThemeMappers.toProto(it) }.forEach { theme ->
             val localizedName = when (theme.id) {
                 "dark"                  -> getString(R.string.dark_theme)
-                "builtin_lavender_dark" -> "Лавандовый ночной"
+                "builtin_lavender_dark" -> getString(R.string.theme_lavender_night)
                 "builtin_dark_graphite" -> getString(R.string.theme_dark_graphite)
                 "builtin_green"         -> getString(R.string.theme_template_green)
                 "builtin_blue"          -> getString(R.string.theme_template_blue)
