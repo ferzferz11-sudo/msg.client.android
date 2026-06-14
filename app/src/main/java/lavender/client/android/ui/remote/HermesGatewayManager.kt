@@ -8,6 +8,7 @@ import com.jcraft.jsch.Session
 import com.jcraft.jsch.JSchException
 import java.net.UnknownHostException
 import java.util.Properties
+import lavender.client.android.R
 
 /**
  * HermesGatewayManager — управление SSH туннелем для подключения Remote Agent

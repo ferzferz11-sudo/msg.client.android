@@ -77,7 +77,7 @@ object AppLog {
     fun clear() = synchronized(logs) { logs.clear() }
 
     fun getLogsText(): String = synchronized(logs) {
-        if (logs.isEmpty()) return@synchronized context.getString(R.string.logs_empty)
+        if (logs.isEmpty()) return@synchronized "Logs empty"
         buildString {
             logs.forEach { entry ->
                 appendLine(entry.toDisplayString())

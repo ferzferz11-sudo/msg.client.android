@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
+import lavender.client.android.R
 
 /**
  * RemoteAgentManager — singleton для привязки UI к RemoteAgentService.

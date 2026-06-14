@@ -1,6 +1,7 @@
 package lavender.client.android.data.proto
 
 import com.google.protobuf.Timestamp
+import lavender.client.android.R
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 
