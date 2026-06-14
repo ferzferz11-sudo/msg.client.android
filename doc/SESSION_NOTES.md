@@ -1,35 +1,44 @@
-# Заметки сессии 5 — 2026-06-14
+# Заметки сессии 7 — 2026-06-14
 
 ## Что сделано
 
-### Auth widgets
-- Создано 3 виджета: ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
-- ServerAuthBottomSheet: лого + имя сервера + адрес + health индикатор + кнопки Войти/Регистрация
-- LoginBottomSheet: username/password + кнопки
-- RegisterBottomSheet: username/password/email + кнопки
-- Health check через http://host:8082/health
+### Dev server
+- Был inactive dead, запущен на порту 50052 (gRPC), 8083 (HTTP)
+- Systemd unit упрощён: только `Environment=APP_ENV=dev`
+- Логи доступны: http://13.140.25.249/server-logs-dev
 
-### Server switch fix
-- Убран преждевременный setServerAddress до успешного входа
-- Добавлен isActiveLoadingChats флаг
-- Добавлен isTransitioning флаг для auth flow
-- startSync() останавливается при смене сервера
+### Android auth cosmetics
+- `app_version_format`: "client" → "app" (EN), "клиент" → "приложение" (RU)
+- Status indicator — только кружок слева от названия сервера (без текста)
+- Drag handle добавлен во все шторки входа
+- Убраны горизонтальные dividers из шторок входа
 
-### Имена серверов
-- prod: "Lava Germany"
-- dev: "Lava Germany dev"
+### Android code cleanup
+- `showAuthChoiceDialog()` — убран `getDefaultServer()`, захардожен дефолт
+- `onResume()` — убран `justReturnedFromServersActivity` guard
+- Profile menu — скрыта кнопка `actionServers`
+- `AppDatabase` — `fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)`
+- `ServersActivity` оставлена для управления списком серверов
 
-### i18n
-- Добавлены строки: server_default_name, app_version_format
-- "Lava: app Android v1.1.3.11" / "Лава: приложение Android v1.1.3.11"
-- Исправлен захардкенный "Lava Germany" на getString(R.string.server_default_name)
-
-### Документация
-- Обновлены все промты и документы
-- Удалён устаревший код из INTEGRATION_SESSION.md
-
-## Известные проблемы
-- Мерцание тулбара после входа через серверы (не может подключиться + кружок перезагрузки)
+### БД prod
+- UNIQUE constraint на `user_devices(user_id, device_id)` существует
+- Дубликатов нет
+- Ошибка 42P10 была из-за старого бинарника prod сервера
 
 ## Коммиты
-- 7d9769f, bc0e701, ee4d44d, 0382343, 502154b, eba9459, f312a62, d668c20
+- `c64856b` — cosmetics: auth bottom sheets UI fixes
+- `13d6045` — fix: restore TextView import in ServerAuthBottomSheet
+- `36cb2a6` — fix: replace deprecated fallbackToDestructiveMigration
+- `689796e` — fix: auth bottom sheets - drag handle, status indicator, remove dividers
+- `bcf8cf2` — fix: replace deprecated fallbackToDestructiveMigrationOnDowngrade with dropAllTables param
+
+## Известные проблемы
+- Bearer token не подставляется в gRPC вызовы (Android) — нужен ClientInterceptor
+- Нет token refresh (Android) — нужен интерцептор для авто-refresh при 401
+- ON CONFLICT 42P10 на prod — нужен редеплой prod сервера
+
+## Следующие шаги
+1. Bearer token interceptor (Android)
+2. Token refresh interceptor (Android)
+3. Тестирование JWT auth на dev
+4. Редеплой prod сервера
