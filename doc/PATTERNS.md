@@ -7,6 +7,14 @@
 
 ## Паттерны
 
+### Auth widgets pattern (v1.1.3.11)
+Аутентификация вынесена в отдельные виджеты:
+- `LoginBottomSheet` — шторка входа (username/password, login/cancel callbacks)
+- `RegisterBottomSheet` — шторка регистрации (username/password/email, register/cancel callbacks)
+- Оба виджета наследуют `StandardBottomSheet`
+- Оба автоматически скрывают server selector (сервер уже выбран)
+- Используются в: `ChatListActivity`, `ServersActivity`, `AuthChoiceDialog`
+
 ### Server switch pattern (v1.1.3.11)
 При смене сервера через ServersActivity:
 - НЕ сохранять `serverAddress` в CredentialStore до успешного входа
