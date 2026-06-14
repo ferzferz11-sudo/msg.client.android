@@ -63,7 +63,7 @@ class OwlSettingsActivity : AppCompatActivity() {
     private var freeModels: List<FreeModelInfoProto> = emptyList()
 
     // "Own model" option — always available with custom key
-    private val ownModelOption = getString(R.string.own_model_option)
+    private lateinit var ownModelOption: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,6 +73,7 @@ class OwlSettingsActivity : AppCompatActivity() {
         chatId = intent.getStringExtra("chatId") ?: ""
         sessionId = intent.getStringExtra("sessionId") ?: ""
         isHermes = intent.getBooleanExtra("isHermes", false)
+        ownModelOption = getString(R.string.own_model_option)
 
         initViews()
         setupToolbar()
