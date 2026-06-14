@@ -100,6 +100,7 @@ class ChatListActivity : AppCompatActivity() {
     private val chats = mutableListOf<ChatInfo>()
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var isChatsLoaded = false // prevent reload flicker on resume
+    private var isLoadingChats = false // prevent concurrent loadChats from launcher + onResume
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
     private var unreadNotifCount = 0 // badge count for server notifications
     private var shouldShowAiSheetOnResume = false // flag to reopen AI sheet after returning from AI activity
@@ -761,11 +762,19 @@ class ChatListActivity : AppCompatActivity() {
             return
         }
 
+        // Prevent concurrent loads
+        if (isLoadingChats) {
+            Log.d("ChatListActivity", "loadChats: already loading, skipping")
+            return
+        }
+
         // Don't hammer the server if we're not connected — wait for READY status
         if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
             Log.d("ChatListActivity", "loadChats: not connected (${grpcClient.connectionStatus.value}), skipping")
             return
         }
+
+        isLoadingChats = true
 
         Log.d("ChatListActivity", "Loading chats for $username (skipCache: $skipCache)")
 
@@ -885,6 +894,8 @@ class ChatListActivity : AppCompatActivity() {
                 } catch (_: CancellationException) {
                     // Activity destroyed during error handling
                 }
+            } finally {
+                isLoadingChats = false
             }
         }
     }
@@ -1168,6 +1179,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun startSync() {
         syncJob?.cancel()
+        val syncServerAddress = CredentialStore.getServerAddress(this) // capture at start
         syncJob = lifecycleScope.launch(Dispatchers.IO) {
             while (true) {
                 delay(5000) // Poll every 5 seconds
@@ -1176,6 +1188,13 @@ class ChatListActivity : AppCompatActivity() {
                 if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
                     delay(1000)
                     continue
+                }
+
+                // Cancel if server changed
+                val currentServer = CredentialStore.getServerAddress(this@ChatListActivity)
+                if (currentServer != syncServerAddress) {
+                    Log.d("ChatListActivity", "startSync: server changed ($syncServerAddress → $currentServer), stopping")
+                    break
                 }
 
                 val currentUserId = GrpcClient.getUserId() ?: ""
@@ -1336,9 +1355,9 @@ class ChatListActivity : AppCompatActivity() {
                 delay(500)
                 waited += 500
                 if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
-                    if (!isChatsLoaded) {
+                    if (!isChatsLoaded && !isLoadingChats) {
                         loadChats()
-                    } else {
+                    } else if (!isLoadingChats) {
                         // Always refresh when returning from another activity (e.g. HermesChatActivity
                         // may have created a new session that should appear in the list)
                         loadChats(skipCache = true)
