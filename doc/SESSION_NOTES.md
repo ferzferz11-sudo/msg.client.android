@@ -1,44 +1,37 @@
-# Заметки сессии 7 — 2026-06-14
+# Заметки сессии 8 — 2026-06-14
 
 ## Что сделано
 
-### Dev server
-- Был inactive dead, запущен на порту 50052 (gRPC), 8083 (HTTP)
-- Systemd unit упрощён: только `Environment=APP_ENV=dev`
-- Логи доступны: http://13.140.25.249/server-logs-dev
+### BearerTokenInterceptor (Android)
+- Создан `data/grpc/BearerTokenInterceptor.kt`
+- Автоматически подставляет JWT Bearer token во все gRPC вызовы
+- Пропускает AuthService (нет токена), Chat stream (legacy auth), вызовы без JWT (v1)
+- Подключён в `RealGrpcClient.connect()` через `builder.intercept()`
 
-### Android auth cosmetics
-- `app_version_format`: "client" → "app" (EN), "клиент" → "приложение" (RU)
-- Status indicator — только кружок слева от названия сервера (без текста)
-- Drag handle добавлен во все шторки входа
-- Убраны горизонтальные dividers из шторок входа
+### Proactive Token Refresh (Android)
+- `startTokenRefresh()` — проверка каждые 60с
+- `performTokenRefresh()` — синхронный refresh через suspendCancellableCoroutine
+- Остановка при logout / FORCE_LOGOUT
 
-### Android code cleanup
-- `showAuthChoiceDialog()` — убран `getDefaultServer()`, захардожен дефолт
-- `onResume()` — убран `justReturnedFromServersActivity` guard
-- Profile menu — скрыта кнопка `actionServers`
-- `AppDatabase` — `fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)`
-- `ServersActivity` оставлена для управления списком серверов
+### Per-server token validation
+- `CredentialStore.setJwtServerAddress()` / `getJwtServerAddress()` / `clearJwtServerAddress()`
+- `initFromPrefs()` — проверка совпадения сервера
+- `login()` — clearTokens() перед новым логином
+- `clearTokens()` — также очищает jwt_server_address
 
-### БД prod
-- UNIQUE constraint на `user_devices(user_id, device_id)` существует
-- Дубликатов нет
-- Ошибка 42P10 была из-за старого бинарника prod сервера
+### Совместимость
+- Полная совместимость с prod сервером (v1, без JWT)
+- Интерцептор является no-op если нет JWT токена
+- Legacy flow (Chat stream с password) не затронут
 
 ## Коммиты
-- `c64856b` — cosmetics: auth bottom sheets UI fixes
-- `13d6045` — fix: restore TextView import in ServerAuthBottomSheet
-- `36cb2a6` — fix: replace deprecated fallbackToDestructiveMigration
-- `689796e` — fix: auth bottom sheets - drag handle, status indicator, remove dividers
-- `bcf8cf2` — fix: replace deprecated fallbackToDestructiveMigrationOnDowngrade with dropAllTables param
+- (pending)
 
 ## Известные проблемы
-- Bearer token не подставляется в gRPC вызовы (Android) — нужен ClientInterceptor
-- Нет token refresh (Android) — нужен интерцептор для авто-refresh при 401
-- ON CONFLICT 42P10 на prod — нужен редеплой prod сервера
+- Нет
 
 ## Следующие шаги
-1. Bearer token interceptor (Android)
-2. Token refresh interceptor (Android)
-3. Тестирование JWT auth на dev
-4. Редеплой prod сервера
+1. Тестирование на prod (v1 legacy) — убедиться что ничего не сломалось
+2. Тестирование на dev (v2 JWT) — полный цикл: регистрация, вход, refresh, logout
+3. Тест server switch — prod ↔ dev
+4. Редеплой prod сервера (после тестирования)

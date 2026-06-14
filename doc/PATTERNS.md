@@ -24,6 +24,15 @@
 - Использовать флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect в `onResume()`
 - Анти-pattern: `CredentialStore.setServerAddress()` до `SessionManager.login()` → двойной вход
 
+### Bearer Token Interceptor pattern (v1.1.3.12)
+Автоматическая подстановка JWT Bearer token во все gRPC вызовы:
+- `BearerTokenInterceptor` подключается к `OkHttpChannelBuilder.intercept()`
+- Пропускает AuthService (нет токена), Chat stream (legacy password auth)
+- No-op если `AuthManager.getBearerToken() == null` (совместимость с v1)
+- Token refresh — proactive, каждые 60с, за 5 минут до истечения
+- Токены привязаны к серверу через `jwt_server_address` в CredentialStore
+- При смене сервера → `clearTokens()` → старые токены удалены
+
 ### ChatWidget reuse pattern
 При использовании ChatWidget в кастомных Activity ОБЯЗАТЕЛЬНО:
 - Добавить TextWatcher для видимости send button

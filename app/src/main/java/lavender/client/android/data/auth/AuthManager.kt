@@ -173,6 +173,8 @@ object AuthManager {
             remove(KEY_AUTH_DEVICE_ID)
             putString(KEY_AUTH_METHOD, "")
         }
+        // Clear the JWT server tracking so tokens aren't associated with any server
+        CredentialStore.clearJwtServerAddress(context)
         Log.d(TAG, "JWT tokens cleared")
     }
 

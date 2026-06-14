@@ -1,8 +1,31 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.12 (dev)
-**Обновлено:** 2026-06-14 (сессия 7)
+**Версия:** v1.1.3.12
+**Обновлено:** 2026-06-14 (сессия 8)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.12 — Bearer Token Interceptor + Token Refresh + Per-server validation
+
+### Новое: Bearer Token Interceptor
+- ✅ **BearerTokenInterceptor** — ClientInterceptor для автоматической подстановки JWT Bearer token
+- ✅ Пропускает AuthService и Chat stream (legacy auth)
+- ✅ No-op при отсутствии токена (совместимость с v1 серверами)
+
+### Новое: Proactive Token Refresh
+- ✅ **startTokenRefresh()** — периодическая проверка каждые 60с
+- ✅ **performTokenRefresh()** — синхронный refresh через suspendCancellableCoroutine
+- ✅ Остановка при logout / FORCE_LOGOUT
+
+### Новое: Per-server token validation
+- ✅ **CredentialStore.setJwtServerAddress()** / **getJwtServerAddress()** / **clearJwtServerAddress()**
+- ✅ **initFromPrefs()** — проверка совпадения сервера при восстановлении сессии
+- ✅ **login()** — clearTokens() перед новым логином
+- ✅ **clearTokens()** — также очищает jwt_server_address
+
+### Коммиты
+- (pending)
 
 ---
 
@@ -67,14 +90,13 @@
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] **Bearer token interceptor** — подставить Bearer token во все gRPC вызовы (getChats, getHistory, sendMessage, etc.)
-- [ ] **Token refresh interceptor** — автоматический refresh при 401 от сервера
 - [ ] **Тестирование JWT auth на dev** — регистрация, вход, refresh token, logout
 - [ ] **Протестировать server switch** — prod ↔ dev, проверить что токены не конфликтуют
+- [ ] **Редеплой prod сервера** — ON CONFLICT 42P10 ошибка была из-за старого бинарника
 
 ### Средний приоритет
-- [ ] **Обновить CHANGELOG.md** — Android
-- [ ] **ON CONFLICT на prod БД** — UNIQUE constraint есть, но ошибка 42P10 была в логах. Нужно пересобрать и деплоить prod сервер.
+- [ ] **Тесты для /info endpoint** — unit-тесты для http_server.go
+- [ ] **Bearer token в Chat stream** — вместо password в первом сообщении (v1.2.1.x)
 
 ### Низкий приоритет
 - [ ] Qdrant + CLIP (production RAG) — на стороне сервера

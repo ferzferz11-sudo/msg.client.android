@@ -282,6 +282,12 @@ object RealGrpcClient {
             // Max idle — allow server to clean up (server MaxConnectionAge = 30min)
             builder.maxInboundMessageSize(64 * 1024 * 1024)
 
+            // Bearer token interceptor — attaches JWT to all calls (skipped for AuthService + Chat stream)
+            val appCtx = context?.applicationContext
+            if (appCtx != null) {
+                builder.intercept(BearerTokenInterceptor(appCtx))
+            }
+
             channel?.shutdownNow()
             val newChannel = builder.build()
             channel = newChannel

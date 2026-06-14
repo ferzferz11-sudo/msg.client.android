@@ -49,6 +49,7 @@ object SessionManager {
         scope.launch {
             GrpcClient.authStatus.collect { status ->
                 if (status == "FORCE_LOGOUT") {
+                    stopTokenRefresh()
                     _session.value = UserSession() // Clear session state
                     _logoutEvent.emit(Unit)
                 }
@@ -94,6 +95,88 @@ object SessionManager {
         deviceUpdateJob = null
     }
 
+    /**
+     * Starts periodic JWT token refresh check.
+     * Runs every 60 seconds. If the access token is about to expire
+     * (within 5 minutes), silently refreshes it using the refresh token.
+     *
+     * Only active when user is authenticated via JWT (v2).
+     * For legacy v1 auth this is a no-op.
+     */
+    private var tokenRefreshJob: Job? = null
+
+    fun startTokenRefresh(context: Context) {
+        tokenRefreshJob?.cancel()
+        tokenRefreshJob = scope.launch {
+            while (isActive) {
+                try {
+                    if (AuthManager.isJwtAuthenticated(context) && AuthManager.needsRefresh(context)) {
+                        Log.d("SessionManager", "Proactive token refresh triggered")
+                        performTokenRefresh(context)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("SessionManager", "Token refresh check error: ${e.message}")
+                }
+                delay(60_000) // check every 60 seconds
+            }
+        }
+    }
+
+    fun stopTokenRefresh() {
+        tokenRefreshJob?.cancel()
+        tokenRefreshJob = null
+    }
+
+    /**
+     * Performs a synchronous token refresh using the stored refresh token.
+     * Called from the periodic refresh job.
+     */
+    private suspend fun performTokenRefresh(context: Context) {
+        val refreshToken = AuthManager.getRefreshToken(context) ?: return
+        Log.d("SessionManager", "Refreshing JWT token...")
+
+        val result = suspendCancellableCoroutine<RefreshTokenResponseProto?> { cont ->
+            GrpcClient.refreshToken(refreshToken) { response, error ->
+                if (cont.isActive) {
+                    if (response != null && response.accessToken.isNotEmpty()) {
+                        cont.resumeWith(Result.success(response))
+                    } else {
+                        Log.w("SessionManager", "Token refresh failed: $error")
+                        cont.resumeWith(Result.success(null))
+                    }
+                }
+            }
+        }
+
+        if (result != null && result.accessToken.isNotEmpty()) {
+            // Store new token pair
+            val currentUsername = AuthManager.getUsername(context)
+            val currentUserId = AuthManager.getUserId(context)
+            val currentDeviceId = AuthManager.getDeviceId(context)
+
+            AuthManager.storeTokens(
+                context = context,
+                accessToken = result.accessToken,
+                refreshToken = result.refreshToken,
+                accessExpiresAt = result.accessExpiresAt,
+                refreshExpiresAt = result.refreshExpiresAt,
+                userId = currentUserId,
+                username = currentUsername,
+                deviceId = currentDeviceId
+            )
+
+            // Update session state
+            _session.value = _session.value.copy(
+                accessToken = result.accessToken,
+                refreshToken = result.refreshToken
+            )
+
+            Log.d("SessionManager", "Token refreshed successfully, new access_expires=${result.accessExpiresAt}")
+        }
+    }
+
     private fun syncDeviceToServer(context: Context) {
         val currentSession = _session.value
         if (currentSession.isLoggedIn) {
@@ -128,23 +211,33 @@ object SessionManager {
         if (username.isNotEmpty()) {
             // Check if we have JWT tokens
             if (AuthManager.isJwtAuthenticated(context)) {
-                Log.d("SessionManager", "Restoring JWT session for $username")
-                val jwtUserId = AuthManager.getUserId(context)
-                val jwtUsername = AuthManager.getUsername(context)
-                val deviceId = AuthManager.getDeviceId(context)
+                // Validate that the JWT tokens were issued for this server
+                val jwtServer = CredentialStore.getJwtServerAddress(context)
+                if (jwtServer.isNotEmpty() && jwtServer != serverAddress) {
+                    // Server has changed — clear stale JWT tokens
+                    Log.w("SessionManager", "Server changed (was=$jwtServer, now=$serverAddress), clearing stale JWT tokens")
+                    AuthManager.clearTokens(context)
+                    updateSession(username = username, password = password, userId = userId, email = email)
+                    _session.value = _session.value.copy(authMethod = AuthManager.getAuthMethod(context))
+                } else {
+                    Log.d("SessionManager", "Restoring JWT session for $username (server=$jwtServer)")
+                    val jwtUserId = AuthManager.getUserId(context)
+                    val jwtUsername = AuthManager.getUsername(context)
+                    val deviceId = AuthManager.getDeviceId(context)
 
-                updateSession(
-                    username = jwtUsername.ifEmpty { username },
-                    password = password,
-                    userId = jwtUserId.ifEmpty { userId },
-                    email = email
-                )
-                _session.value = _session.value.copy(
-                    accessToken = AuthManager.getAccessToken(context) ?: "",
-                    refreshToken = AuthManager.getRefreshToken(context) ?: "",
-                    authMethod = "v2_jwt",
-                    deviceId = deviceId
-                )
+                    updateSession(
+                        username = jwtUsername.ifEmpty { username },
+                        password = password,
+                        userId = jwtUserId.ifEmpty { userId },
+                        email = email
+                    )
+                    _session.value = _session.value.copy(
+                        accessToken = AuthManager.getAccessToken(context) ?: "",
+                        refreshToken = AuthManager.getRefreshToken(context) ?: "",
+                        authMethod = "v2_jwt",
+                        deviceId = deviceId
+                    )
+                }
             } else {
                 updateSession(username = username, password = password, userId = userId, email = email)
                 _session.value = _session.value.copy(authMethod = AuthManager.getAuthMethod(context))
@@ -201,6 +294,11 @@ object SessionManager {
     }
 
     fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {
+        // Clear any stale JWT tokens before starting a new login.
+        // This prevents token conflicts when switching between servers (prod/dev)
+        // or when the previous session's tokens are expired.
+        AuthManager.clearTokens(context)
+
         // Try AuthService v2 (JWT) first
         loginV2(context, username, pass, serverAddress, register, email, onComplete)
     }
@@ -311,9 +409,15 @@ object SessionManager {
                         authMethod = "v2_jwt"
                     )
 
+                    // Track which server issued these JWT tokens
+                    CredentialStore.setJwtServerAddress(context, serverAddress)
+
                     try { syncFcmToken(context, username) } catch (e: Exception) { }
 
                     GrpcClient.getUserAvatar(username) { _ -> }
+
+                    // Start proactive token refresh for JWT sessions
+                    startTokenRefresh(context)
 
                     onComplete("SUCCESS")
                 } else {
@@ -426,6 +530,9 @@ object SessionManager {
         Log.d("SessionManager", "Logging out, clearing credentials but keeping username")
         val currentUsername = _session.value.username
         _session.value = UserSession(username = currentUsername)
+
+        // Stop token refresh
+        stopTokenRefresh()
 
         // Clear JWT tokens
         AuthManager.clearTokens(context)

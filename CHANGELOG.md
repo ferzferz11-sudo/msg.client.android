@@ -1,5 +1,28 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.12] - 2026-06-14
+
+### Новое: Bearer Token Interceptor
+- **BearerTokenInterceptor** — автоматически подставляет JWT Bearer token во все gRPC вызовы (кроме AuthService и Chat stream)
+- Работает только при JWT v2 аутентификации — для legacy v1 (prod сервер) является no-op
+- Полная совместимость с серверами v1 (без JWT)
+
+### Новое: Proactive Token Refresh
+- Автоматическая проверка истечения access token каждые 60 секунд
+- Тихий refresh через `AuthService/RefreshToken` за 5 минут до истечения
+- Корректная остановка при logout / FORCE_LOGOUT
+
+### Новое: Per-server token validation
+- Токены привязаны к серверу, который их выдал (`jwt_server_address`)
+- При смене сервера через ServersActivity — старые токены автоматически очищаются
+- При восстановлении сессии из prefs — проверка совпадения сервера
+
+### Исправлено
+- `SessionManager.login()` — очистка старых JWT токенов перед новым логином (предотвращает конфликты при смене сервера)
+- `AuthManager.clearTokens()` — также очищает `jwt_server_address`
+
+---
+
 ## [1.1.3.11] - 2026-06-14
 
 ### Исправлено
