@@ -4,16 +4,13 @@ import android.content.Context
 import android.util.Log
 import io.grpc.CallOptions
 import io.grpc.ClientCall
-import io.grpc.ClientInterceptor
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import lavender.client.android.data.auth.AuthManager
 import lavender.client.android.data.proto.*
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * ProfileClient — client for ProfileService v2 (JWT Bearer auth).
@@ -27,25 +24,17 @@ import kotlin.coroutines.resumeWithException
 object ProfileClient {
     private const val TAG = "ProfileClient"
 
-    /**
-     * Check if the server supports ProfileService v2.
-     * Returns true when server info indicates profile >= "2.0".
-     */
-    fun isProfileV2Supported(): Boolean {
-        val serverInfo = RealGrpcClient.serverVersion.value
-        // Parse from SERVER_INFO message which includes full info
-        // Also check via cached service versions from /info endpoint
-        return serviceProfileVersion >= "2.0"
-    }
-
     /** Cached ProfileService version string from /info endpoint. */
     @Volatile
     var serviceProfileVersion: String = ""
         internal set
 
+    /** Check if the server supports ProfileService v2. */
+    fun isProfileV2Supported(): Boolean = serviceProfileVersion >= "2.0"
+
     /**
      * Fetch the /info endpoint to determine service versions.
-     * Should be called once after connecting to a server.
+     * Called automatically from RealGrpcClient.connect().
      */
     suspend fun fetchServerInfo(context: Context, serverAddress: String, port: Int = 8083) {
         withContext(Dispatchers.IO) {
@@ -58,7 +47,6 @@ object ProfileClient {
                 val response = connection.inputStream.bufferedReader().readText()
                 connection.disconnect()
 
-                // Parse JSON: {"services":{"profile":"2.0",...},"version":"1.2.1.0"}
                 val json = org.json.JSONObject(response)
                 val services = json.optJSONObject("services")
                 if (services != null) {
@@ -67,51 +55,37 @@ object ProfileClient {
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to fetch /info: ${e.message}")
-                serviceProfileVersion = "" // unknown → will use fallback
+                serviceProfileVersion = ""
             }
         }
     }
 
     // ======= ProfileService v2 gRPC calls =======
-    // All use manually constructed gRPC calls with BearerTokenInterceptor auth.
-
-    private fun <ReqT, RespT> createUnaryCall(
-        methodFullPath: String,
-        request: ReqT,
-        responseClass: Class<RespT>
-    ): Pair<MethodDescriptor<ReqT, RespT>, ReqT> {
-        val method = MethodDescriptor.newBuilder<ReqT, RespT>()
-            .setType(MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName(methodFullPath)
-            .setRequestMarshaller(ProtoMarshaller(request!!))
-            .setResponseMarshaller(ProtoMarshaller(responseClass.newInstance()))
-            .build()
-        return Pair(method, request)
-    }
 
     /**
-     * Get the current user's profile.
-     * Requires JWT auth (BearerTokenInterceptor attaches token).
+     * Get the current user's profile via ProfileService v2.
+     * Falls back to legacy ChatService/GetUserProfile on prod.
      */
     suspend fun getProfile(context: Context): GetProfileResponseProto? {
         if (!isProfileV2Supported()) {
-            Log.d(TAG, "ProfileV2 not supported, using legacy")
-            return getProfileLegacy(context)
+            Log.d(TAG, "ProfileV2 not supported, returning null (use GrpcClient.getUserProfile)")
+            return null
         }
         return try {
             unaryCall(
                 fullMethod = "messenger.ProfileService/GetProfile",
                 request = GetProfileRequestProto(),
-                responseParser = { bytes -> GetProfileResponseProto::class.java.newInstance().also { /* parse from bytes */ } }
+                responseType = GetProfileResponseProto::class.java
             )
         } catch (e: Exception) {
-            Log.w(TAG, "ProfileV2 getProfile failed: ${e.message}, falling back to legacy")
-            getProfileLegacy(context)
+            Log.w(TAG, "ProfileV2 getProfile failed: ${e.message}")
+            null
         }
     }
 
     /**
-     * Update profile (bio, status, locale, username).
+     * Update profile (bio, status, locale, username) via ProfileService v2.
+     * Falls back to legacy ChatService/UpdateProfile on prod.
      */
     suspend fun updateProfile(
         context: Context,
@@ -121,13 +95,13 @@ object ProfileClient {
         locale: String = ""
     ): Boolean = withContext(Dispatchers.IO) {
         if (!isProfileV2Supported()) {
-            return@withContext updateProfileLegacy(context, bio, status)
+            return@withContext updateProfileLegacy(bio, status)
         }
         try {
             val request = UpdateProfileV2RequestProto(
                 username = username, bio = bio, status = status, locale = locale
             )
-            val response = unaryCallLegacy(
+            val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateProfile",
                 request = request,
                 responseType = UpdateProfileV2ResponseProto::class.java
@@ -135,12 +109,13 @@ object ProfileClient {
             response?.success ?: false
         } catch (e: Exception) {
             Log.w(TAG, "ProfileV2 updateProfile failed: ${e.message}")
-            updateProfileLegacy(context, bio, status)
+            updateProfileLegacy(bio, status)
         }
     }
 
     /**
      * Update avatar via ProfileService v2.
+     * Falls back to legacy ChatService/UpdateAvatar on prod.
      */
     suspend fun updateAvatar(
         context: Context,
@@ -148,11 +123,11 @@ object ProfileClient {
         fullAvatarUrl: String = ""
     ): Boolean = withContext(Dispatchers.IO) {
         if (!isProfileV2Supported()) {
-            return@withContext updateAvatarLegacy(context, avatarUrl, fullAvatarUrl)
+            return@withContext updateAvatarLegacy(avatarUrl, fullAvatarUrl)
         }
         try {
             val request = UpdateAvatarV2RequestProto(avatarUrl = avatarUrl, fullAvatarUrl = fullAvatarUrl)
-            val response = unaryCallLegacy(
+            val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateAvatar",
                 request = request,
                 responseType = UpdateAvatarV2ResponseProto::class.java
@@ -160,19 +135,18 @@ object ProfileClient {
             response?.success ?: false
         } catch (e: Exception) {
             Log.w(TAG, "ProfileV2 updateAvatar failed: ${e.message}")
-            updateAvatarLegacy(context, avatarUrl, fullAvatarUrl)
+            updateAvatarLegacy(avatarUrl, fullAvatarUrl)
         }
     }
 
     /**
-     * Get user settings (locale, theme, push, custom).
+     * Get user settings (locale, theme, push) via ProfileService v2.
+     * Returns null on prod (no legacy equivalent).
      */
     suspend fun getUserSettings(context: Context): GetUserSettingsResponseProto? {
-        if (!isProfileV2Supported()) {
-            return null // Legacy doesn't have settings API
-        }
+        if (!isProfileV2Supported()) return null
         return try {
-            unaryCallLegacy(
+            unaryCall(
                 fullMethod = "messenger.ProfileService/GetUserSettings",
                 request = GetUserSettingsRequestProto(),
                 responseType = GetUserSettingsResponseProto::class.java
@@ -184,7 +158,8 @@ object ProfileClient {
     }
 
     /**
-     * Update user settings.
+     * Update user settings via ProfileService v2.
+     * Returns false on prod.
      */
     suspend fun updateUserSettings(
         context: Context,
@@ -192,15 +167,12 @@ object ProfileClient {
         themeId: String = "",
         pushEnabled: Boolean? = null
     ): Boolean = withContext(Dispatchers.IO) {
-        if (!isProfileV2Supported()) {
-            return@withContext false
-        }
+        if (!isProfileV2Supported()) return@withContext false
         try {
             val request = UpdateUserSettingsRequestProto(
-                locale = locale, themeId = themeId,
-                pushEnabled = pushEnabled
+                locale = locale, themeId = themeId, pushEnabled = pushEnabled
             )
-            val response = unaryCallLegacy(
+            val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateUserSettings",
                 request = request,
                 responseType = UpdateUserSettingsResponseProto::class.java
@@ -214,30 +186,17 @@ object ProfileClient {
 
     // ======= Legacy fallbacks (via ChatService) =======
 
-    private suspend fun getProfileLegacy(context: Context): GetProfileResponseProto? {
-        // Legacy: use ChatService/GetUserProfile via GrpcClient
-        val userId = RealGrpcClient.getUserId() ?: return null
-        // This is handled through the existing synchronous callback pattern
-        // Return null here — the UI layer should handle via existing GrpcClient.getUserProfile
-        return null
-    }
-
-    private fun updateProfileLegacy(context: Context, bio: String, status: String): Boolean {
+    private fun updateProfileLegacy(bio: String, status: String): Boolean {
         val username = RealGrpcClient.getCurrentUsername() ?: return false
-        // Use existing GrpcClient.updateProfile
         var result = false
-        RealGrpcClient.updateProfile(username, bio, status) { success, _ ->
-            result = success
-        }
+        RealGrpcClient.updateProfile(username, bio, status) { success, _ -> result = success }
         return result
     }
 
-    private fun updateAvatarLegacy(context: Context, avatarUrl: String, fullAvatarUrl: String): Boolean {
+    private fun updateAvatarLegacy(avatarUrl: String, fullAvatarUrl: String): Boolean {
         val username = RealGrpcClient.getCurrentUsername() ?: return false
         var result = false
-        RealGrpcClient.updateAvatar(username, avatarUrl, fullAvatarUrl) { success, _ ->
-            result = success
-        }
+        RealGrpcClient.updateAvatar(username, avatarUrl, fullAvatarUrl) { success, _ -> result = success }
         return result
     }
 
@@ -247,7 +206,8 @@ object ProfileClient {
      * Make a unary gRPC call using the shared channel.
      * BearerTokenInterceptor automatically attaches JWT from AuthManager.
      */
-    private suspend fun <ReqT, RespT> unaryCallLegacy(
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun <ReqT, RespT> unaryCall(
         fullMethod: String,
         request: ReqT,
         responseType: Class<RespT>
@@ -258,7 +218,6 @@ object ProfileClient {
             return@suspendCancellableCoroutine
         }
 
-        // Build marshallers dynamically
         val requestMarshaller = ProtoMarshaller(request!!)
         val responseInstance = responseType.newInstance()
         val responseMarshaller = ProtoMarshaller(responseInstance)
@@ -294,19 +253,11 @@ object ProfileClient {
         call.halfClose()
         call.request(1)
     }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> unaryCall(
-        fullMethod: String,
-        request: Any,
-        responseParser: (ByteArray) -> T
-    ): T? = throw NotImplementedError("Use unaryCallLegacy instead")
 }
 
 /**
- * Simple marshaller that uses a placeholder for proto serialization.
- * Since we're using manual MethodDescriptor construction with the existing
- * pattern from RealGrpcClient, we reuse the same approach.
+ * Simple marshaller for proto messages.
+ * Uses the same pattern as RealGrpcClient's marshallers.
  */
 private class ProtoMarshaller<T>(private val defaultInstance: T) : MethodDescriptor.Marshaller<T> {
     override fun stream(value: T): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
