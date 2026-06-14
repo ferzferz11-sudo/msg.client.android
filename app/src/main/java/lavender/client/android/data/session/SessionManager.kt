@@ -239,6 +239,7 @@ object SessionManager {
                 if (status != ConnectionStatus.READY) {
                     // Connection failed — fallback to v1
                     Log.w("SessionManager", "V2: connection failed, falling back to v1")
+                    @Suppress("DEPRECATION")
                     loginV1(context, username, pass, serverAddress, register, email, onComplete)
                     return@launch
                 }
@@ -319,10 +320,12 @@ object SessionManager {
                     // V2 auth failed — fallback to v1
                     val errorMsg = "V2 not available"
                     Log.w("SessionManager", "$errorMsg, falling back to v1")
+                    @Suppress("DEPRECATION")
                     loginV1(context, username, pass, serverAddress, register, email, onComplete)
                 }
             } catch (e: Exception) {
                 Log.e("SessionManager", "V2 login error: ${e.message}, falling back to v1")
+                @Suppress("DEPRECATION")
                 loginV1(context, username, pass, serverAddress, register, email, onComplete)
             }
         }
