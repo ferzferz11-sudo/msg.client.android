@@ -1,6 +1,6 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.11
+**Версия:** v1.1.3.12
 **Обновлено:** 2026-06-14
 
 ---
@@ -15,13 +15,14 @@
 - Все наследуют StandardBottomSheet
 - Health check через http://host:8082/health
 - Используются в: ChatListActivity, ServersActivity
+- Drag handle добавлен во все шторки
+- Status indicator — только кружок слева от названия, без текста
 
 ### Server switch pattern (v1.1.3.11)
 При смене сервера через ServersActivity:
 - НЕ сохранять `serverAddress` в CredentialStore до успешного входа
 - Сохранять `serverAddress` ТОЛЬКО после успешного `SessionManager.login()` в SUCCESS callback
 - В `ChatListActivity.serversActivityLauncher` НЕ делать auto-login — пользователь уже вошёл
-- Использовать флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect в `onResume()`
 - Анти-pattern: `CredentialStore.setServerAddress()` до `SessionManager.login()` → двойной вход
 
 ### Bearer Token Interceptor pattern (v1.1.3.12)
@@ -32,6 +33,7 @@
 - Token refresh — proactive, каждые 60с, за 5 минут до истечения
 - Токены привязаны к серверу через `jwt_server_address` в CredentialStore
 - При смене сервера → `clearTokens()` → старые токены удалены
+- Per-server validation: initFromPrefs() проверяет совпадение сервера
 
 ### ChatWidget reuse pattern
 При использовании ChatWidget в кастомных Activity ОБЯЗАТЕЛЬНО:

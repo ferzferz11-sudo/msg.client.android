@@ -90,13 +90,12 @@
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] **Тестирование JWT auth на dev** — регистрация, вход, refresh token, logout
-- [ ] **Протестировать server switch** — prod ↔ dev, проверить что токены не конфликтуют
-- [ ] **Редеплой prod сервера** — ON CONFLICT 42P10 ошибка была из-за старого бинарника
+- [ ] **Редеплой prod сервера** — после тестирования на dev
+- [ ] **UNIQUE constraint на prod БД** — вручную выполнить ALTER TABLE
 
 ### Средний приоритет
-- [ ] **Тесты для /info endpoint** — unit-тесты для http_server.go
 - [ ] **Bearer token в Chat stream** — вместо password в первом сообщении (v1.2.1.x)
+- [ ] **Тесты для BearerTokenInterceptor** — unit-тесты
 
 ### Низкий приоритет
 - [ ] Qdrant + CLIP (production RAG) — на стороне сервера
@@ -114,7 +113,11 @@
 | loginV2 + fallback | JWT приоритет, fallback на v1 для совместимости со старыми серверами |
 | last_username | Сохранение username для предзаполнения после logout |
 | ServersActivity | Остаётся для управления списком серверов (добавление/удаление/выбор) |
-| getAuthMetadata() | Определён в RealGrpcClient, но нигде не вызывается — нужно подключить |
+| BearerTokenInterceptor | Автоматическая подстановка JWT Bearer token, no-op для v1 |
+| Proactive refresh | Проверка каждые 60с, refresh за 5 минут до истечения |
+| Per-server validation | Токены привязаны к серверу, очистка при смене |
+| getChats timeout | withTimeoutOrNull(10с) предотвращает зависание |
+| getChats error callback | callback(emptyList()) при onClose ошибке |
 
 ---
 

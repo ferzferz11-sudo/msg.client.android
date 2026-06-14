@@ -1,18 +1,16 @@
-# Промпт для новой сессии — Android v1.1.3.12 (dev)
+# Промпт для новой сессии — Android v1.1.3.12
 
 **Дата:** 2026-06-14
-**Версия:** 1.1.3.12 (dev)
+**Версия:** 1.1.3.12
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.12 — DEV
+## СТАТУС: v1.1.3.12 — DEV (готов к релизу)
 
-Сервер: v1.2.0.1 на dev (порт 50052, HTTP 8083). AuthService v2 (JWT) основной, v1 deprecated.
-Android: 3 auth виджета, server switch исправлен, AuthV2 интегрирован (loginV2 + fallback на v1).
-UI cosmetics завершены: drag handle, status indicator, dividers.
-
-**Текущая задача:** Bearer token interceptor + token refresh + тестирование JWT auth на dev.
+Сервер: v1.2.0.1 на dev (порт 50052, HTTP 8083) и prod (порт 50051, HTTP 8082).
+Android: BearerTokenInterceptor + proactive refresh + per-server validation реализованы.
+Тестирование на prod пройдено — чаты загружаются, после очистки кеша всё ОК.
 
 ---
 
@@ -20,11 +18,11 @@ UI cosmetics завершены: drag handle, status indicator, dividers.
 
 ### Сервер (/root/msg)
 ```
-main.go                    — Entry point, gRPC server
-server.go                  — ServerVersion = "1.2.0.1"
+main.go                    — Entry point, gRPC server, graceful shutdown
+server.go                  — ServerVersion = "1.2.0.1", service version constants
 auth_service.go            — AuthService v1 (deprecated)
 auth_service_v2.go         — AuthService v2 (JWT, основной)
-auth_interceptor.go        — gRPC Bearer token interceptor
+auth_interceptor.go        — gRPC Bearer token interceptor (unary + streaming)
 auth_jwt.go                — JWT генерация/валидация
 db_auth_devices.go         — CRUD для user_devices + device_auth_log
 db_auth_migrations.go      — миграция таблиц
@@ -42,15 +40,16 @@ ui/
 ├── ServersActivity.kt              — управление списком серверов
 ├── remote/                         — Remote Agent UI
 ├── chat/widget/ChatWidget.kt       — общий виджет чата
-└── adapter/ChatAdapter.kt          — адаптер чатов
+└── adapter/ChatAdapter.kt          — адаптер чатов (clearAll)
 
 data/
-├── grpc/GrpcClient.kt              — facade (signInV2, signUpV2, refreshToken)
-├── grpc/RealGrpcClient.kt          — реализация gRPC (getAuthMetadata определён, но не вызывается)
-├── session/CredentialStore.kt      — credentials + last_username + server list
-├── session/SessionManager.kt       — loginV2 (JWT) + loginV1 (legacy fallback)
-├── session/UserSession.kt          — accessToken, refreshToken, authMethod
-├── auth/AuthManager.kt             — JWT token storage, getBearerToken
+├── grpc/BearerTokenInterceptor.kt  — ClientInterceptor для JWT Bearer token
+├── grpc/GrpcClient.kt              — фасад
+├── grpc/RealGrpcClient.kt          — реализация gRPC (connect, getChats, signInV2, refreshToken)
+├── auth/AuthManager.kt             — JWT token storage, getBearerToken, needsRefresh, clearTokens
+├── session/CredentialStore.kt      — credentials, jwt_server_address, last_username, server list
+├── session/SessionManager.kt       — loginV2 + loginV1 fallback, startTokenRefresh, per-server validation
+├── session/UserSession.kt          — accessToken, refreshToken, authMethod, isJwtAuth
 └── models/ErrorHandler.kt          — единый обработчик ошибок
 ```
 
@@ -64,20 +63,30 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
   → try V2 (SignInV2 gRPC)
   → on success: store JWT tokens via AuthManager.storeTokens()
   → on failure: fallback to V1 (Chat stream auth)
+  → BearerTokenInterceptor подставляет token во все вызовы
+  → Proactive refresh каждые 60с
 ```
+
+### BearerTokenInterceptor
+- Пропускает AuthService (нет токена), Chat stream (legacy auth)
+- No-op если AuthManager.getBearerToken() == null (совместимость с v1)
+- Полная совместимость с prod сервером (v1 без JWT)
+
+### Per-server token validation
+- CredentialStore.setJwtServerAddress() / getJwtServerAddress()
+- initFromPrefs() проверяет совпадение сервера при восстановлении
+- login() вызывает clearTokens() перед новым логином
 
 ### Auth widgets
 - 3 виджета: ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
-- Все наследуют StandardBottomSheet (WidgetSystem.kt:68)
 - Health check через http://host:8082/health
-- Используются в: ChatListActivity, ServersActivity
-- Drag handle добавлен во все шторки
-- Status indicator — только кружок слева от названия, без текста
+- Drag handle во всех шторках
+- Status indicator — только кружок слева от названия
 
 ### Server management
 - ServersActivity — отдельный экран для управления списком серверов
-- CredentialStore.getServerList() / saveServerList() — хранение списка
-- CredentialStore.setServerAddress() — только после успешного входа
+- CredentialStore.getServerList() / saveServerList()
+- При смене сервера → clearTokens() + reconnect
 
 ### Logout
 - SessionManager.logout(): очищает password/tokens, сохраняет username в last_username
@@ -86,7 +95,7 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
-- server_default_name, app_version_format ("Lava: app Android %s" / "Lava: приложение Android %s")
+- app_version_format: "Lava: app Android %s" / "Lava: приложение Android %s"
 
 ---
 
@@ -108,10 +117,14 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
 
 ## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
-- **Bearer token не подставляется в gRPC** — метод `getAuthMetadata()` определён в `RealGrpcClient.kt:333`, но нигде не вызывается. Нужно создать ClientInterceptor.
-- **Нет token refresh** — `AuthManager.needsRefresh()` определён, но не вызывается. При истечении access token (15 мин) клиент получит 401.
-- **Chat stream legacy auth** — при JWT flow стрим использует password в первом сообщении. OK для v1.1.3.x.
-- **ON CONFLICT 42P10 на prod** — UNIQUE constraint на `user_devices(user_id, device_id)` существует, но ошибка была в логах. Возможно старый бинарник. Нужен редеплой prod сервера.
+### 42P10 на prod БД (сервер)
+- `Failed to register device ... pq: there is no unique or exclusion constraint`
+- Нужно вручную выполнить ALTER TABLE на prod БД
+- Не критично — аутентификация работает
+
+### Первый вход на prod — только Favorites
+- Проблема в локальном кеше Android — после очистки всё ОК
+- Не является багом сервера или нового кода
 
 ---
 
@@ -140,10 +153,6 @@ go test ./...
 journalctl -u lavender-server-dev -f
 journalctl -u lavender-server -f
 
-# HTTP логи через браузер
-# Prod: http://13.140.25.249/server-logs
-# Dev:  http://13.140.25.249/server-logs-dev
-
 # === ANDROID ===
 cd /root/msg.client.android
 # assembleRelease ТОЛЬКО локально!
@@ -171,5 +180,4 @@ cd /root/msg.client.android
 - Remote Agent: `/root/msg.client.android/doc/REMOTE_AGENT.md`
 - Сервер: `/root/msg/doc/INTEGRATION_SESSION.md`, `/root/msg/doc/TASKS.md`
 - Подводные камни: `/root/msg/doc/PITFALLS.md`
-- Log Monitor: `/root/msg/doc/LOG_MONITOR.md`
 - CHANGELOG: `/root/msg.client.android/CHANGELOG.md`
