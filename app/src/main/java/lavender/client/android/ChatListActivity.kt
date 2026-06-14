@@ -470,12 +470,12 @@ class ChatListActivity : AppCompatActivity() {
                 }
 
                 if (status == ConnectionStatus.READY) {
+                    Log.d("ChatListActivity", "READY status: username='$username', password='${if (password.isNotEmpty()) "***" else ""}', isAppInBackground=${lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground}")
                     if (username.isNotEmpty() && password.isNotEmpty() && !lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground) {
                         val session = SessionManager.session.value
-                        // Only start chat background stream if we are actually on this screen
-                        // and no other room is active
-                        grpcClient.startChat(username, password, "", register = false, deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
+                        grpcClient.startChat(username, password, "", register = false, deviceId = session.deviceId, deviceName = session.deviceName) { }
                         if (!isChatsLoaded && !isLoadingChats) {
+                            Log.d("ChatListActivity", "Starting loadChats from connectionStatus collector")
                             loadChats()
                         }
                     }
@@ -869,6 +869,13 @@ class ChatListActivity : AppCompatActivity() {
                     chats.clear()
                     chats.addAll(newChats)
                     chatAdapter.setChats(newChats)
+                    Log.d("ChatListActivity", "setChats called: ${newChats.size} chats, adapter itemCount=${chatAdapter.itemCount}")
+
+                    // Force RecyclerView to re-layout
+                    binding.rvChatList.post {
+                        binding.rvChatList.requestLayout()
+                        Log.d("ChatListActivity", "RecyclerView childCount=${binding.rvChatList.childCount}, itemCount=${chatAdapter.itemCount}")
+                    }
 
                     updateAppIconBadge(chats.sumOf { it.unreadCount })
                     isChatsLoaded = true
