@@ -4,8 +4,6 @@ import android.content.Context
 import android.view.View
 import android.widget.EditText
 import android.widget.ProgressBar
-import android.widget.Spinner
-import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
@@ -14,17 +12,18 @@ import lavender.client.android.theme.ThemeStore
 /**
  * Register Bottom Sheet — reusable widget for user registration.
  *
- * Hides server selector elements since server is already chosen.
- * Caller provides callbacks for register/cancel actions.
+ * Shows: username/password/email fields, register/cancel buttons.
+ * No server info (server name/address/status shown on ServerAuthBottomSheet).
+ * Used in: ChatListActivity (first login), ServersActivity (after ServerAuthBottomSheet).
  */
 class RegisterBottomSheet(
     context: Context,
-    private val onRegister: (username: String, password: String, email: String) -> Unit,
+    private val onRegister: (String, String, String) -> Unit,
     private val onCancel: () -> Unit,
     private val prefillUsername: String = "",
     private val prefillPassword: String = "",
-    theme: Theme = lavender.client.android.theme.ThemeStore.currentTheme()
-) : StandardBottomSheet(context, R.layout.bottom_sheet_register, theme) {
+    theme: Theme = ThemeStore.currentTheme()
+) : StandardBottomSheet(context, R.layout.dialog_register, theme) {
 
     private var editTextUsername: EditText? = null
     private var editTextPassword: EditText? = null
@@ -47,22 +46,11 @@ class RegisterBottomSheet(
         btnCancel = findViewById(R.id.btnCancel)
         registerProgressBar = findViewById(R.id.registerProgressBar)
 
-        // Prefill if provided
-        if (prefillUsername.isNotEmpty()) {
-            editTextUsername?.setText(prefillUsername)
-        }
+        if (prefillUsername.isNotEmpty()) editTextUsername?.setText(prefillUsername)
         if (prefillPassword.isNotEmpty()) {
             editTextPassword?.setText(prefillPassword)
+            editTextConfirmPassword?.setText(prefillPassword)
         }
-
-        // Hide server selector — server is always pre-determined
-        findViewById<View>(R.id.serverAddressSpinner)?.visibility = View.GONE
-        findViewById<View>(R.id.serverStatusLayout)?.visibility = View.GONE
-        findViewById<View>(R.id.serverAddressLabel)?.visibility = View.GONE
-        findViewById<View>(R.id.serverStatusIndicator)?.visibility = View.GONE
-        findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
-        // Hide spinner background container (LinearLayout wrapping serverAddressSpinner)
-        (findViewById<Spinner>(R.id.serverAddressSpinner)?.parent as? android.view.ViewGroup)?.visibility = View.GONE
 
         btnCancel?.setOnClickListener { onCancel() }
         btnRegister?.setOnClickListener {
@@ -73,7 +61,6 @@ class RegisterBottomSheet(
 
             if (u.isEmpty() || p.isEmpty()) return@setOnClickListener
             if (p != cp) {
-                // Show error — passwords don't match
                 editTextConfirmPassword?.error = context.getString(R.string.passwords_do_not_match)
                 return@setOnClickListener
             }

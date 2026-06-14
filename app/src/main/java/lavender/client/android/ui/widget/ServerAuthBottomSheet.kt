@@ -11,7 +11,6 @@ import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
 import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ThemeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,10 +19,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Server Auth Bottom Sheet — shown when user taps a server in ServersActivity.
+ * Server Auth Bottom Sheet — first screen when user selects a server.
  *
- * Shows server name, address, online status (via /health), server version,
- * and Login/Register buttons. Similar to auth choice dialog but per-server.
+ * Shows: logo, server name, server address, online status (via /health), login/register buttons.
+ * Used in: ChatListActivity (first login), ServersActivity (server selection).
  */
 class ServerAuthBottomSheet(
     context: Context,
@@ -58,7 +57,7 @@ class ServerAuthBottomSheet(
         statusIndicator = findViewById(R.id.serverAuthStatusIndicator)
         statusText = findViewById(R.id.serverAuthStatusText)
 
-        // App version
+        // App version at bottom
         try {
             val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
             findViewById<TextView>(R.id.serverAuthAppVersion)?.text = "Lava v$versionName"
@@ -101,9 +100,6 @@ class ServerAuthBottomSheet(
     private fun updateStatusIndicator(isOnline: Boolean) {
         val indicatorColor = if (isOnline) Color.parseColor("#4CAF50") else Color.parseColor("#9E9E9E")
         statusIndicator?.background?.setTint(indicatorColor)
-
-        val statusStr = if (isOnline) "Online" else "Offline"
-        // Try to get server version from health response (for now just show status)
-        statusText?.text = statusStr
+        statusText?.text = if (isOnline) "Online" else "Offline"
     }
 }

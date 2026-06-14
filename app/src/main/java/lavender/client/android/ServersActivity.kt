@@ -165,14 +165,14 @@ class ServersActivity : AppCompatActivity() {
             val defaultServers = listOf(
                 CredentialStore.ServerEntry(
                     id = "default-server-1",
-                    name = "Lava (prod)",
+                    name = "Lava Germany",
                     host = "13.140.25.249",
                     port = 50051,
                     isDefault = true
                 ),
                 CredentialStore.ServerEntry(
                     id = "default-server-2",
-                    name = "Lava (dev)",
+                    name = "Lava Germany dev",
                     host = "13.140.25.249",
                     port = 50052,
                     isDefault = false
@@ -284,7 +284,6 @@ class ServersActivity : AppCompatActivity() {
             }
         )
 
-        loginSheet.setTitle(getString(R.string.login_to_server, server.name))
         loginSheet.show()
     }
 

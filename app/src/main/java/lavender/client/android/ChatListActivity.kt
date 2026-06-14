@@ -82,6 +82,7 @@ import lavender.client.android.theme.Theme
 import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.LoginBottomSheet
 import lavender.client.android.ui.widget.RegisterBottomSheet
+import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SearchableListBottomSheet
@@ -2583,6 +2584,7 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showRegisterBottomSheet(prefillUser: String = "", prefillPass: String = "") {
         val customTheme = getAuthTheme()
+
         val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
 
         var isTransitioning = false
@@ -2778,45 +2780,30 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAuthChoiceDialog() {
-        val customTheme = getAuthTheme()
-        val sheet = StandardBottomSheet(this, R.layout.dialog_auth_choice, customTheme)
-        
-        val btnLogin = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnLogin)
-        val btnRegister = sheet.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnRegister)
-        val versionText = sheet.findViewById<TextView>(R.id.authVersionText)
+        val defaultServer = CredentialStore.getDefaultServer(this)
+        val serverName = defaultServer?.name ?: "Lava Germany"
+        val serverHost = defaultServer?.host ?: "13.140.25.249"
+        val serverPort = defaultServer?.port ?: 50051
 
-        val versionName = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-        versionText?.text = "v$versionName"
-
-        val logoImage = sheet.findViewById<ImageView>(R.id.authLogoImage)
-        logoImage?.setOnClickListener {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://13.140.25.249/"))
-                startActivity(intent)
-            } catch (_: Exception) {}
-        }
-
-        var isTransitioning = false
-        btnLogin?.setOnClickListener {
-            isTransitioning = true
-            sheet.dismiss()
-            showLoginBottomSheet()
-        }
-
-        btnRegister?.setOnClickListener {
-            isTransitioning = true
-            sheet.dismiss()
-            showRegisterBottomSheet()
-        }
-
-        sheet.setOnDismissListener {
-            if (!isTransitioning && (username.isEmpty() || password.isEmpty())) {
-                // If it was closed by swiping and we aren't transitioning, reopen it
+        val authSheet = ServerAuthBottomSheet(
+            context = this,
+            serverName = serverName,
+            serverHost = serverHost,
+            serverPort = serverPort,
+            onLogin = {
+                authSheet.dismiss()
+                showLoginBottomSheet()
+            },
+            onRegister = {
+                authSheet.dismiss()
+                showRegisterBottomSheet()
+            }
+        )
+        authSheet.setOnDismissListener {
+            if (username.isEmpty() || password.isEmpty()) {
                 showAuthChoiceDialog()
             }
         }
-
-        sheet.setCancelable(false)
-        sheet.show()
+        authSheet.show()
     }
 }
