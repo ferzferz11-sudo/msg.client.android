@@ -640,6 +640,7 @@
     <string name="call_status_calling">Calling…</string>
     <string name="call_status_incoming">Incoming…</string>
     <string name="conference">Conference</string>
+    <string name="conference_in_development">Conference (in development)</string>
     <string name="group_conference">Group Conference</string>
     <string name="update_ready_title">Update Ready</string>
     <string name="update_ready_text">A new version of Lava is ready to install.</string>

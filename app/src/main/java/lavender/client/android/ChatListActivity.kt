@@ -1986,7 +1986,7 @@ class ChatListActivity : AppCompatActivity() {
                 SheetAction(R.id.actionCreateSecretChat, R.drawable.ic_lock, getString(R.string.secret_chat)) {
                     showCreateSecretChatDialog()
                 },
-                SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference)) {
+                SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference_in_development)) {
                     showCreateConferenceDialog()
                 }
             )).show()
