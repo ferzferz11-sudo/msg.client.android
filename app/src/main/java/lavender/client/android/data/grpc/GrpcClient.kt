@@ -16,6 +16,14 @@ import lavender.client.android.data.proto.GetUserProfileResponseProto
 import lavender.client.android.data.proto.DeviceInfoProto
 import lavender.client.android.data.proto.CallMessageProto
 import lavender.client.android.data.proto.ServerInfoProto
+import lavender.client.android.data.proto.SignInRequestV2Proto
+import lavender.client.android.data.proto.SignUpRequestV2Proto
+import lavender.client.android.data.proto.AuthResponseV2Proto
+import lavender.client.android.data.proto.RefreshTokenRequestProto
+import lavender.client.android.data.proto.RefreshTokenResponseProto
+import lavender.client.android.data.proto.SignOutRequestProto
+import lavender.client.android.data.proto.SimpleAuthResponseProto
+import lavender.client.android.data.proto.RevokeDeviceRequestProto
 
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient

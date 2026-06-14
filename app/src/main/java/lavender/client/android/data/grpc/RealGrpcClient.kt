@@ -3701,8 +3701,7 @@ class AuthResponseV2Marshaller : io.grpc.MethodDescriptor.Marshaller<AuthRespons
                 6 -> refreshExpiresAt = cis.readInt64()
                 7 -> {
                     val userLen = cis.readRawVarint32()
-                    val userBytes = ByteArray(userLen)
-                    cis.readRawBytes(userBytes)
+                    val userBytes = cis.readRawBytes(userLen)
                     val userCis = com.google.protobuf.CodedInputStream.newInstance(userBytes)
                     while (!userCis.isAtEnd) {
                         val utag = userCis.readTag()
