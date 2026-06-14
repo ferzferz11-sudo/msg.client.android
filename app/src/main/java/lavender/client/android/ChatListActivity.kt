@@ -80,6 +80,8 @@ import java.util.Locale
 
 import lavender.client.android.theme.Theme
 import lavender.client.android.ui.widget.AIBottomSheet
+import lavender.client.android.ui.widget.LoginBottomSheet
+import lavender.client.android.ui.widget.RegisterBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SearchableListBottomSheet
@@ -2471,7 +2473,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val loginSheet = LoginBottomSheet(
             context = this,
-            onLogin = { u, p ->
+            onLogin = { u: String, p: String ->
                 val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
 
                 // Show splash overlay during login
@@ -2547,7 +2549,7 @@ class ChatListActivity : AppCompatActivity() {
 
         val registerSheet = RegisterBottomSheet(
             context = this,
-            onRegister = { u, p, email ->
+            onRegister = { u: String, p: String, email: String ->
                 try {
                     startActivity(Intent(this, SplashLoadingActivity::class.java))
                 } catch (_: Exception) {}

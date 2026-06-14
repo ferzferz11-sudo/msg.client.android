@@ -30,6 +30,8 @@ import lavender.client.android.data.session.CredentialStore.ServerEntry
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.ui.widget.LoginBottomSheet
+import lavender.client.android.ui.widget.RegisterBottomSheet
 import java.util.UUID
 
 class ServersActivity : AppCompatActivity() {
@@ -228,7 +230,7 @@ class ServersActivity : AppCompatActivity() {
 
         val loginSheet = LoginBottomSheet(
             context = this,
-            onLogin = { u, p ->
+            onLogin = { u: String, p: String ->
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
                     runOnUiThread {
                         when (result) {
@@ -280,7 +282,7 @@ class ServersActivity : AppCompatActivity() {
 
         val registerSheet = RegisterBottomSheet(
             context = this,
-            onRegister = { u, p, email ->
+            onRegister = { u: String, p: String, email: String ->
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result: String? ->
                     runOnUiThread {
                         when (result) {

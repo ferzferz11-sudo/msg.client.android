@@ -18,9 +18,9 @@ import lavender.client.android.theme.Theme
  */
 class LoginBottomSheet(
     context: Context,
-    private val onLogin: (username: String, password: String) -> Unit,
+    private val onLogin: (String, String) -> Unit,
     private val onCancel: () -> Unit,
-    theme: Theme = lavender.client.android.theme.ThemeStore.currentTheme()
+    theme: Theme = ThemeStore.currentTheme()
 ) : StandardBottomSheet(context, R.layout.bottom_sheet_login, theme) {
 
     private var editTextUsername: EditText? = null
