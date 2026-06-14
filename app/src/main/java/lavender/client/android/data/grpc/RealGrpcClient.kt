@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import lavender.client.android.BuildConfig
+import lavender.client.android.data.auth.AuthManager
 import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
@@ -323,6 +324,24 @@ object RealGrpcClient {
     // Reset reconnect backoff on successful connection
     private fun resetReconnectBackoff() {
         reconnectDelayMs = 5000L
+    }
+
+    /**
+     * Returns gRPC Metadata with JWT Bearer token if available.
+     * Used by all authenticated unary calls.
+     */
+    private fun getAuthMetadata(context: Context? = appContext): io.grpc.Metadata {
+        val metadata = io.grpc.Metadata()
+        if (context != null) {
+            val bearerToken = AuthManager.getBearerToken(context)
+            if (bearerToken != null) {
+                metadata.put(
+                    io.grpc.Metadata.Key.of("authorization", io.grpc.Metadata.ASCII_STRING_MARSHALLER),
+                    bearerToken
+                )
+            }
+        }
+        return metadata
     }
 
     fun reconnect() {

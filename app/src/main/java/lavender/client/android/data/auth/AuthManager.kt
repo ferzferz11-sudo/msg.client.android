@@ -125,6 +125,13 @@ object AuthManager {
     }
 
     /**
+     * Gets the current access token
+     */
+    fun getAccessToken(context: Context): String? {
+        return CredentialStore.getAuthPrefs(context).getString(KEY_ACCESS_TOKEN, null)
+    }
+
+    /**
      * Gets the current refresh token — sent to server for rotation
      */
     fun getRefreshToken(context: Context): String? {

@@ -9,6 +9,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.proto.AuthResponseV2Proto
+import lavender.client.android.data.auth.AuthManager
 import android.os.Build
 
 object SessionManager {
@@ -124,7 +126,29 @@ object SessionManager {
         updateDeviceInfo(context)
 
         if (username.isNotEmpty()) {
-            updateSession(username = username, password = password, userId = userId, email = email)
+            // Check if we have JWT tokens
+            if (AuthManager.isJwtAuthenticated(context)) {
+                Log.d("SessionManager", "Restoring JWT session for $username")
+                val jwtUserId = AuthManager.getUserId(context)
+                val jwtUsername = AuthManager.getUsername(context)
+                val deviceId = AuthManager.getDeviceId(context)
+
+                updateSession(
+                    username = jwtUsername.ifEmpty { username },
+                    password = password,
+                    userId = jwtUserId.ifEmpty { userId },
+                    email = email
+                )
+                _session.value = _session.value.copy(
+                    accessToken = AuthManager.getAccessToken(context) ?: "",
+                    refreshToken = AuthManager.getRefreshToken(context) ?: "",
+                    authMethod = "v2_jwt",
+                    deviceId = deviceId
+                )
+            } else {
+                updateSession(username = username, password = password, userId = userId, email = email)
+                _session.value = _session.value.copy(authMethod = AuthManager.getAuthMethod(context))
+            }
 
             // Reconnect if needed
             if (serverAddress.isNotEmpty() && GrpcClient.connectionStatus.value == ConnectionStatus.DISCONNECTED) {
@@ -177,13 +201,147 @@ object SessionManager {
     }
 
     fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {
-        Log.d("SessionManager", "Login attempt for $username at $serverAddress (register=$register)")
+        // Try AuthService v2 (JWT) first
+        loginV2(context, username, pass, serverAddress, register, email, onComplete)
+    }
+
+    /**
+     * AuthService v2 login — uses JWT tokens.
+     * Falls back to v1 (legacy Chat stream auth) if v2 is not available.
+     */
+    private fun loginV2(
+        context: Context,
+        username: String,
+        pass: String,
+        serverAddress: String,
+        register: Boolean,
+        email: String,
+        onComplete: (String?) -> Unit
+    ) {
+        Log.d("SessionManager", "LoginV2 attempt for $username at $serverAddress (register=$register)")
         val parts = serverAddress.split(":")
         val host = parts[0]
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
 
-        // Force reconnect: old channel may be stale (e.g. profile deleted on server).
-        // Disconnect first so the old channel is fully torn down before creating a new one.
+        // Force reconnect for clean auth
+        GrpcClient.disconnect()
+        GrpcClient.connect(host, useTls = false, port = port, context = context, forceReconnect = true)
+
+        scope.launch {
+            try {
+                // Wait for READY or FAILED status
+                val status = withTimeoutOrNull(10000) {
+                    GrpcClient.connectionStatus.filter {
+                        (it == ConnectionStatus.READY) || (it == ConnectionStatus.FAILED)
+                    }.first()
+                }
+
+                if (status != ConnectionStatus.READY) {
+                    // Connection failed — fallback to v1
+                    Log.w("SessionManager", "V2: connection failed, falling back to v1")
+                    loginV1(context, username, pass, serverAddress, register, email, onComplete)
+                    return@launch
+                }
+
+                val deviceId = getDeviceId(context)
+                val deviceName = getDeviceName()
+                val clientVersion = lavender.client.android.BuildConfig.VERSION_NAME
+
+                // Call SignInV2 or SignUpV2
+                val v2Callback = if (register) {
+                    { cb: (AuthResponseV2Proto?, String?) -> Unit ->
+                        GrpcClient.signUpV2(username, pass, email, deviceId, deviceName, "android", clientVersion, cb)
+                    }
+                } else {
+                    { cb: (AuthResponseV2Proto?, String?) -> Unit ->
+                        GrpcClient.signInV2(username, pass, deviceId, deviceName, "android", clientVersion, cb)
+                    }
+                }
+
+                // Wait for auth response
+                val authResult = withTimeoutOrNull(10000) {
+                    suspendCancellableCoroutine<AuthResponseV2Proto?> { cont ->
+                        v2Callback { response, error ->
+                            if (cont.isActive) {
+                                if (response != null && response.success) {
+                                    cont.resumeWith(Result.success(response))
+                                } else {
+                                    cont.resumeWith(Result.success(null)) // v2 failed, will fallback
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (authResult != null && authResult.success) {
+                    // V2 auth successful — store JWT tokens
+                    Log.d("SessionManager", "V2 auth success for ${authResult.username}")
+
+                    AuthManager.storeTokens(
+                        context = context,
+                        accessToken = authResult.accessToken,
+                        refreshToken = authResult.refreshToken,
+                        accessExpiresAt = authResult.accessExpiresAt,
+                        refreshExpiresAt = authResult.refreshExpiresAt,
+                        userId = authResult.userId,
+                        username = authResult.username,
+                        deviceId = deviceId
+                    )
+
+                    // Also store credentials for backward compat
+                    CredentialStore.setCredentials(
+                        context = context,
+                        username = username,
+                        password = pass,
+                        userId = authResult.userId,
+                        email = authResult.email,
+                        serverAddress = serverAddress
+                    )
+
+                    updateSession(
+                        username = authResult.username,
+                        password = pass,
+                        userId = authResult.userId,
+                        email = authResult.email
+                    )
+                    _session.value = _session.value.copy(
+                        accessToken = authResult.accessToken,
+                        refreshToken = authResult.refreshToken,
+                        authMethod = "v2_jwt"
+                    )
+
+                    try { syncFcmToken(context, username) } catch (e: Exception) { }
+
+                    GrpcClient.getUserAvatar(username) { _ -> }
+
+                    onComplete("SUCCESS")
+                } else {
+                    // V2 auth failed — fallback to v1
+                    val errorMsg = "V2 not available"
+                    Log.w("SessionManager", "$errorMsg, falling back to v1")
+                    loginV1(context, username, pass, serverAddress, register, email, onComplete)
+                }
+            } catch (e: Exception) {
+                Log.e("SessionManager", "V2 login error: ${e.message}, falling back to v1")
+                loginV1(context, username, pass, serverAddress, register, email, onComplete)
+            }
+        }
+    }
+
+    /**
+     * AuthService v1 login — legacy Chat stream auth (deprecated but functional).
+     */
+    @Deprecated("Use loginV2 instead")
+    private fun loginV1(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {
+        Log.d("SessionManager", "LoginV1 (legacy) for $username at $serverAddress (register=$register)")
+        val parts = serverAddress.split(":")
+        val host = parts[0]
+        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+
+        // Mark as legacy auth
+        AuthManager.setLegacyAuth(context)
+
+        // Force reconnect
         GrpcClient.disconnect()
         GrpcClient.connect(host, useTls = false, port = port, context = context, forceReconnect = true)
 
@@ -207,7 +365,7 @@ object SessionManager {
                         GrpcClient.authStatus.filter { it != null }.first()
                     }
 
-                    Log.d("SessionManager", "Auth result received: $authResult, register=$register")
+                    Log.d("SessionManager", "V1 auth result: $authResult, register=$register")
 
                     if (authResult == "REGISTRATION_SUCCESS" || authResult == null || authResult == "SUCCESS") {
                         // Try to fetch User ID
@@ -233,6 +391,7 @@ object SessionManager {
                         )
 
                         updateSession(username = username, password = pass, userId = userId, email = email)
+                        _session.value = _session.value.copy(authMethod = "v1_legacy")
 
                         try {
                             syncFcmToken(context, username)
@@ -245,7 +404,7 @@ object SessionManager {
                             Log.d("SessionManager", "getUserAvatar callback: url=$avatarUrl")
                         }
 
-                        Log.d("SessionManager", "Registration complete, calling onComplete with: ${authResult ?: "SUCCESS"}")
+                        Log.d("SessionManager", "V1 login complete, calling onComplete with: ${authResult ?: "SUCCESS"}")
                         onComplete(authResult ?: "SUCCESS")
                     } else {
                         onComplete(authResult)
@@ -254,7 +413,7 @@ object SessionManager {
                     onComplete("CONNECTION_FAILED")
                 }
             } catch (e: Exception) {
-                Log.e("SessionManager", "Critical login error: ${e.message}", e)
+                Log.e("SessionManager", "V1 login error: ${e.message}", e)
                 onComplete("ERROR")
             }
         }
@@ -263,6 +422,9 @@ object SessionManager {
     fun logout(context: Context) {
         Log.d("SessionManager", "Logging out, clearing all user data")
         _session.value = UserSession()
+
+        // Clear JWT tokens
+        AuthManager.clearTokens(context)
 
         // Clear encrypted credentials
         CredentialStore.clear(context)

@@ -9,7 +9,11 @@ data class UserSession(
     val isSuperAdmin: Boolean = false,
     val deviceId: String = "",
     val deviceName: String = "",
-    val email: String = ""
+    val email: String = "",
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val authMethod: String = "" // "v1_legacy" or "v2_jwt"
 ) {
-    val isLoggedIn: Boolean get() = username.isNotEmpty() && password.isNotEmpty()
+    val isLoggedIn: Boolean get() = username.isNotEmpty()
+    val isJwtAuth: Boolean get() = authMethod == "v2_jwt" && accessToken.isNotEmpty()
 }
