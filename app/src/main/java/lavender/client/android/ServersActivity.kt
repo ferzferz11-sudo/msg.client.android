@@ -273,7 +273,8 @@ class ServersActivity : AppCompatActivity() {
                 }
             },
             onCancel = {
-                // Do nothing, sheet already dismissed
+                loginSheet.dismiss()
+                selectServer(server)
             }
         )
 
@@ -311,7 +312,8 @@ class ServersActivity : AppCompatActivity() {
                 }
             },
             onCancel = {
-                // Do nothing, sheet already dismissed
+                loginSheet.dismiss()
+                selectServer(server)
             },
             prefillUsername = prefillUser,
             prefillPassword = prefillPass

@@ -2537,7 +2537,8 @@ class ChatListActivity : AppCompatActivity() {
             },
             onCancel = {
                 isTransitioning = true
-                // Do nothing, sheet already dismissed
+                loginSheet.dismiss()
+                showAuthChoiceDialog()
             },
             theme = customTheme
         )
@@ -2617,6 +2618,8 @@ class ChatListActivity : AppCompatActivity() {
             },
             onCancel = {
                 isTransitioning = true
+                registerSheet.dismiss()
+                showAuthChoiceDialog()
             },
             prefillUsername = prefillUser,
             prefillPassword = prefillPass,
