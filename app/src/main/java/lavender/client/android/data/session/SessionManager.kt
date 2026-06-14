@@ -430,14 +430,16 @@ object SessionManager {
         // Clear JWT tokens
         AuthManager.clearTokens(context)
 
-        // Clear encrypted credentials (password, tokens, etc.) but keep username
+        // Clear encrypted credentials (password, tokens, etc.)
         CredentialStore.clear(context)
 
-        // Clear non-sensitive legacy prefs
+        // Clear non-sensitive legacy prefs but keep username for pre-fill
         CredentialStore.getLegacyPrefs(context).edit {
             remove("password")
             remove("user_id")
             remove("chat_list_version")
+            // Save username for pre-fill on next login
+            putString("last_username", currentUsername)
         }
 
         GrpcClient.disconnect()

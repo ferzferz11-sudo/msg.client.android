@@ -69,4 +69,11 @@ class LoginBottomSheet(
         editTextUsername?.text?.clear()
         editTextPassword?.text?.clear()
     }
+
+    fun prefillUsername(username: String) {
+        if (username.isNotEmpty()) {
+            editTextUsername?.setText(username)
+            editTextUsername?.setSelection(username.length)
+        }
+    }
 }

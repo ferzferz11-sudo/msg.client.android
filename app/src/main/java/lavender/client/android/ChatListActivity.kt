@@ -2548,6 +2548,13 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
+        // Pre-fill username from last login
+        val lastUsername = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            .getString("last_username", "") ?: ""
+        if (lastUsername.isNotEmpty()) {
+            loginSheet.prefillUsername(lastUsername)
+        }
+
         loginSheet.show()
     }
 
