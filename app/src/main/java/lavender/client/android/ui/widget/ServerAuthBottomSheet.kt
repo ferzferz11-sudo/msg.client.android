@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.view.View
 import android.widget.ImageView
+import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
