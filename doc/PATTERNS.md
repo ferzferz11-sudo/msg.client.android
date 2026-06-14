@@ -8,12 +8,13 @@
 ## Паттерны
 
 ### Auth widgets pattern (v1.1.3.11)
-Аутентификация вынесена в отдельные виджеты:
-- `LoginBottomSheet` — шторка входа (username/password, login/cancel callbacks)
-- `RegisterBottomSheet` — шторка регистрации (username/password/email, register/cancel callbacks)
-- Оба виджета наследуют `StandardBottomSheet`
-- Оба автоматически скрывают server selector (сервер уже выбран)
-- Используются в: `ChatListActivity`, `ServersActivity`, `AuthChoiceDialog`
+Аутентификация вынесена в 3 виджета:
+- `ServerAuthBottomSheet` — шторка выбора входа (лого + сервер + статус + login/register)
+- `LoginBottomSheet` — шторка входа (username/password)
+- `RegisterBottomSheet` — шторка регистрации (username/password/email)
+- Все наследуют StandardBottomSheet
+- Health check через http://host:8082/health
+- Используются в: ChatListActivity, ServersActivity
 
 ### Server switch pattern (v1.1.3.11)
 При смене сервера через ServersActivity:

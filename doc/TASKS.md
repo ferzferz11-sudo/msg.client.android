@@ -6,74 +6,69 @@
 
 ---
 
-## ✅ v1.1.3.11 — Double-login bugfix + Server switch fix
+## ✅ v1.1.3.11 — Auth widgets + Server switch fix + Chat flickering fix
+
+### Новое: Auth bottom sheet widgets
+- ✅ **ServerAuthBottomSheet** — шторка выбора входа (лого + имя сервера + адрес + health индикатор + кнопки Войти/Регистрация)
+- ✅ **LoginBottomSheet** — шторка входа (username/password + кнопки)
+- ✅ **RegisterBottomSheet** — шторка регистрации (username/password/email + кнопки)
+- ✅ Все 3 виджета используются и в ChatListActivity (первый вход) и в ServersActivity (выбор сервера)
+- ✅ Имена серверов: "Lava Germany" (prod), "Lava Germany dev" (dev)
+- ✅ Health check через `http://host:8082/health` (зелёный/серый индикатор)
+- ✅ Версия приложения: "Lava: app Android v1.1.3.11" / "Лава: приложение Android v1.1.3.11"
 
 ### Исправления
-- ✅ **Двойной вход при смене сервера** (ServersActivity → ChatListActivity):
-  - Убран преждевременный `CredentialStore.setServerAddress()` из `ServersActivity.showServerLoginSheet` до успешного входа
-  - `setServerAddress` теперь вызывается только после успешного `SessionManager.login()`
-  - Убран auto-login из `ChatListActivity.serversActivityLauncher` — пользователь уже вошёл через ServersActivity
-  - Добавлен флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect в `onResume()`
-  - Лог подтверждал 3 входа подряд: ferz11→dev:50052, ferz→dev:50052, ferz→prod:50051
-- ✅ **Чаты загружаются с правильного сервера после смены**:
-  - Очистка старых чатов из UI и Room DB при смене сервера
-  - Обновление username/password из CredentialStore в serversActivityLauncher
-  - Обновление GrpcClient.setUserId() и SessionManager.updateSession()
-  - Ожидание connectionStatus READY перед загрузкой чатов (timeout 15с)
-
-### Новое: Мультиязычность (i18n)
-- ✅ Вынесено 100+ хардкодных русских строк в strings.xml (en + ru)
-- ✅ AIBottomSheet, RemoteAgent, ChatList, OWL, Hermes, AgentSettings и др.
-- ✅ Добавлено 43 новых строки в values/strings.xml + values-ru/strings.xml
-- ⚠️ Осталось: ~15 файлов (NewChatActivity, MessageAdapter, HermesGatewayManager, RemoteAgentManager, SecurityActivity, ThemesActivity, CallActivity, AgentListActivity, RemoteAgentActivity agentCommands)
-
-### Новое: Espresso-тесты
-- ✅ ChatListActivityTest — 18 тестов
-- ✅ RemoteAgentActivityTest — 12 тестов
-- ✅ ChatWidgetTest, EmptyChatTextTest
-
-### Исправления
-- ✅ Empty chat text — "Personal storage" только для Favorites
-- ✅ RemoteAgentActivity crash — NPE при инициализации taskTypes
-- ✅ Форматирование строк — позиционные форматтеры
-- ✅ Сборка — getString() в Adapter, BottomSheet, ViewModel
+- ✅ **Двойной вход при смене сервера** — исправлен
+- ✅ **Чаты загружаются с правильного сервера** — clearAll() + ожидание READY
+- ✅ **Мерцание чатов** — isLoadingChats флаг, startSync останавливается при смене сервера
+- ✅ **Двойной тап на Войти/Регистрация** — isTransitioning флаг
+- ✅ **i18n** — server_default_name, app_version_format строки
 
 ---
 
-## ✅ v1.1.3.8 — Espresso Testing IDs + AI Sheet + Bugfixes
-- ✅ Espresso ID naming (snake_case + префиксы)
-- ✅ AI Bottom Sheet улучшения
+## ✅ v1.1.3.10 — i18n completion + Stability
+
+### Android
+- ✅ i18n завершён — все user-facing строки вынесены (~50 строк)
+- ✅ Unit-тесты — ErrorHandlerTest (11), ChatAdapterTest (15)
+- ✅ Crash fixes — OwlSettingsActivity, RemoteAgentActivity
+
+---
+
+## ✅ v1.1.3.9 — Espresso Tests + Bugfixes
+
+- ✅ Espresso-тесты — 4 тест-класса (42 теста)
+- ✅ Empty chat text fix
+- ✅ RemoteAgentActivity crash fix
+
+---
+
+## ✅ v1.1.3.8 — DeployAgentTaskStream fix + Remote Agent UI
+
 - ✅ ChatAdapter filter() fix
-- ✅ Favorites → "Личное хранилище"
+- ✅ RemoteAgentViewModel fix
 
 ---
 
-## ✅ v1.1.3.7 — Streaming + ErrorHandler + P0 Bugfixes
-- ✅ DeployAgentTaskStream (server-side streaming)
+## ✅ v1.1.3.7 — Streaming + ErrorHandler
+
+- ✅ DeployAgentTaskStream
 - ✅ ErrorHandler + AppLog
-- ✅ P0 bugfixes
-
----
-
-## ✅ v1.1.3.5 — Remote Agent: Persistent Connection
-- ✅ Foreground Service + Singleton Manager
-
----
-
-## ✅ v1.1.3.4 — Hermes Gateway (SSH Tunnel)
-- ✅ HermesGatewayManager, 40 unit tests
 
 ---
 
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] **Новая единая авторизация (AuthService + JWT)**
-  - Сервер: расширить AuthService (device management, refresh tokens, sessions)
-  - Android: новый AuthManager с JWT, device registration, token refresh
-  - Web/macOS/iOS: аналогичная реализация
-  - Старые клиенты продолжают работать через Chat stream auth
-  - Миграция: при логине черновый AuthService → выдача JWT → последующие запросы с Bearer
+- [ ] **AuthService v2 интеграция в Android**
+  - Клиент должен поддерживать оба метода входа (v2 приоритет, fallback на v1)
+  - При получении deprecated warning от v1 — показать уведомление
+  - JWT token refresh, device management
+
+### Средний приоритет
+- [ ] **Мерцание тулбара** — "не может подключиться" + кружок перезагрузки после входа через серверы
+  - Проблема: onResume() и serversActivityLauncher конфликтуют
+  - Нужно: единый поток загрузки чатов, не дублировать startSync()
 
 ### Низкий приоритет
 - [ ] Qdrant + CLIP (production RAG)
@@ -85,11 +80,10 @@
 
 | Решение | Обоснование |
 |---------|-------------|
-| ErrorHandler | Единая точка для логирования всех исключений с контекстом |
-| AppLog для Toast | Все Toast-ошибки автоматически попадают в журнал ошибок |
-| CancellationException → INFO | Отмена корутины это не ошибка, а нормальное поведение |
-| AndroidViewModel для i18n | ViewModel не имеет getString(), нужно AndroidViewModel + getApplication() |
-| itemTypes в onCreate | НЕ инициализировать getString() в полях класса Activity — crash до onCreate() |
+| Auth widgets | 3 виджета (ServerAuth, Login, Register) — единый стиль входа |
+| Health check | HTTP /health для индикатора доступности сервера |
+| isLoadingChats | Предотвращает двойную загрузку из launcher + onResume |
+| isTransitioning | Предвращает повторный showAuthChoiceDialog при переходе |
 
 ---
 
@@ -97,14 +91,9 @@
 
 | Файл | Назначение |
 |------|------------|
-| `ErrorHandler.kt` | Единый обработчик ошибок |
-| `AppLog.kt` | Глобальный логгер (in-memory, до 500 записей) |
-| `GrpcClient.kt` | Единая точка доступа к gRPC (facade) |
-| `HermesGrpc.kt` | Hermes/Remote Agent gRPC методы (streaming) |
-| `MessengerProto.kt` | Proto data classes (streaming) |
-| `RemoteAgentSettingsActivity.kt` | Управление токенами и агентом |
-| `RemoteAgentActivity.kt` | Чат с remote agent (streaming) |
-| `RemoteAgentService.kt` | Foreground service |
-| `RemoteAgentManager.kt` | Singleton manager |
-| `HermesGatewayManager.kt` | SSH туннель (JSch) |
-| `RemoteAgentViewModel.kt` | ViewModel для Remote Agent (streaming) |
+| `ServerAuthBottomSheet.kt` | Шторка выбора входа (лого + сервер + статус) |
+| `LoginBottomSheet.kt` | Шторка входа |
+| `RegisterBottomSheet.kt` | Шторка регистрации |
+| `ChatAdapter.kt` | Адаптер чатов с clearAll() |
+| `CredentialStore.kt` | Хранилище credentials + список серверов |
+| `SessionManager.kt` | Управление сессией |

@@ -8,8 +8,10 @@
 
 ## СТАТУС: v1.1.3.11 — DEV
 
-Исправлен баг двойного входа при смене сервера.
-Следующий шаг: тестирование на dev + AuthService v2 интеграция.
+Сервер: v1.2.0.0 на dev и prod. AuthService v2 (JWT) основной, v1 deprecated.
+Android: 3 auth виджета (ServerAuth, Login, Register), server switch исправлен.
+
+**Текущая задача:** Мерцание тулбара после входа через серверы — "не может подключиться" + кружок перезагрузки.
 
 ---
 
@@ -18,55 +20,60 @@
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server
-server.go                  — Структура server (ServerVersion = "1.1.3.10")
-server_remote.go           — Remote Agent RPC (DeployAgentTaskStream fix)
-hermes_remote_manager.go   — HandleTaskStream, StreamDone flag
-server_remote_test.go      — 6 unit-тестов для streaming
-messenger.proto            — DeployAgentTaskStream RPC
+server.go                  — ServerVersion = "1.2.0.0"
+auth_service.go            — AuthService v1 (deprecated, но работает)
+auth_service_v2.go         — AuthService v2 (JWT, основной)
+auth_interceptor.go        — gRPC Bearer token interceptor
+auth_jwt.go                — JWT генерация/валидация
+db_auth_devices.go         — CRUD для user_devices + device_auth_log
+db_auth_migrations.go      — миграция таблиц
+server_remote.go           — Remote Agent RPC
+hermes_remote_manager.go   — HandleTaskStream
+ai_chat_manager.go         — AI чаты
+owl.go                     — OWL AI
+hermes_orchestrator.go     — Hermes Orchestrator
+http_server.go             — HTTP (/health на 8082)
+messenger.proto            — ChatService, AuthService, AI Chat, Remote Agent RPC
 ```
 
 ### Android (/root/msg.client.android)
 ```
-ui/remote/
-├── RemoteAgentActivity.kt         — Чат с агентом (streaming)
-├── RemoteAgentSettingsActivity.kt — Настройки (input fields theming)
-├── RemoteAgentViewModel.kt        — ViewModel (sendMessageStreaming), AndroidViewModel
-├── RemoteAgentService.kt           — Foreground service
-├── RemoteAgentManager.kt           — Singleton manager
-└── HermesGatewayManager.kt         — SSH туннель
-
-ui/chat/widget/ChatWidget.kt       — Общий виджет чата
-ui/adapter/ChatAdapter.kt          — filter() fix (dispatchUpdatesTo)
-theme/ui/ThemeApplier.kt           — Remote Agent input fields added
+ui/
+├── widget/
+│   ├── ServerAuthBottomSheet.kt    — шторка выбора входа (лого + сервер + статус)
+│   ├── LoginBottomSheet.kt         — шторка входа
+│   └── RegisterBottomSheet.kt      — шторка регистрации
+├── remote/                         — Remote Agent UI
+├── chat/widget/ChatWidget.kt       — общий виджет чата
+└── adapter/ChatAdapter.kt          — адаптер чатов (clearAll)
 
 data/
-├── proto/MessengerProto.kt         — Proto data classes
-├── grpc/GrpcClient.kt              — Facade
-├── grpc/HermesGrpc.kt              — Remote Agent gRPC (unary + streaming)
-├── models/ErrorHandler.kt           — Единый обработчик ошибок
-└── models/AppLog.kt                — Глобальный логгер
+├── grpc/GrpcClient.kt              — facade
+├── session/CredentialStore.kt      — credentials + server list + getDefaultServer()
+├── session/SessionManager.kt       — управление сессией
+└── models/ErrorHandler.kt          — единый обработчик ошибок
 ```
 
 ---
 
-## КЛЮЧЕВЫЕ РЕШЕНИЯ (v1.1.3.9)
+## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### i18n — мультиязычность
-- Все пользовательские строки в values/strings.xml (en) + values-ru/strings.xml
-- Для новых строк: ОДНОВРЕМЕННО в оба файла
-- ViewModel → AndroidViewModel для доступа к getString()
-- Adapter/BottomSheet → context.getString()
-- НЕ инициализировать getString() в полях класса Activity (crash до onCreate)
+### Auth widgets
+- 3 виджета: ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
+- Все наследуют StandardBottomSheet
+- Health check через http://host:8082/health
+- Используются в ChatListActivity и ServersActivity
 
-### Espresso Testing
-- Все XML ID: snake_case + префиксы (btn_, et_, tv_, iv_, rv_, fab_, cv_, ll_, fl_, pb_, srl_, til_, actv_, barrier_)
-- Динамические View: View.generateViewId()
-- 4 тест-класса: ChatListActivityTest, RemoteAgentActivityTest, ChatWidgetTest, EmptyChatTextTest
+### Server switch
+- CredentialStore.setServerAddress() только после успешного входа
+- justReturnedFromServersActivity флаг для пропуска reconnect в onResume()
+- isLoadingChats предотвращает двойную загрузку
+- startSync() останавливается при смене сервера
 
-### Empty chat text
-- Favorites → "Personal storage" / "Личное хранилище"
-- Обычные пустые чаты → "No messages" / "Нет сообщений"
-- Проверять chat.type == "favorites", не lastMessageText
+### i18n
+- Все строки в values/strings.xml (en) + values-ru/strings.xml
+- server_default_name, app_version_format строки
+- "Lava: app Android v1.1.3.11" / "Лава: приложение Android v1.1.3.11"
 
 ---
 
@@ -74,46 +81,22 @@ data/
 
 1. НЕ компилировать на сервере (OOM kill)
 2. Коммитить и пушить после каждого значимого изменения
-3. Версия сервера в `server.go:34`, версия Android в `version.txt`
-4. Разделение архитектуры — каждый домен в своём server_*.go файле
-5. userId (UUID) — всегда как ключ, НЕ username
-6. changelog.txt БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — использовать bundled changelog в APK
-7. Agent tokens: в БД хранится SHA-256 хеш, не сам токен
-8. JWT секрет: минимум 32 байта, НЕ коммитить
-9. Темы: цвета программно через `ThemeUtils.parseSafeColor()`, НЕ `?attr/` в XML
-10. ChatAdapter: при фильтрации с Favorites использовать `dispatchUpdatesTo` с offset +1
-11. String resources: НЕ конкатенировать в `setText`, использовать `getString` с placeholders
-12. **i18n**: все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
-13. **getString() в ViewModel**: использовать AndroidViewModel + getApplication<Application>().getString()
-14. **getString() в Adapter/BottomSheet**: использовать context.getString()
-15. **НЕ инициализировать getString() в полях класса Activity** — только в onCreate()
-16. **Форматирование строк**: при нескольких подстановках использовать позиционные форматтеры (%1$s, %2$d)
+3. Версия сервера в server.go:33, версия Android в version.txt
+4. userId (UUID) — всегда как ключ, НЕ username
+5. changelog.txt БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ
+6. JWT секрет: минимум 32 байта, НЕ коммитить
+7. Темы: цвета программно через ThemeUtils.parseSafeColor()
+8. i18n: все новые строки ОДНОВРЕМЕННО в values/strings.xml + values-ru/strings.xml
+9. НЕ инициализировать getString() в полях класса Activity
+10. Форматирование строк: позиционные форматтеры (%1$s, %2$d)
 
 ---
 
 ## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
-- Агент (hermes_remote_agent.py) ещё НЕ отправляет streaming updates — сервер готов, клиент готов
-- Server migration warnings: `role "lavender" does not exist` (не критично)
-
----
-
-## i18n — НЕЗАВЕРШЁННАЯ РАБОТА
-
-**Вынесено (15 файлов):** AIBottomSheet, RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService, ChatListActivity, ConferenceLobbyActivity, OwlSettingsActivity, OwlChatActivity, LogViewerActivity, HermesChatActivity, AgentSettingsActivity/BottomSheet, AgentListActivity, ChatMessageAdapter, CommandBottomSheet, OwlChatViewModel.
-
-**Осталось вынести (средний приоритет):**
-- NewChatActivity: upload progress text, conference/call detection strings
-- MessageAdapter: call status strings ("Пропущенный вызов", "Входящий/Исходящий", "Вызов не принят")
-- HermesGatewayManager: SSH error messages (6 строк)
-- RemoteAgentManager: status text "Отключено", "Сервис не запущен"
-- HermesChatViewModel: error в data class (нет контекста — нужен другой подход)
-- SecurityActivity: Toast "Другие сеансы завершены", "Ошибка при завершении сеансов"
-- ThemesActivity: "Лавандовый ночной"
-- CallActivity: Toast "Не удалось соединиться"
-- AgentListActivity: PREFILL_MESSAGE "Расскажи подробнее о модели"
-- RemoteAgentActivity: agentCommands descriptions (12 строк команд)
-- ChatAdapter: "📷 Фото" / "📷 Photo" (уже есть lang check — можно оставить)
+- **Мерцание тулбара** после входа через серверы — "не может подключиться" + кружок перезагрузки
+  - Проблема: onResume() и serversActivityLauncher конфликтуют
+  - Нужно: единый поток загрузки чатов, не дублировать startSync()
 
 ---
 
@@ -121,8 +104,7 @@ data/
 
 ```bash
 # === СЕРВЕР ===
-cd /root/msg
-export PATH=$PATH:/usr/local/go/bin:~/go/bin
+cd /root/msg && export PATH=$PATH:/usr/local/go/bin:~/go/bin
 
 # Сборка и деплой на dev
 go build -o /tmp/lavender-server-dev .
@@ -141,13 +123,7 @@ go test ./...
 
 # === ANDROID ===
 cd /root/msg.client.android
-# НЕ запускать assembleRelease на сервере (OOM)!
-
-# Релиз
-./scripts/release.sh 1.1.3.10
-
-# SSH к серверу
-ssh lava
+# assembleRelease ТОЛЬКО локально!
 ```
 
 ---
@@ -157,6 +133,7 @@ ssh lava
 | Характеристика | Dev | Prod |
 |----------------|-----|------|
 | Порт | 50052 | 50051 |
+| Имя | Lava Germany dev | Lava Germany |
 | Сервис | lavender-server-dev | lavender-server |
 | Конфиг | .env.dev | .env |
 | DB | chat_db_dev | chat_db |

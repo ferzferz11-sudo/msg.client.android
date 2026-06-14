@@ -45,7 +45,6 @@
 | `/root/msg/doc/INDEX.md` | Индекс серверной документации |
 | `/root/msg/doc/TASKS.md` | Серверный таск-трекер |
 | `/root/msg/doc/PROMPT.md` | Промпт для серверных сессий |
-| `/root/msg/doc/PROMPT_SERVER.md` | Промпт для серверных сессий (детальный) |
 
 ---
 
@@ -62,14 +61,20 @@ app/src/main/java/lavender/client/android/
 │   │   ├── RemoteAgentManager.kt          — singleton manager
 │   │   └── HermesGatewayManager.kt        — SSH туннель
 │   ├── chat/widget/ChatWidget.kt          — общий виджет чата
-│   ├── adapter/ChatAdapter.kt             — адаптер списка чатов
-│   └── ...
+│   ├── adapter/ChatAdapter.kt             — адаптер списка чатов (clearAll)
+│   └── widget/
+│       ├── ServerAuthBottomSheet.kt       — шторка выбора входа
+│       ├── LoginBottomSheet.kt            — шторка входа
+│       └── RegisterBottomSheet.kt         — шторка регистрации
 ├── data/
 │   ├── grpc/GrpcClient.kt                 — facade
 │   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
 │   ├── proto/MessengerProto.kt            — proto data classes
 │   ├── models/ErrorHandler.kt              — единый обработчик ошибок
-│   └── models/AppLog.kt                   — глобальный логгер
+│   ├── models/AppLog.kt                   — глобальный логгер
+│   └── session/
+│       ├── CredentialStore.kt             — credentials + server list
+│       └── SessionManager.kt             — управление сессией
 └── theme/ui/
     ├── ThemeApplier.kt                    — применение тем
     └── ThemeUi.kt                         — ThemeUi.bind()
@@ -79,17 +84,30 @@ app/src/main/java/lavender/client/android/
 
 ## Ключевые паттерны
 
+### Auth widgets pattern (v1.1.3.11)
+Аутентификация вынесена в отдельные виджеты:
+- `ServerAuthBottomSheet` — шторка выбора (лого + сервер + статус + login/register)
+- `LoginBottomSheet` — шторка входа (username/password)
+- `RegisterBottomSheet` — шторка регистрации (username/password/email)
+- Оба наследуют `StandardBottomSheet`
+- Health check через `http://host:8082/health`
+- Используются в: `ChatListActivity`, `ServersActivity`
+
+### Server switch pattern (v1.1.3.11)
+При смене сервера через ServersActivity:
+- НЕ сохранять `serverAddress` до успешного входа
+- Сохранять `serverAddress` ТОЛЬКО после успешного `SessionManager.login()`
+- Использовать флаг `justReturnedFromServersActivity` для пропуска reconnect в onResume()
+- `isLoadingChats` предотвращает двойную загрузку
+- `startSync()` останавливается при смене сервера
+
 ### i18n (v1.1.3.9)
 - Activity: `getString(R.string.xxx)`
 - Adapter: `context.getString(R.string.xxx)`
 - ViewModel: `AndroidViewModel` + `getApplication<Application>().getString()`
 - НЕ инициализировать getString() в полях класса Activity
 - Несколько подстановок: позиционные форматтеры (%1$s, %2$d)
-
-### Remote Agent
-- **Тулбар**: `toolbar_background` + `ThemeUi.bind()` единообразно
-- **Streaming**: `DeployAgentTaskStream` → `callbackFlow` → `flow.collect`
-- **done=True**: сервер отправляет ровно один раз с полными данными
+- Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
 
 ### Темы
 - `ThemeApplier.apply()` до `setContentView()`
@@ -99,6 +117,7 @@ app/src/main/java/lavender/client/android/
 ### Фильтрация чатов
 - `ChatAdapter.filter()` — `dispatchUpdatesTo` с offset +1 для Favorites
 - НЕ использовать `notifyItemRangeChanged`
+- `ChatAdapter.clearAll()` — полная очистка с сбросом favoritesItem
 
 ---
 
@@ -109,7 +128,7 @@ app/src/main/java/lavender/client/android/
 ./gradlew assembleRelease    # ТОЛЬКО локально (OOM на сервере)
 
 # Релиз
-./scripts/release.sh 1.1.3.9
+./scripts/release.sh 1.1.3.11
 
 # SSH к серверу
 ssh lava
@@ -122,4 +141,5 @@ ssh lava
 | | Dev | Prod |
 |--|-----|------|
 | Порт | 50052 | 50051 |
+| Имя | Lava Germany dev | Lava Germany |
 | SSH | lava (13.140.25.249) | same |
