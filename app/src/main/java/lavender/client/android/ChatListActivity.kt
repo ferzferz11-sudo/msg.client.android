@@ -102,6 +102,7 @@ class ChatListActivity : AppCompatActivity() {
     private val pendingDeletions = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private var isChatsLoaded = false // prevent reload flicker on resume
     private var isLoadingChats = false // prevent concurrent loadChats from launcher + onResume
+    private var isConnecting = false // prevent duplicate connect() calls
     private var refreshDebounceJob: Job? = null // debounce rapid refresh requests
     private var unreadNotifCount = 0 // badge count for server notifications
     private var shouldShowAiSheetOnResume = false // flag to reopen AI sheet after returning from AI activity
@@ -440,14 +441,19 @@ class ChatListActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             grpcClient.connectionStatus.collect { status ->
-                val isConnecting = status == ConnectionStatus.CONNECTING
+                val isConnectingNow = status == ConnectionStatus.CONNECTING
                 val isFailed = status == ConnectionStatus.FAILED
+                
+                // Reset isConnecting flag when status changes from CONNECTING
+                if (!isConnectingNow && isConnecting) {
+                    isConnecting = false
+                }
                 
                 if (chatAdapter.getSelectedChats().isEmpty()) {
                     binding.tvToolbarTitle.text = getString(R.string.chats)
                     
                     when {
-                        isConnecting -> {
+                        isConnectingNow -> {
                             binding.tvToolbarSubtitle.text = getString(R.string.connecting)
                             binding.tvToolbarSubtitle.isVisible = true
                         }
@@ -469,7 +475,7 @@ class ChatListActivity : AppCompatActivity() {
                         // Only start chat background stream if we are actually on this screen
                         // and no other room is active
                         grpcClient.startChat(username, password, "", register = false, deviceId = session.deviceId, deviceName = session.deviceName) { /* onMessageReceived */ }
-                        if (!isChatsLoaded) {
+                        if (!isChatsLoaded && !isLoadingChats) {
                             loadChats()
                         }
                     }
@@ -492,7 +498,7 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
         
-        startSync()
+        // startSync() is called from loadChats() after successful load
 
         lifecycleScope.launch {
             SessionManager.logoutEvent.collect {
@@ -863,6 +869,11 @@ class ChatListActivity : AppCompatActivity() {
                     isChatsLoaded = true
 
                     Log.d("ChatListActivity", "Loaded ${chats.size} chats (muted: ${mutedIds.size})")
+                    
+                    // Start background sync and refresh auxiliary data after successful load
+                    startSync()
+                    refreshAiChats()
+                    refreshUnreadCount()
                 }
 
                 // Fetch favorites data in background (non-visual)
@@ -1334,48 +1345,14 @@ class ChatListActivity : AppCompatActivity() {
         // Reset flag after first onResume
         justReturnedFromServersActivity = false
 
-        if (needsReconnect) {
+        if (needsReconnect && !isConnecting) {
             if (savedServerAddress.isNotEmpty()) {
                 val parts = savedServerAddress.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                 Log.d("ChatListActivity", "onResume: reconnecting to $host:$port (was: ${grpcClient.currentServerAddress})")
+                isConnecting = true
                 grpcClient.connect(host, false, port, this, true)
-            }
-        }
-
-        // Reload chats when returning from another activity.
-        // The connection may have dropped while we were away (e.g. OWL activity
-        // held the gRPC channel and keepalive failed). The Flow collector in
-        // onCreate will call loadChats() when status becomes READY, but only
-        // if the channel actually reconnects. As a safety net, if after 3 seconds
-        // the status is still not READY, force a reconnect.
-        lifecycleScope.launch {
-            var waited = 0
-            while (waited < 3000) {
-                delay(500)
-                waited += 500
-                if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
-                    if (!isChatsLoaded && !isLoadingChats) {
-                        loadChats()
-                    } else if (!isLoadingChats) {
-                        // Always refresh when returning from another activity (e.g. HermesChatActivity
-                        // may have created a new session that should appear in the list)
-                        loadChats(skipCache = true)
-                    }
-                    refreshAiChats()
-                    refreshUnreadCount()
-                    return@launch
-                }
-            }
-            // Still not ready after 3s — force reconnect
-            if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                Log.d("ChatListActivity", "onResume: connection still not READY after 3s, forcing reconnect")
-                val serverAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this@ChatListActivity)
-                if (serverAddress.isNotEmpty()) {
-                    val parts = serverAddress.split(":")
-                    grpcClient.connect(parts[0], false, parts.getOrNull(1)?.toIntOrNull() ?: 50051, this@ChatListActivity, true)
-                }
             }
         }
 
@@ -1562,6 +1539,7 @@ class ChatListActivity : AppCompatActivity() {
                     }
 
                     grpcClient.disconnect()
+                    isConnecting = true
                     grpcClient.connect(host, false, port, this, forceReconnect = true)
                 }
 
@@ -1576,7 +1554,7 @@ class ChatListActivity : AppCompatActivity() {
                         if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
                             Log.d("ChatListActivity", "Connection READY after ${waited}ms, loading chats from new server")
                             loadChats(skipCache = true)
-                            startSync()
+                            // startSync() is called inside loadChats() after successful load
                             return@launch
                         }
                     }
