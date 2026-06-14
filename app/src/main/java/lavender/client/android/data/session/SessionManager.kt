@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.*
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.AuthResponseV2Proto
+import lavender.client.android.data.proto.RefreshTokenResponseProto
 import lavender.client.android.data.auth.AuthManager
 import android.os.Build
 

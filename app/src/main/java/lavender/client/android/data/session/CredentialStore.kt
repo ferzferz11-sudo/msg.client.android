@@ -304,9 +304,7 @@ object CredentialStore {
      * Called after successful SignInV2/SignUpV2.
      */
     fun setJwtServerAddress(context: Context, serverAddress: String) {
-        getEncryptedPrefs(context).edit {
-            putString(KEY_JWT_SERVER, serverAddress)
-        }
+        getEncryptedPrefs(context).edit().putString(KEY_JWT_SERVER, serverAddress).apply()
     }
 
     /**
@@ -314,8 +312,6 @@ object CredentialStore {
      * Called on logout or token clear.
      */
     fun clearJwtServerAddress(context: Context) {
-        getEncryptedPrefs(context).edit {
-            remove(KEY_JWT_SERVER)
-        }
+        getEncryptedPrefs(context).edit().remove(KEY_JWT_SERVER).apply()
     }
 }
