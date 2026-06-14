@@ -12,3 +12,5 @@ local.properties
 *.jks
 
 .kotlin/
+*.env
+*.env.bak
