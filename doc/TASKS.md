@@ -15,6 +15,11 @@
   - Убран auto-login из `ChatListActivity.serversActivityLauncher` — пользователь уже вошёл через ServersActivity
   - Добавлен флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect в `onResume()`
   - Лог подтверждал 3 входа подряд: ferz11→dev:50052, ferz→dev:50052, ferz→prod:50051
+- ✅ **Чаты загружаются с правильного сервера после смены**:
+  - Очистка старых чатов из UI и Room DB при смене сервера
+  - Обновление username/password из CredentialStore в serversActivityLauncher
+  - Обновление GrpcClient.setUserId() и SessionManager.updateSession()
+  - Ожидание connectionStatus READY перед загрузкой чатов (timeout 15с)
 
 ### Новое: Мультиязычность (i18n)
 - ✅ Вынесено 100+ хардкодных русских строк в strings.xml (en + ru)
