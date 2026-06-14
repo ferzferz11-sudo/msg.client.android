@@ -420,18 +420,18 @@ object SessionManager {
     }
 
     fun logout(context: Context) {
-        Log.d("SessionManager", "Logging out, clearing all user data")
-        _session.value = UserSession()
+        Log.d("SessionManager", "Logging out, clearing credentials but keeping username")
+        val currentUsername = _session.value.username
+        _session.value = UserSession(username = currentUsername)
 
         // Clear JWT tokens
         AuthManager.clearTokens(context)
 
-        // Clear encrypted credentials
+        // Clear encrypted credentials (password, tokens, etc.) but keep username
         CredentialStore.clear(context)
 
-        // Clear non-sensitive legacy prefs (theme, push settings, etc.)
+        // Clear non-sensitive legacy prefs
         CredentialStore.getLegacyPrefs(context).edit {
-            remove("username")
             remove("password")
             remove("user_id")
             remove("chat_list_version")

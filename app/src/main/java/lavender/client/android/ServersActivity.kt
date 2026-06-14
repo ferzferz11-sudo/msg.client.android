@@ -258,18 +258,11 @@ class ServersActivity : AppCompatActivity() {
                             }
                             "USER_NOT_FOUND" -> {
                                 loginSheet.setLoading(false)
-                                // Offer to register
-                                AlertDialog.Builder(this@ServersActivity)
-                                    .setTitle(R.string.user_not_found)
-                                    .setMessage(getString(R.string.register_confirm, u))
-                                    .setPositiveButton(R.string.yes) { _, _ ->
-                                        loginSheet.dismiss()
-                                        showServerRegisterSheet(server, u, p)
-                                    }
-                                    .setNegativeButton(R.string.no) { _, _ ->
-                                        // Keep login sheet open
-                                    }
-                                    .show()
+                                Toast.makeText(this@ServersActivity, R.string.user_not_found, Toast.LENGTH_LONG).show()
+                            }
+                            "AUTH_FAILED" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.wrong_password, Toast.LENGTH_LONG).show()
                             }
                             else -> {
                                 loginSheet.setLoading(false)

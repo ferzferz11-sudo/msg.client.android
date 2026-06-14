@@ -2521,20 +2521,11 @@ class ChatListActivity : AppCompatActivity() {
                             }
                             "USER_NOT_FOUND" -> {
                                 loginSheet.setLoading(false)
-                                AlertDialog.Builder(this@ChatListActivity)
-                                    .setTitle(R.string.user_not_found)
-                                    .setMessage(getString(R.string.register_confirm, u))
-                                    .setPositiveButton(R.string.yes) { _, _ ->
-                                        isTransitioning = true
-                                        loginSheet.dismiss()
-                                        showRegisterBottomSheet(u, p)
-                                    }
-                                    .setNegativeButton(R.string.no) { _, _ -> }
-                                    .show()
+                                Toast.makeText(this@ChatListActivity, R.string.user_not_found, Toast.LENGTH_LONG).show()
                             }
                             "AUTH_FAILED" -> {
                                 loginSheet.setLoading(false)
-                                Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@ChatListActivity, R.string.wrong_password, Toast.LENGTH_LONG).show()
                             }
                             else -> {
                                 loginSheet.setLoading(false)
