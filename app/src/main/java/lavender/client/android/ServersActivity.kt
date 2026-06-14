@@ -312,7 +312,7 @@ class ServersActivity : AppCompatActivity() {
                 }
             },
             onCancel = {
-                loginSheet.dismiss()
+                registerSheet.dismiss()
                 selectServer(server)
             },
             prefillUsername = prefillUser,
