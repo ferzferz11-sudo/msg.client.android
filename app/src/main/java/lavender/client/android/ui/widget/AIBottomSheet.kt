@@ -50,6 +50,8 @@ class AIBottomSheet(
 
     fun rebuildContent() {
         if (isShowing()) {
+            val theme = ThemeStore.currentTheme()
+            applyTheme(theme)
             buildContent()
         }
     }
