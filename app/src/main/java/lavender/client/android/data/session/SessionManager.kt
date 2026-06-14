@@ -177,7 +177,7 @@ object SessionManager {
     }
 
     fun login(context: Context, username: String, pass: String, serverAddress: String, register: Boolean = false, email: String = "", onComplete: (String?) -> Unit) {
-        Log.d("SessionManager", "Login attempt for $username at $serverAddress (register=$register)")
+        Log.d("SessionManager", "Login attempt for $username at $serverAddress (register=$register), stack: ${Thread.currentThread().stackTrace.take(10).joinToString(" -> ")}")
         val parts = serverAddress.split(":")
         val host = parts[0]
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
