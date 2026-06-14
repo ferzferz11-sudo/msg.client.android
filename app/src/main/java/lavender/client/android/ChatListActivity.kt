@@ -1486,22 +1486,62 @@ class ChatListActivity : AppCompatActivity() {
         justReturnedFromServersActivity = true
 
         if (it.resultCode == RESULT_OK) {
-            // Update session from CredentialStore (already saved by ServersActivity)
+            // Update local vars from CredentialStore (updated by ServersActivity)
+            username = CredentialStore.getUsername(this)
+            password = CredentialStore.getPassword(this)
+
+            // Update GrpcClient and SessionManager with new user data
+            val newUserId = CredentialStore.getUserId(this)
+            if (newUserId.isNotEmpty()) {
+                GrpcClient.setUserId(newUserId)
+            }
+            SessionManager.updateSession(username = username, password = password, userId = newUserId)
+
             val newServer = CredentialStore.getServerAddress(this)
             if (newServer.isNotEmpty()) {
                 val parts = newServer.split(":")
                 val host = parts[0]
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-                // Reconnect to new server if different from current
+
                 if (newServer != grpcClient.currentServerAddress) {
+                    // Server changed — clear old chats and reconnect
+                    Log.d("ChatListActivity", "Server changed: ${grpcClient.currentServerAddress} → $newServer, clearing old chats")
+                    chats.clear()
+                    chatAdapter.setChats(listOf())
+
+                    // Clear local cache for new server
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                            db.chatDao().clearAll()
+                            db.messageDao().clearAll()
+                        } catch (e: Exception) {
+                            Log.e("ChatListActivity", "Error clearing cache", e)
+                        }
+                    }
+
                     grpcClient.disconnect()
-                    grpcClient.connect(host, false, port, this, true)
+                    grpcClient.connect(host, false, port, this, forceReconnect = true)
+                }
+
+                // Wait for connection then load chats
+                isChatsLoaded = false
+                lifecycleScope.launch {
+                    // Wait for READY status (up to 15 seconds)
+                    var waited = 0
+                    while (waited < 15000) {
+                        delay(500)
+                        waited += 500
+                        if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                            Log.d("ChatListActivity", "Connection READY after ${waited}ms, loading chats from new server")
+                            loadChats(skipCache = true)
+                            startSync()
+                            return@launch
+                        }
+                    }
+                    Log.w("ChatListActivity", "Timeout waiting for READY after server switch")
                 }
             }
-            // Reload chats from new server
-            isChatsLoaded = false
-            loadChats()
-            startSync()
         }
         showAdditionalSettingsSheet { showSettingsSheet() }
     }
