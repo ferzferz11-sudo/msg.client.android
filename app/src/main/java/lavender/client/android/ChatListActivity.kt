@@ -2785,7 +2785,9 @@ class ChatListActivity : AppCompatActivity() {
         val serverHost = defaultServer?.host ?: "13.140.25.249"
         val serverPort = defaultServer?.port ?: 50051
 
-        val authSheet = ServerAuthBottomSheet(
+        lateinit var authSheet: ServerAuthBottomSheet
+
+        authSheet = ServerAuthBottomSheet(
             context = this,
             serverName = serverName,
             serverHost = serverHost,
