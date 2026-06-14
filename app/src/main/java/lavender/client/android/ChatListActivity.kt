@@ -2468,10 +2468,11 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun showLoginBottomSheet() {
         val customTheme = getAuthTheme()
-
         var isTransitioning = false
 
-        val loginSheet = LoginBottomSheet(
+        lateinit var loginSheet: LoginBottomSheet
+
+        loginSheet = LoginBottomSheet(
             context = this,
             onLogin = { u: String, p: String ->
                 val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
@@ -2547,7 +2548,9 @@ class ChatListActivity : AppCompatActivity() {
 
         var isTransitioning = false
 
-        val registerSheet = RegisterBottomSheet(
+        lateinit var registerSheet: RegisterBottomSheet
+
+        registerSheet = RegisterBottomSheet(
             context = this,
             onRegister = { u: String, p: String, email: String ->
                 try {

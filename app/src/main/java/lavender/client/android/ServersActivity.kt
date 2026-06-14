@@ -228,7 +228,9 @@ class ServersActivity : AppCompatActivity() {
     private fun showServerLoginSheet(server: ServerEntry) {
         val serverAddress = "${server.host}:${server.port}"
 
-        val loginSheet = LoginBottomSheet(
+        lateinit var loginSheet: LoginBottomSheet
+
+        loginSheet = LoginBottomSheet(
             context = this,
             onLogin = { u: String, p: String ->
                 SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
@@ -280,7 +282,9 @@ class ServersActivity : AppCompatActivity() {
     private fun showServerRegisterSheet(server: ServerEntry, prefillUser: String = "", prefillPass: String = "") {
         val serverAddress = "${server.host}:${server.port}"
 
-        val registerSheet = RegisterBottomSheet(
+        lateinit var registerSheet: RegisterBottomSheet
+
+        registerSheet = RegisterBottomSheet(
             context = this,
             onRegister = { u: String, p: String, email: String ->
                 SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result: String? ->

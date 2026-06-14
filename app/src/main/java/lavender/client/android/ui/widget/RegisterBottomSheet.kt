@@ -9,6 +9,7 @@ import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
+import lavender.client.android.theme.ThemeStore
 
 /**
  * Register Bottom Sheet — reusable widget for user registration.
