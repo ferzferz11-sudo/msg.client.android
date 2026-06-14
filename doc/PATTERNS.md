@@ -1,7 +1,7 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.9
-**Обновлено:** 2026-06-13
+**Версия:** v1.1.3.10
+**Обновлено:** 2026-06-14
 
 ---
 
@@ -61,10 +61,22 @@ Favorites всегда на position 0, не участвует в DiffUtil:
 - Для проверки синтаксиса — читать файлы, не компилировать
 
 ### Версии
-- Версия сервера в server.go:33
+- Версия сервера в server.go:34
 - Версия Android в version.txt
 - НЕ менять версию без явного указания пользователя
 - changelog.txt УДАЛЁН — использовать bundled changelog в APK
+
+### i18n (ОБЯЗАТЕЛЬНО)
+- ВСЕ user-facing строки ДОЛЖНЫ быть в `values/strings.xml` (en) + `values-ru/strings.xml` (ru)
+- НИКОГДА не использовать hardcoded строки в Kotlin/Java коде
+- Использовать `getString(R.string.xxx)` с правильным контекстом:
+  - Activity: `getString(R.string.xxx)` — работает напрямую
+  - Adapter/ViewHolder: `context.getString(R.string.xxx)` или `itemView.context.getString()`
+  - ViewModel: `AndroidViewModel` + `getApplication<Application>().getString()`
+  - Data классы: передать context как параметр
+- НЕ инициализировать `getString()` в полях класса Activity (до `onCreate()`) — crash!
+- При добавлении новой строки: добавить в ОБА файла (en + ru)
+- Проверка: `grep -rn '"[А-Яа-я]' app/src/main/java/ --include="*.kt" | grep -v "R\.string"` — должно быть 0 результатов
 
 ---
 

@@ -1,14 +1,14 @@
 # Промпт для новой сессии — v1.1.3.9 (stable)
 
 **Дата:** 2026-06-13
-**Версия:** 1.1.3.9
+**Версия:** 1.1.3.10
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.9 — СТАБИЛЬНАЯ ВЕРСИЯ
+## СТАТУС: v1.1.3.10 — СТАБИЛЬНАЯ ВЕРСИЯ
 
-Релиз выпущен: https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.9
+Релиз выпущен: https://github.com/ferzferz11-sudo/msg.client.android/releases/tag/v1.1.3.10
 
 ---
 
@@ -17,7 +17,7 @@
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server
-server.go                  — Структура server (ServerVersion = "1.1.3.9")
+server.go                  — Структура server (ServerVersion = "1.1.3.10")
 server_remote.go           — Remote Agent RPC (DeployAgentTaskStream fix)
 hermes_remote_manager.go   — HandleTaskStream, StreamDone flag
 server_remote_test.go      — 6 unit-тестов для streaming
@@ -143,7 +143,7 @@ cd /root/msg.client.android
 # НЕ запускать assembleRelease на сервере (OOM)!
 
 # Релиз
-./scripts/release.sh 1.1.3.9
+./scripts/release.sh 1.1.3.10
 
 # SSH к серверу
 ssh lava
