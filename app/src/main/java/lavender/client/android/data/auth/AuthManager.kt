@@ -42,7 +42,7 @@ object AuthManager {
         val method = getAuthMethod(context)
         if (method != "v2_jwt") return false
         val accessToken = getAccessToken(context)
-        return accessToken != null && accessToken.isNotEmpty()
+        return accessToken != null && accessToken.length > 0
     }
 
     /**
@@ -121,7 +121,7 @@ object AuthManager {
      */
     fun getBearerToken(context: Context): String? {
         val token = getAccessToken(context)
-        return if (!token.isNullOrEmpty()) "Bearer $token" else null
+        return if (token != null && token.length > 0) "Bearer $token" else null
     }
 
     /**
@@ -193,10 +193,6 @@ object AuthManager {
     }
 
     // --- Private helpers ---
-
-    private fun getAccessToken(context: Context): String? {
-        return CredentialStore.getAuthPrefs(context).getString(KEY_ACCESS_TOKEN, null)
-    }
 
     private fun getAccessExpiresAt(context: Context): Long {
         return CredentialStore.getAuthPrefs(context).getLong(KEY_ACCESS_EXPIRES_AT, 0L)
