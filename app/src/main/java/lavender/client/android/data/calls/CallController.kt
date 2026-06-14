@@ -23,7 +23,8 @@ class CallController(
     private val isConference: Boolean,
     private val roomId: String,
     private val webRtcClient: WebRtcClient?,
-    private val listener: Listener
+    private val listener: Listener,
+    private val context: android.content.Context
 ) {
     private val TAG = "CallController"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -83,7 +84,7 @@ class CallController(
                         }
                     }
                     CallMessageProto.Type.REJECT, CallMessageProto.Type.HANGUP, CallMessageProto.Type.END_CONFERENCE -> {
-                        val reason = if (signal.type == CallMessageProto.Type.END_CONFERENCE) getString(R.string.conference_ended) else getString(R.string.call_ended)
+                        val reason = if (signal.type == CallMessageProto.Type.END_CONFERENCE) context.getString(R.string.conference_ended) else context.getString(R.string.call_ended)
                         listener.onCallTerminated(reason)
                     }
                     CallMessageProto.Type.JOIN_CONFERENCE, CallMessageProto.Type.LEAVE_CONFERENCE -> {

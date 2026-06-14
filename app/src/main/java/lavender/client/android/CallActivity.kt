@@ -175,7 +175,7 @@ class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
                     callId = newCallId
                 }
             }
-        })
+        }, this)
     }
 
     override fun onNewIntent(intent: android.content.Intent) {

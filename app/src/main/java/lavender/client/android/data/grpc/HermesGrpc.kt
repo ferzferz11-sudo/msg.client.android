@@ -140,7 +140,7 @@ fun chatWithOrchestrator(
                                 hadError = true
                                 val errorResp = OrchestratorResponseProto(
                                     token = "", finished = true,
-                                    error = getString(R.string.stream_timeout, streamTimeoutMs / 1000),
+                                    error = "Response timeout (${streamTimeoutMs / 1000}s). Please try again.",
                                     agentId = "", agentName = ""
                                 )
                                 _hermesResponses.tryEmit(errorResp)
@@ -178,7 +178,7 @@ fun chatWithOrchestrator(
                     hadError = true
                     val errorResp = OrchestratorResponseProto(
                         token = "", finished = true,
-                        error = getString(R.string.stream_timeout, streamTimeoutMs / 1000),
+                        error = "Response timeout (${streamTimeoutMs / 1000}s). Please try again.",
                         agentId = "", agentName = ""
                     )
                     _hermesResponses.tryEmit(errorResp)
