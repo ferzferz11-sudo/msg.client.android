@@ -1,37 +1,26 @@
-# Заметки сессии 8 — 2026-06-14
+# Заметки сессии 9 — 2026-06-14
 
 ## Что сделано
 
-### BearerTokenInterceptor (Android)
-- Создан `data/grpc/BearerTokenInterceptor.kt`
-- Автоматически подставляет JWT Bearer token во все gRPC вызовы
-- Пропускает AuthService (нет токена), Chat stream (legacy auth), вызовы без JWT (v1)
-- Подключён в `RealGrpcClient.connect()` через `builder.intercept()`
+### ProfileClient (Android)
+- Создан `data/grpc/ProfileClient.kt`
+- Автоопределение ProfileService v2 через /info endpoint (profile >= "2.0")
+- Fallback на legacy ChatService методы для prod
+- Методы: getProfile, updateProfile, updateAvatar, getUserSettings, updateUserSettings
+- Вызов fetchServerInfo() автоматически при connect()
 
-### Proactive Token Refresh (Android)
-- `startTokenRefresh()` — проверка каждые 60с
-- `performTokenRefresh()` — синхронный refresh через suspendCancellableCoroutine
-- Остановка при logout / FORCE_LOGOUT
+### Proto messages
+- Добавлены data classes для ProfileService v2 в MessengerProto.kt
+- GetProfileRequestProto, GetProfileResponseProto, UpdateProfileV2RequestProto, etc.
 
-### Per-server token validation
-- `CredentialStore.setJwtServerAddress()` / `getJwtServerAddress()` / `clearJwtServerAddress()`
-- `initFromPrefs()` — проверка совпадения сервера
-- `login()` — clearTokens() перед новым логином
-- `clearTokens()` — также очищает jwt_server_address
-
-### Совместимость
-- Полная совместимость с prod сервером (v1, без JWT)
-- Интерцептор является no-op если нет JWT токена
-- Legacy flow (Chat stream с password) не затронут
+### GrpcClient facade
+- Добавлены ProfileService v2 методы в фасад
+- isProfileV2Supported, profileServiceVersion
 
 ## Коммиты
-- (pending)
-
-## Известные проблемы
-- Нет
+- `dbbf266` — feat: ProfileService v2 client + Typing/CallSession compat
 
 ## Следующие шаги
-1. Тестирование на prod (v1 legacy) — убедиться что ничего не сломалось
-2. Тестирование на dev (v2 JWT) — полный цикл: регистрация, вход, refresh, logout
-3. Тест server switch — prod ↔ dev
-4. Редеплой prod сервера (после тестирования)
+1. Тестирование ProfileService v2 на dev сервере (после того как ferz соберёт APK)
+2. Редеплой prod сервера до v1.2.1.0
+3. Тесты для ProfileService v2
