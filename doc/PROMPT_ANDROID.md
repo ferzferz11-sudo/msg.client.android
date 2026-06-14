@@ -1,17 +1,17 @@
-# Промпт для новой сессии — v1.1.3.11 (dev)
+# Промпт для новой сессии — Android v1.1.3.11+
 
 **Дата:** 2026-06-14
-**Версия:** 1.1.3.11
+**Версия:** 1.1.3.11+
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.11 — DEV
+## СТАТУС: v1.1.3.11+ — DEV
 
-Сервер: v1.2.0.0 на dev и prod. AuthService v2 (JWT) основной, v1 deprecated.
-Android: 3 auth виджета (ServerAuth, Login, Register), server switch исправлен.
+Сервер: v1.2.0.1 на dev и prod. AuthService v2 (JWT) основной, v1 deprecated.
+Android: 3 auth виджета, server switch исправлен, AuthV2 интегрирован (loginV2 + fallback на v1).
 
-**Текущая задача:** Мерцание тулбара после входа через серверы — "не может подключиться" + кружок перезагрузки.
+**Текущая задача:** Тестирование JWT auth на dev + token refresh interceptor + Bearer token во все gRPC вызовы.
 
 ---
 
@@ -20,19 +20,11 @@ Android: 3 auth виджета (ServerAuth, Login, Register), server switch ис
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server
-server.go                  — ServerVersion = "1.2.0.0"
-auth_service.go            — AuthService v1 (deprecated, но работает)
+server.go                  — ServerVersion = "1.2.0.1"
+auth_service.go            — AuthService v1 (deprecated)
 auth_service_v2.go         — AuthService v2 (JWT, основной)
 auth_interceptor.go        — gRPC Bearer token interceptor
-auth_jwt.go                — JWT генерация/валидация
-db_auth_devices.go         — CRUD для user_devices + device_auth_log
-db_auth_migrations.go      — миграция таблиц
-server_remote.go           — Remote Agent RPC
-hermes_remote_manager.go   — HandleTaskStream
-ai_chat_manager.go         — AI чаты
-owl.go                     — OWL AI
-hermes_orchestrator.go     — Hermes Orchestrator
-http_server.go             — HTTP (/health на 8082)
+http_server.go             — HTTP (/health, /info)
 messenger.proto            — ChatService, AuthService, AI Chat, Remote Agent RPC
 ```
 
@@ -40,17 +32,20 @@ messenger.proto            — ChatService, AuthService, AI Chat, Remote Agent R
 ```
 ui/
 ├── widget/
-│   ├── ServerAuthBottomSheet.kt    — шторка выбора входа (лого + сервер + статус)
-│   ├── LoginBottomSheet.kt         — шторка входа
+│   ├── ServerAuthBottomSheet.kt    — шторка выбора входа
+│   ├── LoginBottomSheet.kt         — шторка входа (prefillUsername)
 │   └── RegisterBottomSheet.kt      — шторка регистрации
 ├── remote/                         — Remote Agent UI
 ├── chat/widget/ChatWidget.kt       — общий виджет чата
-└── adapter/ChatAdapter.kt          — адаптер чатов (clearAll)
+└── adapter/ChatAdapter.kt          — адаптер чатов
 
 data/
-├── grpc/GrpcClient.kt              — facade
-├── session/CredentialStore.kt      — credentials + server list + getDefaultServer()
-├── session/SessionManager.kt       — управление сессией
+├── grpc/GrpcClient.kt              — facade (signInV2, signUpV2, refreshToken)
+├── grpc/RealGrpcClient.kt          — реализация gRPC
+├── session/CredentialStore.kt      — credentials + last_username
+├── session/SessionManager.kt       — loginV2 (JWT) + loginV1 (legacy fallback)
+├── session/UserSession.kt          — accessToken, refreshToken, authMethod
+├── auth/AuthManager.kt             — JWT token storage, getBearerToken
 └── models/ErrorHandler.kt          — единый обработчик ошибок
 ```
 
@@ -58,22 +53,33 @@ data/
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
+### Auth V2 (JWT) flow
+```
+ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
+  → try V2 (SignInV2 gRPC)
+  → on success: store JWT tokens via AuthManager.storeTokens()
+  → on failure: fallback to V1 (Chat stream auth)
+```
+
 ### Auth widgets
 - 3 виджета: ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
 - Все наследуют StandardBottomSheet
 - Health check через http://host:8082/health
-- Используются в ChatListActivity и ServersActivity
+- Используются в: ChatListActivity, ServersActivity
 
 ### Server switch
 - CredentialStore.setServerAddress() только после успешного входа
-- justReturnedFromServersActivity флаг для пропуска reconnect в onResume()
+- justReturnedFromServersActivity флаг для пропуска reconnect в onResume
 - isLoadingChats предотвращает двойную загрузку
-- startSync() останавливается при смене сервера
+
+### Logout
+- SessionManager.logout(): очищает password/tokens, сохраняет username в last_username
+- LoginBottomSheet.prefillUsername(): предзаполняет username из last_username
+- Cancel в login/register sheets: закрывает шторку и возвращает к auth choice
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
-- server_default_name, app_version_format строки
-- "Lava: app Android v1.1.3.11" / "Лава: приложение Android v1.1.3.11"
+- server_default_name, app_version_format, wrong_password строки
 
 ---
 
@@ -94,9 +100,7 @@ data/
 
 ## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
-- **Мерцание тулбара** после входа через серверы — "не может подключиться" + кружок перезагрузки
-  - Проблема: onResume() и serversActivityLauncher конфликтуют
-  - Нужно: единый поток загрузки чатов, не дублировать startSync()
+- **Шторка профиля** (bottom_sheet_user_menu) — нет горизонтальной черты (divider), отличается от других шторок
 
 ---
 
@@ -112,12 +116,6 @@ systemctl stop lavender-server-dev
 cp /tmp/lavender-server-dev /root/LavenderMessenger/run/lavender-server-dev
 systemctl start lavender-server-dev
 
-# Сборка и деплой на prod
-go build -o /tmp/lavender-server .
-systemctl stop lavender-server
-cp /tmp/lavender-server /root/LavenderMessenger/run/lavender-server
-systemctl start lavender-server
-
 # Тесты
 go test ./...
 
@@ -132,7 +130,8 @@ cd /root/msg.client.android
 
 | Характеристика | Dev | Prod |
 |----------------|-----|------|
-| Порт | 50052 | 50051 |
+| Порт gRPC | 50052 | 50051 |
+| Порт HTTP | 8083 | 8082 |
 | Имя | Lava Germany dev | Lava Germany |
 | Сервис | lavender-server-dev | lavender-server |
 | Конфиг | .env.dev | .env |

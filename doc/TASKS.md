@@ -1,6 +1,6 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.11 (dev)
+**Версия:** v1.1.3.11+ (dev)
 **Обновлено:** 2026-06-14
 **Ветка:** feat/1.1.3.x
 
@@ -10,12 +10,9 @@
 
 ### Новое: Auth bottom sheet widgets
 - ✅ **ServerAuthBottomSheet** — шторка выбора входа (лого + имя сервера + адрес + health индикатор + кнопки Войти/Регистрация)
-- ✅ **LoginBottomSheet** — шторка входа (username/password + кнопки)
-- ✅ **RegisterBottomSheet** — шторка регистрации (username/password/email + кнопки)
+- ✅ **LoginBottomSheet** — шторка входа (username/password + prefill)
+- ✅ **RegisterBottomSheet** — шторка регистрации (username/password/email)
 - ✅ Все 3 виджета используются и в ChatListActivity (первый вход) и в ServersActivity (выбор сервера)
-- ✅ Имена серверов: "Lava Germany" (prod), "Lava Germany dev" (dev)
-- ✅ Health check через `http://host:8082/health` (зелёный/серый индикатор)
-- ✅ Версия приложения: "Lava: app Android v1.1.3.11" / "Лава: приложение Android v1.1.3.11"
 
 ### Исправления
 - ✅ **Двойной вход при смене сервера** — исправлен
@@ -26,53 +23,37 @@
 
 ---
 
-## ✅ v1.1.3.10 — i18n completion + Stability
+## ✅ v1.1.3.11+ — AuthV2 integration + UI fixes
 
-### Android
-- ✅ i18n завершён — все user-facing строки вынесены (~50 строк)
-- ✅ Unit-тесты — ErrorHandlerTest (11), ChatAdapterTest (15)
-- ✅ Crash fixes — OwlSettingsActivity, RemoteAgentActivity
+### Новое: AuthV2 (JWT)
+- ✅ **SessionManager.loginV2()** — SignInV2/SignUpV2 с fallback на v1
+- ✅ **JWT token storage** — AuthManager.storeTokens(), getAccessToken(), getRefreshToken(), getBearerToken()
+- ✅ **UserSession** — accessToken, refreshToken, authMethod, isJwtAuth
+- ✅ **Logout сохраняет username** — last_username в legacy prefs
+- ✅ **Предзаполнение username** — LoginBottomSheet.prefillUsername()
 
----
-
-## ✅ v1.1.3.9 — Espresso Tests + Bugfixes
-
-- ✅ Espresso-тесты — 4 тест-класса (42 теста)
-- ✅ Empty chat text fix
-- ✅ RemoteAgentActivity crash fix
-
----
-
-## ✅ v1.1.3.8 — DeployAgentTaskStream fix + Remote Agent UI
-
-- ✅ ChatAdapter filter() fix
-- ✅ RemoteAgentViewModel fix
-
----
-
-## ✅ v1.1.3.7 — Streaming + ErrorHandler
-
-- ✅ DeployAgentTaskStream
-- ✅ ErrorHandler + AppLog
+### Исправления UI
+- ✅ **Toolbar flickering** — единый поток загрузки, isConnecting flag
+- ✅ **Убран диалог "Предложить регистрацию"** — Toast с реальной ошибкой
+- ✅ **Cancel в login/register sheets** — закрывает шторку и возвращает к auth choice
+- ✅ **Подавлены DEPRECATION warnings** — @Suppress("DEPRECATION") на loginV1 fallback
 
 ---
 
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] **AuthService v2 интеграция в Android**
-  - Клиент должен поддерживать оба метода входа (v2 приоритет, fallback на v1)
-  - При получении deprecated warning от v1 — показать уведомление
-  - JWT token refresh, device management
+- [ ] **Тестирование JWT auth на dev** — регистрация, вход, refresh token, logout
+- [ ] **Token refresh interceptor** — автоматический refresh при 401 от сервера
+- [ ] **Подставить Bearer token во все gRPC вызовы** — getChats, getHistory, sendMessage, etc.
+- [ ] **Протестировать server switch** — prod ↔ dev, проверить что токены не конфликтуют
 
 ### Средний приоритет
-- [ ] **Мерцание тулбара** — "не может подключиться" + кружок перезагрузки после входа через серверы
-  - Проблема: onResume() и serversActivityLauncher конфликтуют
-  - Нужно: единый поток загрузки чатов, не дублировать startSync()
+- [ ] **Проверить шторку профиля** — нет горизонтальной черты (divider) в bottom_sheet_user_menu
+- [ ] **Обновить CHANGELOG.md** — Android
 
 ### Низкий приоритет
-- [ ] Qdrant + CLIP (production RAG)
-- [ ] Prometheus метрики
+- [ ] Qdrant + CLIP (production RAG) — на стороне сервера
 
 ---
 
@@ -83,7 +64,9 @@
 | Auth widgets | 3 виджета (ServerAuth, Login, Register) — единый стиль входа |
 | Health check | HTTP /health для индикатора доступности сервера |
 | isLoadingChats | Предотвращает двойную загрузку из launcher + onResume |
-| isTransitioning | Предвращает повторный showAuthChoiceDialog при переходе |
+| isTransitioning | Предотвращает повторный showAuthChoiceDialog при переходе |
+| loginV2 + fallback | JWT приоритет, fallback на v1 для совместимости со старыми серверами |
+| last_username | Сохранение username для предзаполнения после logout |
 
 ---
 
@@ -92,8 +75,10 @@
 | Файл | Назначение |
 |------|------------|
 | `ServerAuthBottomSheet.kt` | Шторка выбора входа (лого + сервер + статус) |
-| `LoginBottomSheet.kt` | Шторка входа |
+| `LoginBottomSheet.kt` | Шторка входа (prefillUsername) |
 | `RegisterBottomSheet.kt` | Шторка регистрации |
+| `AuthManager.kt` | JWT token storage |
+| `SessionManager.kt` | loginV2 + loginV1 fallback |
+| `UserSession.kt` | accessToken, refreshToken, authMethod |
+| `CredentialStore.kt` | Credentials + last_username |
 | `ChatAdapter.kt` | Адаптер чатов с clearAll() |
-| `CredentialStore.kt` | Хранилище credentials + список серверов |
-| `SessionManager.kt` | Управление сессией |

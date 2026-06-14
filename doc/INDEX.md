@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.11
+**Версия:** v1.1.3.11+
 **Обновлено:** 2026-06-14
 **Ветка:** feat/1.1.3.x
 
@@ -60,21 +60,23 @@ app/src/main/java/lavender/client/android/
 │   │   ├── RemoteAgentService.kt          — foreground service
 │   │   ├── RemoteAgentManager.kt          — singleton manager
 │   │   └── HermesGatewayManager.kt        — SSH туннель
+│   ├── widget/
+│   │   ├── ServerAuthBottomSheet.kt       — шторка выбора входа
+│   │   ├── LoginBottomSheet.kt            — шторка входа (prefillUsername)
+│   │   └── RegisterBottomSheet.kt         — шторка регистрации
 │   ├── chat/widget/ChatWidget.kt          — общий виджет чата
-│   ├── adapter/ChatAdapter.kt             — адаптер списка чатов (clearAll)
-│   └── widget/
-│       ├── ServerAuthBottomSheet.kt       — шторка выбора входа
-│       ├── LoginBottomSheet.kt            — шторка входа
-│       └── RegisterBottomSheet.kt         — шторка регистрации
+│   └── adapter/ChatAdapter.kt             — адаптер списка чатов (clearAll)
 ├── data/
-│   ├── grpc/GrpcClient.kt                 — facade
+│   ├── grpc/GrpcClient.kt                 — facade (signInV2, signUpV2, refreshToken)
+│   ├── grpc/RealGrpcClient.kt             — реализация gRPC клиента
 │   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
-│   ├── proto/MessengerProto.kt            — proto data classes
+│   ├── proto/MessengerProto.kt            — proto data classes (AuthResponseV2Proto, etc.)
+│   ├── session/CredentialStore.kt         — credentials + server list + last_username
+│   ├── session/SessionManager.kt          — loginV2 (JWT) + loginV1 (legacy fallback)
+│   ├── session/UserSession.kt             — accessToken, refreshToken, authMethod, isJwtAuth
+│   ├── auth/AuthManager.kt                — JWT token storage, getBearerToken, getAccessToken
 │   ├── models/ErrorHandler.kt              — единый обработчик ошибок
-│   ├── models/AppLog.kt                   — глобальный логгер
-│   └── session/
-│       ├── CredentialStore.kt             — credentials + server list
-│       └── SessionManager.kt             — управление сессией
+│   └── models/AppLog.kt                   — глобальный логгер
 └── theme/ui/
     ├── ThemeApplier.kt                    — применение тем
     └── ThemeUi.kt                         — ThemeUi.bind()
@@ -84,40 +86,52 @@ app/src/main/java/lavender/client/android/
 
 ## Ключевые паттерны
 
+### Auth V2 (JWT) flow (v1.1.3.11+)
+```
+ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
+  → try V2 (SignInV2 gRPC)
+  → on success: store JWT tokens via AuthManager.storeTokens()
+  → on failure/login: fallback to V1 (Chat stream auth)
+```
+
 ### Auth widgets pattern (v1.1.3.11)
-Аутентификация вынесена в отдельные виджеты:
-- `ServerAuthBottomSheet` — шторка выбора (лого + сервер + статус + login/register)
-- `LoginBottomSheet` — шторка входа (username/password)
+Аутентификация вынесена в 3 виджета:
+- `ServerAuthBottomSheet` — шторка выбора входа (лого + сервер + статус + login/register)
+- `LoginBottomSheet` — шторка входа (username/password + prefill из last_username)
 - `RegisterBottomSheet` — шторка регистрации (username/password/email)
-- Оба наследуют `StandardBottomSheet`
-- Health check через `http://host:8082/health`
-- Используются в: `ChatListActivity`, `ServersActivity`
+- Все наследуют StandardBottomSheet
+- Health check через http://host:8082/health
+- Используются в: ChatListActivity, ServersActivity
 
 ### Server switch pattern (v1.1.3.11)
 При смене сервера через ServersActivity:
 - НЕ сохранять `serverAddress` до успешного входа
-- Сохранять `serverAddress` ТОЛЬКО после успешного `SessionManager.login()`
-- Использовать флаг `justReturnedFromServersActivity` для пропуска reconnect в onResume()
-- `isLoadingChats` предотвращает двойную загрузку
-- `startSync()` останавливается при смене сервера
+- Сохранять `serverAddress` ТОЛЬКО после успешного SessionManager.login()
+- Использовать флаг `justReturnedFromServersActivity` для пропуска reconnect в onResume
+- isLoadingChats предотвращает двойную загрузку
+- startSync() останавливается при смене сервера
+
+### Logout pattern (v1.1.3.11+)
+- SessionManager.logout(): очищает password/tokens, сохраняет username в last_username
+- LoginBottomSheet.prefillUsername(): предзаполняет username из last_username
+- Cancel в login/register sheets: закрывает шторку и возвращает к ServerAuthBottomSheet
 
 ### i18n (v1.1.3.9)
 - Activity: `getString(R.string.xxx)`
-- Adapter: `context.getString(R.string.xxx)`
+- Adapter/ViewHolder: `context.getString(R.string.xxx)`
 - ViewModel: `AndroidViewModel` + `getApplication<Application>().getString()`
 - НЕ инициализировать getString() в полях класса Activity
-- Несколько подстановок: позиционные форматтеры (%1$s, %2$d)
 - Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
 
 ### Темы
-- `ThemeApplier.apply()` до `setContentView()`
-- Цвета программно через `ThemeUtils.parseSafeColor()`
-- НЕ использовать `?attr/` в XML для текста на кастомных темах
+- ThemeApplier.apply() до setContentView()
+- Цвета программно через ThemeUtils.parseSafeColor()
+- НЕ использовать ?attr/ в XML для текста на кастомных темах
 
 ### Фильтрация чатов
-- `ChatAdapter.filter()` — `dispatchUpdatesTo` с offset +1 для Favorites
-- НЕ использовать `notifyItemRangeChanged`
-- `ChatAdapter.clearAll()` — полная очистка с сбросом favoritesItem
+- ChatAdapter.filter() — dispatchUpdatesTo с offset +1 для Favorites
+- НЕ использовать notifyItemRangeChanged
+- ChatAdapter.clearAll() — полная очистка с сбросом favoritesItem
 
 ---
 
@@ -140,6 +154,7 @@ ssh lava
 
 | | Dev | Prod |
 |--|-----|------|
-| Порт | 50052 | 50051 |
+| Порт gRPC | 50052 | 50051 |
+| Порт HTTP | 8083 | 8082 |
 | Имя | Lava Germany dev | Lava Germany |
 | SSH | lava (13.140.25.249) | same |
