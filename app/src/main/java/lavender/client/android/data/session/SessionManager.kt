@@ -182,13 +182,16 @@ object SessionManager {
         val host = parts[0]
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
 
-        // Force reconnect: old channel may be stale (e.g. profile deleted on server).
-        // Disconnect first so the old channel is fully torn down before creating a new one.
-        GrpcClient.disconnect()
-        GrpcClient.connect(host, useTls = false, port = port, context = context, forceReconnect = true)
-
         scope.launch {
             try {
+                // Disconnect first, wait for it to fully tear down
+                GrpcClient.disconnect()
+                // Wait for actual disconnect to complete (channel shutdown is async)
+                kotlinx.coroutines.delay(300)
+
+                // Now connect to new server
+                GrpcClient.connect(host, useTls = false, port = port, context = context, forceReconnect = true)
+
                 // Wait for READY or FAILED status
                 val status = withTimeoutOrNull(10000) {
                     GrpcClient.connectionStatus.filter {
