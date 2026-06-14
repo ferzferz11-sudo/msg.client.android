@@ -1172,42 +1172,58 @@ class ChatListActivity : AppCompatActivity() {
             while (true) {
                 delay(5000) // Poll every 5 seconds
 
+                // Skip sync if not connected
+                if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                    delay(1000)
+                    continue
+                }
+
                 val currentUserId = GrpcClient.getUserId() ?: ""
 
                 grpcClient.getChats(username, skipCache = true) { fetchedChats ->
+                    // Skip empty results (server still syncing)
+                    if (fetchedChats.isEmpty()) return@getChats
+
                     if (currentUserId.isNotEmpty()) {
                         grpcClient.getMutedChats { mutedChatIds ->
                             grpcClient.getFavorites(currentUserId) { _ ->
                                 val chatsWithMute = fetchedChats
                                     .filter { !pendingDeletions.contains(it.id) }
-                                    .map { chat ->
-                                        chat.copy(isMuted = mutedChatIds.contains(chat.id))
-                                    }
+                                    .copyWithMute(mutedChatIds)
 
-                                // Clean up pendingDeletions
                                 val serverIds = fetchedChats.map { it.id }.toSet()
                                 pendingDeletions.removeAll { !serverIds.contains(it) }
 
-                                // Check for actual changes (excluding Favorites — it's static)
-                                val hasChanges = chatsWithMute.size != chats.size ||
-                                        chatsWithMute.indices.any { i ->
-                                            val n = chatsWithMute[i]
-                                            val c = chats.getOrNull(i + 1) // +1 offset for Favorites at position 0
+                                // Compare without Favorites offset
+                                val displayChats = chatsWithMute
+                                val adapterDisplay = if (chatAdapter.hasFavorites()) {
+                                    // Skip Favorites at position 0 for comparison
+                                    chats.drop(1)
+                                } else {
+                                    chats.toList()
+                                }
+
+                                val hasChanges = displayChats.size != adapterDisplay.size ||
+                                        displayChats.indices.any { i ->
+                                            val n = displayChats[i]
+                                            val c = adapterDisplay.getOrNull(i)
                                             c == null || n.id != c.id || n.lastMessageTime != c.lastMessageTime ||
                                                     n.unreadCount != c.unreadCount || n.isMuted != c.isMuted
                                         }
 
                                 if (hasChanges) {
                                     runOnUiThread {
-                                        // Rebuild chats list: Favorites at position 0 + updated chats
                                         chats.clear()
-                                        chats.add(ChatInfo(
-                                            id = "favorites_$username",
-                                            name = getString(R.string.favorites),
-                                            type = "favorites",
-                                            lastMessageText = "",
-                                            lastMessageTime = 0L
-                                        ))
+                                        // Add Favorites only if adapter expects it
+                                        if (chatAdapter.hasFavorites()) {
+                                            chats.add(ChatInfo(
+                                                id = "favorites_$username",
+                                                name = getString(R.string.favorites),
+                                                type = "favorites",
+                                                lastMessageText = "",
+                                                lastMessageTime = 0L
+                                            ))
+                                        }
                                         chats.addAll(chatsWithMute)
                                         chatAdapter.setChats(chats.toList())
                                         updateAppIconBadge(chats.sumOf { it.unreadCount })
@@ -1216,31 +1232,35 @@ class ChatListActivity : AppCompatActivity() {
                             }
                         }
                     } else {
-                        // Fallback if no userId
                         val filteredFetched = fetchedChats.filter { !pendingDeletions.contains(it.id) }
+                        val adapterDisplay = if (chatAdapter.hasFavorites()) chats.drop(1) else chats.toList()
 
-                        if (filteredFetched.size != chats.size || filteredFetched.indices.any { i -> chats.getOrNull(i + 1)?.id != filteredFetched[i].id }) {
-                        runOnUiThread {
-                        chats.clear()
-                        // Always prepend Favorites if it was previously shown
-                        if (::chatAdapter.isInitialized && chatAdapter.hasFavorites()) {
-                            chats.add(ChatInfo(
-                                id = "favorites_$username",
-                                name = getString(R.string.favorites),
-                                type = "favorites",
-                                lastMessageText = "",
-                                lastMessageTime = 0L
-                            ))
-                        }
-                        chats.addAll(filteredFetched)
-                        chatAdapter.setChats(chats.toList())
-                        updateAppIconBadge(chats.sumOf { it.unreadCount })
-                        }
+                        if (filteredFetched.size != adapterDisplay.size ||
+                            filteredFetched.indices.any { i -> adapterDisplay.getOrNull(i)?.id != filteredFetched[i].id }) {
+                            runOnUiThread {
+                                chats.clear()
+                                if (chatAdapter.hasFavorites()) {
+                                    chats.add(ChatInfo(
+                                        id = "favorites_$username",
+                                        name = getString(R.string.favorites),
+                                        type = "favorites",
+                                        lastMessageText = "",
+                                        lastMessageTime = 0L
+                                    ))
+                                }
+                                chats.addAll(filteredFetched)
+                                chatAdapter.setChats(chats.toList())
+                                updateAppIconBadge(chats.sumOf { it.unreadCount })
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun List<ChatInfo>.copyWithMute(mutedIds: List<String>): List<ChatInfo> {
+        return map { it.copy(isMuted = mutedIds.contains(it.id)) }
     }
 
     override fun onDestroy() {

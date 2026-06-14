@@ -32,6 +32,7 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.LoginBottomSheet
 import lavender.client.android.ui.widget.RegisterBottomSheet
+import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import java.util.UUID
 
 class ServersActivity : AppCompatActivity() {
@@ -221,8 +222,16 @@ class ServersActivity : AppCompatActivity() {
     }
 
     private fun selectServer(server: ServerEntry) {
-        // Show login/register bottom sheet for the selected server
-        showServerLoginSheet(server)
+        // Show server auth bottom sheet with logo, health check, login/register
+        val authSheet = ServerAuthBottomSheet(
+            context = this,
+            serverName = server.name,
+            serverHost = server.host,
+            serverPort = server.port,
+            onLogin = { showServerLoginSheet(server) },
+            onRegister = { showServerRegisterSheet(server) }
+        )
+        authSheet.show()
     }
 
     private fun showServerLoginSheet(server: ServerEntry) {
