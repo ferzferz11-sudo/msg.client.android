@@ -1,7 +1,7 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.9 (stable)
-**Обновлено:** 2026-06-13
+**Версия:** v1.1.3.10 (stable)
+**Обновлено:** 2026-06-14
 **Ветка:** feat/1.1.3.x
 
 ---
@@ -55,20 +55,15 @@
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] **Обновить hermes_remote_agent.py — поддержка streaming output**
-  - Агент ещё НЕ отправляет streaming updates
-  - Сервер готов, клиент готов
-
-### Средний приоритет
-- [ ] **i18n: завершить вынос оставшихся строк** (~15 файлов)
-  - NewChatActivity, MessageAdapter, HermesGatewayManager, RemoteAgentManager, SecurityActivity, ThemesActivity, CallActivity, AgentListActivity, RemoteAgentActivity agentCommands
-  - Правило: ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
-- [ ] **Кэширование запросов чатов**
-- [ ] Unit-тесты для Android (RemoteAgentViewModel, ChatAdapter)
+- [ ] **Новая единая авторизация (AuthService + JWT)**
+  - Сервер: расширить AuthService (device management, refresh tokens, sessions)
+  - Android: новый AuthManager с JWT, device registration, token refresh
+  - Web/macOS/iOS: аналогичная реализация
+  - Старые клиенты продолжают работать через Chat stream auth
+  - Миграция: при логине черновый AuthService → выдача JWT → последующие запросы с Bearer
 
 ### Низкий приоритет
 - [ ] Qdrant + CLIP (production RAG)
-- [ ] Structured logging (zap/logrus)
 - [ ] Prometheus метрики
 
 ---
