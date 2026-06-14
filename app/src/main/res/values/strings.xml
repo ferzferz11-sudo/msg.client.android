@@ -438,7 +438,7 @@
     <string name="login_to_server">Login to %s</string>
     <string name="register_to_server">Register on %s</string>
     <string name="server_default_name">Lava Germany</string>
-    <string name="app_version_format">Lava: client Android %s</string>
+    <string name="app_version_format">Lava: app Android %s</string>
     <string name="error_required">Required</string>
     <string name="error_invalid_port">Port must be 1-65535</string>
     <string name="delete_server_title">Delete server</string>

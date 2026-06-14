@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.net.Uri
 import android.view.View
 import android.widget.ImageView
-import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
@@ -35,7 +34,6 @@ class ServerAuthBottomSheet(
 ) : StandardBottomSheet(context, R.layout.dialog_server_auth, theme) {
 
     private var statusIndicator: View? = null
-    private var statusText: TextView? = null
 
     init {
         initViews()
@@ -55,7 +53,6 @@ class ServerAuthBottomSheet(
         findViewById<TextView>(R.id.serverAuthAddress)?.text = "$serverHost:$serverPort"
 
         statusIndicator = findViewById(R.id.serverAuthStatusIndicator)
-        statusText = findViewById(R.id.serverAuthStatusText)
 
         // App version at bottom
         try {
@@ -98,8 +95,7 @@ class ServerAuthBottomSheet(
     }
 
     private fun updateStatusIndicator(isOnline: Boolean) {
-        val indicatorColor = if (isOnline) Color.parseColor("#4CAF50") else Color.parseColor("#9E9E9E")
+        val indicatorColor = if (isOnline) Color.parseColor("#4CAF50") else Color.parseColor("#F44336")
         statusIndicator?.background?.setTint(indicatorColor)
-        statusText?.text = if (isOnline) "Online" else "Offline"
     }
 }

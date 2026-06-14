@@ -715,7 +715,7 @@
     <string name="login_to_server">Вход на %s</string>
     <string name="register_to_server">Регистрация на %s</string>
     <string name="server_default_name">Lava Germany</string>
-    <string name="app_version_format">Lava: клиент Android %s</string>
+    <string name="app_version_format">Lava: приложение Android %s</string>
     <string name="delete_chat_confirmation">Удалить этот чат?</string>
     <string name="delete_message_confirmation">Удалить это сообщение?</string>
     <string name="delete_messages_confirmation">Удалить %d выбранных сообщений?</string>

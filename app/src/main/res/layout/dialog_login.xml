@@ -51,6 +51,9 @@
             android:textColorHint="?attr/colorOnSurfaceVariant" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Divider -->
+    <View style="@style/MenuDividerStyle" />
+
     <!-- Join button + progress -->
     <FrameLayout
         android:layout_width="match_parent"

@@ -103,6 +103,9 @@
         android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginBottom="12dp" />
 
+    <!-- Divider -->
+    <View style="@style/MenuDividerStyle" />
+
     <!-- Register button + progress -->
     <FrameLayout
         android:layout_width="match_parent"

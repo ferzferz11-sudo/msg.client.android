@@ -1335,15 +1335,11 @@ class ChatListActivity : AppCompatActivity() {
         Log.d("ChatListActivity", "onResume: connectionStatus=$currentStatus")
         val savedServerAddress = lavender.client.android.data.session.CredentialStore.getServerAddress(this)
 
-        // Skip reconnect if we just returned from ServersActivity — it handles connection itself
-        val needsReconnect = !justReturnedFromServersActivity && (
+        val needsReconnect = (
                            currentStatus == ConnectionStatus.DISCONNECTED ||
                            currentStatus == ConnectionStatus.FAILED ||
                            grpcClient.shouldForceReconnect() ||
                            (savedServerAddress.isNotEmpty() && savedServerAddress != grpcClient.currentServerAddress))
-
-        // Reset flag after first onResume
-        justReturnedFromServersActivity = false
 
         if (needsReconnect && !isConnecting) {
             if (savedServerAddress.isNotEmpty()) {
@@ -1857,10 +1853,8 @@ class ChatListActivity : AppCompatActivity() {
         val errorColor = "#FF5252".toColorInt()
 
         // Show Admin Panel only for super admins
-        // Servers are available for all users
         val isSuperAdmin = SessionManager.session.value.isSuperAdmin
         sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
-        sheet.findViewById<View>(R.id.actionServers)?.isVisible = true
 
         // Red tint for delete and logout
         fun tintError(id: Int) {
@@ -2759,10 +2753,9 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAuthChoiceDialog() {
-        val defaultServer = CredentialStore.getDefaultServer(this)
-        val serverName = defaultServer?.name ?: getString(R.string.server_default_name)
-        val serverHost = defaultServer?.host ?: "13.140.25.249"
-        val serverPort = defaultServer?.port ?: 50051
+        val serverName = getString(R.string.server_default_name)
+        val serverHost = "13.140.25.249"
+        val serverPort = 50051
 
         var isTransitioning = false
 
