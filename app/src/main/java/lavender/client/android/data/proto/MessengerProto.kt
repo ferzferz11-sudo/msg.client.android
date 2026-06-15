@@ -1726,6 +1726,37 @@ data class UnPinChatResponseProto(
     val success: Boolean = false
 )
 
+// ======= Pin Message =======
+
+data class PinMessageRequestProto(
+    val userId: String = "",
+    val chatId: String = "",
+    val messageId: String = ""
+)
+
+data class PinMessageResponseProto(
+    val success: Boolean = false
+)
+
+data class UnPinMessageRequestProto(
+    val userId: String = "",
+    val chatId: String = "",
+    val messageId: String = ""
+)
+
+data class UnPinMessageResponseProto(
+    val success: Boolean = false
+)
+
+data class GetPinnedMessagesRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class GetPinnedMessagesResponseProto(
+    val messages: List<MessageProto> = emptyList()
+)
+
 // ======= ChatList v2: SearchChats =======
 
 data class SearchChatsRequestProto(

@@ -353,6 +353,26 @@ object GrpcClient {
         return realGrpcClient.unarchiveChat(chatId)
     }
 
+    // ======= Pin Message =======
+
+    /** Pin a message in a chat. Returns false on v1 servers. */
+    suspend fun pinMessage(context: android.content.Context, chatId: String, messageId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.pinMessage(chatId, messageId)
+    }
+
+    /** Unpin a message in a chat. Returns false on v1 servers. */
+    suspend fun unpinMessage(context: android.content.Context, chatId: String, messageId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.unpinMessage(chatId, messageId)
+    }
+
+    /** Get pinned messages for a chat. Returns empty list on v1 servers. */
+    suspend fun getPinnedMessages(context: android.content.Context, chatId: String): List<Message> {
+        if (!ProfileClient.isChatV2Supported()) return emptyList()
+        return realGrpcClient.getPinnedMessages(chatId)
+    }
+
     // ======= ProfileService V2 (dev server) =======
 
     /** Check if server supports ProfileService v2 (profile >= "2.0" in /info). */

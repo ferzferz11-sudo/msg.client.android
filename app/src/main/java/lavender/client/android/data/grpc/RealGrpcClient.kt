@@ -2581,6 +2581,43 @@ object RealGrpcClient {
         )?.success ?: false
     }
 
+    // ======= Pin Message =======
+
+    suspend fun pinMessage(chatId: String, messageId: String): Boolean {
+        val userId = currentUserId ?: return false
+        return unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/PinMessage",
+            request = PinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
+            responseType = PinMessageResponseProto::class.java
+        )?.success ?: false
+    }
+
+    suspend fun unpinMessage(chatId: String, messageId: String): Boolean {
+        val userId = currentUserId ?: return false
+        return unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/UnPinMessage",
+            request = UnPinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
+            responseType = UnPinMessageResponseProto::class.java
+        )?.success ?: false
+    }
+
+    suspend fun getPinnedMessages(chatId: String): List<Message> {
+        val userId = currentUserId ?: return emptyList()
+        val response = unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/GetPinnedMessages",
+            request = GetPinnedMessagesRequestProto(userId = userId, chatId = chatId),
+            responseType = GetPinnedMessagesResponseProto::class.java
+        )
+        return response?.messages?.map { proto ->
+            Message(
+                id = proto.id,
+                user = proto.user,
+                text = proto.text,
+                timestamp = proto.createdAt?.seconds ?: 0L
+            )
+        } ?: emptyList()
+    }
+
     // ======= ChatList v2: Low-level unary call helper =======
 
     @Suppress("DEPRECATION", "UNCHECKED_CAST")
