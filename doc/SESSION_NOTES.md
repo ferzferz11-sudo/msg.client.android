@@ -22,7 +22,8 @@
 - Сервер: v1.2.0.1 (без изменений)
 
 ### Коммиты сессии 17
-- (будет при push)
+- `58f7115` — feat: FAB AI — AIBottomSheet integration in ChatListActivityV2
+- `1d989f1` — chore: protoc regeneration + docs update for v1.1.3.17
 
 ---
 
