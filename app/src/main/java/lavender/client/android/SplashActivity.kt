@@ -203,7 +203,7 @@ class SplashActivity : AppCompatActivity() {
     private fun navigateToChatList(host: String) {
         if (host.isNotEmpty()) {
             Log.d("SplashActivity", "Directing to ChatListActivityV2 (server: $host)")
-            Intent(this, ui.chatlist.ChatListActivityV2::class.java)
+            Intent(this, lavender.client.android.ui.chatlist.ChatListActivityV2::class.java)
         } else {
             Log.d("SplashActivity", "Directing to ChatListActivity (no server)")
             Intent(this, ChatListActivity::class.java)
@@ -211,4 +211,4 @@ class SplashActivity : AppCompatActivity() {
             startActivity(it)
             finish()
         }
-}
+    }
