@@ -183,6 +183,15 @@
                     android:contentDescription="@string/reply" />
 
                 <ImageButton
+                    android:id="@+id/pinMessage"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_lock"
+                    app:tint="?attr/colorOnPrimary"
+                    android:contentDescription="@string/pin_message" />
+
+                <ImageButton
                     android:id="@+id/forwardMessages"
                     android:layout_width="48dp"
                     android:layout_height="48dp"

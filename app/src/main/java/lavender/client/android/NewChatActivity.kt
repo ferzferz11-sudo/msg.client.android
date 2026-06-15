@@ -129,6 +129,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var selectionCountText: TextView
     private lateinit var copyMessages: ImageButton
     private lateinit var replyMessage: ImageButton
+    private lateinit var pinMessageBtn: ImageButton
     private lateinit var deleteMessages: ImageButton
     private lateinit var forwardMessages: ImageButton
     private lateinit var toolbarContent: View
@@ -151,6 +152,9 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var mentionContainer: View
     private lateinit var mentionList: RecyclerView
     private lateinit var mentionAdapter: MentionAdapter
+
+    // Pinned messages state
+    private var pinnedMessageIds = mutableSetOf<String>()
 
     private lateinit var searchBar: LinearLayout
     private lateinit var searchInput: EditText
@@ -354,7 +358,8 @@ class NewChatActivity : AppCompatActivity() {
         toolbarAvatar = findViewById(R.id.toolbarAvatar); findViewById<ImageView>(R.id.toolbarLoadingIcon)
         groupParticipantsContainer = findViewById(R.id.groupParticipantsContainer); selectionToolbar = findViewById(R.id.selectionToolbar)
         selectionCountText = findViewById(R.id.selectionCountText); findViewById<ImageButton>(R.id.starMessages); copyMessages = findViewById(R.id.copyMessages)
-        replyMessage = findViewById(R.id.replyMessage); deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
+        replyMessage = findViewById(R.id.replyMessage); pinMessageBtn = findViewById(R.id.pinMessage)
+        deleteMessages = findViewById(R.id.deleteMessages); forwardMessages = findViewById(R.id.forwardMessages)
         toolbarContent = findViewById(R.id.toolbarContent); messagesRecyclerView = findViewById(R.id.messagesRecyclerView); swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         messageInput = findViewById(R.id.messageInput); sendButton = findViewById(R.id.sendButton); attachButton = findViewById(R.id.attachButton); audioButton = findViewById(R.id.audioButton)
         uploadProgressBar = findViewById(R.id.uploadProgressBar); uploadProgressContainer = findViewById(R.id.uploadProgressContainer); uploadProgressText = findViewById(R.id.uploadProgressText); replyPreview = findViewById(R.id.replyPreview)
@@ -627,9 +632,7 @@ class NewChatActivity : AppCompatActivity() {
                 }
             },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
-            onMessageLongClick = { message ->
-                showMessageContextMenu(message)
-            },
+            onMessageLongClick = { enterSelectionMode(it) },
             chatId = roomId,
             onRetrySendMessage = { retryMessage(it) }
         )
@@ -824,6 +827,7 @@ class NewChatActivity : AppCompatActivity() {
         replyMessage.setOnClickListener { replyToSelectedMessage() }
         deleteMessages.setOnClickListener { deleteSelectedMessages() }
         forwardMessages.setOnClickListener { forwardSelectedMessages() }
+        pinMessageBtn.setOnClickListener { pinSelectedMessages() }
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { performSearch(s.toString()) }
@@ -1017,80 +1021,53 @@ class NewChatActivity : AppCompatActivity() {
     private fun showSelectionToolbar(count: Int) {
         selectionMode = true; invalidateOptionsMenu(); toolbarContent.isVisible = false; selectionToolbar.isVisible = true; selectionCountText.text = count.toString()
         setToolbarNavigationIcon(R.drawable.ic_close); replyMessage.isVisible = count == 1; forwardMessages.isVisible = count > 0
+        pinMessageBtn.isVisible = count == 1
         try { selectionToolbar.setBackgroundColor(ThemeStore.currentTheme().primaryColor.toColorInt()) } catch (_: Exception) {}
+    }
+
+    private fun pinSelectedMessages() {
+        val sm = adapter.getSelectedMessages()
+        if (sm.isEmpty()) { hideSelectionToolbar(); return }
+        lifecycleScope.launch {
+            var successCount = 0
+            var failCount = 0
+            sm.forEach { m ->
+                try {
+                    val isPinned = pinnedMessageIds.contains(m.id)
+                    val success = if (isPinned) {
+                        GrpcClient.unpinMessage(this@NewChatActivity, roomId, m.id)
+                    } else {
+                        GrpcClient.pinMessage(this@NewChatActivity, roomId, m.id)
+                    }
+                    if (success) successCount++ else failCount++
+                } catch (e: Exception) {
+                    failCount++
+                }
+            }
+            runOnUiThread {
+                if (successCount > 0) {
+                    showToast(getString(if (sm.size == 1 && pinnedMessageIds.contains(sm[0].id)) R.string.unpinned_message else R.string.pinned_message))
+                    loadPinnedMessages()
+                }
+                if (failCount > 0) {
+                    showToast("Failed: $failCount")
+                }
+                hideSelectionToolbar()
+            }
+        }
     }
     private fun hideSelectionToolbar() { if (!selectionMode) return; selectionMode = false; adapter.toggleSelectionMode(false); invalidateOptionsMenu(); selectionToolbar.isVisible = false; toolbarContent.isVisible = true; setToolbarNavigationIcon(R.drawable.ic_back_arrow) }
     private fun showReplyPreview(m: Message) { replyingTo = m; replyPreview.isVisible = true; replyUser.text = m.user; replyText.text = if (m.imageUrl.isNotEmpty()) "Photo" else m.text; messageInput.requestFocus() }
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
     private fun enterSelectionMode(m: Message) { val p = adapter.currentList.indexOf(m); if (p != -1) { adapter.toggleSelectionMode(true); adapter.toggleSelection(p); showSelectionToolbar(adapter.getSelectedMessages().size) } }
 
-    private fun showMessageContextMenu(message: Message) {
-        val popup = android.widget.PopupMenu(this, messagesRecyclerView)
-        popup.menuInflater.inflate(R.menu.message_context_menu, popup.menu)
-
-        // Show/hide pin/unpin based on message state
-        popup.menu.findItem(R.id.action_pin_message)?.isVisible = !message.isPinned
-        popup.menu.findItem(R.id.action_unpin_message)?.isVisible = message.isPinned
-
-        popup.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_pin_message -> {
-                    pinMessage(message)
-                    true
-                }
-                R.id.action_unpin_message -> {
-                    unpinMessage(message)
-                    true
-                }
-                R.id.action_reply -> {
-                    showReplyPreview(message)
-                    true
-                }
-                R.id.action_delete_message -> {
-                    enterSelectionMode(message)
-                    true
-                }
-                else -> false
-            }
-        }
-        popup.show()
-    }
-
-    private fun pinMessage(message: Message) {
-        lifecycleScope.launch {
-            try {
-                val success = GrpcClient.pinMessage(this@NewChatActivity, roomId, message.id)
-                if (success) {
-                    showToast(getString(R.string.pinned_message))
-                    // Refresh pinned messages
-                    loadPinnedMessages()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to pin message", e)
-            }
-        }
-    }
-
-    private fun unpinMessage(message: Message) {
-        lifecycleScope.launch {
-            try {
-                val success = GrpcClient.unpinMessage(this@NewChatActivity, roomId, message.id)
-                if (success) {
-                    showToast(getString(R.string.unpin_message))
-                    loadPinnedMessages()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to unpin message", e)
-            }
-        }
-    }
-
     private fun loadPinnedMessages() {
         lifecycleScope.launch {
             try {
                 val pinned = GrpcClient.getPinnedMessages(this@NewChatActivity, roomId)
-                // Update adapter with pinned state
-                adapter.updatePinnedMessages(pinned.map { it.id }.toSet())
+                val pinnedIds = pinned.map { it.id }.toSet()
+                pinnedMessageIds = pinnedIds.toMutableSet()
+                adapter.updatePinnedMessages(pinnedIds)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load pinned messages", e)
             }
@@ -1425,7 +1402,7 @@ class NewChatActivity : AppCompatActivity() {
     private fun getSavedUserId(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("user_id", null)
     private fun saveUserId(userId: String) { getSharedPreferences("lavender_prefs", MODE_PRIVATE).edit { putString("user_id", userId) } }
 
-    override fun onResume() { super.onResume(); ThemeStore.refresh(this, username); lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false; if (grpcClient.shouldForceReconnect()) { val sa = intent.getStringExtra("SERVER_ADDRESS") ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", ""); if (!sa.isNullOrEmpty()) { val p = sa.split(":"); grpcClient.connect(p[0], false, p.getOrNull(1)?.toIntOrNull() ?: 50051, this, true) } }; fetchChatMetadataIfNeeded() }
+    override fun onResume() { super.onResume(); ThemeStore.refresh(this, username); lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false; if (grpcClient.shouldForceReconnect()) { val sa = intent.getStringExtra("SERVER_ADDRESS") ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", ""); if (!sa.isNullOrEmpty()) { val p = sa.split(":"); grpcClient.connect(p[0], false, p.getOrNull(1)?.toIntOrNull() ?: 50051, this, true) } }; fetchChatMetadataIfNeeded(); loadPinnedMessages() }
     override fun onPause() { super.onPause(); lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true; if (isTypingSignalSent) { isTypingSignalSent = false; grpcClient.sendTypingSignal(username, false) }; saveDraft() }
 
     // ======= E2EE Methods =======
