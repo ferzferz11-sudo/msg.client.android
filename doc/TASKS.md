@@ -91,13 +91,13 @@
 
 ### Высокий приоритет
 - [ ] **ChatList v2** — новая версия списка чатов с улучшенным UI/UX
-- [ ] **Выпуск Android v1.1.3.13** — готов к релизу
 
 ### Средний приоритет
 - [ ] **Тесты для ProfileService v2** — unit-тесты для ProfileClient
 - [ ] **Bearer token в Chat stream** — вместо password в первом сообщении (v1.2.2.x, отложено)
 
 ### Отложено
+- [ ] Выпуск Android v1.1.3.13 — делается ферзем лично после завершения v2
 - [ ] Qdrant + CLIP (production RAG) — см. AI_SERVICES.md
 
 ---
