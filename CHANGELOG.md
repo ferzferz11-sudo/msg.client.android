@@ -2,16 +2,30 @@
 
 ## [1.1.3.16] - 2026-06-16
 
-### Новое: ChatList v2 UI (dev server)
+### Новое: ChatList v2 UI — полная реализация (сессия 13)
+- **ChatListActivityV2** — полная переработка: RecyclerView+SwipeRefresh напрямую в Activity (без фрагмента)
+- **TabLayout** — табы All / AI / Groups с фильтрацией через ViewModel (setTabFilter)
+- **Toolbar** — avatar→ProfileActivity, title→ServersActivity, search/settings icons
+- **FABs** — fabAi (TODO AI chat), fabAddChat→NewChatActivity
+- **Навигация** — favorites→NewChat, hermes→HermesChat, owl→OwlChat, other→NewChat
+- **Connection status** — subtitle с connecting/online/offline
+- **SplashActivity** — маршрутизация v1/v2 по наличию server host
+- **ChatAdapterV2** — исправлено дублирование cachedColors (единый кэш в адаптере)
+- **AndroidManifest** — регистрация ChatListActivityV2, удалены дубликаты activity
+- **strings.xml** — добавлены connection status строки (en+ru)
+- **activity_chat_list_v2.xml** — SwipeRefresh+RecyclerView вместо FragmentContainer, убран XML tint с FAB
+- Backward compatible: v1 пользователи не получают изменений
+
+### Новое: ChatList v2 UI scaffold (сессия 12)
 - **ChatListActivityV2** — новый Activity с определением версии сервера (v1/v2)
 - **ChatListFragmentV2** — фрагмент с SwipeRefresh + RecyclerView
 - **ChatAdapterV2** — адаптер с секциями (Pinned/Favorites/All Chats)
 - **ChatListViewModelV2** — ViewModel: loadChats, pinChat, archiveChat, searchChats
 - **ChatListSections.kt** — управление секциями
-- **TabLayout** — табы All / AI / Groups (заглушка, без ViewPager2)
+- **TabLayout** — табы All / AI / Groups (заглушка)
 - **v2 context menu** — Pin/Mute/Delete в списке чатов (long press)
 - **Fallback на v1** — при подключении к prod серверу автоматически запускается ChatListActivity v1
-- Backward compatible: v1 пользователи не получают изменений
+- **i18n** — 17 новых строк (en + ru)
 
 ---
 

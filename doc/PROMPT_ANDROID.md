@@ -1,7 +1,7 @@
 # Промпт для новой сессии — Android v1.1.3.16
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.16 (v1.1.3.15 выпущен, v1.1.3.16 в разработке)
+**Версия:** 1.1.3.16 (в разработке)
 **Ветка:** feat/1.1.3.x
 
 ---
@@ -9,11 +9,11 @@
 ## СТАТУС: v1.1.3.16 — в разработке
 
 v1.1.3.15 — последняя стабильная v1 (prod сервер) — **выпущен ферзём**.
-v1.1.3.16 — ChatList v2 UI + разделение v1/v2 Activity.
+v1.1.3.16 — ChatList v2 UI полная реализация + разделение v1/v2 Activity.
 
 Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2).
 Сервер prod: v1.1.3.10 (legacy, без v2).
-Android: ChatList v2 UI scaffold создан, тестируется на dev и prod.
+Android: ChatListActivityV2 с табами, навигацией, FABs, connection status.
 
 ---
 
@@ -46,11 +46,11 @@ messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
 ```
 ui/
 ├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   ├── ChatListActivityV2.kt    — определение версии сервера + fallback на v1
-│   ├── ChatListFragmentV2.kt    — SwipeRefresh + RecyclerView
-│   ├── ChatAdapterV2.kt         — адаптер с секциями
-│   ├── ChatListViewModelV2.kt   — ViewModel
-│   └── ChatListSections.kt      — Section enum + SectionItem
+│   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation (БЕЗ фрагмента)
+│   ├── ChatAdapterV2.kt         — адаптер с секциями (единый кэш цветов)
+│   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter
+│   ├── ChatListSections.kt      — Section enum + SectionItem
+│   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
 ├── adapter/
 │   └── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
 ├── widget/
@@ -61,13 +61,13 @@ ui/
 
 res/
 ├── layout/
-│   ├── activity_chat_list_v2.xml       — v2 layout с TabLayout
+│   ├── activity_chat_list_v2.xml       — v2 layout: SwipeRefresh+RecyclerView, TabLayout, FABs
 │   ├── fragment_chat_list_v2.xml       — SwipeRefresh + RecyclerView
 │   └── item_chat_section_header.xml    — заголовок секции
 ├── menu/
 │   └── chat_list_context_menu_v2.xml   — v2 контекстное меню (Pin/Mute/Delete)
-├── values/strings.xml                  — 17 новых строк
-└── values-ru/strings.xml               — 17 новых строк
+├── values/strings.xml                  — connection status строки
+└── values-ru/strings.xml               — connection status строки
 
 data/
 ├── grpc/
@@ -86,18 +86,14 @@ data/
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### v1.1.3.15 (выпущен)
-- Последняя версия с полной поддержкой v1 (prod сервер)
-- Полная обратная совместимость
-
 ### v1.1.3.16 (в разработке)
-- **Разделение v1/v2 Activity**: ChatListActivityV2 определяет версию сервера через fetchServerInfo()
-  - v2 сервер → ChatListActivityV2 (новый UI)
-  - v1 сервер → fallback на ChatListActivity (v1, без изменений)
-- **Long press на чате** = режим выбора (как в Telegram) — toolbar с действиями
+- **ChatListActivityV2 без фрагмента** — RecyclerView+SwipeRefresh напрямую в Activity
+- **TabLayout** — табы All/AI/Groups с фильтрацией через ViewModel.setTabFilter
+- **SplashActivity** — маршрутизация v1/v2 по наличию server host
+- **Long press на чате** = режим выбора (ActionMode toolbar) — НЕ РЕАЛИЗОВАНО
 - **Короткий тап** = вход в чат/группу
 - **Pin Chat** — в toolbar в режиме выбора (long press)
-- **Pin Message** — в шторке сообщения (bottom sheet)
+- **Pin Message** — в шторке сообщения (bottom sheet) — НЕ РЕАЛИЗОВАНО
 - **Archive** — отдельная сущность, заархивированные но не удалённые чаты
 - **Favorites** — существующий чат "Личное хранилище" (не Archive!)
 - **Секции списка**: Pinned / Favorites / All Chats + Archived
@@ -111,7 +107,7 @@ data/
 
 ## ПРАВИЛА
 
-1. НЕ компилировать на сервере (OOM kill) — это касается и Go и Android (./gradlew убивает всё по памяти)
+1. НЕ компилировать на сервере (OOM kill)
 2. НЕ деплоить новую версию на prod без прямого указания ферзя
 3. Коммитить и пушить после каждого значимого изменения
 4. Версия сервера в server.go:33, версия Android в version.txt
@@ -123,24 +119,10 @@ data/
 10. НЕ инициализировать getString() в полях класса Activity
 11. Форматирование строк: позиционные форматтеры (%1$s, %2$d)
 12. НЕ деплоить на prod без тестирования на dev
-13. **fetchServerInfo** — всегда использовать для определения версии сервера
-14. **Kotlin 2.3.21:** `cont.resume(value, onCancellation = {})` — всегда передавать onCancellation
-15. **НЕ ТРОГАТЬ v1 файлы**: ChatListActivity.kt, ChatAdapter.kt — v1.1.3.15 уже выпущен
-16. **Pin Chat НЕ в toolbar** — в context menu списка (long press), как в Telegram
-
----
-
-## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
-
-### dataBindingGenBaseClasses NPE
-- `@++id/` → `@+id/` (двойной плюс невалиден)
-- НЕ использовать `app:layout_constraint*` в CoordinatorLayout — использовать `android:layout_gravity`
-- НЕ ссылаться на несуществующие стили (TextAppearance.MaterialComponents.Caption)
-
-### 42P10 на prod БД (сервер)
-- `Failed to register device ... pq: there is no unique or exclusion constraint`
-- UNIQUE constraint на user_devices в prod БД уже есть
-- Исправится после редеплоя prod на v1.2.0.1
+13. fetchServerInfo — всегда использовать для определения версии сервера
+14. Kotlin 2.3.21: cont.resume(value, onCancellation = {}) — всегда передавать onCancellation
+15. НЕ ТРОГАТЬ v1 файлы: ChatListActivity.kt, ChatAdapter.kt — v1.1.3.15 уже выпущен
+16. ChatListActivityV2 — БЕЗ фрагмента, RecyclerView+SwipeRefresh напрямую
 
 ---
 
@@ -199,4 +181,4 @@ cd /root/msg.client.android
 - Подводные камни: `/root/msg/doc/PITFALLS.md`
 - CHANGELOG: `/root/msg.client.android/CHANGELOG.md`
 - План ChatList v2: `/root/msg.client.android/doc/PLAN_CHATLIST_V2.md`
-- Заметки сессии: `/root/msg/client.android/doc/SESSION_NOTES.md`
+- Заметки сессии: `/root/msg.client.android/doc/SESSION_NOTES.md`

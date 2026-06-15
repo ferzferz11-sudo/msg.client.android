@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Документация
 
 **Версия:** v1.1.3.16
-**Обновлено:** 2026-06-16
+**Обновлено:** 2026-06-16 (сессия 13)
 **Ветка:** feat/1.1.3.x
 
 ---
@@ -14,7 +14,7 @@
 4. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
 5. **SESSION_NOTES.md** — заметки последней сессии
 6. **CHANGELOG.md** — история изменений
-7. **PLAN_CHATLIST_V2.md** — план ChatList v2 UI + разделение v1/v2
+7. **PLAN_CHATLIST_V2.md** — план ChatList v2 UI + v1/v2 разделение
 
 ---
 
@@ -60,11 +60,11 @@ app/src/main/java/lavender/client/android/
 │
 ├── ui/
 │   ├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   │   ├── ChatListActivityV2.kt    — определение версии + fallback на v1
-│   │   ├── ChatListFragmentV2.kt    — SwipeRefresh + RecyclerView
-│   │   ├── ChatAdapterV2.kt         — адаптер с секциями
-│   │   ├── ChatListViewModelV2.kt   — ViewModel
-│   │   └── ChatListSections.kt      — Section enum + SectionItem
+│   │   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation (БЕЗ фрагмента)
+│   │   ├── ChatAdapterV2.kt         — адаптер с секциями (единый кэш цветов)
+│   │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter
+│   │   ├── ChatListSections.kt      — Section enum + SectionItem
+│   │   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
 │   ├── remote/                  — Remote Agent UI
 │   ├── widget/                   — ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
 │   ├── chat/widget/ChatWidget.kt
@@ -94,7 +94,7 @@ app/src/main/java/lavender/client/android/
 ```
 v1 сервер (prod) → ChatListActivity (v1, без изменений)
 v2 сервер (dev)  → ChatListActivityV2 (новый UI с секциями/табами)
-Определение: fetchServerInfo() → isChatV2Supported() → выбор Activity
+Определение: SplashActivity → fetchServerInfo → выбор Activity
 ```
 
 ### Auth V2 (JWT) flow (v1.1.3.11+)
@@ -110,7 +110,7 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
 ### ChatList v2 flow (v1.1.3.16+)
 ```
 ChatListActivityV2 → fetchServerInfo() → isChatV2Supported()
-  → v2: ChatListFragmentV2 с секциями (Pinned/Favorites/All)
+  → v2: ChatListActivityV2 с секциями (Pinned/Favorites/All)
   → v1: fallback на ChatListActivity
 Pin Chat: context menu списка (long press), НЕ toolbar
 Pin Message: в меню сообщения (long press), нужны новые серверные RPC
@@ -118,10 +118,10 @@ Favorites = Archive: существующий чат "Личное хранил�
 ```
 
 ### i18n (v1.1.3.9)
-- Activity: `getString(R.string.xxx)` — работает напрямую
-- Adapter/ViewHolder: `context.getString(R.string.xxx)` или `itemView.context.getString()`
-- ViewModel: НЕ использовать обычный ViewModel, только `AndroidViewModel` + `getApplication<Application>().getString()`
-- НЕ инициализировать `getString()` в полях класса Activity (до `onCreate()`) — crash!
+- Activity: getString(R.string.xxx) — работает напрямую
+- Adapter/ViewHolder: context.getString(R.string.xxx) или itemView.context.getString()
+- ViewModel: НЕ использовать обычный ViewModel, только AndroidViewModel + getApplication<Application>().getString()
+- НЕ инициализировать getString() в полях класса Activity (до onCreate()) — crash!
 - Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
 
 ### Темы
@@ -131,9 +131,9 @@ Favorites = Archive: существующий чат "Личное хранил�
 - Новые FAB добавлять в ThemeApplier: listOf(R.id.fabAi, R.id.fabAddChat, ...)
 
 ### Kotlin 2.3.21 / Coroutines 1.11 (v1.1.3.14)
-- `CancellableContinuation.resume(value, onCancellation = {})` — всегда передавать onCancellation
-- `import kotlinx.coroutines.suspendCancellableCoroutine` (не `kotlin.coroutines`)
-- data class с `repeated` proto полем использует `List<T>` напрямую (не `getXxxList()`)
+- CancellableContinuation.resume(value, onCancellation = {}) — всегда передавать onCancellation
+- import kotlinx.coroutines.suspendCancellableCoroutine (не kotlin.coroutines)
+- data class с repeated proto полем использует List<T> напрямую (не getXxxList())
 
 ---
 
