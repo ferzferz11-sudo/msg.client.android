@@ -1,8 +1,9 @@
 # Lavender Messenger — Android Документация
 
 **Версия:** v1.1.3.16
-**Обновлено:** 2026-06-16 (сессия 13)
+**Обновлено:** 2026-06-16 (сессия 16)
 **Ветка:** feat/1.1.3.x
+**Тег:** v1.1.3.16
 
 ---
 
@@ -11,10 +12,9 @@
 1. **PROMPT_ANDROID.md** — промпт для новой сессии (читать первым)
 2. **TASKS.md** — таск-трекер (бэклог + сделано)
 3. **PATTERNS.md** — паттерны и анти-patterns разработки
-4. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
-5. **SESSION_NOTES.md** — заметки последней сессии
-6. **CHANGELOG.md** — история изменений
-7. **PLAN_CHATLIST_V2.md** — план ChatList v2 UI + v1/v2 разделение
+4. **SESSION_NOTES.md** — заметки всех сессий
+5. **CHANGELOG.md** — история изменений
+6. **REMOTE_AGENT.md** — документация Remote Agent
 
 ---
 
@@ -26,7 +26,7 @@
 | `PROMPT_ANDROID.md` | Промпт для новой сессии | **Всегда в начале** |
 | `TASKS.md` | Таск-трекер | В начале сессии |
 | `PATTERNS.md` | Паттерны и анти-patterns | Перед написанием кода |
-| `PLAN_CHATLIST_V2.md` | План ChatList v2 UI + v1/v2 разделение | При работе над ChatList v2 |
+| `SESSION_NOTES.md` | Заметки всех сессий | В начале сессии |
 
 ### Архитектура и дизайн
 | Файл | Назначение | Когда читать |
@@ -47,7 +47,7 @@
 |------|-----------|
 | `/root/msg/doc/INDEX.md` | Индекс серверной документации |
 | `/root/msg/doc/TASKS.md` | Серверный таск-трекер |
-| `/root/msg/doc/PROMPT.md` | Промпт для серверных сессий |
+| `/root/msg/doc/PROMPT_SERVER.md` | Промпт для серверных сессий |
 
 ---
 
@@ -60,30 +60,33 @@ app/src/main/java/lavender/client/android/
 │
 ├── ui/
 │   ├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   │   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation (БЕЗ фрагмента)
-│   │   ├── ChatAdapterV2.kt         — адаптер с секциями (единый кэш цветов)
+│   │   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode
+│   │   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state
 │   │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter
 │   │   ├── ChatListSections.kt      — Section enum + SectionItem
 │   │   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
 │   ├── remote/                  — Remote Agent UI
 │   ├── widget/                   — ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
 │   ├── chat/widget/ChatWidget.kt
-│   └── adapter/ChatAdapter.kt   ← v1 (НЕ ТРОГАТЬ)
+│   └── adapter/
+│       ├── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
+│       └── MessageAdapter.kt    — адаптер сообщений + pinned badge
 │
 ├── data/
-│   ├── grpc/GrpcClient.kt                 — facade (pinChat, searchChats, etc.)
-│   ├── grpc/RealGrpcClient.kt             — реализация gRPC
-│   ├── grpc/ProfileClient.kt              — ProfileService v2 + fetchServerInfo
-│   ├── grpc/BearerTokenInterceptor.kt     — JWT Bearer token
-│   ├── proto/MessengerProto.kt            — proto data classes
-│   ├── session/CredentialStore.kt         — credentials + server list
-│   ├── session/SessionManager.kt          — loginV2 + loginV1 fallback
-│   ├── auth/AuthManager.kt                — JWT token storage
-│   └── models/Message.kt                  — ChatInfo (isPinned, isArchived, pinnedAt)
+│   ├── cache/CacheUtils.kt            — единый утилит очистки кэша
+│   ├── grpc/GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
+│   ├── grpc/RealGrpcClient.kt         — реализация gRPC
+│   ├── grpc/ProfileClient.kt          — ProfileService v2 + fetchServerInfo
+│   ├── grpc/BearerTokenInterceptor.kt — JWT Bearer token
+│   ├── proto/MessengerProto.kt        — proto data classes
+│   ├── session/CredentialStore.kt     — credentials + server list + lastUsername
+│   ├── session/SessionManager.kt      — loginV2 + loginV1 fallback
+│   ├── auth/AuthManager.kt            — JWT token storage
+│   └── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt)
 │
 └── theme/ui/
-    ├── ThemeApplier.kt                    — применение тем
-    └── ThemeUi.kt                         — ThemeUi.bind()
+    ├── ThemeApplier.kt                — применение тем
+    └── ThemeUi.kt                     — ThemeUi.bind()
 ```
 
 ---
@@ -112,15 +115,26 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
 ChatListActivityV2 → fetchServerInfo() → isChatV2Supported()
   → v2: ChatListActivityV2 с секциями (Pinned/Favorites/All)
   → v1: fallback на ChatListActivity
-Pin Chat: context menu списка (long press), НЕ toolbar
-Pin Message: в меню сообщения (long press), нужны новые серверные RPC
-Favorites = Archive: существующий чат "Личное хранилище"
+Selection Mode: long press → ActionMode toolbar (Pin/Mute/Archive/Delete)
+Search: SearchView в toolbar + debounce 300ms
+Pin Chat: selection mode toolbar
+Pin Message: selection mode toolbar (кнопка pin/unpin)
+```
+
+### Pin Message flow (v1.1.3.16+)
+```
+Long press on message → enter selection mode (v1-style)
+Select message → pin button in selection toolbar
+→ GrpcClient.pinMessage(context, chatId, messageId) → server RPC
+→ loadPinnedMessages() updates pinnedMessageIds + adapter
+→ Pinned badge shown on pinned messages
+Cache: CacheUtils.clearAllSync() on login (silent)
 ```
 
 ### i18n (v1.1.3.9)
 - Activity: getString(R.string.xxx) — работает напрямую
 - Adapter/ViewHolder: context.getString(R.string.xxx) или itemView.context.getString()
-- ViewModel: НЕ использовать обычный ViewModel, только AndroidViewModel + getApplication<Application>().getString()
+- ViewModel: НЕ использовать обычный ViewModel, только AndroidViewModel
 - НЕ инициализировать getString() в полях класса Activity (до onCreate()) — crash!
 - Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
 
@@ -133,7 +147,12 @@ Favorites = Archive: существующий чат "Личное хранил�
 ### Kotlin 2.3.21 / Coroutines 1.11 (v1.1.3.14)
 - CancellableContinuation.resume(value, onCancellation = {}) — всегда передавать onCancellation
 - import kotlinx.coroutines.suspendCancellableCoroutine (не kotlin.coroutines)
-- data class с repeated proto полем использует List<T> напрямую (не getXxxList())
+- OnBackPressedDispatcher вместо deprecated onBackPressed()
+
+### Cache clearing (v1.1.3.16+)
+- CacheUtils.clearAllSync(context) — синхронная очистка БД при входе (без Toast)
+- CacheUtils.clearAllWithGlide(context) — полная очистка + Glide из настройки (с Toast)
+- Вызывается при входе: SplashActivity, ServersActivity, ChatListActivity
 
 ---
 
@@ -145,3 +164,4 @@ Favorites = Archive: существующий чат "Личное хранил�
 | Порт HTTP | 8083 | 8082 |
 | Имя | Lava Germany dev | Lava Germany |
 | SSH | lava (13.140.25.249) | same |
+| Версия | v1.2.0.1 | v1.1.3.10 |

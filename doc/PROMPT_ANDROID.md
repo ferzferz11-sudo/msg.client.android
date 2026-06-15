@@ -1,19 +1,22 @@
 # Промпт для новой сессии — Android v1.1.3.16
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.16 (в разработке)
+**Версия:** 1.1.3.16 (тег создан, релиз не выпущен)
 **Ветка:** feat/1.1.3.x
+**Тег:** v1.1.3.16
 
 ---
 
-## СТАТУС: v1.1.3.16 — в разработке
+## СТАТУС: v1.1.3.16 — разработка завершена, тестирование
 
-v1.1.3.15 — последняя стабильная v1 (prod сервер) — **выпущен ферзём**.
-v1.1.3.16 — ChatList v2 UI полная реализация + разделение v1/v2 Activity.
+v1.1.3.15 — последняя стабильная v1 (prod сервер).
+v1.1.3.16 — все фичи реализованы, тег создан, требуется тестирование.
 
-Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2).
+Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2, Pin Message).
 Сервер prod: v1.1.3.10 (legacy, без v2).
-Android: ChatListActivityV2 с табами, навигацией, FABs, connection status.
+Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message.
+
+**ВАЖНО:** Серверный proto обновлён (PinMessage RPC), требуется protoc генерация перед сборкой.
 
 ---
 
@@ -29,9 +32,9 @@ auth_interceptor.go        — gRPC Bearer token interceptor (unary + streaming)
 auth_jwt.go                — JWT генерация/валидация
 db_auth_devices.go         — CRUD для user_devices + device_auth_log
 db_auth_migrations.go      — миграция таблиц (включая user_settings)
-db_chatlist_v2.go          — ChatList v2 DB methods
+db_chatlist_v2.go          — ChatList v2 DB methods + Pin Message DB methods
 server_profile_v2.go       — ProfileService v2 (JWT, dev only)
-server_chatlist_v2.go      — ChatList v2 RPC
+server_chatlist_v2.go      — ChatList v2 RPC + Pin Message RPC handlers
 server_chat.go             — Chat stream v2 (JWT + password)
 server_remote.go           — Remote Agent RPC
 hermes_remote_manager.go   — HandleTaskStream
@@ -39,65 +42,65 @@ ai_chat_manager.go         — AI чаты
 owl.go                     — OWL AI
 hermes_orchestrator.go     — Hermes Orchestrator
 http_server.go             — HTTP (/health, /info)
-messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
+messenger.proto            — ChatService v2, AuthService v2, ProfileService v2, Pin Message
 ```
 
 ### Android v2 (/root/msg.client.android) — НОВАЯ ПАПКА
 ```
 ui/
 ├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation (БЕЗ фрагмента)
-│   ├── ChatAdapterV2.kt         — адаптер с секциями (единый кэш цветов)
+│   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode, search
+│   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state
 │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter
 │   ├── ChatListSections.kt      — Section enum + SectionItem
 │   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
 ├── adapter/
-│   └── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
+│   ├── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
+│   └── MessageAdapter.kt    — адаптер сообщений + pinned badge
 ├── widget/
 │   ├── ServerAuthBottomSheet.kt
 │   ├── LoginBottomSheet.kt
 │   └── RegisterBottomSheet.kt
-└── ...
+└── .../
+
+data/
+├── cache/CacheUtils.kt            — единый утилит очистки кэша
+├── grpc/GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
+├── grpc/RealGrpcClient.kt         — реализация gRPC (JWT auth, ChatList v2, Pin Message RPC)
+├── grpc/ProfileClient.kt          — ProfileService v2 client + fetchServerInfo
+├── grpc/BearerTokenInterceptor.kt — JWT Bearer token
+├── proto/MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
+├── session/CredentialStore.kt     — credentials + server list + lastUsername
+├── session/SessionManager.kt      — loginV2 (JWT) + loginV1 (legacy fallback)
+├── auth/AuthManager.kt            — JWT token storage
+└── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt)
 
 res/
 ├── layout/
 │   ├── activity_chat_list_v2.xml       — v2 layout: SwipeRefresh+RecyclerView, TabLayout, FABs
-│   ├── fragment_chat_list_v2.xml       — SwipeRefresh + RecyclerView
-│   └── item_chat_section_header.xml    — заголовок секции
+│   ├── item_chat.xml                   — элемент чата + checkbox для selection
+│   └── item_message.xml                — сообщение + pinned badge
 ├── menu/
+│   ├── chat_list_action_mode.xml       — меню ActionMode (Pin/Mute/Archive/Delete)
+│   ├── chat_list_search.xml            — меню поиска
 │   └── chat_list_context_menu_v2.xml   — v2 контекстное меню (Pin/Mute/Delete)
-├── values/strings.xml                  — connection status строки
-└── values-ru/strings.xml               — connection status строки
-
-data/
-├── grpc/
-│   ├── GrpcClient.kt              — facade (pinChat, searchChats, archiveChat, etc.)
-│   ├── RealGrpcClient.kt          — реализация gRPC
-│   ├── ProfileClient.kt           — ProfileService v2 client + fetchServerInfo
-│   └── BearerTokenInterceptor.kt  — JWT Bearer token
-├── models/
-│   └── Message.kt                 — ChatInfo (isPinned, isArchived, pinnedAt)
-└── session/
-    ├── SessionManager.kt          — loginV2 (JWT) + loginV1 (legacy fallback)
-    └── CredentialStore.kt         — credentials + server list
+├── values/strings.xml                  — connection status, selection, pin message строки
+└── values-ru/strings.xml               — connection status, selection, pin message строки
 ```
 
 ---
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### v1.1.3.16 (в разработке)
+### v1.1.3.16 (текущая)
 - **ChatListActivityV2 без фрагмента** — RecyclerView+SwipeRefresh напрямую в Activity
 - **TabLayout** — табы All/AI/Groups с фильтрацией через ViewModel.setTabFilter
 - **SplashActivity** — маршрутизация v1/v2 по наличию server host
-- **Long press на чате** = режим выбора (ActionMode toolbar) — НЕ РЕАЛИЗОВАНО
-- **Короткий тап** = вход в чат/группу
-- **Pin Chat** — в toolbar в режиме выбора (long press)
-- **Pin Message** — в шторке сообщения (bottom sheet) — НЕ РЕАЛИЗОВАНО
-- **Archive** — отдельная сущность, заархивированные но не удалённые чаты
-- **Favorites** — существующий чат "Личное хранилище" (не Archive!)
-- **Секции списка**: Pinned / Favorites / All Chats + Archived
-- **Табы**: All / AI / Groups
+- **Selection Mode** — long press = ActionMode toolbar, тап = toggle selection
+- **Поиск** — SearchView в toolbar + debounce 300ms
+- **Pin Message** — selection toolbar кнопка pin/unpin (v1-style), pinned badge
+- **CacheUtils** — единый утилит очистки кэша
+- **Очистка кэша при входе** — silent, через CacheUtils.clearAllSync()
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
@@ -121,8 +124,10 @@ data/
 12. НЕ деплоить на prod без тестирования на dev
 13. fetchServerInfo — всегда использовать для определения версии сервера
 14. Kotlin 2.3.21: cont.resume(value, onCancellation = {}) — всегда передавать onCancellation
-15. НЕ ТРОГАТЬ v1 файлы: ChatListActivity.kt, ChatAdapter.kt — v1.1.3.15 уже выпущен
+15. НЕ ТРОГАТЬ v1 файлы: ChatListActivity.kt, ChatAdapter.kt
 16. ChatListActivityV2 — БЕЗ фрагмента, RecyclerView+SwipeRefresh напрямую
+17. Очистка кэша — использовать CacheUtils, не дублировать код
+18. Pin Message — только через selection toolbar (v1-style), НЕ PopupMenu
 
 ---
 
@@ -143,6 +148,9 @@ go build -o /tmp/lavender-server .
 systemctl stop lavender-server
 cp /tmp/lavender-server /root/LavenderMessenger/run/lavender-server
 systemctl start lavender-server
+
+# Proto gen (обязательно после изменений в messenger.proto!)
+protoc --go_out=gen --go_opt=paths=source_relative --go-grpc_out=gen --go-grpc_opt=paths=source_relative messenger.proto
 
 # Тесты
 go test ./...
@@ -178,7 +186,5 @@ cd /root/msg.client.android
 - Паттерны: `/root/msg.client.android/doc/PATTERNS.md`
 - Remote Agent: `/root/msg.client.android/doc/REMOTE_AGENT.md`
 - Сервер: `/root/msg/doc/INTEGRATION_SESSION.md`, `/root/msg/doc/TASKS.md`
-- Подводные камни: `/root/msg/doc/PITFALLS.md`
 - CHANGELOG: `/root/msg.client.android/CHANGELOG.md`
-- План ChatList v2: `/root/msg.client.android/doc/PLAN_CHATLIST_V2.md`
-- Заметки сессии: `/root/msg.client.android/doc/SESSION_NOTES.md`
+- Заметки сессий: `/root/msg.client.android/doc/SESSION_NOTES.md`

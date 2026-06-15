@@ -1,89 +1,36 @@
-# Заметки сессии 13 — 2026-06-16
+# Lavender Messenger — Android Session Notes
 
-## Что сделано
+## Сессия 16 (2026-06-16) — Завершение Pin Message + рефакторинг
 
-### ChatListActivityV2 — полная реализация (без фрагмента)
-- Убрана зависимость от ChatListFragmentV2 — всё в одном Activity
-- Прямой RecyclerView + SwipeRefreshLayout в activity_chat_list_v2.xml
-- TabLayout с табами All/AI/Groups (фильтрация через ViewModel.setTabFilter)
-- Toolbar: avatar→ProfileActivity, title→ServersActivity, search/settings icons
-- FABs: fabAi (TODO AI chat), fabAddChat→NewChatActivity
-- Навигация: favorites→NewChat, hermes→HermesChat, owl→OwlChat, other→NewChat
-- Connection status subtitle (connecting/online/offline)
+### Рефакторинг Pin Message → v1-style selection
+- **Убран PopupMenu context menu** — long press сразу входит в selection mode (как в v1)
+- **Кнопка Pin** в selection toolbar (видна при выборе 1 сообщения)
+- `pinSelectedMessages()` использует `GrpcClient.pinMessage/unpinMessage` через `lifecycleScope`
+- `loadPinnedMessages()` обновляет и локальный `pinnedMessageIds`, и адаптер
+- Вызов `loadPinnedMessages()` в `onResume` и при подключении
+- Удалён `message_context_menu.xml` (больше не нужен)
 
-### SplashActivity — маршрутизация v1/v2
-- При shouldProceed + наличии server host → ChatListActivityV2
-- Без server host → ChatListActivity (v1)
-- ChatListActivityV2 сам делает fetchServerInfo и fallback на v1 если нужно
+### CacheUtils — единый утилитный метод очистки кэша
+- Создан `CacheUtils` object с `clearAllSync()` и `clearAllWithGlide()`
+- `clearAllSync(context)` — синхронная очистка БД (messages, chats) — используется при входе
+- `clearAllWithGlide(context)` — полная очистка + Glide — из настроек
+- Заменены все дублированные `clearAllCache()` в Activity на `CacheUtils.clearAllSync()`
+- `clearLocalCache()` в ChatListActivity теперь использует `CacheUtils.clearAllWithGlide()`
+- Очистка кэша при входе — без Toast (silent)
 
-### ChatAdapterV2 — исправление
-- Убрано дублирование cachedColors из ViewHolder'ов
-- Единый кэш цветов в адаптере, передаётся в ViewHolders как параметры
-
-### AndroidManifest.xml
-- Зарегистрирован ChatListActivityV2
-- Удалён дубликат RemoteAgentSettingsActivity
-- Удалён дубликат LogViewerActivity
-
-### Строки (en + ru)
-- connecting / Подключение… (уже было в values-ru, добавлено в values)
-- connection_online / В сети
-- connection_offline / Не в сети
-
-### Исправления билда
-- Дубликат `connecting` в values/strings.xml — удалён
-- Дубликат `connecting` в values-ru/strings.xml — удалён
-- SplashActivity: `ui.chatlist.ChatListActivityV2` → полный путь `lavender.client.android.ui.chatlist.ChatListActivityV2`
-- SplashActivity: добавлена закрывающая скобка класса
-- ChatListFragmentV2: убран вызов `viewModel.onChatClick()` (метод удалён из VM)
-
-### Коммиты
-- `bd4e22c` — feat: ChatListActivityV2 — full v2 chat list with tabs, navigation, FABs, theme integration
-- `84171a0` — docs: session 13 wrap-up
-- `d270215` — fix: remove duplicate connecting string
-- `4cdd9a0` — fix: use full package path for ChatListActivityV2 in SplashActivity
-- `a9d487a` — fix: add missing closing brace for SplashActivity class
-- `35e6b2b` — fix: fix ChatListFragmentV2 unresolved reference to viewModel.onChatClick
-
-## Сессия 14 — Selection Mode + Search (2026-06-16)
-
-### Что сделано
-
-#### Selection Mode (множественный выбор)
-- **ChatAdapterV2**: добавлен selection state (`selectedIds: MutableSet<String>`, `selectionMode: Boolean`)
-- **ChatAdapterV2**: CheckBox (`cbChatSelect`) в каждом элементе — виден только в selection mode
-- **ChatAdapterV2**: визуальная подсветка выбранных элементов (primary color с alpha=48)
-- **ChatListActivityV2**: `ActionMode.Callback` — long press запускает ActionMode, тап в selection mode = toggle selection
-- **ActionMode menu**: Pin/Unpin, Mute/Unmute, Archive/Unarchive, Delete — массовые действия над выбранными
-- **onBackPressed**: выход из selection mode вместо закрытия Activity
-
-#### Поиск
-- **SearchView** в toolbar через `toolbar.inflateMenu(R.menu.chat_list_search)`
-- **Debounce 300ms** через `kotlinx.coroutines.Job` + `delay()`
-- **Локальная фильтрация** по `allChats` (работает на v1 и v2)
-- **Collapse** восстанавливает полный список
-
-#### Layout changes
-- `item_chat.xml`: добавлен `CheckBox` (`cbChatSelect`) для выделения
-- `activity_chat_list_v2.xml`: убран `ivActionSearch` (теперь SearchView в menu)
-- `chat_list_action_mode.xml`: новое меню для ActionMode
-- `chat_list_search.xml`: новое меню для поиска
-
-### Коммиты
-- `4ddc712` — feat: Selection Mode + Search in ChatListActivityV2
-
-### Следующие шаги (сессия 16)
-1. **Тестирование** на dev и prod серверах
-2. **FAB AI** — создание AI чата (OwlActivity/HermesChatActivity)
-3. **HermesChatActivity / OwlChatActivity** — интеграция с v2 навигацией
+### Коммиты сессии 16
+- `da0c3ae` — refactor: Pin Message via selection toolbar (v1-style)
+- `7973b83` — fix: CacheUtils — remove userDao, fix context type
+- `9929b32` — feat: clear local cache silently on successful login
+- `ed40305` — refactor: extract CacheUtils
 
 ---
 
-## Сессия 15 — Pin Message + ServersActivity improvements (2026-06-16)
+## Сессия 15 (2026-06-16) — Pin Message + ServersActivity
 
 ### Pin Message (сервер)
 - messenger.proto: PinMessageRequest/Response, UnPinMessageRequest/Response, GetPinnedMessagesRequest/Response
-- db_chatlist_v2.go: pinned_messages table, PinnedMessageRow struct, PinMessage/UnPinMessage/GetPinnedMessages/IsMessagePinned
+- db_chatlist_v2.go: pinned_messages table, PinnedMessageRow, CRUD методы
 - server_chatlist_v2.go: PinMessage/UnPinMessage/GetPinnedMessages RPC handlers
 - Все RPC используют только userId (без username)
 
@@ -92,11 +39,10 @@
 - RealGrpcClient: pinMessage(), unpinMessage(), getPinnedMessages()
 - GrpcClient: facade с v1/v2 version check
 - Message.kt: isPinned field
-- MessageAdapter: pinnedMessageIds, updatePinnedMessages(), pinned badge в bind()
-- NewChatActivity: showMessageContextMenu() с PopupMenu (pin/unpin/reply/delete)
+- MessageAdapter: pinnedMessageIds, updatePinnedMessages(), pinned badge
+- NewChatActivity: showMessageContextMenu() (упрощено в сессии 16)
 - item_message.xml: pinned badge layout
-- message_context_menu.xml: context menu для сообщений
-- strings.xml + values-ru: pinned_message, pin_message, unpin_message
+- pinned_message, pin_message, unpin_message строки (en + ru)
 
 ### ServersActivity improvements
 - Prefill последнего логина в login bottom sheet
@@ -104,8 +50,53 @@
 - Все серверы (включая dev) доступны всем пользователям
 - CredentialStore: getLastUsername/setLastUsername
 
-### Коммиты
+### Коммиты сессии 15
 - `7301de3` — Pin Message server
 - `e05da8d` — Pin Message Android client
 - `ec530ff` — Pin Message UI
 - `b367998` — ServersActivity improvements
+
+---
+
+## Сессия 14 (2026-06-16) — Selection Mode + Search
+
+### Selection Mode (множественный выбор чатов)
+- ChatAdapterV2: selection state, CheckBox, визуальная подсветка
+- ChatListActivityV2: ActionMode.Callback, массовые действия
+- onBackPressed → выход из selection mode (OnBackPressedDispatcher)
+
+### Поиск чатов
+- SearchView в toolbar через inflateMenu
+- Debounce 300ms через coroutine Job
+- Локальная фильтрация allChats (работает на v1 и v2)
+
+### Коммиты сессии 14
+- `4ddc712` — feat: Selection Mode + Search
+- `0256dab` — fix: replace deprecated onBackPressed
+
+---
+
+## Сессия 13 (2026-06-16) — ChatList v2 UI
+
+### ChatListActivityV2 — полная реализация
+- RecyclerView+SwipeRefresh напрямую в Activity (без фрагмента)
+- TabLayout с табами All/AI/Groups
+- Toolbar: avatar→ProfileActivity, title→ServersActivity
+- FABs: fabAi, fabAddChat
+- Connection status subtitle
+- SplashActivity маршрутизация v1/v2
+
+### Коммиты сессии 13
+- `bd4e22c` — feat: ChatListActivityV2 full implementation
+
+---
+
+## Теги
+- Android: `v1.1.3.16`
+- Server: `v1.2.0.1`
+
+## Следующие шаги (сессия 17)
+1. **Тестирование** на dev и prod серверах
+2. **FAB AI** — создание AI чата
+3. **HermesChatActivity / OwlChatActivity** — интеграция с v2 навигацией
+4. **protoc генерация** на сервере (после добавления PinMessage в proto)

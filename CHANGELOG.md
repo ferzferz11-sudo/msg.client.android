@@ -2,6 +2,38 @@
 
 ## [1.1.3.16] - 2026-06-16
 
+### Новое: Selection Mode (множественный выбор чатов)
+- **Long press** на чате → ActionMode toolbar с действиями (Pin/Unpin, Mute, Archive, Delete)
+- **Тап** в режиме выбора → toggle selection с checkbox
+- **Визуальная подсветка** выбранных элементов (primary color с alpha)
+- **Back press** → выход из selection mode (OnBackPressedDispatcher)
+- Массовые действия над выбранными чатами
+
+### Новое: Поиск чатов
+- **SearchView** в toolbar через inflateMenu
+- **Debounce 300ms** через coroutine Job
+- Локальная фильтрация allChats (работает на v1 и v2)
+
+### Новое: Pin Message
+- **PinMessage/UnPinMessage/GetPinnedMessages** RPC в ChatService
+- **Selection toolbar** — кнопка pin/unpin при выборе 1 сообщения
+- **Pinned badge** в MessageAdapter для закреплённых сообщений
+- Graceful fallback на v1 серверы
+
+### Новое: ServersActivity improvements
+- **Prefill** последнего логина в login bottom sheet
+- **Splash** после успешного входа/регистрации
+- Все серверы (включая dev) доступны всем пользователям
+
+### Новое: Очистка кэша при входе
+- **CacheUtils** — единый утилитный метод очистки кэша
+- Синхронная очистка БД (messages, chats) при входе (без Toast)
+- Полная очистка + Glide из настроек (с Toast)
+
+### Рефакторинг
+- Удалён дублирующийся код очистки кэша из всех Activity
+- Использование CacheUtils.clearAllSync() и CacheUtils.clearAllWithGlide()
+
 ### Новое: ChatList v2 UI — полная реализация (сессия 13)
 - **ChatListActivityV2** — полная переработка: RecyclerView+SwipeRefresh напрямую в Activity (без фрагмента)
 - **TabLayout** — табы All / AI / Groups с фильтрацией через ViewModel (setTabFilter)

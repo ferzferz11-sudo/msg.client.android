@@ -1,78 +1,63 @@
 # Lavender Messenger (Android) — Задачи
 
 **Версия:** v1.1.3.16
-**Обновлено:** 2026-06-16 (сессия 13)
+**Обновлено:** 2026-06-16 (сессия 16)
 **Ветка:** feat/1.1.3.x
+**Тег:** v1.1.3.16
 
 ---
 
-## ✅ v1.1.3.16 — ChatList v2 UI полная реализация (Сессия 13)
+## ✅ v1.1.3.16 — Все фичи завершены (Сессии 13-16)
 
 ### Новое
-- ✅ **ChatListActivityV2** — полная переработка: RecyclerView+SwipeRefresh напрямую в Activity (без фрагмента)
-- ✅ **TabLayout** — табы All / AI / Groups с фильтрацией через ViewModel.setTabFilter
+- ✅ **ChatListActivityV2** — полная реализация: RecyclerView+SwipeRefresh напрямую в Activity
+- ✅ **TabLayout** — табы All / AI / Groups с фильтрацией через ViewModel
 - ✅ **Toolbar** — avatar→ProfileActivity, title→ServersActivity, search/settings icons
 - ✅ **FABs** — fabAi (TODO), fabAddChat→NewChatActivity
-- ✅ **Навигация** — favorites→NewChat, hermes→HermesChat, owl→OwlChat, other→NewChat
+- ✅ **Навигация** — favorites→NewChat, hermes→HermesChat, owl→OwlChat
 - ✅ **Connection status** — subtitle с connecting/online/offline
-- ✅ **SplashActivity** — маршрутизация v1/v2 по наличию server host
-- ✅ **ChatAdapterV2** — исправлено дублирование cachedColors
-- ✅ **AndroidManifest** — регистрация ChatListActivityV2, удалены дубликаты
-- ✅ **strings.xml** — connection status строки (en+ru)
+- ✅ **SplashActivity** — маршрутизация v1/v2 по server host
+- ✅ **Selection Mode** — long press = ActionMode toolbar, тап = toggle selection
+- ✅ **Поиск** — SearchView в toolbar + debounce 300ms
+- ✅ **Pin Message** — серверные RPC + клиент + UI (selection toolbar + pinned badge)
+- ✅ **ServersActivity** — prefill username, splash после входа, все серверы доступны
+- ✅ **CacheUtils** — единый утилит очистки кэша (clearAllSync + clearAllWithGlide)
+- ✅ **Очистка кэша при входе** — silent, без Toast
 
-### Исправления билда
-- ✅ Дубликат `connecting` в values/strings.xml и values-ru/strings.xml
+### Исправления
+- ✅ Дубликат `connecting` в strings.xml
 - ✅ SplashActivity: полный путь для ChatListActivityV2
-- ✅ SplashActivity: закрывающая скобка класса
-- ✅ ChatListFragmentV2: убран вызов несуществующего viewModel.onChatClick()
+- ✅ ChatListFragmentV2: убран вызов несуществующего метода
+- ✅ Deprecated onBackPressed → OnBackPressedDispatcher
 
 ### Коммиты
-- `bd4e22c` — feat: ChatListActivityV2 full implementation
-- `d270215` — fix: remove duplicate connecting string
-- `4cdd9a0` — fix: full package path for ChatListActivityV2
-- `a9d487a` — fix: missing closing brace
-- `35e6b2b` — fix: ChatListFragmentV2 unresolved reference
+- `bd4e22c` — ChatListActivityV2 full implementation
+- `4ddc712` — Selection Mode + Search
+- `0256dab` — fix deprecated onBackPressed
+- `7301de3` — Pin Message server
+- `e05da8d` — Pin Message Android client
+- `ec530ff` — Pin Message UI
+- `b367998` — ServersActivity improvements
+- `9929b32` — clear cache on login
+- `ed40305` — extract CacheUtils
+- `da0c3ae` — Pin Message via selection toolbar (v1-style)
+- `7973b83` — fix CacheUtils
 
 ---
 
-## ✅ v1.1.3.16 — ChatList v2 UI scaffold (Сессия 12)
-- ✅ ChatListActivityV2, ChatListFragmentV2, ChatAdapterV2, ChatListViewModelV2, ChatListSections
-- ✅ TabLayout (заглушка), v2 context menu, fallback на v1
-- ✅ i18n: 17 новых строк (en + ru)
+## ✅ v1.1.3.15 — Последняя стабильная v1 (prod сервер)
 
 ---
 
-## ✅ v1.1.3.15 — Последняя стабильная v1 (prod сервер) — ВЫПУЩЕН
-
----
-
-## ✅ v1.1.3.14 — ChatStream v2 + ChatList v2 (Сессия 11)
-
----
-
-## ✅ v1.1.3.13 — ProfileService v2 client (Сессия 9)
-
----
-
-## ✅ v1.1.3.12 — Bearer Token Interceptor + Token Refresh (Сессия 8)
-
----
-
-## 📋 Активные задачи (Сессия 14)
+## 📋 Активные задачи (Сессия 17)
 
 ### Высокий приоритет
-- [x] **Selection Mode** — long press = ActionMode toolbar (Pin/Delete/Archive/Mute), тап = toggle selection (множественный выбор)
-- [x] **Поиск** — SearchView в toolbar + debounce 300ms + локальная фильтрация allChats
-- [x] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages
-- [x] **Pin Message клиент** — pinMessage/unPinMessage в GrpcClient + RealGrpcClient
-- [x] **Pin Message UI** — context menu (long press) + pinned badge в MessageAdapter
 - [ ] **Тестирование** — на dev и prod серверах
+- [ ] **protoc генерация** на сервере (после добавления PinMessage в proto)
 
 ### Средний приоритет
-- [ ] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages
-- [ ] **Pin Message клиент** — pinMessage/unPinMessage в GrpcClient + RealGrpcClient
-- [ ] **Pin Message UI** — отображение закреплённого сообщения в MessageAdapter
-- [ ] **Тестирование** — на dev и prod серверах
+- [ ] **FAB AI** — создание AI чата (OwlActivity/HermesChatActivity)
+- [ ] **HermesChatActivity / OwlChatActivity** — интеграция с v2 навигацией
 
 ### Отложено
 - [ ] Qdrant + CLIP (production RAG)
@@ -89,12 +74,14 @@
 | v1/v2 разделение | Новые файлы в ui/chatlist/, v1 без изменений |
 | Long press = режим выбора | ActionMode toolbar с действиями Pin/Delete/Archive (как в Telegram) |
 | Pin Chat в toolbar выбора | НЕ в обычном toolbar — только в режиме выбора |
-| Pin Message — отдельная фича | В шторке сообщения (bottom sheet), нужны новые серверные RPC |
+| Pin Message — selection toolbar | Кнопка pin/unpin в selection toolbar (v1-style), НЕ PopupMenu |
 | Archive — отдельная сущность | Заархивированные но не удалённые чаты |
 | Favorites ≠ Archive | Существующий чат "Личное хранилище" — это не Archive! |
 | fetchServerInfo fallback | Если /info недоступен → v1 для всех сервисов |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 | ChatListActivityV2 без фрагмента | Проще — RecyclerView+SwipeRefresh напрямую в Activity |
+| CacheUtils | Единый утилит очистки кэша, не дублировать код |
+| Очистка кэша при входе | Silent (без Toast), синхронная через CacheUtils.clearAllSync() |
 
 ---
 
@@ -102,13 +89,13 @@
 
 | Файл | Назначение |
 |------|------------|
-| `ui/chatlist/ChatListActivityV2.kt` | v2 Activity: tabs, toolbar, FABs, navigation |
-| `ui/chatlist/ChatAdapterV2.kt` | v2 адаптер с секциями (единый кэш цветов) |
+| `ui/chatlist/ChatListActivityV2.kt` | v2 Activity: tabs, toolbar, FABs, navigation, selection mode |
+| `ui/chatlist/ChatAdapterV2.kt` | v2 адаптер с секциями + selection state |
 | `ui/chatlist/ChatListViewModelV2.kt` | v2 ViewModel: loadChats, pinChat, setTabFilter |
 | `ui/chatlist/ChatListSections.kt` | Section enum + SectionItem |
-| `ui/chatlist/ChatListFragmentV2.kt` | v2 фрагмент (не используется, для справки) |
+| `ui/adapter/MessageAdapter.kt` | Адаптер сообщений + pinned badge |
+| `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
+| `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
+| `data/models/Message.kt` | Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt) |
 | `res/layout/activity_chat_list_v2.xml` | v2 layout: SwipeRefresh+RecyclerView, TabLayout, FABs |
-| `ProfileClient.kt` | ProfileService v2 client + fetchServerInfo |
-| `GrpcClient.kt` | Facade (pinChat, searchChats, archiveChat, etc.) |
-| `Message.kt` | ChatInfo модель (isPinned, isArchived, pinnedAt) |
-| `doc/PLAN_CHATLIST_V2.md` | Детальный план реализации |
+| `res/layout/item_message.xml` | Layout сообщения + pinned badge |
