@@ -2587,7 +2587,7 @@ object RealGrpcClient {
         fullMethod: String,
         request: ReqT,
         responseType: Class<RespT>
-    ): RespT? = suspendCancellableCoroutine { cont ->
+    ): RespT? = suspendCancellableCoroutine(onCancellation = { }) { cont ->
         val channel = getChannel()
         if (channel == null) {
             cont.resume(null)
