@@ -1,26 +1,26 @@
-# Заметки сессии 9 — 2026-06-14
+# Заметки сессии 10 — 2026-06-15
 
 ## Что сделано
 
-### ProfileClient (Android)
-- Создан `data/grpc/ProfileClient.kt`
-- Автоопределение ProfileService v2 через /info endpoint (profile >= "2.0")
-- Fallback на legacy ChatService методы для prod
-- Методы: getProfile, updateProfile, updateAvatar, getUserSettings, updateUserSettings
-- Вызов fetchServerInfo() автоматически при connect()
+### ProfileClient fixes (Android)
+- Исправлены все проблемы с ProfileClient после первоначального PR
+- `unaryCall()` — единообразное использование вместо сломанных method references
+- Inline Marshaller objects вместо `newInstance()` (deprecation fix)
+- Добавлены недостающие imports для ProfileV2 proto classes
+- ProtoMarshaller сделан internal
 
-### Proto messages
-- Добавлены data classes для ProfileService v2 в MessengerProto.kt
-- GetProfileRequestProto, GetProfileResponseProto, UpdateProfileV2RequestProto, etc.
-
-### GrpcClient facade
-- Добавлены ProfileService v2 методы в фасад
-- isProfileV2Supported, profileServiceVersion
+### Документация
+- Обновлены TASKS.md, INTEGRATION_SESSION.md, PROMPT.md, PROMPT_ANDROID.md
+- Актуализированы версии: сервер v1.2.1.0, Android v1.1.3.13
+- Обновлены индексы документации
 
 ## Коммиты
-- `dbbf266` — feat: ProfileService v2 client + Typing/CallSession compat
+- `7782993` — fix: ProfileClient — use unaryCall consistently
+- `73da2e1` — fix: use inline Marshaller objects in ProfileClient.unaryCall
+- `d707fa8` — fix: add missing imports for ProfileV2 proto classes
+- `1a73dee` — fix: suppress newInstance deprecation warning in ProfileClient
 
 ## Следующие шаги
-1. Тестирование ProfileService v2 на dev сервере (после того как ferz соберёт APK)
-2. Редеплой prod сервера до v1.2.1.0
-3. Тесты для ProfileService v2
+1. **ChatList v2** — новая версия списка чатов с улучшенным UI/UX
+2. **Тесты для ProfileService v2** — unit-тесты (сервер + Android)
+3. Тестирование ProfileService v2 на dev сервере (после того как ferz соберёт APK)

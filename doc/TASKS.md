@@ -1,8 +1,32 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.12
-**Обновлено:** 2026-06-14 (сессия 8)
+**Версия:** v1.1.3.13
+**Обновлено:** 2026-06-15 (сессия 10)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.13 — ProfileService v2 client + ProfileClient fixes
+
+### Новое: ProfileService v2 client
+- ✅ **ProfileClient** — клиент для ProfileService v2 с JWT Bearer auth
+- ✅ Автоопределение версии сервера через /info endpoint (profile >= "2.0")
+- ✅ Fallback на legacy ChatService методы для prod сервера
+- ✅ Методы: getProfile, updateProfile, updateAvatar, getUserSettings, updateUserSettings
+- ✅ fetchServerInfo() вызывается автоматически при connect()
+
+### Fixes
+- ✅ **ProfileClient** — использование unaryCall единообразно
+- ✅ **Marshaller objects** — inline вместо newInstance() (deprecation fix)
+- ✅ **Missing imports** — добавлены для ProfileV2 proto classes
+- ✅ **ProtoMarshaller** — сделан internal
+
+### Коммиты
+- `dbbf266` — feat: ProfileService v2 client + Typing/CallSession compat
+- `7782993` — fix: ProfileClient — use unaryCall consistently
+- `73da2e1` — fix: use inline Marshaller objects in ProfileClient.unaryCall
+- `d707fa8` — fix: add missing imports for ProfileV2 proto classes
+- `1a73dee` — fix: suppress newInstance deprecation warning in ProfileClient
 
 ---
 
