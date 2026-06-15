@@ -1,38 +1,50 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.14
-**Обновлено:** 2026-06-16 (сессия 11)
+**Версия:** v1.1.3.16
+**Обновлено:** 2026-06-16 (сессия 12)
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## ✅ v1.1.3.14 — ChatStream v2 + ChatList v2
+## ✅ v1.1.3.16 — ChatList v2 UI (Сессия 12)
 
-### Новое: ChatStream v2 (JWT auth)
-- ✅ **ProfileClient.fetchServerInfo()** — парсит все версии сервисов (chat/auth/profile/ai)
-- ✅ **isChatV2Supported()** / **isAuthV2Supported()** helpers
-- ✅ **BearerTokenInterceptor** — убран пропуск Chat stream для v2 серверов
-- ✅ **RealGrpcClient.startChat()** — JWT token для v2, password для v1
-- ✅ Fallback на v1 если /info недоступен
+### Новое: ChatList v2 UI (dev server)
+- ✅ **ChatListActivityV2** — новый Activity с определением версии сервера (v1/v2)
+- ✅ **ChatListFragmentV2** — фрагмент с SwipeRefresh + RecyclerView
+- ✅ **ChatAdapterV2** — адаптер с секциями (Pinned/Favorites/All Chats)
+- ✅ **ChatListViewModelV2** — ViewModel: loadChats, pinChat, archiveChat, searchChats
+- ✅ **ChatListSections.kt** — управление секциями
+- ✅ **TabLayout** — табы All / AI / Groups (заглушка)
+- ✅ **v2 context menu** — Pin/Mute/Delete в списке чатов (long press)
+- ✅ **Fallback на v1** — при подключении к prod серверу автоматически запускается ChatListActivity v1
+- ✅ **i18n** — 17 новых строк (en + ru)
 
-### Новое: ChatList v2
-- ✅ **GrpcClient** — pinChat, unpinChat, searchChats, archiveChat, unarchiveChat
-- ✅ **RealGrpcClient** — низкоуровневый unaryCallChatListV2 для новых RPC
-- ✅ **ChatInfo** — isPinned, isArchived, pinnedAt поля
-- ✅ Все v2 методы возвращают false/empty на v1 серверах
-
-### Proto updates
-- ✅ PinChatRequestProto, SearchChatsResponseProto, etc.
-- ✅ ChatInfoProto: isPinned, isMuted, isArchived, pinnedAt
-- ✅ GetChatsRequestProto: limit, offset, filter
-- ✅ MessageProto: jwtToken, isE2Ee, e2EePayload + Builder методы
-- ✅ MessageProtoMarshaller: сериализация/deserialization новых полей
+### Исправления билда
+- ✅ `@++id/` → `@+id/` — невалидный XML синтаксис
+- ✅ ConstraintLayout атрибуты → layout_gravity в CoordinatorLayout
+- ✅ Убран несуществующий TextAppearance стиль
+- ✅ parseSafeColor — добавлен defaultColor параметр
+- ✅ ThemeApplier.apply — исправлена сигнатура
+- ✅ ServerAuthBottomSheet — исправлены параметры конструктора
 
 ### Коммиты
-- `cd2294d` — feat: ChatStream v2 + ChatList v2 Android client
-- `cc759b7` — fix: add jwtToken to MessageProto
-- `8731367` — fix: add onCancellation parameter
-- `5bb47b6` — docs: update all docs
+- `7d087bc` — v2 scaffold
+- `0f500ce` — fix ConstraintLayout attrs
+- `23a2a79` — fix TextAppearance
+- `6fb3453` — fix @++id/
+- `28c2715` — fix compilation errors
+- `f0b06e1` — restore version.txt to 1.1.3.15
+
+---
+
+## ✅ v1.1.3.15 — Последняя стабильная v1 (prod сервер) — ВЫПУЩЕН
+- version.txt: 1.1.3.14 → 1.1.3.15
+- **Ферз выпустил релиз v1.1.3.15**
+
+---
+
+## ✅ v1.1.3.14 — ChatStream v2 + ChatList v2
+(Сессия 11 — завершено)
 
 ---
 
@@ -46,26 +58,25 @@
 
 ---
 
-## 📋 Активные задачи
+## 📋 Активные задачи (Сессия 13)
 
 ### Высокий приоритет
-- [ ] **ChatList v2 UI** — новая ChatListActivity с:
-  - Секции: Pinned / Favorites / All Chats
-  - Табы: All / AI / Groups
-  - Search bar с real-time фильтрацией
-  - Unread badges
-  - Context menu: Pin, Mute, Archive, Delete
-  - Swipe-to-refresh + infinite scroll
-  - Shared element transitions
+- [ ] **TabLayout + ViewPager2** — табы All / AI / Groups с фильтрацией
+- [ ] **Переключение v1/v2 при старте** — программный выбор Activity (fetchServerInfo → isChatV2Supported)
+- [ ] **AndroidManifest.xml** — регистрация ChatListActivityV2
+- [ ] **ThemeApplier** — добавить новые FAB в список для тем
 
 ### Средний приоритет
-- [ ] **Тесты для ProfileService v2** — unit-тесты для ProfileClient
-- [ ] **Тесты для ChatList v2** — unit-тесты для pinChat/searchChats/archiveChat
-- [ ] **Read receipts UI** — подключить MarkAsRead в ChatActivity
+- [ ] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages
+- [ ] **Pin Message клиент** — pinMessage/unPinMessage в GrpcClient + RealGrpcClient
+- [ ] **Pin Message UI** — отображение закреплённого сообщения в MessageAdapter
+- [ ] **Тестирование** — на dev и prod серверах
 
 ### Отложено
 - [ ] Qdrant + CLIP (production RAG) — см. AI_SERVICES.md
-- [ ] Выпуск Android v1.1.3.14 — делается ферзем лично после завершения v2 UI
+- [ ] Shared element transitions
+- [ ] Infinite scroll + pagination
+- [ ] Unread badges улучшение
 
 ---
 
@@ -73,10 +84,11 @@
 
 | Решение | Обоснование |
 |---------|-------------|
+| v1/v2 разделение | Новые файлы в ui/chatlist/, v1 без изменений |
+| Pin Chat в context menu | НЕ в toolbar — как в новых версиях Telegram |
+| Pin Message — отдельная фича | Нужны новые серверные RPC (PinMessage/UnPinMessage) |
+| Favorites = Archive | Существующий чат "Личное хранилище" заменяет Archive |
 | fetchServerInfo fallback | Если /info недоступен → v1 для всех сервисов |
-| ChatStream v2 auth | JWT token в первом сообщении stream вместо password |
-| ChatList v2 API | Отдельные RPC методы (PinChat, SearchChats, etc.) |
-| v2 методы на v1 сервере | Возвращают false/empty — UI адаптируется |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 
 ---
@@ -85,9 +97,14 @@
 
 | Файл | Назначение |
 |------|------------|
+| `ui/chatlist/ChatListActivityV2.kt` | v2 Activity с определением версии сервера |
+| `ui/chatlist/ChatListFragmentV2.kt` | v2 фрагмент с RecyclerView |
+| `ui/chatlist/ChatAdapterV2.kt` | v2 адаптер с секциями |
+| `ui/chatlist/ChatListViewModelV2.kt` | v2 ViewModel |
+| `ui/chatlist/ChatListSections.kt` | Управление секциями |
+| `res/layout/activity_chat_list_v2.xml` | v2 layout с TabLayout |
+| `res/menu/chat_list_context_menu_v2.xml` | v2 контекстное меню |
 | `ProfileClient.kt` | ProfileService v2 client + fetchServerInfo |
-| `BearerTokenInterceptor.kt` | JWT Bearer token interceptor (v2: Chat stream) |
-| `RealGrpcClient.kt` | gRPC реализация (JWT auth, ChatList v2 RPC) |
 | `GrpcClient.kt` | Facade (pinChat, searchChats, archiveChat, etc.) |
-| `MessengerProto.kt` | Proto data classes (ChatList v2, jwt_token, etc.) |
-| `Message.kt` | ChatInfo model (isPinned, isArchived, pinnedAt) |
+| `Message.kt` | ChatInfo модель (isPinned, isArchived, pinnedAt) |
+| `doc/PLAN_CHATLIST_V2.md` | Детальный план реализации |

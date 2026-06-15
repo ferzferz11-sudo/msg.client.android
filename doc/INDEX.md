@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.14
+**Версия:** v1.1.3.16
 **Обновлено:** 2026-06-16
 **Ветка:** feat/1.1.3.x
 
@@ -14,6 +14,7 @@
 4. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
 5. **SESSION_NOTES.md** — заметки последней сессии
 6. **CHANGELOG.md** — история изменений
+7. **PLAN_CHATLIST_V2.md** — план ChatList v2 UI + разделение v1/v2
 
 ---
 
@@ -25,6 +26,7 @@
 | `PROMPT_ANDROID.md` | Промпт для новой сессии | **Всегда в начале** |
 | `TASKS.md` | Таск-трекер | В начале сессии |
 | `PATTERNS.md` | Паттерны и анти-patterns | Перед написанием кода |
+| `PLAN_CHATLIST_V2.md` | План ChatList v2 UI + v1/v2 разделение | При работе над ChatList v2 |
 
 ### Архитектура и дизайн
 | Файл | Назначение | Когда читать |
@@ -53,33 +55,32 @@
 
 ```
 app/src/main/java/lavender/client/android/
+├── ChatListActivity.kt          ← v1 (НЕ ТРОГАТЬ — v1.1.3.15 выпущен)
+├── ChatAdapter.kt               ← v1 (НЕ ТРОГАТЬ)
+│
 ├── ui/
-│   ├── remote/
-│   │   ├── RemoteAgentActivity.kt         — чат с агентом
-│   │   ├── RemoteAgentSettingsActivity.kt — настройки (шлюз + токен)
-│   │   ├── RemoteAgentViewModel.kt        — ViewModel (AndroidViewModel)
-│   │   ├── RemoteAgentService.kt          — foreground service
-│   │   ├── RemoteAgentManager.kt          — singleton manager
-│   │   └── HermesGatewayManager.kt        — SSH туннель
-│   ├── widget/
-│   │   ├── ServerAuthBottomSheet.kt       — шторка выбора входа
-│   │   ├── LoginBottomSheet.kt            — шторка входа (prefillUsername)
-│   │   └── RegisterBottomSheet.kt         — шторка регистрации
-│   ├── chat/widget/ChatWidget.kt          — общий виджет чата
-│   └── adapter/ChatAdapter.kt             — адаптер списка чатов (clearAll)
+│   ├── chatlist/                ← v2 НОВАЯ ПАПКА
+│   │   ├── ChatListActivityV2.kt    — определение версии + fallback на v1
+│   │   ├── ChatListFragmentV2.kt    — SwipeRefresh + RecyclerView
+│   │   ├── ChatAdapterV2.kt         — адаптер с секциями
+│   │   ├── ChatListViewModelV2.kt   — ViewModel
+│   │   └── ChatListSections.kt      — Section enum + SectionItem
+│   ├── remote/                  — Remote Agent UI
+│   ├── widget/                   — ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
+│   ├── chat/widget/ChatWidget.kt
+│   └── adapter/ChatAdapter.kt   ← v1 (НЕ ТРОГАТЬ)
+│
 ├── data/
-│   ├── grpc/GrpcClient.kt                 — facade (signInV2, getChats, profile v2, chatlist v2)
-│   ├── grpc/RealGrpcClient.kt             — реализация gRPC клиента
-│   ├── grpc/ProfileClient.kt              — ProfileService v2 client + fetchServerInfo
-│   ├── grpc/BearerTokenInterceptor.kt     — ClientInterceptor для JWT Bearer token
-│   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
-│   ├── proto/MessengerProto.kt            — proto data classes (Auth, Profile v2, ChatList v2, etc.)
-│   ├── session/CredentialStore.kt         — credentials + server list + last_username
-│   ├── session/SessionManager.kt          — loginV2 (JWT) + loginV1 (legacy fallback)
-│   ├── session/UserSession.kt             — accessToken, refreshToken, authMethod, isJwtAuth
-│   ├── auth/AuthManager.kt                — JWT token storage, getBearerToken, getAccessToken
-│   ├── models/ErrorHandler.kt              — единый обработчик ошибок
-│   └── models/AppLog.kt                   — глобальный логгер
+│   ├── grpc/GrpcClient.kt                 — facade (pinChat, searchChats, etc.)
+│   ├── grpc/RealGrpcClient.kt             — реализация gRPC
+│   ├── grpc/ProfileClient.kt              — ProfileService v2 + fetchServerInfo
+│   ├── grpc/BearerTokenInterceptor.kt     — JWT Bearer token
+│   ├── proto/MessengerProto.kt            — proto data classes
+│   ├── session/CredentialStore.kt         — credentials + server list
+│   ├── session/SessionManager.kt          — loginV2 + loginV1 fallback
+│   ├── auth/AuthManager.kt                — JWT token storage
+│   └── models/Message.kt                  — ChatInfo (isPinned, isArchived, pinnedAt)
+│
 └── theme/ui/
     ├── ThemeApplier.kt                    — применение тем
     └── ThemeUi.kt                         — ThemeUi.bind()
@@ -88,6 +89,13 @@ app/src/main/java/lavender/client/android/
 ---
 
 ## Ключевые паттерны
+
+### v1/v2 разделение (v1.1.3.16+)
+```
+v1 сервер (prod) → ChatListActivity (v1, без изменений)
+v2 сервер (dev)  → ChatListActivityV2 (новый UI с секциями/табами)
+Определение: fetchServerInfo() → isChatV2Supported() → выбор Activity
+```
 
 ### Auth V2 (JWT) flow (v1.1.3.11+)
 ```
@@ -99,52 +107,15 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
   → Proactive refresh каждые 60с
 ```
 
-### Profile v2 flow (v1.1.3.13+, dev server only)
+### ChatList v2 flow (v1.1.3.16+)
 ```
-connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
-  → isProfileV2Supported() = true
-  → ProfileClient.getProfile() → messenger.ProfileService/GetProfile (JWT)
-  → Fallback: legacy ChatService/GetUserProfile via GrpcClient
+ChatListActivityV2 → fetchServerInfo() → isChatV2Supported()
+  → v2: ChatListFragmentV2 с секциями (Pinned/Favorites/All)
+  → v1: fallback на ChatListActivity
+Pin Chat: context menu списка (long press), НЕ toolbar
+Pin Message: в меню сообщения (long press), нужны новые серверные RPC
+Favorites = Archive: существующий чат "Личное хранилище"
 ```
-
-### ChatStream v2 flow (v1.1.3.14+)
-```
-fetchServerInfo() → serviceChatVersion = "2.0"
-  → isChatV2Supported() = true
-  → startChat() использует jwt_token вместо password
-  → Fallback: password auth если нет JWT токена
-```
-
-### ChatList v2 flow (v1.1.3.14+)
-```
-GrpcClient.pinChat(context, chatId)     — закрепить чат
-GrpcClient.searchChats(context, query)  — поиск по чатам
-GrpcClient.archiveChat(context, chatId) — архивировать
-```
-Все методы возвращают `false`/empty на v1 серверах.
-
-### Auth widgets pattern (v1.1.3.11)
-Аутентификация вынесена в 3 виджета:
-- `ServerAuthBottomSheet` — шторка выбора входа (лого + сервер + статус + login/register)
-- `LoginBottomSheet` — шторка входа (username/password + prefill из last_username)
-- `RegisterBottomSheet` — шторка регистрации (username/password/email)
-- Все наследуют StandardBottomSheet
-- Health check через http://host:8082/health
-- Используются в: ChatListActivity, ServersActivity
-- Drag handle добавлен во все шторки
-- Status indicator — только кружок слева от названия, без текста
-
-### Server switch pattern (v1.1.3.11)
-При смене сервера через ServersActivity:
-- НЕ сохранять `serverAddress` в CredentialStore до успешного входа
-- Сохранять `serverAddress` ТОЛЬКО после успешного `SessionManager.login()` в SUCCESS callback
-- В `ChatListActivity.serversActivityLauncher` НЕ делать auto-login — пользователь уже вошёл
-- Анти-pattern: `CredentialStore.setServerAddress()` до `SessionManager.login()` → двойной вход
-
-### Logout pattern (v1.1.3.11+)
-- SessionManager.logout(): очищает password/tokens, сохраняет username в last_username
-- LoginBottomSheet.prefillUsername(): предзаполняет username из last_username
-- Cancel в login/register sheets: закрывает шторку и возвращает к ServerAuthBottomSheet
 
 ### i18n (v1.1.3.9)
 - Activity: `getString(R.string.xxx)` — работает напрямую
@@ -154,18 +125,13 @@ GrpcClient.archiveChat(context, chatId) — архивировать
 - Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
 
 ### Темы
-- ThemeApplier.apply() до setContentView()
-- Цвета устанавливать программно через ThemeUtils.parseSafeColor()
+- ThemeApplier.apply(activity, theme) — ДО setContentView()
+- Цвета программно через ThemeUtils.parseSafeColor(colorStr, defaultColor)
 - НЕ использовать ?attr/ в XML для текста на кастомных тёмных темах
 - Новые FAB добавлять в ThemeApplier: listOf(R.id.fabAi, R.id.fabAddChat, ...)
 
-### Фильтрация чатов
-- ChatAdapter.filter() — dispatchUpdatesTo с offset +1 для Favorites
-- НЕ использовать notifyItemRangeChanged
-- ChatAdapter.clearAll() — полная очистка с сбросом favoritesItem
-
 ### Kotlin 2.3.21 / Coroutines 1.11 (v1.1.3.14)
-- `CancellableContinuation.resume()` требует `onCancellation = {}` параметр
+- `CancellableContinuation.resume(value, onCancellation = {})` — всегда передавать onCancellation
 - `import kotlinx.coroutines.suspendCancellableCoroutine` (не `kotlin.coroutines`)
 - data class с `repeated` proto полем использует `List<T>` напрямую (не `getXxxList()`)
 

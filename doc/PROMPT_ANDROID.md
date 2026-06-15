@@ -1,16 +1,19 @@
-# Промпт для новой сессии — Android v1.1.3.14
+# Промпт для новой сессии — Android v1.1.3.16
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.14
+**Версия:** 1.1.3.16 (v1.1.3.15 выпущен, v1.1.3.16 в разработке)
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.14 — готов к тестированию
+## СТАТУС: v1.1.3.16 — в разработке
+
+v1.1.3.15 — последняя стабильная v1 (prod сервер) — **выпущен ферзём**.
+v1.1.3.16 — ChatList v2 UI + разделение v1/v2 Activity.
 
 Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2).
 Сервер prod: v1.1.3.10 (legacy, без v2).
-Android: ChatStream v2 auth + ChatList v2 API + fetchServerInfo с fallback на v1.
+Android: ChatList v2 UI scaffold создан, тестируется на dev и prod.
 
 ---
 
@@ -29,6 +32,7 @@ db_auth_migrations.go      — миграция таблиц (включая use
 db_chatlist_v2.go          — ChatList v2 DB methods
 server_profile_v2.go       — ProfileService v2 (JWT, dev only)
 server_chatlist_v2.go      — ChatList v2 RPC
+server_chat.go             — Chat stream v2 (JWT + password)
 server_remote.go           — Remote Agent RPC
 hermes_remote_manager.go   — HandleTaskStream
 ai_chat_manager.go         — AI чаты
@@ -38,86 +42,63 @@ http_server.go             — HTTP (/health, /info)
 messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
 ```
 
-### Android (/root/msg.client.android)
+### Android v2 (/root/msg.client.android) — НОВАЯ ПАПКА
 ```
 ui/
+├── chatlist/                ← v2 НОВАЯ ПАПКА
+│   ├── ChatListActivityV2.kt    — определение версии сервера + fallback на v1
+│   ├── ChatListFragmentV2.kt    — SwipeRefresh + RecyclerView
+│   ├── ChatAdapterV2.kt         — адаптер с секциями
+│   ├── ChatListViewModelV2.kt   — ViewModel
+│   └── ChatListSections.kt      — Section enum + SectionItem
+├── adapter/
+│   └── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
 ├── widget/
-│   ├── ServerAuthBottomSheet.kt    — шторка выбора входа
-│   ├── LoginBottomSheet.kt         — шторка входа (prefillUsername)
-│   └── RegisterBottomSheet.kt      — шторка регистрации
-├── ServersActivity.kt              — управление списком серверов
-├── remote/                         — Remote Agent UI
-├── chat/widget/ChatWidget.kt       — общий виджет чата
-└── adapter/ChatAdapter.kt          — адаптер чатов (clearAll)
+│   ├── ServerAuthBottomSheet.kt
+│   ├── LoginBottomSheet.kt
+│   └── RegisterBottomSheet.kt
+└── ...
+
+res/
+├── layout/
+│   ├── activity_chat_list_v2.xml       — v2 layout с TabLayout
+│   ├── fragment_chat_list_v2.xml       — SwipeRefresh + RecyclerView
+│   └── item_chat_section_header.xml    — заголовок секции
+├── menu/
+│   └── chat_list_context_menu_v2.xml   — v2 контекстное меню (Pin/Mute/Delete)
+├── values/strings.xml                  — 17 новых строк
+└── values-ru/strings.xml               — 17 новых строк
 
 data/
-├── grpc/BearerTokenInterceptor.kt  — ClientInterceptor для JWT (v2: Chat stream)
-├── grpc/GrpcClient.kt              — facade (pinChat, searchChats, archiveChat, etc.)
-├── grpc/RealGrpcClient.kt          — реализация gRPC (JWT auth, ChatList v2 RPC)
-├── grpc/ProfileClient.kt           — ProfileService v2 client + fetchServerInfo
-├── auth/AuthManager.kt             — JWT token storage, getBearerToken
-├── session/CredentialStore.kt      — credentials + server list + last_username
-├── session/SessionManager.kt       — loginV2 (JWT) + loginV1 (legacy fallback)
-├── session/UserSession.kt          — accessToken, refreshToken, authMethod
-└── proto/MessengerProto.kt         — proto data classes (ChatList v2, jwt_token, etc.)
+├── grpc/
+│   ├── GrpcClient.kt              — facade (pinChat, searchChats, archiveChat, etc.)
+│   ├── RealGrpcClient.kt          — реализация gRPC
+│   ├── ProfileClient.kt           — ProfileService v2 client + fetchServerInfo
+│   └── BearerTokenInterceptor.kt  — JWT Bearer token
+├── models/
+│   └── Message.kt                 — ChatInfo (isPinned, isArchived, pinnedAt)
+└── session/
+    ├── SessionManager.kt          — loginV2 (JWT) + loginV1 (legacy fallback)
+    └── CredentialStore.kt         — credentials + server list
 ```
 
 ---
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### Auth V2 (JWT) flow
-```
-ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
-  → try V2 (SignInV2 gRPC)
-  → on success: store JWT tokens via AuthManager.storeTokens()
-  → on failure: fallback to V1 (Chat stream auth)
-  → BearerTokenInterceptor подставляет token во все вызовы (включая Chat stream на v2)
-  → Proactive refresh каждые 60с
-```
+### v1.1.3.15 (выпущен)
+- Последняя версия с полной поддержкой v1 (prod сервер)
+- Полная обратная совместимость
 
-### Profile v2 flow (dev server only)
-```
-connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
-  → isProfileV2Supported() = true
-  → ProfileClient.getProfile() → messenger.ProfileService/GetProfile (JWT)
-  → Fallback: legacy ChatService/GetUserProfile via GrpcClient
-```
-
-### ChatStream v2 flow
-```
-fetchServerInfo() → serviceChatVersion = "2.0"
-  → isChatV2Supported() = true
-  → startChat() использует jwt_token вместо password
-  → BearerTokenInterceptor пропускает Chat stream (token уже в первом сообщении)
-  → Fallback: password auth если нет JWT токена
-```
-
-### ChatList v2 flow
-```
-GrpcClient.pinChat(context, chatId)     — закрепить чат
-GrpcClient.unpinChat(context, chatId)   — открепить
-GrpcClient.searchChats(context, query)  — поиск по чатам
-GrpcClient.archiveChat(context, chatId) — архивировать
-GrpcClient.unarchiveChat(context, chatId) — разархивировать
-```
-Все методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии.
-
-### Auth widgets
-- 3 виджета: ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
-- Health check через http://host:8082/health
-- Drag handle во всех шторках
-- Status indicator — только кружок слева от названия
-
-### Server management
-- ServersActivity — отдельный экран для управления списком серверов
-- CredentialStore.getServerList() / saveServerList()
-- При смене сервера → clearTokens() + reconnect
-
-### Logout
-- SessionManager.logout(): очищает password/tokens, сохраняет username в last_username
-- LoginBottomSheet.prefillUsername(): предзаполняет username из last_username
-- Cancel в login/register sheets: закрывает шторку и возвращает к auth choice
+### v1.1.3.16 (в разработке)
+- **Разделение v1/v2 Activity**: ChatListActivityV2 определяет версию сервера через fetchServerInfo()
+  - v2 сервер → ChatListActivityV2 (новый UI)
+  - v1 сервер → fallback на ChatListActivity (v1, без изменений)
+- **Pin Chat** — в context menu списка (long press), НЕ в toolbar
+- **Pin Message** — в меню сообщения (long press), нужны новые серверные RPC
+- **Favorites** = Archive — существующий чат "Личное хранилище"
+- **Секции списка**: Pinned / Favorites / All Chats
+- **Табы**: All / AI / Groups
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
@@ -138,25 +119,25 @@ GrpcClient.unarchiveChat(context, chatId) — разархивировать
 9. i18n: все новые строки ОДНОВРЕМЕННО в values/strings.xml + values-ru/strings.xml
 10. НЕ инициализировать getString() в полях класса Activity
 11. Форматирование строк: позиционные форматтеры (%1$s, %2$d)
-12. Серверы: ServersActivity остаётся для управления списком серверов
-13. **Ветка Android: 1.1.3.x** до релиза, после релиза переход на 1.2.0.x
-14. Вся разработка на dev сервере, проверка обратной совместимости на prod
-15. **fetchServerInfo** — всегда использовать для определения версии сервера
-16. **Kotlin 2.3.21:** `cont.resume(value, onCancellation = {})` — всегда передавать onCancellation
+12. НЕ деплоить на prod без тестирования на dev
+13. **fetchServerInfo** — всегда использовать для определения версии сервера
+14. **Kotlin 2.3.21:** `cont.resume(value, onCancellation = {})` — всегда передавать onCancellation
+15. **НЕ ТРОГАТЬ v1 файлы**: ChatListActivity.kt, ChatAdapter.kt — v1.1.3.15 уже выпущен
+16. **Pin Chat НЕ в toolbar** — в context menu списка (long press), как в Telegram
 
 ---
 
 ## ИЗВЕСТНЫЕ ПРОБЛЕМЫ
 
+### dataBindingGenBaseClasses NPE
+- `@++id/` → `@+id/` (двойной плюс невалиден)
+- НЕ использовать `app:layout_constraint*` в CoordinatorLayout — использовать `android:layout_gravity`
+- НЕ ссылаться на несуществующие стили (TextAppearance.MaterialComponents.Caption)
+
 ### 42P10 на prod БД (сервер)
 - `Failed to register device ... pq: there is no unique or exclusion constraint`
-- UNIQUE constraint на user_devices в prod БД уже есть (добавлен ранее)
-- Ошибка возникает только на старом бинарнике (v1.1.3.10)
+- UNIQUE constraint на user_devices в prod БД уже есть
 - Исправится после редеплоя prod на v1.2.0.1
-
-### Первый вход на prod — только Favorites
-- Проблема в локальном кеше Android — после очистки всё ОК
-- Не является багом нового кода
 
 ---
 
@@ -214,3 +195,5 @@ cd /root/msg.client.android
 - Сервер: `/root/msg/doc/INTEGRATION_SESSION.md`, `/root/msg/doc/TASKS.md`
 - Подводные камни: `/root/msg/doc/PITFALLS.md`
 - CHANGELOG: `/root/msg.client.android/CHANGELOG.md`
+- План ChatList v2: `/root/msg.client.android/doc/PLAN_CHATLIST_V2.md`
+- Заметки сессии: `/root/msg/client.android/doc/SESSION_NOTES.md`

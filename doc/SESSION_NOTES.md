@@ -1,48 +1,60 @@
-# Заметки сессии 11 — 2026-06-16
+# Заметки сессии 12 — 2026-06-16
 
 ## Что сделано
 
-### ChatStream v2 (сервер)
-- `messenger.proto`: добавлен `jwt_token` (field 26) в Message
-- `server_chat.go`: Chat stream поддерживает `jwt_token` (v2) + `password` (v1 fallback)
-- `ChatServiceVersion` = "2.0"
+### План ChatList v2 UI + разделение v1/v2
+- Создан детальный план: `doc/PLAN_CHATLIST_V2.md`
+- Ключевое решение: ЧИСТОЕ РАЗДЕЛЕНИЕ v1/v2 архитектуры
+- v1 файлы НЕ ТРОГАТЬ (ChatListActivity.kt, ChatAdapter.kt)
+- v2 — в новой папке `ui/chatlist/`
 
-### ChatList v2 (сервер)
-- `messenger.proto`: PinChat, UnPinChat, SearchChats, ArchiveChat, UnarchiveChat RPC
-- `messenger.proto`: is_pinned, is_muted, is_archived, pinned_at в ChatInfo
-- `messenger.proto`: limit, offset, filter в GetChatsRequest
-- `server_chatlist_v2.go`: реализация RPC методов
-- `db_chatlist_v2.go`: миграции + методы DB
+### ЭТАП 0: v1.1.3.15 — ВЫПУЩЕН РЕЛИЗ
+- version.txt: 1.1.3.14 → 1.1.3.15
+- **Ферз выпустил релиз v1.1.3.15** на prod сервер
 
-### ChatStream v2 + ChatList v2 (Android)
-- ProfileClient: fetchServerInfo парсит все версии, isChatV2Supported()
-- BearerTokenInterceptor: убран пропуск Chat stream для v2
-- RealGrpcClient.startChat(): JWT для v2, password для v1
-- RealGrpcClient: pinChat, unpinChat, searchChats, archiveChat, unarchiveChat
-- GrpcClient: публичные методы ChatList v2
-- MessengerProto.kt: новые proto classes
-- ChatInfo: isPinned, isArchived, pinnedAt
-- MessageProtoMarshaller: jwt_token, isE2Ee, e2EePayload
+### ЭТАП 1: ChatList v2 UI scaffold (v1.1.3.16)
+Создана папка `ui/chatlist/`:
+- ChatListActivityV2.kt — определение версии сервера + fallback на v1
+- ChatListFragmentV2.kt — SwipeRefresh + RecyclerView
+- ChatAdapterV2.kt — адаптер с секциями (Pinned/Favorites/All)
+- ChatListViewModelV2.kt — loadChats, pinChat, archiveChat, searchChats
+- ChatListSections.kt — Section enum + SectionItem
 
-### Документация
-- INTEGRATION_SESSION.md: полный рефакторинг
-- PROMPT.md, PROMPT_ANDROID.md: обновлены
-- CHANGELOG.md (сервер + Android): обновлены
-- PATTERNS.md: новые паттерны (Kotlin 2.3.21, fetchServerInfo, ChatStream v2, ChatList v2)
-- INDEX.md (сервер + Android): обновлены
-- TASKS.md (сервер + Android): обновлены
+Layout: activity_chat_list_v2.xml, fragment_chat_list_v2.xml, item_chat_section_header.xml
+Меню: chat_list_context_menu_v2.xml (Pin/Mute/Delete)
+i18n: 17 строк (en + ru)
 
-## Pitfalls learned
-- Kotlin 2.3.21 / coroutines 1.11: `CancellableContinuation.resume()` требует `onCancellation = {}`
-- `import kotlinx.coroutines.suspendCancellableCoroutine` (не `kotlin.coroutines`)
-- data class с `repeated` proto полем: `List<T>` напрямую (не `getXxxList()`)
-- `suspendCancellableCoroutine` с дженериками: нужен явный тип `CancellableContinuation<T>`
+### Архитектура v2 (уточнено ферзём)
+```
+Pin Chat — context menu списка (long press), НЕ toolbar
+Pin Message — в меню сообщения (long press), нужны новые серверные RPC
+Favorites — существующий чат "Личное хранилище" = заменяет Archive
+Секции списка: Pinned / Favorites / All Chats
+Табы: All / AI / Groups
+```
 
-## Коммиты
-Сервер: `0daf87b`, `840a708`, `de3d55d`, `88cf8d4`
-Android: `cd2294d`, `cc759b7`, `a4a29ae`, `bfe0412`, `f15500f`, `ff6bba2`, `cb1cf84`, `8731367`, `5bb47b6`, `7c872f1`
+### Исправления ошибок билда
+- `@++id/` → `@+id/` — невалидный XML синтаксис ломал data binding
+- `app:layout_constraint*` → `android:layout_gravity` — ConstraintLayout в CoordinatorLayout
+- Убран `tabTextAppearance` — несуществующий стиль
+- `parseSafeColor` — добавлен defaultColor параметр
+- `ThemeApplier.apply` — исправлена сигнатура (activity, theme)
+- `ServerAuthBottomSheet` — исправлены параметры конструктора
+- Удалён неиспользуемый `chat_context_menu.xml`
 
-## Следующие шаги
-1. ChatList v2 UI (ChatListActivity v2)
-2. Тесты для ProfileService v2, ChatStream v2, ChatList v2
-3. Деплой prod сервера (после Android)
+### Коммиты сессии
+- `b95a6f4` — v1.1.3.15 release + PLAN_CHATLIST_V2.md
+- `7d087bc` — v2 scaffold
+- `484bc61` — docs: v1.1.3.15 released, v2 scaffold status
+- `0f500ce` — fix ConstraintLayout attrs in CoordinatorLayout
+- `23a2a79` — fix TextAppearance missing style
+- `bf00543` — remove unused chat_context_menu.xml, restore i18n
+- `6fb3453` — fix @++id/ double plus syntax
+- `28c2715` — fix compilation errors
+- `f0b06e1` — restore version.txt to 1.1.3.15
+
+## Следующие шаги (сессия 13)
+1. TabLayout + ViewPager2 для табов All/AI/Groups
+2. Pin Message — серверные RPC + клиентская реализация
+3. Переключение v1/v2 при старте (программный выбор Activity)
+4. Тестирование на dev и prod серверах

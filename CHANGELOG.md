@@ -1,5 +1,29 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.16] - 2026-06-16
+
+### Новое: ChatList v2 UI (dev server)
+- **ChatListActivityV2** — новый Activity с определением версии сервера (v1/v2)
+- **ChatListFragmentV2** — фрагмент с SwipeRefresh + RecyclerView
+- **ChatAdapterV2** — адаптер с секциями (Pinned/Favorites/All Chats)
+- **ChatListViewModelV2** — ViewModel: loadChats, pinChat, archiveChat, searchChats
+- **ChatListSections.kt** — управление секциями
+- **TabLayout** — табы All / AI / Groups (заглушка, без ViewPager2)
+- **v2 context menu** — Pin/Mute/Delete в списке чатов (long press)
+- **Fallback на v1** — при подключении к prod серверу автоматически запускается ChatListActivity v1
+- Backward compatible: v1 пользователи не получают изменений
+
+---
+
+## [1.1.3.15] - 2026-06-16
+
+### Последняя версия с полной поддержкой v1 (prod сервер)
+- **Стабильная версия** для пользователей на prod сервере (v1.1.3.10)
+- Все v1 API работают без изменений
+- Полная обратная совместимость
+
+---
+
 ## [1.1.3.14] - 2026-06-16
 
 ### Новое: ChatStream v2 (JWT auth в Chat stream)
