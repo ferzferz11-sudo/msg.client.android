@@ -1,16 +1,16 @@
-# Промпт для новой сессии — Android v1.1.3.13
+# Промпт для новой сессии — Android v1.1.3.14
 
-**Дата:** 2026-06-15
-**Версия:** 1.1.3.13
+**Дата:** 2026-06-16
+**Версия:** 1.1.3.14
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.13 — готов к релизу
+## СТАТУС: v1.1.3.14 — готов к тестированию
 
-Сервер dev: v1.2.1.0 (ProfileService v2 активен).
-Сервер prod: v1.1.3.10 (legacy, без ProfileService v2).
-Android: ProfileClient + Typing/CallSession compat реализованы, протестированы на dev и prod.
+Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2).
+Сервер prod: v1.1.3.10 (legacy, без v2).
+Android: ChatStream v2 auth + ChatList v2 API + fetchServerInfo с fallback на v1.
 
 ---
 
@@ -19,21 +19,23 @@ Android: ProfileClient + Typing/CallSession compat реализованы, пр�
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server, graceful shutdown
-server.go                  — ServerVersion = "1.2.1.0", service version constants
+server.go                  — ServerVersion = "1.2.0.1", service version constants
 auth_service.go            — AuthService v1 (deprecated)
 auth_service_v2.go         — AuthService v2 (JWT, основной)
 auth_interceptor.go        — gRPC Bearer token interceptor (unary + streaming)
 auth_jwt.go                — JWT генерация/валидация
 db_auth_devices.go         — CRUD для user_devices + device_auth_log
 db_auth_migrations.go      — миграция таблиц (включая user_settings)
+db_chatlist_v2.go          — ChatList v2 DB methods
 server_profile_v2.go       — ProfileService v2 (JWT, dev only)
+server_chatlist_v2.go      — ChatList v2 RPC
 server_remote.go           — Remote Agent RPC
 hermes_remote_manager.go   — HandleTaskStream
 ai_chat_manager.go         — AI чаты
 owl.go                     — OWL AI
 hermes_orchestrator.go     — Hermes Orchestrator
 http_server.go             — HTTP (/health, /info)
-messenger.proto            — ChatService, AuthService, ProfileService, AI Chat, Remote Agent RPC
+messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
 ```
 
 ### Android (/root/msg.client.android)
@@ -49,15 +51,15 @@ ui/
 └── adapter/ChatAdapter.kt          — адаптер чатов (clearAll)
 
 data/
-├── grpc/BearerTokenInterceptor.kt  — ClientInterceptor для JWT Bearer token
-├── grpc/GrpcClient.kt              — фасад
-├── grpc/RealGrpcClient.kt          — реализация gRPC
-├── grpc/ProfileClient.kt           — ProfileService v2 client (JWT, dev only)
-├── auth/AuthManager.kt             — JWT token storage, getBearerToken, needsRefresh
-├── session/CredentialStore.kt      — credentials, jwt_server_address, last_username
-├── session/SessionManager.kt       — loginV2 + loginV1 fallback, startTokenRefresh
+├── grpc/BearerTokenInterceptor.kt  — ClientInterceptor для JWT (v2: Chat stream)
+├── grpc/GrpcClient.kt              — facade (pinChat, searchChats, archiveChat, etc.)
+├── grpc/RealGrpcClient.kt          — реализация gRPC (JWT auth, ChatList v2 RPC)
+├── grpc/ProfileClient.kt           — ProfileService v2 client + fetchServerInfo
+├── auth/AuthManager.kt             — JWT token storage, getBearerToken
+├── session/CredentialStore.kt      — credentials + server list + last_username
+├── session/SessionManager.kt       — loginV2 (JWT) + loginV1 (legacy fallback)
 ├── session/UserSession.kt          — accessToken, refreshToken, authMethod
-└── models/ErrorHandler.kt          — единый обработчик ошибок
+└── proto/MessengerProto.kt         — proto data classes (ChatList v2, jwt_token, etc.)
 ```
 
 ---
@@ -70,7 +72,7 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
   → try V2 (SignInV2 gRPC)
   → on success: store JWT tokens via AuthManager.storeTokens()
   → on failure: fallback to V1 (Chat stream auth)
-  → BearerTokenInterceptor подставляет token во все вызовы
+  → BearerTokenInterceptor подставляет token во все вызовы (включая Chat stream на v2)
   → Proactive refresh каждые 60с
 ```
 
@@ -81,6 +83,25 @@ connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
   → ProfileClient.getProfile() → messenger.ProfileService/GetProfile (JWT)
   → Fallback: legacy ChatService/GetUserProfile via GrpcClient
 ```
+
+### ChatStream v2 flow
+```
+fetchServerInfo() → serviceChatVersion = "2.0"
+  → isChatV2Supported() = true
+  → startChat() использует jwt_token вместо password
+  → BearerTokenInterceptor пропускает Chat stream (token уже в первом сообщении)
+  → Fallback: password auth если нет JWT токена
+```
+
+### ChatList v2 flow
+```
+GrpcClient.pinChat(context, chatId)     — закрепить чат
+GrpcClient.unpinChat(context, chatId)   — открепить
+GrpcClient.searchChats(context, query)  — поиск по чатам
+GrpcClient.archiveChat(context, chatId) — архивировать
+GrpcClient.unarchiveChat(context, chatId) — разархивировать
+```
+Все методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии.
 
 ### Auth widgets
 - 3 виджета: ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
@@ -106,7 +127,7 @@ connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
 
 ## ПРАВИЛА
 
-1. НЕ компилировать на сервере (OOM kill) — это касается и Go и Android (./gradlew убивает всё по памяти, а на сервере крутится prod)
+1. НЕ компилировать на сервере (OOM kill) — это касается и Go и Android (./gradlew убивает всё по памяти)
 2. НЕ деплоить новую версию на prod без прямого указания ферзя
 3. Коммитить и пушить после каждого значимого изменения
 4. Версия сервера в server.go:33, версия Android в version.txt
@@ -120,6 +141,8 @@ connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
 12. Серверы: ServersActivity остаётся для управления списком серверов
 13. **Ветка Android: 1.1.3.x** до релиза, после релиза переход на 1.2.0.x
 14. Вся разработка на dev сервере, проверка обратной совместимости на prod
+15. **fetchServerInfo** — всегда использовать для определения версии сервера
+16. **Kotlin 2.3.21:** `cont.resume(value, onCancellation = {})` — всегда передавать onCancellation
 
 ---
 
@@ -129,7 +152,7 @@ connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
 - `Failed to register device ... pq: there is no unique or exclusion constraint`
 - UNIQUE constraint на user_devices в prod БД уже есть (добавлен ранее)
 - Ошибка возникает только на старом бинарнике (v1.1.3.10)
-- Исправится после редеплоя prod на v1.2.1.0
+- Исправится после редеплоя prod на v1.2.0.1
 
 ### Первый вход на prod — только Favorites
 - Проблема в локальном кеше Android — после очистки всё ОК
@@ -179,7 +202,7 @@ cd /root/msg.client.android
 | Сервис | lavender-server-dev | lavender-server |
 | Конфиг | .env.dev | .env |
 | DB | chat_db_dev | chat_db |
-| Версия | v1.2.1.0 | v1.1.3.10 |
+| Версия | v1.2.0.1 | v1.1.3.10 |
 
 ---
 

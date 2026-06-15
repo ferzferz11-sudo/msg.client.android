@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.13
-**Обновлено:** 2026-06-15
+**Версия:** v1.1.3.14
+**Обновлено:** 2026-06-16
 **Ветка:** feat/1.1.3.x
 
 ---
@@ -68,12 +68,12 @@ app/src/main/java/lavender/client/android/
 │   ├── chat/widget/ChatWidget.kt          — общий виджет чата
 │   └── adapter/ChatAdapter.kt             — адаптер списка чатов (clearAll)
 ├── data/
-│   ├── grpc/GrpcClient.kt                 — facade (signInV2, getChats, profile v2)
+│   ├── grpc/GrpcClient.kt                 — facade (signInV2, getChats, profile v2, chatlist v2)
 │   ├── grpc/RealGrpcClient.kt             — реализация gRPC клиента
-│   ├── grpc/ProfileClient.kt              — ProfileService v2 client (JWT, dev only)
+│   ├── grpc/ProfileClient.kt              — ProfileService v2 client + fetchServerInfo
 │   ├── grpc/BearerTokenInterceptor.kt     — ClientInterceptor для JWT Bearer token
 │   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
-│   ├── proto/MessengerProto.kt            — proto data classes (Auth, Profile v2, etc.)
+│   ├── proto/MessengerProto.kt            — proto data classes (Auth, Profile v2, ChatList v2, etc.)
 │   ├── session/CredentialStore.kt         — credentials + server list + last_username
 │   ├── session/SessionManager.kt          — loginV2 (JWT) + loginV1 (legacy fallback)
 │   ├── session/UserSession.kt             — accessToken, refreshToken, authMethod, isJwtAuth
@@ -107,6 +107,22 @@ connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
   → Fallback: legacy ChatService/GetUserProfile via GrpcClient
 ```
 
+### ChatStream v2 flow (v1.1.3.14+)
+```
+fetchServerInfo() → serviceChatVersion = "2.0"
+  → isChatV2Supported() = true
+  → startChat() использует jwt_token вместо password
+  → Fallback: password auth если нет JWT токена
+```
+
+### ChatList v2 flow (v1.1.3.14+)
+```
+GrpcClient.pinChat(context, chatId)     — закрепить чат
+GrpcClient.searchChats(context, query)  — поиск по чатам
+GrpcClient.archiveChat(context, chatId) — архивировать
+```
+Все методы возвращают `false`/empty на v1 серверах.
+
 ### Auth widgets pattern (v1.1.3.11)
 Аутентификация вынесена в 3 виджета:
 - `ServerAuthBottomSheet` — шторка выбора входа (лого + сервер + статус + login/register)
@@ -131,21 +147,27 @@ connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
 - Cancel в login/register sheets: закрывает шторку и возвращает к ServerAuthBottomSheet
 
 ### i18n (v1.1.3.9)
-- Activity: `getString(R.string.xxx)`
-- Adapter/ViewHolder: `context.getString(R.string.xxx)`
-- ViewModel: `AndroidViewModel` + `getApplication<Application>().getString()`
-- НЕ инициализировать getString() в полях класса Activity
-- Все новые строки ОДНОВРЕМЕННО в values/strings.xml + values-ru/strings.xml
+- Activity: `getString(R.string.xxx)` — работает напрямую
+- Adapter/ViewHolder: `context.getString(R.string.xxx)` или `itemView.context.getString()`
+- ViewModel: НЕ использовать обычный ViewModel, только `AndroidViewModel` + `getApplication<Application>().getString()`
+- НЕ инициализировать `getString()` в полях класса Activity (до `onCreate()`) — crash!
+- Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
 
 ### Темы
 - ThemeApplier.apply() до setContentView()
-- Цвета программно через ThemeUtils.parseSafeColor()
+- Цвета устанавливать программно через ThemeUtils.parseSafeColor()
 - НЕ использовать ?attr/ в XML для текста на кастомных тёмных темах
+- Новые FAB добавлять в ThemeApplier: listOf(R.id.fabAi, R.id.fabAddChat, ...)
 
 ### Фильтрация чатов
 - ChatAdapter.filter() — dispatchUpdatesTo с offset +1 для Favorites
 - НЕ использовать notifyItemRangeChanged
 - ChatAdapter.clearAll() — полная очистка с сбросом favoritesItem
+
+### Kotlin 2.3.21 / Coroutines 1.11 (v1.1.3.14)
+- `CancellableContinuation.resume()` требует `onCancellation = {}` параметр
+- `import kotlinx.coroutines.suspendCancellableCoroutine` (не `kotlin.coroutines`)
+- data class с `repeated` proto полем использует `List<T>` напрямую (не `getXxxList()`)
 
 ---
 
