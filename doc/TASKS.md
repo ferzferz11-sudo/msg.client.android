@@ -55,12 +55,13 @@
 - [ ] AndroidManifest.xml — регистрация ChatListActivityV2
 - [ ] Тестирование на dev сервере
 
-### ЭТАП 3: Pin Message (сервер + клиент)
+### ЭТАП 3: Pin Chat + Pin Message + Favorites
+- [ ] **Клиент:** кнопка Pin Chat в toolbar NewChatActivity
+- [ ] **Клиент:** секция Pinned в ChatListFragmentV2 (уже есть в адаптере)
 - [ ] **Сервер:** новые RPC PinMessage/UnPinMessage в messenger.proto
 - [ ] **Сервер:** таблица pinned_messages (chat_id, message_id, pinned_at, pinned_by)
 - [ ] **Сервер:** реализация PinMessage/UnPinMessage в server_pinned_messages.go
 - [ ] **Клиент:** pinMessage/unPinMessage в GrpcClient.kt + RealGrpcClient.kt
-- [ ] **Клиент:** кнопка Pin в toolbar NewChatActivity
 - [ ] **Клиент:** отображение закреплённого сообщения в MessageAdapter
 - [ ] **Клиент:** proto классы для PinMessageRequest/Response
 

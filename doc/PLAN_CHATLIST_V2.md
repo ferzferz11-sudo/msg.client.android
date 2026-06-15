@@ -58,10 +58,29 @@ app/src/main/java/lavender/client/android/
    - Переключение в AndroidManifest через activity-alias или программный выбор
 
 ### Критические правила
-- **НЕ ИЗМЕНЯТЬ** ChatListActivity.kt и ChatAdapter.kt до выпуска v1.1.3.15
+- **НЕ ИЗМЕНЯТЬ** ChatListActivity.kt и ChatAdapter.kt — v1.1.3.15 уже выпущен
 - Все v2 изменения — в НОВЫХ файлах в папке `ui/chatlist/`
 - v1 пользователи получают стабильную версию без изменений
 - v2 пользователи получают новый UI с секциями, табами, поиском
+
+### Финальная архитектура v2
+
+```
+Список чатов (ChatListV2):
+├── Секция "Pinned" (вверху, как в Telegram)
+│   └── Закреплённые чаты (PinChat RPC — уже есть на сервере)
+├── Секция "Favorites" (Личное хранилище)
+├── Секция "All Chats" (остальные)
+└── Табы: All / AI / Groups
+
+Внутри чата (NewChatActivity):
+├── Кнопка Pin в toolbar — pin текущего чата в секцию Pinned
+└── Pin Message в меню сообщения — pin конкретного сообщения
+
+Сервер:
+├── PinChat/UnPinChat — уже есть ✅
+└── PinMessage/UnPinMessage — нужно добавить (новые RPC + таблица)
+```
 
 ---
 
@@ -219,15 +238,15 @@ package lavender.client.android.ui.chatlist
 
 ---
 
-## ЭТАП 3: Pin Message + Favorites (вместо Archive)
+## ЭТАП 3: Pin Chat + Pin Message + Favorites
 
-### Архитектура v2 сервера (ChatList v2 + Message Pin)
+### Архитектура v2 сервера
 
 ```
 Существующие v2 RPC (сервер уже имеет):
-  PinChat/UnPinChat         — pin ЧАТА в списке (user_chat_metadata)
-  ArchiveChat/UnarchiveChat  — архивация ЧАТА (user_chat_metadata)
-  SearchChats                — поиск чатов
+  PinChat/UnPinChat         — pin ЧАТА в списке (user_chat_metadata) ✅
+  ArchiveChat/UnarchiveChat  — архивация ЧАТА (user_chat_metadata) ✅
+  SearchChats                — поиск чатов ✅
 
 Новые v2 RPC (нужно добавить на сервер):
   PinMessage/UnPinMessage    — pin СООБЩЕНИЯ внутри чата
@@ -236,41 +255,56 @@ package lavender.client.android.ui.chatlist
   pinned_messages            — (chat_id, message_id, pinned_at, pinned_by)
 ```
 
-### Pin Message — закрепление сообщения внутри чата (как в Telegram)
+### Pin Chat — закрепление чата в списке (уже есть на сервере!)
 
 **Где кнопка:** в **toolbar** внутри NewChatActivity/ChatActivity
-- Пользователь открывает чат → видит кнопку Pin в toolbar
-- Нажимает → выбирает сообщение для закрепления (или pin последнее)
-- Закреплённое сообщение отображается вверху чата (закреплённый баннер)
+- Пользователь внутри чата нажимает кнопку Pin в toolbar
+- Чат перемещается в секцию "Pinned" вверху списка чатов (как в Telegram)
+- Unpin — обратно в "All Chats"
 
-**Серверная часть:**
-- `PinMessage(chatId, messageId)` → добавляет запись в `pinned_messages`
-- `UnPinMessage(chatId, messageId)` → удаляет запись
-- Поле `is_pinned` в таблице `messages` — для быстрой проверки
+**Серверная часть:** УЖЕ ЕСТЬ
+- `PinChat(chatId)` → обновляет user_chat_metadata
+- `UnPinChat(chatId)` → убирает из pinned
 
 **Клиентская часть:**
-- `NewChatActivity.kt` — добавить кнопку Pin в toolbar
-- `MessageAdapter.kt` — отображать закреплённое сообщение вверху чата
-- `GrpcClient.kt` — добавить `pinMessage()`, `unPinMessage()` методы
+- `NewChatActivity.kt` — добавить кнопку Pin Chat в toolbar
+- `ChatListFragmentV2.kt` — отображать секцию "Pinned" вверху списка
+- `GrpcClient.kt` — pinChat/unPinChat уже есть ✅
+
+### Pin Message — закрепление сообщения внутри чата (как в Telegram)
+
+**Где:** в меню сообщения (long press on message) или в toolbar
+- Пользователь долгое нажатие на сообщение → "Pin"
+- Закреплённое сообщение отображается вверху чата (баннер)
+
+**Серверная часть:** НУЖНО ДОБАВИТЬ
+- `PinMessage(chatId, messageId)` → добавляет запись в `pinned_messages`
+- `UnPinMessage(chatId, messageId)` → удаляет запись
+
+**Клиентская часть:**
+- `MessageAdapter.kt` — отображать закреплённое сообщение вверху
+- `GrpcClient.kt` — добавить `pinMessage()`, `unPinMessage()`
+- `RealGrpcClient.kt` — реализация новых RPC
+- `messenger.proto` — новые методы
 
 ### Favorites — заменяет Archive
 
 **Favorites** = существующий чат "Личное хранилище" (уже есть в v1)
 - Пользователь перемещает сообщения/чаты в избранное
 - Не нужен отдельный Archive — Favorites выполняет эту роль
-- PinChat/UnPinChat/ArchiveChat/UnarchiveChat сервера остаются для будущего использования
 
-### Список чатов — без изменений
+### Список чатов — секция Pinned
+- Секция "Pinned" вверху списка (закреплённые чаты)
+- Секция "Favorites" (Личное хранилище)
+- Секция "All Chats" (остальные)
 - Context menu (long press) остаётся как в v1: mute/delete/edit
-- Pin/Archive НЕ добавляются в список чатов
-- Pin — только внутри чата в toolbar
-- Favorites — отдельный чат в списке (уже есть)
 
 ### Файлы для изменения
-- `NewChatActivity.kt` — добавить кнопку Pin Message в toolbar
-- `MessageAdapter.kt` — отображать закреплённое сообщение
-- `GrpcClient.kt` — добавить pinMessage/unPinMessage
-- `RealGrpcClient.kt` — реализация новых RPC
+- `NewChatActivity.kt` — кнопка Pin Chat в toolbar
+- `ChatListFragmentV2.kt` — секция "Pinned" в списке
+- `MessageAdapter.kt` — закреплённое сообщение вверху чата
+- `GrpcClient.kt` — pinMessage/unPinMessage (pinChat уже есть)
+- `RealGrpcClient.kt` — реализация PinMessage/UnPinMessage RPC
 - `messenger.proto` — новые методы PinMessage/UnPinMessage
 - НЕ менять ChatListActivity.kt или ChatAdapter.kt — они остаются как в v1
 
@@ -422,14 +456,15 @@ listOf(R.id.fabAi, R.id.fabAddChat, R.id.fabSearch)
 | 6 | Swipe-to-refresh | ✅ ЗАВЕРШЁН (fragment_chat_list_v2.xml) |
 | 7 | i18n — все новые строки | ✅ ЗАВЕРШЁН (17 строк en+ru) |
 | 8 | TabLayout + ViewPager2 (табы All/AI/Groups) | 🔨 СЛЕДУЮЩИЙ |
-| 9 | **Сервер:** PinMessage/UnPinMessage RPC + таблица pinned_messages | ⬜ |
-| 10 | **Клиент:** pinMessage/unPinMessage в GrpcClient + RealGrpcClient | ⬜ |
-| 11 | **Клиент:** кнопка Pin в toolbar NewChatActivity | ⬜ |
-| 12 | **Клиент:** отображение закреплённого сообщения в MessageAdapter | ⬜ |
-| 13 | Переключение v1/v2 при старте | ⬜ |
-| 14 | AndroidManifest.xml — регистрация V2 | ⬜ |
-| 15 | Тестирование на dev сервере | ⬜ |
-| 16 | Коммит + пуш | ⬜ |
+| 9 | **Клиент:** кнопка Pin Chat в toolbar NewChatActivity | ⬜ |
+| 10 | **Клиент:** секция Pinned в ChatListFragmentV2 | ⬜ |
+| 11 | **Сервер:** PinMessage/UnPinMessage RPC + таблица pinned_messages | ⬜ |
+| 12 | **Клиент:** pinMessage/unPinMessage в GrpcClient + RealGrpcClient | ⬜ |
+| 13 | **Клиент:** отображение закреплённого сообщения в MessageAdapter | ⬜ |
+| 14 | Переключение v1/v2 при старте | ⬜ |
+| 15 | AndroidManifest.xml — регистрация V2 | ⬜ |
+| 16 | Тестирование на dev сервере | ⬜ |
+| 17 | Коммит + пуш | ⬜ |
 
 ---
 
