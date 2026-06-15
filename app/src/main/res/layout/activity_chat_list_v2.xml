@@ -165,12 +165,22 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Fragment container -->
-    <FrameLayout
-        android:id="@+id/fragmentContainer"
+    <!-- Fragment container / Content -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/srlChatList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvChatList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical"
+            android:padding="8dp"
+            android:clipToPadding="false" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- FABs -->
     <lavender.client.android.ui.widget.LavenderFab
@@ -181,8 +191,6 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="80dp"
         android:src="@drawable/ic_ai"
-        app:tint="?attr/colorOnPrimary"
-        app:backgroundTint="?attr/colorPrimary"
         android:contentDescription="AI" />
 
     <lavender.client.android.ui.widget.LavenderFab
@@ -193,8 +201,6 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:src="@android:drawable/ic_input_add"
-        app:tint="?attr/colorOnPrimary"
-        app:backgroundTint="?attr/colorPrimary"
         android:contentDescription="@string/add_chat" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

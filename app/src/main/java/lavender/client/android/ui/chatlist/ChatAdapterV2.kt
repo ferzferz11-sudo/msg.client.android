@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
@@ -15,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.models.Message
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
@@ -46,7 +46,7 @@ class ChatAdapterV2(
     private var flatItems: List<FlatItem> = emptyList()
     private var currentFilter: String = ""
 
-    // Theme colors
+    // Theme colors — single cache for entire adapter
     private var cachedPrimaryColor: Int = 0
     private var cachedTextPrimary: Int = 0
     private var cachedTextSecondary: Int = 0
@@ -72,9 +72,7 @@ class ChatAdapterV2(
     private fun rebuildFlatList() {
         val result = mutableListOf<FlatItem>()
         for (section in sections) {
-            // Section header
             result.add(FlatItem.SectionHeader(section.section, section.chats.size))
-            // Chats in section
             for (chat in section.chats) {
                 if (chat.type == "favorites") {
                     result.add(FlatItem.FavoritesItem(chat))
@@ -105,7 +103,7 @@ class ChatAdapterV2(
             TYPE_FAVORITES -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_chat, parent, false)
-                FavoritesViewHolder(view, onChatClick, onChatLongClick)
+                FavoritesViewHolder(view, onChatClick)
             }
             else -> {
                 val view = LayoutInflater.from(parent.context)
@@ -119,8 +117,8 @@ class ChatAdapterV2(
         initColors(holder.itemView)
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
-            is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(item.chat)
-            is FlatItem.FavoritesItem -> (holder as FavoritesViewHolder).bind(item.chat)
+            is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor)
+            is FlatItem.FavoritesItem -> (holder as FavoritesViewHolder).bind(item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor)
             null -> {}
         }
     }
@@ -129,7 +127,6 @@ class ChatAdapterV2(
 
     fun filter(query: String) {
         currentFilter = query.lowercase()
-        // Rebuild sections with filter applied
         val filteredSections = sections.map { section ->
             val filteredChats = if (currentFilter.isEmpty()) {
                 section.chats
@@ -169,21 +166,20 @@ class ChatAdapterV2(
         private val tvChatName: TextView = itemView.findViewById(R.id.tvChatName)
         private val tvChatType: TextView = itemView.findViewById(R.id.tvChatType)
         private val tvUnreadCount: TextView = itemView.findViewById(R.id.tvUnreadCount)
-        private val ivMuteIndicator: android.widget.ImageView = itemView.findViewById(R.id.ivMuteIndicator)
+        private val ivMuteIndicator: ImageView = itemView.findViewById(R.id.ivMuteIndicator)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo) {
-            initColors(itemView)
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int) {
             tvChatName.text = chat.name
-            tvChatName.setTextColor(cachedTextPrimary)
+            tvChatName.setTextColor(textPrimary)
 
             if (chat.lastMessageText.isNotEmpty()) {
                 tvChatType.text = chat.lastMessageText
-                tvChatType.setTextColor(cachedTextSecondary)
+                tvChatType.setTextColor(textSecondary)
             } else {
                 tvChatType.text = itemView.context.getString(R.string.no_messages)
-                tvChatType.setTextColor(cachedTextSecondary)
+                tvChatType.setTextColor(textSecondary)
             }
 
             tvUnreadCount.isVisible = chat.unreadCount > 0
@@ -192,65 +188,30 @@ class ChatAdapterV2(
             }
 
             ivMuteIndicator.isVisible = chat.isMuted
-
-            cardView.setCardBackgroundColor(cachedSurfaceColor)
+            cardView.setCardBackgroundColor(surfaceColor)
 
             itemView.setOnClickListener { onChatClick(chat) }
             itemView.setOnLongClickListener { view -> onChatLongClick(chat, view); true }
         }
-
-        private fun initColors(view: View) {
-            if (colorsInitialized) return
-            val theme = ThemeStore.currentTheme()
-            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
-            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
-            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-            colorsInitialized = true
-        }
-
-        private var cachedPrimaryColor: Int = 0
-        private var cachedTextPrimary: Int = 0
-        private var cachedTextSecondary: Int = 0
-        private var cachedSurfaceColor: Int = 0
-        private var colorsInitialized = false
     }
 
     class FavoritesViewHolder(
         itemView: View,
-        private val onChatClick: (ChatInfo) -> Unit,
-        private val onChatLongClick: (ChatInfo, View) -> Unit
+        private val onChatClick: (ChatInfo) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
         private val tvChatName: TextView = itemView.findViewById(R.id.tvChatName)
         private val tvChatType: TextView = itemView.findViewById(R.id.tvChatType)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo) {
-            initColors(itemView)
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int) {
             tvChatName.text = itemView.context.getString(R.string.favorites)
-            tvChatName.setTextColor(cachedTextPrimary)
+            tvChatName.setTextColor(textPrimary)
             tvChatType.text = itemView.context.getString(R.string.favorites_description)
-            tvChatType.setTextColor(cachedTextSecondary)
-            cardView.setCardBackgroundColor(cachedSurfaceColor)
+            tvChatType.setTextColor(textSecondary)
+            cardView.setCardBackgroundColor(surfaceColor)
             itemView.setOnClickListener { onChatClick(chat) }
         }
-
-        private fun initColors(view: View) {
-            if (colorsInitialized) return
-            val theme = ThemeStore.currentTheme()
-            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
-            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
-            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
-            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
-            colorsInitialized = true
-        }
-
-        private var cachedPrimaryColor: Int = 0
-        private var cachedTextPrimary: Int = 0
-        private var cachedTextSecondary: Int = 0
-        private var cachedSurfaceColor: Int = 0
-        private var colorsInitialized = false
     }
 }
 

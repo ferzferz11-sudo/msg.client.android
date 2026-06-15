@@ -121,6 +121,14 @@
         <activity android:name=".ui.remote.RemoteAgentActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.remote.RemoteAgentSettingsActivity" android:exported="false" />
+
+        <activity
+            android:name=".ui.chatlist.ChatListActivityV2"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
         <activity android:name=".ui.LogViewerActivity" android:exported="false" />
 
         <activity

@@ -41,6 +41,9 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _tabFilter = MutableStateFlow("all")
+    val tabFilter: StateFlow<String> = _tabFilter.asStateFlow()
+
     private var allChats: List<ChatInfo> = emptyList()
 
     init {
@@ -196,31 +199,35 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun onChatClick(chat: ChatInfo) {
-        // Navigation handled by fragment/activity
-        Log.d(TAG, "Chat clicked: ${chat.name} (${chat.id})")
+    fun setTabFilter(filter: String) {
+        _tabFilter.value = filter
+        buildSections(allChats)
     }
 
     private fun buildSections(chats: List<ChatInfo>) {
-        val pinned = chats.filter { it.isPinned && !it.isArchived }
+        val tab = _tabFilter.value
+
+        // Apply tab filter
+        val filteredChats = when (tab) {
+            "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
+            "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
+            else -> chats // "all"
+        }
+
+        val pinned = filteredChats.filter { it.isPinned && !it.isArchived }
             .sortedByDescending { it.pinnedAt }
-        val favorites = chats.filter { it.type == "favorites" }
-        val allRegular = chats.filter { !it.isPinned && !it.isArchived && it.type != "favorites" }
+        val favorites = filteredChats.filter { it.type == "favorites" }
+        val allRegular = filteredChats.filter { !it.isPinned && !it.isArchived && it.type != "favorites" }
             .sortedByDescending { it.lastMessageTime }
 
         val sectionList = mutableListOf<SectionItem>()
 
-        // Pinned section (only if there are pinned chats)
         if (pinned.isNotEmpty()) {
             sectionList.add(SectionItem(Section.PINNED, pinned))
         }
-
-        // Favorites section (always show if exists)
         if (favorites.isNotEmpty()) {
             sectionList.add(SectionItem(Section.FAVORITES, favorites))
         }
-
-        // All chats section
         if (allRegular.isNotEmpty()) {
             sectionList.add(SectionItem(Section.ALL_CHATS, allRegular))
         }

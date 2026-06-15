@@ -152,6 +152,9 @@ class SplashActivity : AppCompatActivity() {
         session: lavender.client.android.data.session.UserSession,
         prefs: android.content.SharedPreferences
     ) {
+        val serverAddress = prefs.getString("server_address", "") ?: ""
+        val host = serverAddress.split(":").getOrNull(0) ?: ""
+
         val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {
@@ -172,18 +175,18 @@ class SplashActivity : AppCompatActivity() {
                             putExtra("from_notification", true)
                         }
                     } else {
-                        Log.d("SplashActivity", "Directing to NewChatActivity")
+                        Log.d("SplashActivity", "NewChatActivity")
                         Intent(this, NewChatActivity::class.java).apply {
                             putExtra("USERNAME", session.username)
-                            putExtra("SERVER_ADDRESS", prefs.getString("server_address", ""))
+                            putExtra("SERVER_ADDRESS", serverAddress)
                             putExtra("ROOM_ID", roomIdFromPush)
                             putExtra("from_notification", true)
                         }
                     }
                 }
                 else -> {
-                    Log.d("SplashActivity", "Directing to ChatListActivity")
-                    Intent(this, ChatListActivity::class.java)
+                    navigateToChatList(host)
+                    return
                 }
             }
         } else {
@@ -196,4 +199,16 @@ class SplashActivity : AppCompatActivity() {
         startActivity(targetIntent)
         finish()
     }
+
+    private fun navigateToChatList(host: String) {
+        if (host.isNotEmpty()) {
+            Log.d("SplashActivity", "Directing to ChatListActivityV2 (server: $host)")
+            Intent(this, ui.chatlist.ChatListActivityV2::class.java)
+        } else {
+            Log.d("SplashActivity", "Directing to ChatListActivity (no server)")
+            Intent(this, ChatListActivity::class.java)
+        }.let {
+            startActivity(it)
+            finish()
+        }
 }

@@ -855,4 +855,9 @@
     <string name="failed_to_start_recording">Failed to start recording</string>
     <string name="default_model_saved">Default model saved</string>
 
+    <!-- ChatList v2: connection status -->
+    <string name="connecting">Connecting…</string>
+    <string name="connection_online">Online</string>
+    <string name="connection_offline">Offline</string>
+
 </resources>

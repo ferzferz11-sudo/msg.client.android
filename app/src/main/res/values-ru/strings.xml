@@ -851,4 +851,9 @@
     <string name="failed_to_start_recording">Не удалось начать запись</string>
     <string name="default_model_saved">Модель по умолчанию сохранена</string>
 
+    <!-- ChatList v2: connection status -->
+    <string name="connecting">Подключение…</string>
+    <string name="connection_online">В сети</string>
+    <string name="connection_offline">Не в сети</string>
+
 </resources>
