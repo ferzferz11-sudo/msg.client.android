@@ -6,6 +6,13 @@
 
 ---
 
+## ✅ v1.1.3.15 — Последняя стабильная v1 версия (prod сервер)
+- version.txt: 1.1.3.14 → 1.1.3.15
+- CHANGELOG.md: добавлена секция v1.1.3.15
+- Цель: стабильная версия для prod пользователей перед v2 изменениями
+
+---
+
 ## ✅ v1.1.3.14 — ChatStream v2 + ChatList v2
 
 ### Новое: ChatStream v2 (JWT auth)
@@ -65,7 +72,52 @@
 
 ### Отложено
 - [ ] Qdrant + CLIP (production RAG) — см. AI_SERVICES.md
-- [ ] Выпуск Android v1.1.3.14 — делается ферзем лично после завершения v2 UI
+- [ ] Выпуск Android v1.1.3.15 — делается ферзем лично после завершения v2 UI
+
+---
+
+## 📋 ChatList v2 UI (v1.1.3.16+) — НОВАЯ АРХИТЕКТУРА
+
+### Принцип: Чистое разделение v1/v2
+- **v1 файлы НЕ ТРОГАТЬ**: ChatListActivity.kt, ChatAdapter.kt
+- **v2 — новые файлы** в папке `ui/chatlist/`
+- Переключение: fetchServerInfo() → isChatV2Supported() → выбор Activity
+
+### ЭТАП 1: v2 каркас
+- [ ] Создать папку `ui/chatlist/`
+- [ ] ChatListActivityV2.kt — новый Activity
+- [ ] ChatListFragmentV2.kt — фрагмент с секциями
+- [ ] ChatAdapterV2.kt — адаптер с секциями
+- [ ] ChatListViewModelV2.kt — ViewModel
+- [ ] ChatListSections.kt — управление секциями
+- [ ] Layout: activity_chat_list_v2.xml, fragment_chat_list_v2.xml, item_chat_section_header.xml
+
+### ЭТАП 2: Секции чатов
+- [ ] Pinned / Favorites / All Chats секции
+- [ ] Табы: All / AI / Groups
+- [ ] Сортировка pinned по pinnedAt desc
+
+### ЭТАП 3: Контекстное меню + Actions
+- [ ] Pin/Unpin, Mute/Unmute, Archive/Unarchive, Delete
+- [ ] Анимация перемещения между секциями
+
+### ЭТАП 4: Поиск
+- [ ] SearchView в toolbar с debounce 300ms
+- [ ] Локальный поиск по name + lastMessageText
+
+### ЭТАП 5: Swipe-to-refresh + Infinite scroll
+- [ ] SwipeRefreshLayout
+- [ ] Pagination через GetChatsRequestProto limit/offset
+
+### ЭТАП 6: Transitions + Theme + i18n
+- [ ] Shared element transitions
+- [ ] ThemeApplier обновление для новых FAB
+- [ ] i18n: ~30 новых строк (en + ru)
+
+### ЭТАП 7: Интеграция
+- [ ] Переключение v1/v2 при старте (fetchServerInfo → выбор Activity)
+- [ ] AndroidManifest.xml — регистрация ChatListActivityV2
+- [ ] Тестирование на dev сервере
 
 ---
 
