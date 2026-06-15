@@ -61,6 +61,7 @@
 ## 📋 Активные задачи (Сессия 13)
 
 ### Высокий приоритет
+- [ ] **Режим выбора (selection mode)** — long press на чате = toolbar с Pin/Delete/Edit/Archive (как в Telegram). Короткий тап = вход в чат. Заменить context menu на selection mode в ChatListFragmentV2 + ChatAdapterV2
 - [ ] **TabLayout + ViewPager2** — табы All / AI / Groups с фильтрацией
 - [ ] **Переключение v1/v2 при старте** — программный выбор Activity (fetchServerInfo → isChatV2Supported)
 - [ ] **AndroidManifest.xml** — регистрация ChatListActivityV2
@@ -105,7 +106,7 @@
 | `ui/chatlist/ChatListViewModelV2.kt` | v2 ViewModel |
 | `ui/chatlist/ChatListSections.kt` | Управление секциями |
 | `res/layout/activity_chat_list_v2.xml` | v2 layout с TabLayout |
-| `res/menu/chat_list_context_menu_v2.xml` | v2 контекстное меню |
+| `res/menu/chat_list_context_menu_v2.xml` | УДАЛИТЬ — заменить на selection mode |
 | `ProfileClient.kt` | ProfileService v2 client + fetchServerInfo |
 | `GrpcClient.kt` | Facade (pinChat, searchChats, archiveChat, etc.) |
 | `Message.kt` | ChatInfo модель (isPinned, isArchived, pinnedAt) |
