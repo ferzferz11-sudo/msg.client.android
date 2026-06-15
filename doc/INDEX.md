@@ -12,8 +12,7 @@
 2. **TASKS.md** — таск-трекер (бэклог + сделано)
 3. **PATTERNS.md** — паттерны и анти-patterns разработки
 4. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
-| `SESSION_NOTES.md` | Заметки последней сессии |
-| `PLAN_CHATLIST_V2.md` | План ChatList v2 UI + разделение v1/v2 архитектуры | **При работе над ChatList v2** |
+5. **SESSION_NOTES.md** — заметки последней сессии
 6. **CHANGELOG.md** — история изменений
 
 ---

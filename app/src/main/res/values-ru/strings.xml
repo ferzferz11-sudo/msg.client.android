@@ -820,23 +820,6 @@
     <string name="call_connection_failed">Не удалось соединиться</string>
     <string name="call_connection_error">Ошибка соединения</string>
 
-    <!-- i18n: ChatList v2 (tabs, sections, actions) -->
-    <string name="tab_all">Все</string>
-    <string name="tab_ai">ИИ</string>
-    <string name="tab_groups">Группы</string>
-    <string name="section_pinned">Закреплённые</string>
-    <string name="section_favorites">Избранное</string>
-    <string name="section_all_chats">Все чаты</string>
-    <string name="section_archived">Архив</string>
-    <string name="action_pin">Закрепить</string>
-    <string name="action_unpin">Открепить</string>
-    <string name="action_archive">Архивировать</string>
-    <string name="action_unarchive">Разархивировать</string>
-    <string name="action_mute">Отключить звук</string>
-    <string name="action_unmute">Включить звук</string>
-    <string name="search_chats">Поиск чатов…</string>
-    <string name="search_no_results">Ничего не найдено</string>
-
     <!-- i18n: English hardcoded strings -->
     <string name="failed_to_resize_image">Не удалось изменить размер изображения</string>
     <string name="failed_to_read_image">Не удалось прочитать изображение</string>

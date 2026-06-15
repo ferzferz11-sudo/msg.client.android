@@ -158,7 +158,6 @@
             app:tabIndicatorColor="?attr/colorOnPrimary"
             app:tabSelectedTextColor="?attr/colorOnPrimary"
             app:tabTextColor="?attr/colorOnPrimary"
-            app:tabTextAppearance="@style/TextAppearance.MaterialComponents.Caption"
             app:tabIndicatorHeight="2dp"
             app:tabPaddingStart="16dp"
             app:tabPaddingEnd="16dp"
