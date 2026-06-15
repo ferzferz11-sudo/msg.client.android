@@ -1,8 +1,20 @@
 # План: ChatList v2 UI + Разделение v1/v2 архитектуры
 
 **Дата:** 2026-06-16
-**Версия плана:** 1.0
-**Статус:** Утверждён
+**Версия плана:** 1.1
+**Статус:** В работе
+
+---
+
+## СТАТУС РЕЛИЗОВ
+
+| Версия | Статус | Дата | Коммит |
+|--------|--------|------|--------|
+| v1.1.3.15 | ✅ ВЫПУЩЕН | 2026-06-16 | `b95a6f4` |
+| v1.1.3.16+ | 🔨 В разработке | — | — |
+
+**v1.1.3.15** — последняя версия с полной поддержкой v1 (prod сервер). Выпущен ферзём.
+Все изменения сессии 12 (v2 scaffold) пойдут в **v1.1.3.16+**.
 
 ---
 
@@ -362,27 +374,27 @@ listOf(R.id.fabAi, R.id.fabAddChat, R.id.fabSearch)
 
 ## ПОРЯДОК РЕАЛИЗАЦИИ
 
-| Шаг | Что делаем | Файлы | Статус |
-|-----|-----------|-------|--------|
-| 0 | Выпуск v1.1.3.15 (последняя v1) | version.txt, CHANGELOG.md | ⬜ |
-| 1 | Создать папку ui/chatlist/ + базовые файлы | ChatListActivityV2.kt, ChatListFragmentV2.kt, ChatAdapterV2.kt, ChatListViewModelV2.kt, ChatListSections.kt | ⬜ |
-| 2 | Layout файлы для v2 | activity_chat_list_v2.xml, fragment_chat_list_v2.xml, item_chat_section_header.xml | ⬜ |
-| 3 | Секции чатов (Pinned/Favorites/All) | ChatListSections.kt, ChatAdapterV2.kt | ⬜ |
-| 4 | Контекстное меню + Pin/Archive | ChatListFragmentV2.kt, ChatAdapterV2.kt | ⬜ |
-| 5 | Поиск | ChatListActivityV2.kt, ChatAdapterV2.kt | ⬜ |
-| 6 | Swipe-to-refresh + infinite scroll | ChatListFragmentV2.kt, ChatAdapterV2.kt | ⬜ |
-| 7 | Shared element transitions | ChatListFragmentV2.kt | ⬜ |
-| 8 | Переключение v1/v2 при старте | SplashActivity.kt или программный выбор | ⬜ |
-| 9 | ThemeApplier обновление | ThemeApplier.kt | ⬜ |
-| 10 | i18n — все новые строки | values/strings.xml, values-ru/strings.xml | ⬜ |
-| 11 | Тестирование на dev сервере | — | ⬜ |
-| 12 | Коммит + пуш | — | ⬜ |
+| Шаг | Что делаем | Статус |
+|-----|-----------|--------|
+| 0 | Выпуск v1.1.3.15 (последняя v1) — **выпущен ферзём** | ✅ ЗАВЕРШЁН |
+| 1 | Создать папку ui/chatlist/ + базовые файлы | ✅ ЗАВЕРШЁН (коммит `7d087bc`) |
+| 2 | Layout файлы для v2 | ✅ ЗАВЕРШЁН |
+| 3 | Секции чатов (Pinned/Favorites/All) | ✅ ЗАВЕРШЁН (ChatAdapterV2) |
+| 4 | Контекстное меню + Pin/Archive | ✅ ЗАВЕРШЁН (chat_context_menu.xml) |
+| 5 | Поиск | ✅ ЗАВЕРШЁН (ChatAdapterV2.filter()) |
+| 6 | Swipe-to-refresh | ✅ ЗАВЕРШЁН (fragment_chat_list_v2.xml) |
+| 7 | i18n — все новые строки | ✅ ЗАВЕРШЁН (17 строк en+ru) |
+| 8 | TabLayout + ViewPager2 (табы All/AI/Groups) | 🔨 СЛЕДУЮЩИЙ |
+| 9 | Переключение v1/v2 при старте | ⬜ |
+| 10 | AndroidManifest.xml — регистрация V2 | ⬜ |
+| 11 | Тестирование на dev сервере | ⬜ |
+| 12 | Коммит + пуш | ⬜ |
 
 ---
 
 ## КЛЮЧЕВЫЕ ПАТТЕРНЫ (ОБЯЗАТЕЛЬНО СОБЛЮДАТЬ)
 
-1. **НЕ ИЗМЕНЯТЬ** ChatListActivity.kt и ChatAdapter.kt до выпуска v1.1.3.15
+1. **НЕ ИЗМЕНЯТЬ** ChatListActivity.kt и ChatAdapter.kt — v1.1.3.15 уже выпущен
 2. **fetchServerInfo** — всегда проверять isChatV2Supported() перед v2 API
 3. **ChatAdapter.clearAll()** — вместо setChats(emptyList()) — crash!
 4. **CancellableContinuation.resume(value, onCancellation = {})** — Kotlin 2.3.21
