@@ -1,22 +1,26 @@
-# Промпт для новой сессии — Android v1.1.3.17
+# Промпт для новой сессии — Android v1.1.3.18+
 
 **Дата:** 2026-06-15
-**Версия:** 1.1.3.17 (разработка)
+**Версия:** 1.1.3.18 (разработка)
 **Ветка:** feat/1.1.3.x
 **Тег:** v1.1.3.17
 
 ---
 
-## СТАТУС: v1.1.3.17 — FAB AI подключён, тестирование
+## СТАТУС: v1.1.3.18 — Продолжение разработки
 
-v1.1.3.15 — последняя стабильная v1 (prod сервер).
-v1.1.3.16 — все фичи реализованы, тег создан, требуется тестирование.
+v1.1.3.17 — FAB AI подключён, AIBottomSheet интегрирован.
+v1.1.3.16 — все фичи реализованы (ChatListV2, Selection Mode, Search, Pin Message, CacheUtils).
 
 Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2, Pin Message).
 Сервер prod: v1.1.3.10 (legacy, без v2).
-Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message.
+Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message, FAB AI.
 
-**ВАЖНО:** Серверный proto обновлён (PinMessage RPC), требуется protoc генерация перед сборкой.
+**Архитектурный принцип:** Полное разделение v1 и v2 архитектуры.
+- v1 сервер (prod) → ChatListActivity (v1, без изменений)
+- v2 сервер (dev) → ChatListActivityV2 (v2)
+- Оба клиента (v1 и v2) поддерживают обратную совместимость с v1 сервером
+- fetchServerInfo всегда определяет версию сервера
 
 ---
 
