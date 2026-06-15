@@ -21,11 +21,13 @@
 - Context menu: Pin/Mute/Delete (long press)
 - i18n: 17 новых строк (en + ru)
 
-### Архитектура v2 (уточнено ферзём)
-- **Pin Chat** — в context menu списка (long press), НЕ в toolbar
-- **Pin Message** — в меню сообщения (long press), нужны новые серверные RPC (PinMessage/UnPinMessage + таблица pinned_messages)
-- **Favorites** = Archive — существующий чат "Личное хранилище"
-- В списке чатов context menu без Pin и Archive — только Mute/Delete/Edit
+### Архитектура v2 (уточнено ферзём, сессия 13)
+- **Long press на чате** = режим выбора (как в Telegram) — появляется toolbar с действиями
+- **Короткий тап** = вход в чат/группу
+- **Pin Chat** — в toolbar в режиме выбора (long press)
+- **Pin Message** — в шторке сообщения (bottom sheet меню)
+- **Archive** — отдельная сущность, заархивированные но не удалённые чаты
+- **Favorites** — существующий чат "Личное хранилище" (не Archive!)
 
 ---
 

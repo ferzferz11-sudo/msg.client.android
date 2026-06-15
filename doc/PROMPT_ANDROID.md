@@ -94,10 +94,13 @@ data/
 - **Разделение v1/v2 Activity**: ChatListActivityV2 определяет версию сервера через fetchServerInfo()
   - v2 сервер → ChatListActivityV2 (новый UI)
   - v1 сервер → fallback на ChatListActivity (v1, без изменений)
-- **Pin Chat** — в context menu списка (long press), НЕ в toolbar
-- **Pin Message** — в меню сообщения (long press), нужны новые серверные RPC
-- **Favorites** = Archive — существующий чат "Личное хранилище"
-- **Секции списка**: Pinned / Favorites / All Chats
+- **Long press на чате** = режим выбора (как в Telegram) — toolbar с действиями
+- **Короткий тап** = вход в чат/группу
+- **Pin Chat** — в toolbar в режиме выбора (long press)
+- **Pin Message** — в шторке сообщения (bottom sheet)
+- **Archive** — отдельная сущность, заархивированные но не удалённые чаты
+- **Favorites** — существующий чат "Личное хранилище" (не Archive!)
+- **Секции списка**: Pinned / Favorites / All Chats + Archived
 - **Табы**: All / AI / Groups
 
 ### i18n

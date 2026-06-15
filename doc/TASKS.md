@@ -85,9 +85,11 @@
 | Решение | Обоснование |
 |---------|-------------|
 | v1/v2 разделение | Новые файлы в ui/chatlist/, v1 без изменений |
-| Pin Chat в context menu | НЕ в toolbar — как в новых версиях Telegram |
-| Pin Message — отдельная фича | Нужны новые серверные RPC (PinMessage/UnPinMessage) |
-| Favorites = Archive | Существующий чат "Личное хранилище" заменяет Archive |
+| Long press = режим выбора | Toolbar с действиями Pin/Delete/Edit (как в Telegram) |
+| Pin Chat в toolbar выбора | НЕ в обычном toolbar — только в режиме выбора |
+| Pin Message — отдельная фича | В шторке сообщения (bottom sheet), нужны новые серверные RPC |
+| Archive — отдельная сущность | Заархивированные но не удалённые чаты |
+| Favorites ≠ Archive | Существующий чат "Личное хранилище" — это не Archive! |
 | fetchServerInfo fallback | Если /info недоступен → v1 для всех сервисов |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 
