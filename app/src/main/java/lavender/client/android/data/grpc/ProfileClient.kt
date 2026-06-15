@@ -218,15 +218,17 @@ object ProfileClient {
             return@suspendCancellableCoroutine
         }
 
-        val requestMarshaller = ProtoMarshaller(request!!)
-        val responseInstance = responseType.newInstance()
-        val responseMarshaller = ProtoMarshaller(responseInstance)
-
         val method = MethodDescriptor.newBuilder<ReqT, RespT>()
             .setType(MethodDescriptor.MethodType.UNARY)
             .setFullMethodName(fullMethod)
-            .setRequestMarshaller(requestMarshaller)
-            .setResponseMarshaller(responseMarshaller)
+            .setRequestMarshaller(object : MethodDescriptor.Marshaller<ReqT> {
+                override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+                override fun parse(stream: java.io.InputStream): ReqT = request
+            })
+            .setResponseMarshaller(object : MethodDescriptor.Marshaller<RespT> {
+                override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+                override fun parse(stream: java.io.InputStream): RespT = responseType.newInstance()
+            })
             .build()
 
         val call = channel.newCall(method, CallOptions.DEFAULT)
@@ -253,12 +255,4 @@ object ProfileClient {
         call.halfClose()
         call.request(1)
     }
-}
-/**
- * Simple marshaller for proto messages.
- * Uses the same pattern as RealGrpcClient's marshallers.
- */
-internal class ProtoMarshaller<T>(private val defaultInstance: T) : MethodDescriptor.Marshaller<T> {
-    override fun stream(value: T): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-    override fun parse(stream: java.io.InputStream): T = defaultInstance
 }
