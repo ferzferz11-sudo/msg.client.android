@@ -34,7 +34,8 @@ data class MessageProto(
     val deviceName: String = "",
     val userId: String = "",
     val isE2Ee: Boolean = false,
-    val e2EePayload: String = ""
+    val e2EePayload: String = "",
+    val jwtToken: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -61,6 +62,7 @@ data class MessageProto(
         private var userId: String = ""
         private var isE2Ee: Boolean = false
         private var e2EePayload: String = ""
+        private var jwtToken: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -178,6 +180,11 @@ data class MessageProto(
             return this
         }
 
+        fun setJwtToken(jwtToken: String): Builder {
+            this.jwtToken = jwtToken
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -191,7 +198,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId, isE2Ee, e2EePayload)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId, isE2Ee, e2EePayload, jwtToken)
         }
     }
     

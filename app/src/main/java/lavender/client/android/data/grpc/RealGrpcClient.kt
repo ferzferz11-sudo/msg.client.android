@@ -2538,15 +2538,15 @@ object RealGrpcClient {
             request = SearchChatsRequestProto(userId = userId, query = query, limit = limit, offset = offset),
             responseType = SearchChatsResponseProto::class.java
         )
-        return response?.chatsList?.map { proto ->
+        return response?.chats?.map { proto ->
             ChatInfo(
                 id = proto.id,
                 name = proto.name,
                 type = proto.type,
                 participants = proto.participants,
-                createdAt = proto.createdAt,
+                createdAt = proto.createdAt?.seconds ?: 0L,
                 unreadCount = proto.unreadCount,
-                lastMessageTime = proto.lastMessageTime,
+                lastMessageTime = proto.lastMessageTime?.seconds ?: 0L,
                 creator = proto.creator,
                 lastMessageText = proto.lastMessageText,
                 avatarUrl = proto.avatarUrl,
@@ -2594,14 +2594,14 @@ object RealGrpcClient {
             return@suspendCancellableCoroutine
         }
 
-        val method = MethodDescriptor.newBuilder<ReqT, RespT>()
-            .setType(MethodDescriptor.MethodType.UNARY)
+        val method = io.grpc.MethodDescriptor.newBuilder<ReqT, RespT>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName(fullMethod)
-            .setRequestMarshaller(object : MethodDescriptor.Marshaller<ReqT> {
+            .setRequestMarshaller(object : io.grpc.MethodDescriptor.Marshaller<ReqT> {
                 override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
                 override fun parse(stream: java.io.InputStream): ReqT = request
             })
-            .setResponseMarshaller(object : MethodDescriptor.Marshaller<RespT> {
+            .setResponseMarshaller(object : io.grpc.MethodDescriptor.Marshaller<RespT> {
                 override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
                 @Suppress("DEPRECATION")
                 override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
@@ -2621,6 +2621,10 @@ object RealGrpcClient {
                 }
             }
         }, io.grpc.Metadata())
+
+        cont.invokeOnCancellation {
+            call.cancel("Cancelled", null)
+        }
 
         call.sendMessage(request)
         call.halfClose()
