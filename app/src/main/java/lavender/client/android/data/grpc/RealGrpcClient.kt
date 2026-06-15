@@ -21,8 +21,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 enum class ConnectionStatus {
     DISCONNECTED,
@@ -2589,7 +2588,7 @@ object RealGrpcClient {
         fullMethod: String,
         request: ReqT,
         responseType: Class<RespT>
-    ): RespT? = kotlin.coroutines.suspendCancellableCoroutine { cont ->
+    ): RespT? = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
         val channel = getChannel()
         if (channel == null) {
             cont.resume(null)
