@@ -72,7 +72,40 @@
 ### Коммиты
 - `4ddc712` — feat: Selection Mode + Search in ChatListActivityV2
 
-### Следующие шаги (сессия 15)
-1. **Pin Message** — серверные RPC + клиент + UI
-2. **Тестирование** на dev и prod серверах
-3. **FAB AI** — создание AI чата (OwlActivity/HermesChatActivity)
+### Следующие шаги (сессия 16)
+1. **Тестирование** на dev и prod серверах
+2. **FAB AI** — создание AI чата (OwlActivity/HermesChatActivity)
+3. **HermesChatActivity / OwlChatActivity** — интеграция с v2 навигацией
+
+---
+
+## Сессия 15 — Pin Message + ServersActivity improvements (2026-06-16)
+
+### Pin Message (сервер)
+- messenger.proto: PinMessageRequest/Response, UnPinMessageRequest/Response, GetPinnedMessagesRequest/Response
+- db_chatlist_v2.go: pinned_messages table, PinnedMessageRow struct, PinMessage/UnPinMessage/GetPinnedMessages/IsMessagePinned
+- server_chatlist_v2.go: PinMessage/UnPinMessage/GetPinnedMessages RPC handlers
+- Все RPC используют только userId (без username)
+
+### Pin Message (клиент)
+- MessengerProto.kt: PinMessageRequestProto, PinMessageResponseProto, etc.
+- RealGrpcClient: pinMessage(), unpinMessage(), getPinnedMessages()
+- GrpcClient: facade с v1/v2 version check
+- Message.kt: isPinned field
+- MessageAdapter: pinnedMessageIds, updatePinnedMessages(), pinned badge в bind()
+- NewChatActivity: showMessageContextMenu() с PopupMenu (pin/unpin/reply/delete)
+- item_message.xml: pinned badge layout
+- message_context_menu.xml: context menu для сообщений
+- strings.xml + values-ru: pinned_message, pin_message, unpin_message
+
+### ServersActivity improvements
+- Prefill последнего логина в login bottom sheet
+- Splash после успешного входа/регистрации (showSplashAndFinish)
+- Все серверы (включая dev) доступны всем пользователям
+- CredentialStore: getLastUsername/setLastUsername
+
+### Коммиты
+- `7301de3` — Pin Message server
+- `e05da8d` — Pin Message Android client
+- `ec530ff` — Pin Message UI
+- `b367998` — ServersActivity improvements
