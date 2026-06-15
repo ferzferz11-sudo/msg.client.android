@@ -227,7 +227,8 @@ object ProfileClient {
             })
             .setResponseMarshaller(object : MethodDescriptor.Marshaller<RespT> {
                 override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                override fun parse(stream: java.io.InputStream): RespT = responseType.newInstance()
+                @Suppress("DEPRECATION")
+                override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
             })
             .build()
 
