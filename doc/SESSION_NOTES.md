@@ -1,5 +1,31 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 17 (2026-06-15) — FAB AI + интеграция
+
+### Сервер
+- protoc генерация после добавления PinMessage в messenger.proto
+- Деплой на dev сервер (v1.2.0.1 с PinMessage RPC)
+
+### FAB AI (ChatListActivityV2)
+- AIBottomSheet подключён к FAB AI (вместо TODO)
+- Создание Hermes чата → HermesChatActivity с пустым chatId → createSession на сервере
+- Создание OWL чата → OwlChatActivity с пустым chatId → createOwlChat на сервере
+- Существующие AI чаты (hermes/owl) отображаются в AIBottomSheet
+- Удаление AI чатов через контекстное меню
+- Настройки: Hermes → OwlSettingsActivity (isHermes=true), OWL → OwlSettingsActivity
+
+### ChatListViewModelV2
+- Добавлен публичный метод `getChats(): List<ChatInfo>`
+
+### Версия
+- Android: v1.1.3.16 → v1.1.3.17
+- Сервер: v1.2.0.1 (без изменений)
+
+### Коммиты сессии 17
+- (будет при push)
+
+---
+
 ## Сессия 16 (2026-06-16) — Завершение Pin Message + рефакторинг
 
 ### Рефакторинг Pin Message → v1-style selection

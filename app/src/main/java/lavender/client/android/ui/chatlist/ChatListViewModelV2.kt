@@ -204,6 +204,8 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
         buildSections(allChats)
     }
 
+    fun getChats(): List<ChatInfo> = allChats
+
     fun onChatClick(chat: ChatInfo) {
         Log.d(TAG, "Chat clicked: ${chat.name} (${chat.id})")
     }

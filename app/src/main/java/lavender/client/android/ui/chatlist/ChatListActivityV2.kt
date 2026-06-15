@@ -27,12 +27,14 @@ import lavender.client.android.R
 import lavender.client.android.ServersActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ProfileClient
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
 
 /**
@@ -68,6 +70,10 @@ class ChatListActivityV2 : AppCompatActivity() {
     private var actionMode: ActionMode? = null
     private var searchView: androidx.appcompat.widget.SearchView? = null
     private var searchDebounceJob: Job? = null
+
+    // AI Bottom Sheet
+    private var aiBottomSheet: AIBottomSheet? = null
+    private val aiChats = mutableListOf<AIChatInfo>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -290,13 +296,107 @@ class ChatListActivityV2 : AppCompatActivity() {
 
     private fun setupFABs() {
         findViewById<View>(R.id.fabAi)?.setOnClickListener {
-            // TODO: Create AI chat (OwlActivity or HermesChatActivity)
-            Log.d(TAG, "FAB AI clicked")
+            showAIBottomSheet()
         }
         findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
             val intent = Intent(this, NewChatActivity::class.java)
             startActivity(intent)
         }
+    }
+
+    // ======= AI Bottom Sheet =======
+
+    private fun showAIBottomSheet() {
+        // Filter AI chats from the full list (types: "hermes", "owl")
+        aiChats.clear()
+        aiChats.addAll(viewModel.getChats().filter {
+            it.type == "hermes" || it.type == "owl"
+        }.map { chat ->
+            AIChatInfo(
+                id = chat.id,
+                name = chat.name,
+                type = chat.type
+            )
+        })
+
+        aiBottomSheet = AIBottomSheet(
+            context = this,
+            existingChats = aiChats,
+            onChatClick = { aiChat ->
+                if (aiChat.type == "hermes") {
+                    openHermesChat(aiChat.id, aiChat.name)
+                } else {
+                    openOwlChat(aiChat.id, aiChat.name)
+                }
+            },
+            onDeleteChat = { aiChat ->
+                val userId = SessionManager.session.value.userId
+                val username = SessionManager.session.value.username
+                if (userId.isNotEmpty()) {
+                    GrpcClient.deleteChat(aiChat.id, userId, username) { success, _ ->
+                        if (success) {
+                            viewModel.loadChats()
+                        }
+                    }
+                }
+            },
+            onSettingsClick = { aiChat ->
+                if (aiChat.type == "hermes") {
+                    openHermesSettings(aiChat.id)
+                } else {
+                    openOwlSettings(aiChat.id)
+                }
+            },
+            onCreateHermesChat = {
+                val hermesCount = aiChats.count { it.type == "hermes" }
+                val chatName = getString(R.string.lava_ai_n, hermesCount + 1)
+                openHermesChat("", chatName)
+            },
+            onCreateOwlChat = {
+                val owlCount = aiChats.count { it.type == "owl" }
+                val chatName = getString(R.string.owl_agent_n, owlCount + 1)
+                openOwlChat("", chatName)
+            },
+            onOpenNotifications = {
+                startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
+            },
+            onOpenRemoteAgents = {
+                startActivity(Intent(this, lavender.client.android.ui.remote.RemoteAgentActivity::class.java))
+            },
+            unreadNotifCount = 0
+        )
+        aiBottomSheet?.buildAndShow()
+    }
+
+    private fun openHermesChat(chatId: String, chatName: String) {
+        val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
+            putExtra("CHAT_ID", chatId)
+            putExtra("CHAT_NAME", chatName)
+        }
+        startActivity(intent)
+    }
+
+    private fun openOwlChat(chatId: String, chatName: String) {
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java).apply {
+            putExtra("CHAT_ID", chatId)
+            putExtra("CHAT_NAME", chatName)
+        }
+        startActivity(intent)
+    }
+
+    private fun openHermesSettings(chatId: String) {
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java).apply {
+            putExtra("sessionId", chatId)
+            putExtra("isHermes", true)
+        }
+        startActivity(intent)
+    }
+
+    private fun openOwlSettings(chatId: String) {
+        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java).apply {
+            putExtra("CHAT_ID", chatId)
+        }
+        startActivity(intent)
     }
 
     // ======= ActionMode (Selection Mode) =======

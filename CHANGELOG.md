@@ -1,5 +1,22 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.17] - 2026-06-15
+
+### Новое: FAB AI — создание AI чата из ChatListActivityV2
+- **AIBottomSheet** подключён к FAB AI в ChatListActivityV2
+- Создание нового Hermes чата → HermesChatActivity (пустой chatId = создание на сервере)
+- Создание нового OWL чата → OwlChatActivity (пустой chatId = создание на сервере)
+- Существующие AI чаты отображаются в списке (Hermes + OWL)
+- Удаление AI чатов через контекстное меню
+- Настройки AI чатов → OwlSettingsActivity (для OWL и Hermes)
+- Навигация: таб AI фильтрует hermes/owl типы
+
+### Рефакторинг
+- ChatListViewModelV2: добавлен публичный метод `getChats()` для доступа к списку чатов
+- ChatListActivityV2: импорты обновлены (AIChatInfo, AIBottomSheet)
+
+---
+
 ## [1.1.3.16] - 2026-06-16
 
 ### Новое: Selection Mode (множественный выбор чатов)
