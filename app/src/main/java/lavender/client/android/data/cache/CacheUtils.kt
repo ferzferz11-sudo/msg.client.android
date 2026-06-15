@@ -20,7 +20,6 @@ object CacheUtils {
             runBlocking(Dispatchers.IO) {
                 db.messageDao().clearAll()
                 db.chatDao().clearAll()
-                db.userDao().clearAll()
             }
             Log.d("Cache", "Silently cleared all local cache")
         } catch (e: Exception) {
@@ -35,7 +34,6 @@ object CacheUtils {
             withContext(Dispatchers.IO) {
                 db.messageDao().clearAll()
                 db.chatDao().clearAll()
-                db.userDao().clearAll()
             }
             // Clear Glide caches on main thread
             com.bumptech.glide.Glide.get(context).clearMemory()
