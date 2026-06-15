@@ -1,9 +1,11 @@
 package lavender.client.android.ui.chatlist
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListUpdateCallback
 import androidx.recyclerview.widget.RecyclerView
@@ -54,10 +56,10 @@ class ChatAdapterV2(
     private fun initColors(view: View) {
         if (colorsInitialized) return
         val theme = ThemeStore.currentTheme()
-        cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor)
-        cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor)
-        cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor)
-        cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor)
+        cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+        cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+        cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
+        cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
         colorsInitialized = true
     }
 
@@ -200,10 +202,10 @@ class ChatAdapterV2(
         private fun initColors(view: View) {
             if (colorsInitialized) return
             val theme = ThemeStore.currentTheme()
-            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor)
-            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor)
-            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor)
-            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor)
+            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
+            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             colorsInitialized = true
         }
 
@@ -237,10 +239,10 @@ class ChatAdapterV2(
         private fun initColors(view: View) {
             if (colorsInitialized) return
             val theme = ThemeStore.currentTheme()
-            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor)
-            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor)
-            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor)
-            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor)
+            cachedPrimaryColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
+            cachedTextPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
+            cachedTextSecondary = ThemeUtils.parseSafeColor(theme.onSurfaceColor, Color.LTGRAY)
+            cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.DKGRAY)
             colorsInitialized = true
         }
 

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import lavender.client.android.ChatListActivity
@@ -12,6 +13,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 
@@ -106,11 +108,18 @@ class ChatListActivityV2 : AppCompatActivity() {
     }
 
     private fun showAuthChoiceDialog() {
-        // Reuse v1 auth widgets — they work for both v1 and v2
+        val serverAddress = CredentialStore.getServerAddress(this) ?: return
+        val parts = serverAddress.split(":")
+        val host = parts[0]
+        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+
         lavender.client.android.ui.widget.ServerAuthBottomSheet(
             context = this,
-            onLoginClick = { },
-            onRegisterClick = { }
+            serverName = "Lava",
+            serverHost = host,
+            serverPort = port,
+            onLogin = { },
+            onRegister = { }
         ).show()
     }
 
@@ -121,6 +130,6 @@ class ChatListActivityV2 : AppCompatActivity() {
             if (isDarkMode) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
             else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         )
-        ThemeApplier.apply(this)
+        ThemeApplier.apply(this, ThemeStore.currentTheme())
     }
 }
