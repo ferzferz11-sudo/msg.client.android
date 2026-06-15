@@ -254,12 +254,11 @@ object ProfileClient {
         call.request(1)
     }
 }
-
 /**
  * Simple marshaller for proto messages.
  * Uses the same pattern as RealGrpcClient's marshallers.
  */
-private class ProtoMarshaller<T>(private val defaultInstance: T) : MethodDescriptor.Marshaller<T> {
+internal class ProtoMarshaller<T>(private val defaultInstance: T) : MethodDescriptor.Marshaller<T> {
     override fun stream(value: T): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
     override fun parse(stream: java.io.InputStream): T = defaultInstance
 }

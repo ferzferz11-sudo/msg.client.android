@@ -13,6 +13,8 @@ import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.proto.CustomThemeProto
 import lavender.client.android.data.proto.FCMLogEntryProto
 import lavender.client.android.data.proto.GetUserProfileResponseProto
+import lavender.client.android.data.proto.GetProfileResponseProto
+import lavender.client.android.data.proto.GetUserSettingsResponseProto
 import lavender.client.android.data.proto.DeviceInfoProto
 import lavender.client.android.data.proto.CallMessageProto
 import lavender.client.android.data.proto.ServerInfoProto
