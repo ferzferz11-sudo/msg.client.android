@@ -2587,57 +2587,48 @@ object RealGrpcClient {
         fullMethod: String,
         request: ReqT,
         responseType: Class<RespT>
-    ): RespT? {
-        return try {
-            suspendCancellableCoroutine<RespT?> { cont ->
-                val channel = getChannel()
-                if (channel == null) {
-                    cont.resume(null)
-                    return@suspendCancellableCoroutine
-                }
-
-                val method = io.grpc.MethodDescriptor.newBuilder<ReqT, RespT>()
-                    .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-                    .setFullMethodName(fullMethod)
-                    .setRequestMarshaller(object : io.grpc.MethodDescriptor.Marshaller<ReqT> {
-                        override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                        override fun parse(stream: java.io.InputStream): ReqT = request
-                    })
-                    .setResponseMarshaller(object : io.grpc.MethodDescriptor.Marshaller<RespT> {
-                        override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                        @Suppress("DEPRECATION")
-                        override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
-                    })
-                    .build()
-
-                val call = channel.newCall(method, io.grpc.CallOptions.DEFAULT)
-                call.start(object : io.grpc.ClientCall.Listener<RespT>() {
-                    private var response: RespT? = null
-                    override fun onMessage(message: RespT) { response = message }
-                    override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                        if (status.isOk) {
-                            cont.resume(response)
-                        } else {
-                            Log.w("RealGrpcClient", "ChatList V2 call failed [$fullMethod]: ${status.code} ${status.description}")
-                            cont.resume(null)
-                        }
-                    }
-                }, io.grpc.Metadata())
-
-                cont.invokeOnCancellation {
-                    call.cancel("Cancelled", null)
-                }
-
-                call.sendMessage(request)
-                call.halfClose()
-                call.request(1)
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("RealGrpcClient", "ChatList V2 call exception [$fullMethod]: ${e.message}")
-            null
+    ): RespT? = suspendCancellableCoroutine { cont ->
+        val channel = getChannel()
+        if (channel == null) {
+            cont.resume(null)
+            return@suspendCancellableCoroutine
         }
+
+        val method = io.grpc.MethodDescriptor.newBuilder<ReqT, RespT>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName(fullMethod)
+            .setRequestMarshaller(object : io.grpc.MethodDescriptor.Marshaller<ReqT> {
+                override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+                override fun parse(stream: java.io.InputStream): ReqT = request
+            })
+            .setResponseMarshaller(object : io.grpc.MethodDescriptor.Marshaller<RespT> {
+                override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+                @Suppress("DEPRECATION")
+                override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
+            })
+            .build()
+
+        val call = channel.newCall(method, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RespT>() {
+            private var response: RespT? = null
+            override fun onMessage(message: RespT) { response = message }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (status.isOk) {
+                    cont.resume(response)
+                } else {
+                    Log.w("RealGrpcClient", "ChatList V2 call failed [$fullMethod]: ${status.code} ${status.description}")
+                    cont.resume(null)
+                }
+            }
+        }, io.grpc.Metadata())
+
+        cont.invokeOnCancellation {
+            call.cancel("Cancelled", null)
+        }
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
     }
 }
 
