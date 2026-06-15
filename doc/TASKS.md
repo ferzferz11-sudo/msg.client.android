@@ -1,128 +1,71 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.13
-**Обновлено:** 2026-06-15 (сессия 10)
+**Версия:** v1.1.3.14
+**Обновлено:** 2026-06-16 (сессия 11)
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## ✅ v1.1.3.13 — ProfileService v2 client + ProfileClient fixes
+## ✅ v1.1.3.14 — ChatStream v2 + ChatList v2
 
-### Новое: ProfileService v2 client
-- ✅ **ProfileClient** — клиент для ProfileService v2 с JWT Bearer auth
-- ✅ Автоопределение версии сервера через /info endpoint (profile >= "2.0")
-- ✅ Fallback на legacy ChatService методы для prod сервера
-- ✅ Методы: getProfile, updateProfile, updateAvatar, getUserSettings, updateUserSettings
-- ✅ fetchServerInfo() вызывается автоматически при connect()
+### Новое: ChatStream v2 (JWT auth)
+- ✅ **ProfileClient.fetchServerInfo()** — парсит все версии сервисов (chat/auth/profile/ai)
+- ✅ **isChatV2Supported()** / **isAuthV2Supported()** helpers
+- ✅ **BearerTokenInterceptor** — убран пропуск Chat stream для v2 серверов
+- ✅ **RealGrpcClient.startChat()** — JWT token для v2, password для v1
+- ✅ Fallback на v1 если /info недоступен
 
-### Fixes
-- ✅ **ProfileClient** — использование unaryCall единообразно
-- ✅ **Marshaller objects** — inline вместо newInstance() (deprecation fix)
-- ✅ **Missing imports** — добавлены для ProfileV2 proto classes
-- ✅ **ProtoMarshaller** — сделан internal
+### Новое: ChatList v2
+- ✅ **GrpcClient** — pinChat, unpinChat, searchChats, archiveChat, unarchiveChat
+- ✅ **RealGrpcClient** — низкоуровневый unaryCallChatListV2 для новых RPC
+- ✅ **ChatInfo** — isPinned, isArchived, pinnedAt поля
+- ✅ Все v2 методы возвращают false/empty на v1 серверах
 
-### Коммиты
-- `dbbf266` — feat: ProfileService v2 client + Typing/CallSession compat
-- `7782993` — fix: ProfileClient — use unaryCall consistently
-- `73da2e1` — fix: use inline Marshaller objects in ProfileClient.unaryCall
-- `d707fa8` — fix: add missing imports for ProfileV2 proto classes
-- `1a73dee` — fix: suppress newInstance deprecation warning in ProfileClient
-
----
-
-## ✅ v1.1.3.12 — Bearer Token Interceptor + Token Refresh + Per-server validation
-
-### Новое: Bearer Token Interceptor
-- ✅ **BearerTokenInterceptor** — ClientInterceptor для автоматической подстановки JWT Bearer token
-- ✅ Пропускает AuthService и Chat stream (legacy auth)
-- ✅ No-op при отсутствии токена (совместимость с v1 серверами)
-
-### Новое: Proactive Token Refresh
-- ✅ **startTokenRefresh()** — периодическая проверка каждые 60с
-- ✅ **performTokenRefresh()** — синхронный refresh через suspendCancellableCoroutine
-- ✅ Остановка при logout / FORCE_LOGOUT
-
-### Новое: Per-server token validation
-- ✅ **CredentialStore.setJwtServerAddress()** / **getJwtServerAddress()** / **clearJwtServerAddress()**
-- ✅ **initFromPrefs()** — проверка совпадения сервера при восстановлении сессии
-- ✅ **login()** — clearTokens() перед новым логином
-- ✅ **clearTokens()** — также очищает jwt_server_address
+### Proto updates
+- ✅ PinChatRequestProto, SearchChatsResponseProto, etc.
+- ✅ ChatInfoProto: isPinned, isMuted, isArchived, pinnedAt
+- ✅ GetChatsRequestProto: limit, offset, filter
+- ✅ MessageProto: jwtToken, isE2Ee, e2EePayload + Builder методы
+- ✅ MessageProtoMarshaller: сериализация/deserialization новых полей
 
 ### Коммиты
-- (pending)
+- `cd2294d` — feat: ChatStream v2 + ChatList v2 Android client
+- `cc759b7` — fix: add jwtToken to MessageProto
+- `8731367` — fix: add onCancellation parameter
+- `5bb47b6` — docs: update all docs
 
 ---
 
-## ✅ v1.1.3.12 — Auth bottom sheets cosmetics + code cleanup
-
-### UI cosmetics
-- ✅ **app_version_format** — "client" → "app" (EN), "клиент" → "приложение" (RU)
-- ✅ **ServerAuthBottomSheet status indicator** — только кружок (без текста), зелёный/красный, слева от названия сервера
-- ✅ **Drag handle** — добавлен во все шторки входа (server auth, login, register)
-- ✅ **Убраны горизонтальные dividers** из шторок входа
-- ✅ **Divider в шторке профиля** — уже был, оставлен как есть
-
-### Code cleanup
-- ✅ **showAuthChoiceDialog()** — убран getDefaultServer(), захардожен дефолтный сервер
-- ✅ **onResume()** — убран justReturnedFromServersActivity guard
-- ✅ **Profile menu** — скрыта кнопка actionServers
-- ✅ **AppDatabase** — fallbackToDestructiveMigration → fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
-- ✅ **Серверы** — ServersActivity остаётся для управления списком серверов
-
-### Коммиты
-- `c64856b` — cosmetics: auth bottom sheets UI fixes
-- `13d6045` — fix: restore TextView import in ServerAuthBottomSheet
-- `36cb2a6` — fix: replace deprecated fallbackToDestructiveMigration
-- `689796e` — fix: auth bottom sheets - drag handle, status indicator position, remove dividers
-- `bcf8cf2` — fix: replace deprecated fallbackToDestructiveMigrationOnDowngrade with dropAllTables param
+## ✅ v1.1.3.13 — ProfileService v2 client
+(Сессия 9 — завершено)
 
 ---
 
-## ✅ v1.1.3.11+ — AuthV2 integration + UI fixes
-
-### Новое: AuthV2 (JWT)
-- ✅ **SessionManager.loginV2()** — SignInV2/SignUpV2 с fallback на v1
-- ✅ **JWT token storage** — AuthManager.storeTokens(), getAccessToken(), getRefreshToken(), getBearerToken()
-- ✅ **UserSession** — accessToken, refreshToken, authMethod, isJwtAuth
-- ✅ **Logout сохраняет username** — last_username в legacy prefs
-- ✅ **Предзаполнение username** — LoginBottomSheet.prefillUsername()
-
-### Исправления UI
-- ✅ **Toolbar flickering** — единый поток загрузки, isConnecting flag
-- ✅ **Убран диалог "Предложить регистрацию"** — Toast с реальной ошибкой
-- ✅ **Cancel в login/register sheets** — закрывает шторку и возвращает к auth choice
-- ✅ **Подавлены DEPRECATION warnings** — @Suppress("DEPRECATION") на loginV1 fallback
+## ✅ v1.1.3.12 — Bearer Token Interceptor + Token Refresh
+(Сессия 8 — завершено)
 
 ---
 
-## ✅ v1.1.3.11 — Auth widgets + Server switch fix + Chat flickering fix
-
-### Новое: Auth bottom sheet widgets
-- ✅ **ServerAuthBottomSheet** — шторка выбора входа (лого + имя сервера + адрес + health индикатор + кнопки Войти/Регистрация)
-- ✅ **LoginBottomSheet** — шторка входа (username/password + prefill)
-- ✅ **RegisterBottomSheet** — шторка регистрации (username/password/email)
-
-### Исправления
-- ✅ **Двойной вход при смене сервера** — исправлен
-- ✅ **Чаты загружаются с правильного сервера** — clearAll() + ожидание READY
-- ✅ **Мерцание чатов** — isLoadingChats флаг, startSync останавливается при смене сервера
-- ✅ **Двойной тап на Войти/Регистрация** — isTransitioning флаг
-- ✅ **i18n** — server_default_name, app_version_format строки
-
----
-
-## 📋 Бэклог
+## 📋 Активные задачи
 
 ### Высокий приоритет
-- [ ] **ChatList v2** — новая версия списка чатов с улучшенным UI/UX
+- [ ] **ChatList v2 UI** — новая ChatListActivity с:
+  - Секции: Pinned / Favorites / All Chats
+  - Табы: All / AI / Groups
+  - Search bar с real-time фильтрацией
+  - Unread badges
+  - Context menu: Pin, Mute, Archive, Delete
+  - Swipe-to-refresh + infinite scroll
+  - Shared element transitions
 
 ### Средний приоритет
 - [ ] **Тесты для ProfileService v2** — unit-тесты для ProfileClient
-- [ ] **Bearer token в Chat stream** — вместо password в первом сообщении (v1.2.2.x, отложено)
+- [ ] **Тесты для ChatList v2** — unit-тесты для pinChat/searchChats/archiveChat
+- [ ] **Read receipts UI** — подключить MarkAsRead в ChatActivity
 
 ### Отложено
-- [ ] Выпуск Android v1.1.3.13 — делается ферзем лично после завершения v2
 - [ ] Qdrant + CLIP (production RAG) — см. AI_SERVICES.md
+- [ ] Выпуск Android v1.1.3.14 — делается ферзем лично после завершения v2 UI
 
 ---
 
@@ -130,20 +73,11 @@
 
 | Решение | Обоснование |
 |---------|-------------|
-| Auth widgets | 3 виджета (ServerAuth, Login, Register) — единый стиль входа |
-| Health check | HTTP /health для индикатора доступности сервера |
-| isLoadingChats | Предотвращает двойную загрузку из launcher + onResume |
-| isTransitioning | Предотвращает повторный showAuthChoiceDialog при переходе |
-| loginV2 + fallback | JWT приоритет, fallback на v1 для совместимости со старыми серверами |
-| last_username | Сохранение username для предзаполнения после logout |
-| ServersActivity | Остаётся для управления списком серверов (добавление/удаление/выбор) |
-|| BearerTokenInterceptor | Автоматическая подстановка JWT Bearer token, no-op для v1 ||
-|| Proactive refresh | Проверка каждые 60с, refresh за 5 минут до истечения ||
-|| Per-server validation | Токены привязаны к серверу, очистка при смене ||
-|| getChats timeout | withTimeoutOrNull(10с) предотвращает зависание ||
-| getChats error callback | callback(emptyList()) при onClose ошибке |
-| ProfileClient | ProfileService v2 client (JWT, dev only), fallback на v1 |
-| fetchServerInfo | Автоопределение версии сервера через /info при connect() |
+| fetchServerInfo fallback | Если /info недоступен → v1 для всех сервисов |
+| ChatStream v2 auth | JWT token в первом сообщении stream вместо password |
+| ChatList v2 API | Отдельные RPC методы (PinChat, SearchChats, etc.) |
+| v2 методы на v1 сервере | Возвращают false/empty — UI адаптируется |
+| onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 
 ---
 
@@ -151,14 +85,9 @@
 
 | Файл | Назначение |
 |------|------------|
-| `ServerAuthBottomSheet.kt` | Шторка выбора входа (лого + сервер + статус) |
-| `LoginBottomSheet.kt` | Шторка входа (prefillUsername) |
-| `RegisterBottomSheet.kt` | Шторка регистрации |
-| `AuthManager.kt` | JWT token storage |
-| `SessionManager.kt` | loginV2 + loginV1 fallback |
-| `UserSession.kt` | accessToken, refreshToken, authMethod |
-| `CredentialStore.kt` | Credentials + last_username + server list |
-| `ChatAdapter.kt` | Адаптер чатов с clearAll() |
-| `ServersActivity.kt` | Управление списком серверов (добавление/удаление/выбор) |
-| `ProfileClient.kt` | ProfileService v2 client (JWT, dev only) |
-| `BearerTokenInterceptor.kt` | ClientInterceptor для JWT Bearer token |
+| `ProfileClient.kt` | ProfileService v2 client + fetchServerInfo |
+| `BearerTokenInterceptor.kt` | JWT Bearer token interceptor (v2: Chat stream) |
+| `RealGrpcClient.kt` | gRPC реализация (JWT auth, ChatList v2 RPC) |
+| `GrpcClient.kt` | Facade (pinChat, searchChats, archiveChat, etc.) |
+| `MessengerProto.kt` | Proto data classes (ChatList v2, jwt_token, etc.) |
+| `Message.kt` | ChatInfo model (isPinned, isArchived, pinnedAt) |
