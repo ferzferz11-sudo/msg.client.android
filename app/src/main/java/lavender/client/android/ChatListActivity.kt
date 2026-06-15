@@ -1973,25 +1973,11 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun clearLocalCache() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch {
             try {
-                // 1. Clear Room database using DAOs
-                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
-                db.messageDao().clearAll()
-                db.chatDao().clearAll()
-
-                // 2. Clear Glide disk cache
-                com.bumptech.glide.Glide.get(this@ChatListActivity).clearDiskCache()
-                
-                withContext(Dispatchers.Main) {
-                    // 3. Clear Glide memory cache
-                    com.bumptech.glide.Glide.get(this@ChatListActivity).clearMemory()
-                    
-                    Toast.makeText(this@ChatListActivity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
-                    
-                    // Reload chats to refresh from server
-                    loadChats()
-                }
+                lavender.client.android.data.cache.CacheUtils.clearAllWithGlide(this@ChatListActivity)
+                Toast.makeText(this@ChatListActivity, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
+                loadChats()
             } catch (e: Exception) {
                 Log.e("Cache", "Error clearing cache", e)
             }
@@ -2802,12 +2788,6 @@ class ChatListActivity : AppCompatActivity() {
 
     /** Clear all local cache silently on successful login. */
     private fun clearAllCache() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
-                db.messageDao().clearAll()
-                db.userDao().clearAll()
-            } catch (_: Exception) {}
-        }
+        lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
     }
 }

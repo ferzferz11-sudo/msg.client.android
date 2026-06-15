@@ -17,7 +17,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -349,13 +348,7 @@ class ServersActivity : AppCompatActivity() {
 
     /** Clear all local cache silently on successful login. */
     private fun clearAllCache() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ServersActivity)
-                db.messageDao().clearAll()
-                db.userDao().clearAll()
-            } catch (_: Exception) {}
-        }
+        lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
     }
 
     private fun showAddServerDialog() {

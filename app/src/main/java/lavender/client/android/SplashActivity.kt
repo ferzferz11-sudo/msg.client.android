@@ -220,12 +220,6 @@ class SplashActivity : AppCompatActivity() {
 
     /** Clear all local cache silently on successful login. */
     private fun clearAllCache() {
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@SplashActivity)
-                db.messageDao().clearAll()
-                db.userDao().clearAll()
-            } catch (_: Exception) {}
-        }
+        lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
     }
 }
