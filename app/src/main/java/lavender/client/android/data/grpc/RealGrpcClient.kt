@@ -2591,7 +2591,7 @@ object RealGrpcClient {
     ): RespT? = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
         val channel = getChannel()
         if (channel == null) {
-            cont.resume(null)
+            cont.resume(null, onCancellation = {})
             return@suspendCancellableCoroutine
         }
         val method = io.grpc.MethodDescriptor.newBuilder<ReqT, RespT>()
@@ -2613,10 +2613,10 @@ object RealGrpcClient {
             override fun onMessage(message: RespT) { response = message }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (status.isOk) {
-                    cont.resume(response)
+                    cont.resume(response, onCancellation = {})
                 } else {
                     Log.w("RealGrpcClient", "ChatList V2 call failed: ${status.code}")
-                    cont.resume(null)
+                    cont.resume(null, onCancellation = {})
                 }
             }
         }
