@@ -8,6 +8,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.view.isVisible
@@ -148,6 +149,9 @@ class ChatListActivityV2 : AppCompatActivity() {
 
         // Setup FABs
         setupFABs()
+
+        // Register back press handler for selection mode
+        setupBackPressHandler()
 
         // Connect to server
         val serverAddress = CredentialStore.getServerAddress(this) ?: return
@@ -525,6 +529,20 @@ class ChatListActivityV2 : AppCompatActivity() {
         ).show()
     }
 
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (::chatAdapter.isInitialized && chatAdapter.isSelectionMode()) {
+                    actionMode?.finish()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
+    }
+
     private fun applyTheme() {
         val prefs = getSharedPreferences("ThemePrefs", MODE_PRIVATE)
         val isDarkMode = prefs.getBoolean("dark_mode", false)
@@ -533,13 +551,5 @@ class ChatListActivityV2 : AppCompatActivity() {
             else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         )
         ThemeApplier.apply(this, ThemeStore.currentTheme())
-    }
-
-    override fun onBackPressed() {
-        if (chatAdapter.isSelectionMode()) {
-            actionMode?.finish()
-        } else {
-            super.onBackPressed()
-        }
     }
 }
