@@ -61,11 +61,13 @@
 ## 📋 Активные задачи (Сессия 13)
 
 ### Высокий приоритет
-- [ ] **Режим выбора (selection mode)** — long press на чате = toolbar с Pin/Delete/Edit/Archive (как в Telegram). Короткий тап = вход в чат. Заменить context menu на selection mode в ChatListFragmentV2 + ChatAdapterV2
-- [ ] **TabLayout + ViewPager2** — табы All / AI / Groups с фильтрацией
-- [ ] **Переключение v1/v2 при старте** — программный выбор Activity (fetchServerInfo → isChatV2Supported)
-- [ ] **AndroidManifest.xml** — регистрация ChatListActivityV2
-- [ ] **ThemeApplier** — добавить новые FAB в список для тем
+- [x] **ChatListActivityV2** — полная реализация с навигацией, табами, FABs
+- [x] **TabLayout** — табы All / AI / Groups с фильтрацией
+- [x] **Переключение v1/v2** — SplashActivity выбирает Activity по наличию сервера
+- [x] **AndroidManifest.xml** — регистрация ChatListActivityV2
+- [x] **ThemeApplier** — v2 FAB темится автоматически
+- [ ] **Режим выбора (selection mode)** — long press на чате = ActionMode toolbar с Pin/Delete/Archive
+- [ ] **Поиск** — SearchView в toolbar + debounce 300ms
 
 ### Средний приоритет
 - [ ] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages

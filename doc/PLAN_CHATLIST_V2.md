@@ -459,16 +459,18 @@ listOf(R.id.fabAi, R.id.fabAddChat, R.id.fabSearch)
 | 5 | Поиск | ✅ ЗАВЕРШЁН (ChatAdapterV2.filter()) |
 | 6 | Swipe-to-refresh | ✅ ЗАВЕРШЁН (fragment_chat_list_v2.xml) |
 | 7 | i18n — все новые строки | ✅ ЗАВЕРШЁН (17 строк en+ru) |
-| 8 | TabLayout + ViewPager2 (табы All/AI/Groups) | 🔨 СЛЕДУЮЩИЙ |
-| 9 | **Клиент:** кнопка Pin Chat в toolbar NewChatActivity | ⬜ |
-| 10 | **Клиент:** секция Pinned в ChatListFragmentV2 | ⬜ |
-| 11 | **Сервер:** PinMessage/UnPinMessage RPC + таблица pinned_messages | ⬜ |
-| 12 | **Клиент:** pinMessage/unPinMessage в GrpcClient + RealGrpcClient | ⬜ |
-| 13 | **Клиент:** отображение закреплённого сообщения в MessageAdapter | ⬜ |
-| 14 | Переключение v1/v2 при старте | ⬜ |
-| 15 | AndroidManifest.xml — регистрация V2 | ⬜ |
-| 16 | Тестирование на dev сервере | ⬜ |
-| 17 | Коммит + пуш | ⬜ |
+|| 8 | TabLayout + ViewPager2 (табы All/AI/Groups) | ✅ ЗАВЕРШЁН (сессия 13) |
+|| 9 | **Клиент:** кнопка Pin Chat в toolbar NewChatActivity | ⬜ |
+|| 10 | **Клиент:** секция Pinned в ChatListActivityV2 | ✅ ЗАВЕРШАНО |
+|| 11 | **Сервер:** PinMessage/UnPinMessage RPC + таблица pinned_messages | ⬜ |
+|| 12 | **Клиент:** pinMessage/unPinMessage в GrpcClient + RealGrpcClient | ⬜ |
+|| 13 | **Клиент:** отображение закреплённого сообщения в MessageAdapter | ⬜ |
+|| 14 | Переключение v1/v2 при старте | ✅ ЗАВЕРШЁНО (SplashActivity) |
+|| 15 | AndroidManifest.xml — регистрация V2 | ✅ ЗАВЕРШЁНО |
+|| 16 | Selection Mode (long press = ActionMode toolbar) | ⬜ |
+|| 17 | Поиск (SearchView + debounce) | ⬜ |
+|| 18 | Тестирование на dev сервере | ⬜ |
+|| 19 | Коммит + пуш | ✅ ЗАВЕРШЁН (`bd4e22c`) |
 
 ---
 
