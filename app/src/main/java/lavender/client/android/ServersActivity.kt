@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
@@ -35,6 +36,13 @@ import lavender.client.android.ui.widget.RegisterBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import java.util.UUID
 
+/**
+ * ServersActivity — управление списком серверов.
+ *
+ * Все сервары (включая dev) доступны всем пользователям.
+ * По умолчанию предустановлены Lava Germany (prod) и Lava Germany dev.
+ * При входе через сервер — prefill последнего логина + splash перед навигацией.
+ */
 class ServersActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
@@ -70,7 +78,6 @@ class ServersActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
-        // Title is set via custom TextView in XML (toolbarTitle)
 
         // Status bar insets
         val systemBars = WindowInsetsCompat.Type.systemBars()
@@ -106,7 +113,6 @@ class ServersActivity : AppCompatActivity() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.bindingAdapterPosition
                 if (pos in servers.indices) {
-                    // Reset the item view so it doesn't disappear
                     adapter.notifyItemChanged(pos)
                     confirmDeleteServer(servers[pos])
                 }
@@ -161,7 +167,7 @@ class ServersActivity : AppCompatActivity() {
         servers.clear()
         val list = CredentialStore.getServerList(this)
         if (list.isEmpty()) {
-            // First run — seed with default servers
+            // First run — seed with default servers (all servers available to all users)
             val defaultServers = listOf(
                 CredentialStore.ServerEntry(
                     id = "default-server-1",
@@ -208,7 +214,6 @@ class ServersActivity : AppCompatActivity() {
         val wasDefault = server.isDefault
         CredentialStore.removeServer(this, server.id)
 
-        // If we deleted the default server, make the first remaining one default
         if (wasDefault) {
             val remaining = CredentialStore.getServerList(this)
             if (remaining.isNotEmpty()) {
@@ -236,6 +241,7 @@ class ServersActivity : AppCompatActivity() {
 
     private fun showServerLoginSheet(server: ServerEntry) {
         val serverAddress = "${server.host}:${server.port}"
+        val lastUsername = CredentialStore.getLastUsername(this)
 
         lateinit var loginSheet: LoginBottomSheet
 
@@ -248,13 +254,13 @@ class ServersActivity : AppCompatActivity() {
                             "SUCCESS" -> {
                                 CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
                                 CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
+                                CredentialStore.setLastUsername(this@ServersActivity, u)
                                 val userId = SessionManager.session.value.userId
                                 if (userId.isNotEmpty()) {
                                     CredentialStore.setUserId(this@ServersActivity, userId)
                                 }
                                 loginSheet.dismiss()
-                                setResult(RESULT_OK)
-                                finish()
+                                showSplashAndFinish()
                             }
                             "USER_NOT_FOUND" -> {
                                 loginSheet.setLoading(false)
@@ -278,6 +284,11 @@ class ServersActivity : AppCompatActivity() {
             }
         )
 
+        // Prefill last username
+        if (lastUsername.isNotEmpty()) {
+            loginSheet.prefillUsername(lastUsername)
+        }
+
         loginSheet.show()
     }
 
@@ -295,13 +306,13 @@ class ServersActivity : AppCompatActivity() {
                             "SUCCESS", "REGISTRATION_SUCCESS" -> {
                                 CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
                                 CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
+                                CredentialStore.setLastUsername(this@ServersActivity, u)
                                 val userId = SessionManager.session.value.userId
                                 if (userId.isNotEmpty()) {
                                     CredentialStore.setUserId(this@ServersActivity, userId)
                                 }
                                 registerSheet.dismiss()
-                                setResult(RESULT_OK)
-                                finish()
+                                showSplashAndFinish()
                             }
                             else -> {
                                 registerSheet.setLoading(false)
@@ -321,6 +332,15 @@ class ServersActivity : AppCompatActivity() {
 
         registerSheet.setTitle(getString(R.string.register_to_server, server.name))
         registerSheet.show()
+    }
+
+    private fun showSplashAndFinish() {
+        // Show splash screen before navigating to chat list (same as normal login flow)
+        val intent = Intent(this, SplashActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun showAddServerDialog() {
@@ -411,7 +431,6 @@ class ServersActivity : AppCompatActivity() {
             holder.address.text = address
             holder.defaultBadge.visibility = if (server.isDefault) View.VISIBLE else View.GONE
 
-            // Highlight if this is the currently selected server
             val isSelected = address == currentServerAddress
             if (isSelected) {
                 holder.card.strokeWidth = 2
@@ -420,13 +439,11 @@ class ServersActivity : AppCompatActivity() {
                 holder.card.strokeWidth = 0
             }
 
-            // Colors
             holder.card.setCardBackgroundColor(surfaceColor)
             holder.name.setTextColor(textPrimaryColor)
             holder.address.setTextColor(textSecondaryColor)
 
             holder.card.setOnClickListener { onSelect(server) }
-            // Hide delete button for default or protected servers
             if (server.isDefault || server.isProtected) {
                 holder.deleteBtn.visibility = View.GONE
             } else {

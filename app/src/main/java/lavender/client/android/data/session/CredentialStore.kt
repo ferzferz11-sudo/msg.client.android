@@ -84,6 +84,16 @@ object CredentialStore {
             ?: migrateIfNeeded(context)
     }
 
+    /** Get last successfully used username (for prefill in login forms). */
+    fun getLastUsername(context: Context): String {
+        return getUsername(context)
+    }
+
+    /** Save username for future prefill. */
+    fun setLastUsername(context: Context, username: String) {
+        setCredentials(context, username, getPassword(context), getServerAddress(context))
+    }
+
     fun getPassword(context: Context): String {
         return getEncryptedPrefs(context).getString(KEY_PASSWORD, null)
             ?: migrateIfNeeded(context)
