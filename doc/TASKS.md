@@ -90,15 +90,15 @@
 ## 📋 Бэклог
 
 ### Высокий приоритет
-- [ ] **Редеплой prod сервера** — после тестирования на dev
-- [ ] **UNIQUE constraint на prod БД** — вручную выполнить ALTER TABLE
+- [ ] **ChatList v2** — новая версия списка чатов с улучшенным UI/UX
+- [ ] **Выпуск Android v1.1.3.13** — готов к релизу
 
 ### Средний приоритет
-- [ ] **Bearer token в Chat stream** — вместо password в первом сообщении (v1.2.1.x)
-- [ ] **Тесты для BearerTokenInterceptor** — unit-тесты
+- [ ] **Тесты для ProfileService v2** — unit-тесты для ProfileClient
+- [ ] **Bearer token в Chat stream** — вместо password в первом сообщении (v1.2.2.x, отложено)
 
-### Низкий приоритет
-- [ ] Qdrant + CLIP (production RAG) — на стороне сервера
+### Отложено
+- [ ] Qdrant + CLIP (production RAG) — см. AI_SERVICES.md
 
 ---
 
@@ -113,11 +113,13 @@
 | loginV2 + fallback | JWT приоритет, fallback на v1 для совместимости со старыми серверами |
 | last_username | Сохранение username для предзаполнения после logout |
 | ServersActivity | Остаётся для управления списком серверов (добавление/удаление/выбор) |
-| BearerTokenInterceptor | Автоматическая подстановка JWT Bearer token, no-op для v1 |
-| Proactive refresh | Проверка каждые 60с, refresh за 5 минут до истечения |
-| Per-server validation | Токены привязаны к серверу, очистка при смене |
-| getChats timeout | withTimeoutOrNull(10с) предотвращает зависание |
+|| BearerTokenInterceptor | Автоматическая подстановка JWT Bearer token, no-op для v1 ||
+|| Proactive refresh | Проверка каждые 60с, refresh за 5 минут до истечения ||
+|| Per-server validation | Токены привязаны к серверу, очистка при смене ||
+|| getChats timeout | withTimeoutOrNull(10с) предотвращает зависание ||
 | getChats error callback | callback(emptyList()) при onClose ошибке |
+| ProfileClient | ProfileService v2 client (JWT, dev only), fallback на v1 |
+| fetchServerInfo | Автоопределение версии сервера через /info при connect() |
 
 ---
 
@@ -134,3 +136,5 @@
 | `CredentialStore.kt` | Credentials + last_username + server list |
 | `ChatAdapter.kt` | Адаптер чатов с clearAll() |
 | `ServersActivity.kt` | Управление списком серверов (добавление/удаление/выбор) |
+| `ProfileClient.kt` | ProfileService v2 client (JWT, dev only) |
+| `BearerTokenInterceptor.kt` | ClientInterceptor для JWT Bearer token |
