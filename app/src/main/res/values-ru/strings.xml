@@ -837,6 +837,12 @@
     <string name="search_chats">Поиск чатов…</string>
     <string name="search_no_results">Ничего не найдено</string>
 
+    <!-- Pin Message -->
+    <string name="pinned_message">Закреплённое сообщение</string>
+    <string name="pin_message">Закрепить</string>
+    <string name="unpin_message">Открепить</string>
+    <string name="pinned_message_format">📌 %s</string>
+
     <!-- i18n: English hardcoded strings -->
     <string name="failed_to_resize_image">Не удалось изменить размер изображения</string>
     <string name="failed_to_read_image">Не удалось прочитать изображение</string>

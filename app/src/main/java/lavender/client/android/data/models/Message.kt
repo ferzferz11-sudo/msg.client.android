@@ -26,7 +26,8 @@ data class Message(
     val userId: String = "",
     val isSent: Boolean = true, // Messages from server are always sent
     val isE2EE: Boolean = false, // E2EE-encrypted message
-    val e2eePayload: String = "" // Base64-encoded encrypted data
+    val e2eePayload: String = "", // Base64-encoded encrypted data
+    val isPinned: Boolean = false // Pin Message: message is pinned in chat
 )
 
 data class ChatInfo(

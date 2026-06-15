@@ -627,7 +627,9 @@ class NewChatActivity : AppCompatActivity() {
                 }
             },
             onSelectionChanged = { if (it > 0) showSelectionToolbar(it) else hideSelectionToolbar() },
-            onMessageLongClick = { enterSelectionMode(it) },
+            onMessageLongClick = { message ->
+                showMessageContextMenu(message)
+            },
             chatId = roomId,
             onRetrySendMessage = { retryMessage(it) }
         )
@@ -701,6 +703,8 @@ class NewChatActivity : AppCompatActivity() {
                         if (adapter.currentList.isEmpty()) {
                             viewModel.loadHistory()
                         }
+                        // Load pinned messages
+                        loadPinnedMessages()
                     }
                 }
             }
@@ -1019,6 +1023,80 @@ class NewChatActivity : AppCompatActivity() {
     private fun showReplyPreview(m: Message) { replyingTo = m; replyPreview.isVisible = true; replyUser.text = m.user; replyText.text = if (m.imageUrl.isNotEmpty()) "Photo" else m.text; messageInput.requestFocus() }
     private fun hideReplyPreview() { replyingTo = null; replyPreview.isVisible = false }
     private fun enterSelectionMode(m: Message) { val p = adapter.currentList.indexOf(m); if (p != -1) { adapter.toggleSelectionMode(true); adapter.toggleSelection(p); showSelectionToolbar(adapter.getSelectedMessages().size) } }
+
+    private fun showMessageContextMenu(message: Message) {
+        val popup = android.widget.PopupMenu(this, messagesRecyclerView)
+        popup.menuInflater.inflate(R.menu.message_context_menu, popup.menu)
+
+        // Show/hide pin/unpin based on message state
+        popup.menu.findItem(R.id.action_pin_message)?.isVisible = !message.isPinned
+        popup.menu.findItem(R.id.action_unpin_message)?.isVisible = message.isPinned
+
+        popup.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_pin_message -> {
+                    pinMessage(message)
+                    true
+                }
+                R.id.action_unpin_message -> {
+                    unpinMessage(message)
+                    true
+                }
+                R.id.action_reply -> {
+                    showReplyPreview(message)
+                    true
+                }
+                R.id.action_delete_message -> {
+                    enterSelectionMode(message)
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    private fun pinMessage(message: Message) {
+        lifecycleScope.launch {
+            try {
+                val success = GrpcClient.pinMessage(this@NewChatActivity, roomId, message.id)
+                if (success) {
+                    showToast(getString(R.string.pinned_message))
+                    // Refresh pinned messages
+                    loadPinnedMessages()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pin message", e)
+            }
+        }
+    }
+
+    private fun unpinMessage(message: Message) {
+        lifecycleScope.launch {
+            try {
+                val success = GrpcClient.unpinMessage(this@NewChatActivity, roomId, message.id)
+                if (success) {
+                    showToast(getString(R.string.unpin_message))
+                    loadPinnedMessages()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to unpin message", e)
+            }
+        }
+    }
+
+    private fun loadPinnedMessages() {
+        lifecycleScope.launch {
+            try {
+                val pinned = GrpcClient.getPinnedMessages(this@NewChatActivity, roomId)
+                // Update adapter with pinned state
+                adapter.updatePinnedMessages(pinned.map { it.id }.toSet())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load pinned messages", e)
+            }
+        }
+    }
+
     private fun copySelectedMessages() { val sm = adapter.getSelectedMessages(); val tc = sm.joinToString("\n\n") { "${it.user}: ${it.text}" }; (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("messages", tc)); showToast(getString(R.string.copied_to_clipboard)); hideSelectionToolbar() }
     private fun replyToSelectedMessage() { val sm = adapter.getSelectedMessages(); if (sm.size == 1) { showReplyPreview(sm[0]); hideSelectionToolbar() } }
 

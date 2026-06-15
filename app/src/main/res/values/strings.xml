@@ -840,6 +840,12 @@
     <string name="search_chats">Search chats…</string>
     <string name="search_no_results">No results</string>
 
+    <!-- Pin Message -->
+    <string name="pinned_message">Pinned message</string>
+    <string name="pin_message">Pin message</string>
+    <string name="unpin_message">Unpin message</string>
+    <string name="pinned_message_format">📌 %s</string>
+
     <!-- i18n: English hardcoded strings -->
     <string name="failed_to_resize_image">Failed to resize image</string>
     <string name="failed_to_read_image">Failed to read image</string>

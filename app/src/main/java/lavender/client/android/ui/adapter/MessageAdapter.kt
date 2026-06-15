@@ -45,9 +45,15 @@ class MessageAdapter(
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
     private var searchHighlight: String? = null
+    private var pinnedMessageIds = mutableSetOf<String>()
 
     fun setSearchHighlight(query: String?) {
         searchHighlight = query
+        notifyItemRangeChanged(0, itemCount)
+    }
+
+    fun updatePinnedMessages(ids: Set<String>) {
+        pinnedMessageIds = ids.toMutableSet()
         notifyItemRangeChanged(0, itemCount)
     }
 
@@ -788,6 +794,23 @@ class MessageAdapter(
                 }
             }
             
+            // Pinned message badge
+            val llPinnedBadge: LinearLayout? = itemView.findViewById(R.id.llPinnedBadge)
+            val ivPinnedIcon: ImageView? = itemView.findViewById(R.id.ivPinnedIcon)
+            val tvPinnedText: TextView? = itemView.findViewById(R.id.tvPinnedText)
+
+            if (llPinnedBadge != null && ivPinnedIcon != null && tvPinnedText != null) {
+                val isPinned = pinnedMessageIds.contains(message.id)
+                llPinnedBadge.isVisible = isPinned
+                if (isPinned) {
+                    tvPinnedText.text = message.text.ifEmpty { context.getString(R.string.pinned_message) }
+                    try {
+                        val surfaceVariant = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)
+                        llPinnedBadge.backgroundTintList = ColorStateList.valueOf(surfaceVariant)
+                    } catch (_: Exception) {}
+                }
+            }
+
             // reactionsText should also be clickable to show the dialog
             reactionsText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
         }
