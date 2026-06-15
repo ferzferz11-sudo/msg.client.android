@@ -714,8 +714,7 @@
     <!-- Remote Agent - SSH/Gateway -->
     <string name="ssh_host_empty">Введите SSH хост</string>
     <string name="gateway_connected">Шлюз подключён</string>
-    <string name="gateway_disconnected">Шлюз отключён</string>
-    <string name="connecting">Подключение...</string>
+    <string name="gateway_disconnected">Gateway disconnected</string>
 
     <!-- Remote Agent - Activity -->
 
