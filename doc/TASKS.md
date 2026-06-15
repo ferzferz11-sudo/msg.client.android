@@ -61,8 +61,12 @@
 ## 📋 Активные задачи (Сессия 14)
 
 ### Высокий приоритет
-- [ ] **Selection Mode** — long press = ActionMode toolbar (Pin/Delete/Archive), короткий тап = вход в чат
-- [ ] **Поиск** — SearchView в toolbar + debounce 300ms + серверный searchChats для v2
+- [x] **Selection Mode** — long press = ActionMode toolbar (Pin/Delete/Archive/Mute), тап = toggle selection (множественный выбор)
+- [x] **Поиск** — SearchView в toolbar + debounce 300ms + локальная фильтрация allChats
+- [ ] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages
+- [ ] **Pin Message клиент** — pinMessage/unPinMessage в GrpcClient + RealGrpcClient
+- [ ] **Pin Message UI** — отображение закреплённого сообщения в MessageAdapter
+- [ ] **Тестирование** — на dev и prod серверах
 
 ### Средний приоритет
 - [ ] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages

@@ -45,8 +45,34 @@
 - `a9d487a` — fix: add missing closing brace for SplashActivity class
 - `35e6b2b` — fix: fix ChatListFragmentV2 unresolved reference to viewModel.onChatClick
 
-## Следующие шаги (сессия 14)
-1. **Selection Mode** — long press = ActionMode toolbar (Pin/Delete/Archive), короткий тап = вход в чат
-2. **Поиск** — SearchView в toolbar + debounce 300ms + серверный searchChats для v2
-3. **Pin Message** — серверные RPC + клиент + UI
-4. **Тестирование** на dev и prod серверах
+## Сессия 14 — Selection Mode + Search (2026-06-16)
+
+### Что сделано
+
+#### Selection Mode (множественный выбор)
+- **ChatAdapterV2**: добавлен selection state (`selectedIds: MutableSet<String>`, `selectionMode: Boolean`)
+- **ChatAdapterV2**: CheckBox (`cbChatSelect`) в каждом элементе — виден только в selection mode
+- **ChatAdapterV2**: визуальная подсветка выбранных элементов (primary color с alpha=48)
+- **ChatListActivityV2**: `ActionMode.Callback` — long press запускает ActionMode, тап в selection mode = toggle selection
+- **ActionMode menu**: Pin/Unpin, Mute/Unmute, Archive/Unarchive, Delete — массовые действия над выбранными
+- **onBackPressed**: выход из selection mode вместо закрытия Activity
+
+#### Поиск
+- **SearchView** в toolbar через `toolbar.inflateMenu(R.menu.chat_list_search)`
+- **Debounce 300ms** через `kotlinx.coroutines.Job` + `delay()`
+- **Локальная фильтрация** по `allChats` (работает на v1 и v2)
+- **Collapse** восстанавливает полный список
+
+#### Layout changes
+- `item_chat.xml`: добавлен `CheckBox` (`cbChatSelect`) для выделения
+- `activity_chat_list_v2.xml`: убран `ivActionSearch` (теперь SearchView в menu)
+- `chat_list_action_mode.xml`: новое меню для ActionMode
+- `chat_list_search.xml`: новое меню для поиска
+
+### Коммиты
+- `4ddc712` — feat: Selection Mode + Search in ChatListActivityV2
+
+### Следующие шаги (сессия 15)
+1. **Pin Message** — серверные RPC + клиент + UI
+2. **Тестирование** на dev и prod серверах
+3. **FAB AI** — создание AI чата (OwlActivity/HermesChatActivity)
