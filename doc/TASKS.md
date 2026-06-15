@@ -16,7 +16,8 @@
 - ✅ **Удаление/Настройки** AI чатов
 
 ### Коммиты
-- (будет при push)
+- `58f7115` — feat: FAB AI — AIBottomSheet integration in ChatListActivityV2
+- `1d989f1` — chore: protoc regeneration + docs update
 
 ---
 
