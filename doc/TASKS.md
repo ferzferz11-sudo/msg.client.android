@@ -63,9 +63,9 @@
 ### Высокий приоритет
 - [x] **Selection Mode** — long press = ActionMode toolbar (Pin/Delete/Archive/Mute), тап = toggle selection (множественный выбор)
 - [x] **Поиск** — SearchView в toolbar + debounce 300ms + локальная фильтрация allChats
-- [ ] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages
-- [ ] **Pin Message клиент** — pinMessage/unPinMessage в GrpcClient + RealGrpcClient
-- [ ] **Pin Message UI** — отображение закреплённого сообщения в MessageAdapter
+- [x] **Pin Message** — серверные RPC PinMessage/UnPinMessage + таблица pinned_messages
+- [x] **Pin Message клиент** — pinMessage/unPinMessage в GrpcClient + RealGrpcClient
+- [x] **Pin Message UI** — context menu (long press) + pinned badge в MessageAdapter
 - [ ] **Тестирование** — на dev и prod серверах
 
 ### Средний приоритет
