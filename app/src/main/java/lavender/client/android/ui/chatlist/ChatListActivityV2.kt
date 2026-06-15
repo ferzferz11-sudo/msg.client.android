@@ -3,10 +3,13 @@ package lavender.client.android.ui.chatlist
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -14,6 +17,8 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import lavender.client.android.NewChatActivity
@@ -32,16 +37,19 @@ import lavender.client.android.ui.widget.ServerAuthBottomSheet
 /**
  * ChatListActivityV2 — Activity для v2 серверов (ChatList v2 API).
  *
- * Определяет версию сервера через fetchServerInfo() и:
- * - v2 сервер (chat >= "2.0"): показывает ChatListFragmentV2 с секциями/табами
- * - v1 сервер (chat < "2.0"): fallback на ChatListActivity (v1)
+ * Features:
+ * - Selection Mode: long press = start ActionMode, tap = toggle selection
+ * - Search: SearchView in toolbar with 300ms debounce
+ * - Tab filter: All / AI / Groups
+ * - v1 fallback: auto-redirect to ChatListActivity if server doesn't support v2
  *
- * v1 файлы (ChatListActivity.kt, ChatAdapter.kt) НЕ ИЗМЕНЯЮТСЯ.
+ * v1 files (ChatListActivity.kt, ChatAdapter.kt) НЕ ИЗМЕНЯЮТСЯ.
  */
 class ChatListActivityV2 : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ChatListActivityV2"
+        private const val SEARCH_DEBOUNCE_MS = 300L
     }
 
     private lateinit var viewModel: ChatListViewModelV2
@@ -53,8 +61,12 @@ class ChatListActivityV2 : AppCompatActivity() {
     private var tvToolbarTitle: TextView? = null
     private var tvToolbarSubtitle: TextView? = null
     private var ivToolbarUserAvatar: ImageView? = null
-    private var ivActionSearch: ImageView? = null
     private var ivActionSettings: ImageView? = null
+
+    // ActionMode
+    private var actionMode: ActionMode? = null
+    private var searchView: androidx.appcompat.widget.SearchView? = null
+    private var searchDebounceJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,7 +123,6 @@ class ChatListActivityV2 : AppCompatActivity() {
         tvToolbarTitle = findViewById(R.id.tvToolbarTitle)
         tvToolbarSubtitle = findViewById(R.id.tvToolbarSubtitle)
         ivToolbarUserAvatar = findViewById(R.id.ivToolbarUserAvatar)
-        ivActionSearch = findViewById(R.id.ivActionSearch)
         ivActionSettings = findViewById(R.id.ivActionSettings)
         tabLayout = findViewById(R.id.tabLayout)
         swipeRefresh = findViewById(R.id.srlChatList)
@@ -122,6 +133,9 @@ class ChatListActivityV2 : AppCompatActivity() {
 
         // Setup toolbar actions
         setupToolbarActions(username)
+
+        // Setup search menu in toolbar
+        setupSearchMenu()
 
         // Setup tabs
         setupTabs()
@@ -170,12 +184,6 @@ class ChatListActivityV2 : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Search click -> toggle search
-        ivActionSearch?.setOnClickListener {
-            // TODO: SearchView expansion (Phase 5)
-            Log.d(TAG, "Search clicked")
-        }
-
         // Settings click -> ServersActivity (admin)
         ivActionSettings?.setOnClickListener {
             val intent = Intent(this, ServersActivity::class.java)
@@ -210,13 +218,33 @@ class ChatListActivityV2 : AppCompatActivity() {
 
         chatAdapter = ChatAdapterV2(
             scope = lifecycleScope,
-            onChatClick = { chat -> navigateToChat(chat, username) },
+            onChatClick = { chat ->
+                if (chatAdapter.isSelectionMode()) {
+                    // In selection mode: tap toggles selection
+                    chatAdapter.toggleSelection(chat.id)
+                    updateActionModeTitle()
+                    if (chatAdapter.getSelectedIds().isEmpty()) {
+                        actionMode?.finish()
+                    }
+                } else {
+                    // Normal mode: navigate to chat
+                    navigateToChat(chat, username)
+                }
+            },
             onChatLongClick = { chat, anchorView ->
-                // TODO: Selection mode (Phase 2)
-                Log.d(TAG, "Long click on chat: ${chat.name}")
+                if (!chatAdapter.isSelectionMode()) {
+                    // Start selection mode on long press
+                    chatAdapter.setSelectionMode(true)
+                    chatAdapter.toggleSelection(chat.id)
+                    startSupportActionMode(actionModeCallback)
+                    updateActionModeTitle()
+                }
             },
             onSelectionChanged = { count ->
-                // TODO: Update toolbar selection count
+                updateActionModeTitle()
+                if (count == 0 && actionMode != null) {
+                    actionMode?.finish()
+                }
             }
         )
 
@@ -266,6 +294,164 @@ class ChatListActivityV2 : AppCompatActivity() {
             startActivity(intent)
         }
     }
+
+    // ======= ActionMode (Selection Mode) =======
+
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            actionMode = mode
+            mode.menuInflater.inflate(R.menu.chat_list_action_mode, menu)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            return false
+        }
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            val selectedChats = chatAdapter.getSelectedChats()
+            if (selectedChats.isEmpty()) return false
+
+            return when (item.itemId) {
+                R.id.action_pin -> {
+                    pinSelectedChats(selectedChats)
+                    true
+                }
+                R.id.action_mute -> {
+                    muteSelectedChats(selectedChats)
+                    true
+                }
+                R.id.action_archive -> {
+                    archiveSelectedChats(selectedChats)
+                    true
+                }
+                R.id.action_delete -> {
+                    deleteSelectedChats(selectedChats)
+                    true
+                }
+                else -> false
+            }
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            actionMode = null
+            chatAdapter.clearSelection()
+        }
+    }
+
+    private fun updateActionModeTitle() {
+        val count = chatAdapter.getSelectedIds().size
+        actionMode?.title = getString(R.string.selected_count, count)
+    }
+
+    private fun pinSelectedChats(chats: List<ChatInfo>) {
+        lifecycleScope.launch {
+            var pinned = 0
+            var unpinned = 0
+            for (chat in chats) {
+                if (chat.isPinned) {
+                    if (GrpcClient.unpinChat(this@ChatListActivityV2, chat.id)) unpinned++
+                } else {
+                    if (GrpcClient.pinChat(this@ChatListActivityV2, chat.id)) pinned++
+                }
+            }
+            if (pinned > 0 || unpinned > 0) {
+                viewModel.loadChats()
+            }
+            actionMode?.finish()
+        }
+    }
+
+    private fun muteSelectedChats(chats: List<ChatInfo>) {
+        lifecycleScope.launch {
+            for (chat in chats) {
+                viewModel.toggleMute(chat.id, !chat.isMuted)
+            }
+            actionMode?.finish()
+        }
+    }
+
+    private fun archiveSelectedChats(chats: List<ChatInfo>) {
+        lifecycleScope.launch {
+            var archived = 0
+            var unarchived = 0
+            for (chat in chats) {
+                if (chat.isArchived) {
+                    if (GrpcClient.unarchiveChat(this@ChatListActivityV2, chat.id)) unarchived++
+                } else {
+                    if (GrpcClient.archiveChat(this@ChatListActivityV2, chat.id)) archived++
+                }
+            }
+            if (archived > 0 || unarchived > 0) {
+                viewModel.loadChats()
+            }
+            actionMode?.finish()
+        }
+    }
+
+    private fun deleteSelectedChats(chats: List<ChatInfo>) {
+        lifecycleScope.launch {
+            var deleted = 0
+            for (chat in chats) {
+                viewModel.deleteChat(chat.id)
+                deleted++
+            }
+            if (deleted > 0) {
+                viewModel.loadChats()
+            }
+            actionMode?.finish()
+        }
+    }
+
+    // ======= Search =======
+
+    private fun setupSearchMenu() {
+        toolbar?.inflateMenu(R.menu.chat_list_search)
+        toolbar?.setOnMenuItemClickListener { menuItem ->
+            if (menuItem.itemId == R.id.action_search) {
+                // SearchView is handled by its own listener in onMenuItemClick
+                true
+            } else {
+                false
+            }
+        }
+
+        // Find SearchView from menu and set listener
+        val searchItem = toolbar?.menu?.findItem(R.id.action_search)
+        searchView = searchItem?.actionView as? androidx.appcompat.widget.SearchView
+        searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+            override fun onMenuItemActionExpand(item: MenuItem): Boolean {
+                return true
+            }
+            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+                viewModel.loadChats()
+                return true
+            }
+        })
+
+        searchView?.apply {
+            queryHint = getString(R.string.search_chats)
+            setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean = true
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    searchDebounceJob?.cancel()
+                    searchDebounceJob = lifecycleScope.launch {
+                        delay(SEARCH_DEBOUNCE_MS)
+                        val query = newText ?: ""
+                        if (query.isEmpty()) {
+                            viewModel.loadChats()
+                        } else {
+                            viewModel.searchChats(query)
+                        }
+                    }
+                    return true
+                }
+            })
+        }
+    }
+
+    // ======= Navigation =======
 
     private fun navigateToChat(chat: ChatInfo, username: String) {
         when (chat.type) {
@@ -347,5 +533,13 @@ class ChatListActivityV2 : AppCompatActivity() {
             else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         )
         ThemeApplier.apply(this, ThemeStore.currentTheme())
+    }
+
+    override fun onBackPressed() {
+        if (chatAdapter.isSelectionMode()) {
+            actionMode?.finish()
+        } else {
+            super.onBackPressed()
+        }
     }
 }
