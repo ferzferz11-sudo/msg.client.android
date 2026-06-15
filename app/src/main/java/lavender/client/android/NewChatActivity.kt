@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
@@ -101,6 +102,10 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private lateinit var viewModel: ChatViewModel
+
+    companion object {
+        private const val TAG = "NewChatActivity"
+    }
     private val grpcClient = GrpcClient
     private var username = ""
     private var password = ""
@@ -1046,7 +1051,7 @@ class NewChatActivity : AppCompatActivity() {
             }
             runOnUiThread {
                 if (successCount > 0) {
-                    showToast(getString(if (sm.size == 1 && pinnedMessageIds.contains(sm[0].id)) R.string.unpinned_message else R.string.pinned_message))
+                    showToast(getString(if (sm.size == 1 && pinnedMessageIds.contains(sm[0].id)) R.string.unpin_message else R.string.pinned_message))
                     loadPinnedMessages()
                 }
                 if (failCount > 0) {
