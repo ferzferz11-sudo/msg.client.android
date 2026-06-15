@@ -221,7 +221,11 @@ data class ChatInfoProto(
     val peerPublicKey: String = "",
     val e2eeReady: Boolean = false,
     val activeAgentId: String = "",   // For hermes sessions: current active agent
-    val agentMode: String = ""        // For hermes sessions: single/parallel/pipeline
+    val agentMode: String = "",       // For hermes sessions: single/parallel/pipeline
+    val isPinned: Boolean = false,    // ChatList v2: pinned status
+    val isMuted: Boolean = false,     // ChatList v2: muted status
+    val isArchived: Boolean = false,  // ChatList v2: archived status
+    val pinnedAt: Long = 0L           // ChatList v2: timestamp when pinned (for sort order)
 )
 
 // Mark Read Request/Response
@@ -250,7 +254,10 @@ data class DeleteChatResponseProto(
 // Get Chats Request/Response
 data class GetChatsRequestProto(
     val username: String = "",
-    val userId: String = ""
+    val userId: String = "",
+    val limit: Int = 0,
+    val offset: Int = 0,
+    val filter: String = ""
 )
 
 data class GetChatsResponseProto(
@@ -1690,4 +1697,57 @@ data class UpdateUserSettingsRequestProto(
 data class UpdateUserSettingsResponseProto(
     val success: Boolean = false,
     val message: String = ""
+)
+
+// ======= ChatList v2: PinChat / UnPinChat =======
+
+data class PinChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class PinChatResponseProto(
+    val success: Boolean = false
+)
+
+data class UnPinChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class UnPinChatResponseProto(
+    val success: Boolean = false
+)
+
+// ======= ChatList v2: SearchChats =======
+
+data class SearchChatsRequestProto(
+    val userId: String = "",
+    val query: String = "",
+    val limit: Int = 20,
+    val offset: Int = 0
+)
+
+data class SearchChatsResponseProto(
+    val chats: List<ChatInfoProto> = emptyList()
+)
+
+// ======= ChatList v2: ArchiveChat / UnarchiveChat =======
+
+data class ArchiveChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class ArchiveChatResponseProto(
+    val success: Boolean = false
+)
+
+data class UnarchiveChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class UnarchiveChatResponseProto(
+    val success: Boolean = false
 )

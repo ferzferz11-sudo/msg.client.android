@@ -29,12 +29,34 @@ object ProfileClient {
     var serviceProfileVersion: String = ""
         internal set
 
+    /** Cached ChatService version string from /info endpoint. */
+    @Volatile
+    var serviceChatVersion: String = ""
+        internal set
+
+    /** Cached AuthService version string from /info endpoint. */
+    @Volatile
+    var serviceAuthVersion: String = ""
+        internal set
+
+    /** Cached AIService version string from /info endpoint. */
+    @Volatile
+    var serviceAIVersion: String = ""
+        internal set
+
     /** Check if the server supports ProfileService v2. */
     fun isProfileV2Supported(): Boolean = serviceProfileVersion >= "2.0"
+
+    /** Check if the server supports ChatService v2 (JWT in Chat stream, Pin/Search/Archive). */
+    fun isChatV2Supported(): Boolean = serviceChatVersion >= "2.0"
+
+    /** Check if the server supports AuthService v2 (JWT). */
+    fun isAuthV2Supported(): Boolean = serviceAuthVersion >= "2.0"
 
     /**
      * Fetch the /info endpoint to determine service versions.
      * Called automatically from RealGrpcClient.connect().
+     * If /info is unavailable, all versions stay empty → v1 fallback for everything.
      */
     suspend fun fetchServerInfo(context: Context, serverAddress: String, port: Int = 8083) {
         withContext(Dispatchers.IO) {
@@ -50,12 +72,19 @@ object ProfileClient {
                 val json = org.json.JSONObject(response)
                 val services = json.optJSONObject("services")
                 if (services != null) {
-                    serviceProfileVersion = services.optString("profile", "1.0")
-                    Log.d(TAG, "Server profile version: $serviceProfileVersion")
+                    serviceProfileVersion = services.optString("profile", "")
+                    serviceChatVersion = services.optString("chat", "")
+                    serviceAuthVersion = services.optString("auth", "")
+                    serviceAIVersion = services.optString("ai", "")
+                    Log.d(TAG, "Server versions: profile=$serviceProfileVersion chat=$serviceChatVersion auth=$serviceAuthVersion ai=$serviceAIVersion")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch /info: ${e.message}")
+                Log.w(TAG, "Failed to fetch /info: ${e.message} — using v1 fallback for all services")
+                // All versions stay empty → v1 fallback everywhere
                 serviceProfileVersion = ""
+                serviceChatVersion = ""
+                serviceAuthVersion = ""
+                serviceAIVersion = ""
             }
         }
     }

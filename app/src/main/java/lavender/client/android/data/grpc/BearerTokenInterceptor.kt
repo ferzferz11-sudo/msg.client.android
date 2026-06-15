@@ -8,20 +8,20 @@ import io.grpc.ClientCall
 import io.grpc.ClientInterceptor
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
-import io.grpc.Status
 import lavender.client.android.data.auth.AuthManager
 
 /**
- * ClientInterceptor that automatically attaches a JWT Bearer token to all gRPC calls.
+ * ClientInterceptor that automatically attaches a JWT Bearer token to gRPC calls.
  *
  * Rules:
  * - Skips AuthService calls (SignIn, SignUp, Refresh — no token yet)
+ * - Skips Chat stream for v1 servers (chat < "2.0" or /info unavailable)
+ * - For v2 servers (chat >= "2.0"), attaches Bearer token to Chat stream
  * - Skips calls when no JWT token is available (legacy v1 auth)
- * - Only attaches Bearer token when AuthManager has a valid JWT
  *
- * This ensures backward compatibility with v1 servers (prod):
- * - If server doesn't support JWT, client uses legacy flow → no token → interceptor is a no-op
- * - If server supports JWT (dev), client stores tokens → interceptor attaches them
+ * Backward compatibility:
+ * - v1 server: no token → interceptor is a no-op for all calls
+ * - v2 server: token available → attaches to all calls including Chat stream
  */
 class BearerTokenInterceptor(
     private val context: Context
@@ -44,10 +44,14 @@ class BearerTokenInterceptor(
             return next.newCall(method, callOptions)
         }
 
-        // Skip Chat stream — legacy auth uses password in first message
-        // Server's AuthStreamInterceptor also skips ChatService/Chat
+        // For Chat stream: only skip if server doesn't support v2
+        // v2 servers (chat >= "2.0") use JWT token in first message, so we attach it
         if (method.fullMethodName == "/messenger.ChatService/Chat") {
-            return next.newCall(method, callOptions)
+            if (!ProfileClient.isChatV2Supported()) {
+                // v1 server — skip interceptor, use password auth in first message
+                return next.newCall(method, callOptions)
+            }
+            // v2 server — continue to attach token below
         }
 
         // Only attach token if we have one (JWT v2 auth)

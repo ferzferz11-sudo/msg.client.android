@@ -313,6 +313,46 @@ object GrpcClient {
         realGrpcClient.updateProfile(username, bio, status, callback)
     }
 
+    // ======= ChatService V2 (dev server) =======
+
+    /** Check if server supports ChatService v2 (chat >= "2.0" in /info). */
+    val isChatV2Supported: Boolean
+        get() = ProfileClient.isChatV2Supported()
+
+    /** Cached ChatService version from /info endpoint. */
+    val chatServiceVersion: String
+        get() = ProfileClient.serviceChatVersion
+
+    /** Pin a chat (ChatList v2). Returns false on v1 servers. */
+    suspend fun pinChat(context: android.content.Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.pinChat(chatId)
+    }
+
+    /** Unpin a chat (ChatList v2). Returns false on v1 servers. */
+    suspend fun unpinChat(context: android.content.Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.unpinChat(chatId)
+    }
+
+    /** Search chats by query (ChatList v2). Returns empty list on v1 servers. */
+    suspend fun searchChats(context: android.content.Context, query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> {
+        if (!ProfileClient.isChatV2Supported()) return emptyList()
+        return realGrpcClient.searchChats(query, limit, offset)
+    }
+
+    /** Archive a chat (ChatList v2). Returns false on v1 servers. */
+    suspend fun archiveChat(context: android.content.Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.archiveChat(chatId)
+    }
+
+    /** Unarchive a chat (ChatList v2). Returns false on v1 servers. */
+    suspend fun unarchiveChat(context: android.content.Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.unarchiveChat(chatId)
+    }
+
     // ======= ProfileService V2 (dev server) =======
 
     /** Check if server supports ProfileService v2 (profile >= "2.0" in /info). */

@@ -475,21 +475,38 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         
         requestObserver = call.startChatStream(onMessageReceived)
-        
-        val firstMessage = MessageProto.newBuilder()
+
+        // Build first message: v2 uses jwt_token, v1 uses password
+        val firstMessageBuilder = MessageProto.newBuilder()
             .setUser(username)
-            .setPassword(password)
             .setText(joinMessage)
-            .setRoomId(currentRoomId) // Set current room on start
+            .setRoomId(currentRoomId)
             .setCreatedAt(ProtoUtils.getCurrentTimestamp())
             .setClientVersion(BuildConfig.VERSION_NAME)
             .setRegister(register)
             .setDeviceId(deviceId)
             .setDeviceName(deviceName)
-            .build()
-        
+
+        if (ProfileClient.isChatV2Supported()) {
+            // ChatStream v2: use JWT token for auth
+            val bearerToken = AuthManager.getBearerToken(appContext ?: return)
+            if (bearerToken != null) {
+                firstMessageBuilder.setJwtToken(bearerToken)
+                Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
+            } else {
+                // No JWT token — fallback to password auth even on v2 server
+                firstMessageBuilder.setPassword(password)
+                Log.d(TAG, "ChatStream v2: no JWT token, falling back to password auth for $username")
+            }
+        } else {
+            // ChatStream v1: use password auth
+            firstMessageBuilder.setPassword(password)
+        }
+
+        val firstMessage = firstMessageBuilder.build()
+
         _authStatus.value = null // Reset auth status on new stream
-        
+
         requestObserver?.onNext(firstMessage)
         
         // Only resend pending data AFTER sending authentication signal
@@ -2493,6 +2510,122 @@ object RealGrpcClient {
         if (fa.isNotEmpty()) fullAvatarCache[u] = fa
         avatarCacheFlow.value = avatarCache.toMap()
     }
+
+    // ======= ChatList v2: PinChat / UnPinChat =======
+
+    suspend fun pinChat(chatId: String): Boolean {
+        val userId = currentUserId ?: return false
+        return unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/PinChat",
+            request = PinChatRequestProto(userId = userId, chatId = chatId),
+            responseType = PinChatResponseProto::class.java
+        )?.success ?: false
+    }
+
+    suspend fun unpinChat(chatId: String): Boolean {
+        val userId = currentUserId ?: return false
+        return unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/UnPinChat",
+            request = UnPinChatRequestProto(userId = userId, chatId = chatId),
+            responseType = UnPinChatResponseProto::class.java
+        )?.success ?: false
+    }
+
+    suspend fun searchChats(query: String, limit: Int, offset: Int): List<ChatInfo> {
+        val userId = currentUserId ?: return emptyList()
+        val response = unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/SearchChats",
+            request = SearchChatsRequestProto(userId = userId, query = query, limit = limit, offset = offset),
+            responseType = SearchChatsResponseProto::class.java
+        )
+        return response?.chatsList?.map { proto ->
+            ChatInfo(
+                id = proto.id,
+                name = proto.name,
+                type = proto.type,
+                participants = proto.participants,
+                createdAt = proto.createdAt,
+                unreadCount = proto.unreadCount,
+                lastMessageTime = proto.lastMessageTime,
+                creator = proto.creator,
+                lastMessageText = proto.lastMessageText,
+                avatarUrl = proto.avatarUrl,
+                fullAvatarUrl = proto.fullAvatarUrl,
+                lastMessageUsername = proto.lastMessageUsername,
+                lastMessageHasImage = proto.lastMessageHasImage,
+                allowMembersToAdd = proto.allowMembersToAdd,
+                isPinned = proto.isPinned,
+                isMuted = proto.isMuted,
+                isArchived = proto.isArchived,
+                pinnedAt = proto.pinnedAt
+            )
+        } ?: emptyList()
+    }
+
+    suspend fun archiveChat(chatId: String): Boolean {
+        val userId = currentUserId ?: return false
+        return unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/ArchiveChat",
+            request = ArchiveChatRequestProto(userId = userId, chatId = chatId),
+            responseType = ArchiveChatResponseProto::class.java
+        )?.success ?: false
+    }
+
+    suspend fun unarchiveChat(chatId: String): Boolean {
+        val userId = currentUserId ?: return false
+        return unaryCallChatListV2(
+            fullMethod = "messenger.ChatService/UnarchiveChat",
+            request = UnarchiveChatRequestProto(userId = userId, chatId = chatId),
+            responseType = UnarchiveChatResponseProto::class.java
+        )?.success ?: false
+    }
+
+    // ======= ChatList v2: Low-level unary call helper =======
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun <ReqT, RespT> unaryCallChatListV2(
+        fullMethod: String,
+        request: ReqT,
+        responseType: Class<RespT>
+    ): RespT? = suspendCancellableCoroutine { cont ->
+        val channel = getChannel()
+        if (channel == null) {
+            cont.resume(null)
+            return@suspendCancellableCoroutine
+        }
+
+        val method = MethodDescriptor.newBuilder<ReqT, RespT>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName(fullMethod)
+            .setRequestMarshaller(object : MethodDescriptor.Marshaller<ReqT> {
+                override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+                override fun parse(stream: java.io.InputStream): ReqT = request
+            })
+            .setResponseMarshaller(object : MethodDescriptor.Marshaller<RespT> {
+                override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+                @Suppress("DEPRECATION")
+                override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
+            })
+            .build()
+
+        val call = channel.newCall(method, io.grpc.CallOptions.DEFAULT)
+        call.start(object : io.grpc.ClientCall.Listener<RespT>() {
+            private var response: RespT? = null
+            override fun onMessage(message: RespT) { response = message }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (status.isOk) {
+                    cont.resume(response)
+                } else {
+                    Log.w("RealGrpcClient", "ChatList V2 call failed [$fullMethod]: ${status.code} ${status.description}")
+                    cont.resume(null)
+                }
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+    }
 }
 
 // MARSHALLERS
@@ -2544,6 +2677,9 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
         if (value.deviceId.isNotEmpty()) cos.writeString(21, value.deviceId)
         if (value.deviceName.isNotEmpty()) cos.writeString(22, value.deviceName)
         if (value.userId.isNotEmpty()) cos.writeString(23, value.userId)
+        if (value.isE2Ee) cos.writeBool(24, value.isE2Ee)
+        if (value.e2EePayload.isNotEmpty()) cos.writeString(25, value.e2EePayload)
+        if (value.jwtToken.isNotEmpty()) cos.writeString(26, value.jwtToken)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(stream: java.io.InputStream): MessageProto {
@@ -2579,6 +2715,9 @@ class MessageProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<MessageProto>
                 21 -> builder.setDeviceId(cis.readString())
                 22 -> builder.setDeviceName(cis.readString())
                 23 -> builder.setUserId(cis.readString())
+                24 -> builder.setIsE2Ee(cis.readBool())
+                25 -> builder.setE2EePayload(cis.readString())
+                26 -> builder.setJwtToken(cis.readString())
                 else -> cis.skipField(tag)
             }
         }

@@ -50,7 +50,10 @@ data class ChatInfo(
     val peerPublicKey: String = "",     // Base64 peer public key
     val e2eeReady: Boolean = false,     // Both keys exchanged
     val activeAgentId: String = "",     // For hermes sessions: current active agent
-    val agentMode: String = ""          // For hermes sessions: single/parallel/pipeline
+    val agentMode: String = "",         // For hermes sessions: single/parallel/pipeline
+    val isPinned: Boolean = false,      // ChatList v2: pinned status
+    val isArchived: Boolean = false,    // ChatList v2: archived status
+    val pinnedAt: Long = 0L             // ChatList v2: timestamp when pinned (for sort order)
 ) {
     fun getDisplayName(currentUsername: String): String {
         if (type != "direct") return name
