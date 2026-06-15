@@ -2501,6 +2501,9 @@ class ChatListActivity : AppCompatActivity() {
             onLogin = { u: String, p: String ->
                 val serverAddress = CredentialStore.getServerAddress(this).ifEmpty { "13.140.25.249:50051" }
 
+                // Clear local cache silently on successful login
+                clearAllCache()
+
                 // Show splash overlay during login
                 try {
                     startActivity(Intent(this, SplashLoadingActivity::class.java))
@@ -2795,5 +2798,16 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
         authSheet.show()
+    }
+
+    /** Clear all local cache silently on successful login. */
+    private fun clearAllCache() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ChatListActivity)
+                db.messageDao().clearAll()
+                db.userDao().clearAll()
+            } catch (_: Exception) {}
+        }
     }
 }

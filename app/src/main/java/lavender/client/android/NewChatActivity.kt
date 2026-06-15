@@ -1139,6 +1139,17 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun starSelectedMessages() { val sm = adapter.getSelectedMessages(); val uid = grpcClient.getUserId() ?: ""; if (uid.isEmpty()) { showToast("User ID not loaded. Please wait."); return }; var c = 0; sm.forEach { m -> grpcClient.addFavorite(uid, m.id) { _, _ -> c++; if (c == sm.size) runOnUiThread { showToast(getString(R.string.added_to_favorites)); hideSelectionToolbar() } } } }
     private fun clearCacheForCurrentRoom() { lifecycleScope.launch(Dispatchers.IO) { try { lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity).messageDao().clearRoom(roomId) } catch (_: Exception) {} } }
+
+    /** Clear all local cache (messages, users, etc.) — called on successful login. */
+    private fun clearAllCache() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                db.messageDao().clearAll()
+                db.userDao().clearAll()
+            } catch (_: Exception) {}
+        }
+    }
     private var typingJob: Job? = null
 
     private fun sendMessage(text: String, imageUrl: String) {

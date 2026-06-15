@@ -17,6 +17,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -335,12 +337,25 @@ class ServersActivity : AppCompatActivity() {
     }
 
     private fun showSplashAndFinish() {
+        // Clear local cache silently on successful login
+        clearAllCache()
         // Show splash screen before navigating to chat list (same as normal login flow)
         val intent = Intent(this, SplashActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         startActivity(intent)
         finish()
+    }
+
+    /** Clear all local cache silently on successful login. */
+    private fun clearAllCache() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@ServersActivity)
+                db.messageDao().clearAll()
+                db.userDao().clearAll()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun showAddServerDialog() {

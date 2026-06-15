@@ -155,6 +155,11 @@ class SplashActivity : AppCompatActivity() {
         val serverAddress = prefs.getString("server_address", "") ?: ""
         val host = serverAddress.split(":").getOrNull(0) ?: ""
 
+        // Clear local cache on successful login (silent, no toast)
+        if (shouldProceed) {
+            clearAllCache()
+        }
+
         val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {
@@ -210,6 +215,17 @@ class SplashActivity : AppCompatActivity() {
         }.let {
             startActivity(it)
             finish()
+        }
+    }
+
+    /** Clear all local cache silently on successful login. */
+    private fun clearAllCache() {
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@SplashActivity)
+                db.messageDao().clearAll()
+                db.userDao().clearAll()
+            } catch (_: Exception) {}
         }
     }
 }
