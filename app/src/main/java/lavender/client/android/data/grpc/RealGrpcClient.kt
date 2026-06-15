@@ -21,6 +21,8 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resumeWith
+import kotlin.Result
 
 enum class ConnectionStatus {
     DISCONNECTED,
@@ -2587,10 +2589,10 @@ object RealGrpcClient {
         fullMethod: String,
         request: ReqT,
         responseType: Class<RespT>
-    ): RespT? = suspendCancellableCoroutine(onCancellation = { }) { cont ->
+    ): RespT? = suspendCancellableCoroutine { cont ->
         val channel = getChannel()
         if (channel == null) {
-            cont.resume(null)
+            cont.resumeWith(Result.success(null))
             return@suspendCancellableCoroutine
         }
 
@@ -2614,10 +2616,10 @@ object RealGrpcClient {
             override fun onMessage(message: RespT) { response = message }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (status.isOk) {
-                    cont.resume(response)
+                    cont.resumeWith(Result.success(response))
                 } else {
                     Log.w("RealGrpcClient", "ChatList V2 call failed [$fullMethod]: ${status.code} ${status.description}")
-                    cont.resume(null)
+                    cont.resumeWith(Result.success(null))
                 }
             }
         }, io.grpc.Metadata())
