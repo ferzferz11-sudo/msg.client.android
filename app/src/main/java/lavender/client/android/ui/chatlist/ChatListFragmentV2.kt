@@ -8,12 +8,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.databinding.FragmentChatListV2Binding
 
@@ -54,15 +52,13 @@ class ChatListFragmentV2 : Fragment() {
         chatAdapter = ChatAdapterV2(
             scope = viewLifecycleOwner.lifecycleScope,
             onChatClick = { chat ->
-                // Navigate to chat activity (reuse v1 logic)
                 viewModel.onChatClick(chat)
             },
-            onChatLongClick = { chat, view ->
-                // Show context menu
-                showChatContextMenu(chat, view)
+            onChatLongClick = { chat, anchorView ->
+                showChatContextMenu(chat, anchorView)
             },
             onSelectionChanged = { count ->
-                // Update toolbar
+                // Update toolbar if needed
             }
         )
 
@@ -94,15 +90,14 @@ class ChatListFragmentV2 : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.connectionStatus.collectLatest { status ->
-                // Update subtitle
+                // Update subtitle if needed
             }
         }
     }
 
     private fun showChatContextMenu(chat: ChatInfo, anchorView: View) {
-        // Context menu: Pin/Unpin, Mute/Unmute, Archive/Unarchive, Delete
         val popup = android.widget.PopupMenu(requireContext(), anchorView)
-        popup.menuInflater.inflate(R.menu.chat_context_menu, popup.menu)
+        popup.menuInflater.inflate(R.menu.chat_list_context_menu_v2, popup.menu)
 
         // Update menu item titles based on current state
         popup.menu.findItem(R.id.action_pin)?.title = if (chat.isPinned) {
@@ -115,15 +110,9 @@ class ChatListFragmentV2 : Fragment() {
         } else {
             getString(R.string.action_mute)
         }
-        popup.menu.findItem(R.id.action_archive)?.title = if (chat.isArchived) {
-            getString(R.string.action_unarchive)
-        } else {
-            getString(R.string.action_archive)
-        }
 
-        // Hide archive for favorites
-        popup.menu.findItem(R.id.action_archive)?.isVisible = chat.type != "favorites"
-        popup.menu.findItem(R.id.action_unarchive)?.isVisible = false
+        // Hide pin for favorites
+        popup.menu.findItem(R.id.action_pin)?.isVisible = chat.type != "favorites"
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -134,10 +123,6 @@ class ChatListFragmentV2 : Fragment() {
                 }
                 R.id.action_mute -> {
                     viewModel.toggleMute(chat.id, !chat.isMuted)
-                    true
-                }
-                R.id.action_archive -> {
-                    viewModel.archiveChat(chat.id)
                     true
                 }
                 R.id.action_delete -> {

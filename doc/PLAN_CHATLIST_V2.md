@@ -67,19 +67,21 @@ app/src/main/java/lavender/client/android/
 
 ```
 Список чатов (ChatListV2):
-├── Секция "Pinned" (вверху, как в Telegram)
-│   └── Закреплённые чаты (PinChat RPC — уже есть на сервере)
+├── Секция "Pinned" (вверху, как в Telegram) — ⚠️ ПОКА НЕ РЕАЛИЗОВАНО
+│   └── Pin чата через context menu списка (long press) — НЕ в toolbar
 ├── Секция "Favorites" (Личное хранилище)
 ├── Секция "All Chats" (остальные)
 └── Табы: All / AI / Groups
 
 Внутри чата (NewChatActivity):
-├── Кнопка Pin в toolbar — pin текущего чата в секцию Pinned
-└── Pin Message в меню сообщения — pin конкретного сообщения
+├── Pin чата — в overflow menu "..." (три точки) — НЕ в toolbar
+│   └── Как в новых версиях Telegram — НЕ в toolbar
+└── Pin Message — в context menu сообщения (long press on message)
+    └── ⚠️ ПОКА НЕ РЕАЛИЗОВАНО (нужны новые серверные RPC)
 
 Сервер:
 ├── PinChat/UnPinChat — уже есть ✅
-└── PinMessage/UnPinMessage — нужно добавить (новые RPC + таблица)
+└── PinMessage/UnPinMessage — нужно добавить (новые RPC + таблица) ⚠️
 ```
 
 ---
