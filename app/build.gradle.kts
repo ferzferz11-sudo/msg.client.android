@@ -69,6 +69,7 @@ android {
         viewBinding = true
         buildConfig = true
         resValues = true
+        dataBinding = false
     }
 }
 
