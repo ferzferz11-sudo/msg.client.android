@@ -2583,7 +2583,7 @@ object RealGrpcClient {
 
     // ======= ChatList v2: Low-level unary call helper =======
 
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("DEPRECATION", "UNCHECKED_CAST")
     private suspend fun <ReqT, RespT> unaryCallChatListV2(
         fullMethod: String,
         request: ReqT,

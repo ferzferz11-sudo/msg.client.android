@@ -1,5 +1,32 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.14] - 2026-06-16
+
+### Новое: ChatStream v2 (JWT auth в Chat stream)
+- **BearerTokenInterceptor** — теперь прикрепляет JWT token к Chat stream на v2 серверах
+- **RealGrpcClient.startChat()** — использует JWT token для v2, password для v1
+- **ProfileClient.fetchServerInfo()** — парсит все версии сервисов (chat/auth/profile/ai)
+- Добавлены `isChatV2Supported()`, `isAuthV2Supported()` helpers
+- Backward compatible: v1 серверы работают без изменений
+
+### Новое: ChatList v2
+- **ProfileClient.fetchServerInfo()** — проверка `chat >= "2.0"` для ChatList v2 API
+- **GrpcClient** — добавлены `pinChat()`, `unpinChat()`, `searchChats()`, `archiveChat()`, `unarchiveChat()`
+- **RealGrpcClient** — низкоуровневый `unaryCallChatListV2()` для новых RPC методов
+- **ChatInfo** — добавлены `isPinned`, `isArchived`, `pinnedAt` поля
+- Все v2 методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии
+
+### Proto updates
+- **MessengerProto.kt** — добавлены ChatList v2 proto classes (PinChatRequestProto, SearchChatsResponseProto, etc.)
+- **MessageProto** — добавлены `jwtToken`, `isE2Ee`, `e2EePayload` + Builder методы
+- **GetChatsRequestProto** — добавлены `limit`, `offset`, `filter` для пагинации
+
+### Исправлено
+- MessageProtoMarshaller — сериализация/deserialization jwt_token (field 26), isE2Ee, e2EePayload
+- Обратная совместимость: v1 клиенты работают с новым сервером без изменений
+
+---
+
 ## [1.1.3.13] - 2026-06-14
 
 ### Новое: ProfileService v2 client

@@ -1,7 +1,7 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.13
-**Обновлено:** 2026-06-15
+**Версия:** v1.1.3.14
+**Обновлено:** 2026-06-16
 
 ---
 
@@ -249,3 +249,65 @@ cd /root/msg.client.android
 2. Добавить в `values-ru/strings.xml` (русский)
 3. Проверить что нет дубликатов (поиск по имени в обоих файлах)
 4. Использовать `getString(R.string.xxx)` с правильным контекстом
+
+---
+
+## Kotlin 2.3.21 / Coroutines 1.11 patterns (v1.1.3.14)
+
+### fetchServerInfo pattern
+Всегда используй `ProfileClient.fetchServerInfo()` для определения версии сервера:
+```kotlin
+// При connect() автоматически вызывается fetchServerInfo()
+// Результат кэшируется в ProfileClient.serviceXxxVersion
+
+// Проверка перед использованием v2 API:
+if (ProfileClient.isChatV2Supported()) {
+    // Используем PinChat, SearchChats, JWT auth в Chat stream
+} else {
+    // Fallback на v1
+}
+```
+**Правило:** если /info недоступен или версия < "2.0" — работаем по v1 для ВСЕХ сущностей.
+
+### CancellableContinuation.resume() pattern (Kotlin 2.3.21)
+В Kotlin 2.3.21 / coroutines 1.11 `CancellableContinuation.resume()` имеет параметр `onCancellation`:
+```kotlin
+// Правильно:
+cont.resume(value, onCancellation = {})
+cont.resume(null, onCancellation = {})
+
+// Неправильно (deprecated warning):
+cont.resume(value)
+cont.resume(null)
+```
+**Правило:** всегда передавай `onCancellation = {}` при вызове `cont.resume()` внутри `suspendCancellableCoroutine`.
+
+### ChatStream v2 auth pattern
+```kotlin
+// В startChat():
+if (ProfileClient.isChatV2Supported()) {
+    val token = AuthManager.getBearerToken(context)
+    if (token != null) {
+        builder.setJwtToken(token)  // v2: JWT auth
+    } else {
+        builder.setPassword(password) // fallback на v1
+    }
+} else {
+    builder.setPassword(password)  // v1: password auth
+}
+```
+
+### ChatList v2 pattern
+```kotlin
+// Pin/Unpin:
+GrpcClient.pinChat(context, chatId)
+GrpcClient.unpinChat(context, chatId)
+
+// Search:
+val results = GrpcClient.searchChats(context, "query", limit = 20)
+
+// Archive:
+GrpcClient.archiveChat(context, chatId)
+GrpcClient.unarchiveChat(context, chatId)
+```
+**Правило:** все v2 методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии.
