@@ -55,7 +55,16 @@
 - [ ] AndroidManifest.xml — регистрация ChatListActivityV2
 - [ ] Тестирование на dev сервере
 
-### ЭТАП 3: Дополнительные фичи (после основного)
+### ЭТАП 3: Pin Message (сервер + клиент)
+- [ ] **Сервер:** новые RPC PinMessage/UnPinMessage в messenger.proto
+- [ ] **Сервер:** таблица pinned_messages (chat_id, message_id, pinned_at, pinned_by)
+- [ ] **Сервер:** реализация PinMessage/UnPinMessage в server_pinned_messages.go
+- [ ] **Клиент:** pinMessage/unPinMessage в GrpcClient.kt + RealGrpcClient.kt
+- [ ] **Клиент:** кнопка Pin в toolbar NewChatActivity
+- [ ] **Клиент:** отображение закреплённого сообщения в MessageAdapter
+- [ ] **Клиент:** proto классы для PinMessageRequest/Response
+
+### ЭТАП 4: Дополнительные фичи (после основного)
 - [ ] Shared element transitions
 - [ ] ThemeApplier обновление для новых FAB
 - [ ] Infinite scroll + pagination
@@ -73,6 +82,8 @@
 | v2 методы на v1 сервере | Возвращают false/empty — UI адаптируется |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 | v1/v2 разделение | Новые файлы в ui/chatlist/, v1 без изменений |
+| Pin Message | Отдельная таблица pinned_messages, НЕ PinChat (чат) |
+| Favorites = Archive | Существующий чат "Личное хранилище" заменяет Archive |
 
 ---
 
