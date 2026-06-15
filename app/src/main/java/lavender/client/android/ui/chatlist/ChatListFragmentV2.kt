@@ -1,6 +1,7 @@
 package lavender.client.android.ui.chatlist
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -52,7 +53,8 @@ class ChatListFragmentV2 : Fragment() {
         chatAdapter = ChatAdapterV2(
             scope = viewLifecycleOwner.lifecycleScope,
             onChatClick = { chat ->
-                viewModel.onChatClick(chat)
+                // Navigation delegated to host activity
+                Log.d("ChatListFragmentV2", "Chat clicked: ${chat.name}")
             },
             onChatLongClick = { chat, anchorView ->
                 showChatContextMenu(chat, anchorView)

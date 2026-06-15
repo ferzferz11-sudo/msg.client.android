@@ -204,6 +204,10 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
         buildSections(allChats)
     }
 
+    fun onChatClick(chat: ChatInfo) {
+        Log.d(TAG, "Chat clicked: ${chat.name} (${chat.id})")
+    }
+
     private fun buildSections(chats: List<ChatInfo>) {
         val tab = _tabFilter.value
 
