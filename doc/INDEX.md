@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.11+
+**Версия:** v1.1.3.13
 **Обновлено:** 2026-06-14
 **Ветка:** feat/1.1.3.x
 
@@ -12,7 +12,8 @@
 2. **TASKS.md** — таск-трекер (бэклог + сделано)
 3. **PATTERNS.md** — паттерны и анти-patterns разработки
 4. **REMOTE_AGENT.md** — документация Remote Agent (архитектура, протокол, streaming)
-5. **CHANGELOG.md** — история изменений
+5. **SESSION_NOTES.md** — заметки последней сессии
+6. **CHANGELOG.md** — история изменений
 
 ---
 
@@ -67,10 +68,12 @@ app/src/main/java/lavender/client/android/
 │   ├── chat/widget/ChatWidget.kt          — общий виджет чата
 │   └── adapter/ChatAdapter.kt             — адаптер списка чатов (clearAll)
 ├── data/
-│   ├── grpc/GrpcClient.kt                 — facade (signInV2, signUpV2, refreshToken)
+│   ├── grpc/GrpcClient.kt                 — facade (signInV2, getChats, profile v2)
 │   ├── grpc/RealGrpcClient.kt             — реализация gRPC клиента
+│   ├── grpc/ProfileClient.kt              — ProfileService v2 client (JWT, dev only)
+│   ├── grpc/BearerTokenInterceptor.kt     — ClientInterceptor для JWT Bearer token
 │   ├── grpc/HermesGrpc.kt                 — Remote Agent gRPC
-│   ├── proto/MessengerProto.kt            — proto data classes (AuthResponseV2Proto, etc.)
+│   ├── proto/MessengerProto.kt            — proto data classes (Auth, Profile v2, etc.)
 │   ├── session/CredentialStore.kt         — credentials + server list + last_username
 │   ├── session/SessionManager.kt          — loginV2 (JWT) + loginV1 (legacy fallback)
 │   ├── session/UserSession.kt             — accessToken, refreshToken, authMethod, isJwtAuth
@@ -91,7 +94,17 @@ app/src/main/java/lavender/client/android/
 ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
   → try V2 (SignInV2 gRPC)
   → on success: store JWT tokens via AuthManager.storeTokens()
-  → on failure/login: fallback to V1 (Chat stream auth)
+  → on failure: fallback to V1 (Chat stream auth)
+  → BearerTokenInterceptor подставляет token во все вызовы
+  → Proactive refresh каждые 60с
+```
+
+### Profile v2 flow (v1.1.3.13+, dev server only)
+```
+connect() → fetchServerInfo(/info) → serviceProfileVersion = "2.0"
+  → isProfileV2Supported() = true
+  → ProfileClient.getProfile() → messenger.ProfileService/GetProfile (JWT)
+  → Fallback: legacy ChatService/GetUserProfile via GrpcClient
 ```
 
 ### Auth widgets pattern (v1.1.3.11)
@@ -102,14 +115,15 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
 - Все наследуют StandardBottomSheet
 - Health check через http://host:8082/health
 - Используются в: ChatListActivity, ServersActivity
+- Drag handle добавлен во все шторки
+- Status indicator — только кружок слева от названия, без текста
 
 ### Server switch pattern (v1.1.3.11)
 При смене сервера через ServersActivity:
-- НЕ сохранять `serverAddress` до успешного входа
-- Сохранять `serverAddress` ТОЛЬКО после успешного SessionManager.login()
-- Использовать флаг `justReturnedFromServersActivity` для пропуска reconnect в onResume
-- isLoadingChats предотвращает двойную загрузку
-- startSync() останавливается при смене сервера
+- НЕ сохранять `serverAddress` в CredentialStore до успешного входа
+- Сохранять `serverAddress` ТОЛЬКО после успешного `SessionManager.login()` в SUCCESS callback
+- В `ChatListActivity.serversActivityLauncher` НЕ делать auto-login — пользователь уже вошёл
+- Анти-pattern: `CredentialStore.setServerAddress()` до `SessionManager.login()` → двойной вход
 
 ### Logout pattern (v1.1.3.11+)
 - SessionManager.logout(): очищает password/tokens, сохраняет username в last_username
@@ -121,32 +135,17 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
 - Adapter/ViewHolder: `context.getString(R.string.xxx)`
 - ViewModel: `AndroidViewModel` + `getApplication<Application>().getString()`
 - НЕ инициализировать getString() в полях класса Activity
-- Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
+- Все новые строки ОДНОВРЕМЕННО в values/strings.xml + values-ru/strings.xml
 
 ### Темы
 - ThemeApplier.apply() до setContentView()
 - Цвета программно через ThemeUtils.parseSafeColor()
-- НЕ использовать ?attr/ в XML для текста на кастомных темах
+- НЕ использовать ?attr/ в XML для текста на кастомных тёмных темах
 
 ### Фильтрация чатов
 - ChatAdapter.filter() — dispatchUpdatesTo с offset +1 для Favorites
 - НЕ использовать notifyItemRangeChanged
 - ChatAdapter.clearAll() — полная очистка с сбросом favoritesItem
-
----
-
-## Команды
-
-```bash
-# Сборка
-./gradlew assembleRelease    # ТОЛЬКО локально (OOM на сервере)
-
-# Релиз
-./scripts/release.sh 1.1.3.11
-
-# SSH к серверу
-ssh lava
-```
 
 ---
 

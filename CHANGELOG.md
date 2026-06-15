@@ -1,5 +1,19 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.13] - 2026-06-14
+
+### Новое: ProfileService v2 client
+- **ProfileClient** — клиент для ProfileService v2 с JWT Bearer auth
+- Автоопределение версии сервера через /info endpoint (profile >= "2.0")
+- Fallback на legacy ChatService методы для prod сервера
+- Методы: getProfile, updateProfile, updateAvatar, getUserSettings, updateUserSettings
+- fetchServerInfo() вызывается автоматически при connect()
+
+### Исправлено: Typing/CallSession compat
+- v1 клиенты теперь могут вызывать Typing и CallSession без JWT (server-side fix)
+
+---
+
 ## [1.1.3.12] - 2026-06-14
 
 ### Новое: Bearer Token Interceptor
