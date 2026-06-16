@@ -54,12 +54,30 @@ object ProfileClient {
     fun isAuthV2Supported(): Boolean = serviceAuthVersion >= "2.0"
 
     /**
-     * Fetch the /info endpoint to determine service versions.
+     * Determine service versions.
      * Called automatically from RealGrpcClient.connect().
-     * If /info is unavailable, all versions stay empty → v1 fallback for everything.
+     *
+     * Strategy:
+     * - Dev server (grpcPort 50052): skip HTTP entirely, assume v2.
+     * - Prod server (grpcPort 50051): try HTTP /info, fallback to v1 if unavailable.
+     *
+     * This avoids a 5-second HTTP timeout + warning log on dev where the HTTP
+     * port is behind NAT/firewall but gRPC works fine.
      */
     suspend fun fetchServerInfo(context: Context, serverAddress: String, httpPort: Int = 8083, grpcPort: Int = 50051) {
         withContext(Dispatchers.IO) {
+            if (grpcPort == 50052) {
+                // Dev server — v2 by definition, skip HTTP /info entirely
+                // (HTTP port 8083 is not reachable from behind NAT/firewall)
+                serviceProfileVersion = "2.0"
+                serviceChatVersion = "2.0"
+                serviceAuthVersion = "2.0"
+                serviceAIVersion = "1.0"
+                Log.d(TAG, "Dev server (port $grpcPort) — v2 assumed, skipping HTTP /info")
+                return@withContext
+            }
+
+            // Prod server — try HTTP /info
             try {
                 val url = "http://$serverAddress:$httpPort/info"
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
@@ -76,25 +94,15 @@ object ProfileClient {
                     serviceChatVersion = services.optString("chat", "")
                     serviceAuthVersion = services.optString("auth", "")
                     serviceAIVersion = services.optString("ai", "")
-                    Log.d(TAG, "Server versions: profile=$serviceProfileVersion chat=$serviceChatVersion auth=$serviceAuthVersion ai=$serviceAIVersion")
+                    Log.d(TAG, "Server versions from /info: profile=$serviceProfileVersion chat=$serviceChatVersion auth=$serviceAuthVersion ai=$serviceAIVersion")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch /info: ${e.message} — using gRPC port heuristic fallback")
-                // HTTP /info unavailable (e.g. dev server behind NAT/firewall, or prod without /info).
-                // Use gRPC port as heuristic: 50052 = dev (v2), 50051 = prod (v1)
-                if (grpcPort == 50052) {
-                    // Dev server defaults to v2
-                    serviceProfileVersion = "2.0"
-                    serviceChatVersion = "2.0"
-                    serviceAuthVersion = "2.0"
-                    serviceAIVersion = "1.0"
-                } else {
-                    // Prod server — v1 fallback
-                    serviceProfileVersion = ""
-                    serviceChatVersion = ""
-                    serviceAuthVersion = ""
-                    serviceAIVersion = ""
-                }
+                // HTTP /info unavailable — prod v1 fallback
+                Log.d(TAG, "HTTP /info unavailable (${e.message}) — prod v1 fallback")
+                serviceProfileVersion = ""
+                serviceChatVersion = ""
+                serviceAuthVersion = ""
+                serviceAIVersion = ""
             }
         }
     }
