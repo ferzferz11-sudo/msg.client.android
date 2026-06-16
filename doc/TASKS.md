@@ -1,8 +1,26 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.24
-**Обновлено:** 2026-06-16 (сессия 30)
+**Версия:** v1.1.3.25
+**Обновлено:** 2026-06-17 (сессия 31)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.25 — Update System восстановление (Сессия 31)
+
+### Update System
+- ✅ **UpdateManager интегрирован** — инициализация в setupUI(), наблюдение за StateFlow
+- ✅ **Silent update check** — автопроверка при старте + автоскачивание
+- ✅ **Manual update check** — кнопка в user menu вызывает checkManualUpdate()
+- ✅ **Update dialog** — шторка с текущей/новой версией, кнопка Download/Force download
+- ✅ **Update indicator** — llUpdateContainer в toolbar (progress, install, available states)
+- ✅ **Progress dialog** — диалог прогресса скачивания с кнопкой отмены
+- ✅ **APK install** — через FileProvider после скачивания
+- ✅ **Drawable ресурсы** — ic_loading_renew, deployed_code_update_24, ic_checked
+- ✅ **onResume/onPause** — регистрация/отписка UpdatePrefs listener
+
+### Коммиты
+- TBD — feat: restore update system — UpdateManager integration, silent check, manual check, progress dialog
 
 ---
 
@@ -90,7 +108,7 @@
 ## 📋 Активные задачи
 
 ### Высокий приоритет
-- [ ] **Восстановить функциональность обновлений** — UpdateActivity, проверка обновлений, скачивание APK
+- [x] **Восстановить функциональность обновлений** — UpdateManager интегрирован, silent check, manual check, progress dialog, APK install
 - [ ] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
   - ~2000 строк — самый большой оставшийся кусок

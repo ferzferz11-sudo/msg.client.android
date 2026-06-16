@@ -1,21 +1,19 @@
-# Промпт для новой сессии — Android v1.1.3.24+
+# Промпт для новой сессии — Android v1.1.3.25+
 
-**Дата:** 2026-06-16
-**Версия:** 1.1.3.24 (разработка)
+**Дата:** 2026-06-17
+**Версия:** 1.1.3.25 (разработка)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.24 (не выпущен)
+**Тег:** v1.1.3.25 (не выпущен)
 
 ---
 
-## СТАТУС: v1.1.3.24 — Auth flow fix + Settings Sheet
+## СТАТУС: v1.1.3.25 — Update System восстановление
 
 **Ключевые изменения:**
-- Auth flow полностью работает: login, register, logout, reconnect
-- ProfileBottomSheet удалён, заменён на showSettingsSheet() и showAdditionalSettingsSheet() в ChatListActivity
-- Клик на аватар → bottom_sheet_user_menu.xml (с иконками)
-- Клик на ⚙️ → bottom_sheet_additional_settings.xml (с иконками)
-- enableOnBackInvokedCallback="true" в манифесте
-- Дублирующий connect() убран
+- UpdateManager интегрирован в ChatListActivity: silent check, manual check, progress dialog
+- Update indicator в toolbar (llUpdateContainer) с состояниями: available/downloading/downloaded
+- APK install через FileProvider после скачивания
+- Созданы drawable: ic_loading_renew, deployed_code_update_24, ic_checked
 
 Сервер dev: v1.2.0.2
 Сервер prod: v1.1.3.10
@@ -200,15 +198,16 @@ cd /root/msg.client.android
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.24)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.25)
 
 ### Высокий приоритет
-1. **Восстановить функциональность обновлений** — UpdateActivity, проверка обновлений, скачивание APK
-2. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
+1. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
+   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
+   - ~2000 строк — самый большой оставшийся кусок
 
 ### Средний приоритет
-3. **ProfileService v2** — проверить работу на dev сервере
-4. **Read receipts** — MarkAsRead
+2. **ProfileService v2** — проверить работу на dev сервере
+3. **Read receipts** — MarkAsRead
 
 ### Отложено
 - Qdrant + CLIP (production RAG)

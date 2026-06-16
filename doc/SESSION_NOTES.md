@@ -1,5 +1,45 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 31 (2026-06-17) — UpdateActivity восстановление
+
+### Контекст
+- В v1 reference (ChatListActivity_v1_REFERENCE.kt) была полная система обновлений
+- В текущем ChatListActivity кнопка Update в user menu имела пустой onClick (TODO)
+- UpdateManager и UpdateUtils уже существовали, но не были подключены
+- Не хватало drawable: ic_loading_renew, deployed_code_update_24, ic_checked
+
+### Что сделано
+1. **Созданы drawable ресурсы:**
+   - `ic_loading_renew.xml` — иконка загрузки (circular arrow) для анимации скачивания
+   - `deployed_code_update_24.xml` — иконка "system-update" для layout
+   - `ic_checked.xml` — иконка "check" для состояния "обновлений нет"
+
+2. **ChatListActivity — интеграция UpdateManager:**
+   - Добавлен импорт `UpdateManager`, `UpdateUtils`, `BuildConfig`, `File`, `AnimationUtils`, `MaterialButton`
+   - Поле `updateManager: UpdateManager` и `updatePrefsListener` для наблюдения за SharedPreferences
+   - В `setupUI()`: инициализация UpdateManager, наблюдение за StateFlow (isDownloading, downloadProgress, isDownloaded)
+   - Silent update check при старте (`checkForUpdatesSilently()`)
+   - `actionUpdate` onClick теперь вызывает `checkManualUpdate()` вместо TODO
+
+3. **Новые методы в ChatListActivity:**
+   - `checkForUpdatesSilently()` — фоновая проверка + автоскачивание
+   - `checkManualUpdate()` — ручная проверка + диалог
+   - `showUpdateDialog(current, latest)` — шторка с информацией о версии
+   - `updateUpdateIndicatorVisibility()` — управление видимостью update container в toolbar
+   - `showUpdateProgressDialog()` — диалог прогресса с кнопкой отмены
+   - `onResume()` — регистрация prefs listener + updateUpdateIndicatorVisibility()
+   - `onPause()` — отписка prefs listener
+
+4. **Существующие layout ресурсы использованы:**
+   - `activity_chat_list.xml` — llUpdateContainer, tvUpdateProgress, ivUpdateAvailable уже были
+   - `bottom_sheet_update.xml` — шторка обновления
+   - Все необходимые strings.xml уже были (update_available, install_update, version_info_format, etc.)
+
+### Коммиты
+- TBD — feat: restore update system — UpdateManager integration, silent check, manual check, progress dialog
+
+---
+
 ## Сессия 30 (2026-06-16) — Auth flow fix, ProfileBottomSheet → Settings Sheet
 
 ### Контекст

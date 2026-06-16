@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import android.view.animation.AnimationUtils
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -29,11 +31,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import lavender.client.android.NewChatActivity
 import lavender.client.android.R
 import lavender.client.android.SplashLoadingActivity
 import lavender.client.android.ServersActivity
 import lavender.client.android.ThemesActivity
+import lavender.client.android.BuildConfig
 import lavender.client.android.ContactsActivity
 import lavender.client.android.EditProfileActivity
 import lavender.client.android.NotificationActivity
@@ -47,6 +51,8 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.cache.CacheUtils
+import lavender.client.android.data.updates.UpdateManager
+import lavender.client.android.data.updates.UpdateUtils
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
@@ -94,6 +100,12 @@ class ChatListActivity : AppCompatActivity() {
     // AI Bottom Sheet
     private var aiBottomSheet: AIBottomSheet? = null
     private val aiChats = mutableListOf<AIChatInfo>()
+
+    // Update
+    private lateinit var updateManager: UpdateManager
+    private val updatePrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        runOnUiThread { updateUpdateIndicatorVisibility() }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -161,6 +173,28 @@ class ChatListActivity : AppCompatActivity() {
         // Register back press handler for selection mode
         setupBackPressHandler()
 
+        // Initialize UpdateManager and observe download state
+        updateManager = UpdateManager(this)
+        lifecycleScope.launch {
+            updateManager.isDownloadingInstance.collect { downloading ->
+                updateUpdateIndicatorVisibility()
+            }
+        }
+        lifecycleScope.launch {
+            updateManager.downloadProgressInstance.collect { progress ->
+                val tvProgress = findViewById<TextView>(R.id.tvUpdateProgress)
+                tvProgress?.text = getString(R.string.percent_format, progress)
+                tvProgress?.isVisible = progress > 0
+            }
+        }
+        lifecycleScope.launch {
+            updateManager.isDownloadedInstance.collect { downloaded ->
+                updateUpdateIndicatorVisibility()
+            }
+        }
+        // Silent update check on startup
+        checkForUpdatesSilently()
+
         // Note: GrpcClient.connect() is already called from SessionManager.initFromPrefs()
         // when serverAddress is set. No need to connect again here.
 
@@ -203,6 +237,10 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Register update prefs listener
+        getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(updatePrefsListener)
+        updateUpdateIndicatorVisibility()
         // Safety net: if chats list is empty but we're connected, reload.
         // This handles the case where loadChats() was called before READY
         // (e.g. race condition during server switch).
@@ -212,6 +250,12 @@ class ChatListActivity : AppCompatActivity() {
             Log.d(TAG, "onResume: chats empty but READY — reloading")
             viewModel.loadChats()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(updatePrefsListener)
     }
 
     private fun setupToolbarActions(username: String) {
@@ -285,7 +329,7 @@ class ChatListActivity : AppCompatActivity() {
         // Update
         sheet.findViewById<View>(R.id.actionUpdate)?.setOnClickListener {
             sheet.dismiss()
-            // TODO: implement update check
+            checkManualUpdate()
         }
 
         // Language toggle
@@ -300,6 +344,122 @@ class ChatListActivity : AppCompatActivity() {
             showAdditionalSettingsSheet()
         }
 
+        sheet.show()
+    }
+
+    // ======= Update Methods =======
+
+    private fun checkForUpdatesSilently() {
+        updateManager.checkForUpdates { isAvailable, latestVersion ->
+            runOnUiThread {
+                updateUpdateIndicatorVisibility()
+                if (isAvailable) {
+                    val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                    val isDownloaded = prefs.getBoolean("update_downloaded", false)
+                    val isDownloading = prefs.getBoolean("update_downloading", false)
+                    if (!isDownloaded && !isDownloading) {
+                        updateManager.startDownload(isAuto = true)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkManualUpdate() {
+        val currentVersion = lavender.client.android.BuildConfig.VERSION_NAME
+        updateManager.checkForUpdates { isAvailable, latestVersion ->
+            runOnUiThread {
+                showUpdateDialog(currentVersion, latestVersion)
+            }
+        }
+    }
+
+    private fun showUpdateDialog(current: String, latest: String) {
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_update)
+        val titleView = sheet.findViewById<TextView>(R.id.updateTitle)
+        val messageView = sheet.findViewById<TextView>(R.id.updateMessage)
+        val btnUpdate = sheet.findViewById<MaterialButton>(R.id.btnUpdate)
+        val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
+        val updateIcon = sheet.findViewById<ImageView>(R.id.updateIcon)
+
+        val isAvailable = UpdateUtils.isUpdateAvailable(current, latest)
+        if (!isAvailable) {
+            titleView?.text = getString(R.string.ok)
+            updateIcon?.setImageResource(R.drawable.ic_checked)
+            btnUpdate?.text = getString(R.string.force_download)
+        }
+
+        messageView?.text = getString(R.string.version_info_format, current, latest)
+        btnCancel?.setOnClickListener { sheet.dismiss() }
+        btnUpdate?.setOnClickListener {
+            sheet.dismiss()
+            updateManager.startDownload()
+            updateUpdateIndicatorVisibility()
+        }
+        sheet.show()
+    }
+
+    private fun updateUpdateIndicatorVisibility() {
+        val prefs = getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+        val isAvailable = prefs.getBoolean("update_available", false)
+        val isDownloaded = prefs.getBoolean("update_downloaded", false)
+        val isDownloading = prefs.getBoolean("update_downloading", false)
+
+        val llUpdateContainer = findViewById<View>(R.id.llUpdateContainer)
+        val ivUpdateAvailable = findViewById<ImageView>(R.id.ivUpdateAvailable)
+        val tvUpdateProgress = findViewById<TextView>(R.id.tvUpdateProgress)
+
+        // Show container if update is available, downloading, or downloaded
+        llUpdateContainer?.isVisible = isAvailable || isDownloading || isDownloaded
+
+        if (isDownloading) {
+            ivUpdateAvailable?.setImageResource(R.drawable.ic_update_rotating)
+            val rotation = AnimationUtils.loadAnimation(this, R.anim.rotate_renew)
+            ivUpdateAvailable?.startAnimation(rotation)
+            tvUpdateProgress?.isVisible = true
+        } else {
+            ivUpdateAvailable?.clearAnimation()
+            tvUpdateProgress?.isVisible = false
+            if (isDownloaded) {
+                ivUpdateAvailable?.setImageResource(R.drawable.ic_install_update)
+            } else if (isAvailable) {
+                ivUpdateAvailable?.setImageResource(R.drawable.ic_update_available)
+            }
+        }
+
+        llUpdateContainer?.setOnClickListener {
+            if (isDownloaded) {
+                val apkPath = prefs.getString("apk_path", null)
+                if (apkPath != null) {
+                    UpdateUtils.installApk(this, File(apkPath))
+                }
+            } else if (isDownloading) {
+                showUpdateProgressDialog()
+            } else if (isAvailable) {
+                updateManager.startDownload()
+                updateUpdateIndicatorVisibility()
+            }
+        }
+    }
+
+    private fun showUpdateProgressDialog() {
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_update)
+        val titleView = sheet.findViewById<TextView>(R.id.updateTitle)
+        val messageView = sheet.findViewById<TextView>(R.id.updateMessage)
+        val btnUpdate = sheet.findViewById<MaterialButton>(R.id.btnUpdate)
+        val btnCancel = sheet.findViewById<MaterialButton>(R.id.btnCancel)
+
+        titleView?.text = getString(R.string.update_in_progress)
+        messageView?.text = getString(R.string.downloading_update)
+        btnUpdate?.text = getString(R.string.continue_label)
+        btnUpdate?.setOnClickListener { sheet.dismiss() }
+        btnCancel?.text = getString(R.string.cancel_update)
+        btnCancel?.setOnClickListener {
+            sheet.dismiss()
+            updateManager.cancelDownload()
+            updateUpdateIndicatorVisibility()
+            Toast.makeText(this, R.string.update_cancelled, Toast.LENGTH_SHORT).show()
+        }
         sheet.show()
     }
 

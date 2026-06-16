@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="960"
-    android:viewportHeight="960">
-  <path
-      android:fillColor="#FFFFFF"
-      android:pathData="M204,642Q182,604 171,564Q160,524 160,482Q160,348 253,254Q346,160 480,160L487,160L423,96L479,40L639,200L479,360L423,304L487,240L480,240Q380,240 310,310.5Q240,381 240,482Q240,508 246,533Q252,558 264,582L204,642ZM481,920L321,760L481,600L537,656L473,720L480,720Q580,720 650,649.5Q720,579 720,478Q720,452 714,427Q708,402 696,378L756,318Q778,356 789,396Q800,436 800,478Q800,612 707,706Q614,800 480,800L473,800L537,864L481,920Z"/>
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Loading/renew icon - circular arrow for download animation -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M12,4V2.21c0,-0.45 -0.54,-0.67 -0.85,-0.35L8.35,4.65c-0.2,0.2 -0.2,0.51 0,0.71l2.8,2.8C11.46,8.46 12,8.24 12,7.79V6c3.31,0 6,2.69 6,6c0,1.01 -0.25,1.97 -0.7,2.8l1.46,1.46C19.54,15.03 20,13.57 20,12C20,7.58 16.42,4 12,4zM4,12c0,-1.01 0.25,-1.97 0.7,-2.8L3.24,7.74C2.46,8.97 2,10.43 2,12c0,4.42 3.58,8 8,8v1.79c0,0.45 0.54,0.67 0.85,0.35l2.8,-2.8c0.2,-0.2 0.2,-0.51 0,-0.71l-2.8,-2.8C10.54,15.54 10,15.76 10,16.21V18C6.69,18 4,15.31 4,12z"/>
 </vector>
