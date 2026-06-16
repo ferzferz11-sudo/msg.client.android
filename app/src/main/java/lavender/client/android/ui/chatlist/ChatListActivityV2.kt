@@ -252,7 +252,10 @@ class ChatListActivityV2 : AppCompatActivity() {
                         actionMode?.finish()
                     }
                 } else {
-                    // Normal mode: navigate to chat
+                    // Normal mode: mark as read, then navigate to chat
+                    if (chat.unreadCount > 0) {
+                        viewModel.markAsRead(chat.id)
+                    }
                     navigateToChat(chat, username)
                 }
             },
@@ -290,6 +293,15 @@ class ChatListActivityV2 : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.isLoading.collectLatest { loading ->
                 swipeRefresh?.isRefreshing = loading
+            }
+        }
+
+        // Observe new messages for non-active chats — update unread badges in real-time
+        lifecycleScope.launch {
+            GrpcClient.newMessageEvent.collect { (roomId, _) ->
+                if (roomId.isNotEmpty() && roomId != GrpcClient.currentRoomId) {
+                    viewModel.incrementUnreadCount(roomId)
+                }
             }
         }
 

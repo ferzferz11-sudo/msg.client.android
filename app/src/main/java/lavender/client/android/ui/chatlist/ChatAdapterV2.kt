@@ -237,9 +237,16 @@ class ChatAdapterV2(
                 tvChatType.setTextColor(textSecondary)
             }
 
-            tvUnreadCount.isVisible = chat.unreadCount > 0 && !selectionMode
-            if (chat.unreadCount > 0) {
-                tvUnreadCount.text = chat.unreadCount.toString()
+            // Unread badge — styled by theme
+            if (chat.unreadCount > 0 && !selectionMode) {
+                tvUnreadCount.isVisible = true
+                tvUnreadCount.text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString()
+                // Badge background uses primary color
+                tvUnreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(cachedPrimaryColor)
+                // Text color: white for dark primary, black for light primary
+                tvUnreadCount.setTextColor(if (ThemeUtils.isLight(cachedPrimaryColor)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            } else {
+                tvUnreadCount.isVisible = false
             }
 
             ivMuteIndicator.isVisible = chat.isMuted && !selectionMode

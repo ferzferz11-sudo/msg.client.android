@@ -209,6 +209,36 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
         Log.d(TAG, "Chat clicked: ${chat.name} (${chat.id})")
     }
 
+    /**
+     * Mark chat as read: clear unread count locally + send MarkAsRead to server.
+     */
+    fun markAsRead(chatId: String) {
+        viewModelScope.launch {
+            try {
+                val username = lavender.client.android.data.session.SessionManager.session.value.username
+                GrpcClient.markRead(chatId, username) {
+                    // Server acknowledged — clear unread locally
+                    allChats = allChats.map {
+                        if (it.id == chatId) it.copy(unreadCount = 0) else it
+                    }
+                    buildSections(allChats)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to mark as read: $chatId", e)
+            }
+        }
+    }
+
+    /**
+     * Increment unread count for a chat (called when new message arrives in non-active chat).
+     */
+    fun incrementUnreadCount(chatId: String) {
+        allChats = allChats.map {
+            if (it.id == chatId) it.copy(unreadCount = it.unreadCount + 1) else it
+        }
+        buildSections(allChats)
+    }
+
     private fun buildSections(chats: List<ChatInfo>) {
         val tab = _tabFilter.value
 

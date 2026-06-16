@@ -54,6 +54,11 @@ object GrpcClient {
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
+    val newMessageEvent: SharedFlow<Pair<String, String>> = realGrpcClient.newMessageEvent
+
+    var currentRoomId: String
+        get() = realGrpcClient.currentRoomId
+        set(value) { realGrpcClient.currentRoomId = value }
 
     var hasCheckedForUpdates: Boolean
         get() = realGrpcClient.hasCheckedForUpdates

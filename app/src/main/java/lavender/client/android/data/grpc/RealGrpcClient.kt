@@ -52,7 +52,7 @@ object RealGrpcClient {
     var currentServerPort: Int = 50051
         private set
     var currentRoomId = ""
-        private set
+        internal set
 
 
 
@@ -213,6 +213,10 @@ object RealGrpcClient {
 
     private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
     val callSignals: SharedFlow<CallMessageProto> = _callSignals
+
+    /** Emitted when a new message arrives for a non-active chat (roomId, messageId). */
+    private val _newMessageEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
+    val newMessageEvent: SharedFlow<Pair<String, String>> = _newMessageEvent
 
     var hasCheckedForUpdates = false
     var isAppInBackground = false
@@ -752,6 +756,10 @@ object RealGrpcClient {
                     // Still cache background messages
                     scope.launch(Dispatchers.IO) {
                         db()?.messageDao()?.insertMessages(listOf(message.toEntity()))
+                    }
+                    // Notify chat list to increment unread count for this room
+                    scope.launch {
+                        _newMessageEvent.emit(Pair(message.roomId, message.id))
                     }
                     return
                 }
