@@ -309,13 +309,11 @@ object RealGrpcClient {
             // Fetch /info to determine service versions (ProfileService v2 support)
             if (context != null) {
                 val httpPort = if (port == 50052) 8083 else 8082
-                Log.d(TAG, "connect: launching fetchServerInfo for $serverAddress:$httpPort")
                 scope.launch {
                     try {
                         ProfileClient.fetchServerInfo(context, serverAddress, httpPort, port)
-                        Log.d(TAG, "connect: fetchServerInfo done, profile=${ProfileClient.serviceProfileVersion}")
                     } catch (e: Exception) {
-                        Log.w(TAG, "connect: fetchServerInfo failed: ${e.message}")
+                        Log.w(TAG, "fetchServerInfo failed: ${e.message}")
                     }
                 }
             }

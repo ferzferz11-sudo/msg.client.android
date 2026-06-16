@@ -59,11 +59,9 @@ object ProfileClient {
      * If /info is unavailable, all versions stay empty → v1 fallback for everything.
      */
     suspend fun fetchServerInfo(context: Context, serverAddress: String, httpPort: Int = 8083, grpcPort: Int = 50051) {
-        Log.d(TAG, "fetchServerInfo: starting for $serverAddress:$httpPort (grpc=$grpcPort)")
         withContext(Dispatchers.IO) {
             try {
                 val url = "http://$serverAddress:$httpPort/info"
-                Log.d(TAG, "fetchServerInfo: fetching $url")
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
@@ -90,7 +88,6 @@ object ProfileClient {
                     serviceChatVersion = "2.0"
                     serviceAuthVersion = "2.0"
                     serviceAIVersion = "1.0"
-                    Log.d(TAG, "Dev server detected (gRPC port 50052), defaulting to v2")
                 } else {
                     // Prod server — v1 fallback
                     serviceProfileVersion = ""
