@@ -1,8 +1,24 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.19
-**Обновлено:** 2026-06-16 (сессия 22)
+**Версия:** v1.1.3.20
+**Обновлено:** 2026-06-16 (сессия 23)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.20 — Модуляризация RealGrpcClient (Сессия 23)
+
+### Исправлено
+- ✅ **RealGrpcClient разделён на модули**: 4081 → 3739 строк (-342, -8.4%)
+- ✅ **GrpcConnectionManager** (167 строк) — connect/reconnect/disconnect/keepalive
+- ✅ **GrpcAuthClient** (232 строки) — signInV2/signUpV2/refreshToken/signOut/revokeDevice
+- ✅ **GrpcCallClient** (124 строки) — startCallSession/sendCallSignal
+- ✅ **GrpcTypingClient** (87 строк) — startTypingStream/sendTypingSignal
+- ✅ **ChatListFragmentV2** (144 строки) — удалён мёртвый код
+- ✅ **Дублирование currentServerAddress/currentServerPort** — исправлено
+
+### Коммиты
+- `TBD` — feat: modularize RealGrpcClient — extract 4 modules, remove dead code
 
 ---
 
@@ -145,6 +161,10 @@
 | `ui/widget/AIBottomSheet.kt` | Шторка выбора AI чата (OWL/Hermes) |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
-| `data/grpc/RealGrpcClient.kt` | Реализация gRPC: connect, reconnect, keepalive, version detection |
+| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (3739 строк) |
+| `data/grpc/GrpcConnectionManager.kt` | connect/reconnect/disconnect/keepalive (167 строк) |
+| `data/grpc/GrpcAuthClient.kt` | signInV2/signUpV2/refreshToken/signOut (232 строки) |
+| `data/grpc/GrpcCallClient.kt` | startCallSession/sendCallSignal (124 строки) |
+| `data/grpc/GrpcTypingClient.kt` | startTypingStream/sendTypingSignal (87 строк) |
 | `data/grpc/ProfileClient.kt` | ProfileService v2 client + version detection |
 | `data/models/Message.kt` | Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo |

@@ -1,5 +1,33 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 23 (2026-06-16) — Модуляризация RealGrpcClient
+
+### Контекст
+- Продолжаем работу над v1.1.3.20
+- Цель: разделить RealGrpcClient на модули
+
+### Что сделано
+- Извлечены 4 модуля из RealGrpcClient:
+  - GrpcConnectionManager (167 строк) — connect/reconnect/disconnect/keepalive
+  - GrpcAuthClient (232 строки) — signInV2/signUpV2/refreshToken/signOut/revokeDevice
+  - GrpcCallClient (124 строки) — startCallSession/sendCallSignal
+  - GrpcTypingClient (87 строк) — startTypingStream/sendTypingSignal
+- Удалён мёртвый код: ChatListFragmentV2 (144 строки), fragment_chat_list_v2.xml
+- Исправлено дублирование currentServerAddress/currentServerPort
+- Итоговая статистика:
+  - RealGrpcClient: 4081 → 3739 строк (-342, -8.4%)
+  - Новые файлы: 4 модуля (610 строк суммарно)
+  - Удалено: ChatListFragmentV2 + layout (144 строки)
+
+### Коммиты
+- `TBD` — feat: modularize RealGrpcClient — extract 4 modules, remove dead code
+
+### Следующие шаги
+- Выделить GrpcChatClient из оставшихся ~3700 строк RealGrpcClient
+- Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
+
+---
+
 ## Сессия 22 (2026-06-16) — JWT auth fix, reconnect optimization, architecture analysis
 
 ### Контекст
@@ -242,7 +270,7 @@
 ---
 
 ## Теги
-- Android: `v1.1.3.18`
+- Android: `v1.1.3.20`
 - Server dev: `v1.2.0.1`
 - Server prod: `v1.1.3.10`
 

@@ -1,9 +1,9 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.19
-**Обновлено:** 2026-06-16 (сессия 22)
+**Версия:** v1.1.3.20
+**Обновлено:** 2026-06-16 (сессия 23)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.18
+**Тег:** v1.1.3.20
 
 ---
 
@@ -66,7 +66,6 @@ app/src/main/java/lavender/client/android/
 │   │   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state
 │   │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter, getChats
 │   │   ├── ChatListSections.kt      — Section enum + SectionItem
-│   │   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
 │   ├── adapter/
 │   │   ├── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
 │   │   └── MessageAdapter.kt    — адаптер сообщений + pinned badge
@@ -87,11 +86,16 @@ app/src/main/java/lavender/client/android/
 │
 ├── data/
 │   ├── cache/CacheUtils.kt            — единый утилит очистки кэша
-│   ├── grpc/GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
-│   ├── grpc/RealGrpcClient.kt         — реализация gRPC (optimistic READY, reconnect, keepalive)
-│   ├── grpc/ProfileClient.kt          — ProfileService v2 client + version detection
-│   ├── grpc/BearerTokenInterceptor.kt — JWT Bearer token
-│   ├── proto/MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
+│   ├── grpc/
+│   │   ├── GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
+│   │   ├── RealGrpcClient.kt          — оркестратор модулей (3739 строк)
+│   │   ├── GrpcConnectionManager.kt   — connect/reconnect/disconnect/keepalive (167 строк)
+│   │   ├── GrpcAuthClient.kt          — signInV2/signUpV2/refreshToken/signOut (232 строки)
+│   │   ├── GrpcCallClient.kt          — startCallSession/sendCallSignal (124 строки)
+│   │   ├── GrpcTypingClient.kt        — startTypingStream/sendTypingSignal (87 строк)
+│   │   ├── ProfileClient.kt           — ProfileService v2 client + version detection
+│   │   ├── BearerTokenInterceptor.kt — JWT Bearer token
+│   │   └── MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
 │   ├── session/CredentialStore.kt     — credentials + server list + lastUsername
 │   ├── session/SessionManager.kt      — loginV2 + loginV1 fallback
 │   ├── auth/AuthManager.kt            — JWT token storage

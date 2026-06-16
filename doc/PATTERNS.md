@@ -312,6 +312,30 @@ GrpcClient.unarchiveChat(context, chatId)
 ```
 **Правило:** все v2 методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии.
 
+### RealGrpcClient modular pattern (v1.1.3.20+)
+```kotlin
+// RealGrpcClient is now an orchestrator, not a monolith.
+// Channel management → GrpcConnectionManager
+// Auth operations → GrpcAuthClient
+// Typing stream → GrpcTypingClient
+// Call stream → GrpcCallClient
+// Chat stream/messages → RealGrpcClient (next: extract GrpcChatClient)
+
+// Module injection pattern:
+private val connectionManager = GrpcConnectionManager(
+    scope = scope,
+    connectionStatus = _connectionStatus,
+    onFetchServerInfo = { host, httpPort, ctx -> ... },
+    onAutoResumeChat = { ... }
+)
+private val authClient = GrpcAuthClient(
+    getChannel = { getChannel() },
+    connectionStatus = _connectionStatus,
+    authStatus = _authStatus,
+    setAuthFailure = { connectionManager.isAuthFailure = it }
+)
+```
+
 ### gRPC connection readiness pattern (v1.1.3.18+)
 ```kotlin
 // After builder.build(), gRPC channel connects lazily (first RPC).

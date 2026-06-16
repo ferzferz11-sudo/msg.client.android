@@ -34,10 +34,53 @@ enum class ConnectionStatus {
 object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var channel: ManagedChannel? = null
+    // channel is now managed by GrpcConnectionManager
 
-    fun getChannel(): ManagedChannel? = channel
-    
+    // ====== Module: Connection Manager ======
+    private val connectionManager = GrpcConnectionManager(
+        scope = scope,
+        connectionStatus = _connectionStatus,
+        onFetchServerInfo = { host: String, httpPort: Int, ctx: Context ->
+            ProfileClient.fetchServerInfo(ctx, host, httpPort, currentServerPort)
+        },
+        onAutoResumeChat = {
+            lastChatRequest?.let {
+                Log.d(TAG, "Resuming last chat for ${it.u}")
+                startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
+            }
+        }
+    )
+
+    // Proxy channel access to connection manager
+    fun getChannel(): ManagedChannel? = connectionManager.channel
+
+    // ====== Module: Auth Client ======
+    private val authClient = GrpcAuthClient(
+        getChannel = { getChannel() },
+        connectionStatus = _connectionStatus,
+        authStatus = _authStatus,
+        setAuthFailure = { connectionManager.isAuthFailure = it }
+    )
+
+    // ====== Module: Typing Client ======
+    private val typingClient = GrpcTypingClient(
+        getChannel = { getChannel() },
+        typingUsers = _typingUsers,
+        scope = scope
+    )
+
+    // ====== Module: Call Client ======
+    private val callClient = GrpcCallClient(
+        getChannel = { getChannel() },
+        getUsername = { currentUsername },
+        getUserId = { currentUserId },
+        callSignals = _callSignals,
+        connectionStatus = _connectionStatus,
+        requestObserverRef = { requestObserver },
+        scope = scope,
+        onCallStreamError = { /* handled by callClient internally */ }
+    )
+
     private var database: AppDatabase? = null
     private fun db() = database ?: appContext?.let { 
         val d = AppDatabase.getDatabase(it)
@@ -45,12 +88,9 @@ object RealGrpcClient {
         d
     }
     private var requestObserver: StreamObserver<MessageProto>? = null
-    private var typingRequestObserver: StreamObserver<TypingRequestProto>? = null
-    private var callRequestObserver: StreamObserver<CallMessageProto>? = null
+    // typingRequestObserver and callRequestObserver are now owned by typingClient and callClient
     
-    var currentServerAddress: String? = null
-    var currentServerPort: Int = 50051
-        private set
+    // currentServerAddress and currentServerPort are now proxied to connectionManager (lines 298-303)
     var currentRoomId = ""
         internal set
 
@@ -245,118 +285,20 @@ object RealGrpcClient {
     private val pendingReads = mutableSetOf<String>()
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
-        Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${_connectionStatus.value}")
-
-        val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
-        val addressMatch = currentServerAddress == serverAddress
-        val channelAlive = channel != null && !channelDead && _connectionStatus.value == ConnectionStatus.READY
-
-        // If channel is alive and address matches, keep it — active streams must not be killed.
-        if (addressMatch && channelAlive) {
-            Log.d(TAG, "Connection already READY (force=$forceReconnect), keeping active streams")
-            return
-        }
-
-        // CRITICAL: Do not reset channel if a call is in progress
-        if (lavender.client.android.data.calls.CallManager.currentCall.value != null) {
-            Log.w(TAG, "Call in progress, preventing channel reset")
-            return
-        }
-
+        // Delegate channel management to GrpcConnectionManager
         appContext = context?.applicationContext
-        currentServerAddress = serverAddress
-        currentServerPort = port
         _isSuperAdmin.value = false
         loadDeletedMessages()
-
-        Log.d(TAG, "Connecting to $serverAddress:$port (TLS: $useTls)")
-        // Use RECONNECTING for transient state (was already connected before)
-        val wasConnected = _connectionStatus.value == ConnectionStatus.READY ||
-                           _connectionStatus.value == ConnectionStatus.RECONNECTING
-        _connectionStatus.value = if (wasConnected) ConnectionStatus.RECONNECTING else ConnectionStatus.CONNECTING
-
-        try {
-            val builder = OkHttpChannelBuilder.forAddress(serverAddress, port)
-            if (useTls) {
-                builder.useTransportSecurity()
-            } else {
-                builder.usePlaintext()
-            }
-
-            // Keep-alive for mobile networks — more lenient timeouts
-            builder.keepAliveTime(30, TimeUnit.SECONDS)     // Ping every 30s
-            builder.keepAliveTimeout(10, TimeUnit.SECONDS)   // 10s to detect dead connection
-            builder.keepAliveWithoutCalls(true)
-            // Max idle — allow server to clean up (server MaxConnectionAge = 30min)
-            builder.maxInboundMessageSize(64 * 1024 * 1024)
-            // Idle timeout — reconnect before server's MaxConnectionAge (30min)
-            builder.idleTimeout(25, TimeUnit.MINUTES)
-
-            // Bearer token interceptor — attaches JWT to all calls (skipped for AuthService + Chat stream)
-            val appCtx = context?.applicationContext
-            if (appCtx != null) {
-                builder.intercept(BearerTokenInterceptor(appCtx))
-            }
-
-            channel?.shutdownNow()
-            val newChannel = builder.build()
-            channel = newChannel
-
-            // Channel is built. gRPC OkHttp channel connects lazily on first RPC.
-            // We set READY immediately — if the first RPC fails, onClose will
-            // trigger RECONNECTING. This avoids a separate HTTP health check
-            // which may fail due to firewall/NAT even though gRPC works.
-            _connectionStatus.value = ConnectionStatus.READY
-            resetReconnectBackoff()
-            Log.d(TAG, "Channel built — READY (optimistic): $serverAddress")
-
-            // Fetch /info to determine service versions (ProfileService v2 support)
-            if (context != null) {
-                val httpPort = if (port == 50052) 8083 else 8082
-                scope.launch {
-                    try {
-                        ProfileClient.fetchServerInfo(context, serverAddress, httpPort, port)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "fetchServerInfo failed: ${e.message}")
-                    }
-                }
-            }
-
-            // Auto-resume last chat if it exists
-            lastChatRequest?.let {
-                Log.d(TAG, "Resuming last chat for ${it.u}")
-                startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Connection failed", e)
-            _connectionStatus.value = ConnectionStatus.RECONNECTING
-            _error.value = e.message
-
-            // Graceful retry with exponential backoff
-            scheduleReconnect(serverAddress, useTls, port, context)
-        }
+        connectionManager.connect(serverAddress, useTls, port, context, forceReconnect)
     }
 
-    private var reconnectJob: Job? = null
-
-    private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
-        reconnectJob?.cancel()
-        reconnectJob = scope.launch {
-            val delayMs = reconnectDelayMs.coerceAtMost(30000L)
-            Log.d(TAG, "Scheduling reconnect in ${delayMs}ms...")
-            delay(delayMs)
-            reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(60000L)
-            Log.d(TAG, "Retrying connection to $serverAddress...")
-            connect(serverAddress, useTls, port, context)
-        }
-    }
-
-    private var reconnectDelayMs = 5000L
-
-    // Reset reconnect backoff on successful connection
-    private fun resetReconnectBackoff() {
-        reconnectDelayMs = 5000L
-    }
+    // Legacy fields — proxied to connectionManager
+    var currentServerAddress: String? = null
+        get() = connectionManager.currentServerAddress
+        private set
+    var currentServerPort: Int = 50051
+        get() = connectionManager.currentServerPort
+        private set
 
     /**
      * Returns gRPC Metadata with JWT Bearer token if available.
@@ -377,24 +319,15 @@ object RealGrpcClient {
     }
 
     fun reconnect() {
-        val addr = currentServerAddress
-        if (!addr.isNullOrEmpty()) {
-            Log.d(TAG, "reconnect() called, reconnecting to $addr:$currentServerPort")
-            connect(addr, false, currentServerPort, appContext, true)
-        }
+        connectionManager.reconnect()
     }
 
     fun disconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-        resetReconnectBackoff()
-        channel?.shutdown()
-        channel = null
+        connectionManager.disconnect()
         requestObserver = null
-        typingRequestObserver = null
-        callRequestObserver = null
+        typingClient.clearTypingObserver()
+        callClient.clearCallObserver()
         lastChatRequest = null
-        _connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
 
     private var lastChatRequest: LastChatRequest? = null
@@ -450,14 +383,14 @@ object RealGrpcClient {
             }
         }
 
-        val currentChannel = channel
+        val currentChannel = getChannel()
         if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
             val addr = currentServerAddress
             if (!addr.isNullOrEmpty()) {
                 Log.w(TAG, "Channel is not available, attempting reconnect to $addr")
                 connect(addr)
             } else {
-                Log.e(TAG, "Cannot start chat: channel and server address are null")
+                Log.e(TAG, "Cannot start chat: getChannel() and server address are null")
             }
             return
         }
@@ -530,7 +463,7 @@ object RealGrpcClient {
     }
 
     fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDevicesRequestProto, GetDevicesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetDevices")
@@ -548,7 +481,7 @@ object RealGrpcClient {
     }
 
     fun deleteDevice(uid: String, did: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteDevice")
@@ -566,7 +499,7 @@ object RealGrpcClient {
     }
 
     fun deleteOtherDevices(uid: String, currentDid: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteOtherDevices")
@@ -609,7 +542,7 @@ object RealGrpcClient {
                 }
 
                 // If authenticated and no call session active, start it
-                if (callRequestObserver == null && currentUsername != null) {
+                if (callClient.callRequestObserver == null && currentUsername != null) {
                     startCallSession()
                 }
                 
@@ -1012,130 +945,19 @@ object RealGrpcClient {
     }
 
     private fun startTypingStream() {
-        val currentChannel = channel ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TypingRequestProto, TypingSignalProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
-            .setFullMethodName("messenger.ChatService/Typing")
-            .setRequestMarshaller(TypingRequestMarshaller())
-            .setResponseMarshaller(TypingSignalMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        typingRequestObserver = call.startTypingStream()
-    }
-
-    private fun io.grpc.ClientCall<TypingRequestProto, TypingSignalProto>.startTypingStream(): StreamObserver<TypingRequestProto> {
-        val responseObserver = object : StreamObserver<TypingSignalProto> {
-            override fun onNext(value: TypingSignalProto) {
-                _typingUsers.update { current ->
-                    val roomTyping = current[value.roomId]?.toMutableSet() ?: mutableSetOf()
-                    if (value.isTyping) roomTyping.add(value.username) else roomTyping.remove(value.username)
-                    current + (value.roomId to roomTyping)
-                }
-            }
-            override fun onError(t: Throwable) { 
-                Log.e(TAG, "Typing stream error", t) 
-                scope.launch {
-                    delay(5000)
-                    startTypingStream()
-                }
-            }
-            override fun onCompleted() {}
-        }
-
-        this.start(object : io.grpc.ClientCall.Listener<TypingSignalProto>() {
-            override fun onMessage(message: TypingSignalProto) = responseObserver.onNext(message)
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        this.request(Int.MAX_VALUE)
-
-        return object : StreamObserver<TypingRequestProto> {
-            override fun onNext(value: TypingRequestProto) = this@startTypingStream.sendMessage(value)
-            override fun onError(t: Throwable) = this@startTypingStream.cancel("Error", t)
-            override fun onCompleted() = this@startTypingStream.halfClose()
-        }
+        typingClient.startTypingStream()
     }
 
     fun sendTypingSignal(username: String, isTyping: Boolean) {
-        typingRequestObserver?.onNext(TypingRequestProto(currentRoomId, username, isTyping, currentUserId ?: ""))
+        typingClient.sendTypingSignal(username, isTyping, currentRoomId, currentUserId ?: "")
     }
 
     fun startCallSession() {
-        val currentChannel = channel
-        if (currentChannel == null || currentChannel.isShutdown) {
-            Log.e(TAG, "Cannot start call session: channel not ready")
-            return
-        }
-        if (callRequestObserver != null) return // Already started
-
-        Log.d(TAG, "Starting CallSession stream")
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CallMessageProto, CallMessageProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
-            .setFullMethodName("messenger.ChatService/CallSession")
-            .setRequestMarshaller(CallMessageProtoMarshaller())
-            .setResponseMarshaller(CallMessageProtoMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        callRequestObserver = call.startCallStream()
-
-        // Send an identity signal to register with the hub on the server
-        val identityId = currentUserId ?: currentUsername
-        identityId?.let { id ->
-            callRequestObserver?.onNext(CallMessageProto(
-                senderId = id,
-                type = CallMessageProto.Type.ICE_CANDIDATE, // Use as heartbeat/identity
-                payload = "IDENTITY"
-            ))
-        }
-    }
-
-    private fun io.grpc.ClientCall<CallMessageProto, CallMessageProto>.startCallStream(): StreamObserver<CallMessageProto> {
-        val responseObserver = object : StreamObserver<CallMessageProto> {
-            override fun onNext(value: CallMessageProto) {
-                scope.launch { _callSignals.emit(value) }
-            }
-            override fun onError(t: Throwable) {
-                Log.e(TAG, "Call session stream error", t)
-                callRequestObserver = null
-                lavender.client.android.data.calls.CallManager.clearCurrentCall()
-                scope.launch {
-                    delay(5000)
-                    startCallSession()
-                }
-            }
-            override fun onCompleted() {
-                Log.d(TAG, "Call session stream completed")
-                callRequestObserver = null
-                lavender.client.android.data.calls.CallManager.clearCurrentCall()
-            }
-        }
-
-        this.start(object : io.grpc.ClientCall.Listener<CallMessageProto>() {
-            override fun onMessage(message: CallMessageProto) = responseObserver.onNext(message)
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    _connectionStatus.value = ConnectionStatus.FAILED
-                    requestObserver = null
-                }
-                if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
-            }
-        }, io.grpc.Metadata())
-        this.request(Int.MAX_VALUE)
-
-        return object : StreamObserver<CallMessageProto> {
-            override fun onNext(value: CallMessageProto) = this@startCallStream.sendMessage(value)
-            override fun onError(t: Throwable) = this@startCallStream.cancel("Error", t)
-            override fun onCompleted() = this@startCallStream.halfClose()
-        }
+        callClient.startCallSession()
     }
 
     fun sendCallSignal(signal: CallMessageProto) {
-        if (callRequestObserver == null) {
-            startCallSession()
-            // Give it a bit of time or queue it? For now just try to send
-        }
-        callRequestObserver?.onNext(signal)
+        callClient.sendCallSignal(signal)
     }
 
     fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
@@ -1148,7 +970,7 @@ object RealGrpcClient {
             }
         }
 
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetHistoryRequestProto, GetHistoryResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetHistory")
@@ -1203,9 +1025,9 @@ object RealGrpcClient {
         // Only use cache for pull-to-refresh (skipCache=true means cache was cleared).
         // Server response always updates UI.
 
-        val currentChannel = channel
+        val currentChannel = getChannel()
         if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
-            Log.w(TAG, "getChats: channel is null or dead, attempting reconnect")
+            Log.w(TAG, "getChats: getChannel() is null or dead, attempting reconnect")
             _connectionStatus.value = ConnectionStatus.FAILED
             val addr = currentServerAddress
             if (!addr.isNullOrEmpty()) {
@@ -1268,7 +1090,7 @@ object RealGrpcClient {
     fun clearMessages() { _messages.value = emptyList() }
 
     fun registerToken(user: String, token: String, pushEnabled: Boolean) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TokenRequestProto, TokenResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/RegisterToken")
@@ -1298,49 +1120,9 @@ object RealGrpcClient {
         deviceType: String = "android",
         clientVersion: String = "",
         callback: (AuthResponseV2Proto?, String?) -> Unit
-    ) {
-        val currentChannel = channel ?: run {
-            callback(null, "Not connected")
-            return
-        }
+    ) = authClient.signInV2(username, password, deviceId, deviceName, deviceType, clientVersion, callback)
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SignInRequestV2Proto, AuthResponseV2Proto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AuthService/SignInV2")
-            .setRequestMarshaller(SignInRequestV2Marshaller())
-            .setResponseMarshaller(AuthResponseV2Marshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AuthResponseV2Proto>() {
-            override fun onMessage(message: AuthResponseV2Proto) {
-                if (message.success) {
-                    callback(message, null)
-                } else {
-                    callback(null, message.message)
-                }
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(null, status.description ?: "Auth failed")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(SignInRequestV2Proto(
-            username = username,
-            password = password,
-            deviceId = deviceId,
-            deviceName = deviceName,
-            deviceType = deviceType,
-            clientVersion = clientVersion
-        ))
-        call.halfClose()
-        call.request(1)
-    }
-
-    /**
-     * SignUpV2 — registers a new user via AuthService v2 with JWT tokens.
-     */
+    /** SignUpV2 — delegates to GrpcAuthClient */
     fun signUpV2(
         username: String,
         password: String,
@@ -1350,155 +1132,29 @@ object RealGrpcClient {
         deviceType: String = "android",
         clientVersion: String = "",
         callback: (AuthResponseV2Proto?, String?) -> Unit
-    ) {
-        val currentChannel = channel ?: run {
-            callback(null, "Not connected")
-            return
-        }
+    ) = authClient.signUpV2(username, password, email, deviceId, deviceName, deviceType, clientVersion, callback)
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SignUpRequestV2Proto, AuthResponseV2Proto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AuthService/SignUpV2")
-            .setRequestMarshaller(SignUpRequestV2Marshaller())
-            .setResponseMarshaller(AuthResponseV2Marshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AuthResponseV2Proto>() {
-            override fun onMessage(message: AuthResponseV2Proto) {
-                if (message.success) {
-                    callback(message, null)
-                } else {
-                    callback(null, message.message)
-                }
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(null, status.description ?: "Registration failed")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(SignUpRequestV2Proto(
-            username = username,
-            password = password,
-            email = email,
-            deviceId = deviceId,
-            deviceName = deviceName,
-            deviceType = deviceType,
-            clientVersion = clientVersion
-        ))
-        call.halfClose()
-        call.request(1)
-    }
-
-    /**
-     * RefreshToken — exchanges a refresh token for a new access+refresh pair.
-     */
+    /** RefreshToken — delegates to GrpcAuthClient */
     fun refreshToken(
         refreshToken: String,
         callback: (RefreshTokenResponseProto?, String?) -> Unit
-    ) {
-        val currentChannel = channel ?: run {
-            callback(null, "Not connected")
-            return
-        }
+    ) = authClient.refreshToken(refreshToken, callback)
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RefreshTokenRequestProto, RefreshTokenResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AuthService/RefreshToken")
-            .setRequestMarshaller(RefreshTokenRequestMarshaller())
-            .setResponseMarshaller(RefreshTokenResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RefreshTokenResponseProto>() {
-            override fun onMessage(message: RefreshTokenResponseProto) {
-                callback(message, null)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(null, status.description ?: "Token refresh failed")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(RefreshTokenRequestProto(refreshToken = refreshToken))
-        call.halfClose()
-        call.request(1)
-    }
-
-    /**
-     * SignOut — revokes a device session or all sessions.
-     */
+    /** SignOut — delegates to GrpcAuthClient */
     fun signOut(
         refreshToken: String = "",
         allDevices: Boolean = false,
         callback: (Boolean, String) -> Unit
-    ) {
-        val currentChannel = channel ?: run {
-            callback(false, "Not connected")
-            return
-        }
+    ) = authClient.signOut(refreshToken, allDevices, callback)
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SignOutRequestProto, SimpleAuthResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AuthService/SignOut")
-            .setRequestMarshaller(SignOutRequestMarshaller())
-            .setResponseMarshaller(SimpleAuthResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<SimpleAuthResponseProto>() {
-            override fun onMessage(message: SimpleAuthResponseProto) {
-                callback(message.success, message.message)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(false, status.description ?: "Sign out failed")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(SignOutRequestProto(refreshToken = refreshToken, allDevices = allDevices))
-        call.halfClose()
-        call.request(1)
-    }
-
-    /**
-     * RevokeDevice — deactivates a specific device for the authenticated user.
-     */
+    /** RevokeDevice — delegates to GrpcAuthClient */
     fun revokeDevice(
         deviceId: String,
         callback: (Boolean, String) -> Unit
-    ) {
-        val currentChannel = channel ?: run {
-            callback(false, "Not connected")
-            return
-        }
-
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RevokeDeviceRequestProto, SimpleAuthResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AuthService/RevokeDevice")
-            .setRequestMarshaller(RevokeDeviceRequestMarshaller())
-            .setResponseMarshaller(SimpleAuthResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<SimpleAuthResponseProto>() {
-            override fun onMessage(message: SimpleAuthResponseProto) {
-                callback(message.success, message.message)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(false, status.description ?: "Revoke failed")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(RevokeDeviceRequestProto(deviceId = deviceId))
-        call.halfClose()
-        call.request(1)
-    }
+    ) = authClient.revokeDevice(deviceId, callback)
 
     fun saveDraft(roomId: String, text: String, replyId: String, replyUser: String, replyText: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveDraftRequestProto, SaveDraftResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SaveDraft")
@@ -1517,7 +1173,7 @@ object RealGrpcClient {
     }
 
     fun getDraft(roomId: String, callback: (String, String, String, String, Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDraftRequestProto, GetDraftResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetDraft")
@@ -1536,7 +1192,7 @@ object RealGrpcClient {
     }
 
     fun deleteDraft(roomId: String, callback: (Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDraftRequestProto, DeleteDraftResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteDraft")
@@ -1555,7 +1211,7 @@ object RealGrpcClient {
     }
 
     fun getMutedChats(callback: (List<String>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetMutedChatsRequestProto, GetMutedChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetMutedChats")
@@ -1574,7 +1230,7 @@ object RealGrpcClient {
     }
 
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SetMutedChatRequestProto, SetMutedChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SetMutedChat")
@@ -1593,7 +1249,7 @@ object RealGrpcClient {
     }
 
     fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddFavoriteRequestProto, AddFavoriteResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/AddFavorite")
@@ -1612,7 +1268,7 @@ object RealGrpcClient {
     }
 
     fun removeFavorite(userId: String, messageId: String, callback: (Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveFavoriteRequestProto, RemoveFavoriteResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/RemoveFavorite")
@@ -1641,7 +1297,7 @@ object RealGrpcClient {
             }
         }
 
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetFavoritesRequestProto, GetFavoritesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetFavorites")
@@ -1669,7 +1325,7 @@ object RealGrpcClient {
     }
 
     fun saveFavoriteMessage(message: Message, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MessageProto, AddFavoriteResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SaveFavoriteMessage")
@@ -1688,7 +1344,7 @@ object RealGrpcClient {
     }
 
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserIdRequestProto, GetUserIdResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetUserId")
@@ -1721,7 +1377,7 @@ object RealGrpcClient {
     }
 
     fun editMessage(id: String, text: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<EditMessageRequestProto, EditMessageResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/EditMessage")
@@ -1739,7 +1395,7 @@ object RealGrpcClient {
     }
 
     fun updateAvatar(username: String, avatarUrl: String, fullAvatarUrl: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateAvatarRequestProto, UpdateAvatarResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateAvatar")
@@ -1762,7 +1418,7 @@ object RealGrpcClient {
     }
 
     fun getUserAvatar(username: String, userId: String = "", callback: (String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserAvatarRequestProto, GetUserAvatarResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetUserAvatar")
@@ -1783,7 +1439,7 @@ object RealGrpcClient {
     }
 
     fun updateProfile(username: String, bio: String, status: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateProfileRequestProto, UpdateProfileResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateProfile")
@@ -1801,7 +1457,7 @@ object RealGrpcClient {
     }
 
     fun getUserProfile(userId: String, callback: (GetUserProfileResponseProto?) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserProfileRequestProto, GetUserProfileResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetUserProfile")
@@ -1819,7 +1475,7 @@ object RealGrpcClient {
     }
 
     fun deleteMessage(m: Message) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         
         // Optimistic UI: remove locally first
         deletedMessageHashes.add(getMessageHash(m))
@@ -1844,7 +1500,7 @@ object RealGrpcClient {
     }
 
     fun deleteProfile(u: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteProfileRequestProto, DeleteProfileResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteProfile")
@@ -1864,7 +1520,7 @@ object RealGrpcClient {
     fun clearSystemNotification() { _systemNotification.value = null }
 
     fun updateUsername(ou: String, nu: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateUsernameRequestProto, UpdateUsernameResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateUsername")
@@ -1882,7 +1538,7 @@ object RealGrpcClient {
     }
 
     fun updatePassword(u: String, op: String, np: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdatePasswordRequestProto, UpdatePasswordResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdatePassword")
@@ -1900,7 +1556,7 @@ object RealGrpcClient {
     }
 
     fun adminUpdatePassword(tu: String, np: String, au: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AdminUpdatePasswordRequestProto, AdminUpdatePasswordResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/AdminUpdatePassword")
@@ -1918,7 +1574,7 @@ object RealGrpcClient {
     }
 
     fun requestPasswordReset(email: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RequestPasswordResetRequestProto, RequestPasswordResetResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/RequestPasswordReset")
@@ -1936,7 +1592,7 @@ object RealGrpcClient {
     }
 
     fun resetPassword(token: String, newPw: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ResetPasswordRequestProto, ResetPasswordResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/ResetPassword")
@@ -1959,9 +1615,9 @@ object RealGrpcClient {
             lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid)
         }
 
-        val currentChannel = channel
+        val currentChannel = getChannel()
         if (currentChannel == null || _connectionStatus.value != ConnectionStatus.READY) {
-            Log.d(TAG, "Queueing markRead for $rid because channel is not ready")
+            Log.d(TAG, "Queueing markRead for $rid because getChannel() is not ready")
             pendingReads.add(rid)
             onComp?.invoke()
             return
@@ -2001,7 +1657,7 @@ object RealGrpcClient {
     }
 
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteChat")
@@ -2029,7 +1685,7 @@ object RealGrpcClient {
     }
 
     fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteChat")
@@ -2055,7 +1711,7 @@ object RealGrpcClient {
     }
 
     fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateDirectChatRequestProto, CreateDirectChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/CreateDirectChat")
@@ -2077,7 +1733,7 @@ object RealGrpcClient {
     }
 
     fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateGroupChatRequestProto, CreateGroupChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/CreateGroupChat")
@@ -2095,7 +1751,7 @@ object RealGrpcClient {
     }
 
     fun updateChatAvatar(cid: String, a: String, u: String, fa: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatAvatarRequestProto, UpdateChatAvatarResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateChatAvatar")
@@ -2113,7 +1769,7 @@ object RealGrpcClient {
     }
 
     fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatSettingsRequestProto, UpdateChatSettingsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateChatSettings")
@@ -2131,7 +1787,7 @@ object RealGrpcClient {
     }
 
     fun updateChatName(cid: String, n: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatNameRequestProto, UpdateChatNameResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/UpdateChatName")
@@ -2160,7 +1816,7 @@ object RealGrpcClient {
     }
 
     fun addParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddParticipantRequestProto, AddParticipantResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/AddParticipant")
@@ -2181,7 +1837,7 @@ object RealGrpcClient {
     }
 
     fun removeParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveParticipantRequestProto, RemoveParticipantResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/RemoveParticipant")
@@ -2201,7 +1857,7 @@ object RealGrpcClient {
     }
 
     fun addContact(u: String, cu: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddContactRequestProto, AddContactResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/AddContact")
@@ -2219,7 +1875,7 @@ object RealGrpcClient {
     }
 
     fun removeContact(u: String, cu: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveContactRequestProto, RemoveContactResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/RemoveContact")
@@ -2237,7 +1893,7 @@ object RealGrpcClient {
     }
 
     fun getContacts(u: String, cb: (List<String>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetContactsRequestProto, GetContactsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetContacts")
@@ -2255,7 +1911,7 @@ object RealGrpcClient {
     }
 
     fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllUsersRequestProto, GetAllUsersResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetAllUsers")
@@ -2282,7 +1938,7 @@ object RealGrpcClient {
     }
 
     fun getAllChats(callback: (List<ChatInfo>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllChatsRequestProto, GetAllChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetAllChats")
@@ -2329,7 +1985,7 @@ object RealGrpcClient {
     }
 
     fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAIChatsRequestProto, GetAIChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetAIChats")
@@ -2361,7 +2017,7 @@ object RealGrpcClient {
     }
 
     fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RenameAIChatRequestProto, RenameAIChatResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/RenameAIChat")
@@ -2389,7 +2045,7 @@ object RealGrpcClient {
     }
 
     fun getChatListVersion(u: String, cb: (Long) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatListVersionRequestProto, GetChatListVersionResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetChatListVersion")
@@ -2407,7 +2063,7 @@ object RealGrpcClient {
     }
 
     fun getThemes(u: String, cb: (String, List<CustomThemeProto>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetThemesRequestProto, GetThemesResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetThemes")
@@ -2425,7 +2081,7 @@ object RealGrpcClient {
     }
 
     fun saveTheme(u: String, t: CustomThemeProto, cb: (Boolean, String) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveThemeRequestProto, SaveThemeResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SaveTheme")
@@ -2443,7 +2099,7 @@ object RealGrpcClient {
     }
 
     fun setCurrentTheme(u: String, tid: String, cb: (Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SetCurrentThemeRequestProto, SetCurrentThemeResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/SetCurrentTheme")
@@ -2461,7 +2117,7 @@ object RealGrpcClient {
     }
 
     fun deleteTheme(u: String, tid: String, cb: (Boolean) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteThemeRequestProto, DeleteThemeResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/DeleteTheme")
@@ -2479,7 +2135,7 @@ object RealGrpcClient {
     }
 
     fun getFCMLogs(cb: (List<FCMLogEntryProto>) -> Unit) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetFCMLogsRequestProto, GetFCMLogsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetFCMLogs")
@@ -2497,7 +2153,7 @@ object RealGrpcClient {
     }
 
     fun setReaction(messageId: String, username: String, emoji: String) {
-        val currentChannel = channel ?: return
+        val currentChannel = getChannel() ?: return
         
         // Optimistic UI: update locally first
         _messages.update { current ->
@@ -2659,8 +2315,8 @@ object RealGrpcClient {
         request: ReqT,
         responseType: Class<RespT>
     ): RespT? = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-        val channel = getChannel()
-        if (channel == null) {
+        val getChannel() = getChannel()
+        if (getChannel() == null) {
             cont.resume(null, onCancellation = {})
             return@suspendCancellableCoroutine
         }
@@ -2677,7 +2333,7 @@ object RealGrpcClient {
                 override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
             })
             .build()
-        val call = channel.newCall(method, io.grpc.CallOptions.DEFAULT)
+        val call = getChannel().newCall(method, io.grpc.CallOptions.DEFAULT)
         val listener = object : io.grpc.ClientCall.Listener<RespT>() {
             private var response: RespT? = null
             override fun onMessage(message: RespT) { response = message }

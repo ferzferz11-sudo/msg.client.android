@@ -15,7 +15,7 @@ import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
 
 /**
- * ChatListViewModelV2 — ViewModel для ChatListFragmentV2.
+ * ChatListViewModelV2 — ViewModel для ChatListActivityV2.
  *
  * Управляет:
  * - Загрузкой и фильтрацией чатов
