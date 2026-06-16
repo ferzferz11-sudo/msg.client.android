@@ -1,9 +1,9 @@
 # Lava Messenger — Android Документация
 
-**Версия:** v1.1.3.23
-**Обновлено:** 2026-06-16 (сессия 29)
+**Версия:** v1.1.3.24
+**Обновлено:** 2026-06-16 (сессия 30)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.22 (не выпущен)
+**Тег:** v1.1.3.24 (не выпущен)
 
 ---
 
@@ -72,7 +72,7 @@ app/src/main/java/lavender/client/android/
 │   │   ├── LoginBottomSheet.kt
 │   │   ├── RegisterBottomSheet.kt
 │   │   ├── AIBottomSheet.kt
-│   │   └── CommandBottomSheet.kt
+│   │   └── NewChatBottomSheet.kt
 │   ├── hermes/
 │   ├── owl/
 │   └── remote/

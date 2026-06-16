@@ -1,32 +1,44 @@
 # Lava Messenger — Android Session Notes
 
-## Сессия 29 (2026-06-16) — Fix auth flow после logout
+## Сессия 30 (2026-06-16) — Auth flow fix, ProfileBottomSheet → Settings Sheet
 
 ### Контекст
-- После logout и повторного запуска приложения шторка авторизации не показывала адрес сервера
-- `showAuthChoiceDialog()` имел пустые `onLogin`/`onRegister` — кнопки ничего не делали
-- `ServerAuthBottomSheet` health check использовал жёстко зашитый порт 8082 для всех серверов
-
-### Корневые причины
-1. `SessionManager.logout()` вызывал `CredentialStore.clear()` который стирал **всё** включая `server_address`
-2. `showAuthChoiceDialog()` при пустом `serverAddress` просто делал `return` без показа шторки
-3. `onLogin`/`onRegister` в `showAuthChoiceDialog()` были пустыми лямбдами `{ }`
-4. `ServerAuthBottomSheet.checkServerHealth()` использовал порт 8082 для всех серверов (dev использует 8083)
+- После logout шторка авторизации не показывала адрес сервера
+- `showAuthChoiceDialog()` имел пустые `onLogin`/`onRegister`
+- `ServerAuthBottomSheet` health check использовал жёстко зашитый порт 8082
+- ProfileBottomSheet был отдельным BottomSheetDialogFragment с пустым функционалом
+- Дублирующий `connect()` в setupUI и initFromPrefs
 
 ### Исправления
-1. **SessionManager.logout()** — сохраняет `server_address` после `CredentialStore.clear()`, чтобы при повторном запуске шторка знала какой сервер показывать
-2. **ChatListActivity.showAuthChoiceDialog()** — при пустом `serverAddress` берёт default server из `CredentialStore.getServerList()`, сохраняет его и показывает шторку
-3. **ChatListActivity.showLoginBottomSheet()** — полная реализация: prefill username, SessionManager.login(), обработка ошибок, recreate() после успеха
-4. **ChatListActivity.showRegisterBottomSheet()** — полная реализация: SessionManager.login(register=true), обработка ошибок, recreate()
-5. **ServerAuthBottomSheet** — добавлен параметр `httpPort` с автоопределением по gRPC порту (50051→8082, 50052→8083)
-6. **Dismiss listeners** — все шторки при закрытии без логина перезапускают auth dialog
+
+#### Auth flow
+1. **SessionManager.logout()** — сохраняет `server_address` после `CredentialStore.clear()`
+2. **showAuthChoiceDialog()** — при пустом serverAddress берёт default server из server list
+3. **showLoginBottomSheet()** — полная реализация: prefill, login, error handling, recreate
+4. **showRegisterBottomSheet()** — полная реализация: register, error handling, recreate
+5. **ServerAuthBottomSheet** — параметр `httpPort` с автоопределением (50051→8082, 50052→8083)
+6. **Dismiss listeners** — все шторки перезапускают auth dialog при закрытии без логина
+7. **setContentView перед auth dialog** — Activity всегда имеет layout перед показом шторки
+
+#### Settings Sheet (вместо ProfileBottomSheet)
+8. **ProfileBottomSheet.kt удалён** — заменён на showSettingsSheet() в ChatListActivity
+9. **bottom_sheet_profile.xml удалён** — заменён на bottom_sheet_user_menu.xml
+10. **Клик на аватар** → `showSettingsSheet()` → `bottom_sheet_user_menu.xml` (с иконками: share, edit profile, contacts, themes, update, language, additional settings)
+11. **Клик на ⚙️** → `showAdditionalSettingsSheet()` → `bottom_sheet_additional_settings.xml` (с иконками: security, notifications, logs, clear cache, about, admin, servers, delete profile, logout)
+12. **enableOnBackInvokedCallback="true"** — добавлен в манифест
+13. **Дублирующий connect() убран** — только initFromPrefs вызывает connect
 
 ### Коммиты
-- TBD — fix: auth flow after logout — server address persistence, login/register bottom sheets
+- `462d9f5` — feat: full auth flow with LoginBottomSheet + RegisterBottomSheet
+- `2a806bd` — fix: remove duplicate GrpcClient.connect()
+- `4b273c5` — fix: setContentView before auth dialog + enableOnBackInvokedCallback
+- `c0b0e64` — feat: ProfileBottomSheet with full settings (отменён)
+- `8db3bd0` — fix: ProfileBottomSheet compilation errors (отменён)
+- `f85b1c1` — refactor: remove ProfileBottomSheet, move settings to ChatListActivity as StandardBottomSheet
 
 ---
 
-## Сессия 28 (2026-06-16) — Рефакторинг соединений, единый ChatListActivity
+## Сессия 29 (2026-06-16) — Fix auth flow после logout (частично, завершена в сессии 30)
 
 ### Контекст
 - Проблемы с соединением: force reconnect убивал канал, shutdownNow race condition

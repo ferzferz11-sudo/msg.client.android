@@ -1,23 +1,35 @@
 # Lava Messenger (Android) — Задачи
 
 **Версия:** v1.1.3.24
-**Обновлено:** 2026-06-16 (сессия 29)
+**Обновлено:** 2026-06-16 (сессия 30)
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## ✅ v1.1.3.23 — Fix auth flow после logout (Сессия 29)
+## ✅ v1.1.3.24 — Auth flow fix + Settings Sheet (Сессия 30)
 
-### Исправлено
-- ✅ **logout() сохраняет server_address** — после CredentialStore.clear() восстанавливает server_address, чтобы шторка авторизации знала какой сервер показывать
+### Auth flow
+- ✅ **logout() сохраняет server_address** — после CredentialStore.clear() восстанавливает server_address
 - ✅ **showAuthChoiceDialog() с default server** — при пустом serverAddress берёт default из server list
-- ✅ **showLoginBottomSheet()** — полная реализация с prefill, login, error handling, recreate
-- ✅ **showRegisterBottomSheet()** — полная реализация с register, error handling, recreate
+- ✅ **showLoginBottomSheet()** — полная реализация: prefill, login, error handling, recreate
+- ✅ **showRegisterBottomSheet()** — полная реализация: register, error handling, recreate
 - ✅ **ServerAuthBottomSheet httpPort** — автоопределение HTTP порта по gRPC порту (50051→8082, 50052→8083)
 - ✅ **Dismiss listeners** — все шторки перезапускают auth dialog при закрытии без логина
+- ✅ **setContentView перед auth dialog** — Activity всегда имеет layout
+
+### Settings Sheet
+- ✅ **ProfileBottomSheet.kt удалён** — заменён на showSettingsSheet() в ChatListActivity
+- ✅ **bottom_sheet_profile.xml удалён** — заменён на bottom_sheet_user_menu.xml
+- ✅ **Клик на аватар** → showSettingsSheet() → bottom_sheet_user_menu.xml (с иконками)
+- ✅ **Клик на ⚙️** → showAdditionalSettingsSheet() → bottom_sheet_additional_settings.xml (с иконками)
+- ✅ **enableOnBackInvokedCallback="true"** — добавлен в манифест
+- ✅ **Дублирующий connect() убран** — только initFromPrefs вызывает connect
 
 ### Коммиты
-- `462d9f5` — feat: full auth flow with LoginBottomSheet + RegisterBottomSheet in ChatListActivity
+- `462d9f5` — feat: full auth flow with LoginBottomSheet + RegisterBottomSheet
+- `2a806bd` — fix: remove duplicate GrpcClient.connect()
+- `4b273c5` — fix: setContentView before auth dialog + enableOnBackInvokedCallback
+- `f85b1c1` — refactor: remove ProfileBottomSheet, move settings to ChatListActivity
 
 ---
 
@@ -30,9 +42,6 @@
 - ✅ ChatListViewModelV2 → ChatListViewModel
 - ✅ ChatAdapterV2 → ChatAdapter
 - ✅ Убран fallbackToV1() — один Activity работает на v1 и v2
-- ✅ Обновлён SplashActivity — всегда route на ChatListActivity
-- ✅ Обновлён AndroidManifest — одна запись ChatListActivity
-- ✅ activity_chat_list_v2.xml → activity_chat_list.xml
 
 ### Соединение
 - ✅ JWT auth fallback: при JWT ошибке → clear tokens → retry с password
@@ -41,125 +50,50 @@
 - ✅ Аватар в тулбаре: Glide + avatarCacheFlow
 - ✅ Статус соединения: RECONNECTING и FAILED отображаются
 
-### Коммиты
-- `cde8776` — chore: rename Lavender → Lava
-- `33ce3a5` — fix: update share text and descriptions
-- `86ecb9f` — fix: getChats retry after shutdownNow
-- `01313ae` — fix: force chat stream restart after shutdownNow race
-- `1b43a27` — fix: AuthManager.clearTokens null-safety
-- `44485a7` — debug: add stack trace logging for forceReconnect
-- `383292f` — refactor: merge v1/v2 ChatList into single Activity
-
 ---
 
 ## ✅ v1.1.3.22 — Rename Lavender → Lava (Сессия 27)
-
-### Android
-- ✅ Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
-- ✅ Каналы уведомлений: "Lavender Calls" → "Lava Calls", "Lavender Messages" → "Lava Messages"
-- ✅ Тема: "Lavender Night" → "Lava Night" (en)
-- ✅ Hardcoded строки в Kotlin заменены на R.string.*:
-  - FullScreenImageActivity: "Lavender_*.jpg" → R.string.filename_prefix
-  - ShareReceiverActivity: "Lavender Messenger" → R.string.share_app_description
-  - VideoPlayerActivity: "Lavender Messenger" → R.string.share_app_description
-  - ChatListActivity: "Lavender Messenger Feedback" → R.string.feedback_subject
-- ✅ Добавлены новые строки в strings.xml (en + ru): filename_prefix, share_app_description, feedback_subject
-
-### Коммиты
-- `cde8776` — chore: rename Lavender → Lava in all user-facing strings (en + ru)
-- `33ce3a5` — fix: update share text and descriptions — Lava: secure business communications platform
+- ✅ Все user-facing строки обновлены (en + ru)
 
 ---
 
-## ✅ v1.1.3.21 — FCM Push Notifications uplevel (Сессия 26)
-
-### Сервер (v1.2.0.2)
-- ✅ Hub.IsUserOnline(userId, username) — проверка онлайн-статуса
-- ✅ Hub.SetUserId() + clientUserIds map
-- ✅ sendPushNotification — skip online + collapse key + TTL
-- ✅ GetAllUsers() возвращает UserId
-- ✅ server_push_test.go — 7 тестов
-- ✅ Исправлена миграция user_chat_metadata
-
-### Android
-- ✅ Канал IMPORTANCE_HIGH + PRIORITY_HIGH + CATEGORY_MESSAGE
-- ✅ DND bypass switch + channel.setBypassDnd()
-- ✅ i18n: push_bypass_dnd + lavender_messages_channel_desc
-- ✅ Исправлены ошибки компиляции
-
-### Коммиты
-- `8b1dd90` — feat: FCM push — HIGH priority notifications
-- `a3bb5b9` — feat: FCM push — DND bypass + online user skip
-- `883eef1` — fix: Android compilation errors
+## ✅ v1.1.3.21 — FCM Push Notifications (Сессия 26)
+- ✅ HIGH priority notifications, DND bypass, online user skip
 
 ---
 
-## ✅ v1.1.3.20 — Модуляризация RealGrpcClient + Cleanup (Сессии 23-25)
-
-### Исправлено
-- ✅ **RealGrpcClient разделён на модули**: 4081 → 3739 строк (-342, -8.4%)
-- ✅ **GrpcConnectionManager** (167 строк) — connect/reconnect/disconnect/keepalive
-- ✅ **GrpcAuthClient** (232 строки) — signInV2/signUpV2/refreshToken/signOut/revokeDevice
-- ✅ **GrpcCallClient** (124 строки) — startCallSession/sendCallSignal
-- ✅ **GrpcTypingClient** (87 строк) — startTypingStream/sendTypingSignal
-- ✅ **ChatListFragmentV2** (144 строки) — удалён мёртвый код
-- ✅ **changelog_bundled.txt** — удалён, ChangelogActivity упрощён
-- ✅ **Дублирование currentServerAddress/currentServerPort** — исправлено
-- ✅ **Gradle wrapper** — удалён с сервера, восстановлен в git для локальной сборки
-
-### Коммиты
-- `c413038` — feat: modularize RealGrpcClient
-- `208141c` — fix: resolve compilation errors from modularization
-- `389aa02` — chore: remove changelog_bundled.txt and all usage in code
-- `30e1fac` — chore: restore Gradle wrapper for local builds
-- `e22ec93` — fix: restore missing Dispatchers and withContext imports
-
-### Тег
-- ✅ `v1.1.3.20` — выпущен (релиз отложен до стабильности)
+## ✅ v1.1.3.20 — Модуляризация RealGrpcClient (Сессии 23-25)
+- ✅ 4 модуля выделены, RealGrpcClient: 4081 → 3739 строк
 
 ---
 
-## ✅ v1.1.3.19 — Стабильность и оптимизация (Сессия 22)
-
-- ✅ JWT auth fix — getAccessToken() вместо getBearerToken()
-- ✅ Reconnect stability — единый источник onError, auth failure detection
-- ✅ DiffUtil — ChatAdapterV2 использует DiffUtil
-- ✅ Unread badges — цвета по теме, mark-as-read, реал-тайм обновление
+## ✅ v1.1.3.19 — Стабильность (Сессия 22)
+- ✅ JWT auth fix, reconnect optimization, DiffUtil, unread badges
 
 ---
 
 ## ✅ v1.1.3.18 — Стабильность соединения (Сессии 19-21)
-
-- ✅ HTTP /info fix — dev сервер определяется мгновенно
-- ✅ Keepalive 30s/10s, idleTimeout 25min
-- ✅ Баг загрузки чатов — убран двойной loadChats, cache-first
-- ✅ Poll interval 5s → 30s
+- ✅ HTTP /info fix, keepalive, poll interval
 
 ---
 
 ## ✅ v1.1.3.17 — FAB AI (Сессия 17)
-
-- ✅ AIBottomSheet, создание AI чатов, настройки
-
----
-
-## ✅ v1.1.3.16 — Selection Mode, Search, Pin Message, CacheUtils (Сессии 13-16)
-
-- ✅ Selection Mode, поиск, Pin Message, CacheUtils, ServersActivity
+- ✅ AIBottomSheet, AI навигация
 
 ---
 
-## ✅ v1.1.3.15 — Стабильная v1 (prod)
+## ✅ v1.1.3.16 — Selection Mode, Search, Pin Message (Сессии 13-16)
+- ✅ Selection Mode, поиск, Pin Message, CacheUtils
 
 ---
 
 ## 📋 Активные задачи
 
 ### Высокий приоритет
+- [ ] **Восстановить функциональность обновлений** — UpdateActivity, проверка обновлений, скачивание APK
 - [ ] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
   - ~2000 строк — самый большой оставшийся кусок
-- [ ] **Выпуск тега v1.1.3.21** — после локальной сборки APK
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
@@ -179,19 +113,17 @@
 | v1/v2 разделение | Новые файлы в ui/chatlist/, v1 без изменений |
 | Long press = режим выбора | ActionMode toolbar с действиями Pin/Delete/Archive |
 | Pin Chat в toolbar выбора | НЕ в обычном toolbar — только в режиме выбора |
-| Pin Message — selection toolbar | Кнопка pin/unpin в selection toolbar (v1-style) |
 | fetchServerInfo strategy | Dev (50052): skip HTTP, assume v2. Prod (50051): try HTTP /info, fallback v1 |
 | Optimistic READY | gRPC channel подключается лениво, health check не нужен |
 | Unread badge by theme | Badge bg = primary color, text = adaptive (white/black) |
-| newMessageEvent | SharedFlow<Pair<roomId, messageId>> for real-time unread increment |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 | ChatListActivityV2 без фрагмента | RecyclerView+SwipeRefresh напрямую в Activity |
 | CacheUtils | Единый утилит очистки кэша |
-| HermesSettings → OwlSettingsActivity | Переиспользование с isHermes=true |
-| AIChatInfo минимальная | Только id, name, type |
 | Keepalive 30s/10s | Для мобильных сетей, меньше разрывов |
 | Poll 30s | Уменьшение нагрузки на сервер |
-| Gradle wrapper удалён с сервера | OOM protection — нельзя случайно запустить ./gradlew на сервере |
+| Gradle wrapper удалён с сервера | OOM protection |
+| Settings Sheet вместо ProfileBottomSheet | showSettingsSheet() + showAdditionalSettingsSheet() в ChatListActivity |
+| enableOnBackInvokedCallback | Убирает warning в логах на Android 13+ |
 
 ---
 
@@ -199,12 +131,16 @@
 
 | Файл | Назначение |
 |------|-----------|
-| `ui/chatlist/ChatListActivityV2.kt` | v2 Activity: tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet |
-| `ui/chatlist/ChatAdapterV2.kt` | v2 адаптер с секциями + selection state + DiffUtil |
-| `ui/chatlist/ChatListViewModelV2.kt` | v2 ViewModel: loadChats, pinChat, setTabFilter, getChats |
+| `ui/chatlist/ChatListActivity.kt` | ЕДИНЫЙ Activity: tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet, settings sheets |
+| `ui/chatlist/ChatListViewModel.kt` | ViewModel: loadChats, pinChat, setTabFilter, getChats |
 | `ui/chatlist/ChatListSections.kt` | Section enum + SectionItem |
+| `ui/adapter/ChatAdapter.kt` | Адаптер с секциями + selection state + DiffUtil |
 | `ui/adapter/MessageAdapter.kt` | Адаптер сообщений + pinned badge |
 | `ui/widget/AIBottomSheet.kt` | Шторка выбора AI чата (OWL/Hermes) |
+| `ui/widget/ServerAuthBottomSheet.kt` | Шторка выбора входа (лого + сервер + статус + login/register) |
+| `ui/widget/LoginBottomSheet.kt` | Шторка входа (username/password) |
+| `ui/widget/RegisterBottomSheet.kt` | Шторка регистрации |
+| `ui/widget/NewChatBottomSheet.kt` | Шторка создания чата |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
 | `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~3700 строк, цель: ~200) |

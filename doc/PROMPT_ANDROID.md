@@ -1,26 +1,21 @@
-# Промпт для новой сессии — Android v1.1.3.23+
+# Промпт для новой сессии — Android v1.1.3.24+
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.23 (разработка)
+**Версия:** 1.1.3.24 (разработка)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.22 (не выпущен)
+**Тег:** v1.1.3.24 (не выпущен)
 
 ---
 
-## СТАТУС: v1.1.3.23 — Рефакторинг соединений, единый ChatListActivity
+## СТАТУС: v1.1.3.24 — Auth flow fix + Settings Sheet
 
-**Ключевые изменения в этой сессии:**
-- Удалён ChatListActivity (v1) — 2802 строки мёртвого кода
-- Удалён ChatAdapter (v1)
-- ChatListActivityV2 → ChatListActivity (единый)
-- ChatListViewModelV2 → ChatListViewModel
-- ChatAdapterV2 → ChatAdapter
-- Убран fallbackToV1() — один Activity работает на v1 и v2 серверах
-- JWT auth fallback: при ошибке JWT → очистка токенов → retry с password
-- getChats retry при shutdownNow вместо возврата emptyList
-- Backup chat stream restart при shutdownNow race condition
-- Аватар в тулбаре загружается через Glide + avatarCacheFlow
-- Статус соединения в тулбаре: RECONNECTING и FAILED отображаются
+**Ключевые изменения:**
+- Auth flow полностью работает: login, register, logout, reconnect
+- ProfileBottomSheet удалён, заменён на showSettingsSheet() и showAdditionalSettingsSheet() в ChatListActivity
+- Клик на аватар → bottom_sheet_user_menu.xml (с иконками)
+- Клик на ⚙️ → bottom_sheet_additional_settings.xml (с иконками)
+- enableOnBackInvokedCallback="true" в манифесте
+- Дублирующий connect() убран
 
 Сервер dev: v1.2.0.2
 Сервер prod: v1.1.3.10
@@ -56,18 +51,18 @@ messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
 ```
 ui/
 ├── chatlist/
-│   ├── ChatListActivity.kt         — ЕДИНЫЙ Activity: tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet
+│   ├── ChatListActivity.kt         — ЕДИНЫЙ Activity: tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet, settings sheets
 │   ├── ChatListViewModel.kt        — loadChats, pinChat, setTabFilter, getChats
 │   ├── ChatListSections.kt         — Section enum + SectionItem
 ├── adapter/
 │   ├── ChatAdapter.kt              — адаптер с секциями + selection state + DiffUtil
 │   └── MessageAdapter.kt           — адаптер сообщений + pinned badge
 ├── widget/
-│   ├── ServerAuthBottomSheet.kt
-│   ├── LoginBottomSheet.kt
-│   ├── RegisterBottomSheet.kt
+│   ├── ServerAuthBottomSheet.kt    — шторка выбора входа (httpPort auto-detect)
+│   ├── LoginBottomSheet.kt         — шторка входа (prefillUsername)
+│   ├── RegisterBottomSheet.kt      — шторка регистрации
 │   ├── AIBottomSheet.kt            — шторка выбора AI чата (OWL/Hermes)
-│   └── CommandBottomSheet.kt       — шторка команд
+│   └── NewChatBottomSheet.kt       — шторка создания чата
 ├── hermes/                         — Hermes AI чат
 ├── owl/                            — OWL AI чат
 └── remote/                         — Remote Agent UI
@@ -94,7 +89,7 @@ data/
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### v1.1.3.23 (текущая)
+### v1.1.3.24 (текущая)
 - **Единый ChatListActivity** — убрано разделение v1/v2, один Activity работает на обоих серверах
 - **НЕТ fallbackToV1()** — если сервер v1, Activity просто не показывает v2-only фичи
 - **JWT auth fallback** — при JWT ошибке: clear tokens → retry с password
@@ -102,24 +97,18 @@ data/
 - **Backup chat restart** — при shutdownNow race condition через 2с
 - **Аватар в тулбаре** — Glide + avatarCacheFlow
 - **Статус соединения** — RECONNECTING и FAILED отображаются в тулбаре
-
-### v1.1.3.22
-- **Rename Lavender → Lava** — все user-facing строки обновлены
-- **share_app_description** — "Lava: secure business communications platform" / "Лава: платформа защищенных бизнес-коммуникаций"
-
-### v1.1.3.20
-- **RealGrpcClient модуляризирован** — 4 модуля выделены, ~3700 строк осталось
+- **Settings Sheet** — showSettingsSheet() + showAdditionalSettingsSheet() в ChatListActivity
+- **enableOnBackInvokedCallback** — добавлен в манифест
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
-- Приложение называется "Lava" (en) / "Лава" (ru), НЕ "Lavender"
-- app_version_format: "Lava: app Android %s" / "Lava: приложение Android %s"
+- Приложение называется "Lava" (en) / "Лава" (ru)
 
 ---
 
 ## ПРАВИЛА
 
-1. ⚠️ **НЕ компилировать Android на сервере** — только `go build` для сервера, Gradle wrapper удалён
+1. ⚠️ **НЕ компилировать Android на сервере** — только `go build` для сервера
 2. НЕ деплоить новую версию на prod без прямого указания ферзя
 3. Коммитить и пушить после каждого значимого изменения
 4. Версия сервера в server.go:33, версия Android в version.txt
@@ -211,13 +200,11 @@ cd /root/msg.client.android
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.23)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.24)
 
 ### Высокий приоритет
-1. **Оптимизация соединения** — убрать все лишние connect/disconnect, один стабильный канал
+1. **Восстановить функциональность обновлений** — UpdateActivity, проверка обновлений, скачивание APK
 2. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
-   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
-   - ~2000 строк — самый большой оставшийся кусок
 
 ### Средний приоритет
 3. **ProfileService v2** — проверить работу на dev сервере

@@ -1,6 +1,140 @@
-# Lavender Messenger — Android CHANGELOG
+# Lava Messenger — Android CHANGELOG
+
+## v1.1.3.24 (2026-06-16) — Auth flow fix + Settings Sheet
+
+### Auth flow
+- **logout() сохраняет server_address** — после CredentialStore.clear() восстанавливает адрес сервера
+- **showAuthChoiceDialog()** — при пустом serverAddress берёт default server из server list
+- **showLoginBottomSheet()** — полная реализация: prefill username, login, error handling, recreate
+- **showRegisterBottomSheet()** — полная реализация: register, error handling, recreate
+- **ServerAuthBottomSheet httpPort** — автоопределение HTTP порта по gRPC порту (50051→8082, 50052→8083)
+- **Dismiss listeners** — все шторки перезапускают auth dialog при закрытии без логина
+- **setContentView перед auth dialog** — Activity всегда имеет layout
+
+### Settings Sheet
+- **ProfileBottomSheet.kt удалён** — заменён на showSettingsSheet() в ChatListActivity
+- **bottom_sheet_profile.xml удалён** — заменён на bottom_sheet_user_menu.xml
+- **Клик на аватар** → showSettingsSheet() → bottom_sheet_user_menu.xml (с иконками)
+- **Клик на ⚙️** → showAdditionalSettingsSheet() → bottom_sheet_additional_settings.xml (с иконками)
+- **enableOnBackInvokedCallback="true"** — добавлен в манифест
+- **Дублирующий connect() убран** — только initFromPrefs вызывает connect
+
+### Коммиты
+- `462d9f5` — feat: full auth flow with LoginBottomSheet + RegisterBottomSheet
+- `2a806bd` — fix: remove duplicate GrpcClient.connect()
+- `4b273c5` — fix: setContentView before auth dialog + enableOnBackInvokedCallback
+- `f85b1c1` — refactor: remove ProfileBottomSheet, move settings to ChatListActivity
+
+---
+
+## v1.1.3.23 (2026-06-16) — Рефакторинг соединений, единый ChatListActivity
+
+### Архитектура
+- **Единый ChatListActivity** — v1/v2 объединены, один Activity работает на обоих серверах
+- **Удалён ChatListActivity (v1)** — 2802 строки мёртвого кода
+- **Удалён ChatAdapter (v1)**
+
+### Соединение
+- **JWT auth fallback** — при JWT ошибке → clear tokens → retry с password
+- **getChats retry** — при shutdownNow через 1.5с вместо emptyList
+- **Backup chat restart** — при shutdownNow race condition через 2с
+- **Аватар в тулбаре** — Glide + avatarCacheFlow
+- **Статус соединения** — RECONNECTING и FAILED отображаются
+
+### Коммиты
+- `383292f` — refactor: merge v1/v2 ChatList into single Activity
+- `86ecb9f` — fix: getChats retry after shutdownNow
+- `01313ae` — fix: force chat stream restart after shutdownNow race
+- `1b43a27` — fix: AuthManager.clearTokens null-safety
+
+---
+
+## v1.1.3.22 (2026-06-16) — Rename Lavender → Lava
+
+### Изменения
+- Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
+- Каналы уведомлений: "Lavender Calls/Messages" → "Lava Calls/Messages"
+- Тема: "Lavender Night" → "Lava Night" (en)
+- 4 hardcoded строки в Kotlin заменены на R.string.*
+
+### Коммиты
+- `cde8776` — chore: rename Lavender → Lava in all user-facing strings (en + ru)
+- `33ce3a5` — fix: update share text and descriptions
+
+---
+
+## v1.1.3.21 (2026-06-16) — FCM Push Notifications
+
+### Сервер (v1.2.0.2)
+- Hub.IsUserOnline(userId, username) — проверка онлайн-статуса
+- sendPushNotification — skip online + collapse key + TTL
+- server_push_test.go — 7 тестов
+
+### Android
+- Канал IMPORTANCE_HIGH + PRIORITY_HIGH + CATEGORY_MESSAGE
+- DND bypass switch + channel.setBypassDnd()
+- i18n: push_bypass_dnd + lavender_messages_channel_desc
+
+### Коммиты
+- `8b1dd90` — feat: FCM push — HIGH priority notifications
+- `a3bb5b9` — feat: FCM push — DND bypass + online user skip
+- `883eef1` — fix: Android compilation errors
+
+---
 
 ## v1.1.3.20 (2026-06-16) — Модуляризация RealGrpcClient + Cleanup
+
+### Рефакторинг
+- **RealGrpcClient разделён на модули**: 4081 → 3739 строк (-342, -8.4%)
+- **GrpcConnectionManager** (167 строк) — connect/reconnect/disconnect/keepalive
+- **GrpcAuthClient** (232 строки) — signInV2/signUpV2/refreshToken/signOut/revokeDevice
+- **GrpcCallClient** (124 строки) — startCallSession/sendCallSignal
+- **GrpcTypingClient** (87 строк) — startTypingStream/sendTypingSignal
+
+### Удаление мёртвого кода
+- **ChatListFragmentV2** (144 строки) + fragment_chat_list_v2.xml — удалены
+- **changelog_bundled.txt** — удалён
+
+### Тег
+- `v1.1.3.20` — выпущен (релиз отложен до стабильности)
+
+---
+
+## v1.1.3.19 (2026-06-16) — Стабильность и оптимизация
+
+- JWT auth fix — getAccessToken() вместо getBearerToken()
+- Reconnect stability — единый источник onError
+- DiffUtil — ChatAdapterV2 использует DiffUtil
+- Unread badges — цвета по теме, mark-as-read, реал-тайм обновление
+
+---
+
+## v1.1.3.18 (2026-06-15) — Стабильность соединения
+
+- HTTP /info fix — dev сервер определяется мгновенно
+- Keepalive 30s/10s, idleTimeout 25min
+- Баг загрузки чатов — убран двойной loadChats
+- Poll interval 5s → 30s
+
+---
+
+## v1.1.3.17 (2026-06-15) — FAB AI
+
+- AIBottomSheet подключён к ChatListActivity
+- AI навигация — Hermes/OWL чаты
+
+---
+
+## v1.1.3.16 (2026-06-16) — Selection Mode, Search, Pin Message, CacheUtils
+
+- Selection Mode — long press → ActionMode toolbar
+- Поиск — SearchView в toolbar + debounce 300ms
+- Pin Message — selection toolbar
+- CacheUtils — единый утилит очистки кэша
+
+---
+
+## v1.1.3.15 и ранее — Стабильная v1 (prod)
 
 ### Рефакторинг
 - **RealGrpcClient разделён на модули**: 4081 → 3739 строк (-342, -8.4%)

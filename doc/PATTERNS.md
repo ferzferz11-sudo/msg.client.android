@@ -1,7 +1,7 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.17
-**Обновлено:** 2026-06-15
+**Версия:** v1.1.3.24
+**Обновлено:** 2026-06-16 (сессия 30)
 
 ---
 
@@ -13,10 +13,20 @@
 - `LoginBottomSheet` — шторка входа (username/password)
 - `RegisterBottomSheet` — шторка регистрации (username/password/email)
 - Все наследуют StandardBottomSheet
-- Health check через http://host:8082/health
+- Health check через http://host:8082/health (автоопределение порта: 50051→8082, 50052→8083)
 - Используются в: ChatListActivity, ServersActivity
 - Drag handle добавлен во все шторки
 - Status indicator — только кружок слева от названия, без текста
+- Dismiss listener — при закрытии без логина перезапускает auth dialog
+
+### StandardBottomSheet pattern (v1.1.3.24)
+Все шторки наследуют `StandardBottomSheet`:
+- `ServerAuthBottomSheet`, `LoginBottomSheet`, `RegisterBottomSheet`, `AIBottomSheet`, `NewChatBottomSheet`
+- Settings Sheet (`bottom_sheet_user_menu.xml`) — вызывается из ChatListActivity.showSettingsSheet()
+- Additional Settings Sheet (`bottom_sheet_additional_settings.xml`) — вызывается из ChatListActivity.showAdditionalSettingsSheet()
+- Кастомный layout через `StandardBottomSheet(context, R.layout.xxx)`
+- Drag handle добавлен во все шторки автоматически
+- Dismiss listener через `setOnDismissListener { }`
 
 ### Server switch pattern (v1.1.3.11)
 При смене сервера через ServersActivity:
