@@ -15,7 +15,7 @@ import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
 
 /**
- * ChatListViewModelV2 — ViewModel для ChatListActivityV2.
+ * ChatListViewModel — ViewModel для ChatListActivity.
  *
  * Управляет:
  * - Загрузкой и фильтрацией чатов
@@ -23,10 +23,10 @@ import lavender.client.android.data.models.ChatInfo
  * - Действиями (Pin, Archive, Mute, Delete)
  * - Поиском
  */
-class ChatListViewModelV2(application: Application) : AndroidViewModel(application) {
+class ChatListViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
-        private const val TAG = "ChatListViewModelV2"
+        private const val TAG = "ChatListViewModel"
     }
 
     private val _sections = MutableStateFlow<List<SectionItem>>(emptyList())

@@ -206,16 +206,10 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun navigateToChatList(host: String) {
-        if (host.isNotEmpty()) {
-            Log.d("SplashActivity", "Directing to ChatListActivityV2 (server: $host)")
-            Intent(this, lavender.client.android.ui.chatlist.ChatListActivityV2::class.java)
-        } else {
-            Log.d("SplashActivity", "Directing to ChatListActivity (no server)")
-            Intent(this, ChatListActivity::class.java)
-        }.let {
-            startActivity(it)
-            finish()
-        }
+        // Always use ChatListActivity — works on both v1 and v2 servers
+        Log.d("SplashActivity", "Directing to ChatListActivity (server: $host)")
+        startActivity(Intent(this, ChatListActivity::class.java))
+        finish()
     }
 
     /** Clear all local cache silently on successful login. */

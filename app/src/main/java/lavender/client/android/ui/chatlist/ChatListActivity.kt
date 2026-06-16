@@ -40,27 +40,26 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
+import lavender.client.android.ui.adapter.ChatAdapter
 
 /**
- * ChatListActivityV2 — Activity для v2 серверов (ChatList v2 API).
+ * ChatListActivity — единый Activity для списка чатов.
  *
- * Features:
- * - Selection Mode: long press = start ActionMode, tap = toggle selection
- * - Search: SearchView in toolbar with 300ms debounce
- * - Tab filter: All / AI / Groups
- * - v1 fallback: auto-redirect to ChatListActivity if server doesn't support v2
+ * Работает на v1 и v2 серверах:
+ * - v2: полный функционал (Pin, Archive, Search, Tabs)
+ * - v1: базовый функционал (список чатов, Favorites, AI)
  *
- * v1 files (ChatListActivity.kt, ChatAdapter.kt) НЕ ИЗМЕНЯЮТСЯ.
+ * Никакого fallback на отдельный Activity — всё в одном месте.
  */
-class ChatListActivityV2 : AppCompatActivity() {
+class ChatListActivity : AppCompatActivity() {
 
     companion object {
-        private const val TAG = "ChatListActivityV2"
+        private const val TAG = "ChatListActivity"
         private const val SEARCH_DEBOUNCE_MS = 300L
     }
 
-    private lateinit var viewModel: ChatListViewModelV2
-    private lateinit var chatAdapter: ChatAdapterV2
+    private lateinit var viewModel: ChatListViewModel
+    private lateinit var chatAdapter: ChatAdapter
     private var swipeRefresh: SwipeRefreshLayout? = null
     private var rvChatList: RecyclerView? = null
     private var tabLayout: TabLayout? = null
@@ -88,37 +87,17 @@ class ChatListActivityV2 : AppCompatActivity() {
         val serverAddress = CredentialStore.getServerAddress(this) ?: ""
 
         if (serverAddress.isEmpty()) {
-            Log.w(TAG, "No server address — falling back to v1 ChatListActivity")
-            fallbackToV1()
+            Log.w(TAG, "No server address — showing auth dialog")
+            showAuthChoiceDialog()
             return
         }
 
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val httpPort = if (parts.size > 1 && parts[1].toIntOrNull() == 50052) 8083 else 8082
-        val grpcPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
-
-        // Check server version before setting up UI
-        lifecycleScope.launch {
-            try {
-                GrpcClient.fetchServerInfo(this@ChatListActivityV2, host, httpPort, grpcPort)
-
-                if (ProfileClient.isChatV2Supported()) {
-                    Log.d(TAG, "v2 server detected — using ChatListActivityV2")
-                    setupV2UI()
-                } else {
-                    Log.d(TAG, "v1 server detected — falling back to v1 ChatListActivity")
-                    fallbackToV1()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to determine server version — falling back to v1", e)
-                fallbackToV1()
-            }
-        }
+        // Always setup UI — works on both v1 and v2 servers
+        setupUI()
     }
 
-    private fun setupV2UI() {
-        setContentView(R.layout.activity_chat_list_v2)
+    private fun setupUI() {
+        setContentView(R.layout.activity_chat_list)
 
         val username = SessionManager.session.value.username
         val password = SessionManager.session.value.password
@@ -181,7 +160,7 @@ class ChatListActivityV2 : AppCompatActivity() {
             GrpcClient.avatarCacheFlow.collectLatest { cache ->
                 val url = cache[avatarUsername]
                 if (!url.isNullOrEmpty() && ivToolbarUserAvatar != null) {
-                    Glide.with(this@ChatListActivityV2)
+                    Glide.with(this@ChatListActivity)
                         .load(url)
                         .apply(RequestOptions.circleCropTransform()
                             .placeholder(R.drawable.ic_default_avatar)
@@ -264,9 +243,9 @@ class ChatListActivityV2 : AppCompatActivity() {
     }
 
     private fun setupRecyclerView(username: String) {
-        viewModel = ChatListViewModelV2(application)
+        viewModel = ChatListViewModel(application)
 
-        chatAdapter = ChatAdapterV2(
+        chatAdapter = ChatAdapter(
             scope = lifecycleScope,
             onChatClick = { chat ->
                 if (chatAdapter.isSelectionMode()) {
@@ -488,9 +467,9 @@ class ChatListActivityV2 : AppCompatActivity() {
             var unpinned = 0
             for (chat in chats) {
                 if (chat.isPinned) {
-                    if (GrpcClient.unpinChat(this@ChatListActivityV2, chat.id)) unpinned++
+                    if (GrpcClient.unpinChat(this@ChatListActivity, chat.id)) unpinned++
                 } else {
-                    if (GrpcClient.pinChat(this@ChatListActivityV2, chat.id)) pinned++
+                    if (GrpcClient.pinChat(this@ChatListActivity, chat.id)) pinned++
                 }
             }
             if (pinned > 0 || unpinned > 0) {
@@ -515,9 +494,9 @@ class ChatListActivityV2 : AppCompatActivity() {
             var unarchived = 0
             for (chat in chats) {
                 if (chat.isArchived) {
-                    if (GrpcClient.unarchiveChat(this@ChatListActivityV2, chat.id)) unarchived++
+                    if (GrpcClient.unarchiveChat(this@ChatListActivity, chat.id)) unarchived++
                 } else {
-                    if (GrpcClient.archiveChat(this@ChatListActivityV2, chat.id)) archived++
+                    if (GrpcClient.archiveChat(this@ChatListActivity, chat.id)) archived++
                 }
             }
             if (archived > 0 || unarchived > 0) {
@@ -637,14 +616,6 @@ class ChatListActivityV2 : AppCompatActivity() {
                 startActivity(intent)
             }
         }
-    }
-
-    private fun fallbackToV1() {
-        val intent = Intent(this, lavender.client.android.ChatListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        startActivity(intent)
-        finish()
     }
 
     private fun showAuthChoiceDialog() {
