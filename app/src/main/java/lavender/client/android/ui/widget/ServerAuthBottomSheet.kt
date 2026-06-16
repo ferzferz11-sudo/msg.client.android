@@ -29,6 +29,7 @@ class ServerAuthBottomSheet(
     private val serverName: String,
     private val serverHost: String,
     private val serverPort: Int,
+    private val httpPort: Int = if (serverPort == 50052) 8083 else 8082,
     private val onLogin: () -> Unit,
     private val onRegister: () -> Unit,
     theme: Theme = ThemeStore.currentTheme()
@@ -75,7 +76,7 @@ class ServerAuthBottomSheet(
     private fun checkServerHealth() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val url = URL("http://$serverHost:8082/health")
+                val url = URL("http://$serverHost:$httpPort/health")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.connectTimeout = 3000
                 connection.readTimeout = 3000

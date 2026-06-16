@@ -8,6 +8,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import lavender.client.android.NewChatActivity
 import lavender.client.android.R
+import lavender.client.android.SplashLoadingActivity
 import lavender.client.android.ServersActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
@@ -39,6 +41,8 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
+import lavender.client.android.ui.widget.LoginBottomSheet
+import lavender.client.android.ui.widget.RegisterBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import lavender.client.android.ui.widget.ProfileBottomSheet
 import lavender.client.android.ui.widget.NewChatBottomSheet
@@ -618,19 +622,209 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun showAuthChoiceDialog() {
-        val serverAddress = CredentialStore.getServerAddress(this) ?: return
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+        var serverAddress = CredentialStore.getServerAddress(this)
+        var host: String
+        var port: Int
+        var serverName: String
 
-        ServerAuthBottomSheet(
+        if (serverAddress.isEmpty()) {
+            // No saved server — try to get default from server list
+            val defaultServer = CredentialStore.getDefaultServer(this)
+            if (defaultServer != null) {
+                serverAddress = "${defaultServer.host}:${defaultServer.port}"
+                host = defaultServer.host
+                port = defaultServer.port
+                serverName = defaultServer.name
+                // Save as current server so next time it's available
+                CredentialStore.setServerAddress(this, serverAddress)
+            } else {
+                Log.w(TAG, "No server address and no default server — cannot show auth dialog")
+                return
+            }
+        } else {
+            val parts = serverAddress.split(":")
+            host = parts[0]
+            port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+            serverName = if (port == 50052) "Lava Germany dev" else "Lava Germany"
+        }
+
+        var isTransitioning = false
+        lateinit var authSheet: ServerAuthBottomSheet
+
+        authSheet = ServerAuthBottomSheet(
             context = this,
-            serverName = "Lava",
+            serverName = serverName,
             serverHost = host,
             serverPort = port,
-            onLogin = { },
-            onRegister = { }
-        ).show()
+            onLogin = {
+                isTransitioning = true
+                authSheet.dismiss()
+                showLoginBottomSheet(serverAddress)
+            },
+            onRegister = {
+                isTransitioning = true
+                authSheet.dismiss()
+                showRegisterBottomSheet(serverAddress)
+            }
+        )
+        authSheet.setOnDismissListener {
+            // If user dismissed without logging in, re-show auth dialog
+            if (!isTransitioning) {
+                val uname = SessionManager.session.value.username
+                val pwd = SessionManager.session.value.password
+                if (uname.isEmpty() || pwd.isEmpty()) {
+                    showAuthChoiceDialog()
+                }
+            }
+        }
+        authSheet.show()
+    }
+
+    private fun showLoginBottomSheet(serverAddress: String) {
+        var isTransitioning = false
+
+        lateinit var loginSheet: LoginBottomSheet
+
+        loginSheet = LoginBottomSheet(
+            context = this,
+            onLogin = { u: String, p: String ->
+                try {
+                    startActivity(Intent(this, SplashLoadingActivity::class.java))
+                } catch (_: Exception) {}
+
+                SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result ->
+                    runOnUiThread {
+                        SplashLoadingActivity.finishIfShowing()
+                        when (result) {
+                            "SUCCESS" -> {
+                                CredentialStore.setCredentials(
+                                    context = this@ChatListActivity,
+                                    username = u,
+                                    password = p,
+                                    serverAddress = serverAddress
+                                )
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    CredentialStore.setUserId(this@ChatListActivity, userId)
+                                }
+                                isTransitioning = true
+                                loginSheet.dismiss()
+                                recreate()
+                            }
+                            "USER_NOT_FOUND" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ChatListActivity, R.string.user_not_found, Toast.LENGTH_LONG).show()
+                            }
+                            "AUTH_FAILED" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ChatListActivity, R.string.wrong_password, Toast.LENGTH_LONG).show()
+                            }
+                            else -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ChatListActivity, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            },
+            onCancel = {
+                isTransitioning = true
+                loginSheet.dismiss()
+                showAuthChoiceDialog()
+            }
+        )
+
+        loginSheet.setOnDismissListener {
+            if (!isTransitioning) {
+                val uname = SessionManager.session.value.username
+                val pwd = SessionManager.session.value.password
+                if (uname.isEmpty() || pwd.isEmpty()) {
+                    showAuthChoiceDialog()
+                }
+            }
+        }
+
+        // Pre-fill username from last login
+        val lastUsername = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+            .getString("last_username", "") ?: ""
+        if (lastUsername.isNotEmpty()) {
+            loginSheet.prefillUsername(lastUsername)
+        }
+
+        loginSheet.show()
+    }
+
+    private fun showRegisterBottomSheet(serverAddress: String) {
+        var isTransitioning = false
+
+        lateinit var registerSheet: RegisterBottomSheet
+
+        registerSheet = RegisterBottomSheet(
+            context = this,
+            onRegister = { u: String, p: String, email: String ->
+                try {
+                    startActivity(Intent(this, SplashLoadingActivity::class.java))
+                } catch (_: Exception) {}
+
+                SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result ->
+                    runOnUiThread {
+                        SplashLoadingActivity.finishIfShowing()
+                        when (result) {
+                            "SUCCESS", "REGISTRATION_SUCCESS" -> {
+                                CredentialStore.setCredentials(
+                                    context = this@ChatListActivity,
+                                    username = u,
+                                    password = p,
+                                    email = email,
+                                    serverAddress = serverAddress
+                                )
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    CredentialStore.setUserId(this@ChatListActivity, userId)
+                                }
+                                Toast.makeText(this@ChatListActivity, R.string.registration_success, Toast.LENGTH_LONG).show()
+                                isTransitioning = true
+                                registerSheet.dismiss()
+                                recreate()
+                            }
+                            "USER_ALREADY_EXISTS" -> {
+                                registerSheet.setLoading(false)
+                                Toast.makeText(this, R.string.user_already_exists, Toast.LENGTH_LONG).show()
+                            }
+                            "EMAIL_ALREADY_IN_USE" -> {
+                                registerSheet.setLoading(false)
+                                Toast.makeText(this, R.string.email_already_in_use, Toast.LENGTH_LONG).show()
+                            }
+                            "AUTH_FAILED" -> {
+                                registerSheet.setLoading(false)
+                                Toast.makeText(this, R.string.auth_failed, Toast.LENGTH_LONG).show()
+                            }
+                            else -> {
+                                registerSheet.setLoading(false)
+                                Toast.makeText(this, R.string.connection_failed, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            },
+            onCancel = {
+                isTransitioning = true
+                registerSheet.dismiss()
+                showAuthChoiceDialog()
+            }
+        )
+
+        registerSheet.setOnDismissListener {
+            if (!isTransitioning) {
+                val uname = SessionManager.session.value.username
+                val pwd = SessionManager.session.value.password
+                if (uname.isEmpty() || pwd.isEmpty()) {
+                    showAuthChoiceDialog()
+                }
+            }
+        }
+
+        registerSheet.show()
     }
 
     private fun setupBackPressHandler() {

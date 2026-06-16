@@ -1,5 +1,31 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 29 (2026-06-16) — Fix auth flow после logout
+
+### Контекст
+- После logout и повторного запуска приложения шторка авторизации не показывала адрес сервера
+- `showAuthChoiceDialog()` имел пустые `onLogin`/`onRegister` — кнопки ничего не делали
+- `ServerAuthBottomSheet` health check использовал жёстко зашитый порт 8082 для всех серверов
+
+### Корневые причины
+1. `SessionManager.logout()` вызывал `CredentialStore.clear()` который стирал **всё** включая `server_address`
+2. `showAuthChoiceDialog()` при пустом `serverAddress` просто делал `return` без показа шторки
+3. `onLogin`/`onRegister` в `showAuthChoiceDialog()` были пустыми лямбдами `{ }`
+4. `ServerAuthBottomSheet.checkServerHealth()` использовал порт 8082 для всех серверов (dev использует 8083)
+
+### Исправления
+1. **SessionManager.logout()** — сохраняет `server_address` после `CredentialStore.clear()`, чтобы при повторном запуске шторка знала какой сервер показывать
+2. **ChatListActivity.showAuthChoiceDialog()** — при пустом `serverAddress` берёт default server из `CredentialStore.getServerList()`, сохраняет его и показывает шторку
+3. **ChatListActivity.showLoginBottomSheet()** — полная реализация: prefill username, SessionManager.login(), обработка ошибок, recreate() после успеха
+4. **ChatListActivity.showRegisterBottomSheet()** — полная реализация: SessionManager.login(register=true), обработка ошибок, recreate()
+5. **ServerAuthBottomSheet** — добавлен параметр `httpPort` с автоопределением по gRPC порту (50051→8082, 50052→8083)
+6. **Dismiss listeners** — все шторки при закрытии без логина перезапускают auth dialog
+
+### Коммиты
+- TBD — fix: auth flow after logout — server address persistence, login/register bottom sheets
+
+---
+
 ## Сессия 28 (2026-06-16) — Рефакторинг соединений, единый ChatListActivity
 
 ### Контекст
