@@ -5,12 +5,13 @@
 ### Что сделано
 - Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
 - Каналы уведомлений: "Lavender Calls/Messages" → "Lava Calls/Messages"
-- Тема: "Lavender Night" → "Lava Night" (en), "Лавандовый ночной" → "Лавовый ночной" (ru)
+- Тема: "Lavender Night" → "Lava Night" (en)
 - 4 hardcoded строки в Kotlin заменены на R.string.* с добавлением новых строк в strings.xml
 - Обновлён TASKS.md: версия → v1.1.3.22
 
 ### Коммиты
-- (pending)
+- `cde8776` — chore: rename Lavender → Lava in all user-facing strings (en + ru)
+- `33ce3a5` — fix: update share text and descriptions — Lava: secure business communications platform
 
 ---
 

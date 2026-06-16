@@ -11,7 +11,7 @@
 ### Android
 - ✅ Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
 - ✅ Каналы уведомлений: "Lavender Calls" → "Lava Calls", "Lavender Messages" → "Lava Messages"
-- ✅ Тема: "Lavender Night" → "Lava Night" (en), "Лавандовый ночной" → "Лавовый ночной" (ru)
+- ✅ Тема: "Lavender Night" → "Lava Night" (en)
 - ✅ Hardcoded строки в Kotlin заменены на R.string.*:
   - FullScreenImageActivity: "Lavender_*.jpg" → R.string.filename_prefix
   - ShareReceiverActivity: "Lavender Messenger" → R.string.share_app_description
@@ -20,7 +20,8 @@
 - ✅ Добавлены новые строки в strings.xml (en + ru): filename_prefix, share_app_description, feedback_subject
 
 ### Коммиты
-- (pending)
+- `cde8776` — chore: rename Lavender → Lava in all user-facing strings (en + ru)
+- `33ce3a5` — fix: update share text and descriptions — Lava: secure business communications platform
 
 ---
 
