@@ -18,6 +18,9 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -168,6 +171,27 @@ class ChatListActivityV2 : AppCompatActivity() {
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
         GrpcClient.connect(host, false, port, this)
 
+        // Fetch user avatar for toolbar
+        val avatarUsername = username
+        GrpcClient.getUserAvatar(avatarUsername) { _ ->
+            Log.d(TAG, "Avatar fetched for $avatarUsername")
+        }
+        // Observe avatar cache to update toolbar avatar
+        lifecycleScope.launch {
+            GrpcClient.avatarCacheFlow.collectLatest { cache ->
+                val url = cache[avatarUsername]
+                if (!url.isNullOrEmpty() && ivToolbarUserAvatar != null) {
+                    Glide.with(this@ChatListActivityV2)
+                        .load(url)
+                        .apply(RequestOptions.circleCropTransform()
+                            .placeholder(R.drawable.ic_default_avatar)
+                            .error(R.drawable.ic_default_avatar))
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(ivToolbarUserAvatar!!)
+                }
+            }
+        }
+
         // Observe connection status
         lifecycleScope.launch {
             GrpcClient.connectionStatus.collect { status ->
@@ -175,7 +199,8 @@ class ChatListActivityV2 : AppCompatActivity() {
                     lavender.client.android.data.grpc.ConnectionStatus.CONNECTING -> getString(R.string.connecting)
                     lavender.client.android.data.grpc.ConnectionStatus.READY -> getString(R.string.connection_online)
                     lavender.client.android.data.grpc.ConnectionStatus.DISCONNECTED -> getString(R.string.connection_offline)
-                    else -> ""
+                    lavender.client.android.data.grpc.ConnectionStatus.RECONNECTING -> getString(R.string.connecting)
+                    lavender.client.android.data.grpc.ConnectionStatus.FAILED -> getString(R.string.connection_offline)
                 }
                 tvToolbarSubtitle?.text = statusText
                 tvToolbarSubtitle?.isVisible = statusText.isNotEmpty()

@@ -149,6 +149,9 @@ object RealGrpcClient {
     var currentRoomId = ""
         internal set
 
+    /** Tracks whether the last Chat stream used JWT auth. Used for fallback to password on auth failure. */
+    private var lastAuthWasJwt: Boolean = false
+
 
 
     fun fetchServersList(context: android.content.Context, cb: (List<ServerInfoProto>) -> Unit) {
@@ -439,15 +442,18 @@ object RealGrpcClient {
             val accessToken = AuthManager.getAccessToken(appContext ?: return)
             if (accessToken != null && accessToken.isNotEmpty()) {
                 firstMessageBuilder.setJwtToken(accessToken)
+                lastAuthWasJwt = true
                 Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
             } else {
                 // No JWT token — fallback to password auth even on v2 server
                 firstMessageBuilder.setPassword(password)
+                lastAuthWasJwt = false
                 Log.d(TAG, "ChatStream v2: no JWT token, falling back to password auth for $username")
             }
         } else {
             // ChatStream v1: use password auth
             firstMessageBuilder.setPassword(password)
+            lastAuthWasJwt = false
         }
 
         val firstMessage = firstMessageBuilder.build()
@@ -768,10 +774,33 @@ object RealGrpcClient {
                         requestObserver = null
                         return
                     }
-                    // Do not retry on auth failures (JWT malformed, invalid, expired)
+                    // JWT auth failure — if we used JWT and have a password, retry with password
                     if (description.contains("authentication failed", ignoreCase = true) ||
                         description.contains("JWT validation failed", ignoreCase = true) ||
-                        description.contains("token is malformed", ignoreCase = true)) {
+                        description.contains("token is malformed", ignoreCase = true) ||
+                        description.contains("token is expired", ignoreCase = true)) {
+
+                        if (lastAuthWasJwt) {
+                            // JWT failed — clear tokens and retry with password if available
+                            Log.w(TAG, "JWT auth failed — clearing tokens, will retry with password: $description")
+                            AuthManager.clearTokens(appContext)
+                            _authStatus.value = null
+                            lastAuthWasJwt = false
+
+                            // Schedule a chat restart with password auth
+                            requestObserver = null
+                            _connectionStatus.value = ConnectionStatus.RECONNECTING
+                            scope.launch {
+                                delay(1000)
+                                lastChatRequest?.let { req ->
+                                    Log.d(TAG, "Retrying chat stream with password auth for ${req.u}")
+                                    startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
+                                }
+                            }
+                            return
+                        }
+
+                        // No JWT fallback available — mark as auth failure
                         Log.w(TAG, "Auth failure — not retrying: $description")
                         _authStatus.value = "AUTH_FAILED"
                         _connectionStatus.value = ConnectionStatus.FAILED
@@ -1072,6 +1101,24 @@ object RealGrpcClient {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
                     // Always callback to prevent hanging coroutine
                     scope.launch(Dispatchers.Main) { callback(emptyList()) }
+
+                    // If JWT auth failed on a v1 server, clear tokens and retry chat with password
+                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && lastAuthWasJwt) {
+                        Log.w(TAG, "getChats: JWT auth failed — clearing tokens, will retry chat with password")
+                        AuthManager.clearTokens(appContext)
+                        _authStatus.value = null
+                        lastAuthWasJwt = false
+                        // Trigger chat restart with password auth
+                        scope.launch {
+                            delay(500)
+                            lastChatRequest?.let { req ->
+                                Log.d(TAG, "getChats: retrying chat stream with password for ${req.u}")
+                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
+                            }
+                        }
+                        return
+                    }
+
                     // Do NOT trigger reconnect here — getChats is a poll request,
                     // next poll (30s) will retry. Chat stream onError handles reconnect.
                     // Do NOT set RECONNECTING here either — let stream-level errors drive that.
