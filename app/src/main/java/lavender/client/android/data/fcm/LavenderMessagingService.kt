@@ -171,7 +171,10 @@ class LavenderMessagingService : FirebaseMessagingService() {
         // Apply DND bypass if enabled (requires NOTIFICATION_POLICY_ACCESS)
         val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         if (prefs.getBoolean("push_bypass_dnd", false)) {
-            notificationBuilder.setBypassDnd(true)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channel = notificationManager.getNotificationChannel(channelId)
+                channel?.setBypassDnd(true)
+            }
         }
 
         // Добавляем ID комнаты в экстра для возможности удаления программно
@@ -180,7 +183,6 @@ class LavenderMessagingService : FirebaseMessagingService() {
         notificationBuilder.addExtras(extras)
 
         // Применяем стиль (если выбран messaging)
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val style = prefs.getString("notification_style", "standard")
         if (style == "messaging") {
             val user = androidx.core.app.Person.Builder().setName(title).build()
