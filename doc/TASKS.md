@@ -71,12 +71,12 @@
 - [ ] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
   - ~2000 строк — самый большой оставшийся кусок
-- [x] **Push notifications — FCM uplevel** — приоритетные уведомления (Шаг 1 выполнен)
+- [x] **Push notifications — FCM uplevel** — приоритетные уведомления (Шаги 1-3 выполнены)
   - [x] Server: AndroidConfig Priority HIGH + AndroidNotification PriorityHigh
   - [x] Android: канал IMPORTANCE_HIGH + PRIORITY_HIGH + CATEGORY_MESSAGE
-  - [ ] Шаг 2: проверка онлайн-статуса (не слать push если пользователь в чате)
-  - [ ] Шаг 2: collapse key + TTL
-  - [ ] Шаг 3: настройка DND bypass
+  - [x] Шаг 2: проверка онлайн-статуса (не слать push если пользователь в чате)
+  - [x] Шаг 2: collapse key + TTL (5 min)
+  - [x] Шаг 3: DND bypass switch + setBypassDnd() + permission request
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
