@@ -94,6 +94,7 @@ class ChatListActivity : AppCompatActivity() {
 
         if (serverAddress.isEmpty()) {
             Log.w(TAG, "No server address — showing auth dialog")
+            setContentView(R.layout.activity_chat_list)
             showAuthChoiceDialog()
             return
         }
