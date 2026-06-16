@@ -1210,7 +1210,7 @@ object RealGrpcClient {
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
             override fun onMessage(message: GetChatsResponseProto) {
-                Log.d(TAG, "getChats: onMessage received, ${message.chatsCount} chats")
+                Log.d(TAG, "getChats: onMessage received, ${message.chatsList.size} chats")
                 val chats = message.chats.map { proto ->
                     ChatInfo(proto.id, proto.name, proto.type, proto.participants,
                              proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
