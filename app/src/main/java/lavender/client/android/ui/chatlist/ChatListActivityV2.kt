@@ -72,7 +72,7 @@ class ChatListActivityV2 : ChatListBaseActivity() {
 
     private val actionModeCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.menuInflater.inflate(R.menu.menu_chat_selection, menu)
+            mode.menuInflater.inflate(R.menu.chat_list_action_mode, menu)
             chatAdapter.setSelectionMode(true)
             return true
         }
@@ -87,18 +87,8 @@ class ChatListActivityV2 : ChatListBaseActivity() {
                     mode.finish()
                     return true
                 }
-                R.id.action_unpin -> {
-                    selectedIds.forEach { viewModel.unpinChat(it) }
-                    mode.finish()
-                    return true
-                }
                 R.id.action_mute -> {
                     selectedIds.forEach { viewModel.toggleMute(it, true) }
-                    mode.finish()
-                    return true
-                }
-                R.id.action_unmute -> {
-                    selectedIds.forEach { viewModel.toggleMute(it, false) }
                     mode.finish()
                     return true
                 }
@@ -108,7 +98,6 @@ class ChatListActivityV2 : ChatListBaseActivity() {
                     return true
                 }
                 R.id.action_delete -> {
-                    // Delete not implemented yet
                     mode.finish()
                     return true
                 }
@@ -125,8 +114,8 @@ class ChatListActivityV2 : ChatListBaseActivity() {
     // ======== Lifecycle ========
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applyTheme(currentUsername)
         super.onCreate(savedInstanceState)
+        ThemeUi.bind(this, currentUsername)
 
         if (currentUsername.isEmpty() || currentPassword.isEmpty()) {
             showAuthChoiceDialog()
@@ -353,7 +342,7 @@ class ChatListActivityV2 : ChatListBaseActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_chat_list_v2, menu)
+        menuInflater.inflate(R.menu.chat_list_menu, menu)
         return true
     }
 
@@ -399,20 +388,17 @@ class ChatListActivityV2 : ChatListBaseActivity() {
 
         aiBottomSheet = AIBottomSheet(
             context = this,
-            aiChats = aiChats,
-            onNewOwlChat = {
-                navigateToOwl(
-                    ChatInfo(id = "", name = getString(R.string.new_owl_chat), type = "owl")
-                )
+            existingChats = aiChats.toMutableList(),
+            onCreateOwlChat = {
+                navigateToOwl(ChatInfo(id = "", name = "OWL", type = "owl"))
             },
-            onNewHermesChat = {
-                navigateToHermes(
-                    ChatInfo(id = "", name = getString(R.string.new_hermes_chat), type = "hermes")
-                )
+            onCreateHermesChat = {
+                navigateToHermes(ChatInfo(id = "", name = "Hermes", type = "hermes"))
             },
-            onExistingChat = { chat -> navigateToChat(chat, currentUsername) },
-            onOwlSettings = { openOwlSettings() },
-            onHermesSettings = { openHermesSettings() }
+            onChatClick = { chat -> navigateToChat(chat, currentUsername) },
+            onSettingsClick = { chat ->
+                if (chat.type == "hermes") openHermesSettings() else openOwlSettings()
+            }
         )
         aiBottomSheet?.buildAndShow()
     }
@@ -440,7 +426,7 @@ class ChatListActivityV2 : ChatListBaseActivity() {
         actionMode?.title = getString(R.string.selected_count, count)
     }
 
-    override fun showAuthChoiceDialog() {
+    private fun showAuthChoiceDialog() {
         val serverAddress = CredentialStore.getServerAddress(this) ?: return
         val parts = serverAddress.split(":")
         val host = parts[0]
