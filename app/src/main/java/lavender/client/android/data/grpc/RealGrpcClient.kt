@@ -136,6 +136,42 @@ object RealGrpcClient {
         onCallStreamError = { /* handled by callClient internally */ }
     )
 
+    // ====== Module: Chat List Client ======
+    private val chatListClient = GrpcChatListClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        getUsername = { currentUsername },
+        chatDeletedEvent = _chatDeletedEvent,
+        allUsers = _allUsers,
+        serverTime = _serverTime,
+        scope = scope
+    )
+
+    // ====== Module: Profile Client ======
+    private val profileClient = GrpcProfileClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        getUsername = { currentUsername },
+        avatarCache = avatarCache,
+        fullAvatarCache = fullAvatarCache,
+        avatarCacheFlow = avatarCacheFlow,
+        scope = scope
+    )
+
+    // ====== Module: Draft Client ======
+    private val draftClient = GrpcDraftClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId }
+    )
+
+    // ====== Module: Favorites Client ======
+    private val favoritesClient = GrpcFavoritesClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        getUsername = { currentUsername },
+        scope = scope
+    )
+
     private var database: AppDatabase? = null
     private fun db() = database ?: appContext?.let { 
         val d = AppDatabase.getDatabase(it)
@@ -470,57 +506,15 @@ object RealGrpcClient {
     }
 
     fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDevicesRequestProto, GetDevicesResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetDevices")
-            .setRequestMarshaller(GetDevicesRequestMarshaller())
-            .setResponseMarshaller(GetDevicesResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetDevicesResponseProto>() {
-            override fun onMessage(message: GetDevicesResponseProto) { cb(message.devices) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(emptyList()) }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetDevicesRequestProto(uid))
-        call.halfClose()
-        call.request(1)
+        profileClient.getDevices(uid, cb)
     }
 
     fun deleteDevice(uid: String, did: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteDevice")
-            .setRequestMarshaller(DeleteDeviceRequestMarshaller())
-            .setResponseMarshaller(DeleteDeviceResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
-            override fun onMessage(message: DeleteDeviceResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteDeviceRequestProto(uid, did))
-        call.halfClose()
-        call.request(1)
+        profileClient.deleteDevice(uid, did, cb)
     }
 
     fun deleteOtherDevices(uid: String, currentDid: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDeviceRequestProto, DeleteDeviceResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteOtherDevices")
-            .setRequestMarshaller(DeleteDeviceRequestMarshaller())
-            .setResponseMarshaller(DeleteDeviceResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteDeviceResponseProto>() {
-            override fun onMessage(message: DeleteDeviceResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteDeviceRequestProto(uid, currentDid))
-        call.halfClose()
-        call.request(1)
+        profileClient.deleteOtherDevices(uid, currentDid, cb)
     }
 
     private fun io.grpc.ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
@@ -1061,98 +1055,7 @@ object RealGrpcClient {
     }
 
     fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
-        // NOTE: Do NOT load from cache first — on first login cache is empty and
-        // calling callback(emptyList()) causes UI to show empty sections.
-        // Only use cache for pull-to-refresh (skipCache=true means cache was cleared).
-        // Server response always updates UI.
-
-        val currentChannel = getChannel()
-        if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
-            Log.w(TAG, "getChats: getChannel() is null or dead, attempting reconnect")
-            _connectionStatus.value = ConnectionStatus.FAILED
-            val addr = currentServerAddress
-            if (!addr.isNullOrEmpty()) {
-                connect(addr)
-            }
-            // Always callback to prevent hanging coroutine
-            scope.launch(Dispatchers.Main) { callback(emptyList()) }
-            return
-        }
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetChats")
-            .setRequestMarshaller(GetChatsRequestMarshaller())
-            .setResponseMarshaller(GetChatsResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
-            override fun onMessage(message: GetChatsResponseProto) {
-                Log.d(TAG, "getChats: onMessage received, ${message.chats.size} chats")
-                val chats = message.chats.map { proto ->
-                    ChatInfo(proto.id, proto.name, proto.type, proto.participants,
-                             proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.unreadCount,
-                             proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl, proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd,
-                             proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                             proto.isSecret, proto.peerPublicKey, proto.e2eeReady,
-                             proto.activeAgentId, proto.agentMode)
-                }
-                scope.launch(Dispatchers.IO) {
-                    db()?.chatDao()?.syncChats(chats.map { it.toEntity() })
-                }
-                // Only update UI with network result if it's not empty
-                if (chats.isNotEmpty()) {
-                    scope.launch(Dispatchers.Main) { callback(chats) }
-                }
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
-
-                    // If channel was shut down for reconnect, retry after a short delay
-                    // to avoid returning empty list and waiting 30s for next poll
-                    if (status.description?.contains("shutdownNow") == true) {
-                        Log.d(TAG, "getChats: channel shutdownNow — scheduling retry in 1.5s")
-                        scope.launch {
-                            delay(1500)
-                            val un = currentUsername ?: return@launch
-                            Log.d(TAG, "getChats: retrying after shutdownNow")
-                            getChats(un, skipCache = true, callback)
-                        }
-                        return
-                    }
-
-                    // Always callback to prevent hanging coroutine
-                    scope.launch(Dispatchers.Main) { callback(emptyList()) }
-
-                    // If JWT auth failed on a v1 server, clear tokens and retry chat with password
-                    if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && lastAuthWasJwt) {
-                        Log.w(TAG, "getChats: JWT auth failed — clearing tokens, will retry chat with password")
-                        appContext?.let { AuthManager.clearTokens(it) }
-                        _authStatus.value = null
-                        lastAuthWasJwt = false
-                        // Trigger chat restart with password auth
-                        scope.launch {
-                            delay(500)
-                            lastChatRequest?.let { req ->
-                                Log.d(TAG, "getChats: retrying chat stream with password for ${req.u}")
-                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                            }
-                        }
-                        return
-                    }
-
-                    // Do NOT trigger reconnect here — getChats is a poll request,
-                    // next poll (30s) will retry. Chat stream onError handles reconnect.
-                    // Do NOT set RECONNECTING here either — let stream-level errors drive that.
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetChatsRequestProto(username = username, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.getChats(username, skipCache, callback)
     }
 
     fun setRoomId(roomId: String) {
@@ -1163,19 +1066,7 @@ object RealGrpcClient {
     fun clearMessages() { _messages.value = emptyList() }
 
     fun registerToken(user: String, token: String, pushEnabled: Boolean) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<TokenRequestProto, TokenResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RegisterToken")
-            .setRequestMarshaller(TokenRequestMarshaller())
-            .setResponseMarshaller(TokenResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<TokenResponseProto>() {}, io.grpc.Metadata())
-        call.sendMessage(TokenRequestProto(user, token, pushEnabled, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.registerToken(user, token, pushEnabled)
     }
 
     // ======= AuthService V2 Methods (JWT) =======
@@ -1227,212 +1118,43 @@ object RealGrpcClient {
     ) = authClient.revokeDevice(deviceId, callback)
 
     fun saveDraft(roomId: String, text: String, replyId: String, replyUser: String, replyText: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveDraftRequestProto, SaveDraftResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/SaveDraft")
-            .setRequestMarshaller(SaveDraftRequestMarshaller())
-            .setResponseMarshaller(SaveDraftResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<SaveDraftResponseProto>() {
-            override fun onMessage(message: SaveDraftResponseProto) { callback(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(SaveDraftRequestProto(currentUserId ?: "", roomId, text, replyId, replyUser, replyText))
-        call.halfClose()
-        call.request(1)
+        draftClient.saveDraft(roomId, text, replyId, replyUser, replyText, callback)
     }
 
     fun getDraft(roomId: String, callback: (String, String, String, String, Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetDraftRequestProto, GetDraftResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetDraft")
-            .setRequestMarshaller(GetDraftRequestMarshaller())
-            .setResponseMarshaller(GetDraftResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetDraftResponseProto>() {
-            override fun onMessage(message: GetDraftResponseProto) { callback(message.draftText, message.repliedToMessageId, message.repliedToUser, message.repliedToText, message.hasDraft) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetDraftRequestProto(currentUserId ?: "", roomId))
-        call.halfClose()
-        call.request(1)
+        draftClient.getDraft(roomId, callback)
     }
 
     fun deleteDraft(roomId: String, callback: (Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteDraftRequestProto, DeleteDraftResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteDraft")
-            .setRequestMarshaller(DeleteDraftRequestMarshaller())
-            .setResponseMarshaller(DeleteDraftResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteDraftResponseProto>() {
-            override fun onMessage(message: DeleteDraftResponseProto) { callback(message.success) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteDraftRequestProto(currentUserId ?: "", roomId))
-        call.halfClose()
-        call.request(1)
+        draftClient.deleteDraft(roomId, callback)
     }
 
     fun getMutedChats(callback: (List<String>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetMutedChatsRequestProto, GetMutedChatsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetMutedChats")
-            .setRequestMarshaller(GetMutedChatsRequestMarshaller())
-            .setResponseMarshaller(GetMutedChatsResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetMutedChatsResponseProto>() {
-            override fun onMessage(message: GetMutedChatsResponseProto) { callback(message.roomIds) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetMutedChatsRequestProto(currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.getMutedChats(callback)
     }
 
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SetMutedChatRequestProto, SetMutedChatResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/SetMutedChat")
-            .setRequestMarshaller(SetMutedChatRequestMarshaller())
-            .setResponseMarshaller(SetMutedChatResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<SetMutedChatResponseProto>() {
-            override fun onMessage(message: SetMutedChatResponseProto) { callback(message.success) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(SetMutedChatRequestProto(currentUserId ?: "", roomId, muted))
-        call.halfClose()
-        call.request(1)
+        chatListClient.setMutedChat(roomId, muted, callback)
     }
 
     fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddFavoriteRequestProto, AddFavoriteResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/AddFavorite")
-            .setRequestMarshaller(AddFavoriteRequestMarshaller())
-            .setResponseMarshaller(AddFavoriteResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AddFavoriteResponseProto>() {
-            override fun onMessage(message: AddFavoriteResponseProto) { callback(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(AddFavoriteRequestProto(userId, messageId))
-        call.halfClose()
-        call.request(1)
+        favoritesClient.addFavorite(userId, messageId, callback)
     }
 
     fun removeFavorite(userId: String, messageId: String, callback: (Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveFavoriteRequestProto, RemoveFavoriteResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RemoveFavorite")
-            .setRequestMarshaller(RemoveFavoriteRequestMarshaller())
-            .setResponseMarshaller(RemoveFavoriteResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RemoveFavoriteResponseProto>() {
-            override fun onMessage(message: RemoveFavoriteResponseProto) { callback(message.success) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(RemoveFavoriteRequestProto(userId, messageId))
-        call.halfClose()
-        call.request(1)
+        favoritesClient.removeFavorite(userId, messageId, callback)
     }
 
     fun getFavorites(userId: String, callback: (List<Message>) -> Unit) {
-        // Load from cache first
-        scope.launch(Dispatchers.IO) {
-            // Find messages belonging to favorites virtual room or starred
-            val favoritesRoomId = "favorites_" + (currentUsername ?: "")
-            val cached = db()?.messageDao()?.getFavorites(favoritesRoomId)?.map { it.toDomain() } ?: emptyList()
-            if (cached.isNotEmpty()) {
-                withContext(Dispatchers.Main) { callback(cached) }
-            }
-        }
-
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetFavoritesRequestProto, GetFavoritesResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetFavorites")
-            .setRequestMarshaller(GetFavoritesRequestMarshaller())
-            .setResponseMarshaller(GetFavoritesResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetFavoritesResponseProto>() {
-            override fun onMessage(message: GetFavoritesResponseProto) {
-                val msgs = message.messages.map { ProtoUtils.createMessageFromProto(it) }
-                
-                // Save to persistent cache
-                scope.launch(Dispatchers.IO) {
-                    db()?.messageDao()?.insertMessages(msgs.map { it.toEntity() })
-                }
-                
-                callback(msgs)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetFavoritesRequestProto(userId))
-        call.halfClose()
-        call.request(1)
+        favoritesClient.getFavorites(userId, callback)
     }
 
     fun saveFavoriteMessage(message: Message, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MessageProto, AddFavoriteResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/SaveFavoriteMessage")
-            .setRequestMarshaller(MessageProtoMarshaller())
-            .setResponseMarshaller(AddFavoriteResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AddFavoriteResponseProto>() {
-            override fun onMessage(message: AddFavoriteResponseProto) { callback(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(ProtoUtils.createMessageProto(message))
-        call.halfClose()
-        call.request(1)
+        favoritesClient.saveFavoriteMessage(message, callback)
     }
 
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserIdRequestProto, GetUserIdResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetUserId")
-            .setRequestMarshaller(GetUserIdRequestMarshaller())
-            .setResponseMarshaller(GetUserIdResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetUserIdResponseProto>() {
-            override fun onMessage(message: GetUserIdResponseProto) { callback(message.userId, message.found) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetUserIdRequestProto(username))
-        call.halfClose()
-        call.request(1)
+        chatListClient.fetchUserId(username, callback)
     }
 
     fun setUserId(userId: String) { currentUserId = userId }
@@ -1450,14 +1172,17 @@ object RealGrpcClient {
     }
 
     fun editMessage(id: String, text: String, cb: (Boolean, String) -> Unit) {
+        // Delegated to chat message client (kept inline for now — needs message cache access)
         val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<EditMessageRequestProto, EditMessageResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/EditMessage")
-            .setRequestMarshaller(EditMessageRequestMarshaller())
-            .setResponseMarshaller(EditMessageResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val call = currentChannel.newCall(
+            io.grpc.MethodDescriptor.newBuilder<EditMessageRequestProto, EditMessageResponseProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+                .setFullMethodName("messenger.ChatService/EditMessage")
+                .setRequestMarshaller(EditMessageRequestMarshaller())
+                .setResponseMarshaller(EditMessageResponseMarshaller())
+                .build(),
+            io.grpc.CallOptions.DEFAULT
+        )
         call.start(object : io.grpc.ClientCall.Listener<EditMessageResponseProto>() {
             override fun onMessage(message: EditMessageResponseProto) { cb(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
@@ -1468,104 +1193,37 @@ object RealGrpcClient {
     }
 
     fun updateAvatar(username: String, avatarUrl: String, fullAvatarUrl: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateAvatarRequestProto, UpdateAvatarResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdateAvatar")
-            .setRequestMarshaller(UpdateAvatarRequestMarshaller())
-            .setResponseMarshaller(UpdateAvatarResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdateAvatarResponseProto>() {
-            override fun onMessage(message: UpdateAvatarResponseProto) { 
-                if (message.success) {
-                    updateAvatarCache(username, avatarUrl, fullAvatarUrl)
-                }
-                callback(message.success, message.message) 
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdateAvatarRequestProto(username = username, avatarUrl = avatarUrl, fullAvatarUrl = fullAvatarUrl, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.updateAvatar(username, avatarUrl, fullAvatarUrl, callback)
     }
 
     fun getUserAvatar(username: String, userId: String = "", callback: (String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserAvatarRequestProto, GetUserAvatarResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetUserAvatar")
-            .setRequestMarshaller(GetUserAvatarRequestMarshaller())
-            .setResponseMarshaller(GetUserAvatarResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetUserAvatarResponseProto>() {
-            override fun onMessage(message: GetUserAvatarResponseProto) { 
-                updateAvatarCache(username, message.avatarUrl, message.fullAvatarUrl)
-                callback(message.avatarUrl) 
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetUserAvatarRequestProto(username, userId))
-        call.halfClose()
-        call.request(1)
+        profileClient.getUserAvatar(username, userId, callback)
     }
 
     fun updateProfile(username: String, bio: String, status: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateProfileRequestProto, UpdateProfileResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdateProfile")
-            .setRequestMarshaller(UpdateProfileRequestMarshaller())
-            .setResponseMarshaller(UpdateProfileResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdateProfileResponseProto>() {
-            override fun onMessage(message: UpdateProfileResponseProto) { callback(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdateProfileRequestProto(username = username, bio = bio, status = status, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.updateProfile(username, bio, status, callback)
     }
 
     fun getUserProfile(userId: String, callback: (GetUserProfileResponseProto?) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetUserProfileRequestProto, GetUserProfileResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetUserProfile")
-            .setRequestMarshaller(GetUserProfileRequestMarshaller())
-            .setResponseMarshaller(GetUserProfileResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetUserProfileResponseProto>() {
-            override fun onMessage(message: GetUserProfileResponseProto) { callback(message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(null) }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetUserProfileRequestProto(userId = userId))
-        call.halfClose()
-        call.request(1)
+        profileClient.getUserProfile(userId, callback)
     }
 
     fun deleteMessage(m: Message) {
-        val currentChannel = getChannel() ?: return
-        
         // Optimistic UI: remove locally first
         deletedMessageHashes.add(getMessageHash(m))
         _messages.update { current -> current.filterNot { it.id == m.id } }
-        
-        // Remove from persistent cache
-        scope.launch(Dispatchers.IO) {
-            db()?.messageDao()?.deleteMessage(m.id)
-        }
+        scope.launch(Dispatchers.IO) { db()?.messageDao()?.deleteMessage(m.id) }
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteMessages")
-            .setRequestMarshaller(DeleteMessagesRequestMarshaller())
-            .setResponseMarshaller(DeleteMessagesResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val currentChannel = getChannel() ?: return
+        val call = currentChannel.newCall(
+            io.grpc.MethodDescriptor.newBuilder<DeleteMessagesRequestProto, DeleteMessagesResponseProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+                .setFullMethodName("messenger.ChatService/DeleteMessages")
+                .setRequestMarshaller(DeleteMessagesRequestMarshaller())
+                .setResponseMarshaller(DeleteMessagesResponseMarshaller())
+                .build(),
+            io.grpc.CallOptions.DEFAULT
+        )
         call.start(object : io.grpc.ClientCall.Listener<DeleteMessagesResponseProto>() {}, io.grpc.Metadata())
         call.sendMessage(DeleteMessagesRequestProto(listOf(ProtoUtils.createMessageProto(m)), currentUsername ?: ""))
         call.halfClose()
@@ -1573,121 +1231,33 @@ object RealGrpcClient {
     }
 
     fun deleteProfile(u: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteProfileRequestProto, DeleteProfileResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteProfile")
-            .setRequestMarshaller(DeleteProfileRequestMarshaller())
-            .setResponseMarshaller(DeleteProfileResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteProfileResponseProto>() {
-            override fun onMessage(message: DeleteProfileResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteProfileRequestProto(username = u, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.deleteProfile(u, cb)
     }
 
     fun clearSystemNotification() { _systemNotification.value = null }
 
     fun updateUsername(ou: String, nu: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateUsernameRequestProto, UpdateUsernameResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdateUsername")
-            .setRequestMarshaller(UpdateUsernameRequestMarshaller())
-            .setResponseMarshaller(UpdateUsernameResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdateUsernameResponseProto>() {
-            override fun onMessage(message: UpdateUsernameResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdateUsernameRequestProto(ou, nu, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.updateUsername(ou, nu, cb)
     }
 
     fun updatePassword(u: String, op: String, np: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdatePasswordRequestProto, UpdatePasswordResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdatePassword")
-            .setRequestMarshaller(UpdatePasswordRequestMarshaller())
-            .setResponseMarshaller(UpdatePasswordResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdatePasswordResponseProto>() {
-            override fun onMessage(message: UpdatePasswordResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdatePasswordRequestProto(u, op, np, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.updatePassword(u, op, np, cb)
     }
 
     fun adminUpdatePassword(tu: String, np: String, au: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AdminUpdatePasswordRequestProto, AdminUpdatePasswordResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/AdminUpdatePassword")
-            .setRequestMarshaller(AdminUpdatePasswordRequestMarshaller())
-            .setResponseMarshaller(AdminUpdatePasswordResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AdminUpdatePasswordResponseProto>() {
-            override fun onMessage(message: AdminUpdatePasswordResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(AdminUpdatePasswordRequestProto(tu, np, au, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.adminUpdatePassword(tu, np, au, cb)
     }
 
     fun requestPasswordReset(email: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RequestPasswordResetRequestProto, RequestPasswordResetResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RequestPasswordReset")
-            .setRequestMarshaller(RequestPasswordResetRequestMarshaller())
-            .setResponseMarshaller(RequestPasswordResetResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RequestPasswordResetResponseProto>() {
-            override fun onMessage(message: RequestPasswordResetResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(RequestPasswordResetRequestProto(email))
-        call.halfClose()
-        call.request(1)
+        profileClient.requestPasswordReset(email, cb)
     }
 
     fun resetPassword(token: String, newPw: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ResetPasswordRequestProto, ResetPasswordResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/ResetPassword")
-            .setRequestMarshaller(ResetPasswordRequestMarshaller())
-            .setResponseMarshaller(ResetPasswordResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<ResetPasswordResponseProto>() {
-            override fun onMessage(message: ResetPasswordResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(ResetPasswordRequestProto(token, newPw))
-        call.halfClose()
-        call.request(1)
+        profileClient.resetPassword(token, newPw, cb)
     }
 
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
-        // Dismiss push notifications for this room locally
-        appContext?.let {
-            lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid)
-        }
-
+        appContext?.let { lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid) }
         val currentChannel = getChannel()
         if (currentChannel == null || _connectionStatus.value != ConnectionStatus.READY) {
             Log.d(TAG, "Queueing markRead for $rid because getChannel() is not ready")
@@ -1695,22 +1265,19 @@ object RealGrpcClient {
             onComp?.invoke()
             return
         }
-
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/MarkRead")
-            .setRequestMarshaller(MarkReadRequestMarshaller())
-            .setResponseMarshaller(MarkReadResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val call = currentChannel.newCall(
+            io.grpc.MethodDescriptor.newBuilder<MarkReadRequestProto, MarkReadResponseProto>()
+                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+                .setFullMethodName("messenger.ChatService/MarkRead")
+                .setRequestMarshaller(MarkReadRequestMarshaller())
+                .setResponseMarshaller(MarkReadResponseMarshaller())
+                .build(),
+            io.grpc.CallOptions.DEFAULT
+        )
         call.start(object : io.grpc.ClientCall.Listener<MarkReadResponseProto>() {
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { 
-                if (status.isOk) {
-                    pendingReads.remove(rid)
-                } else {
-                    pendingReads.add(rid)
-                }
-                onComp?.invoke() 
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (status.isOk) pendingReads.remove(rid) else pendingReads.add(rid)
+                onComp?.invoke()
             }
         }, io.grpc.Metadata())
         call.sendMessage(MarkReadRequestProto(rid, u, currentUserId ?: ""))
@@ -1730,484 +1297,99 @@ object RealGrpcClient {
     }
 
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteChat")
-            .setRequestMarshaller(DeleteChatRequestMarshaller())
-            .setResponseMarshaller(DeleteChatResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
-            override fun onMessage(message: DeleteChatResponseProto) {
-                if (message.success) {
-                    // Clear local messages when chat is successfully deleted
-                    // Don't delete chat entry to avoid sync conflicts when chat is recreated with same ID
-                    scope.launch(Dispatchers.IO) {
-                        db()?.messageDao()?.clearRoom(cid)
-                        Log.d(TAG, "Cleared local messages for deleted chat: $cid")
-                    }
-                }
-                cb(message.success, message.message)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteChatRequestProto(cid, requesterUsername, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.deleteChat(cid, requesterUsername, cb)
     }
 
     fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteChatRequestProto, DeleteChatResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteChat")
-            .setRequestMarshaller(DeleteChatRequestMarshaller())
-            .setResponseMarshaller(DeleteChatResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
-            override fun onMessage(message: DeleteChatResponseProto) {
-                if (message.success) {
-                    scope.launch(Dispatchers.IO) {
-                        db()?.messageDao()?.clearRoom(cid)
-                        Log.d(TAG, "Cleared local messages for deleted chat: $cid")
-                    }
-                }
-                cb(message.success, message.message)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteChatRequestProto(cid, username, userId))
-        call.halfClose()
-        call.request(1)
+        chatListClient.deleteChatWithUserId(cid, userId, username, cb)
     }
 
     fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateDirectChatRequestProto, CreateDirectChatResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/CreateDirectChat")
-            .setRequestMarshaller(CreateDirectChatRequestMarshaller())
-            .setResponseMarshaller(CreateDirectChatResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<CreateDirectChatResponseProto>() {
-            override fun onMessage(message: CreateDirectChatResponseProto) { if (message.success) cb(message.chatId) else cb(null) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(null) }
-        }, io.grpc.Metadata())
-        
-        // We know u1 is the current user if called from most places, but let's be careful.
-        // Actually, usually user1 is the one who initiates.
-        val u1Id = if (u1 == currentUsername) currentUserId ?: "" else ""
-        call.sendMessage(CreateDirectChatRequestProto(u1, u2, u1Id, ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.createDirectChat(u1, u2, cb)
     }
 
     fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<CreateGroupChatRequestProto, CreateGroupChatResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/CreateGroupChat")
-            .setRequestMarshaller(CreateGroupChatRequestMarshaller())
-            .setResponseMarshaller(CreateGroupChatResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<CreateGroupChatResponseProto>() {
-            override fun onMessage(message: CreateGroupChatResponseProto) { if (message.success) cb(message.chatId) else cb(null) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(null) }
-        }, io.grpc.Metadata())
-        call.sendMessage(CreateGroupChatRequestProto(n, ps, c, currentUserId ?: "", emptyList(), type))
-        call.halfClose()
-        call.request(1)
+        chatListClient.createGroupChat(n, ps, c, type, cb)
     }
 
     fun updateChatAvatar(cid: String, a: String, u: String, fa: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatAvatarRequestProto, UpdateChatAvatarResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdateChatAvatar")
-            .setRequestMarshaller(UpdateChatAvatarRequestMarshaller())
-            .setResponseMarshaller(UpdateChatAvatarResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdateChatAvatarResponseProto>() {
-            override fun onMessage(message: UpdateChatAvatarResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdateChatAvatarRequestProto(cid, a, u, fa, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.updateChatAvatar(cid, a, u, fa, cb)
     }
 
     fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatSettingsRequestProto, UpdateChatSettingsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdateChatSettings")
-            .setRequestMarshaller(UpdateChatSettingsRequestMarshaller())
-            .setResponseMarshaller(UpdateChatSettingsResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdateChatSettingsResponseProto>() {
-            override fun onMessage(message: UpdateChatSettingsResponseProto) { callback(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) callback(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdateChatSettingsRequestProto(chatId, allowAdd, currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.updateChatSettings(chatId, allowAdd, callback)
     }
 
     fun updateChatName(cid: String, n: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<UpdateChatNameRequestProto, UpdateChatNameResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/UpdateChatName")
-            .setRequestMarshaller(UpdateChatNameRequestMarshaller())
-            .setResponseMarshaller(UpdateChatNameResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<UpdateChatNameResponseProto>() {
-            override fun onMessage(message: UpdateChatNameResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(UpdateChatNameRequestProto(cid, n))
-        call.halfClose()
-        call.request(1)
+        chatListClient.updateChatName(cid, n, cb)
     }
 
     fun addParticipants(cid: String, us: List<String>, cb: (Boolean, String) -> Unit) {
-        var completed = 0; var allSuccess = true; var lastMsg = ""
-        if (us.isEmpty()) { cb(true, ""); return }
-        us.forEach { u ->
-            addParticipant(cid, u) { success, msg ->
-                completed++; if (!success) allSuccess = false; lastMsg = msg
-                if (completed == us.size) cb(allSuccess, lastMsg)
-            }
-        }
+        chatListClient.addParticipants(cid, us, cb)
     }
 
     fun addParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddParticipantRequestProto, AddParticipantResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/AddParticipant")
-            .setRequestMarshaller(AddParticipantRequestMarshaller())
-            .setResponseMarshaller(AddParticipantResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AddParticipantResponseProto>() {
-            override fun onMessage(message: AddParticipantResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        
-        // Check if u is current user (unlikely for addParticipant but good for consistency)
-        val uId = if (u == currentUsername) currentUserId ?: "" else ""
-        call.sendMessage(AddParticipantRequestProto(cid, u, uId))
-        call.halfClose()
-        call.request(1)
+        chatListClient.addParticipant(cid, u, cb)
     }
 
     fun removeParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveParticipantRequestProto, RemoveParticipantResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RemoveParticipant")
-            .setRequestMarshaller(RemoveParticipantRequestMarshaller())
-            .setResponseMarshaller(RemoveParticipantResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RemoveParticipantResponseProto>() {
-            override fun onMessage(message: RemoveParticipantResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        
-        val uId = if (u == currentUsername) currentUserId ?: "" else ""
-        call.sendMessage(RemoveParticipantRequestProto(cid, u, uId))
-        call.halfClose()
-        call.request(1)
+        chatListClient.removeParticipant(cid, u, cb)
     }
 
     fun addContact(u: String, cu: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<AddContactRequestProto, AddContactResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/AddContact")
-            .setRequestMarshaller(AddContactRequestMarshaller())
-            .setResponseMarshaller(AddContactResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<AddContactResponseProto>() {
-            override fun onMessage(message: AddContactResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(AddContactRequestProto(username = u, contactUsername = cu, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.addContact(u, cu, cb)
     }
 
     fun removeContact(u: String, cu: String, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RemoveContactRequestProto, RemoveContactResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RemoveContact")
-            .setRequestMarshaller(RemoveContactRequestMarshaller())
-            .setResponseMarshaller(RemoveContactResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RemoveContactResponseProto>() {
-            override fun onMessage(message: RemoveContactResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(RemoveContactRequestProto(username = u, contactUsername = cu, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.removeContact(u, cu, cb)
     }
 
     fun getContacts(u: String, cb: (List<String>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetContactsRequestProto, GetContactsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetContacts")
-            .setRequestMarshaller(GetContactsRequestMarshaller())
-            .setResponseMarshaller(GetContactsResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetContactsResponseProto>() {
-            override fun onMessage(message: GetContactsResponseProto) { cb(message.contacts) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetContactsRequestProto(username = u, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.getContacts(u, cb)
     }
 
     fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllUsersRequestProto, GetAllUsersResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetAllUsers")
-            .setRequestMarshaller(GetAllUsersRequestMarshaller())
-            .setResponseMarshaller(GetAllUsersResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetAllUsersResponseProto>() {
-            override fun onMessage(message: GetAllUsersResponseProto) { 
-                Log.d(TAG, "GetAllUsers: received ${message.users.size} users")
-                _allUsers.value = message.users
-                _serverTime.value = message.serverTime
-                cb(message.users) 
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    Log.e(TAG, "GetAllUsers failed: ${status.code} - ${status.description}")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetAllUsersRequestProto())
-        call.halfClose()
-        call.request(1)
+        chatListClient.loadAllUsers(cb)
     }
 
     fun getAllChats(callback: (List<ChatInfo>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAllChatsRequestProto, GetAllChatsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetAllChats")
-            .setRequestMarshaller(GetAllChatsRequestMarshaller())
-            .setResponseMarshaller(GetAllChatsResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetAllChatsResponseProto>() {
-            override fun onMessage(message: GetAllChatsResponseProto) {
-                Log.d(TAG, "GetAllChats: received ${message.chats.size} chats")
-                callback(message.chats.map { proto ->
-                    ChatInfo(
-                        id = proto.id,
-                        name = proto.name,
-                        type = proto.type,
-                        participants = proto.participants,
-                        createdAt = proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        unreadCount = proto.unreadCount,
-                        lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        creator = proto.creator,
-                        lastMessageText = proto.lastMessageText,
-                        avatarUrl = proto.avatarUrl,
-                        fullAvatarUrl = proto.fullAvatarUrl,
-                        lastMessageUsername = proto.lastMessageUsername,
-                        isMuted = false,
-                        lastMessageHasImage = proto.lastMessageHasImage,
-                        allowMembersToAdd = proto.allowMembersToAdd,
-                        conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
-                        isSecret = proto.isSecret,
-                        peerPublicKey = proto.peerPublicKey,
-                        e2eeReady = proto.e2eeReady
-                    )
-                })
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    Log.e(TAG, "GetAllChats failed: ${status.code} - ${status.description}")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetAllChatsRequestProto())
-        call.halfClose()
-        call.request(1)
+        chatListClient.getAllChats(callback)
     }
 
     fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetAIChatsRequestProto, GetAIChatsResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetAIChats")
-            .setRequestMarshaller(GetAIChatsRequestMarshaller())
-            .setResponseMarshaller(GetAIChatsResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetAIChatsResponseProto>() {
-            override fun onMessage(message: GetAIChatsResponseProto) {
-                Log.d(TAG, "GetAIChats: received ${message.chats.size} chats")
-                callback(message.chats.map { proto ->
-                    AIChatInfo(
-                        id = proto.id,
-                        name = proto.name,
-                        type = proto.type,
-                        createdAt = proto.createdAt
-                    )
-                })
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    Log.e(TAG, "GetAIChats failed: ${status.code} - ${status.description}")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetAIChatsRequestProto().apply { this.userId = userId })
-        call.halfClose()
-        call.request(1)
+        chatListClient.getAIChats(userId, callback)
     }
 
     fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<RenameAIChatRequestProto, RenameAIChatResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/RenameAIChat")
-            .setRequestMarshaller(RenameAIChatRequestMarshaller())
-            .setResponseMarshaller(RenameAIChatResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<RenameAIChatResponseProto>() {
-            override fun onMessage(message: RenameAIChatResponseProto) {
-                callback(message.success, message.error)
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    callback(false, status.description ?: "Unknown error")
-                }
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(RenameAIChatRequestProto().apply {
-            this.chatId = chatId
-            this.userId = userId
-            this.newName = newName
-        })
-        call.halfClose()
-        call.request(1)
+        chatListClient.renameAIChat(chatId, userId, newName, callback)
     }
 
     fun getChatListVersion(u: String, cb: (Long) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatListVersionRequestProto, GetChatListVersionResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetChatListVersion")
-            .setRequestMarshaller(GetChatListVersionRequestMarshaller())
-            .setResponseMarshaller(GetChatListVersionResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetChatListVersionResponseProto>() {
-            override fun onMessage(message: GetChatListVersionResponseProto) { cb(message.version) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetChatListVersionRequestProto(username = u, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        chatListClient.getChatListVersion(u, cb)
     }
 
     fun getThemes(u: String, cb: (String, List<CustomThemeProto>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetThemesRequestProto, GetThemesResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetThemes")
-            .setRequestMarshaller(GetThemesRequestMarshaller())
-            .setResponseMarshaller(GetThemesResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<GetThemesResponseProto>() {
-            override fun onMessage(message: GetThemesResponseProto) { cb(message.currentThemeId, message.customThemes) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(GetThemesRequestProto(username = u, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.getThemes(u, cb)
     }
 
     fun saveTheme(u: String, t: CustomThemeProto, cb: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SaveThemeRequestProto, SaveThemeResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/SaveTheme")
-            .setRequestMarshaller(SaveThemeRequestMarshaller())
-            .setResponseMarshaller(SaveThemeResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<SaveThemeResponseProto>() {
-            override fun onMessage(message: SaveThemeResponseProto) { cb(message.success, message.message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) { if (!status.isOk) cb(false, status.description ?: "Error") }
-        }, io.grpc.Metadata())
-        call.sendMessage(SaveThemeRequestProto(username = u, theme = t, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.saveTheme(u, t, cb)
     }
 
     fun setCurrentTheme(u: String, tid: String, cb: (Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<SetCurrentThemeRequestProto, SetCurrentThemeResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/SetCurrentTheme")
-            .setRequestMarshaller(SetCurrentThemeRequestMarshaller())
-            .setResponseMarshaller(SetCurrentThemeResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<SetCurrentThemeResponseProto>() {
-            override fun onMessage(message: SetCurrentThemeResponseProto) { cb(message.success) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(SetCurrentThemeRequestProto(username = u, themeId = tid, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.setCurrentTheme(u, tid, cb)
     }
 
     fun deleteTheme(u: String, tid: String, cb: (Boolean) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<DeleteThemeRequestProto, DeleteThemeResponseProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/DeleteTheme")
-            .setRequestMarshaller(DeleteThemeRequestMarshaller())
-            .setResponseMarshaller(DeleteThemeResponseMarshaller())
-            .build()
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
-        call.start(object : io.grpc.ClientCall.Listener<DeleteThemeResponseProto>() {
-            override fun onMessage(message: DeleteThemeResponseProto) { cb(message.success) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
-        }, io.grpc.Metadata())
-        call.sendMessage(DeleteThemeRequestProto(username = u, themeId = tid, userId = currentUserId ?: ""))
-        call.halfClose()
-        call.request(1)
+        profileClient.deleteTheme(u, tid, cb)
     }
 
     fun getFCMLogs(cb: (List<FCMLogEntryProto>) -> Unit) {
+        profileClient.getFCMLogs(cb)
+    }
+
+    // ======= FCM Logs (kept for reference) =======
+    private fun _getFCMLogsInline(cb: (List<FCMLogEntryProto>) -> Unit) {
         val currentChannel = getChannel() ?: return
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetFCMLogsRequestProto, GetFCMLogsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
