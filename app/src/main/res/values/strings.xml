@@ -155,7 +155,7 @@
     <string name="history_load_error">Failed to load history: %s</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="share_app">Share Lava</string>
-    <string name="share_text">Try Lava Messenger — your own communication system!</string>
+    <string name="share_text">Try Lava — secure business communications platform!</string>
     <string name="exit">Exit</string>
     <string name="disconnected">Disconnected</string>
     <string name="waiting_for_network">Waiting for network…</string>
@@ -870,7 +870,7 @@
 
     <!-- File/Feedback -->
     <string name="filename_prefix">Lava</string>
-    <string name="share_app_description">Lava Messenger</string>
-    <string name="feedback_subject">Lava Messenger Feedback</string>
+    <string name="share_app_description">Lava: secure business communications platform</string>
+    <string name="feedback_subject">Lava Feedback</string>
 
 </resources>
