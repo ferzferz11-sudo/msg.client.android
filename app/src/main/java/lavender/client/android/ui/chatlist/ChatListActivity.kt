@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.view.isVisible
@@ -22,14 +23,22 @@ import com.google.android.material.tabs.TabLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import lavender.client.android.NewChatActivity
 import lavender.client.android.R
 import lavender.client.android.SplashLoadingActivity
 import lavender.client.android.ServersActivity
+import lavender.client.android.ThemesActivity
+import lavender.client.android.ContactsActivity
+import lavender.client.android.EditProfileActivity
+import lavender.client.android.NotificationActivity
+import lavender.client.android.SecurityActivity
+import lavender.client.android.SuperAdminActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.ProfileClient
@@ -37,6 +46,7 @@ import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.data.cache.CacheUtils
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
@@ -44,9 +54,10 @@ import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.LoginBottomSheet
 import lavender.client.android.ui.widget.RegisterBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
-import lavender.client.android.ui.widget.ProfileBottomSheet
 import lavender.client.android.ui.widget.NewChatBottomSheet
+import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.adapter.ChatAdapter
+import lavender.client.android.ui.LogViewerActivity
 
 /**
  * ChatListActivity — единый Activity для списка чатов.
@@ -204,9 +215,9 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setupToolbarActions(username: String) {
-        // Avatar click -> ProfileBottomSheet
+        // Avatar click -> User menu sheet (profile, themes, contacts, etc.)
         ivToolbarUserAvatar?.setOnClickListener {
-            ProfileBottomSheet(this).show()
+            showSettingsSheet()
         }
 
         // Title click -> ServersActivity
@@ -215,10 +226,215 @@ class ChatListActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Settings click -> ProfileBottomSheet
+        // Settings click -> Additional settings sheet
         ivActionSettings?.setOnClickListener {
-            ProfileBottomSheet(this).show()
+            showAdditionalSettingsSheet()
         }
+    }
+
+    // ======= Settings Sheet (avatar click) =======
+
+    private fun showSettingsSheet() {
+        val username = SessionManager.session.value.username
+        val avatarUrl = GrpcClient.getAvatarCache()[username] ?: ""
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_user_menu)
+
+        // Avatar in header
+        val menuUserAvatar = sheet.findViewById<ImageView>(R.id.menuUserAvatar)
+        if (avatarUrl.isNotEmpty() && menuUserAvatar != null) {
+            Glide.with(this)
+                .load(avatarUrl)
+                .apply(RequestOptions.circleCropTransform().placeholder(R.drawable.ic_default_avatar))
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(menuUserAvatar)
+        }
+
+        // Username in header
+        sheet.findViewById<TextView>(R.id.menuUsername)?.text = username
+
+        // Share
+        sheet.findViewById<View>(R.id.actionShareHeader)?.setOnClickListener {
+            sheet.dismiss()
+            shareApp()
+        }
+
+        // Edit Profile
+        sheet.findViewById<View>(R.id.actionEditProfile)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, EditProfileActivity::class.java).apply {
+                putExtra("USERNAME", username)
+            })
+        }
+
+        // Contacts
+        sheet.findViewById<View>(R.id.actionContacts)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, ContactsActivity::class.java).apply {
+                putExtra("USERNAME", username)
+            })
+        }
+
+        // Themes
+        sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, ThemesActivity::class.java).apply {
+                putExtra("username", username)
+            })
+        }
+
+        // Update
+        sheet.findViewById<View>(R.id.actionUpdate)?.setOnClickListener {
+            sheet.dismiss()
+            // TODO: implement update check
+        }
+
+        // Language toggle
+        sheet.findViewById<View>(R.id.actionToggleLanguage)?.setOnClickListener {
+            sheet.dismiss()
+            toggleLanguage()
+        }
+
+        // Additional Settings
+        sheet.findViewById<View>(R.id.actionAdditionalSettings)?.setOnClickListener {
+            sheet.dismiss()
+            showAdditionalSettingsSheet()
+        }
+
+        sheet.show()
+    }
+
+    // ======= Additional Settings Sheet (settings icon click) =======
+
+    private fun showAdditionalSettingsSheet() {
+        val username = SessionManager.session.value.username
+        val isSuperAdmin = SessionManager.session.value.isSuperAdmin
+        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_additional_settings)
+
+        // Show Admin Panel only for super admins
+        sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
+
+        // Security
+        sheet.findViewById<View>(R.id.actionSecurity)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, SecurityActivity::class.java).apply {
+                putExtra("username", username)
+            })
+        }
+
+        // Notifications
+        sheet.findViewById<View>(R.id.actionNotifications)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, NotificationActivity::class.java))
+        }
+
+        // Logs
+        sheet.findViewById<View>(R.id.actionLogs)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, LogViewerActivity::class.java))
+        }
+
+        // Clear Cache
+        sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
+            sheet.dismiss()
+            try {
+                runBlocking(Dispatchers.IO) {
+                    CacheUtils.clearAllWithGlide(this@ChatListActivity)
+                }
+                Toast.makeText(this, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error clearing cache", e)
+            }
+        }
+
+        // About
+        sheet.findViewById<View>(R.id.actionAbout)?.setOnClickListener {
+            sheet.dismiss()
+            showAboutDialog()
+        }
+
+        // Admin
+        sheet.findViewById<View>(R.id.actionAdmin)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, SuperAdminActivity::class.java))
+        }
+
+        // Servers
+        sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, ServersActivity::class.java))
+        }
+
+        // Delete Profile
+        sheet.findViewById<View>(R.id.actionDeleteProfile)?.setOnClickListener {
+            sheet.dismiss()
+            confirmDeleteProfile()
+        }
+
+        // Logout
+        sheet.findViewById<View>(R.id.actionLogout)?.setOnClickListener {
+            sheet.dismiss()
+            GrpcClient.disconnect()
+            SessionManager.logout(this)
+            val intent = Intent(this, ChatListActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+        }
+
+        sheet.show()
+    }
+
+    private fun confirmDeleteProfile() {
+        val username = SessionManager.session.value.username
+        AlertDialog.Builder(this)
+            .setTitle(R.string.delete_profile)
+            .setMessage(R.string.delete_profile_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                GrpcClient.deleteProfile(username) { success, _ ->
+                    runOnUiThread {
+                        if (success) {
+                            Toast.makeText(this, R.string.profile_deleted, Toast.LENGTH_LONG).show()
+                            GrpcClient.disconnect()
+                            SessionManager.logout(this)
+                            val intent = Intent(this, ChatListActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            }
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this, R.string.failed_to_delete_profile, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showAboutDialog() {
+        val sheet = StandardBottomSheet(this, R.layout.dialog_about)
+        try {
+            val versionName = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+            sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = getString(R.string.app_version_format, versionName)
+        } catch (_: Exception) {}
+        sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
+        sheet.show()
+    }
+
+    private fun shareApp() {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
+            putExtra(Intent.EXTRA_TEXT, getString(R.string.share_app_description))
+        }
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
+    }
+
+    private fun toggleLanguage() {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val currentLang = prefs.getString("language", "ru") ?: "ru"
+        val newLang = if (currentLang == "ru") "en" else "ru"
+        prefs.edit().putString("language", newLang).apply()
+        recreate()
     }
 
     private fun setupTabs() {
