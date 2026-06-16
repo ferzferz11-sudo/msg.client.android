@@ -67,11 +67,24 @@
 
 ---
 
-## 📋 Активные задачи (Сессия 18)
+## ✅ v1.1.3.18 — Исправление бага загрузки чатов (Сессия 19)
+
+### Исправлено
+- ✅ **Баг: чаты не загружаются при входе на новый сервер**
+- `RealGrpcClient.connect()`: health check перед READY
+- `RealGrpcClient.getChats()`: убрана cache-first логика
+- `ChatListActivityV2`: убран двойной loadChats()
+- `ChatListActivityV2` + `ChatListActivity`: onResume() safety net
+
+### Коммиты
+- `3f808bf` — fix: resolve chat loading race condition (Phase 1)
+
+---
+
+## 📋 Активные задачи (Сессия 19)
 
 ### Высокий приоритет
-- [ ] **Тестирование v1.1.3.17** — FAB AI, AIBottomSheet, AI навигация на dev и prod
-- [ ] **Исправление багов** — по результатам тестирования
+- [ ] **Тестирование v1.1.3.18** — проверить исправление бага на dev и prod
 
 ### Средний приоритет
 - [ ] **Unread badges** — улучшение счётчика непрочитанных в списке чатов

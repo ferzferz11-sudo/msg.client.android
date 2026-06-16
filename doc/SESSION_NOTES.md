@@ -1,5 +1,24 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 19 (2026-06-16) — Фаза 1: Исправление бага загрузки чатов
+
+### Корневые причины бага
+1. `RealGrpcClient.connect()` ставил READY сразу после `builder.build()`, до установления TCP
+2. `ChatListActivityV2.setupRecyclerView()` вызывал `loadChats()` дублируя `ViewModel.init`
+3. Cache-first логика в `getChats()` вызывала `callback(emptyList())` при пустом кэше
+
+### Исправления
+- `RealGrpcClient.connect()`: CONNECTING → health check `/health` → READY
+- `RealGrpcClient.getChats()`: убрана cache-first логига; callback всегда вызывается
+- `ChatListActivityV2`: убран двойной `loadChats()`; добавлен `onResume()` safety net
+- `ChatListActivity` (v1): добавлен `onResume()` safety net
+- Коммит: `3f808bf`
+
+### Коммиты
+- `3f808bf` — fix: resolve chat loading race condition (Phase 1)
+
+---
+
 ## Сессия 18 (2026-06-15) — Подготовка к v1.1.3.18+ / v1.2.0.2+
 
 ### Контекст

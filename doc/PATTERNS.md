@@ -311,3 +311,39 @@ GrpcClient.archiveChat(context, chatId)
 GrpcClient.unarchiveChat(context, chatId)
 ```
 **Правило:** все v2 методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии.
+
+### gRPC connection readiness pattern (v1.1.3.18)
+```kotlin
+// After builder.build(), gRPC channel connects lazily (first RPC).
+// NEVER set READY immediately — verify server reachability first:
+// 1. Set CONNECTING after builder.build()
+// 2. Launch HTTP /health check (3s timeout)
+// 3. Only set READY on 200 OK
+// 4. On failure → RECONNECTING + backoff
+```
+**Правило:** `connectionStatus = READY` только после успешного health check.
+GRPC `builder.build()` создаёт channel, но TCP соединение устанавливается лениво.
+
+### getChats() callback pattern (v1.1.3.18)
+```kotlin
+// ALWAYS call callback, even on error — hanging coroutine freezes UI.
+// Do NOT use cache-first: empty cache → empty callback → empty sections → user sees blank list.
+// Server response is the single source of truth for chat list.
+```
+**Правило:** `callback()` должен быть вызван в каждом коде путь (success/error/timeout).
+
+### onResume() safety net pattern (v1.1.3.18)
+```kotlin
+// In Activity onResume(), check if list is empty but connection is READY.
+// This handles race conditions during initial load or server switch.
+override fun onResume() {
+    super.onResume()
+    if (viewModel.getChats().isEmpty()
+        && connectionStatus.value == ConnectionStatus.READY
+    ) {
+        viewModel.loadChats()
+    }
+}
+```
+**Правило:** Единственная точка входа для `loadChats()` — `ViewModel.init` collector.
+НЕ дублировать вызовы из Activity.

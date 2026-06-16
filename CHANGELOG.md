@@ -1,5 +1,23 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.18] - 2026-06-16
+
+### Исправлено: Баг загрузки чатов при входе на новый сервер
+- **Корневая причина**: `connect()` ставил READY сразу после `builder.build()`,
+  до установления TCP-соединения. gRPC channel подключается лениво.
+- **Корневая причина**: `ChatListActivityV2` вызывал `loadChats()` дважды
+  (из Activity и из ViewModel), race condition.
+- **Корневая причина**: cache-first логика в `getChats()` вызывала
+  `callback(emptyList())` при пустом кэше.
+
+### Исправления
+- `RealGrpcClient.connect()`: CONNECTING → HTTP /health → READY
+- `RealGrpcClient.getChats()`: убрана cache-first логика; callback всегда вызывается
+- `ChatListActivityV2`: убран двойной `loadChats()`
+- `ChatListActivityV2` + `ChatListActivity`: onResume() safety net
+
+---
+
 ## [1.1.3.17] - 2026-06-15
 
 ### Новое: FAB AI — создание AI чата из ChatListActivityV2
