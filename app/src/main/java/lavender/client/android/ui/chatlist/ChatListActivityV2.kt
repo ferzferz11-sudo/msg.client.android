@@ -1,5 +1,6 @@
 package lavender.client.android.ui.chatlist
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -20,16 +21,21 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import lavender.client.android.R
 import lavender.client.android.NewChatActivity
+import lavender.client.android.R
+import lavender.client.android.ServersActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.ProfileClient
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
+import lavender.client.android.ui.widget.ServerAuthBottomSheet
 
 /**
  * ChatListActivityV2 — Activity для v2 серверов (ChatList v2 API).
@@ -59,66 +65,92 @@ class ChatListActivityV2 : ChatListBaseActivity() {
     private var tvToolbarSubtitle: TextView? = null
     private var ivToolbarUserAvatar: ImageView? = null
     private var ivActionSettings: ImageView? = null
-
-    // ActionMode
-    private var actionMode: ActionMode? = null
-    private var searchView: androidx.appcompat.widget.SearchView? = null
-    private var searchDebounceJob: Job? = null
-
-    // AI Bottom Sheet
     private var aiBottomSheet: AIBottomSheet? = null
-    private val aiChats = mutableListOf<AIChatInfo>()
+    private var actionMode: ActionMode? = null
+    private var searchJob: Job? = null
+    private var searchMenuItem: MenuItem? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        SessionManager.initFromPrefs(this)
-        applyTheme()
-
-        val serverAddress = CredentialStore.getServerAddress(this) ?: ""
-
-        if (serverAddress.isEmpty()) {
-            Log.w(TAG, "No server address — falling back to v1 ChatListActivity")
-            fallbackToV1()
-            return
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            mode.menuInflater.inflate(R.menu.menu_chat_selection, menu)
+            chatAdapter.setSelectionMode(true)
+            return true
         }
 
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val httpPort = if (parts.size > 1 && parts[1].toIntOrNull() == 50052) 8083 else 8082
-        val grpcPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
 
-        // Check server version before setting up UI
-        lifecycleScope.launch {
-            try {
-                GrpcClient.fetchServerInfo(this@ChatListActivityV2, host, httpPort, grpcPort)
-
-                if (ProfileClient.isChatV2Supported()) {
-                    Log.d(TAG, "v2 server detected — using ChatListActivityV2")
-                    setupV2UI()
-                } else {
-                    Log.d(TAG, "v1 server detected — falling back to v1 ChatListActivity")
-                    fallbackToV1()
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            val selectedIds = chatAdapter.getSelectedIds()
+            when (item.itemId) {
+                R.id.action_pin -> {
+                    selectedIds.forEach { viewModel.pinChat(it) }
+                    mode.finish()
+                    return true
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to determine server version — falling back to v1", e)
-                fallbackToV1()
+                R.id.action_unpin -> {
+                    selectedIds.forEach { viewModel.unpinChat(it) }
+                    mode.finish()
+                    return true
+                }
+                R.id.action_mute -> {
+                    selectedIds.forEach { viewModel.toggleMute(it, true) }
+                    mode.finish()
+                    return true
+                }
+                R.id.action_unmute -> {
+                    selectedIds.forEach { viewModel.toggleMute(it, false) }
+                    mode.finish()
+                    return true
+                }
+                R.id.action_archive -> {
+                    selectedIds.forEach { viewModel.archiveChat(it) }
+                    mode.finish()
+                    return true
+                }
+                R.id.action_delete -> {
+                    // Delete not implemented yet
+                    mode.finish()
+                    return true
+                }
             }
+            return false
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            chatAdapter.setSelectionMode(false)
+            actionMode = null
         }
     }
 
-    private fun setupV2UI() {
-        setContentView(R.layout.activity_chat_list_v2)
+    // ======== Lifecycle ========
 
-        val username = SessionManager.session.value.username
-        val password = SessionManager.session.value.password
+    override fun onCreate(savedInstanceState: Bundle?) {
+        applyTheme(currentUsername)
+        super.onCreate(savedInstanceState)
 
-        if (username.isEmpty() || password.isEmpty()) {
+        if (currentUsername.isEmpty() || currentPassword.isEmpty()) {
             showAuthChoiceDialog()
             return
         }
 
-        ThemeUi.bind(this, username)
+        setupV2UI()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Safety net: if chats list is empty but we're connected, reload.
+        if (::viewModel.isInitialized && viewModel.getChats().isEmpty()
+            && GrpcClient.connectionStatus.value == ConnectionStatus.READY
+        ) {
+            Log.d(TAG, "onResume: chats empty but READY — reloading")
+            viewModel.loadChats()
+        }
+    }
+
+    // ======= Setup ========
+
+    private fun setupV2UI() {
+        setContentView(R.layout.activity_chat_list_v2)
 
         // Init views
         toolbar = findViewById(R.id.toolbar)
@@ -134,7 +166,7 @@ class ChatListActivityV2 : ChatListBaseActivity() {
         tvToolbarTitle?.text = getString(R.string.chats)
 
         // Setup toolbar actions
-        setupToolbarActions(username)
+        setupToolbarActions(currentUsername)
 
         // Setup search menu in toolbar
         setupSearchMenu()
@@ -143,7 +175,7 @@ class ChatListActivityV2 : ChatListBaseActivity() {
         setupTabs()
 
         // Setup RecyclerView
-        setupRecyclerView(username)
+        setupRecyclerView(currentUsername)
 
         // Setup SwipeRefresh
         setupSwipeRefresh()
@@ -165,9 +197,9 @@ class ChatListActivityV2 : ChatListBaseActivity() {
         lifecycleScope.launch {
             GrpcClient.connectionStatus.collect { status ->
                 val statusText = when (status) {
-                    lavender.client.android.data.grpc.ConnectionStatus.CONNECTING -> getString(R.string.connecting)
-                    lavender.client.android.data.grpc.ConnectionStatus.READY -> getString(R.string.connection_online)
-                    lavender.client.android.data.grpc.ConnectionStatus.DISCONNECTED -> getString(R.string.connection_offline)
+                    ConnectionStatus.CONNECTING -> getString(R.string.connecting)
+                    ConnectionStatus.READY -> getString(R.string.connection_online)
+                    ConnectionStatus.DISCONNECTED -> getString(R.string.connection_offline)
                     else -> ""
                 }
                 tvToolbarSubtitle?.text = statusText
@@ -176,33 +208,15 @@ class ChatListActivityV2 : ChatListBaseActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Safety net: if chats list is empty but we're connected, reload.
-        // This handles the case where loadChats() was called before READY
-        // (e.g. race condition during server switch).
-        if (::viewModel.isInitialized && viewModel.getChats().isEmpty()
-            && GrpcClient.connectionStatus.value == ConnectionStatus.READY
-        ) {
-            Log.d(TAG, "onResume: chats empty but READY — reloading")
-            viewModel.loadChats()
-        }
-    }
-
     private fun setupToolbarActions(username: String) {
-        // Avatar click -> ProfileActivity
         ivToolbarUserAvatar?.setOnClickListener {
             val intent = Intent(this, lavender.client.android.ProfileActivity::class.java)
             startActivity(intent)
         }
-
-        // Title click -> ServersActivity
         tvToolbarTitle?.setOnClickListener {
             val intent = Intent(this, ServersActivity::class.java)
             startActivity(intent)
         }
-
-        // Settings click -> ServersActivity (admin)
         ivActionSettings?.setOnClickListener {
             val intent = Intent(this, ServersActivity::class.java)
             startActivity(intent)
@@ -214,7 +228,6 @@ class ChatListActivityV2 : ChatListBaseActivity() {
             tabs.addTab(tabs.newTab().setText(R.string.tab_all))
             tabs.addTab(tabs.newTab().setText(R.string.tab_ai))
             tabs.addTab(tabs.newTab().setText(R.string.tab_groups))
-
             tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     val filter = when (tab?.position) {
@@ -238,14 +251,12 @@ class ChatListActivityV2 : ChatListBaseActivity() {
             scope = lifecycleScope,
             onChatClick = { chat ->
                 if (chatAdapter.isSelectionMode()) {
-                    // In selection mode: tap toggles selection
                     chatAdapter.toggleSelection(chat.id)
                     updateActionModeTitle()
                     if (chatAdapter.getSelectedIds().isEmpty()) {
                         actionMode?.finish()
                     }
                 } else {
-                    // Normal mode: mark as read, then navigate to chat
                     if (chat.unreadCount > 0) {
                         viewModel.markAsRead(chat.id)
                     }
@@ -254,7 +265,6 @@ class ChatListActivityV2 : ChatListBaseActivity() {
             },
             onChatLongClick = { chat, anchorView ->
                 if (!chatAdapter.isSelectionMode()) {
-                    // Start selection mode on long press
                     chatAdapter.setSelectionMode(true)
                     chatAdapter.toggleSelection(chat.id)
                     startSupportActionMode(actionModeCallback)
@@ -297,9 +307,6 @@ class ChatListActivityV2 : ChatListBaseActivity() {
                 }
             }
         }
-
-        // NOTE: loadChats() is called from ViewModel's init when it observes READY status.
-        // Do NOT duplicate the call here — double invocation causes race condition.
     }
 
     private fun setupSwipeRefresh() {
@@ -309,311 +316,18 @@ class ChatListActivityV2 : ChatListBaseActivity() {
     }
 
     private fun setupFABs() {
+        findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
+            val intent = Intent(this, NewChatActivity::class.java)
+            intent.putExtra("USERNAME", currentUsername)
+            startActivity(intent)
+        }
         findViewById<View>(R.id.fabAi)?.setOnClickListener {
             showAIBottomSheet()
         }
-        findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
-            val intent = Intent(this, NewChatActivity::class.java)
-            startActivity(intent)
-        }
-    }
-
-    // ======= AI Bottom Sheet =======
-
-    private fun showAIBottomSheet() {
-        // Filter AI chats from the full list (types: "hermes", "owl")
-        aiChats.clear()
-        aiChats.addAll(viewModel.getChats().filter {
-            it.type == "hermes" || it.type == "owl"
-        }.map { chat ->
-            AIChatInfo(
-                id = chat.id,
-                name = chat.name,
-                type = chat.type
-            )
-        })
-
-        aiBottomSheet = AIBottomSheet(
-            context = this,
-            existingChats = aiChats,
-            onChatClick = { aiChat ->
-                if (aiChat.type == "hermes") {
-                    openHermesChat(aiChat.id, aiChat.name)
-                } else {
-                    openOwlChat(aiChat.id, aiChat.name)
-                }
-            },
-            onDeleteChat = { aiChat ->
-                val userId = SessionManager.session.value.userId
-                val username = SessionManager.session.value.username
-                if (userId.isNotEmpty()) {
-                    GrpcClient.deleteChat(aiChat.id, userId, username) { success, _ ->
-                        if (success) {
-                            viewModel.loadChats()
-                        }
-                    }
-                }
-            },
-            onSettingsClick = { aiChat ->
-                if (aiChat.type == "hermes") {
-                    openHermesSettings(aiChat.id)
-                } else {
-                    openOwlSettings(aiChat.id)
-                }
-            },
-            onCreateHermesChat = {
-                val hermesCount = aiChats.count { it.type == "hermes" }
-                val chatName = getString(R.string.lava_ai_n, hermesCount + 1)
-                openHermesChat("", chatName)
-            },
-            onCreateOwlChat = {
-                val owlCount = aiChats.count { it.type == "owl" }
-                val chatName = getString(R.string.owl_agent_n, owlCount + 1)
-                openOwlChat("", chatName)
-            },
-            onOpenNotifications = {
-                startActivity(Intent(this, lavender.client.android.ui.notification.NotificationActivity::class.java))
-            },
-            onOpenRemoteAgents = {
-                startActivity(Intent(this, lavender.client.android.ui.remote.RemoteAgentActivity::class.java))
-            },
-            unreadNotifCount = 0
-        )
-        aiBottomSheet?.buildAndShow()
-    }
-
-    private fun openHermesChat(chatId: String, chatName: String) {
-        val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
-            putExtra("CHAT_ID", chatId)
-            putExtra("CHAT_NAME", chatName)
-        }
-        startActivity(intent)
-    }
-
-    private fun openOwlChat(chatId: String, chatName: String) {
-        val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java).apply {
-            putExtra("CHAT_ID", chatId)
-            putExtra("CHAT_NAME", chatName)
-        }
-        startActivity(intent)
-    }
-
-    private fun openHermesSettings(chatId: String) {
-        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java).apply {
-            putExtra("sessionId", chatId)
-            putExtra("isHermes", true)
-        }
-        startActivity(intent)
-    }
-
-    private fun openOwlSettings(chatId: String) {
-        val intent = Intent(this, lavender.client.android.ui.owl.OwlSettingsActivity::class.java).apply {
-            putExtra("CHAT_ID", chatId)
-        }
-        startActivity(intent)
-    }
-
-    // ======= ActionMode (Selection Mode) =======
-
-    private val actionModeCallback = object : ActionMode.Callback {
-        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            actionMode = mode
-            mode.menuInflater.inflate(R.menu.chat_list_action_mode, menu)
-            return true
-        }
-
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-            return false
-        }
-
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            val selectedChats = chatAdapter.getSelectedChats()
-            if (selectedChats.isEmpty()) return false
-
-            return when (item.itemId) {
-                R.id.action_pin -> {
-                    pinSelectedChats(selectedChats)
-                    true
-                }
-                R.id.action_mute -> {
-                    muteSelectedChats(selectedChats)
-                    true
-                }
-                R.id.action_archive -> {
-                    archiveSelectedChats(selectedChats)
-                    true
-                }
-                R.id.action_delete -> {
-                    deleteSelectedChats(selectedChats)
-                    true
-                }
-                else -> false
-            }
-        }
-
-        override fun onDestroyActionMode(mode: ActionMode) {
-            actionMode = null
-            chatAdapter.clearSelection()
-        }
-    }
-
-    private fun updateActionModeTitle() {
-        val count = chatAdapter.getSelectedIds().size
-        actionMode?.title = getString(R.string.selected_count, count)
-    }
-
-    private fun pinSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            var pinned = 0
-            var unpinned = 0
-            for (chat in chats) {
-                if (chat.isPinned) {
-                    if (GrpcClient.unpinChat(this@ChatListActivityV2, chat.id)) unpinned++
-                } else {
-                    if (GrpcClient.pinChat(this@ChatListActivityV2, chat.id)) pinned++
-                }
-            }
-            if (pinned > 0 || unpinned > 0) {
-                viewModel.loadChats()
-            }
-            actionMode?.finish()
-        }
-    }
-
-    private fun muteSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            for (chat in chats) {
-                viewModel.toggleMute(chat.id, !chat.isMuted)
-            }
-            actionMode?.finish()
-        }
-    }
-
-    private fun archiveSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            var archived = 0
-            var unarchived = 0
-            for (chat in chats) {
-                if (chat.isArchived) {
-                    if (GrpcClient.unarchiveChat(this@ChatListActivityV2, chat.id)) unarchived++
-                } else {
-                    if (GrpcClient.archiveChat(this@ChatListActivityV2, chat.id)) archived++
-                }
-            }
-            if (archived > 0 || unarchived > 0) {
-                viewModel.loadChats()
-            }
-            actionMode?.finish()
-        }
-    }
-
-    private fun deleteSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            var deleted = 0
-            for (chat in chats) {
-                viewModel.deleteChat(chat.id)
-                deleted++
-            }
-            if (deleted > 0) {
-                viewModel.loadChats()
-            }
-            actionMode?.finish()
-        }
-    }
-
-    // ======= Search =======
-
-    private fun setupSearchMenu() {
-        toolbar?.inflateMenu(R.menu.chat_list_search)
-        toolbar?.setOnMenuItemClickListener { menuItem ->
-            if (menuItem.itemId == R.id.action_search) {
-                // SearchView is handled by its own listener in onMenuItemClick
-                true
-            } else {
-                false
-            }
-        }
-
-        // Find SearchView from menu and set listener
-        val searchItem = toolbar?.menu?.findItem(R.id.action_search)
-        searchView = searchItem?.actionView as? androidx.appcompat.widget.SearchView
-        searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-            override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                return true
-            }
-            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                viewModel.loadChats()
-                return true
-            }
-        })
-
-        searchView?.apply {
-            queryHint = getString(R.string.search_chats)
-            setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(query: String?): Boolean = true
-
-                override fun onQueryTextChange(newText: String?): Boolean {
-                    searchDebounceJob?.cancel()
-                    searchDebounceJob = lifecycleScope.launch {
-                        delay(SEARCH_DEBOUNCE_MS)
-                        val query = newText ?: ""
-                        if (query.isEmpty()) {
-                            viewModel.loadChats()
-                        } else {
-                            viewModel.searchChats(query)
-                        }
-                    }
-                    return true
-                }
-            })
-        }
-    }
-
-    // ======= Navigation =======
-
-    override fun navigateToRegularChat(chat: ChatInfo, username: String) {
-        val serverAddress = CredentialStore.getServerAddress(this) ?: ""
-        val intent = Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
-            putExtra("USERNAME", username)
-            putExtra("SERVER_ADDRESS", serverAddress)
-            putExtra("CHAT_NAME", chat.name)
-            putExtra("ROOM_ID", chat.id)
-            putExtra("IS_DIRECT", chat.type == "direct")
-            putExtra("CHAT_TYPE", chat.type)
-            putExtra("PARTICIPANTS", chat.participants)
-            putExtra("AVATAR_URL", chat.avatarUrl)
-            putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
-            putExtra("CREATOR", chat.creator)
-        }
-        startActivity(intent)
-    }
-
-    // ======= Selection Mode =======
-        val intent = Intent(this, lavender.client.android.ChatListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        startActivity(intent)
-        finish()
-    }
-
-    private fun showAuthChoiceDialog() {
-        val serverAddress = CredentialStore.getServerAddress(this) ?: return
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-
-        ServerAuthBottomSheet(
-            context = this,
-            serverName = "Lava",
-            serverHost = host,
-            serverPort = port,
-            onLogin = { },
-            onRegister = { }
-        ).show()
     }
 
     private fun setupBackPressHandler() {
-        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (::chatAdapter.isInitialized && chatAdapter.isSelectionMode()) {
                     actionMode?.finish()
@@ -626,13 +340,125 @@ class ChatListActivityV2 : ChatListBaseActivity() {
         })
     }
 
-    private fun applyTheme() {
-        val prefs = getSharedPreferences("ThemePrefs", MODE_PRIVATE)
-        val isDarkMode = prefs.getBoolean("dark_mode", false)
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-            if (isDarkMode) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-            else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+    private fun setupSearchMenu() {
+        toolbar?.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_search -> {
+                    searchMenuItem = menuItem
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_chat_list_v2, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_search -> {
+                // Search handled via SearchView in toolbar
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    fun onMenuItemActionExpand(item: MenuItem): Boolean = true
+
+    fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+        searchJob?.cancel()
+        viewModel.searchChats("")
+        return true
+    }
+
+    fun onQueryTextChange(newText: String): Boolean {
+        searchJob?.cancel()
+        searchJob = lifecycleScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            viewModel.searchChats(newText)
+        }
+        return true
+    }
+
+    fun onQueryTextSubmit(query: String): Boolean {
+        searchJob?.cancel()
+        viewModel.searchChats(query)
+        return true
+    }
+
+    // ======== UI Actions ========
+
+    private fun showAIBottomSheet() {
+        val chats = if (::viewModel.isInitialized) viewModel.getChats() else emptyList()
+        val aiChats = chats.filter { it.type == "owl" || it.type == "hermes" }
+            .map { AIChatInfo(id = it.id, name = it.name, type = it.type) }
+
+        aiBottomSheet = AIBottomSheet(
+            context = this,
+            aiChats = aiChats,
+            onNewOwlChat = {
+                navigateToOwl(
+                    ChatInfo(id = "", name = getString(R.string.new_owl_chat), type = "owl")
+                )
+            },
+            onNewHermesChat = {
+                navigateToHermes(
+                    ChatInfo(id = "", name = getString(R.string.new_hermes_chat), type = "hermes")
+                )
+            },
+            onExistingChat = { chat -> navigateToChat(chat, currentUsername) },
+            onOwlSettings = { openOwlSettings() },
+            onHermesSettings = { openHermesSettings() }
         )
-        ThemeApplier.apply(this, ThemeStore.currentTheme())
+        aiBottomSheet?.buildAndShow()
+    }
+
+    override fun navigateToRegularChat(chat: ChatInfo, username: String) {
+        val serverAddress = CredentialStore.getServerAddress(this) ?: ""
+        startActivity(Intent(this, NewChatActivity::class.java).apply {
+            putExtra("USERNAME", username)
+            putExtra("SERVER_ADDRESS", serverAddress)
+            putExtra("CHAT_NAME", chat.name)
+            putExtra("ROOM_ID", chat.id)
+            putExtra("IS_DIRECT", chat.type == "direct")
+            putExtra("CHAT_TYPE", chat.type)
+            putExtra("PARTICIPANTS", chat.participants)
+            putExtra("AVATAR_URL", chat.avatarUrl)
+            putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
+            putExtra("CREATOR", chat.creator)
+        })
+    }
+
+    // ======== Selection Mode ========
+
+    private fun updateActionModeTitle() {
+        val count = chatAdapter.getSelectedIds().size
+        actionMode?.title = getString(R.string.selected_count, count)
+    }
+
+    override fun showAuthChoiceDialog() {
+        val serverAddress = CredentialStore.getServerAddress(this) ?: return
+        val parts = serverAddress.split(":")
+        val host = parts[0]
+        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+        ServerAuthBottomSheet(
+            context = this,
+            serverName = "Lava",
+            serverHost = host,
+            serverPort = port,
+            onLogin = { },
+            onRegister = { }
+        ).show()
+    }
+
+    private fun fallbackToV1() {
+        startActivity(Intent(this, lavender.client.android.ChatListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        })
+        finish()
     }
 }

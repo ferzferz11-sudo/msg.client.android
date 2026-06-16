@@ -10,20 +10,13 @@ import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.ui.hermes.HermesChatActivity
 import lavender.client.android.ui.owl.OwlChatActivity
-import lavender.client.android.ui.widget.LoginBottomSheet
-import lavender.client.android.ui.widget.RegisterBottomSheet
-import lavender.client.android.ui.widget.ServerAuthBottomSheet
 
 /**
  * Base activity for chat list screens (v1 and v2).
  *
  * Provides common functionality:
- * - Theme application
- * - Server connection
- * - Auth dialogs
- * - Navigation to chats (favorites, hermes, owl, regular)
+ * - Navigation to chats (favorites, hermes, owl, regular via subclass override)
  * - Settings navigation
- * - Back press handling
  *
  * v1 (ChatListActivity): extends this + adds its own toolbar, adapter, chat loading
  * v2 (ChatListActivityV2): extends this + adds ViewModel, sections, selection mode
@@ -32,8 +25,6 @@ abstract class ChatListBaseActivity : AppCompatActivity() {
 
     protected var currentUsername: String = ""
     protected var currentPassword: String = ""
-
-    // ======== Lifecycle ========
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,63 +37,6 @@ abstract class ChatListBaseActivity : AppCompatActivity() {
         currentUsername = SessionManager.session.value.username
         currentPassword = SessionManager.session.value.password
     }
-
-    // ======== Theme ========
-
-    protected fun applyTheme(username: String) {
-        try {
-            lavender.client.android.theme.ui.ThemeApplier.apply(this, username)
-        } catch (e: Exception) {
-            // Theme application should not crash the activity
-        }
-    }
-
-    // ======== Server Connection ========
-
-    protected fun connectToServer(): Boolean {
-        val serverAddress = CredentialStore.getServerAddress(this) ?: return false
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-        if (GrpcClient.isConnectedTo(host, port)) return true
-        GrpcClient.connect(host, false, port, this)
-        return true
-    }
-
-    // ======== Auth Dialogs ========
-
-    protected fun showAuthChoiceDialog() {
-        val serverAddress = CredentialStore.getServerAddress(this)
-        if (serverAddress.isNullOrEmpty()) { finish(); return }
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-        ServerAuthBottomSheet(host, port) { action ->
-            when (action) {
-                ServerAuthBottomSheet.Action.LOGIN -> showLoginBottomSheet()
-                ServerAuthBottomSheet.Action.REGISTER -> showRegisterBottomSheet()
-            }
-        }.show(supportFragmentManager, "auth_choice")
-    }
-
-    protected fun showLoginBottomSheet() {
-        LoginBottomSheet(currentUsername) { username, password ->
-            currentUsername = username
-            currentPassword = password
-            performLogin(username, password)
-        }.show(supportFragmentManager, "login")
-    }
-
-    protected fun showRegisterBottomSheet() {
-        RegisterBottomSheet { username, password, _ ->
-            currentUsername = username
-            currentPassword = password
-            performRegister(username, password)
-        }.show(supportFragmentManager, "register")
-    }
-
-    protected open fun performLogin(username: String, password: String) {}
-    protected open fun performRegister(username: String, password: String) {}
 
     // ======== Navigation ========
 
@@ -169,8 +103,4 @@ abstract class ChatListBaseActivity : AppCompatActivity() {
             putExtra("CHAT_NAME", chatName)
         })
     }
-
-    // ======== Back Press ========
-
-    protected fun handleOnBackPressed(): Boolean = false
 }
