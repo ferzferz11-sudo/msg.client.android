@@ -47,11 +47,13 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
     private var allChats: List<ChatInfo> = emptyList()
 
     init {
-        // Observe connection status
+        Log.d(TAG, "init: starting connection status observer")
         viewModelScope.launch {
             GrpcClient.connectionStatus.collect { status ->
+                Log.d(TAG, "init: connectionStatus=$status")
                 _connectionStatus.value = status
                 if (status == ConnectionStatus.READY) {
+                    Log.d(TAG, "init: READY — calling loadChats()")
                     loadChats()
                 }
             }
@@ -59,19 +61,27 @@ class ChatListViewModelV2(application: Application) : AndroidViewModel(applicati
     }
 
     fun loadChats() {
-        if (_isLoading.value) return
+        if (_isLoading.value) {
+            Log.d(TAG, "loadChats: already loading, skip")
+            return
+        }
         _isLoading.value = true
+        Log.d(TAG, "loadChats: starting")
 
         viewModelScope.launch {
             try {
                 val username = lavender.client.android.data.session.SessionManager.session.value.username
+                Log.d(TAG, "loadChats: fetching chats for '$username'")
                 val fetchedChats = kotlinx.coroutines.withTimeoutOrNull(10000L) {
                     kotlinx.coroutines.suspendCancellableCoroutine<List<ChatInfo>> { cont ->
+                        Log.d(TAG, "loadChats: calling GrpcClient.getChats")
                         GrpcClient.getChats(username, skipCache = true) { chats ->
+                            Log.d(TAG, "loadChats: GrpcClient.getChats callback, chats=${chats.size}")
                             if (cont.isActive) cont.resumeWith(Result.success(chats))
                         }
                     }
                 } ?: emptyList()
+                Log.d(TAG, "loadChats: fetched ${fetchedChats.size} chats (timeout=${fetchedChats.isEmpty()})")
 
                 allChats = fetchedChats
                 buildSections(fetchedChats)

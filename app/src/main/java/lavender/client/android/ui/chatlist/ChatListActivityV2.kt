@@ -165,11 +165,14 @@ class ChatListActivityV2 : AppCompatActivity() {
         val parts = serverAddress.split(":")
         val host = parts[0]
         val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+        Log.d(TAG, "setupV2UI: connecting to $host:$port")
         GrpcClient.connect(host, false, port, this)
+        Log.d(TAG, "setupV2UI: connect called, status=${GrpcClient.connectionStatus.value}")
 
         // Observe connection status
         lifecycleScope.launch {
             GrpcClient.connectionStatus.collect { status ->
+                Log.d(TAG, "setupV2UI: connectionStatus=$status")
                 val statusText = when (status) {
                     lavender.client.android.data.grpc.ConnectionStatus.CONNECTING -> getString(R.string.connecting)
                     lavender.client.android.data.grpc.ConnectionStatus.READY -> getString(R.string.connection_online)
