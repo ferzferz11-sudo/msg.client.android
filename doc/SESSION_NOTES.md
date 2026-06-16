@@ -1,5 +1,24 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 21 (2026-06-16) — Fix HTTP /info для dev сервера
+
+### Проблема
+- Dev сервер (порт 50052) недоступен по HTTP (NAT/firewall), fetchServerInfo падал с 5с таймаутом
+- В логе появлялся warning "Failed to fetch /info" хотя fallback работал
+- Корневая причина: для dev сервера вообще нет смысла пытаться HTTP /info
+
+### Исправление
+- Если grpcPort == 50052 (dev) — сразу ставим v2 версии без HTTP запроса
+- Если grpcPort == 50051 (prod) — пробуем HTTP /info, при неудаче v1 fallback
+- Убран warning лог, вместо него debug-лог для prod fallback
+- Коммит: f45bdd3
+
+### Результат
+- Dev сервер: нет HTTP таймаута, нет warning в логе, v2 определяется мгновенно
+- Prod сервер: поведение не изменилось
+
+---
+
 ## Сессия 20 (2026-06-16) — Оптимизация соединения и стабильность
 
 ### Контекст

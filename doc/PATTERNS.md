@@ -324,13 +324,12 @@ GrpcClient.unarchiveChat(context, chatId)
 
 ### Server version detection pattern (v1.1.3.18+)
 ```kotlin
-// 1. Try HTTP /info endpoint (works on prod, may fail on dev behind NAT)
-// 2. If HTTP fails, use gRPC port heuristic:
-//    - grpcPort 50052 → dev server → v2 (profile=2.0, chat=2.0, auth=2.0)
-//    - grpcPort 50051 → prod server → v1 fallback (all empty)
-// 3. Cache versions in ProfileClient.serviceXxxVersion
+// 1. Check gRPC port FIRST — skip HTTP entirely for known ports:
+//    - grpcPort 50052 → dev server → v2 (profile=2.0, chat=2.0, auth=2.0, ai=1.0)
+//    - grpcPort 50051 → prod server → try HTTP /info, fallback to v1 (all empty)
+// 2. Cache versions in ProfileClient.serviceXxxVersion
 ```
-**Правило:** Всегда передавай `grpcPort` в `fetchServerInfo()` для fallback.
+**Правило:** Dev server (50052) — НЕ пытаться HTTP /info, сразу v2. Prod server (50051) — пробовать HTTP /info, при неудаче v1 fallback.
 
 ### getChats() callback pattern (v1.1.3.18+)
 ```kotlin

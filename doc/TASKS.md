@@ -1,9 +1,20 @@
 # Lavender Messenger (Android) — Задачи
 
 **Версия:** v1.1.3.18
-**Обновлено:** 2026-06-16 (сессия 20)
+**Обновлено:** 2026-06-16 (сессия 21)
 **Ветка:** feat/1.1.3.x
 **Тег:** v1.1.3.18
+
+---
+
+## ✅ v1.1.3.18 — Fix HTTP /info для dev (Сессия 21)
+
+### Исправлено
+- ✅ **HTTP /info warning на dev** — для порта 50052 HTTP запрос не делается вообще, сразу v2
+- ✅ **5с таймаут на dev** — убран, v2 определяется мгновенно
+
+### Коммиты
+- `f45bdd3` — fix: skip HTTP /info for dev server (port 50052)
 
 ---
 
@@ -74,8 +85,8 @@
 | Long press = режим выбора | ActionMode toolbar с действиями Pin/Delete/Archive |
 | Pin Chat в toolbar выбора | НЕ в обычном toolbar — только в режиме выбора |
 | Pin Message — selection toolbar | Кнопка pin/unpin в selection toolbar (v1-style) |
-| fetchServerInfo fallback | HTTP /info недоступен → gRPC port heuristic (50052=v2, 50051=v1) |
-| Optimistic READY | gRPC channel подключается лениво, health check не нужен |
+|| fetchServerInfo strategy | Dev (50052): skip HTTP, assume v2. Prod (50051): try HTTP /info, fallback v1 |
+|| Optimistic READY | gRPC channel подключается лениво, health check не нужен |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 | ChatListActivityV2 без фрагмента | RecyclerView+SwipeRefresh напрямую в Activity |
 | CacheUtils | Единый утилит очистки кэша |
