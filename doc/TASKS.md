@@ -1,8 +1,23 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.23
-**Обновлено:** 2026-06-16 (сессия 28)
+**Версия:** v1.1.3.24
+**Обновлено:** 2026-06-16 (сессия 29)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.23 — Fix auth flow после logout (Сессия 29)
+
+### Исправлено
+- ✅ **logout() сохраняет server_address** — после CredentialStore.clear() восстанавливает server_address, чтобы шторка авторизации знала какой сервер показывать
+- ✅ **showAuthChoiceDialog() с default server** — при пустом serverAddress берёт default из server list
+- ✅ **showLoginBottomSheet()** — полная реализация с prefill, login, error handling, recreate
+- ✅ **showRegisterBottomSheet()** — полная реализация с register, error handling, recreate
+- ✅ **ServerAuthBottomSheet httpPort** — автоопределение HTTP порта по gRPC порту (50051→8082, 50052→8083)
+- ✅ **Dismiss listeners** — все шторки перезапускают auth dialog при закрытии без логина
+
+### Коммиты
+- `462d9f5` — feat: full auth flow with LoginBottomSheet + RegisterBottomSheet in ChatListActivity
 
 ---
 
