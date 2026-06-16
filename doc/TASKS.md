@@ -1,8 +1,27 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.25
-**Обновлено:** 2026-06-17 (сессия 31)
+**Версия:** v1.1.3.26
+**Обновлено:** 2026-06-17 (сессия 32)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.26 — Продолжение модуляризации RealGrpcClient (Сессия 32)
+
+### Новые модули
+- ✅ **GrpcChatListClient** (638 LOC) — getChats, pinChat, searchChats, archiveChat, chat management
+- ✅ **GrpcProfileClient** (506 LOC) — profile, avatar, contacts, themes, devices
+- ✅ **GrpcDraftClient** (86 LOC) — saveDraft, getDraft, deleteDraft
+- ✅ **GrpcFavoritesClient** (120 LOC) — addFavorite, removeFavorite, getFavorites, saveFavoriteMessage
+- ✅ **GrpcUnaryCallHelper** (111 LOC) — универсальный helper для unary вызовов
+
+### Результат
+- RealGrpcClient: 3810 → 2992 LOC (-818 LOC, -21%)
+- Всего выделено модулей: 9 (ConnectionManager, Auth, Call, Typing, ChatList, Profile, Draft, Favorites, UnaryCallHelper)
+- Добавлен CODE_AUDIT.md
+
+### Коммит
+- `9d0b61a` — refactor: extract GrpcChatListClient, GrpcProfileClient, GrpcDraftClient, GrpcFavoritesClient, GrpcUnaryCallHelper
 
 ---
 
@@ -109,9 +128,13 @@
 
 ### Высокий приоритет
 - [x] **Восстановить функциональность обновлений** — UpdateManager интегрирован, silent check, manual check, progress dialog, APK install
-- [ ] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
-  - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
-  - ~2000 строк — самый большой оставшийся кусок
+- [x] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
+  - ✅ GrpcChatListClient (638 LOC) — getChats, pinChat, searchChats, archiveChat
+  - ✅ GrpcProfileClient (506 LOC) — profile, avatar, contacts, themes, devices
+  - ✅ GrpcDraftClient (86 LOC) — saveDraft, getDraft, deleteDraft
+  - ✅ GrpcFavoritesClient (120 LOC) — addFavorite, removeFavorite, getFavorites
+  - ✅ GrpcUnaryCallHelper (111 LOC) — universal unary call helper
+  - ⬜ Осталось в RealGrpcClient: ~2992 строк (chat stream, messages, history, reactions, AI chats, server discovery)
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
@@ -161,10 +184,15 @@
 | `ui/widget/NewChatBottomSheet.kt` | Шторка создания чата |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
-| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~3700 строк, цель: ~200) |
-| `data/grpc/GrpcConnectionManager.kt` | connect/reconnect/disconnect/keepalive (167 строк) |
-| `data/grpc/GrpcAuthClient.kt` | signInV2/signUpV2/refreshToken/signOut (232 строки) |
-| `data/grpc/GrpcCallClient.kt` | startCallSession/sendCallSignal (124 строки) |
-| `data/grpc/GrpcTypingClient.kt` | startTypingStream/sendTypingSignal (87 строк) |
-| `data/grpc/ProfileClient.kt` | ProfileService v2 client + version detection |
+|| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~2992 строк, цель: ~200) |
+|| `data/grpc/GrpcConnectionManager.kt` | connect/reconnect/disconnect/keepalive (167 строк) |
+|| `data/grpc/GrpcAuthClient.kt` | signInV2/signUpV2/refreshToken/signOut (232 строки) |
+|| `data/grpc/GrpcCallClient.kt` | startCallSession/sendCallSignal (124 строки) |
+|| `data/grpc/GrpcTypingClient.kt` | startTypingStream/sendTypingSignal (87 строк) |
+|| `data/grpc/GrpcChatListClient.kt` | getChats/pinChat/searchChats/archiveChat (638 строк) |
+|| `data/grpc/GrpcProfileClient.kt` | profile/avatar/contacts/themes/devices (506 строк) |
+|| `data/grpc/GrpcDraftClient.kt` | saveDraft/getDraft/deleteDraft (86 строк) |
+|| `data/grpc/GrpcFavoritesClient.kt` | addFavorite/removeFavorite/getFavorites (120 строк) |
+|| `data/grpc/GrpcUnaryCallHelper.kt` | универсальный unary call helper (111 строк) |
+|| `data/grpc/ProfileClient.kt` | ProfileService v2 client + version detection |
 | `data/models/Message.kt` | Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo |
