@@ -1212,7 +1212,6 @@ object RealGrpcClient {
             .setResponseMarshaller(GetChatsResponseMarshaller())
             .build()
 
-        Log.d(TAG, "getChats: channel=${currentChannel != null}, status=${_connectionStatus.value}")
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
             override fun onMessage(message: GetChatsResponseProto) {
