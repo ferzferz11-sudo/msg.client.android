@@ -293,40 +293,31 @@ object RealGrpcClient {
             val newChannel = builder.build()
             channel = newChannel
 
-            // Channel is built but gRPC connects lazily — verify server is reachable
-            // via HTTP health check before marking READY.
-            _connectionStatus.value = ConnectionStatus.CONNECTING
+            // Channel is built. gRPC OkHttp channel connects lazily on first RPC.
+            // We set READY immediately — if the first RPC fails, onClose will
+            // trigger RECONNECTING. This avoids a separate HTTP health check
+            // which may fail due to firewall/NAT even though gRPC works.
+            _connectionStatus.value = ConnectionStatus.READY
             resetReconnectBackoff()
-            Log.d(TAG, "Channel built, verifying server reachability: $serverAddress")
+            Log.d(TAG, "Channel built — READY (optimistic): $serverAddress")
 
-            // Verify server reachability via HTTP health check before READY
-            scope.launch {
-                val httpPort = if (port == 50052) 8083 else 8082
-                val healthOk = checkServerHealth(serverAddress, httpPort)
-                if (healthOk) {
-                    _connectionStatus.value = ConnectionStatus.READY
-                    Log.d(TAG, "Server health check OK — READY: $serverAddress")
-
-                    // Fetch /info to determine service versions (ProfileService v2 support)
-                    if (context != null) {
-                        try {
-                            ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
-                            Log.d(TAG, "ProfileService version: ${ProfileClient.serviceProfileVersion}")
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Failed to fetch server info: ${e.message}")
-                        }
+            // Fetch /info to determine service versions (ProfileService v2 support)
+            if (context != null) {
+                scope.launch {
+                    try {
+                        val httpPort = if (port == 50052) 8083 else 8082
+                        ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
+                        Log.d(TAG, "ProfileService version: ${ProfileClient.serviceProfileVersion}")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to fetch server info: ${e.message}")
                     }
-
-                    // Auto-resume last chat if it exists
-                    lastChatRequest?.let {
-                        Log.d(TAG, "Resuming last chat for ${it.u}")
-                        startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
-                    }
-                } else {
-                    Log.w(TAG, "Server health check FAILED: $serverAddress")
-                    _connectionStatus.value = ConnectionStatus.RECONNECTING
-                    scheduleReconnect(serverAddress, useTls, port, context)
                 }
+            }
+
+            // Auto-resume last chat if it exists
+            lastChatRequest?.let {
+                Log.d(TAG, "Resuming last chat for ${it.u}")
+                startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
@@ -339,30 +330,6 @@ object RealGrpcClient {
     }
 
     private var reconnectJob: Job? = null
-
-    /**
-     * Check server reachability via HTTP /health endpoint.
-     * Returns true if server responds with 200 OK within timeout.
-     */
-    private suspend fun checkServerHealth(host: String, httpPort: Int): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = java.net.URL("http://$host:$httpPort/health")
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 3000
-                conn.readTimeout = 3000
-                conn.requestMethod = "GET"
-                conn.connect()
-                val code = conn.responseCode
-                conn.disconnect()
-                Log.d(TAG, "Health check $host:$httpPort → HTTP $code")
-                code == 200
-            } catch (e: Exception) {
-                Log.w(TAG, "Health check failed for $host:$httpPort: ${e.message}")
-                false
-            }
-        }
-    }
 
     private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
         reconnectJob?.cancel()
@@ -934,8 +901,21 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
+                    Log.w(TAG, "Chat stream onClose error: ${status.code} - ${status.description}")
                     _connectionStatus.value = ConnectionStatus.FAILED
                     requestObserver = null
+                    // Trigger reconnect on transport errors
+                    if (status.code == io.grpc.Status.Code.UNAVAILABLE
+                        || status.code == io.grpc.Status.Code.UNAUTHENTICATED
+                        || status.code == io.grpc.Status.Code.INTERNAL
+                        || status.code == io.grpc.Status.Code.UNKNOWN
+                    ) {
+                        Log.w(TAG, "Chat stream: transport error, triggering reconnect")
+                        val addr = currentServerAddress
+                        if (!addr.isNullOrEmpty()) {
+                            scheduleReconnect(addr, false, 50052, appContext)
+                        }
+                    }
                 }
                 if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
             }
@@ -1250,8 +1230,20 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
-                    // Resume the coroutine with empty list on error to prevent hanging
+                    // Always callback to prevent hanging coroutine
                     scope.launch(Dispatchers.Main) { callback(emptyList()) }
+                    // Trigger reconnect on transport errors (UNAVAILABLE, UNAUTHENTICATED, etc.)
+                    if (status.code == io.grpc.Status.Code.UNAVAILABLE
+                        || status.code == io.grpc.Status.Code.UNAUTHENTICATED
+                        || status.code == io.grpc.Status.Code.INTERNAL
+                    ) {
+                        Log.w(TAG, "getChats: transport error, triggering reconnect")
+                        _connectionStatus.value = ConnectionStatus.RECONNECTING
+                        val addr = currentServerAddress
+                        if (!addr.isNullOrEmpty()) {
+                            scheduleReconnect(addr, false, 50052, appContext)
+                        }
+                    }
                 }
             }
         }, io.grpc.Metadata())
