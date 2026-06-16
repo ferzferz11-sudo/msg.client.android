@@ -8,6 +8,7 @@ import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import lavender.client.android.R
@@ -27,6 +28,11 @@ import lavender.client.android.theme.ThemeUtils
  * - При включении показывает CheckBox на каждом элементе
  * - Множественный выбор через тап (toggle)
  * - Визуальная подсветка выбранных элементов
+ *
+ * DiffUtil:
+ * - setSections() использует DiffUtil для анимированных обновлений
+ * - Секции идентифицируются по Section enum
+ * - Чаты идентифицируются по chat.id
  */
 class ChatAdapterV2(
     private val scope: CoroutineScope,
@@ -71,10 +77,16 @@ class ChatAdapterV2(
 
     // ======= Public API =======
 
+    /**
+     * Update sections with DiffUtil for animated changes.
+     * Calculates minimal diff and dispatches insert/remove/move/update operations.
+     */
     fun setSections(newSections: List<SectionItem>) {
         sections = newSections
-        rebuildFlatList()
-        notifyDataSetChanged()
+        val newFlat = buildFlatList(newSections)
+        val diff = DiffUtil.calculateDiff(ChatListDiffCallback(flatItems, newFlat))
+        flatItems = newFlat
+        diff.dispatchUpdatesTo(this)
     }
 
     fun getSelectedIds(): Set<String> = selectedIds.toSet()
@@ -119,7 +131,7 @@ class ChatAdapterV2(
 
     // ======= Internal =======
 
-    private fun rebuildFlatList() {
+    private fun buildFlatList(sections: List<SectionItem>): List<FlatItem> {
         val result = mutableListOf<FlatItem>()
         for (section in sections) {
             result.add(FlatItem.SectionHeader(section.section, section.chats.size))
@@ -131,8 +143,39 @@ class ChatAdapterV2(
                 }
             }
         }
-        flatItems = result
+        return result
     }
+
+    // ======= DiffUtil =======
+
+    class ChatListDiffCallback(
+        private val oldList: List<FlatItem>,
+        private val newList: List<FlatItem>
+    ) : DiffUtil.Callback() {
+
+        override fun getOldListSize(): Int = oldList.size
+        override fun getNewListSize(): Int = newList.size
+
+        override fun areItemsTheSame(oldPos: Int, newPos: Int): Boolean {
+            val old = oldList[oldPos]
+            val new = newList[newPos]
+            return when {
+                old is FlatItem.SectionHeader && new is FlatItem.SectionHeader ->
+                    old.section == new.section
+                old is FlatItem.ChatItem && new is FlatItem.ChatItem ->
+                    old.chat.id == new.chat.id
+                old is FlatItem.FavoritesItem && new is FlatItem.FavoritesItem ->
+                    old.chat.id == new.chat.id
+                else -> false
+            }
+        }
+
+        override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean {
+            return oldList[oldPos] == newList[newPos]
+        }
+    }
+
+    // ======= RecyclerView.Adapter =======
 
     override fun getItemViewType(position: Int): Int {
         return when (flatItems.getOrNull(position)) {
