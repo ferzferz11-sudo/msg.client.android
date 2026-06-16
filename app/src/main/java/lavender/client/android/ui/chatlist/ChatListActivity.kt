@@ -149,12 +149,8 @@ class ChatListActivity : AppCompatActivity() {
         // Register back press handler for selection mode
         setupBackPressHandler()
 
-        // Connect to server
-        val serverAddress = CredentialStore.getServerAddress(this) ?: return
-        val parts = serverAddress.split(":")
-        val host = parts[0]
-        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
-        GrpcClient.connect(host, false, port, this)
+        // Note: GrpcClient.connect() is already called from SessionManager.initFromPrefs()
+        // when serverAddress is set. No need to connect again here.
 
         // Fetch user avatar for toolbar
         val avatarUsername = username
