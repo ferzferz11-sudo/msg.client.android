@@ -312,27 +312,36 @@ GrpcClient.unarchiveChat(context, chatId)
 ```
 **Правило:** все v2 методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии.
 
-### gRPC connection readiness pattern (v1.1.3.18)
+### gRPC connection readiness pattern (v1.1.3.18+)
 ```kotlin
 // After builder.build(), gRPC channel connects lazily (first RPC).
-// NEVER set READY immediately — verify server reachability first:
-// 1. Set CONNECTING after builder.build()
-// 2. Launch HTTP /health check (3s timeout)
-// 3. Only set READY on 200 OK
-// 4. On failure → RECONNECTING + backoff
+// Use OPTIMISTIC READY — set READY immediately after builder.build().
+// If first RPC fails, onClose will trigger RECONNECTING.
+// Keepalive: 30s interval, 10s timeout, idleTimeout 25min (before server MaxConnectionAge).
+// On shutdownNow: do NOT trigger reconnect (it's our own reconnect).
 ```
-**Правило:** `connectionStatus = READY` только после успешного health check.
-GRPC `builder.build()` создаёт channel, но TCP соединение устанавливается лениво.
+**Правило:** `connectionStatus = READY` сразу после `builder.build()`. gRPC channel подключается лениво. Reconnect только при реальных ошибках (UNAVAILABLE keepalive), не при shutdownNow.
 
-### getChats() callback pattern (v1.1.3.18)
+### Server version detection pattern (v1.1.3.18+)
+```kotlin
+// 1. Try HTTP /info endpoint (works on prod, may fail on dev behind NAT)
+// 2. If HTTP fails, use gRPC port heuristic:
+//    - grpcPort 50052 → dev server → v2 (profile=2.0, chat=2.0, auth=2.0)
+//    - grpcPort 50051 → prod server → v1 fallback (all empty)
+// 3. Cache versions in ProfileClient.serviceXxxVersion
+```
+**Правило:** Всегда передавай `grpcPort` в `fetchServerInfo()` для fallback.
+
+### getChats() callback pattern (v1.1.3.18+)
 ```kotlin
 // ALWAYS call callback, even on error — hanging coroutine freezes UI.
 // Do NOT use cache-first: empty cache → empty callback → empty sections → user sees blank list.
 // Server response is the single source of truth for chat list.
+// Poll interval: 30 seconds (not 5s) to reduce server load.
 ```
 **Правило:** `callback()` должен быть вызван в каждом коде путь (success/error/timeout).
 
-### onResume() safety net pattern (v1.1.3.18)
+### onResume() safety net pattern (v1.1.3.18+)
 ```kotlin
 // In Activity onResume(), check if list is empty but connection is READY.
 // This handles race conditions during initial load or server switch.
@@ -345,5 +354,4 @@ override fun onResume() {
     }
 }
 ```
-**Правило:** Единственная точка входа для `loadChats()` — `ViewModel.init` collector.
-НЕ дублировать вызовы из Activity.
+**Правило:** Единственная точка входа для `loadChats()` — `ViewModel.init` collector. НЕ дублировать вызовы из Activity.

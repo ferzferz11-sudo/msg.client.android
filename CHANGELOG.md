@@ -2,19 +2,21 @@
 
 ## [1.1.3.18] - 2026-06-16
 
-### Исправлено: Баг загрузки чатов при входе на новый сервер
-- **Корневая причина**: `connect()` ставил READY сразу после `builder.build()`,
-  до установления TCP-соединения. gRPC channel подключается лениво.
-- **Корневая причина**: `ChatListActivityV2` вызывал `loadChats()` дважды
-  (из Activity и из ViewModel), race condition.
-- **Корневая причина**: cache-first логика в `getChats()` вызывала
-  `callback(emptyList())` при пустом кэше.
+### Исправлено: Баг загрузки чатов (сессия 19)
+- **Корневая причина**: `connect()` ставил READY сразу после `builder.build()`, до установления TCP
+- **Корневая причина**: Двойной `loadChats()` в ChatListActivityV2 (Activity + ViewModel)
+- **Корневая причина**: Cache-first логика в `getChats()` вызывала `callback(emptyList())`
+- Убран HTTP health check, используется optimistic READY
+- Убрана cache-first логика; callback всегда вызываетс
+- Добавлен reconnect при transport errors
+- onResume() safety nets для v1 и v2
 
-### Исправления
-- `RealGrpcClient.connect()`: CONNECTING → HTTP /health → READY
-- `RealGrpcClient.getChats()`: убрана cache-first логика; callback всегда вызывается
-- `ChatListActivityV2`: убран двойной `loadChats()`
-- `ChatListActivityV2` + `ChatListActivity`: onResume() safety net
+### Исправлено: Стабильность соединения (сессия 20)
+- **HTTP /info недоступен на dev** — fallback по gRPC порту (50052→v2, 50051→v1)
+- **Keepalive failures** — увеличены таймауты (30s/10s), добавлен idleTimeout 25min
+- **Множественные reconnect** — подавлен reconnect при shutdownNow
+- **Poll interval** — увеличен 5s → 30s
+- Сохранение currentServerPort для правильного reconnect
 
 ---
 

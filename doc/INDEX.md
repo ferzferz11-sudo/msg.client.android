@@ -1,9 +1,9 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.17
-**Обновлено:** 2026-06-15 (сессия 17)
+**Версия:** v1.1.3.18
+**Обновлено:** 2026-06-16 (сессия 20)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.17
+**Тег:** v1.1.3.18
 
 ---
 
@@ -86,14 +86,14 @@ app/src/main/java/lavender/client/android/
 ├── data/
 │   ├── cache/CacheUtils.kt            — единый утилит очистки кэша
 │   ├── grpc/GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
-│   ├── grpc/RealGrpcClient.kt         — реализация gRPC (JWT auth, ChatList v2, Pin Message RPC)
-│   ├── grpc/ProfileClient.kt          — ProfileService v2 client + fetchServerInfo
+│   ├── grpc/RealGrpcClient.kt         — реализация gRPC (optimistic READY, reconnect, keepalive)
+│   ├── grpc/ProfileClient.kt          — ProfileService v2 client + version detection
 │   ├── grpc/BearerTokenInterceptor.kt — JWT Bearer token
 │   ├── proto/MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
 │   ├── session/CredentialStore.kt     — credentials + server list + lastUsername
 │   ├── session/SessionManager.kt      — loginV2 + loginV1 fallback
 │   ├── auth/AuthManager.kt            — JWT token storage
-│   └── models/Message.kt              — Message (isPinned), ChatInfo, AIChatInfo
+│   └── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo
 │
 └── theme/ui/
     ├── ThemeApplier.kt                — применение тем
@@ -107,7 +107,7 @@ app/src/main/java/lavender/client/android/
 ### v1/v2 разделение (v1.1.3.16+)
 ```
 v1 сервер (prod) → ChatListActivity (v1, без изменений)
-v2 сервер (dev)  → ChatListActivityV2 (новый UI с секциями/табами)
+v2 сервер (dev)  → ChatListActivityV2 (v2)
 Определение: SplashActivity → fetchServerInfo → выбор Activity
 ```
 
@@ -140,14 +140,14 @@ FAB AI → AIBottomSheet → выбор типа (OWL/Hermes)
   → Настройки: OwlSettingsActivity (isHermes=true для Hermes)
 ```
 
-### Pin Message flow (v1.1.3.16+)
+### Connection stability (v1.1.3.18+)
 ```
-Long press on message → enter selection mode (v1-style)
-Select message → pin button in selection toolbar
-→ GrpcClient.pinMessage(context, chatId, messageId) → server RPC
-→ loadPinnedMessages() updates pinnedMessageIds + adapter
-→ Pinned badge shown on pinned messages
-Cache: CacheUtils.clearAllSync() on login (silent)
+connect() → optimistic READY → fetchServerInfo (async)
+  → HTTP /info OK → parse versions
+  → HTTP /info fail → gRPC port heuristic (50052=v2, 50051=v1)
+Keepalive: 30s interval, 10s timeout, idleTimeout 25min
+Reconnect: on UNAVAILABLE/UNAUTHENTICATED/INTERNAL, NOT on shutdownNow
+Poll: getChats every 30s
 ```
 
 ### i18n (v1.1.3.9)
@@ -170,7 +170,7 @@ Cache: CacheUtils.clearAllSync() on login (silent)
 
 ### Cache clearing (v1.1.3.16+)
 - CacheUtils.clearAllSync(context) — синхронная очистка БД при входе (без Toast)
-- CacheUtils.clearAllWithGlide(context) — полная очистка + Glide из настройки (с Toast)
+- CacheUtils.clearAllWithGlide(context) — полная очистка + Glide из настроек (с Toast)
 - Вызывается при входе: SplashActivity, ServersActivity, ChatListActivity
 
 ---
@@ -182,5 +182,4 @@ Cache: CacheUtils.clearAllSync() on login (silent)
 | Порт gRPC | 50052 | 50051 |
 | Порт HTTP | 8083 | 8082 |
 | Имя | Lava Germany dev | Lava Germany |
-| SSH | lava (13.140.25.249) | same |
 | Версия | v1.2.0.1 | v1.1.3.10 |

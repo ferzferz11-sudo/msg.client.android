@@ -1,17 +1,15 @@
-# Промпт для новой сессии — Android v1.1.3.18+
+# Промпт для новой сессии — Android v1.1.3.19+
 
-**Дата:** 2026-06-15
+**Дата:** 2026-06-16
 **Версия:** 1.1.3.18 (разработка)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.17
+**Тег:** v1.1.3.18
 
 ---
 
-## СТАТУС: v1.1.3.18 — Тестирование v1.1.3.17, план следующей сессии
+## СТАТУС: v1.1.3.18 — Стабильная загрузка чатов, оптимизация соединения
 
-v1.1.3.17 — FAB AI подключён, AIBottomSheet интегрирован, protoc сгенерирован.
-v1.1.3.16 — все фичи реализованы (ChatListV2, Selection Mode, Search, Pin Message, CacheUtils).
-
+v1.1.3.18 — баг загрузки чатов исправлен, соединение оптимизировано.
 Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2, Pin Message).
 Сервер prod: v1.1.3.10 (legacy, без v2).
 Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message, FAB AI.
@@ -20,7 +18,7 @@ Android: ChatListActivityV2 с табами, selection mode, поиском, Pin
 - v1 сервер (prod) → ChatListActivity (v1, без изменений)
 - v2 сервер (dev) → ChatListActivityV2 (v2)
 - Оба клиента (v1 и v2) поддерживают обратную совместимость с v1 сервером
-- fetchServerInfo всегда определяет версию сервера
+- Версия сервера определяется через HTTP /info + fallback по gRPC порту
 
 ---
 
@@ -49,7 +47,7 @@ http_server.go             — HTTP (/health, /info)
 messenger.proto            — ChatService v2, AuthService v2, ProfileService v2, Pin Message
 ```
 
-### Android v2 (/root/msg.client.android) — НОВАЯ ПАПКА
+### Android v2 (/root/msg.client.android)
 ```
 ui/
 ├── chatlist/                ← v2 НОВАЯ ПАПКА
@@ -69,8 +67,7 @@ ui/
 │   └── CommandBottomSheet.kt     — шторка команд
 ├── hermes/                       — Hermes AI чат
 │   ├── HermesChatActivity.kt
-│   ├── HermesChatViewModel.kt
-│   └── HermesSettingsActivity.kt (не существует, используется OwlSettingsActivity с isHermes=true)
+│   └── HermesChatViewModel.kt
 ├── owl/                          — OWL AI чат
 │   ├── OwlChatActivity.kt
 │   ├── OwlChatViewModel.kt
@@ -80,8 +77,8 @@ ui/
 data/
 ├── cache/CacheUtils.kt            — единый утилит очистки кэша
 ├── grpc/GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
-├── grpc/RealGrpcClient.kt         — реализация gRPC (JWT auth, ChatList v2, Pin Message RPC)
-├── grpc/ProfileClient.kt          — ProfileService v2 client + fetchServerInfo
+├── grpc/RealGrpcClient.kt         — реализация gRPC (JWT auth, ChatList v2, Pin Message RPC, optimistic READY, reconnect)
+├── grpc/ProfileClient.kt          — ProfileService v2 client + version detection (HTTP /info + gRPC port heuristic)
 ├── grpc/BearerTokenInterceptor.kt — JWT Bearer token
 ├── proto/MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
 ├── session/CredentialStore.kt     — credentials + server list + lastUsername
@@ -106,19 +103,16 @@ res/
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### v1.1.3.17 (текущая)
+### v1.1.3.18 (текущая)
+- **Optimistic READY** — gRPC channel подключается лениво, READY сразу после builder.build()
+- **Reconnect on transport errors** — UNAVAILABLE/UNAUTHENTICATED/INTERNAL → reconnect, но НЕ при shutdownNow
+- **Keepalive 30s/10s** — для мобильных сетей, idleTimeout 25min
+- **gRPC port heuristic** — если HTTP /info недоступен: 50052 → v2, 50051 → v1
+- **Poll 30s** — getChats каждые 30 секунд вместо 5
+
+### v1.1.3.17
 - **FAB AI** — AIBottomSheet подключён к ChatListActivityV2
 - **AI навигация** — Hermes/OWL чаты создаются с пустым chatId → сервер создаёт
-- **AI настройки** — Hermes использует OwlSettingsActivity с isHermes=true
-- **getChats()** — публичный метод в ChatListViewModelV2
-
-### v1.1.3.16 (предыдущая)
-- **ChatListActivityV2 без фрагмента** — RecyclerView+SwipeRefresh напрямую в Activity
-- **TabLayout** — табы All/AI/Groups с фильтрацией через ViewModel.setTabFilter
-- **Selection Mode** — long press = ActionMode toolbar, тап = toggle selection
-- **Поиск** — SearchView в toolbar + debounce 300ms
-- **Pin Message** — selection toolbar кнопка pin/unpin (v1-style), pinned badge
-- **CacheUtils** — единый утилит очистки кэша
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
@@ -146,6 +140,8 @@ res/
 16. ChatListActivityV2 — БЕЗ фрагмента, RecyclerView+SwipeRefresh напрямую
 17. Очистка кэша — использовать CacheUtils, не дублировать код
 18. Pin Message — только через selection toolbar (v1-style), НЕ PopupMenu
+19. getChats() — всегда вызывать callback, даже при ошибке
+20. loadChats() — единственная точка входа: ViewModel.init collector, НЕ дублировать из Activity
 
 ---
 
@@ -195,6 +191,9 @@ cd /root/msg.client.android
 | Конфиг | .env.dev | .env |
 | DB | chat_db_dev | chat_db |
 | Версия | v1.2.0.1 | v1.1.3.10 |
+| ProfileService | v2 (JWT) | v1 (legacy ChatService) |
+| ChatStream | v2 (JWT + password) | v1 (password only) |
+| ChatList | v2 (Pin/Search/Archive) | v1 (basic) |
 
 ---
 
@@ -209,23 +208,17 @@ cd /root/msg.client.android
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.18)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.19)
 
-### Критический баг (ПЕРВЫЙ ПРИОРИТЕТ)
-1. **Баг: Чаты не загружаются при входе на новый сервер** — подробное исследование в `doc/BUG_LOAD_CHATS_RESEARCH.md`
-   - Симптом: при входе виден только "Избранное", чаты не появляются
-   - SwipeRefresh помогает, но не всегда (при восстановлении сеанса — не помогает)
-   - Корневая причина: race condition между connect/loadChats + проблемы с кэшем в getChats()
-   - Нужно: исправить логику загрузки чатов в ChatListActivity (v1) и ChatListActivityV2 (v2)
+### Высокий приоритет
+1. **Unread badges** — счётчик непрочитанных в списке чатов
+2. **Push notifications** — FCM интеграция
 
 ### Средний приоритет
-2. **Unread badges улучшение** — счётчик непрочитанных в списке чатов
-3. **Push notifications** — интеграция с FCM для v2
+3. **ProfileService v2** — проверить работу на dev сервере
+4. **Read receipts** — MarkAsRead
 
-### Отложено (не в этой сессии)
+### Отложено
 - Qdrant + CLIP (production RAG)
 - Shared element transitions
 - Infinite scroll + pagination
-- Read receipts (MarkAsRead)
-- Редеплой prod сервера — только после выхода Android клиента
-- Выпуск Android — делается ферзем лично
