@@ -1,4 +1,52 @@
-# Lavender Messenger — Android Changelog
+# Lava Messenger — Android Changelog
+
+## [1.1.3.23] - 2026-06-16
+
+### Рефакторинг: Единый ChatListActivity
+- **Удалён ChatListActivity (v1)** — 2802 строки мёртвого кода
+- **Удалён ChatAdapter (v1)**
+- ChatListActivityV2 → ChatListActivity (единый)
+- ChatListViewModelV2 → ChatListViewModel
+- ChatAdapterV2 → ChatAdapter
+- Убран fallbackToV1() — один Activity работает на v1 и v2 серверах
+- Обновлён SplashActivity — всегда route на ChatListActivity
+- Обновлён AndroidManifest — одна запись ChatListActivity
+- activity_chat_list_v2.xml → activity_chat_list.xml
+
+### Исправлено: Соединение
+- **JWT auth fallback** — при JWT ошибке: clear tokens → retry с password
+- **getChats retry** — при shutdownNow через 1.5с вместо emptyList
+- **Backup chat stream restart** — при shutdownNow race condition через 2с
+- **Аватар в тулбаре** — Glide + avatarCacheFlow
+- **Статус соединения** — RECONNECTING и FAILED отображаются в тулбаре
+- Убран ivActionMute из ThemeApplier (v1-only ID)
+
+### Коммиты
+- `cde8776` — chore: rename Lavender → Lava
+- `33ce3a5` — fix: update share text and descriptions
+- `86ecb9f` — fix: getChats retry after shutdownNow
+- `01313ae` — fix: force chat stream restart after shutdownNow race
+- `1b43a27` — fix: AuthManager.clearTokens null-safety
+- `44485a7` — debug: add stack trace logging for forceReconnect
+- `383292f` — refactor: merge v1/v2 ChatList into single Activity
+- `1f8ce5d` — fix: compilation errors after v1/v2 merge
+
+---
+
+## [1.1.3.22] - 2026-06-16
+
+### Новое: Rename Lavender → Lava
+- Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
+- Каналы уведомлений: "Lavender Calls" → "Lava Calls", "Lavender Messages" → "Lava Messages"
+- Тема: "Lavender Night" → "Lava Night" (en)
+- Hardcoded строки в Kotlin заменены на R.string.*
+- share_app_description: "Lava: secure business communications platform" / "Лава: платформа защищенных бизнес-коммуникаций"
+
+### Коммиты
+- `cde8776` — chore: rename Lavender → Lava in all user-facing strings (en + ru)
+- `33ce3a5` — fix: update share text and descriptions
+
+---
 
 ## [1.1.3.21] - 2026-06-16
 

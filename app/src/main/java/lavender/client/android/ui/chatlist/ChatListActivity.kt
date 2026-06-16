@@ -40,6 +40,8 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
+import lavender.client.android.ui.widget.ProfileBottomSheet
+import lavender.client.android.ui.widget.NewChatBottomSheet
 import lavender.client.android.ui.adapter.ChatAdapter
 
 /**
@@ -201,10 +203,9 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun setupToolbarActions(username: String) {
-        // Avatar click -> ProfileActivity
+        // Avatar click -> ProfileBottomSheet
         ivToolbarUserAvatar?.setOnClickListener {
-            val intent = Intent(this, lavender.client.android.ProfileActivity::class.java)
-            startActivity(intent)
+            ProfileBottomSheet.newInstance().show(supportFragmentManager, "profile")
         }
 
         // Title click -> ServersActivity
@@ -213,10 +214,9 @@ class ChatListActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Settings click -> ServersActivity (admin)
+        // Settings click -> ProfileBottomSheet
         ivActionSettings?.setOnClickListener {
-            val intent = Intent(this, ServersActivity::class.java)
-            startActivity(intent)
+            ProfileBottomSheet.newInstance().show(supportFragmentManager, "profile")
         }
     }
 
@@ -312,8 +312,7 @@ class ChatListActivity : AppCompatActivity() {
             showAIBottomSheet()
         }
         findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
-            val intent = Intent(this, NewChatActivity::class.java)
-            startActivity(intent)
+            NewChatBottomSheet.newInstance().show(supportFragmentManager, "new_chat")
         }
     }
 
