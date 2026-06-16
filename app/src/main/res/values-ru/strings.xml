@@ -303,6 +303,8 @@
     <string name="receive_push_hint">Если отключено, вы не будете получать никаких пуш-уведомлений.</string>
     <string name="send_push">Уведомлять других (от меня)</string>
     <string name="send_push_hint">Если отключено, ваши сообщения не будут вызывать пуш-уведомления у других.</string>
+    <string name="push_bypass_dnd">Пробивать режим Не беспокоить</string>
+    <string name="push_bypass_dnd_hint">Разрешить уведомлениям пробивать режим ДНД (требуется разрешение)</string>
     <string name="incoming">Входящие</string>
     <string name="outgoing">Исходящие</string>
     <string name="notification_history">История уведомлений</string>

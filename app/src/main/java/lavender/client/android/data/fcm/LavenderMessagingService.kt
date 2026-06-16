@@ -168,6 +168,12 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
+        // Apply DND bypass if enabled (requires NOTIFICATION_POLICY_ACCESS)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        if (prefs.getBoolean("push_bypass_dnd", false)) {
+            notificationBuilder.setBypassDnd(true)
+        }
+
         // Добавляем ID комнаты в экстра для возможности удаления программно
         val extras = android.os.Bundle()
         extras.putString("room_id", roomId)

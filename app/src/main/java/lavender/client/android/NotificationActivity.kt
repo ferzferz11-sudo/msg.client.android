@@ -70,6 +70,17 @@ class NotificationActivity : AppCompatActivity() {
             updateTokenOnServer()
         }
 
+        // DND Bypass
+        val switchBypassDnd = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchBypassDnd)
+        switchBypassDnd.isChecked = prefs.getBoolean("push_bypass_dnd", false)
+
+        switchBypassDnd.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("push_bypass_dnd", isChecked) }
+            if (isChecked) {
+                requestDndBypassPermission()
+            }
+        }
+
         // Preview views
         val previewLayout = findViewById<View>(R.id.notificationPreview)
         previewTitle = previewLayout.findViewById(R.id.notifTitle)
@@ -168,13 +179,23 @@ class NotificationActivity : AppCompatActivity() {
         val username = prefs.getString("username", "") ?: ""
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
-        
+
         if (username.isNotEmpty()) {
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val token = if (receiveEnabled) task.result else "DISABLED"
                     grpcClient.registerToken(username, token, sendEnabled)
                 }
+            }
+        }
+    }
+
+    private fun requestDndBypassPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            if (!nm.isNotificationPolicyAccessGranted) {
+                val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                startActivity(intent)
             }
         }
     }
