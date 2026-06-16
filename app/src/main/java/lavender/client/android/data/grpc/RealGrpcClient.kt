@@ -293,28 +293,40 @@ object RealGrpcClient {
             val newChannel = builder.build()
             channel = newChannel
 
-            _connectionStatus.value = ConnectionStatus.READY
+            // Channel is built but gRPC connects lazily — verify server is reachable
+            // via HTTP health check before marking READY.
+            _connectionStatus.value = ConnectionStatus.CONNECTING
             resetReconnectBackoff()
-            Log.d(TAG, "Channel built successfully to $serverAddress")
+            Log.d(TAG, "Channel built, verifying server reachability: $serverAddress")
 
-            // Fetch /info to determine service versions (ProfileService v2 support)
-            if (context != null) {
-                scope.launch {
-                    try {
-                        // Determine HTTP port: dev uses 8083, prod uses 8082
-                        val httpPort = if (port == 50052) 8083 else 8082
-                        ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
-                        Log.d(TAG, "ProfileService version: ${ProfileClient.serviceProfileVersion}")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to fetch server info: ${e.message}")
+            // Verify server reachability via HTTP health check before READY
+            scope.launch {
+                val httpPort = if (port == 50052) 8083 else 8082
+                val healthOk = checkServerHealth(serverAddress, httpPort)
+                if (healthOk) {
+                    _connectionStatus.value = ConnectionStatus.READY
+                    Log.d(TAG, "Server health check OK — READY: $serverAddress")
+
+                    // Fetch /info to determine service versions (ProfileService v2 support)
+                    if (context != null) {
+                        try {
+                            ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
+                            Log.d(TAG, "ProfileService version: ${ProfileClient.serviceProfileVersion}")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to fetch server info: ${e.message}")
+                        }
                     }
-                }
-            }
 
-            // Auto-resume last chat if it exists
-            lastChatRequest?.let {
-                Log.d(TAG, "Resuming last chat for ${it.u}")
-                startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
+                    // Auto-resume last chat if it exists
+                    lastChatRequest?.let {
+                        Log.d(TAG, "Resuming last chat for ${it.u}")
+                        startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
+                    }
+                } else {
+                    Log.w(TAG, "Server health check FAILED: $serverAddress")
+                    _connectionStatus.value = ConnectionStatus.RECONNECTING
+                    scheduleReconnect(serverAddress, useTls, port, context)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
@@ -327,6 +339,30 @@ object RealGrpcClient {
     }
 
     private var reconnectJob: Job? = null
+
+    /**
+     * Check server reachability via HTTP /health endpoint.
+     * Returns true if server responds with 200 OK within timeout.
+     */
+    private suspend fun checkServerHealth(host: String, httpPort: Int): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = java.net.URL("http://$host:$httpPort/health")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 3000
+                conn.readTimeout = 3000
+                conn.requestMethod = "GET"
+                conn.connect()
+                val code = conn.responseCode
+                conn.disconnect()
+                Log.d(TAG, "Health check $host:$httpPort → HTTP $code")
+                code == 200
+            } catch (e: Exception) {
+                Log.w(TAG, "Health check failed for $host:$httpPort: ${e.message}")
+                false
+            }
+        }
+    }
 
     private fun scheduleReconnect(serverAddress: String, useTls: Boolean, port: Int, context: Context?) {
         reconnectJob?.cancel()
@@ -1166,15 +1202,10 @@ object RealGrpcClient {
     }
 
     fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
-        // Load from cache first (if not skipped) and show immediately
-        if (!skipCache) {
-            scope.launch(Dispatchers.IO) {
-                val cached = db()?.chatDao()?.getAllChats()?.map { it.toDomain() } ?: emptyList()
-                if (cached.isNotEmpty()) {
-                    withContext(Dispatchers.Main) { callback(cached) }
-                }
-            }
-        }
+        // NOTE: Do NOT load from cache first — on first login cache is empty and
+        // calling callback(emptyList()) causes UI to show empty sections.
+        // Only use cache for pull-to-refresh (skipCache=true means cache was cleared).
+        // Server response always updates UI.
 
         val currentChannel = channel
         if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
@@ -1184,6 +1215,8 @@ object RealGrpcClient {
             if (!addr.isNullOrEmpty()) {
                 connect(addr)
             }
+            // Always callback to prevent hanging coroutine
+            scope.launch(Dispatchers.Main) { callback(emptyList()) }
             return
         }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()

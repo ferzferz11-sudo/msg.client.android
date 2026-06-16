@@ -26,6 +26,7 @@ import lavender.client.android.NewChatActivity
 import lavender.client.android.R
 import lavender.client.android.ServersActivity
 import lavender.client.android.data.grpc.GrpcClient
+import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
@@ -181,6 +182,19 @@ class ChatListActivityV2 : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Safety net: if chats list is empty but we're connected, reload.
+        // This handles the case where loadChats() was called before READY
+        // (e.g. race condition during server switch).
+        if (::viewModel.isInitialized && viewModel.getChats().isEmpty()
+            && GrpcClient.connectionStatus.value == ConnectionStatus.READY
+        ) {
+            Log.d(TAG, "onResume: chats empty but READY — reloading")
+            viewModel.loadChats()
+        }
+    }
+
     private fun setupToolbarActions(username: String) {
         // Avatar click -> ProfileActivity
         ivToolbarUserAvatar?.setOnClickListener {
@@ -278,14 +292,8 @@ class ChatListActivityV2 : AppCompatActivity() {
             }
         }
 
-        // Observe connection -> load chats when ready
-        lifecycleScope.launch {
-            viewModel.connectionStatus.collectLatest { status ->
-                if (status == lavender.client.android.data.grpc.ConnectionStatus.READY) {
-                    viewModel.loadChats()
-                }
-            }
-        }
+        // NOTE: loadChats() is called from ViewModel's init when it observes READY status.
+        // Do NOT duplicate the call here — double invocation causes race condition.
     }
 
     private fun setupSwipeRefresh() {

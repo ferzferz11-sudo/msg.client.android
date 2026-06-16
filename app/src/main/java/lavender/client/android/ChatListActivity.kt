@@ -1371,6 +1371,15 @@ class ChatListActivity : AppCompatActivity() {
                 lifecycleScope.launch { showAIActionSheet() }
             }
         }
+
+        // Safety net: if chats list is empty but we're connected, reload.
+        // This handles the case where loadChats() was called before READY.
+        if (::chatAdapter.isInitialized && chats.size <= 1
+            && grpcClient.connectionStatus.value == ConnectionStatus.READY
+        ) {
+            Log.d("ChatListActivity", "onResume: chats empty (only Favorites) but READY — reloading")
+            loadChats()
+        }
     }
 
     override fun onPause() {
