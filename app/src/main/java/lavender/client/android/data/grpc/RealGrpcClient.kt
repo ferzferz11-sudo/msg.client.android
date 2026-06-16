@@ -49,6 +49,8 @@ object RealGrpcClient {
     private var callRequestObserver: StreamObserver<CallMessageProto>? = null
     
     var currentServerAddress: String? = null
+    var currentServerPort: Int = 50051
+        private set
     var currentRoomId = ""
         private set
 
@@ -259,6 +261,7 @@ object RealGrpcClient {
 
         appContext = context?.applicationContext
         currentServerAddress = serverAddress
+        currentServerPort = port
         _isSuperAdmin.value = false
         loadDeletedMessages()
 
@@ -276,12 +279,14 @@ object RealGrpcClient {
                 builder.usePlaintext()
             }
 
-            // Aggressive keep-alive for fast detection of dead connections on mobile
-            builder.keepAliveTime(10, TimeUnit.SECONDS)    // Ping every 10s
-            builder.keepAliveTimeout(5, TimeUnit.SECONDS)   // 5s to detect dead connection
+            // Keep-alive for mobile networks — more lenient timeouts
+            builder.keepAliveTime(30, TimeUnit.SECONDS)     // Ping every 30s
+            builder.keepAliveTimeout(10, TimeUnit.SECONDS)   // 10s to detect dead connection
             builder.keepAliveWithoutCalls(true)
             // Max idle — allow server to clean up (server MaxConnectionAge = 30min)
             builder.maxInboundMessageSize(64 * 1024 * 1024)
+            // Idle timeout — reconnect if no activity (server MaxConnectionAgeGrace = 5s)
+            builder.maxIdleTimeout(25, TimeUnit.MINUTES)
 
             // Bearer token interceptor — attaches JWT to all calls (skipped for AuthService + Chat stream)
             val appCtx = context?.applicationContext
@@ -913,7 +918,7 @@ object RealGrpcClient {
                         Log.w(TAG, "Chat stream: transport error, triggering reconnect")
                         val addr = currentServerAddress
                         if (!addr.isNullOrEmpty()) {
-                            scheduleReconnect(addr, false, 50052, appContext)
+                            scheduleReconnect(addr, false, currentServerPort, appContext)
                         }
                     }
                 }
@@ -1243,7 +1248,7 @@ object RealGrpcClient {
                         _connectionStatus.value = ConnectionStatus.RECONNECTING
                         val addr = currentServerAddress
                         if (!addr.isNullOrEmpty()) {
-                            scheduleReconnect(addr, false, 50052, appContext)
+                            scheduleReconnect(addr, false, currentServerPort, appContext)
                         }
                     }
                 }

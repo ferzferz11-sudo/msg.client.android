@@ -1206,7 +1206,7 @@ class ChatListActivity : AppCompatActivity() {
         val syncServerAddress = CredentialStore.getServerAddress(this) // capture at start
         syncJob = lifecycleScope.launch(Dispatchers.IO) {
             while (true) {
-                delay(5000) // Poll every 5 seconds
+                delay(30000) // Poll every 30 seconds
 
                 // Skip sync if not connected
                 if (grpcClient.connectionStatus.value != ConnectionStatus.READY) {
