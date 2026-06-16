@@ -13,6 +13,8 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import lavender.client.android.R
 import lavender.client.android.ServersActivity
 import lavender.client.android.ThemesActivity
@@ -56,7 +58,7 @@ class ProfileBottomSheet(
 
         // Avatar
         val ivAvatar = findViewById<ImageView>(R.id.ivProfileAvatar)
-        if (avatarUrl.isNotEmpty()) {
+        if (avatarUrl.isNotEmpty() && ivAvatar != null) {
             Glide.with(context)
                 .load(avatarUrl)
                 .apply(RequestOptions.circleCropTransform().placeholder(R.drawable.ic_default_avatar))
@@ -109,7 +111,7 @@ class ProfileBottomSheet(
 
         // Avatar in header
         val menuUserAvatar = sheet.findViewById<ImageView>(R.id.menuUserAvatar)
-        if (avatarUrl.isNotEmpty()) {
+        if (avatarUrl.isNotEmpty() && menuUserAvatar != null) {
             Glide.with(context)
                 .load(avatarUrl)
                 .apply(RequestOptions.circleCropTransform().placeholder(R.drawable.ic_default_avatar))
@@ -204,7 +206,9 @@ class ProfileBottomSheet(
         sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
             sheet.dismiss()
             try {
-                CacheUtils.clearAllWithGlide(context)
+                runBlocking(Dispatchers.IO) {
+                    CacheUtils.clearAllWithGlide(context)
+                }
                 Toast.makeText(context, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Log.e("ProfileBottomSheet", "Error clearing cache", e)
@@ -258,16 +262,20 @@ class ProfileBottomSheet(
             .setPositiveButton(R.string.delete) { _, _ ->
                 try {
                     GrpcClient.deleteProfile(username) { success, _ ->
-                        if (success) {
-                            Toast.makeText(context, R.string.profile_deleted, Toast.LENGTH_LONG).show()
-                            GrpcClient.disconnect()
-                            SessionManager.logout(context)
-                            val intent = Intent(context, ChatListActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        if (context is android.app.Activity) {
+                            context.runOnUiThread {
+                                if (success) {
+                                    Toast.makeText(context, R.string.profile_deleted, Toast.LENGTH_LONG).show()
+                                    GrpcClient.disconnect()
+                                    SessionManager.logout(context)
+                                    val intent = Intent(context, ChatListActivity::class.java).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    }
+                                    context.startActivity(intent)
+                                } else {
+                                    Toast.makeText(context, R.string.failed_to_delete_profile, Toast.LENGTH_LONG).show()
+                                }
                             }
-                            context.startActivity(intent)
-                        } else {
-                            Toast.makeText(context, R.string.failed_to_delete_profile, Toast.LENGTH_LONG).show()
                         }
                     }
                 } catch (e: Exception) {
@@ -283,7 +291,7 @@ class ProfileBottomSheet(
         val sheet = StandardBottomSheet(context, R.layout.dialog_about)
         try {
             val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
-            sheet.findViewById<TextView>(R.id.aboutVersion)?.text = context.getString(R.string.app_version_format, versionName)
+            sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = context.getString(R.string.app_version_format, versionName)
         } catch (_: Exception) {}
         // Close button
         sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
