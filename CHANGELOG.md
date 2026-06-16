@@ -1,5 +1,41 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.19] - 2026-06-16
+
+### Исправлено: JWT auth для ChatStream v2
+- **JWT token malformed** — `getBearerToken()` возвращал `"Bearer <token>"` с префиксом, а `setJwtToken()` ожидал чистый токен
+- Исправлено: используем `getAccessToken()` для JWT в ChatStream
+- **Бесконечный reconnect loop при auth failure** — `UNKNOWN - authentication failed` не ловился как auth error
+- Добавлена проверка `authentication failed` / `JWT validation failed` / `token is malformed` → FAILED status, без retry
+
+### Исправлено: Дублированный reconnect logic
+- **3 независимых источника reconnect** (onClose, onError, getChats onClose) конфликтовали
+- onClose больше не вызывает reconnect, только делегирует в onError
+- getChats() onClose не трогает connection status
+- onError — единственный источник reconnect с isRetrying guard
+
+### Новое: Unread badges
+- Бейдж стилизуется по теме (primary color bg, adaptive text color)
+- Кап 99+ для больших чисел
+- MarkAsRead при клике на чат (clear badge + server MarkAsRead)
+- Реал-тайм обновление через newMessageEvent SharedFlow
+
+### Новое: DiffUtil в ChatAdapterV2
+- Заменён notifyDataSetChanged на DiffUtil.calculateDiff() + dispatchUpdatesTo()
+- Анимации добавления/удаления элементов, нет мерцания
+
+### Документация
+- Создан `doc/ARCH_ANALYSIS_V2_V1.md` — полный анализ архитектуры v2 vs v1
+
+### Коммиты
+- `9726929` — fix: JWT auth and infinite reconnect on auth failure
+- `63ed73f` — fix: eliminate duplicate reconnect logic
+- `959a79f` — feat: add DiffUtil to ChatAdapterV2
+- `e029aa7` — feat: unread badges — theme colors, mark-as-read, real-time update
+- `583bf3f` — docs: add ARCH_ANALYSIS_V2_V1.md
+
+---
+
 ## [1.1.3.18] - 2026-06-16
 
 ### Исправлено: Баг загрузки чатов (сессия 19)

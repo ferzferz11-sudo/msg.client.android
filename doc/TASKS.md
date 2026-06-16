@@ -1,18 +1,37 @@
 # Lavender Messenger (Android) — Задачи
 
 **Версия:** v1.1.3.19
-**Обновлено:** 2026-06-16 (сессия 21)
+**Обновлено:** 2026-06-16 (сессия 22)
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## 🚧 v1.1.3.19 — Unread Badges (Сессия 21)
+## ✅ v1.1.3.19 — Стабильность и оптимизация (Сессия 22)
 
-### В процессе
-- [x] **Badge colors by theme** — primary color background, adaptive text color
-- [x] **Mark as read on click** — clear badge + server MarkAsRead on chat open
-- [x] **Real-time update** — newMessageEvent SharedFlow for background messages
-- [ ] **Test on dev** — verify unread badges work on v2 server
+### Исправлено
+- ✅ **JWT auth** — используем getAccessToken() вместо getBearerToken() для ChatStream
+- ✅ **Auth failure reconnect loop** — проверка authentication failed → FAILED без retry
+- ✅ **Дублированный reconnect** — onClose/getChats больше не вызывают reconnect
+- ✅ **DiffUtil** — ChatAdapterV2 использует DiffUtil вместо notifyDataSetChanged
+
+### Новое
+- ✅ **Unread badges** — цвета по теме, mark-as-read, реал-тайм обновление
+
+### Коммиты
+- `9726929` — fix: JWT auth and infinite reconnect on auth failure
+- `63ed73f` — fix: eliminate duplicate reconnect logic
+- `959a79f` — feat: add DiffUtil to ChatAdapterV2
+- `e029aa7` — feat: unread badges
+
+---
+
+## ✅ v1.1.3.19 — Unread Badges (Сессия 21)
+
+### Исправлено
+- ✅ **Badge colors by theme** — primary color background, adaptive text color
+- ✅ **Mark as read on click** — clear badge + server MarkAsRead on chat open
+- ✅ **Real-time update** — newMessageEvent SharedFlow for background messages
+- ✅ **Test on dev** — ✅ протестировано на dev сервере
 
 ### Коммиты
 - `e029aa7` — feat: unread badges — theme colors, mark-as-read on click, real-time update
@@ -72,15 +91,18 @@
 
 ---
 
-## 📋 Активные задачи (Сессия 21)
+## 📋 Активные задачи (Сессия 22)
 
 ### Высокий приоритет
 - [x] **Unread badges** — theme colors, mark-as-read on click, real-time update (v1.1.3.19)
+- [x] **JWT auth fix** — getAccessToken() вместо getBearerToken() (v1.1.3.19)
+- [x] **Reconnect stability** — убраны дубли reconnect, auth failure detection (v1.1.3.19)
 - [ ] **Push notifications** — FCM интеграция
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
 - [ ] **Read receipts** — MarkAsRead
+- [ ] **Разделить RealGrpcClient** — выделить модули (ConnectionManager, ChatClient, AuthClient)
 
 ### Отложено
 - [ ] Qdrant + CLIP (production RAG)

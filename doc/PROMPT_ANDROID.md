@@ -1,15 +1,15 @@
 # Промпт для новой сессии — Android v1.1.3.19+
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.18 (разработка)
+**Версия:** 1.1.3.19 (разработка)
 **Ветка:** feat/1.1.3.x
 **Тег:** v1.1.3.18
 
 ---
 
-## СТАТУС: v1.1.3.18 — Стабильная загрузка чатов, оптимизация соединения
+## СТАТУС: v1.1.3.19 — JWT auth, reconnect stability, DiffUtil, unread badges
 
-v1.1.3.18 — баг загрузки чатов исправлен, соединение оптимизировано.
+v1.1.3.19 — JWT auth исправлен, reconnect оптимизирован, DiffUtil добавлен, unread badges работают.
 Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2, Pin Message).
 Сервер prod: v1.1.3.10 (legacy, без v2).
 Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message, FAB AI.
@@ -19,6 +19,13 @@ Android: ChatListActivityV2 с табами, selection mode, поиском, Pin
 - v2 сервер (dev) → ChatListActivityV2 (v2)
 - Оба клиента (v1 и v2) поддерживают обратную совместимость с v1 сервером
 - Версия сервера определяется через HTTP /info + fallback по gRPC порту
+
+**КРИТИЧЕСКИЕ ПИТФОЛЫ (изучены в сессии 22):**
+- `getBearerToken()` возвращает `"Bearer <token>"` — для JWT в ChatStream использовать `getAccessToken()` (чистый токен)
+- Auth failure (`UNKNOWN` + `"authentication failed"`) — ловить явно, ставить FAILED, НЕ retry
+- Reconnect — единственный источник onError, НЕ onClose/getChats
+- НЕ переписывать работающий код с нуля — только добавлять недостающее
+- RealGrpcClient 4070 строк — главная проблема архитектуры (план: разделить на модули)
 
 ---
 
@@ -205,20 +212,31 @@ cd /root/msg.client.android
 - Сервер: `/root/msg/doc/INTEGRATION_SESSION.md`, `/root/msg/doc/TASKS.md`
 - CHANGELOG: `/root/msg.client.android/CHANGELOG.md`
 - Заметки сессий: `/root/msg.client.android/doc/SESSION_NOTES.md`
+- Архитектурный анализ: `/root/msg.client.android/doc/ARCH_ANALYSIS_V2_V1.md`
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.19)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.20)
 
 ### Высокий приоритет
-1. **Unread badges** — счётчик непрочитанных в списке чатов
-2. **Push notifications** — FCM интеграция
+1. **Push notifications** — FCM интеграция
+2. **Разделить RealGrpcClient** — выделить модули (ConnectionManager, ChatClient, AuthClient, ProfileClient)
 
 ### Средний приоритет
 3. **ProfileService v2** — проверить работу на dev сервере
 4. **Read receipts** — MarkAsRead
+5. **Убрать мёртвый код** — ChatListFragmentV2 (не используется)
 
 ### Отложено
 - Qdrant + CLIP (production RAG)
 - Shared element transitions
 - Infinite scroll + pagination
+
+### Выполнено в v1.1.3.19
+- ✅ Unread badges — цвета по теме, mark-as-read, реал-тайм обновление
+- ✅ JWT auth fix — getAccessToken() вместо getBearerToken()
+- ✅ Reconnect stability — единый источник onError, auth failure detection
+- ✅ DiffUtil в ChatAdapterV2 — анимированные обновления списка
+- ✅ Stream stability — убраны дубли reconnect, shutdownNow suppression
+- ✅ HTTP /info fix — dev сервер определяется мгновенно
+- ✅ ARCH_ANALYSIS_V2_V1.md — анализ архитектуры

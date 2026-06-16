@@ -1,5 +1,65 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 22 (2026-06-16) — JWT auth fix, reconnect optimization, architecture analysis
+
+### Контекст
+- Продолжаем работу над v1.1.3.19
+- Тестирование v2 на dev сервере
+
+### Проблемы и исправления
+
+#### 1. JWT token malformed
+- **Симптом**: `token is malformed: could not base64 decode header: illegal base64 data at input byte 6`
+- **Причина**: `getBearerToken()` возвращал `"Bearer <token>"` с префиксом, а `setJwtToken()` ожидал чистый токен
+- **Решение**: Используем `getAccessToken()` вместо `getBearerToken()` для ChatStream JWT auth
+- **Коммит**: 9726929
+
+#### 2. Бесконечный reconnect loop при auth failure
+- **Симптом**: `UNKNOWN - authentication failed` → бесконечный retry loop
+- **Причина**: `UNKNOWN` код ошибки не ловился как auth error в onError
+- **Решение**: Добавлена проверка `description.contains("authentication failed")` → FAILED status, без retry
+- **Коммит**: 9726929
+
+#### 3. Дублированный reconnect logic (3 источника)
+- **Симптом**: onClose, onError, getChats() onClose — все вызывали reconnect независимо
+- **Решение**:
+  - onClose больше не вызывает scheduleReconnect, только делегирует в onError
+  - getChats() onClose не трогает connection status
+  - onError — единственный источник reconnect с isRetrying guard
+- **Коммит**: 63ed73f
+
+#### 4. DiffUtil в ChatAdapterV2
+- **Симптом**: notifyDataSetChanged вызывал мерцание списка
+- **Решение**: Заменён на DiffUtil.calculateDiff() + dispatchUpdatesTo()
+- **Коммит**: 959a79f
+
+#### 5. Unread badges
+- **Симптом**: Бейдж не стилизовался по теме, не обновлялся в реальном времени
+- **Решение**:
+  - Цвет бейджа = primary color темы, текст адаптивный
+  - MarkAsRead при клике на чат
+  - newMessageEvent SharedFlow для реал-тайм обновления
+- **Коммит**: e029aa7
+
+### Документация
+- Создан `doc/ARCH_ANALYSIS_V2_V1.md` — полный анализ архитектуры v2 vs v1
+- Метрики: v1 ChatListActivity 2802 строки, v2 ChatListActivityV2 664 строки
+- RealGrpcClient: 4070 строк, 471 метод — главная проблема архитектуры
+
+### Коммиты
+- `9726929` — fix: JWT auth and infinite reconnect on auth failure
+- `63ed73f` — fix: eliminate duplicate reconnect logic
+- `959a79f` — feat: add DiffUtil to ChatAdapterV2
+- `e029aa7` — feat: unread badges — theme colors, mark-as-read, real-time update
+- `583bf3f` — docs: add ARCH_ANALYSIS_V2_V1.md
+
+### Тестирование
+- ✅ dev (v2): JWT auth работает, чаты загружаются, AI чат работает
+- ✅ Нет бесконечного reconnect loop
+- ✅ Логи чистые
+
+---
+
 ## Сессия 21 (2026-06-16) — Fix HTTP /info для dev сервера
 
 ### Проблема
