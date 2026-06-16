@@ -16,6 +16,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import lavender.client.android.data.changelog.ChangelogRepository
 import lavender.client.android.ui.adapter.ChangelogAdapter
 import lavender.client.android.theme.ThemeStore
