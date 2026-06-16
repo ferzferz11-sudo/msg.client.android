@@ -312,7 +312,6 @@ object RealGrpcClient {
                     try {
                         val httpPort = if (port == 50052) 8083 else 8082
                         ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
-                        Log.d(TAG, "ProfileService version: ${ProfileClient.serviceProfileVersion}")
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to fetch server info: ${e.message}")
                     }

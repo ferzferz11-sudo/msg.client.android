@@ -59,9 +59,11 @@ object ProfileClient {
      * If /info is unavailable, all versions stay empty → v1 fallback for everything.
      */
     suspend fun fetchServerInfo(context: Context, serverAddress: String, port: Int = 8083) {
+        Log.d(TAG, "fetchServerInfo: starting for $serverAddress:$port")
         withContext(Dispatchers.IO) {
             try {
                 val url = "http://$serverAddress:$port/info"
+                Log.d(TAG, "fetchServerInfo: fetching $url")
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
