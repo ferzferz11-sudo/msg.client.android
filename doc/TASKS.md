@@ -1,9 +1,21 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.18
+**Версия:** v1.1.3.19
 **Обновлено:** 2026-06-16 (сессия 21)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.18
+
+---
+
+## 🚧 v1.1.3.19 — Unread Badges (Сессия 21)
+
+### В процессе
+- [x] **Badge colors by theme** — primary color background, adaptive text color
+- [x] **Mark as read on click** — clear badge + server MarkAsRead on chat open
+- [x] **Real-time update** — newMessageEvent SharedFlow for background messages
+- [ ] **Test on dev** — verify unread badges work on v2 server
+
+### Коммиты
+- `e029aa7` — feat: unread badges — theme colors, mark-as-read on click, real-time update
 
 ---
 
@@ -63,7 +75,7 @@
 ## 📋 Активные задачи (Сессия 21)
 
 ### Высокий приоритет
-- [ ] **Unread badges** — счётчик непрочитанных в списке чатов
+- [x] **Unread badges** — theme colors, mark-as-read on click, real-time update (v1.1.3.19)
 - [ ] **Push notifications** — FCM интеграция
 
 ### Средний приоритет
@@ -85,8 +97,10 @@
 | Long press = режим выбора | ActionMode toolbar с действиями Pin/Delete/Archive |
 | Pin Chat в toolbar выбора | НЕ в обычном toolbar — только в режиме выбора |
 | Pin Message — selection toolbar | Кнопка pin/unpin в selection toolbar (v1-style) |
-|| fetchServerInfo strategy | Dev (50052): skip HTTP, assume v2. Prod (50051): try HTTP /info, fallback v1 |
-|| Optimistic READY | gRPC channel подключается лениво, health check не нужен |
+| fetchServerInfo strategy | Dev (50052): skip HTTP, assume v2. Prod (50051): try HTTP /info, fallback v1 |
+| Optimistic READY | gRPC channel подключается лениво, health check не нужен |
+| Unread badge by theme | Badge bg = primary color, text = adaptive (white/black) |
+| newMessageEvent | SharedFlow<Pair<roomId, messageId>> for real-time unread increment |
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 для cont.resume() |
 | ChatListActivityV2 без фрагмента | RecyclerView+SwipeRefresh напрямую в Activity |
 | CacheUtils | Единый утилит очистки кэша |
