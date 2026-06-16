@@ -61,6 +61,9 @@ class GrpcConnectionManager(
         forceReconnect: Boolean = false
     ) {
         Log.d(TAG, "connect() called: addr=$serverAddress:$port force=$forceReconnect status=${connectionStatus.value}")
+        if (forceReconnect) {
+            Log.d(TAG, "forceReconnect requested — stack: ${Thread.currentThread().stackTrace.take(8).joinToString(" -> ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }}")
+        }
 
         val channelDead = channel?.isShutdown == true || channel?.isTerminated == true
         val addressMatch = currentServerAddress == serverAddress
