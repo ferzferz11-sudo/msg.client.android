@@ -1108,6 +1108,20 @@ object RealGrpcClient {
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
+
+                    // If channel was shut down for reconnect, retry after a short delay
+                    // to avoid returning empty list and waiting 30s for next poll
+                    if (status.description?.contains("shutdownNow") == true) {
+                        Log.d(TAG, "getChats: channel shutdownNow — scheduling retry in 1.5s")
+                        scope.launch {
+                            delay(1500)
+                            val un = currentUsername ?: return@launch
+                            Log.d(TAG, "getChats: retrying after shutdownNow")
+                            getChats(un, skipCache = true, callback)
+                        }
+                        return
+                    }
+
                     // Always callback to prevent hanging coroutine
                     scope.launch(Dispatchers.Main) { callback(emptyList()) }
 
