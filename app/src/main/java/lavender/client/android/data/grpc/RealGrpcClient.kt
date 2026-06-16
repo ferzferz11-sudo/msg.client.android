@@ -285,8 +285,8 @@ object RealGrpcClient {
             builder.keepAliveWithoutCalls(true)
             // Max idle — allow server to clean up (server MaxConnectionAge = 30min)
             builder.maxInboundMessageSize(64 * 1024 * 1024)
-            // Idle timeout — reconnect if no activity (server MaxConnectionAgeGrace = 5s)
-            builder.maxIdleTimeout(25, TimeUnit.MINUTES)
+            // Idle timeout — reconnect before server's MaxConnectionAge (30min)
+            builder.idleTimeout(25, TimeUnit.MINUTES)
 
             // Bearer token interceptor — attaches JWT to all calls (skipped for AuthService + Chat stream)
             val appCtx = context?.applicationContext
@@ -909,12 +909,14 @@ object RealGrpcClient {
                     Log.w(TAG, "Chat stream onClose error: ${status.code} - ${status.description}")
                     _connectionStatus.value = ConnectionStatus.FAILED
                     requestObserver = null
-                    // Trigger reconnect on transport errors
-                    if (status.code == io.grpc.Status.Code.UNAVAILABLE
-                        || status.code == io.grpc.Status.Code.UNAUTHENTICATED
-                        || status.code == io.grpc.Status.Code.INTERNAL
-                        || status.code == io.grpc.Status.Code.UNKNOWN
-                    ) {
+                    // Trigger reconnect on transport errors, but NOT on shutdownNow
+                    val isShutdownNow = status.description?.contains("shutdownNow") == true
+                    if (!isShutdownNow && (
+                        status.code == io.grpc.Status.Code.UNAVAILABLE ||
+                        status.code == io.grpc.Status.Code.UNAUTHENTICATED ||
+                        status.code == io.grpc.Status.Code.INTERNAL ||
+                        status.code == io.grpc.Status.Code.UNKNOWN
+                    )) {
                         Log.w(TAG, "Chat stream: transport error, triggering reconnect")
                         val addr = currentServerAddress
                         if (!addr.isNullOrEmpty()) {
@@ -1239,11 +1241,14 @@ object RealGrpcClient {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
                     // Always callback to prevent hanging coroutine
                     scope.launch(Dispatchers.Main) { callback(emptyList()) }
-                    // Trigger reconnect on transport errors (UNAVAILABLE, UNAUTHENTICATED, etc.)
-                    if (status.code == io.grpc.Status.Code.UNAVAILABLE
-                        || status.code == io.grpc.Status.Code.UNAUTHENTICATED
-                        || status.code == io.grpc.Status.Code.INTERNAL
-                    ) {
+                    // Trigger reconnect on transport errors, but NOT on shutdownNow
+                    // (shutdownNow is triggered by our own reconnect logic)
+                    val isShutdownNow = status.description?.contains("shutdownNow") == true
+                    if (!isShutdownNow && (
+                        status.code == io.grpc.Status.Code.UNAVAILABLE ||
+                        status.code == io.grpc.Status.Code.UNAUTHENTICATED ||
+                        status.code == io.grpc.Status.Code.INTERNAL
+                    )) {
                         Log.w(TAG, "getChats: transport error, triggering reconnect")
                         _connectionStatus.value = ConnectionStatus.RECONNECTING
                         val addr = currentServerAddress
