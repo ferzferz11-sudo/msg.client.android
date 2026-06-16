@@ -807,8 +807,19 @@ object RealGrpcClient {
                     }
                     // Do not retry on shutdownNow (our own reconnect)
                     if (description.contains("shutdownNow")) {
-                        Log.d(TAG, "shutdownNow — skipping retry")
+                        Log.d(TAG, "shutdownNow — will auto-resume chat after reconnect")
                         requestObserver = null
+                        // Schedule chat restart — onAutoResumeChat will be called by GrpcConnectionManager
+                        // but we also schedule a backup restart in case the race condition hits
+                        scope.launch {
+                            delay(1500)
+                            if (requestObserver == null && lastChatRequest != null) {
+                                Log.d(TAG, "shutdownNow backup: restarting chat stream")
+                                lastChatRequest?.let { req ->
+                                    startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
+                                }
+                            }
+                        }
                         return
                     }
                 }
