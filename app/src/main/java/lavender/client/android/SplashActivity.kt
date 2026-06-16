@@ -3,6 +3,7 @@ package lavender.client.android
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
+import lavender.client.android.ui.chatlist.ChatListActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View

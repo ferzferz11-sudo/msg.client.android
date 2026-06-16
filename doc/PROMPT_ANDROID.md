@@ -1,41 +1,29 @@
-# Промпт для новой сессии — Android v1.1.3.22+
+# Промпт для новой сессии — Android v1.1.3.23+
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.22 (разработка)
+**Версия:** 1.1.3.23 (разработка)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.21 (выпущен)
+**Тег:** v1.1.3.22 (не выпущен)
 
 ---
 
-## СТАТУС: v1.1.3.22 — Rename Lavender→Lava сделан, следующий шаг: GrpcChatClient
+## СТАТУС: v1.1.3.23 — Рефакторинг соединений, единый ChatListActivity
 
-RealGrpcClient частично модуляризирован: 4 из 6 модулей выделены.
-Осталось ~3700 строк в RealGrpcClient, целевой размер ~200 строк (facade).
+**Ключевые изменения в этой сессии:**
+- Удалён ChatListActivity (v1) — 2802 строки мёртвого кода
+- Удалён ChatAdapter (v1)
+- ChatListActivityV2 → ChatListActivity (единый)
+- ChatListViewModelV2 → ChatListViewModel
+- ChatAdapterV2 → ChatAdapter
+- Убран fallbackToV1() — один Activity работает на v1 и v2 серверах
+- JWT auth fallback: при ошибке JWT → очистка токенов → retry с password
+- getChats retry при shutdownNow вместо возврата emptyList
+- Backup chat stream restart при shutdownNow race condition
+- Аватар в тулбаре загружается через Glide + avatarCacheFlow
+- Статус соединения в тулбаре: RECONNECTING и FAILED отображаются
 
-Сервер dev: v1.2.0.2 (FCM push uplevel, userId-based online check, исправлена миграция).
-Сервер prod: v1.1.3.10 (legacy, без v2).
-Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message, FAB AI.
-Android: FCM push notifications с HIGH priority, DND bypass, проверка онлайн-статуса.
-
-**Архитектурный принцип:** Полное разделение v1 и v2 архитектуры.
-- v1 сервер (prod) → ChatListActivity (v1, без изменений)
-- v2 сервер (dev) → ChatListActivityV2 (v2)
-- Оба клиента (v1 и v2) поддерживают обратную совместимость с v1 сервером
-- Версия сервера определяется через HTTP /info + fallback по gRPC порту
-
-**КРИТИЧЕСКИЕ ПИТФОЛЫ (изучены в сессиях 22-26):**
-- `getBearerToken()` возвращает `"<token>"` — для JWT в ChatStream использовать `getAccessToken()` (чистый токен)
-- Auth failure (`UNKNOWN` + `"authentication failed"`) — ловить явно, ставить FAILED, НЕ retry
-- Reconnect — единственный источник onError, НЕ onClose/getChats
-- НЕ переписывать работающий код с нуля — только добавлять недостающее
-- RealGrpcClient 3739 строк (было 4081) — разделить на модули: сделано 4/6, осталось GrpcChatClient + GrpcProfileClient
-- НЕ компилировать Android на сервере — Gradle wrapper удалён (OOM kill), собирать ТОЛЬКО локально
-- Kotlin object init order: StateFlow объявления ДО инициализации модулей (top-to-bottom)
-- FCM: использовать `channel.setBypassDnd(true)` для O+, НЕ `notificationBuilder.setBypassDnd()` (не существует в API)
-- FCM: `IsUserOnline(userId, username)` — userId основной, username fallback для v1 клиентов
-- Миграции БД: разделять на шаги (добавить колонку → заполнить данные → менять PK), проверять NULL перед PK
-- НЕ компилировать Android на сервере — Gradle wrapper удалён (OOM kill), собирать ТОЛЬКО локально
-- Kotlin object init order: StateFlow объявления ДО инициализации модулей (top-to-bottom)
+Сервер dev: v1.2.0.2
+Сервер prod: v1.1.3.10
 
 ---
 
@@ -44,7 +32,7 @@ Android: FCM push notifications с HIGH priority, DND bypass, проверка �
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server, graceful shutdown
-server.go                  — ServerVersion = "1.2.0.1", service version constants
+server.go                  — ServerVersion = "1.2.0.2", service version constants
 auth_service.go            — AuthService v1 (deprecated)
 auth_service_v2.go         — AuthService v2 (JWT, основной)
 auth_interceptor.go        — gRPC Bearer token interceptor (unary + streaming)
@@ -64,77 +52,67 @@ http_server.go             — HTTP (/health, /info)
 messenger.proto            — ChatService v2, AuthService v2, ProfileService v2, Pin Message
 ```
 
-### Android v2 (/root/msg.client.android)
+### Android (/root/msg.client.android)
 ```
 ui/
-├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet
-│   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state + DiffUtil
-│   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter, getChats
-│   ├── ChatListSections.kt      — Section enum + SectionItem
+├── chatlist/
+│   ├── ChatListActivity.kt         — ЕДИНЫЙ Activity: tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet
+│   ├── ChatListViewModel.kt        — loadChats, pinChat, setTabFilter, getChats
+│   ├── ChatListSections.kt         — Section enum + SectionItem
 ├── adapter/
-│   ├── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
-│   └── MessageAdapter.kt    — адаптер сообщений + pinned badge
+│   ├── ChatAdapter.kt              — адаптер с секциями + selection state + DiffUtil
+│   └── MessageAdapter.kt           — адаптер сообщений + pinned badge
 ├── widget/
 │   ├── ServerAuthBottomSheet.kt
 │   ├── LoginBottomSheet.kt
 │   ├── RegisterBottomSheet.kt
-│   ├── AIBottomSheet.kt          — шторка выбора AI чата (OWL/Hermes)
-│   └── CommandBottomSheet.kt     — шторка команд
-├── hermes/                       — Hermes AI чат
-│   ├── HermesChatActivity.kt
-│   └── HermesChatViewModel.kt
-├── owl/                          — OWL AI чат
-│   ├── OwlChatActivity.kt
-│   ├── OwlChatViewModel.kt
-│   └── OwlSettingsActivity.kt
-└── remote/                       — Remote Agent UI
+│   ├── AIBottomSheet.kt            — шторка выбора AI чата (OWL/Hermes)
+│   └── CommandBottomSheet.kt       — шторка команд
+├── hermes/                         — Hermes AI чат
+├── owl/                            — OWL AI чат
+└── remote/                         — Remote Agent UI
 
 data/
-├── cache/CacheUtils.kt            — единый утилит очистки кэша
+├── cache/CacheUtils.kt             — единый утилит очистки кэша
 ├── grpc/
-│   ├── GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
-│   ├── RealGrpcClient.kt          — оркестратор модулей (~3700 строк, цель: ~200)
-│   ├── GrpcConnectionManager.kt   — connect/reconnect/disconnect/keepalive (167 строк)
-│   ├── GrpcAuthClient.kt          — signInV2/signUpV2/refreshToken/signOut (232 строки)
-│   ├── GrpcCallClient.kt          — startCallSession/sendCallSignal (124 строки)
-│   ├── GrpcTypingClient.kt        — startTypingStream/sendTypingSignal (87 строк)
-│   ├── ProfileClient.kt           — ProfileService v2 client + version detection
-│   ├── BearerTokenInterceptor.kt  — JWT Bearer token
-│   └── MessengerProto.kt          — proto data classes
-├── session/CredentialStore.kt     — credentials + server list + lastUsername
-├── session/SessionManager.kt      — loginV2 (JWT) + loginV1 (legacy fallback)
-├── auth/AuthManager.kt            — JWT token storage
-└── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo
+│   ├── GrpcClient.kt              — facade (pinChat, pinMessage, searchChats, etc.)
+│   ├── RealGrpcClient.kt           — оркестратор модулей (~3700 строк, цель: ~200)
+│   ├── GrpcConnectionManager.kt    — connect/reconnect/disconnect/keepalive (167 строк)
+│   ├── GrpcAuthClient.kt           — signInV2/signUpV2/refreshToken/signOut (232 строки)
+│   ├── GrpcCallClient.kt           — startCallSession/sendCallSignal (124 строки)
+│   ├── GrpcTypingClient.kt         — startTypingStream/sendTypingSignal (87 строк)
+│   ├── ProfileClient.kt            — ProfileService v2 client + version detection
+│   ├── BearerTokenInterceptor.kt   — JWT Bearer token
+│   └── MessengerProto.kt           — proto data classes
+├── session/CredentialStore.kt      — credentials + server list + lastUsername
+├── session/SessionManager.kt       — loginV2 (JWT) + loginV1 (legacy fallback)
+├── auth/AuthManager.kt             — JWT token storage
+└── models/Message.kt               — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo
 ```
 
 ---
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### v1.1.3.20 (текущая)
-- **Gradle wrapper удалён с сервера** — OOM protection, Android собирать ТОЛЬКО локально
+### v1.1.3.23 (текущая)
+- **Единый ChatListActivity** — убрано разделение v1/v2, один Activity работает на обоих серверах
+- **НЕТ fallbackToV1()** — если сервер v1, Activity просто не показывает v2-only фичи
+- **JWT auth fallback** — при JWT ошибке: clear tokens → retry с password
+- **getChats retry** — при shutdownNow через 1.5с вместо emptyList
+- **Backup chat restart** — при shutdownNow race condition через 2с
+- **Аватар в тулбаре** — Glide + avatarCacheFlow
+- **Статус соединения** — RECONNECTING и FAILED отображаются в тулбаре
+
+### v1.1.3.22
+- **Rename Lavender → Lava** — все user-facing строки обновлены
+- **share_app_description** — "Lava: secure business communications platform" / "Лава: платформа защищенных бизнес-коммуникаций"
+
+### v1.1.3.20
 - **RealGrpcClient модуляризирован** — 4 модуля выделены, ~3700 строк осталось
-
-### v1.1.3.19
-- **JWT auth** — getAccessToken() для ChatStream (чистый токен, без "Bearer ")
-- **Reconnect** — единый источник onError, auth failure detection
-- **DiffUtil** — ChatAdapterV2 использует DiffUtil
-- **Unread badges** — цвета по теме, mark-as-read, реал-тайм
-
-### v1.1.3.18
-- **Optimistic READY** — gRPC channel подключается лениво, READY сразу после builder.build()
-- **Reconnect on transport errors** — UNAVAILABLE/UNAUTHENTICATED/INTERNAL → reconnect, НЕ при shutdownNow
-- **Keepalive 30s/10s** — для мобильных сетей, idleTimeout 25min
-- **gRPC port heuristic** — если HTTP /info недоступен: 50052 → v2, 50051 → v1
-- **Poll 30s** — getChats каждые 30 секунд
-
-### v1.1.3.17
-- **FAB AI** — AIBottomSheet подключён к ChatListActivityV2
-- **AI навигация** — Hermes/OWL чаты создаются с пустым chatId → сервер создаёт
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
+- Приложение называется "Lava" (en) / "Лава" (ru), НЕ "Lavender"
 - app_version_format: "Lava: app Android %s" / "Lava: приложение Android %s"
 
 ---
@@ -155,13 +133,13 @@ data/
 12. НЕ деплоить на prod без тестирования на dev
 13. fetchServerInfo — всегда использовать для определения версии сервера
 14. Kotlin 2.3.21: cont.resume(value, onCancellation = {}) — всегда передавать onCancellation
-15. НЕ ТРОГАТЬ v1 файлы: ChatListActivity.kt, ChatAdapter.kt
-16. ChatListActivityV2 — БЕЗ фрагмента, RecyclerView+SwipeRefresh напрямую
-17. Очистка кэша — использовать CacheUtils, не дублировать код
-18. Pin Message — только через selection toolbar (v1-style), НЕ PopupMenu
-19. getChats() — всегда вызывать callback, даже при ошибке
-20. loadChats() — единственная точка входа: ViewModel.init collector, НЕ дублировать из Activity
-21. Kotlin object: StateFlow объявления ДО инициализации модулей (top-to-bottom)
+15. Очистка кэша — использовать CacheUtils, не дублировать код
+16. Pin Message — только через selection toolbar (v1-style), НЕ PopupMenu
+17. getChats() — всегда вызывать callback, даже при ошибке
+18. loadChats() — единственная точка входа: ViewModel.init collector, НЕ дублировать из Activity
+19. Kotlin object: StateFlow объявления ДО инициализации модулей (top-to-bottom)
+20. **НЕТ forceReconnect** — один connect при старте, reconnect только если FAILED
+21. **НЕТ disconnect/connect при resume** — только reconnect если статус FAILED
 
 ---
 
@@ -183,7 +161,7 @@ systemctl stop lavender-server
 cp /tmp/lavender-server /root/LavenderMessenger/run/lavender-server
 systemctl start lavender-server
 
-# Proto gen (обязательно после изменений в messenger.proto!)
+# Proto gen
 protoc --go_out=gen --go_opt=paths=source_relative --go-grpc_out=gen --go-grpc_opt=paths=source_relative messenger.proto
 
 # Тесты
@@ -195,7 +173,7 @@ journalctl -u lavender-server -f
 
 # === ANDROID ===
 cd /root/msg.client.android
-# assembleRelease ТОЛЬКО локально! Gradle wrapper удалён с сервера.
+# assembleRelease ТОЛЬКО локально!
 ```
 
 ---
@@ -210,7 +188,7 @@ cd /root/msg.client.android
 | Сервис | lavender-server-dev | lavender-server |
 | Конфиг | .env.dev | .env |
 | DB | chat_db_dev | chat_db |
-| Версия | v1.2.0.1 | v1.1.3.10 |
+| Версия | v1.2.0.2 | v1.1.3.10 |
 | ProfileService | v2 (JWT) | v1 (legacy ChatService) |
 | ChatStream | v2 (JWT + password) | v1 (password only) |
 | ChatList | v2 (Pin/Search/Archive) | v1 (basic) |
@@ -227,31 +205,23 @@ cd /root/msg.client.android
 | `doc/PATTERNS.md` | Паттерны и анти-patterns | Перед написанием кода |
 | `doc/SESSION_NOTES.md` | Заметки всех сессий | В начале сессии |
 | `doc/CHANGELOG.md` | История изменений | Для понимания что сделано |
-| `doc/ARCH_ANALYSIS_V2_V1.md` | Анализ архитектуры v2 vs v1 | При планировании рефакторинга |
 | `doc/REMOTE_AGENT.md` | Remote Agent: архитектура, протокол, streaming | При работе с Remote Agent |
-| `doc/PLAN_REFACTOR_GRPC.md` | План рефакторинга RealGrpcClient | При продолжении модуляризации |
 | `/root/msg/doc/INTEGRATION_SESSION.md` | Интеграционная сессия | При работе с сервером |
 | `/root/msg/doc/AI_SERVICES.md` | AI-сервисы: OWL, Hermes | При работе с AI чатами |
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.22)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.23)
 
 ### Высокий приоритет
-1. **Выпуск тега v1.1.3.21** — после локальной сборки APK
+1. **Оптимизация соединения** — убрать все лишние connect/disconnect, один стабильный канал
 2. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
    - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
    - ~2000 строк — самый большой оставшийся кусок
-   - Тестировать на dev после завершения
 
 ### Средний приоритет
 3. **ProfileService v2** — проверить работу на dev сервере
 4. **Read receipts** — MarkAsRead
-
-### Отложено
-- Qdrant + CLIP (production RAG)
-- Shared element transitions
-- Infinite scroll + pagination
 
 ### Отложено
 - Qdrant + CLIP (production RAG)

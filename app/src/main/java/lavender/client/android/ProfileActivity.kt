@@ -3,6 +3,7 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import lavender.client.android.ui.chatlist.ChatListActivity
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle

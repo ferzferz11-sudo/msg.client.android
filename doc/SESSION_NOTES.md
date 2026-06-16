@@ -1,4 +1,40 @@
-# Lavender Messenger — Android Session Notes
+# Lava Messenger — Android Session Notes
+
+## Сессия 28 (2026-06-16) — Рефакторинг соединений, единый ChatListActivity
+
+### Контекст
+- Проблемы с соединением: force reconnect убивал канал, shutdownNow race condition
+- Дублирование v1/v2: два Activity, два адаптера, два ViewModel
+- ChatListActivity (v1) вызывал force reconnect в onResume — убивал канал ChatListActivityV2
+
+### Что сделано
+- Удалён ChatListActivity.kt (v1) — 2802 строки
+- Удалён ChatAdapter.kt (v1)
+- ChatListActivityV2 → ChatListActivity (единый)
+- ChatListViewModelV2 → ChatListViewModel
+- ChatAdapterV2 → ChatAdapter
+- Убран fallbackToV1() — один Activity работает на v1 и v2 серверах
+- Обновлён SplashActivity — всегда route на ChatListActivity
+- Обновлён AndroidManifest — одна запись
+- activity_chat_list_v2.xml → activity_chat_list.xml
+
+### Соединение
+- JWT auth fallback: при JWT ошибке → clear tokens → retry с password
+- getChats retry при shutdownNow (1.5с) вместо emptyList
+- Backup chat stream restart при shutdownNow race condition (2с)
+- Аватар в тулбаре: Glide + avatarCacheFlow
+- Статус соединения: RECONNECTING и FAILED отображаются в тулбаре
+
+### Коммиты
+- `cde8776` — chore: rename Lavender → Lava
+- `33ce3a5` — fix: update share text and descriptions
+- `86ecb9f` — fix: getChats retry after shutdownNow
+- `01313ae` — fix: force chat stream restart after shutdownNow race
+- `1b43a27` — fix: AuthManager.clearTokens null-safety
+- `44485a7` — debug: add stack trace logging for forceReconnect
+- `383292f` — refactor: merge v1/v2 ChatList into single Activity
+
+---
 
 ## Сессия 27 (2026-06-16) — Rename Lavender → Lava
 

@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import lavender.client.android.R
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.ui.chatlist.SectionItem
+import lavender.client.android.ui.chatlist.Section
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
