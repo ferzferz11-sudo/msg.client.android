@@ -384,8 +384,8 @@ object GrpcClient {
         get() = ProfileClient.serviceProfileVersion
 
     /** Fetch server info to determine service versions. Called automatically on connect. */
-    suspend fun fetchServerInfo(context: android.content.Context, serverAddress: String, port: Int = 8083) {
-        ProfileClient.fetchServerInfo(context, serverAddress, port)
+    suspend fun fetchServerInfo(context: android.content.Context, serverAddress: String, port: Int = 8083, grpcPort: Int = 50051) {
+        ProfileClient.fetchServerInfo(context, serverAddress, port, grpcPort)
     }
 
     /** Get profile via ProfileService v2 (dev) or legacy ChatService (prod). */

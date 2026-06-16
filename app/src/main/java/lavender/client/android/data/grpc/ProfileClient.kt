@@ -58,11 +58,11 @@ object ProfileClient {
      * Called automatically from RealGrpcClient.connect().
      * If /info is unavailable, all versions stay empty → v1 fallback for everything.
      */
-    suspend fun fetchServerInfo(context: Context, serverAddress: String, port: Int = 8083) {
-        Log.d(TAG, "fetchServerInfo: starting for $serverAddress:$port")
+    suspend fun fetchServerInfo(context: Context, serverAddress: String, httpPort: Int = 8083, grpcPort: Int = 50051) {
+        Log.d(TAG, "fetchServerInfo: starting for $serverAddress:$httpPort (grpc=$grpcPort)")
         withContext(Dispatchers.IO) {
             try {
-                val url = "http://$serverAddress:$port/info"
+                val url = "http://$serverAddress:$httpPort/info"
                 Log.d(TAG, "fetchServerInfo: fetching $url")
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
                 connection.connectTimeout = 5000
@@ -81,12 +81,23 @@ object ProfileClient {
                     Log.d(TAG, "Server versions: profile=$serviceProfileVersion chat=$serviceChatVersion auth=$serviceAuthVersion ai=$serviceAIVersion")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch /info: ${e.message} — using v1 fallback for all services")
-                // All versions stay empty → v1 fallback everywhere
-                serviceProfileVersion = ""
-                serviceChatVersion = ""
-                serviceAuthVersion = ""
-                serviceAIVersion = ""
+                Log.w(TAG, "Failed to fetch /info: ${e.message} — using gRPC port heuristic fallback")
+                // HTTP /info unavailable (e.g. dev server behind NAT/firewall, or prod without /info).
+                // Use gRPC port as heuristic: 50052 = dev (v2), 50051 = prod (v1)
+                if (grpcPort == 50052) {
+                    // Dev server defaults to v2
+                    serviceProfileVersion = "2.0"
+                    serviceChatVersion = "2.0"
+                    serviceAuthVersion = "2.0"
+                    serviceAIVersion = "1.0"
+                    Log.d(TAG, "Dev server detected (gRPC port 50052), defaulting to v2")
+                } else {
+                    // Prod server — v1 fallback
+                    serviceProfileVersion = ""
+                    serviceChatVersion = ""
+                    serviceAuthVersion = ""
+                    serviceAIVersion = ""
+                }
             }
         }
     }

@@ -312,7 +312,7 @@ object RealGrpcClient {
                 Log.d(TAG, "connect: launching fetchServerInfo for $serverAddress:$httpPort")
                 scope.launch {
                     try {
-                        ProfileClient.fetchServerInfo(context, serverAddress, httpPort)
+                        ProfileClient.fetchServerInfo(context, serverAddress, httpPort, port)
                         Log.d(TAG, "connect: fetchServerInfo done, profile=${ProfileClient.serviceProfileVersion}")
                     } catch (e: Exception) {
                         Log.w(TAG, "connect: fetchServerInfo failed: ${e.message}")

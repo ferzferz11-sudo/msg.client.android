@@ -93,11 +93,12 @@ class ChatListActivityV2 : AppCompatActivity() {
         val parts = serverAddress.split(":")
         val host = parts[0]
         val httpPort = if (parts.size > 1 && parts[1].toIntOrNull() == 50052) 8083 else 8082
+        val grpcPort = if (parts.size > 1) parts[1].toIntOrNull() ?: 50051 else 50051
 
         // Check server version before setting up UI
         lifecycleScope.launch {
             try {
-                GrpcClient.fetchServerInfo(this@ChatListActivityV2, host, httpPort)
+                GrpcClient.fetchServerInfo(this@ChatListActivityV2, host, httpPort, grpcPort)
 
                 if (ProfileClient.isChatV2Supported()) {
                     Log.d(TAG, "v2 server detected — using ChatListActivityV2")
