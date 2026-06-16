@@ -807,17 +807,19 @@ object RealGrpcClient {
                     }
                     // Do not retry on shutdownNow (our own reconnect)
                     if (description.contains("shutdownNow")) {
-                        Log.d(TAG, "shutdownNow — will auto-resume chat after reconnect")
+                        Log.d(TAG, "shutdownNow — scheduling stream restart via onAutoResumeChat")
                         requestObserver = null
-                        // Schedule chat restart — onAutoResumeChat will be called by GrpcConnectionManager
-                        // but we also schedule a backup restart in case the race condition hits
+                        // Force restart the chat stream after channel rebuild.
+                        // onAutoResumeChat was called synchronously in connect(), but the
+                        // old observer may still be non-null (race condition). Schedule a
+                        // delayed restart to ensure the stream is reconnected.
                         scope.launch {
-                            delay(1500)
-                            if (requestObserver == null && lastChatRequest != null) {
-                                Log.d(TAG, "shutdownNow backup: restarting chat stream")
-                                lastChatRequest?.let { req ->
-                                    startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                                }
+                            delay(2000)
+                            Log.d(TAG, "shutdownNow: forcing chat stream restart")
+                            lastChatRequest?.let { req ->
+                                // Force restart: clear observer so startChat doesn't skip
+                                requestObserver = null
+                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
                             }
                         }
                         return
