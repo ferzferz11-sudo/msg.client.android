@@ -379,8 +379,8 @@ object RealGrpcClient {
     fun reconnect() {
         val addr = currentServerAddress
         if (!addr.isNullOrEmpty()) {
-            Log.d(TAG, "reconnect() called, reconnecting to $addr")
-            connect(addr, false, 50051, appContext, true)
+            Log.d(TAG, "reconnect() called, reconnecting to $addr:$currentServerPort")
+            connect(addr, false, currentServerPort, appContext, true)
         }
     }
 
@@ -831,47 +831,47 @@ object RealGrpcClient {
                         _authStatus.value = if (description.contains("user not found")) "USER_NOT_FOUND" else "AUTH_FAILED"
                         _connectionStatus.value = ConnectionStatus.FAILED
                         requestObserver = null
-                        // We don't call disconnect() here to allow the user to see the error and decide
-                        // what to do next, e.g., try to register. Calling disconnect() would kill the channel.
+                        return
+                    }
+                    // Do not retry on shutdownNow (our own reconnect)
+                    if (description.contains("shutdownNow")) {
+                        Log.d(TAG, "shutdownNow — skipping retry")
+                        requestObserver = null
                         return
                     }
                 }
 
-                _connectionStatus.value = ConnectionStatus.RECONNECTING
+                // Already retrying? Don't start another loop.
+                if (isRetrying) {
+                    Log.d(TAG, "Already in retry loop, skipping")
+                    return
+                }
 
-                // Clear observer immediately to prevent broken stream reuse
+                _connectionStatus.value = ConnectionStatus.RECONNECTING
                 requestObserver = null
 
-                if (isRetrying) return // Already in retry loop
-
+                isRetrying = true
                 scope.launch {
-                    isRetrying = true
-                    var retryDelay = 3000L // Start with 3 seconds for stream reconnect
-                    val maxRetryDelay = 30000L // Max 30 seconds for streams
-                    var retryCount = 0
-                    val maxRetries = 50
-
                     try {
+                        var retryDelay = 3000L
+                        val maxRetryDelay = 30000L
+                        var retryCount = 0
+                        val maxRetries = 50
+
                         while (retryCount < maxRetries && requestObserver == null) {
                             delay(retryDelay)
 
                             // Don't retry if app is in background for too long
                             if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
-                                 Log.d(TAG, "App in background for too long, stopping stream retry loop")
-                                 break
-                            }
-
-                            // If server was unavailable, fully reset the channel before retrying
-                            if (t is io.grpc.StatusRuntimeException && t.status.code == io.grpc.Status.Code.UNAVAILABLE) {
-                                Log.w(TAG, "Server UNAVAILABLE, resetting connection channel")
-                                currentServerAddress?.let { connect(it, forceReconnect = true) }
+                                Log.d(TAG, "App in background for too long, stopping stream retry loop")
+                                break
                             }
 
                             Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1}, delay=${retryDelay}ms)...")
 
                             lastChatRequest?.let { req ->
                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                                if (_connectionStatus.value == ConnectionStatus.READY) {
+                                if (_connectionStatus.value == ConnectionStatus.READY && requestObserver != null) {
                                     Log.d(TAG, "Stream reconnection successful")
                                     return@launch
                                 }
@@ -880,14 +880,14 @@ object RealGrpcClient {
                             retryCount++
                             retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
                         }
+
+                        if (retryCount >= maxRetries) {
+                            Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
+                            _connectionStatus.value = ConnectionStatus.FAILED
+                            _error.value = "Connection lost. Please check your internet connection."
+                        }
                     } finally {
                         isRetrying = false
-                    }
-
-                    if (retryCount >= maxRetries) {
-                        Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
-                        _connectionStatus.value = ConnectionStatus.FAILED
-                        _error.value = "Connection lost. Please check your internet connection."
                     }
                 }
             }
@@ -912,26 +912,17 @@ object RealGrpcClient {
                 responseObserver.onNext(message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) {
-                    Log.w(TAG, "Chat stream onClose error: ${status.code} - ${status.description}")
-                    _connectionStatus.value = ConnectionStatus.FAILED
-                    requestObserver = null
-                    // Trigger reconnect on transport errors, but NOT on shutdownNow
-                    val isShutdownNow = status.description?.contains("shutdownNow") == true
-                    if (!isShutdownNow && (
-                        status.code == io.grpc.Status.Code.UNAVAILABLE ||
-                        status.code == io.grpc.Status.Code.UNAUTHENTICATED ||
-                        status.code == io.grpc.Status.Code.INTERNAL ||
-                        status.code == io.grpc.Status.Code.UNKNOWN
-                    )) {
-                        Log.w(TAG, "Chat stream: transport error, triggering reconnect")
-                        val addr = currentServerAddress
-                        if (!addr.isNullOrEmpty()) {
-                            scheduleReconnect(addr, false, currentServerPort, appContext)
-                        }
-                    }
+                if (status.isOk) {
+                    Log.d(TAG, "Chat stream completed normally")
+                    responseObserver.onCompleted()
+                    return
                 }
-                if (status.isOk) responseObserver.onCompleted() else responseObserver.onError(status.asRuntimeException())
+                // Log the error
+                Log.w(TAG, "Chat stream onClose error: ${status.code} - ${status.description}")
+                // Clear observer to prevent broken stream reuse
+                requestObserver = null
+                // Let onError handle all reconnect logic — don't duplicate it here
+                responseObserver.onError(status.asRuntimeException())
             }
         }, io.grpc.Metadata())
         this.request(Int.MAX_VALUE)
@@ -1247,21 +1238,9 @@ object RealGrpcClient {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
                     // Always callback to prevent hanging coroutine
                     scope.launch(Dispatchers.Main) { callback(emptyList()) }
-                    // Trigger reconnect on transport errors, but NOT on shutdownNow
-                    // (shutdownNow is triggered by our own reconnect logic)
-                    val isShutdownNow = status.description?.contains("shutdownNow") == true
-                    if (!isShutdownNow && (
-                        status.code == io.grpc.Status.Code.UNAVAILABLE ||
-                        status.code == io.grpc.Status.Code.UNAUTHENTICATED ||
-                        status.code == io.grpc.Status.Code.INTERNAL
-                    )) {
-                        Log.w(TAG, "getChats: transport error, triggering reconnect")
-                        _connectionStatus.value = ConnectionStatus.RECONNECTING
-                        val addr = currentServerAddress
-                        if (!addr.isNullOrEmpty()) {
-                            scheduleReconnect(addr, false, currentServerPort, appContext)
-                        }
-                    }
+                    // Do NOT trigger reconnect here — getChats is a poll request,
+                    // next poll (30s) will retry. Chat stream onError handles reconnect.
+                    // Do NOT set RECONNECTING here either — let stream-level errors drive that.
                 }
             }
         }, io.grpc.Metadata())
