@@ -1,30 +1,9 @@
 # Lavender Messenger (Android) — Задачи
 
 **Версия:** v1.1.3.17
-**Обновлено:** 2026-06-15 (сессия 18)
+**Обновлено:** 2026-06-15 (сессия 17)
 **Ветка:** feat/1.1.3.x
 **Тег:** v1.1.3.17
-
----
-
-## 📋 Активные задачи (Сессия 18+)
-
-### Высокий приоритет
-- [ ] **Тестирование** — полное тестирование на dev и prod серверах
-- [ ] **HermesChatActivity / OwlChatActivity** — доработки инеграции с v2 навигацией
-
-### Средний приоритет
-- [ ] **Pin Chat** — кнопка Pin Chat в toolbar NewChatActivity
-- [ ] **Shared element transitions** — анимации переходов между экранами
-- [ ] **Infinite scroll + pagination** — подгрузка чатов при скролле
-- [ ] **Unread badges** — улучшение отображения непрочитанных
-
-### Сервер v1.2.0.2+ (dev)
-- [ ] **Новые RPC** — определить и реализовать новые серверные методы для v2
-- [ ] **Обратная совместимость** — убедиться что v1 клиенты работают с v2 сервером
-
-### Отложено
-- [ ] Qdrant + CLIP (production RAG)
 
 ---
 
@@ -35,6 +14,10 @@
 - ✅ **Создание AI чата** — Hermes/OWL через AIBottomSheet
 - ✅ **Существующие AI чаты** — отображаются в списке с навигацией
 - ✅ **Удаление/Настройки** AI чатов
+
+### Исправления
+- ✅ HermesSettingsActivity → OwlSettingsActivity с isHermes=true
+- ✅ AIChatInfo mapping: только id, name, type
 
 ### Коммиты
 - `58f7115` — feat: FAB AI — AIBottomSheet integration in ChatListActivityV2
@@ -84,21 +67,21 @@
 
 ---
 
-## 📋 Активные задачи (Сессия 17)
+## 📋 Активные задачи (Сессия 18)
 
 ### Высокий приоритет
-- [ ] **Тестирование** — на dev и prod серверах
-- [ ] **protoc генерация** на сервере (после добавления PinMessage в proto)
+- [ ] **Тестирование v1.1.3.17** — FAB AI, AIBottomSheet, AI навигация на dev и prod
+- [ ] **Исправление багов** — по результатам тестирования
 
 ### Средний приоритет
-- [ ] **FAB AI** — создание AI чата (OwlActivity/HermesChatActivity)
-- [ ] **HermesChatActivity / OwlChatActivity** — интеграция с v2 навигацией
+- [ ] **Unread badges** — улучшение счётчика непрочитанных в списке чатов
+- [ ] **Push notifications** — FCM интеграция для v2
 
 ### Отложено
 - [ ] Qdrant + CLIP (production RAG)
 - [ ] Shared element transitions
 - [ ] Infinite scroll + pagination
-- [ ] Unread badges улучшение
+- [ ] Read receipts (MarkAsRead)
 
 ---
 
@@ -117,20 +100,23 @@
 | ChatListActivityV2 без фрагмента | Проще — RecyclerView+SwipeRefresh напрямую в Activity |
 | CacheUtils | Единый утилит очистки кэша, не дублировать код |
 | Очистка кэша при входе | Silent (без Toast), синхронная через CacheUtils.clearAllSync() |
+| HermesSettings → OwlSettingsActivity | Переиспользование с isHermes=true, нет отдельного класса |
+| AIChatInfo минимальная | Только id, name, type — не содержит полей ChatInfo |
 
 ---
 
 ## 📁 Ключевые файлы
 
 | Файл | Назначение |
-|------|------------|
-| `ui/chatlist/ChatListActivityV2.kt` | v2 Activity: tabs, toolbar, FABs, navigation, selection mode |
+|------|-----------|
+| `ui/chatlist/ChatListActivityV2.kt` | v2 Activity: tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet |
 | `ui/chatlist/ChatAdapterV2.kt` | v2 адаптер с секциями + selection state |
-| `ui/chatlist/ChatListViewModelV2.kt` | v2 ViewModel: loadChats, pinChat, setTabFilter |
+| `ui/chatlist/ChatListViewModelV2.kt` | v2 ViewModel: loadChats, pinChat, setTabFilter, getChats |
 | `ui/chatlist/ChatListSections.kt` | Section enum + SectionItem |
 | `ui/adapter/MessageAdapter.kt` | Адаптер сообщений + pinned badge |
+| `ui/widget/AIBottomSheet.kt` | Шторка выбора AI чата (OWL/Hermes) |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
-| `data/models/Message.kt` | Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt) |
+| `data/models/Message.kt` | Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo |
 | `res/layout/activity_chat_list_v2.xml` | v2 layout: SwipeRefresh+RecyclerView, TabLayout, FABs |
 | `res/layout/item_message.xml` | Layout сообщения + pinned badge |

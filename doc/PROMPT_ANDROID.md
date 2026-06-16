@@ -7,9 +7,9 @@
 
 ---
 
-## СТАТУС: v1.1.3.18 — Продолжение разработки
+## СТАТУС: v1.1.3.18 — Тестирование v1.1.3.17, план следующей сессии
 
-v1.1.3.17 — FAB AI подключён, AIBottomSheet интегрирован.
+v1.1.3.17 — FAB AI подключён, AIBottomSheet интегрирован, protoc сгенерирован.
 v1.1.3.16 — все фичи реализованы (ChatListV2, Selection Mode, Search, Pin Message, CacheUtils).
 
 Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2, Pin Message).
@@ -53,9 +53,9 @@ messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
 ```
 ui/
 ├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode, search
+│   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet
 │   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state
-│   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter
+│   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter, getChats
 │   ├── ChatListSections.kt      — Section enum + SectionItem
 │   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
 ├── adapter/
@@ -64,8 +64,18 @@ ui/
 ├── widget/
 │   ├── ServerAuthBottomSheet.kt
 │   ├── LoginBottomSheet.kt
-│   └── RegisterBottomSheet.kt
-└── .../
+│   ├── RegisterBottomSheet.kt
+│   ├── AIBottomSheet.kt          — шторка выбора AI чата (OWL/Hermes)
+│   └── CommandBottomSheet.kt     — шторка команд
+├── hermes/                       — Hermes AI чат
+│   ├── HermesChatActivity.kt
+│   ├── HermesChatViewModel.kt
+│   └── HermesSettingsActivity.kt (не существует, используется OwlSettingsActivity с isHermes=true)
+├── owl/                          — OWL AI чат
+│   ├── OwlChatActivity.kt
+│   ├── OwlChatViewModel.kt
+│   └── OwlSettingsActivity.kt
+└── remote/                       — Remote Agent UI
 
 data/
 ├── cache/CacheUtils.kt            — единый утилит очистки кэша
@@ -77,7 +87,7 @@ data/
 ├── session/CredentialStore.kt     — credentials + server list + lastUsername
 ├── session/SessionManager.kt      — loginV2 (JWT) + loginV1 (legacy fallback)
 ├── auth/AuthManager.kt            — JWT token storage
-└── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt)
+└── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo
 
 res/
 ├── layout/
@@ -96,15 +106,19 @@ res/
 
 ## КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-### v1.1.3.16 (текущая)
+### v1.1.3.17 (текущая)
+- **FAB AI** — AIBottomSheet подключён к ChatListActivityV2
+- **AI навигация** — Hermes/OWL чаты создаются с пустым chatId → сервер создаёт
+- **AI настройки** — Hermes использует OwlSettingsActivity с isHermes=true
+- **getChats()** — публичный метод в ChatListViewModelV2
+
+### v1.1.3.16 (предыдущая)
 - **ChatListActivityV2 без фрагмента** — RecyclerView+SwipeRefresh напрямую в Activity
 - **TabLayout** — табы All/AI/Groups с фильтрацией через ViewModel.setTabFilter
-- **SplashActivity** — маршрутизация v1/v2 по наличию server host
 - **Selection Mode** — long press = ActionMode toolbar, тап = toggle selection
 - **Поиск** — SearchView в toolbar + debounce 300ms
 - **Pin Message** — selection toolbar кнопка pin/unpin (v1-style), pinned badge
 - **CacheUtils** — единый утилит очистки кэша
-- **Очистка кэша при входе** — silent, через CacheUtils.clearAllSync()
 
 ### i18n
 - Все строки в values/strings.xml (en) + values-ru/strings.xml
@@ -192,3 +206,24 @@ cd /root/msg.client.android
 - Сервер: `/root/msg/doc/INTEGRATION_SESSION.md`, `/root/msg/doc/TASKS.md`
 - CHANGELOG: `/root/msg.client.android/CHANGELOG.md`
 - Заметки сессий: `/root/msg.client.android/doc/SESSION_NOTES.md`
+
+---
+
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.18)
+
+### Высокий приоритет
+1. **Тестирование v1.1.3.17** — FAB AI, AIBottomSheet, навигация AI чатов
+2. **Тестирование на prod** — fallback на v1 при недоступности v2 API
+3. **Испечение багов** — по результатам тестирования
+
+### Средний приоритет
+4. **Unread badges улучшение** — счётчик непрочитанных в списке чатов
+5. **Push notifications** — интеграция с FCM для v2
+
+### Отложено (не в этой сессии)
+- Qdrant + CLIP (production RAG)
+- Shared element transitions
+- Infinite scroll + pagination
+- Read receipts (MarkAsRead)
+- Редеплой prod сервера — только после выхода Android клиента
+- Выпуск Android — делается ферзем лично

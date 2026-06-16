@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Документация
 
-**Версия:** v1.1.3.18 (разработка)
-**Обновлено:** 2026-06-15 (сессия 18)
+**Версия:** v1.1.3.17
+**Обновлено:** 2026-06-15 (сессия 17)
 **Ветка:** feat/1.1.3.x
 **Тег:** v1.1.3.17
 
@@ -60,29 +60,40 @@ app/src/main/java/lavender/client/android/
 │
 ├── ui/
 │   ├── chatlist/                ← v2 НОВАЯ ПАПКА
-│   │   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode
+│   │   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet
 │   │   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state
-│   │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter
+│   │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter, getChats
 │   │   ├── ChatListSections.kt      — Section enum + SectionItem
 │   │   └── ChatListFragmentV2.kt    — фрагмент (не используется, для справки)
-│   ├── remote/                  — Remote Agent UI
-│   ├── widget/                   — ServerAuthBottomSheet, LoginBottomSheet, RegisterBottomSheet
-│   ├── chat/widget/ChatWidget.kt
-│   └── adapter/
-│       ├── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
-│       └── MessageAdapter.kt    — адаптер сообщений + pinned badge
+│   ├── adapter/
+│   │   ├── ChatAdapter.kt       ← v1 (НЕ ТРОГАТЬ)
+│   │   └── MessageAdapter.kt    — адаптер сообщений + pinned badge
+│   ├── widget/
+│   │   ├── ServerAuthBottomSheet.kt
+│   │   ├── LoginBottomSheet.kt
+│   │   ├── RegisterBottomSheet.kt
+│   │   ├── AIBottomSheet.kt          — шторка выбора AI чата (OWL/Hermes)
+│   │   └── CommandBottomSheet.kt
+│   ├── hermes/                       — Hermes AI чат
+│   │   ├── HermesChatActivity.kt
+│   │   └── HermesChatViewModel.kt
+│   ├── owl/                          — OWL AI чат
+│   │   ├── OwlChatActivity.kt
+│   │   ├── OwlChatViewModel.kt
+│   │   └── OwlSettingsActivity.kt
+│   └── remote/                       — Remote Agent UI
 │
 ├── data/
 │   ├── cache/CacheUtils.kt            — единый утилит очистки кэша
 │   ├── grpc/GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
-│   ├── grpc/RealGrpcClient.kt         — реализация gRPC
-│   ├── grpc/ProfileClient.kt          — ProfileService v2 + fetchServerInfo
+│   ├── grpc/RealGrpcClient.kt         — реализация gRPC (JWT auth, ChatList v2, Pin Message RPC)
+│   ├── grpc/ProfileClient.kt          — ProfileService v2 client + fetchServerInfo
 │   ├── grpc/BearerTokenInterceptor.kt — JWT Bearer token
-│   ├── proto/MessengerProto.kt        — proto data classes
+│   ├── proto/MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
 │   ├── session/CredentialStore.kt     — credentials + server list + lastUsername
 │   ├── session/SessionManager.kt      — loginV2 + loginV1 fallback
 │   ├── auth/AuthManager.kt            — JWT token storage
-│   └── models/Message.kt              — Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt)
+│   └── models/Message.kt              — Message (isPinned), ChatInfo, AIChatInfo
 │
 └── theme/ui/
     ├── ThemeApplier.kt                — применение тем
@@ -119,6 +130,14 @@ Selection Mode: long press → ActionMode toolbar (Pin/Mute/Archive/Delete)
 Search: SearchView в toolbar + debounce 300ms
 Pin Chat: selection mode toolbar
 Pin Message: selection mode toolbar (кнопка pin/unpin)
+```
+
+### AI Chat flow (v1.1.3.17+)
+```
+FAB AI → AIBottomSheet → выбор типа (OWL/Hermes)
+  → Создание: пустой chatId → HermesChatActivity/OwlChatActivity → сервер создаёт
+  → Существующие: список AI чатов из общего списка (фильтр hermes/owl)
+  → Настройки: OwlSettingsActivity (isHermes=true для Hermes)
 ```
 
 ### Pin Message flow (v1.1.3.16+)
