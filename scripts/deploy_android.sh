@@ -81,8 +81,8 @@ else
 fi
 
 # 2. Копируем в архив и обновляем version.txt
-# Примечание: changelog.txt больше не загружается на сервер —
-# вместо него используется assets/changelog_bundled.txt в APK
+# changelog.txt больше не загружается на сервер — changelog_bundled.txt удалён
+# ChangelogActivity теперь грузит только с GitHub API
 echo "→ Обновление сайта..."
 ssh $SSH_OPTS "$SERVER" "VERSION='$VERSION' bash -c '
   mkdir -p $ARCHIVE_DIR/\$VERSION

@@ -96,9 +96,9 @@ Proto генерируются вручную как data classes в MessengerPr
 
 ### Changelog
 
-- `CHANGELOG.md` — dev-facing, подробный
-- `app/src/main/assets/changelog_bundled.txt` — user-facing, показывается в приложении
-- При релизе: обновлять bundled + CHANGELOG.md
+- `doc/CHANGELOG.md` — dev-facing, подробный
+- При релизе: обновлять CHANGELOG.md
+- ~~changelog_bundled.txt~~ — УДАЛЁН (GitHub грузится стабильно)
 
 ### Сборка
 - `compileDebugKotlin` — РИСКОВАННО на сервере (~1GB). Сначала `free -h`, если < 2GB free → НЕ запускать
