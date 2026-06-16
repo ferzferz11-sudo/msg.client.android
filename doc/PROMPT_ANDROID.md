@@ -219,13 +219,14 @@ cd /root/msg.client.android
 ## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.20)
 
 ### Высокий приоритет
-1. **Push notifications** — FCM интеграция
-2. **Разделить RealGrpcClient** — выделить модули (ConnectionManager, ChatClient, AuthClient, ProfileClient)
+1. **Рефакторинг RealGrpcClient** — разделить на модули (план: `doc/PLAN_REFACTOR_GRPC.md`)
+   - GrpcConnectionManager, GrpcChatClient, GrpcAuthClient, GrpcProfileClient, GrpcCallClient, GrpcTypingClient
+   - RealGrpcClient → тонкая обёртка ~200 строк
+   - Тестировать на dev после каждого шага
 
 ### Средний приоритет
+2. **Убрать мёртвый код** — ChatListFragmentV2 (не используется, 144 строки)
 3. **ProfileService v2** — проверить работу на dev сервере
-4. **Read receipts** — MarkAsRead
-5. **Убрать мёртвый код** — ChatListFragmentV2 (не используется)
 
 ### Отложено
 - Qdrant + CLIP (production RAG)
@@ -240,3 +241,4 @@ cd /root/msg.client.android
 - ✅ Stream stability — убраны дубли reconnect, shutdownNow suppression
 - ✅ HTTP /info fix — dev сервер определяется мгновенно
 - ✅ ARCH_ANALYSIS_V2_V1.md — анализ архитектуры
+- ✅ PLAN_REFACTOR_GRPC.md — план рефакторинга
