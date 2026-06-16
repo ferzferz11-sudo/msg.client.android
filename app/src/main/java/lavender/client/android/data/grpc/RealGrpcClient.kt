@@ -35,13 +35,68 @@ object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     // channel is now managed by GrpcConnectionManager
+    
+    // ====== StateFlow declarations (must come before module initialization) ======
+    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus
 
-    // ====== Module: Connection Manager ======
+    private val _messages = MutableStateFlow<List<Message>>(emptyList())
+    private var isRetrying = false
+    val messages: StateFlow<List<Message>> = _messages
+
+    private val _users = MutableStateFlow<List<String>>(emptyList())
+    val users: StateFlow<List<String>> = _users
+
+    private val _allUsers = MutableStateFlow<List<UserInfoProto>>(emptyList())
+    val allUsers: StateFlow<List<UserInfoProto>> = _allUsers
+
+    private val _serverTime = MutableStateFlow<Timestamp?>(null)
+    val serverTime: StateFlow<Timestamp?> = _serverTime
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
+    val _systemNotification = MutableStateFlow<String?>(null)
+    val systemNotification: StateFlow<String?> = _systemNotification
+
+    val _isSuperAdmin = MutableStateFlow(false)
+    val isSuperAdmin: StateFlow<Boolean> = _isSuperAdmin
+
+    private val _serverVersion = MutableStateFlow("")
+    val serverVersion: StateFlow<String> = _serverVersion
+
+    private val _authStatus = MutableStateFlow<String?>(null)
+    val authStatus: StateFlow<String?> = _authStatus
+
+    private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
+    val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
+
+    private val _chatDeletedEvent = MutableStateFlow<String?>(null)
+    val chatDeletedEvent: StateFlow<String?> = _chatDeletedEvent
+
+    private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
+    val callSignals: SharedFlow<CallMessageProto> = _callSignals
+
+    /** Emitted when a new message arrives for a non-active chat (roomId, messageId). */
+    private val _newMessageEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
+    val newMessageEvent: SharedFlow<Pair<String, String>> = _newMessageEvent
+
+    var hasCheckedForUpdates = false
+    var isAppInBackground = false
+        set(value) {
+            field = value
+            if (value) {
+                backgroundStartTime = System.currentTimeMillis()
+            }
+        }
+    private var backgroundStartTime: Long = 0
     private val connectionManager = GrpcConnectionManager(
         scope = scope,
         connectionStatus = _connectionStatus,
         onFetchServerInfo = { host: String, httpPort: Int, ctx: Context ->
-            ProfileClient.fetchServerInfo(ctx, host, httpPort, currentServerPort)
+            scope.launch {
+                ProfileClient.fetchServerInfo(ctx, host, httpPort, currentServerPort)
+            }
         },
         onAutoResumeChat = {
             lastChatRequest?.let {
@@ -214,60 +269,6 @@ object RealGrpcClient {
     }
     
     
-    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
-    val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus
-
-    private val _messages = MutableStateFlow<List<Message>>(emptyList())
-    private var isRetrying = false
-    val messages: StateFlow<List<Message>> = _messages
-
-    private val _users = MutableStateFlow<List<String>>(emptyList())
-    val users: StateFlow<List<String>> = _users
-
-    private val _allUsers = MutableStateFlow<List<UserInfoProto>>(emptyList())
-    val allUsers: StateFlow<List<UserInfoProto>> = _allUsers
-
-    private val _serverTime = MutableStateFlow<Timestamp?>(null)
-    val serverTime: StateFlow<Timestamp?> = _serverTime
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
-
-    val _systemNotification = MutableStateFlow<String?>(null)
-    val systemNotification: StateFlow<String?> = _systemNotification
-
-    val _isSuperAdmin = MutableStateFlow(false)
-    val isSuperAdmin: StateFlow<Boolean> = _isSuperAdmin
-
-    private val _serverVersion = MutableStateFlow("")
-    val serverVersion: StateFlow<String> = _serverVersion
-
-    private val _authStatus = MutableStateFlow<String?>(null)
-    val authStatus: StateFlow<String?> = _authStatus
-
-    private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
-    val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
-
-    private val _chatDeletedEvent = MutableStateFlow<String?>(null)
-    val chatDeletedEvent: StateFlow<String?> = _chatDeletedEvent
-
-    private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
-    val callSignals: SharedFlow<CallMessageProto> = _callSignals
-
-    /** Emitted when a new message arrives for a non-active chat (roomId, messageId). */
-    private val _newMessageEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
-    val newMessageEvent: SharedFlow<Pair<String, String>> = _newMessageEvent
-
-    var hasCheckedForUpdates = false
-    var isAppInBackground = false
-        set(value) {
-            field = value
-            if (value) {
-                backgroundStartTime = System.currentTimeMillis()
-            }
-        }
-    private var backgroundStartTime: Long = 0
-
     fun shouldForceReconnect(): Boolean {
         // Force reconnect if app was in background for more than 5 minutes
         return isAppInBackground && (System.currentTimeMillis() - backgroundStartTime) > 5 * 60 * 1000
@@ -2315,8 +2316,8 @@ object RealGrpcClient {
         request: ReqT,
         responseType: Class<RespT>
     ): RespT? = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-        val getChannel() = getChannel()
-        if (getChannel() == null) {
+        val ch = getChannel()
+        if (ch == null) {
             cont.resume(null, onCancellation = {})
             return@suspendCancellableCoroutine
         }
@@ -2333,7 +2334,7 @@ object RealGrpcClient {
                 override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
             })
             .build()
-        val call = getChannel().newCall(method, io.grpc.CallOptions.DEFAULT)
+        val call = ch.newCall(method, io.grpc.CallOptions.DEFAULT)
         val listener = object : io.grpc.ClientCall.Listener<RespT>() {
             private var response: RespT? = null
             override fun onMessage(message: RespT) { response = message }
