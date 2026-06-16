@@ -334,3 +334,57 @@
 - Qdrant + CLIP (production RAG)
 - Shared element transitions
 - Infinite scroll + pagination
+
+---
+
+## Сессия 26 (2026-06-16) — FCM Push Notifications uplevel
+
+### Контекст
+- Доработка push notifications: приоритетные уведомления, DND bypass, проверка онлайн-статуса
+
+### Что сделано
+
+#### Сервер (v1.2.0.2)
+- **Hub.IsUserOnline(userId, username)** — проверка онлайн-статуса по userId (v2) с fallback на username (v1)
+- **Hub.SetUserId()** — метод для установки userId при v2 JWT аутентификации
+- **Hub.clientUserIds** — новый map для хранения userId по stream
+- **sendPushNotification(userId, username, ...)** — новая сигнатура, пропускает push если онлайн
+- **CollapseKey = roomID** — заменяет предыдущий push для того же чата
+- **TTL = 5 min** — не хранит старые push
+- **GetAllUsers()** — теперь возвращает UserId (UUID)
+- **server_chat.go** — вызов SetUserId() при v2 JWT auth
+- **server_push_test.go** — 7 тестов для IsUserOnline (все проходят)
+- **db_chatlist_v2.go** — исправлена миграция user_chat_metadata (NULL user_id, UUID-as-username)
+- **Версия 1.2.0.1 → 1.2.0.2**
+
+#### Android (v1.1.3.21)
+- **Канал lavender_messages** — IMPORTANCE_HIGH + vibration + badge
+- **NotificationCompat** — PRIORITY_HIGH + CATEGORY_MESSAGE + VISIBILITY_PUBLIC
+- **DND bypass switch** в NotificationActivity + channel.setBypassDnd(true) для O+
+- **requestDndBypassPermission()** — открывает настройки если нет разрешения
+- **i18n** — push_bypass_dnd + push_bypass_dnd_hint + lavender_messages_channel_desc (en + ru)
+- **Исправлены ошибки компиляции** — дубликат prefs, setBypassDnd, отсутствующий импорт Intent
+
+### Коммиты Android
+- `8b1dd90` — feat: FCM push — HIGH priority notifications
+- `a3bb5b9` — feat: FCM push — DND bypass + online user skip
+- `427c932` — docs: update TASKS.md
+- `5564265` — docs: update TASKS.md
+- `883eef1` — fix: Android compilation errors
+
+### Коммиты сервера
+- `c57a33e` — feat: FCM push — AndroidConfig Priority HIGH
+- `d109c2a` — feat: FCM push — skip online users + collapse key + TTL + DND bypass
+- `e4ceeb4` — feat: FCM push — userId-based online check + tests
+- `12585be` — fix: ChatList v2 migration — handle NULL user_id + UUID-as-username
+
+### Тестирование
+- ✅ Сборка Android прошла успешно
+- ✅ Вход на prod (v1) — работает
+- ✅ Вход на dev (v2) — работает
+- ✅ Push notifications с высоким приоритетом
+- ✅ Тесты сервера проходят (go test ./...)
+
+### Следующие шаги
+- Выпуск тега Android v1.1.3.21 (отложено до локальной сборки APK)
+- Продолжение модуляризации RealGrpcClient (GrpcChatClient)

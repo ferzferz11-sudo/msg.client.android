@@ -1,20 +1,21 @@
-# Промпт для новой сессии — Android v1.1.3.20+
+# Промпт для новой сессии — Android v1.1.3.21+
 
 **Дата:** 2026-06-16
-**Версия:** 1.1.3.20 (разработка)
+**Версия:** 1.1.3.21 (разработка)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.20
+**Тег:** v1.1.3.21 (не выпущен, ожидает локальной сборки APK)
 
 ---
 
-## СТАТУС: v1.1.3.20 — Модуляризация RealGrpcClient, следующий шаг: GrpcChatClient
+## СТАТУС: v1.1.3.21 — FCM Push Notifications сделаны, следующий шаг: GrpcChatClient
 
 RealGrpcClient частично модуляризирован: 4 из 6 модулей выделены.
 Осталось ~3700 строк в RealGrpcClient, целевой размер ~200 строк (facade).
 
-Сервер dev: v1.2.0.1 (ProfileService v2, ChatStream v2, ChatList v2, Pin Message).
+Сервер dev: v1.2.0.2 (FCM push uplevel, userId-based online check, исправлена миграция).
 Сервер prod: v1.1.3.10 (legacy, без v2).
 Android: ChatListActivityV2 с табами, selection mode, поиском, Pin Message, FAB AI.
+Android: FCM push notifications с HIGH priority, DND bypass, проверка онлайн-статуса.
 
 **Архитектурный принцип:** Полное разделение v1 и v2 архитектуры.
 - v1 сервер (prod) → ChatListActivity (v1, без изменений)
@@ -22,12 +23,17 @@ Android: ChatListActivityV2 с табами, selection mode, поиском, Pin
 - Оба клиента (v1 и v2) поддерживают обратную совместимость с v1 сервером
 - Версия сервера определяется через HTTP /info + fallback по gRPC порту
 
-**КРИТИЧЕСКИЕ ПИТФОЛЫ (изучены в сессиях 22-24):**
-- `getBearerToken()` возвращает `"Bearer <token>"` — для JWT в ChatStream использовать `getAccessToken()` (чистый токен)
+**КРИТИЧЕСКИЕ ПИТФОЛЫ (изучены в сессиях 22-26):**
+- `getBearerToken()` возвращает `"<token>"` — для JWT в ChatStream использовать `getAccessToken()` (чистый токен)
 - Auth failure (`UNKNOWN` + `"authentication failed"`) — ловить явно, ставить FAILED, НЕ retry
 - Reconnect — единственный источник onError, НЕ onClose/getChats
 - НЕ переписывать работающий код с нуля — только добавлять недостающее
 - RealGrpcClient 3739 строк (было 4081) — разделить на модули: сделано 4/6, осталось GrpcChatClient + GrpcProfileClient
+- НЕ компилировать Android на сервере — Gradle wrapper удалён (OOM kill), собирать ТОЛЬКО локально
+- Kotlin object init order: StateFlow объявления ДО инициализации модулей (top-to-bottom)
+- FCM: использовать `channel.setBypassDnd(true)` для O+, НЕ `notificationBuilder.setBypassDnd()` (не существует в API)
+- FCM: `IsUserOnline(userId, username)` — userId основной, username fallback для v1 клиентов
+- Миграции БД: разделять на шаги (добавить колонку → заполнить данные → менять PK), проверять NULL перед PK
 - НЕ компилировать Android на сервере — Gradle wrapper удалён (OOM kill), собирать ТОЛЬКО локально
 - Kotlin object init order: StateFlow объявления ДО инициализации модулей (top-to-bottom)
 
@@ -229,18 +235,23 @@ cd /root/msg.client.android
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.21)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.22)
 
 ### Высокий приоритет
-1. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
+1. **Выпуск тега v1.1.3.21** — после локальной сборки APK
+2. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
    - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
    - ~2000 строк — самый большой оставшийся кусок
    - Тестировать на dev после завершения
-2. **Push notifications** — FCM интеграция
 
 ### Средний приоритет
 3. **ProfileService v2** — проверить работу на dev сервере
 4. **Read receipts** — MarkAsRead
+
+### Отложено
+- Qdrant + CLIP (production RAG)
+- Shared element transitions
+- Infinite scroll + pagination
 
 ### Отложено
 - Qdrant + CLIP (production RAG)

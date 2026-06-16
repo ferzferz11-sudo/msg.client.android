@@ -1,5 +1,33 @@
 # Lavender Messenger — Android Changelog
 
+## [1.1.3.21] - 2026-06-16
+
+### Новое: FCM Push Notifications — HIGH Priority
+- **Сервер (v1.2.0.2)**: `AndroidConfig.Priority = "high"` + `AndroidNotification.PriorityHigh` — push проходит через Doze
+- **Сервер**: `Hub.IsUserOnline(userId, username)` — проверка онлайн-статуса по userId (v2) с fallback на username (v1)
+- **Сервер**: `sendPushNotification` пропускает push если пользователь онлайн в gRPC стриме
+- **Сервер**: `CollapseKey = roomID` — заменяет предыдущий push для того же чата
+- **Сервер**: `TTL = 5 min` — не хранит старые push
+- **Сервер**: `GetAllUsers()` теперь возвращает `UserId` (UUID)
+- **Сервер**: `SetUserId()` вызывается при v2 JWT аутентификации
+- **Android**: канал `lavender_messages` — `IMPORTANCE_HIGH` + vibration + badge
+- **Android**: `NotificationCompat.PRIORITY_HIGH` + `CATEGORY_MESSAGE` + `VISIBILITY_PUBLIC`
+- **Android**: DND bypass switch в NotificationActivity + `channel.setBypassDnd(true)` для O+
+- **Android**: `requestDndBypassPermission()` — открывает настройки если нет разрешения
+- **i18n**: `push_bypass_dnd` + `push_bypass_dnd_hint` (en + ru)
+- **i18n**: `lavender_messages_channel_desc` (en + ru)
+
+### Исправлено
+- **NotificationActivity**: добавлен недостающий `import android.content.Intent`
+- **LavenderMessagingService**: убран дубликат `val prefs`, исправлен DND bypass (channel.setBypassDnd вместо notificationBuilder)
+
+### Коммиты
+- `8b1dd90` — feat: FCM push — HIGH priority notifications
+- `a3bb5b9` — feat: FCM push — DND bypass + online user skip
+- `883eef1` — fix: Android compilation errors
+
+---
+
 ## [1.1.3.19] - 2026-06-16
 
 ### Исправлено: JWT auth для ChatStream v2

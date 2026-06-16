@@ -1,8 +1,31 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.20
-**Обновлено:** 2026-06-16 (сессия 24)
+**Версия:** v1.1.3.21
+**Обновлено:** 2026-06-16 (сессия 26)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.21 — FCM Push Notifications uplevel (Сессия 26)
+
+### Сервер (v1.2.0.2)
+- ✅ Hub.IsUserOnline(userId, username) — проверка онлайн-статуса
+- ✅ Hub.SetUserId() + clientUserIds map
+- ✅ sendPushNotification — skip online + collapse key + TTL
+- ✅ GetAllUsers() возвращает UserId
+- ✅ server_push_test.go — 7 тестов
+- ✅ Исправлена миграция user_chat_metadata
+
+### Android
+- ✅ Канал IMPORTANCE_HIGH + PRIORITY_HIGH + CATEGORY_MESSAGE
+- ✅ DND bypass switch + channel.setBypassDnd()
+- ✅ i18n: push_bypass_dnd + lavender_messages_channel_desc
+- ✅ Исправлены ошибки компиляции
+
+### Коммиты
+- `8b1dd90` — feat: FCM push — HIGH priority notifications
+- `a3bb5b9` — feat: FCM push — DND bypass + online user skip
+- `883eef1` — fix: Android compilation errors
 
 ---
 
@@ -71,12 +94,7 @@
 - [ ] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
   - ~2000 строк — самый большой оставшийся кусок
-- [x] **Push notifications — FCM uplevel** — приоритетные уведомления (Шаги 1-3 выполнены)
-  - [x] Server: AndroidConfig Priority HIGH + AndroidNotification PriorityHigh
-  - [x] Android: канал IMPORTANCE_HIGH + PRIORITY_HIGH + CATEGORY_MESSAGE
-  - [x] Шаг 2: проверка онлайн-статуса (не слать push если пользователь в чате)
-  - [x] Шаг 2: collapse key + TTL (5 min)
-  - [x] Шаг 3: DND bypass switch + setBypassDnd() + permission request
+- [ ] **Выпуск тега v1.1.3.21** — после локальной сборки APK
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
