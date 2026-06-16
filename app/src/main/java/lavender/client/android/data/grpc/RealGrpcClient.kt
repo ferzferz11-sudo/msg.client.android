@@ -783,11 +783,9 @@ object RealGrpcClient {
                         if (lastAuthWasJwt) {
                             // JWT failed — clear tokens and retry with password if available
                             Log.w(TAG, "JWT auth failed — clearing tokens, will retry with password: $description")
-                            AuthManager.clearTokens(appContext)
+                            appContext?.let { AuthManager.clearTokens(it) }
                             _authStatus.value = null
                             lastAuthWasJwt = false
-
-                            // Schedule a chat restart with password auth
                             requestObserver = null
                             _connectionStatus.value = ConnectionStatus.RECONNECTING
                             scope.launch {
@@ -1105,7 +1103,7 @@ object RealGrpcClient {
                     // If JWT auth failed on a v1 server, clear tokens and retry chat with password
                     if (status.code == io.grpc.Status.Code.UNAUTHENTICATED && lastAuthWasJwt) {
                         Log.w(TAG, "getChats: JWT auth failed — clearing tokens, will retry chat with password")
-                        AuthManager.clearTokens(appContext)
+                        appContext?.let { AuthManager.clearTokens(it) }
                         _authStatus.value = null
                         lastAuthWasJwt = false
                         // Trigger chat restart with password auth
