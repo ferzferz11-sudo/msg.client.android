@@ -130,7 +130,18 @@
 
 ## 4. Рекомендации по оптимизации
 
-### 4.1 Выделить ChatListBaseActivity (устранение дублирования)
+### 4.1 Добавить DiffUtil в ChatAdapterV2 ✅ (v1.1.3.19)
+- ✅ `notifyDataSetChanged` заменён на DiffUtil + dispatchUpdatesTo
+- ✅ Анимации добавления/удаления элементов, нет мерцания
+
+### 4.2 Разделить RealGrpcClient на модули ✅ ЧАСТИЧНО (v1.1.3.20)
+- ✅ GrpcConnectionManager (167 строк)
+- ✅ GrpcAuthClient (232 строки)
+- ✅ GrpcCallClient (124 строки)
+- ✅ GrpcTypingClient (87 строк)
+- ⏳ GrpcChatClient (~2000 строк) — СЛЕДУЮШИЙ
+- ⏳ GrpcProfileClient — после GrpcChatClient
+- ⏳ RealGrpcClient → тонкая обёртка ~200 строк — финальный шаг
 
 **Проблема:** 9 общих методов дублируются между v1 и v2.
 
@@ -328,17 +339,16 @@ app/src/main/java/lavender/client/android/
 
 ## 6. Приоритеты реализации
 
-### Фаза 1: Критические оптимизации (до запуска v2 на prod)
+### Фаза 1: Критические оптимизации (в процессе)
+1. ✅ **Разделить RealGrpcClient** — 4 из 6 модулей выделены (v1.1.3.20)
+2. ✅ **Добавить DiffUtil в ChatAdapterV2** — устранено мерцание (v1.1.3.19)
+3. ⏳ **Выделить GrpcChatClient** — ~2000 строк из RealGrpcClient (СЛЕДУЮЩИЙ)
 
-1. **Разделить RealGrpcClient** — выделить GrpcConnectionManager, GrpcChatClient, GrpcAuthClient
-2. **Добавить DiffUtil в ChatAdapterV2** — устранить мерцание списка
-3. **Выделить ChatListBaseActivity** — устранить дублирование v1/v2
-
-### Фаза 2: Средние оптимизации (после запуска v2)
-
-4. **Унифицировать навигацию** — ChatListNavigation
-5. **Оптимизировать подключение** — единая точка connect
-6. **Убрать мёртвый код** — ChatListFragmentV2, неиспользуемые методы
+### Фаза 2: Средние оптимизации
+4. **Выделить GrpcProfileClient** + рефакторинг RealGrpcClient в тонкую обёртку
+5. **Выделить ChatListBaseActivity** — устранить дублирование v1/v2
+6. **Оптимизировать подключение** — единая точка connect
+7. **Убрать мёртвый код** ✅ ChatListFragmentV2 удалён (v1.1.3.20)
 
 ### Фаза 3: Долгосрочные (v1.2.0.x)
 

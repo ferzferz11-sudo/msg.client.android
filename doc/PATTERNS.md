@@ -83,10 +83,11 @@ Favorites всегда на position 0, не участвует в DiffUtil:
 - Новые FAB добавлять в ThemeApplier: listOf(R.id.fabAi, R.id.fabAddChat, ...)
 
 ### Сборка
-- НЕ компилировать на сервере (OOM kill)
-- compileDebugKotlin — рискованно (~1GB), только если > 2GB free
-- assembleRelease — ТОЛЬКО локально
+- ⚠️ **Gradle wrapper удалён с серверв** — OOM protection, НЕ компилировать Android на сервере!
+- `compileDebugKotlin` / `assembleRelease` — ТОЛЬКО локально
+- На сервере: только `go build` для серверной части
 - Для проверки синтаксиса — читать файлы, не компилировать
+- Локально: gradle.properties настроен на 2048m JVM memory
 
 ### Версии
 - Версия сервера в server.go:34
@@ -181,7 +182,13 @@ onView(withId(R.id.rvChatList))
 
 ## Известные проблемы
 
-### Исправлено в v1.1.3.8
+### Исправлено в v1.1.3.19
+- ✅ **ChatAdapterV2 notifyDataSetChanged** — заменён на DiffUtil + dispatchUpdatesTo с анимациями
+- ✅ **Unread badges** — цвета по теме, real-time update через SharedFlow
+
+### Исправлено в v1.1.3.20
+- ✅ **ChatListFragmentV2** — мёртвый код удалён (144 строки)
+- ✅ **RealGrpcClient модуляризация** — 4 модуля выделены (ConnectionManager, Auth, Call, Typing)
 - **DeployAgentTaskStream** — done=True отправлялся дважды (пустой + полный). Теперь один done=True с полными данными из TaskResult
 - **ChatAdapter filter()** — notifyItemRangeChanged не обновлял размер списка при фильтрации с Favorites → crash. Исправлено на dispatchUpdatesTo с offset +1
 
@@ -315,26 +322,29 @@ GrpcClient.unarchiveChat(context, chatId)
 ### RealGrpcClient modular pattern (v1.1.3.20+)
 ```kotlin
 // RealGrpcClient is now an orchestrator, not a monolith.
-// Channel management → GrpcConnectionManager
-// Auth operations → GrpcAuthClient
-// Typing stream → GrpcTypingClient
-// Call stream → GrpcCallClient
-// Chat stream/messages → RealGrpcClient (next: extract GrpcChatClient)
+// StateFlow declarations MUST come before module initialization (Kotlin object init order!)
+object RealGrpcClient {
+    // 1. StateFlow declarations FIRST (top-to-bottom init)
+    private val _connectionStatus = MutableStateFlow(...)
+    val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus
+    // ... more StateFlows
 
-// Module injection pattern:
-private val connectionManager = GrpcConnectionManager(
-    scope = scope,
-    connectionStatus = _connectionStatus,
-    onFetchServerInfo = { host, httpPort, ctx -> ... },
-    onAutoResumeChat = { ... }
-)
-private val authClient = GrpcAuthClient(
-    getChannel = { getChannel() },
-    connectionStatus = _connectionStatus,
-    authStatus = _authStatus,
-    setAuthFailure = { connectionManager.isAuthFailure = it }
-)
+    // 2. Module initialization AFTER StateFlows
+    private val connectionManager = GrpcConnectionManager(
+        scope = scope,
+        connectionStatus = _connectionStatus,
+        onFetchServerInfo = { ... }
+    )
+    private val authClient = GrpcAuthClient(
+        getChannel = { getChannel() },
+        connectionStatus = _connectionStatus,
+        authStatus = _authStatus,
+    )
+    // ... more modules
+}
 ```
+
+**КРИТИЧНО:** В Kotlin `object` инициализация идёт top-to-bottom. StateFlow должны быть объявлены ДО модулей, которые их используют. Иначе → NPE при обращении к StateFlow из конструктора модуля.
 
 ### gRPC connection readiness pattern (v1.1.3.18+)
 ```kotlin

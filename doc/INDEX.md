@@ -1,7 +1,7 @@
 # Lavender Messenger — Android Документация
 
 **Версия:** v1.1.3.20
-**Обновлено:** 2026-06-16 (сессия 23)
+**Обновлено:** 2026-06-16 (сессия 24)
 **Ветка:** feat/1.1.3.x
 **Тег:** v1.1.3.20
 
@@ -9,13 +9,14 @@
 
 ## Быстрый старт
 
-1. **PROMPT_ANDROID.md** — промпт для новой сессии (читать первым)
-2. **TASKS.md** — таск-трекер (бэклог + сделано)
-3. **PATTERNS.md** — паттерны и анти-patterns разработки
-4. **SESSION_NOTES.md** — заметки всех сессий
-5. **CHANGELOG.md** — история изменений
-6. **REMOTE_AGENT.md** — документация Remote Agent
-7. **ARCH_ANALYSIS_V2_V1.md** — анализ архитектуры v2 vs v1
+**Порядок чтения для новой сессии:**
+
+1. **PROMPT_ANDROID.md** — полный контекс текущего состояния + правила + приоритеты
+2. **TASKS.md** — что сделано, что осталось
+3. **SESSION_NOTES.md** — история сессий
+4. **PATTERNS.md** — паттерны и анти-patterns перед написанием кода
+5. **CHANGELOG.md** — история изменений по версиям
+6. **INDEX.md** — этот файл, для навигации по остальной документации
 
 ---
 
@@ -25,24 +26,21 @@
 | Файл | Назначение | Когда читать |
 |------|-----------|-------------|
 | `PROMPT_ANDROID.md` | Промпт для новой сессии | **Всегда в начале** |
-| `TASKS.md` | Таск-трекер | В начале сессии |
-| `PATTERNS.md` | Паттерны и анти-patterns | Перед написанием кода |
+| `TASKS.md` | Таск-трекер (бэклог + сделано) | В начале сессии |
 | `SESSION_NOTES.md` | Заметки всех сессий | В начале сессии |
+| `CHANGELOG.md` | История изменений по версиям | Для понимания что сделано |
 
-### Архитектура и дизайн
+### Архитектура и паттерны
 | Файл | Назначение | Когда читать |
 |------|-----------|-------------|
-| `ARCH_ANALYSIS_V2_V1.md` | Анализ архитектуры v2 vs v1, метрики, рекомендации | При планировании рефакторинга |
+| `PATTERNS.md` | Паттерны и анти-patterns разработки | Перед написанием кода |
+| `ARCH_ANALYSIS_V2_V1.md` | Анализ архитектуры v2 vs v1 | При планировании рефакторинга |
+| `PLAN_REFACTOR_GRPC.md` | План рефакторинга RealGrpcClient | При продолжении модуляризации |
+
+### Компоненты
+| Файл | Назначение | Когда читать |
+|------|-----------|-------------|
 | `REMOTE_AGENT.md` | Remote Agent: архитектура, протокол, streaming | При работе с Remote Agent |
-| `/root/msg/doc/INTEGRATION_SESSION.md` | Интеграционная сессия: версии, архитектура | При работе с сервером |
-| `/root/msg/doc/AI_SERVICES.md` | AI-сервисы: OWL, Hermes | При работе с AI чатами |
-
-### Справочники
-| Файл | Назначение | Когда читать |
-|------|-----------|-------------|
-| `/root/msg/doc/PITFALLS.md` | Подводные камни | **Перед началом работы** |
-| `/root/msg/doc/LOG_MONITOR.md` | Log Monitor | При проблемах с логами |
-| `/root/msg/doc/TESTING.md` | Модульные тесты | При работе с тестами |
 
 ### Сервер
 | Файл | Назначение |
@@ -50,6 +48,8 @@
 | `/root/msg/doc/INDEX.md` | Индекс серверной документации |
 | `/root/msg/doc/TASKS.md` | Серверный таск-трекер |
 | `/root/msg/doc/PROMPT_SERVER.md` | Промпт для серверных сессий |
+| `/root/msg/doc/INTEGRATION_SESSION.md` | Интеграционная сессия: версии, архитектура |
+| `/root/msg/doc/AI_SERVICES.md` | AI-сервисы: OWL, Hermes |
 
 ---
 
@@ -63,7 +63,7 @@ app/src/main/java/lavender/client/android/
 ├── ui/
 │   ├── chatlist/                ← v2 НОВАЯ ПАПКА
 │   │   ├── ChatListActivityV2.kt    — tabs, toolbar, FABs, navigation, selection mode, search, AI bottom sheet
-│   │   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state
+│   │   ├── ChatAdapterV2.kt         — адаптер с секциями + selection state + DiffUtil
 │   │   ├── ChatListViewModelV2.kt   — loadChats, pinChat, setTabFilter, getChats
 │   │   ├── ChatListSections.kt      — Section enum + SectionItem
 │   ├── adapter/
@@ -88,14 +88,14 @@ app/src/main/java/lavender/client/android/
 │   ├── cache/CacheUtils.kt            — единый утилит очистки кэша
 │   ├── grpc/
 │   │   ├── GrpcClient.kt             — facade (pinChat, pinMessage, searchChats, etc.)
-│   │   ├── RealGrpcClient.kt          — оркестратор модулей (3739 строк)
+│   │   ├── RealGrpcClient.kt          — оркестратор модулей (~3700 строк, цель: ~200)
 │   │   ├── GrpcConnectionManager.kt   — connect/reconnect/disconnect/keepalive (167 строк)
 │   │   ├── GrpcAuthClient.kt          — signInV2/signUpV2/refreshToken/signOut (232 строки)
 │   │   ├── GrpcCallClient.kt          — startCallSession/sendCallSignal (124 строки)
 │   │   ├── GrpcTypingClient.kt        — startTypingStream/sendTypingSignal (87 строк)
 │   │   ├── ProfileClient.kt           — ProfileService v2 client + version detection
-│   │   ├── BearerTokenInterceptor.kt — JWT Bearer token
-│   │   └── MessengerProto.kt        — proto data classes (ChatList v2, Pin Message, jwt_token)
+│   │   ├── BearerTokenInterceptor.kt  — JWT Bearer token
+│   │   └── MessengerProto.kt          — proto data classes
 │   ├── session/CredentialStore.kt     — credentials + server list + lastUsername
 │   ├── session/SessionManager.kt      — loginV2 + loginV1 fallback
 │   ├── auth/AuthManager.kt            — JWT token storage
@@ -110,14 +110,14 @@ app/src/main/java/lavender/client/android/
 
 ## Ключевые паттерны
 
-### v1/v2 разделение (v1.1.3.16+)
+### v1/v2 разделение
 ```
 v1 сервер (prod) → ChatListActivity (v1, без изменений)
 v2 сервер (dev)  → ChatListActivityV2 (v2)
 Определение: SplashActivity → fetchServerInfo → выбор Activity
 ```
 
-### Auth V2 (JWT) flow (v1.1.3.11+)
+### Auth V2 (JWT) flow
 ```
 ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
   → try V2 (SignInV2 gRPC)
@@ -127,7 +127,7 @@ ServerAuthBottomSheet → LoginBottomSheet → SessionManager.login()
   → Proactive refresh каждые 60с
 ```
 
-### ChatList v2 flow (v1.1.3.16+)
+### ChatList v2 flow
 ```
 ChatListActivityV2 → fetchServerInfo() → isChatV2Supported()
   → v2: ChatListActivityV2 с секциями (Pinned/Favorites/All)
@@ -138,7 +138,7 @@ Pin Chat: selection mode toolbar
 Pin Message: selection mode toolbar (кнопка pin/unpin)
 ```
 
-### AI Chat flow (v1.1.3.17+)
+### AI Chat flow
 ```
 FAB AI → AIBottomSheet → выбор типа (OWL/Hermes)
   → Создание: пустой chatId → HermesChatActivity/OwlChatActivity → сервер создаёт
@@ -146,7 +146,7 @@ FAB AI → AIBottomSheet → выбор типа (OWL/Hermes)
   → Настройки: OwlSettingsActivity (isHermes=true для Hermes)
 ```
 
-### Connection stability (v1.1.3.18+)
+### Connection stability
 ```
 connect() → optimistic READY → fetchServerInfo (async)
   → HTTP /info OK → parse versions
@@ -156,28 +156,16 @@ Reconnect: on UNAVAILABLE/UNAUTHENTICATED/INTERNAL, NOT on shutdownNow
 Poll: getChats every 30s
 ```
 
-### i18n (v1.1.3.9)
-- Activity: getString(R.string.xxx) — работает напрямую
-- Adapter/ViewHolder: context.getString(R.string.xxx) или itemView.context.getString()
-- ViewModel: НЕ использовать обычный ViewModel, только AndroidViewModel
-- НЕ инициализировать getString() в полях класса Activity (до onCreate()) — crash!
-- Все новые строки ОДНОВРЕМЕННО в values/strings.xml (en) + values-ru/strings.xml
-
-### Темы
-- ThemeApplier.apply(activity, theme) — ДО setContentView()
-- Цвета программно через ThemeUtils.parseSafeColor(colorStr, defaultColor)
-- НЕ использовать ?attr/ в XML для текста на кастомных тёмных темах
-- Новые FAB добавлять в ThemeApplier: listOf(R.id.fabAi, R.id.fabAddChat, ...)
-
-### Kotlin 2.3.21 / Coroutines 1.11 (v1.1.3.14)
-- CancellableContinuation.resume(value, onCancellation = {}) — всегда передавать onCancellation
-- import kotlinx.coroutines.suspendCancellableCoroutine (не kotlin.coroutines)
-- OnBackPressedDispatcher вместо deprecated onBackPressed()
-
-### Cache clearing (v1.1.3.16+)
-- CacheUtils.clearAllSync(context) — синхронная очистка БД при входе (без Toast)
-- CacheUtils.clearAllWithGlide(context) — полная очистка + Glide из настроек (с Toast)
-- Вызывается при входе: SplashActivity, ServersActivity, ChatListActivity
+### RealGrpcClient modular pattern (v1.1.3.20+)
+```
+RealGrpcClient → оркестратор модулей (цель: ~200 строк)
+  ├── GrpcConnectionManager — channel management
+  ├── GrpcAuthClient — auth operations
+  ├── GrpcChatClient — chat operations (ОЖИДАЕТ)
+  ├── GrpcProfileClient — profile operations (ОЖИДАЕТ)
+  ├── GrpcCallClient — call signaling
+  └── GrpcTypingClient — typing indicator
+```
 
 ---
 

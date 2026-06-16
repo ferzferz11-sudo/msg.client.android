@@ -1,5 +1,29 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 24 (2026-06-16) — Обновление документации, OOM protection
+
+### Контекст
+- Предыдущая сессия прервалась из-за отсутствия интернета
+- Серверная сборка Android прервалась OOM kill
+- gradle.properties был изменён экспериментальными флагами (KSP/AGP)
+
+### Исправления
+- **gradle.properties очищен** — убраны экспериментальные флаги KSP/AGP
+- **Gradle wrapper удалён с сервера** — защита от случайного OOM kill при `./gradlew`
+- **Память JVM** — 2048m для локальной сборки (ferz на своей машине)
+
+### Документация
+- Создан полный CHANGELOG.md с историей v1.1.3.16–v1.1.3.20
+- Обновлены все файлы документации
+- Приоритеты приведены в актуальное состояние
+
+### Коммиты
+- `6207fc3` — chore: revert gradle.properties — remove experimental KSP/AGP flags
+- `f60478c` — chore: revert gradle memory to 512m/256m (server-safe)
+- `69da87a` — chore: increase Gradle JVM memory to 2048m for local builds
+
+---
+
 ## Сессия 23 (2026-06-16) — Модуляризация RealGrpcClient
 
 ### Контекст
@@ -274,7 +298,19 @@
 - Server dev: `v1.2.0.1`
 - Server prod: `v1.1.3.10`
 
-## Следующие шаги (сессия 21)
-1. **Unread badges** — улучшение счётчика непрочитанных
+## Следующие шаги (после сессии 24)
+
+### Высокий приоритет
+1. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
+   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
+   - Это самый большой оставшийся кусок — ~2000 строк
 2. **Push notifications** — FCM интеграция
-3. **ProfileService v2** — проверить что работает на dev
+
+### Средний приоритет
+3. **ProfileService v2** — проверить работу на dev сервере
+4. **Read receipts** — MarkAsRead
+
+### Отложено
+- Qdrant + CLIP (production RAG)
+- Shared element transitions
+- Infinite scroll + pagination
