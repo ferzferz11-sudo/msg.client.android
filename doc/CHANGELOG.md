@@ -1,5 +1,31 @@
 # Lava Messenger — Android CHANGELOG
 
+## v1.1.3.25 (2026-06-17) — Update System восстановление + модуляризация
+
+### Новая архитектура — UpdateCoordinator
+- **UpdateCoordinator.kt** (257 строк) — вся update логика вынесена из ChatListActivity
+- **ChatListActivity** — только создаёт UpdateCoordinator, наблюдает StateFlow, делегирует UI
+
+### Update System (восстановлено из v1)
+- **Silent update check** — автопроверка при старте + автоскачивание в фоне
+- **Manual update check** — кнопка в user menu → диалог с версией
+- **Update indicator** — llUpdateContainer в toolbar (available/downloading/downloaded)
+- **Progress dialog** — шторка прогресса с кнопкой отмены
+- **APK install** — через FileProvider после скачивания
+- **Announcements** — changelog.txt с сервера
+
+### Drawable ресурсы
+- `ic_loading_renew.xml` — иконка загрузки (circular arrow)
+- `deployed_code_update_24.xml` — иконка "system-update"
+- `ic_checked.xml` — иконка "check" (обновлений нет)
+
+### Коммиты
+- `6d693f1` — feat: restore update system — UpdateManager integration
+- `5185526` — refactor: extract UpdateCoordinator from ChatListActivity
+- `9d19969` — fix: add missing imports for UpdateCoordinator compilation
+
+---
+
 ## v1.1.3.24 (2026-06-16) — Auth flow fix + Settings Sheet
 
 ### Auth flow

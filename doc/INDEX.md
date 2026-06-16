@@ -64,6 +64,7 @@ app/src/main/java/lavender/client/android/
 │   │   ├── ChatListActivity.kt
 │   │   ├── ChatListViewModel.kt
 │   │   ├── ChatListSections.kt
+│   │   └── UpdateCoordinator.kt    — update логика (check, dialog, indicator, progress)
 │   ├── adapter/
 │   │   ├── ChatAdapter.kt
 │   │   └── MessageAdapter.kt

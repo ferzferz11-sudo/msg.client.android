@@ -1,11 +1,19 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.24
-**Обновлено:** 2026-06-16 (сессия 30)
+**Версия:** v1.1.3.25
+**Обновлено:** 2026-06-17 (сессия 31)
 
 ---
 
 ## Паттерны
+
+### UpdateCoordinator pattern (v1.1.3.25)
+Вынос сложной логики из Activity в отдельный координирующий класс:
+- `UpdateCoordinator` — вся update логика (check, dialog, indicator, progress, announcements)
+- `UpdateManager` — скачивание, StateFlow, фоновые операции (data/updates/)
+- `ChatListActivity` — только создаёт UpdateCoordinator, наблюдает StateFlow, делегирует UI
+- Паттерн: Activity → Coordinator → Manager → Utils
+- Преимущества: Activity не раздувается, логика тестируема, переиспользуемо
 
 ### Auth widgets pattern (v1.1.3.11)
 Аутентификация вынесена в 3 виджета:
