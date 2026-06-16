@@ -501,9 +501,10 @@ object RealGrpcClient {
 
         if (ProfileClient.isChatV2Supported()) {
             // ChatStream v2: use JWT token for auth
-            val bearerToken = AuthManager.getBearerToken(appContext ?: return)
-            if (bearerToken != null) {
-                firstMessageBuilder.setJwtToken(bearerToken)
+            // Use getAccessToken (not getBearerToken) — JWT field expects raw token without "Bearer " prefix
+            val accessToken = AuthManager.getAccessToken(appContext ?: return)
+            if (accessToken != null && accessToken.isNotEmpty()) {
+                firstMessageBuilder.setJwtToken(accessToken)
                 Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
             } else {
                 // No JWT token — fallback to password auth even on v2 server
@@ -829,6 +830,16 @@ object RealGrpcClient {
 
                         Log.w(TAG, "Authentication error, not retrying: $description")
                         _authStatus.value = if (description.contains("user not found")) "USER_NOT_FOUND" else "AUTH_FAILED"
+                        _connectionStatus.value = ConnectionStatus.FAILED
+                        requestObserver = null
+                        return
+                    }
+                    // Do not retry on auth failures (JWT malformed, invalid, expired)
+                    if (description.contains("authentication failed", ignoreCase = true) ||
+                        description.contains("JWT validation failed", ignoreCase = true) ||
+                        description.contains("token is malformed", ignoreCase = true)) {
+                        Log.w(TAG, "Auth failure — not retrying: $description")
+                        _authStatus.value = "AUTH_FAILED"
                         _connectionStatus.value = ConnectionStatus.FAILED
                         requestObserver = null
                         return
