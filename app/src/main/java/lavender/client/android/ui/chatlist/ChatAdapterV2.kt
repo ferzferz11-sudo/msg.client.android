@@ -211,10 +211,10 @@ class ChatAdapterV2(
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, selectionMode, selectedIds.contains(item.chat.id)
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id)
             )
             is FlatItem.FavoritesItem -> (holder as FavoritesViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, selectionMode, selectedIds.contains(item.chat.id)
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id)
             )
             null -> {}
         }
@@ -268,7 +268,7 @@ class ChatAdapterV2(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, selectionMode: Boolean, isSelected: Boolean) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean) {
             tvChatName.text = chat.name
             tvChatName.setTextColor(textPrimary)
 
@@ -285,9 +285,9 @@ class ChatAdapterV2(
                 tvUnreadCount.isVisible = true
                 tvUnreadCount.text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString()
                 // Badge background uses primary color
-                tvUnreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(cachedPrimaryColor)
+                tvUnreadCount.backgroundTintList = android.content.res.ColorStateList.valueOf(primaryColor)
                 // Text color: white for dark primary, black for light primary
-                tvUnreadCount.setTextColor(if (ThemeUtils.isLight(cachedPrimaryColor)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                tvUnreadCount.setTextColor(if (ThemeUtils.isLight(primaryColor)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
             } else {
                 tvUnreadCount.isVisible = false
             }
@@ -323,7 +323,7 @@ class ChatAdapterV2(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, selectionMode: Boolean, isSelected: Boolean) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean) {
             tvChatName.text = itemView.context.getString(R.string.favorites)
             tvChatName.setTextColor(textPrimary)
             tvChatType.text = itemView.context.getString(R.string.favorites_description)
