@@ -1,6 +1,6 @@
 # Lavender Messenger — Android CHANGELOG
 
-## v1.1.3.20 (2026-06-16) — Модуляризация RealGrpcClient
+## v1.1.3.20 (2026-06-16) — Модуляризация RealGrpcClient + Cleanup
 
 ### Рефакторинг
 - **RealGrpcClient разделён на модули**: 4081 → 3739 строк (-342, -8.4%)
@@ -11,17 +11,24 @@
 
 ### Удаление мёртвого кода
 - **ChatListFragmentV2** (144 строки) + fragment_chat_list_v2.xml — удалены
-- **Дублирование currentServerAddress/currentServerPort** — исправлено
+- **changelog_bundled.txt** — удалён (GitHub API грузится стабильно)
+- **ChangelogActivity.kt** — упрощён: убран bundled fallback, server fallback, delay(3000)
 
 ### Инфраструктура
-- Gradle wrapper удалён с сервера (OOM protection — нельзя случайно запустить ./gradlew)
-- gradle.properties: JVM память 2048m для локальной сборки
+- Gradle wrapper удалён с сервера, восстановлен в git для локальной сборки
+- gradle.properties: 512m/256m сервер, 2048m локально
 
 ### Коммиты
 - `c413038` — feat: modularize RealGrpcClient — extract 4 modules, remove dead code
 - `208141c` — fix: resolve compilation errors from modularization
 - `6207fc3` — chore: revert gradle.properties — remove experimental KSP/AGP flags
 - `f60478c` — chore: revert gradle memory to 512m/256m (server-safe)
+- `389aa02` — chore: remove changelog_bundled.txt and all usage in code
+- `30e1fac` — chore: restore Gradle wrapper for local builds
+- `e22ec93` — fix: restore missing Dispatchers and withContext imports
+
+### Тег
+- `v1.1.3.20` — выпущен (релиз отложен до стабильности)
 
 ---
 

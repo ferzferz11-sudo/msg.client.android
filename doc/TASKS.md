@@ -6,7 +6,7 @@
 
 ---
 
-## ✅ v1.1.3.20 — Модуляризация RealGrpcClient + OOM Protection (Сессии 23-24)
+## ✅ v1.1.3.20 — Модуляризация RealGrpcClient + Cleanup (Сессии 23-25)
 
 ### Исправлено
 - ✅ **RealGrpcClient разделён на модули**: 4081 → 3739 строк (-342, -8.4%)
@@ -15,12 +15,19 @@
 - ✅ **GrpcCallClient** (124 строки) — startCallSession/sendCallSignal
 - ✅ **GrpcTypingClient** (87 строк) — startTypingStream/sendTypingSignal
 - ✅ **ChatListFragmentV2** (144 строки) — удалён мёртвый код
+- ✅ **changelog_bundled.txt** — удалён, ChangelogActivity упрощён
 - ✅ **Дублирование currentServerAddress/currentServerPort** — исправлено
-- ✅ **Gradle wrapper удалён с сервера** — OOM protection
+- ✅ **Gradle wrapper** — удалён с сервера, восстановлен в git для локальной сборки
 
 ### Коммиты
 - `c413038` — feat: modularize RealGrpcClient
 - `208141c` — fix: resolve compilation errors from modularization
+- `389aa02` — chore: remove changelog_bundled.txt and all usage in code
+- `30e1fac` — chore: restore Gradle wrapper for local builds
+- `e22ec93` — fix: restore missing Dispatchers and withContext imports
+
+### Тег
+- ✅ `v1.1.3.20` — выпущен (релиз отложен до стабильности)
 
 ---
 

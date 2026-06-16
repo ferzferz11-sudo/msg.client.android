@@ -1,5 +1,25 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 25 (2026-06-16) — Cleanup: changelog_bundled, Gradle wrapper restore, import fix
+
+### Контекст
+- Финализация v1.1.3.20 перед выпуском тега
+
+### Что сделано
+- ✅ **changelog_bundled.txt удалён** — больше не нужен (GitHub API грузится стабильно)
+- ✅ **ChangelogActivity.kt упрощён** — убран bundled fallback, server fallback, delay(3000), неиспользуемые импорты
+- ✅ **Gradle wrapper восстановлен** — gradlew, gradle-wrapper.jar, libs.versions.toml (нужны для локальной сборки)
+- ✅ **Исправлены импорты** — восстановлены Dispatchers и withContext в ChangelogActivity
+- ✅ **Сборка прошла успешно** — assembleRelease работает, ChangelogActivity работает
+- ✅ **Тег v1.1.3.20 выпущен** — git tag, релиз отложен до стабильности
+
+### Коммиты
+- `389aa02` — chore: remove changelog_bundled.txt and all usage in code
+- `30e1fac` — chore: restore Gradle wrapper for local builds
+- `e22ec93` — fix: restore missing Dispatchers and withContext imports in ChangelogActivity
+
+---
+
 ## Сессия 24 (2026-06-16) — Обновление документации, OOM protection
 
 ### Контекст
