@@ -206,7 +206,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun setupToolbarActions(username: String) {
         // Avatar click -> ProfileBottomSheet
         ivToolbarUserAvatar?.setOnClickListener {
-            ProfileBottomSheet.newInstance().show(supportFragmentManager, "profile")
+            ProfileBottomSheet(this).show()
         }
 
         // Title click -> ServersActivity
@@ -217,7 +217,7 @@ class ChatListActivity : AppCompatActivity() {
 
         // Settings click -> ProfileBottomSheet
         ivActionSettings?.setOnClickListener {
-            ProfileBottomSheet.newInstance().show(supportFragmentManager, "profile")
+            ProfileBottomSheet(this).show()
         }
     }
 
