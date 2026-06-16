@@ -763,6 +763,7 @@
     <string name="call_from">Calling %s</string>
     <string name="lavender_calls_channel">Lavender Calls</string>
     <string name="lavender_messages_channel">Lavender Messages</string>
+    <string name="lavender_messages_channel_desc">Incoming chat messages</string>
 
     <!-- i18n: BuiltInThemes theme names -->
     <string name="theme_graphite_dark">Graphite Dark</string>

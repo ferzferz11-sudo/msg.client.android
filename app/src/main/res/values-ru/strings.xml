@@ -760,6 +760,7 @@
     <string name="call_from">Звонит %s</string>
     <string name="lavender_calls_channel">Звонки Lavender</string>
     <string name="lavender_messages_channel">Сообщения Lavender</string>
+    <string name="lavender_messages_channel_desc">Входящие сообщения чатов</string>
 
     <!-- i18n: BuiltInThemes theme names -->
     <string name="theme_graphite_dark">Графит темный</string>

@@ -115,8 +115,12 @@ class LavenderMessagingService : FirebaseMessagingService() {
             val channel = NotificationChannel(
                 channelId,
                 getString(R.string.lavender_messages_channel),
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = getString(R.string.lavender_messages_channel_desc)
+                enableVibration(true)
+                setShowBadge(true)
+            }
             notificationManager.createNotificationChannel(channel)
         }
 
@@ -160,7 +164,9 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         // Добавляем ID комнаты в экстра для возможности удаления программно
         val extras = android.os.Bundle()
