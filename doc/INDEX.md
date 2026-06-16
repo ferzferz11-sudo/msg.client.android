@@ -96,6 +96,14 @@ app/src/main/java/lavender/client/android/
 
 ---
 
+## Архивные файлы
+
+| Файл | Назначение |
+|------|-----------|
+| `doc/ChatListActivity_v1_REFERENCE.kt` | Копия удалённого ChatListActivity (v1) — 2802 строки. Использовать как справочник для функционала списка чатов (Favorites, Notifications, Themes, Updates, Calls, etc.) |
+
+---
+
 ## Серверы
 
 | | Dev | Prod |

@@ -39,7 +39,7 @@ class ProfileBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view)
+        super.onViewCreated(view, savedInstanceState)
 
         val context = requireContext()
         val username = CredentialStore.getUsername(context)
@@ -80,7 +80,7 @@ class ProfileBottomSheet : BottomSheetDialogFragment() {
         view.findViewById<View>(R.id.btnLogout)?.setOnClickListener {
             dismiss()
             GrpcClient.disconnect()
-            SessionManager.logout()
+            SessionManager.logout(context)
             val intent = Intent(context, ChatListActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
