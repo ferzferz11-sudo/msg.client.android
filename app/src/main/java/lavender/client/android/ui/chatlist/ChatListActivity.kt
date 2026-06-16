@@ -47,6 +47,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.cache.CacheUtils
+import lavender.client.android.data.updates.UpdateManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi

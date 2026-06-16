@@ -13,7 +13,12 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.content.edit
+import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.BuildConfig
 import lavender.client.android.R
@@ -47,7 +52,7 @@ class UpdateCoordinator(
     private val ivUpdateAvailable: ImageView? get() = activity.findViewById(R.id.ivUpdateAvailable)
     private val tvUpdateProgress: TextView? get() = activity.findViewById(R.id.tvUpdateProgress)
 
-    // Listeners
+    // Listener
     val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         activity.runOnUiThread { updateIndicatorVisibility() }
     }
@@ -181,7 +186,7 @@ class UpdateCoordinator(
     // ======= Announcements (changelog.txt from server) =======
 
     private fun checkAnnouncements() {
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             checkAnnouncementsInternal()
         }
     }
