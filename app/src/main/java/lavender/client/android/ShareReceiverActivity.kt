@@ -332,7 +332,7 @@ class ShareReceiverActivity : AppCompatActivity() {
         try {
             val request = DownloadManager.Request(Uri.parse(url))
                 .setTitle("Downloading Video")
-                .setDescription("Lavender Messenger")
+                .setDescription(getString(R.string.share_app_description))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "video_${System.currentTimeMillis()}.mp4")
                 .setAllowedOverMetered(true)

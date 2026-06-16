@@ -1,5 +1,19 @@
 # Lavender Messenger — Android Session Notes
 
+## Сессия 27 (2026-06-16) — Rename Lavender → Lava
+
+### Что сделано
+- Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
+- Каналы уведомлений: "Lavender Calls/Messages" → "Lava Calls/Messages"
+- Тема: "Lavender Night" → "Lava Night" (en), "Лавандовый ночной" → "Лавовый ночной" (ru)
+- 4 hardcoded строки в Kotlin заменены на R.string.* с добавлением новых строк в strings.xml
+- Обновлён TASKS.md: версия → v1.1.3.22
+
+### Коммиты
+- (pending)
+
+---
+
 ## Сессия 25 (2026-06-16) — Cleanup: changelog_bundled, Gradle wrapper restore, import fix
 
 ### Контекст

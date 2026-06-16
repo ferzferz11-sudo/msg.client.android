@@ -760,13 +760,13 @@
     <string name="new_message">Новое сообщение</string>
     <string name="incoming_call">Входящий звонок</string>
     <string name="call_from">Звонит %s</string>
-    <string name="lavender_calls_channel">Звонки Lavender</string>
-    <string name="lavender_messages_channel">Сообщения Lavender</string>
+    <string name="lavender_calls_channel">Звонки Лава</string>
+    <string name="lavender_messages_channel">Сообщения Лава</string>
     <string name="lavender_messages_channel_desc">Входящие сообщения чатов</string>
 
     <!-- i18n: BuiltInThemes theme names -->
     <string name="theme_graphite_dark">Графит темный</string>
-    <string name="theme_lavender_night">Лавандовый ночной</string>
+    <string name="theme_lavender_night">Лавовый ночной</string>
     <string name="theme_graphite_gold">Графит и золото</string>
     <string name="theme_modern_blue">Современный синий</string>
     <string name="theme_green_forest">Зеленый лес</string>
@@ -863,5 +863,10 @@
     <!-- ChatList v2: connection status -->
     <string name="connection_online">В сети</string>
     <string name="connection_offline">Не в сети</string>
+
+    <!-- File/Feedback -->
+    <string name="filename_prefix">Лава</string>
+    <string name="share_app_description">Лава Мессенджер</string>
+    <string name="feedback_subject">Лава Мессенджер Обратная связь</string>
 
 </resources>

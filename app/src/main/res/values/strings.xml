@@ -763,13 +763,13 @@
     <string name="new_message">New message</string>
     <string name="incoming_call">Incoming call</string>
     <string name="call_from">Calling %s</string>
-    <string name="lavender_calls_channel">Lavender Calls</string>
-    <string name="lavender_messages_channel">Lavender Messages</string>
+    <string name="lavender_calls_channel">Lava Calls</string>
+    <string name="lavender_messages_channel">Lava Messages</string>
     <string name="lavender_messages_channel_desc">Incoming chat messages</string>
 
     <!-- i18n: BuiltInThemes theme names -->
     <string name="theme_graphite_dark">Graphite Dark</string>
-    <string name="theme_lavender_night">Lavender Night</string>
+    <string name="theme_lavender_night">Lava Night</string>
     <string name="theme_graphite_gold">Graphite &amp; Gold</string>
     <string name="theme_modern_blue">Modern Blue</string>
     <string name="theme_green_forest">Green Forest</string>
@@ -867,5 +867,10 @@
     <string name="connecting">Connecting…</string>
     <string name="connection_online">Online</string>
     <string name="connection_offline">Offline</string>
+
+    <!-- File/Feedback -->
+    <string name="filename_prefix">Lava</string>
+    <string name="share_app_description">Lava Messenger</string>
+    <string name="feedback_subject">Lava Messenger Feedback</string>
 
 </resources>

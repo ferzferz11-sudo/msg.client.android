@@ -98,6 +98,7 @@ Favorites всегда на position 0, не участвует в DiffUtil:
 ### i18n (ОБЯЗАТЕЛЬНО)
 - ВСЕ user-facing строки ДОЛЖНЫ быть в `values/strings.xml` (en) + `values-ru/strings.xml` (ru)
 - НИКОГДА не использовать hardcoded строки в Kotlin/Java коде
+- ** Naming: приложение называется "Lava" (en) / "Лава" (ru), НЕ "Lavender"**
 - Использовать `getString(R.string.xxx)` с правильным контекстом:
   - Activity: `getString(R.string.xxx)` — работает напрямую
   - Adapter/ViewHolder: `context.getString(R.string.xxx)` или `itemView.context.getString()`

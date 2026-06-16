@@ -1,8 +1,26 @@
 # Lavender Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.21
-**Обновлено:** 2026-06-16 (сессия 26)
+**Версия:** v1.1.3.22
+**Обновлено:** 2026-06-16 (сессия 27)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.22 — Rename Lavender → Lava (Сессия 27)
+
+### Android
+- ✅ Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
+- ✅ Каналы уведомлений: "Lavender Calls" → "Lava Calls", "Lavender Messages" → "Lava Messages"
+- ✅ Тема: "Lavender Night" → "Lava Night" (en), "Лавандовый ночной" → "Лавовый ночной" (ru)
+- ✅ Hardcoded строки в Kotlin заменены на R.string.*:
+  - FullScreenImageActivity: "Lavender_*.jpg" → R.string.filename_prefix
+  - ShareReceiverActivity: "Lavender Messenger" → R.string.share_app_description
+  - VideoPlayerActivity: "Lavender Messenger" → R.string.share_app_description
+  - ChatListActivity: "Lavender Messenger Feedback" → R.string.feedback_subject
+- ✅ Добавлены новые строки в strings.xml (en + ru): filename_prefix, share_app_description, feedback_subject
+
+### Коммиты
+- (pending)
 
 ---
 

@@ -171,7 +171,7 @@ class FullScreenImageActivity : AppCompatActivity() {
     }
 
     private fun saveImageToGallery(bitmap: Bitmap) {
-        val filename = "Lavender_${System.currentTimeMillis()}.jpg"
+        val filename = "${getString(R.string.filename_prefix)}_${System.currentTimeMillis()}.jpg"
         var fos: java.io.OutputStream? = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             contentResolver?.also { resolver ->

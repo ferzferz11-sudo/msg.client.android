@@ -1734,7 +1734,7 @@ class ChatListActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = "mailto:".toUri()
                 putExtra(Intent.EXTRA_EMAIL, arrayOf("ferzfrez11@gmsil.com"))
-                putExtra(Intent.EXTRA_SUBJECT, "Lavender Messenger Feedback")
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.feedback_subject))
                 putExtra(Intent.EXTRA_TEXT, "From: $fromEmail\n\n$messageText")
             }
             startActivity(Intent.createChooser(intent, "Send Feedback"))
