@@ -1,6 +1,5 @@
 package lavender.client.android.ui.chatlist
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -9,7 +8,6 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -22,21 +20,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import lavender.client.android.NewChatActivity
 import lavender.client.android.R
-import lavender.client.android.ServersActivity
+import lavender.client.android.NewChatActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.ProfileClient
-import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
-import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
-import lavender.client.android.ui.widget.ServerAuthBottomSheet
 
 /**
  * ChatListActivityV2 — Activity для v2 серверов (ChatList v2 API).
@@ -47,9 +40,9 @@ import lavender.client.android.ui.widget.ServerAuthBottomSheet
  * - Tab filter: All / AI / Groups
  * - v1 fallback: auto-redirect to ChatListActivity if server doesn't support v2
  *
- * v1 files (ChatListActivity.kt, ChatAdapter.kt) НЕ ИЗМЕНЯЮТСЯ.
+ * Extends ChatListBaseActivity for common functionality (theme, auth, navigation).
  */
-class ChatListActivityV2 : AppCompatActivity() {
+class ChatListActivityV2 : ChatListBaseActivity() {
 
     companion object {
         private const val TAG = "ChatListActivityV2"
@@ -578,55 +571,24 @@ class ChatListActivityV2 : AppCompatActivity() {
 
     // ======= Navigation =======
 
-    private fun navigateToChat(chat: ChatInfo, username: String) {
-        when (chat.type) {
-            "favorites" -> {
-                val intent = Intent(this, NewChatActivity::class.java).apply {
-                    putExtra("USERNAME", username)
-                    putExtra("CHAT_NAME", getString(R.string.favorites))
-                    putExtra("ROOM_ID", "favorites_$username")
-                    putExtra("IS_DIRECT", false)
-                    putExtra("PARTICIPANTS", "[\"$username\"]")
-                    putExtra("CREATOR", username)
-                }
-                startActivity(intent)
-            }
-            "hermes" -> {
-                val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
-                    putExtra("CHAT_ID", chat.id)
-                    putExtra("CHAT_NAME", chat.name)
-                    putExtra("ACTIVE_AGENT_ID", chat.activeAgentId)
-                    putExtra("AGENT_MODE", chat.agentMode)
-                }
-                startActivity(intent)
-            }
-            "owl" -> {
-                val intent = Intent(this, lavender.client.android.ui.owl.OwlChatActivity::class.java).apply {
-                    putExtra("CHAT_ID", chat.id)
-                    putExtra("CHAT_NAME", chat.name)
-                }
-                startActivity(intent)
-            }
-            else -> {
-                val serverAddress = CredentialStore.getServerAddress(this) ?: ""
-                val intent = Intent(this, NewChatActivity::class.java).apply {
-                    putExtra("USERNAME", username)
-                    putExtra("SERVER_ADDRESS", serverAddress)
-                    putExtra("CHAT_NAME", chat.name)
-                    putExtra("ROOM_ID", chat.id)
-                    putExtra("IS_DIRECT", chat.type == "direct")
-                    putExtra("CHAT_TYPE", chat.type)
-                    putExtra("PARTICIPANTS", chat.participants)
-                    putExtra("AVATAR_URL", chat.avatarUrl)
-                    putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
-                    putExtra("CREATOR", chat.creator)
-                }
-                startActivity(intent)
-            }
+    override fun navigateToRegularChat(chat: ChatInfo, username: String) {
+        val serverAddress = CredentialStore.getServerAddress(this) ?: ""
+        val intent = Intent(this, lavender.client.android.NewChatActivity::class.java).apply {
+            putExtra("USERNAME", username)
+            putExtra("SERVER_ADDRESS", serverAddress)
+            putExtra("CHAT_NAME", chat.name)
+            putExtra("ROOM_ID", chat.id)
+            putExtra("IS_DIRECT", chat.type == "direct")
+            putExtra("CHAT_TYPE", chat.type)
+            putExtra("PARTICIPANTS", chat.participants)
+            putExtra("AVATAR_URL", chat.avatarUrl)
+            putExtra("FULL_AVATAR_URL", chat.fullAvatarUrl)
+            putExtra("CREATOR", chat.creator)
         }
+        startActivity(intent)
     }
 
-    private fun fallbackToV1() {
+    // ======= Selection Mode =======
         val intent = Intent(this, lavender.client.android.ChatListActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
