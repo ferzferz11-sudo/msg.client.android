@@ -191,13 +191,13 @@
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
 - [ ] **Read receipts** — MarkAsRead с broadcast
-- [ ] **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel
 
 ### Отложено
+- [ ] NewChatActivity рефакторинг — 1473 строки, выделить ViewModel (отложено по решению ферзя)
+- [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
 - [ ] Qdrant + CLIP (production RAG)
 - [ ] Shared element transitions
 - [ ] Infinite scroll + pagination
-- [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
 
 ---
 
