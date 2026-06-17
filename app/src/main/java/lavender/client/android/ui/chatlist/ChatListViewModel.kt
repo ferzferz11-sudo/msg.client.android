@@ -1,7 +1,6 @@
 package lavender.client.android.ui.chatlist
 
 import android.app.Application
-import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +12,7 @@ import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.session.SessionManager
 
 /**
  * ChatListViewModel — ViewModel для ChatListActivity.
@@ -237,7 +237,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun markAsRead(chatId: String) {
         viewModelScope.launch {
             try {
-                val username = lavender.client.android.data.session.SessionManager.session.value.username
+                val username = SessionManager.session.value.username
                 GrpcClient.markRead(chatId, username) {
                     // Server acknowledged — clear unread locally
                     allChats = allChats.map {
