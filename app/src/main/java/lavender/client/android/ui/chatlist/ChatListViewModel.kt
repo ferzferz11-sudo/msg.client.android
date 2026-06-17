@@ -29,6 +29,11 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         private const val TAG = "ChatListViewModel"
     }
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun clearError() { _error.value = null }
+
     private val _sections = MutableStateFlow<List<SectionItem>>(emptyList())
     val sections: StateFlow<List<SectionItem>> = _sections.asStateFlow()
 
@@ -53,6 +58,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 if (status == ConnectionStatus.READY) {
                     loadChats()
                 }
+            }
+        }
+        // Listen for errors — show in UI
+        viewModelScope.launch {
+            GrpcClient.error.collect { errorMsg ->
+                _error.value = errorMsg
             }
         }
         // Listen for read receipts — clear unread count in chat list

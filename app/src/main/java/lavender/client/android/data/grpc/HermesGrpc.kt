@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import lavender.client.android.data.proto.*
 import lavender.client.android.data.models.AppLog
+import lavender.client.android.data.models.ErrorHandler
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
@@ -206,9 +207,7 @@ fun chatWithOrchestrator(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (lavender.client.android.BuildConfig.DEBUG) {
-                Log.e("HermesGrpc", "chatWithOrchestrator error: ${e.message}")
-                }
+                ErrorHandler.handle("HermesGrpc.chatWithOrchestrator", e)
                 _hermesTyping.tryEmit(false)
                 val errorResp = OrchestratorResponseProto(
                     token = "",
@@ -229,9 +228,7 @@ fun chatWithOrchestrator(
         }
 
         if (attempt >= maxRetries) {
-            if (lavender.client.android.BuildConfig.DEBUG) {
-            Log.e("HermesGrpc", "chatWithOrchestrator: max retries exceeded")
-            }
+            ErrorHandler.warn("HermesGrpc.chatWithOrchestrator", "Max retries exceeded ($maxRetries)")
             val errorResp = OrchestratorResponseProto(
                 token = "",
                 finished = true,
@@ -710,10 +707,7 @@ suspend fun createHermesSession(
     if (channel == null || channel.isShutdown || channel.isTerminated) {
         if (lavender.client.android.BuildConfig.DEBUG) {
         }
-        lavender.client.android.data.models.AppLog.error(
-            "HermesGrpc:createHermesSession",
-            "Channel is null or dead! userId=$userId channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}"
-        )
+        ErrorHandler.handle("HermesGrpc.createHermesSession", "Channel is null or dead! userId=$userId channel=$channel isShutdown=${channel?.isShutdown} isTerminated=${channel?.isTerminated}")
         return@withContext CreateHermesSessionResponseProto()
     }
 
@@ -771,10 +765,7 @@ suspend fun createHermesSession(
             if (lavender.client.android.BuildConfig.DEBUG) {
             }
             if (!result.isCompleted) {
-                lavender.client.android.data.models.AppLog.error(
-                    "HermesGrpc:createHermesSession",
-                    "Stream closed before response! status=${status.code} desc=${status.description}"
-                )
+                ErrorHandler.handle("HermesGrpc.createHermesSession", "Stream closed before response! status=${status.code} desc=${status.description}")
                 result.complete(CreateHermesSessionResponseProto())
             }
         }

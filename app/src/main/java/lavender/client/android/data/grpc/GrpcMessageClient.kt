@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
+import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 import lavender.client.android.data.fcm.LavenderMessagingService
 
@@ -60,7 +61,7 @@ class GrpcMessageClient(
             requestObserver.onNext(proto)
             Log.d(TAG, "Message sent via stream: ${message.text.take(20)}...")
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending message", e)
+            ErrorHandler.handle("GrpcMessageClient.sendMessage", e)
         }
     }
 

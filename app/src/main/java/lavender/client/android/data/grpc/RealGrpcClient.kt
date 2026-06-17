@@ -16,6 +16,7 @@ import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.AIChatInfo
+import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -485,7 +486,7 @@ object RealGrpcClient {
             }
 
             override fun onError(t: Throwable) {
-                Log.e(TAG, "Chat stream error", t)
+                ErrorHandler.handle("RealGrpcClient.chatStream", t)
                 if (t is io.grpc.StatusRuntimeException) {
                     val description = t.status.description ?: ""
                     if (description.contains("user not found", ignoreCase = true) ||

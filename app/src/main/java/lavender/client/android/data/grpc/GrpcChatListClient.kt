@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 
 /**
@@ -109,7 +110,7 @@ class GrpcChatListClient(
                 })
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) Log.e(TAG, "getAllChats failed: ${status.code}")
+                if (!status.isOk) ErrorHandler.handle("GrpcChatListClient.getAllChats", "Status: ${status.code} — ${status.description}")
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllChatsRequestProto())
@@ -498,7 +499,7 @@ class GrpcChatListClient(
                 callback(message.users)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) Log.e(TAG, "GetAllUsers failed: ${status.code}")
+                if (!status.isOk) ErrorHandler.handle("GrpcChatListClient.getAllUsers", "Status: ${status.code} — ${status.description}")
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllUsersRequestProto())
@@ -548,7 +549,7 @@ class GrpcChatListClient(
                 })
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) Log.e(TAG, "getAIChats failed: ${status.code}")
+                if (!status.isOk) ErrorHandler.handle("GrpcChatListClient.getAIChats", "Status: ${status.code} — ${status.description}")
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAIChatsRequestProto().apply { this.userId = userId })
