@@ -97,7 +97,18 @@
                     android:visibility="gone"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
-                    android:focusable="true">
+                    android:focusable="true"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/tvUpdateAvailable"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/update_available"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/tvUpdateProgress"
@@ -110,27 +121,7 @@
                         tools:text="45%"
                         tools:visibility="visible" />
 
-                    <ImageView
-                        android:id="@+id/ivUpdateAvailable"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:padding="8dp"
-                        android:src="@drawable/deployed_code_update_24"
-                        app:tint="?attr/colorOnPrimary"
-                        android:contentDescription="@string/update_available" />
-
                 </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/ivActionSettings"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="8dp"
-                    android:padding="8dp"
-                    android:src="@drawable/ic_settings"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    app:tint="?attr/colorOnPrimary"
-                    android:contentDescription="@string/admin_label" />
 
             </LinearLayout>
 

@@ -49,7 +49,7 @@ class UpdateCoordinator(
 
     // Ссылки на view элементы (lazy — получаем когда нужны)
     private val llUpdateContainer: View? get() = activity.findViewById(R.id.llUpdateContainer)
-    private val ivUpdateAvailable: ImageView? get() = activity.findViewById(R.id.ivUpdateAvailable)
+    private val tvUpdateAvailable: TextView? get() = activity.findViewById(R.id.tvUpdateAvailable)
     private val tvUpdateProgress: TextView? get() = activity.findViewById(R.id.tvUpdateProgress)
 
     // Listener
@@ -60,21 +60,11 @@ class UpdateCoordinator(
     // ======= Silent check (called once on startup) =======
 
     fun checkForUpdatesSilently() {
+        // Only check announcements, don't auto-download
         checkAnnouncements()
-        updateManager.checkForUpdates { isAvailable, latestVersion ->
-            val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
-            val isDownloaded = prefs.getBoolean("update_downloaded", false)
-            val isDownloading = prefs.getBoolean("update_downloading", false)
-
+        updateManager.checkForUpdates { isAvailable, _ ->
             activity.runOnUiThread {
                 updateIndicatorVisibility()
-                if (isAvailable) {
-                    if (!isDownloaded && !isDownloading) {
-                        updateManager.startDownload(isAuto = true)
-                    } else if (isDownloaded) {
-                        showUpdateAvailableNotification(latestVersion)
-                    }
-                }
             }
         }
     }
@@ -131,18 +121,11 @@ class UpdateCoordinator(
         llUpdateContainer?.isVisible = isAvailable || isDownloading || isDownloaded
 
         if (isDownloading) {
-            ivUpdateAvailable?.setImageResource(R.drawable.ic_update_rotating)
-            val rotation = AnimationUtils.loadAnimation(context, R.anim.rotate_renew)
-            ivUpdateAvailable?.startAnimation(rotation)
+            tvUpdateAvailable?.isVisible = false
             tvUpdateProgress?.isVisible = true
         } else {
-            ivUpdateAvailable?.clearAnimation()
             tvUpdateProgress?.isVisible = false
-            if (isDownloaded) {
-                ivUpdateAvailable?.setImageResource(R.drawable.ic_install_update)
-            } else if (isAvailable) {
-                ivUpdateAvailable?.setImageResource(R.drawable.ic_update_available)
-            }
+            tvUpdateAvailable?.isVisible = isAvailable || isDownloaded
         }
 
         llUpdateContainer?.setOnClickListener {

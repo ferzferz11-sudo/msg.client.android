@@ -114,7 +114,7 @@ object ThemeApplier {
             toolbar.findViewById<TextView>(R.id.tvToolbarSubtitle)?.setTextColor(ThemeUtils.adjustAlpha(customOnPrimary, 0.8f))
             
             // Tint toolbar icons
-            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionEdit, R.id.ivActionSettings, R.id.ivUpdateAvailable, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby, R.id.ivToolbarUserAvatar)
+            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionEdit, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby, R.id.ivToolbarUserAvatar)
             toolbarActions.forEach { id ->
                 findViewById<ImageView>(id)?.let { iv ->
                     iv.imageTintList = ColorStateList.valueOf(customOnPrimary)

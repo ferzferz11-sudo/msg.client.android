@@ -85,7 +85,6 @@ class ChatListActivity : AppCompatActivity() {
     private var tvToolbarTitle: TextView? = null
     private var tvToolbarSubtitle: TextView? = null
     private var ivToolbarUserAvatar: ImageView? = null
-    private var ivActionSettings: ImageView? = null
 
     // ActionMode
     private var actionMode: ActionMode? = null
@@ -136,7 +135,6 @@ class ChatListActivity : AppCompatActivity() {
         tvToolbarTitle = findViewById(R.id.tvToolbarTitle)
         tvToolbarSubtitle = findViewById(R.id.tvToolbarSubtitle)
         ivToolbarUserAvatar = findViewById(R.id.ivToolbarUserAvatar)
-        ivActionSettings = findViewById(R.id.ivActionSettings)
         tabLayout = findViewById(R.id.tabLayout)
         swipeRefresh = findViewById(R.id.srlChatList)
         rvChatList = findViewById(R.id.rvChatList)
@@ -266,11 +264,6 @@ class ChatListActivity : AppCompatActivity() {
         tvToolbarTitle?.setOnClickListener {
             val intent = Intent(this, ServersActivity::class.java)
             startActivity(intent)
-        }
-
-        // Settings click -> Additional settings sheet
-        ivActionSettings?.setOnClickListener {
-            showAdditionalSettingsSheet()
         }
     }
 
