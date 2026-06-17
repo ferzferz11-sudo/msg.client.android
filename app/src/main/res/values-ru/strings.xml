@@ -250,8 +250,9 @@
     <string name="add_emoji">Добавить эмодзи</string>
     <string name="contacts">Контакты</string>
     <string name="add_contact">Добавить контакт</string>
-    <string name="create_direct_chat_after">Сразу создать личный чат</string>
-    <string name="contact_added">Контакт успешно добавлен</string>
+    <string name="create_direct_chat_after">Создать чат сразу</string>
+        <string name="contacts_added">Добавлено контактов: %d</string>
+        <string name="contact_added">Контакт успешно добавлен</string>
     <string name="already_in_contacts">Пользователь уже в контактах</string>
     <string name="no_contacts">Контактов пока нет. Добавьте кого-нибудь, чтобы начать общение!</string>
     <string name="remove_contact">Удалить контакт</string>
@@ -351,6 +352,7 @@
     <string name="action_about">О программе</string>
     <string name="action_super_admin">Админ панель</string>
     <string name="favorites">Избранное</string>
+    <string name="no_favorites_yet">Избранного пока нет</string>
     <string name="added_to_favorites">Добавлено в Избранное</string>
     <string name="remove_multiple_contacts_confirm">Удалить выбранные контакты (%d)?</string>
 

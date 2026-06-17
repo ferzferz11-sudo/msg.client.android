@@ -1,7 +1,7 @@
 # Lava Messenger — Android Code Audit
 
 **Дата:** 2026-06-17
-**Версия:** v1.1.3.29
+**Версия:** v1.1.3.30
 **Аудитор:** OWL (автоматический аудит)
 
 ---
@@ -13,6 +13,7 @@
 | Всего Kotlin файлов | 141 |
 | RealGrpcClient | 874 (было 3810, -77%) |
 | gRPC модулей | 12 + Marshallers |
+| ChatListActivity | ~1445 LOC (добавлены SearchableListBottomSheet методы) |
 
 ---
 

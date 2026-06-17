@@ -46,7 +46,6 @@ class ChatAdapter(
     companion object {
         private const val TYPE_SECTION_HEADER = 0
         private const val TYPE_CHAT_ITEM = 1
-        private const val TYPE_FAVORITES = 2
     }
 
     private var sections: List<SectionItem> = emptyList()
@@ -97,7 +96,6 @@ class ChatAdapter(
         return flatItems.mapNotNull { item ->
             when (item) {
                 is FlatItem.ChatItem -> if (selectedIds.contains(item.chat.id)) item.chat else null
-                is FlatItem.FavoritesItem -> if (selectedIds.contains(item.chat.id)) item.chat else null
                 else -> null
             }
         }
@@ -138,11 +136,7 @@ class ChatAdapter(
         for (section in sections) {
             result.add(FlatItem.SectionHeader(section.section, section.chats.size))
             for (chat in section.chats) {
-                if (chat.type == "favorites") {
-                    result.add(FlatItem.FavoritesItem(chat))
-                } else {
-                    result.add(FlatItem.ChatItem(chat))
-                }
+                result.add(FlatItem.ChatItem(chat))
             }
         }
         return result
@@ -165,8 +159,6 @@ class ChatAdapter(
                 old is FlatItem.SectionHeader && new is FlatItem.SectionHeader ->
                     old.section == new.section
                 old is FlatItem.ChatItem && new is FlatItem.ChatItem ->
-                    old.chat.id == new.chat.id
-                old is FlatItem.FavoritesItem && new is FlatItem.FavoritesItem ->
                     old.chat.id == new.chat.id
                 else -> false
             }
@@ -195,11 +187,6 @@ class ChatAdapter(
                     .inflate(R.layout.item_chat_section_header, parent, false)
                 SectionHeaderViewHolder(view)
             }
-            TYPE_FAVORITES -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_chat, parent, false)
-                FavoritesViewHolder(view, onChatClick, onChatLongClick)
-            }
             else -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_chat, parent, false)
@@ -213,9 +200,6 @@ class ChatAdapter(
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id)
-            )
-            is FlatItem.FavoritesItem -> (holder as FavoritesViewHolder).bind(
                 item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id)
             )
             null -> {}
@@ -249,7 +233,6 @@ class ChatAdapter(
         fun bind(item: FlatItem.SectionHeader) {
             tvSectionName.text = when (item.section) {
                 Section.PINNED -> itemView.context.getString(R.string.section_pinned)
-                Section.FAVORITES -> itemView.context.getString(R.string.section_favorites)
                 Section.ALL_CHATS -> itemView.context.getString(R.string.section_all_chats)
                 Section.ARCHIVED -> itemView.context.getString(R.string.section_archived)
             }
@@ -313,38 +296,6 @@ class ChatAdapter(
             }
         }
     }
-
-    class FavoritesViewHolder(
-        itemView: View,
-        private val onChatClick: (ChatInfo) -> Unit,
-        private val onChatLongClick: (ChatInfo, View) -> Unit
-    ) : RecyclerView.ViewHolder(itemView) {
-        private val tvChatName: TextView = itemView.findViewById(R.id.tvChatName)
-        private val tvChatType: TextView = itemView.findViewById(R.id.tvChatType)
-        private val cbChatSelect: CheckBox = itemView.findViewById(R.id.cbChatSelect)
-        private val cardView: com.google.android.material.card.MaterialCardView =
-            itemView as com.google.android.material.card.MaterialCardView
-
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean) {
-            tvChatName.text = itemView.context.getString(R.string.favorites)
-            tvChatName.setTextColor(textPrimary)
-            tvChatType.text = itemView.context.getString(R.string.favorites_description)
-            tvChatType.setTextColor(textSecondary)
-
-            // Selection mode
-            cbChatSelect.isVisible = selectionMode
-            cbChatSelect.isChecked = isSelected
-            cardView.setCardBackgroundColor(if (isSelected) selectedColor else surfaceColor)
-
-            if (selectionMode) {
-                itemView.setOnClickListener { onChatClick(chat) }
-                itemView.setOnLongClickListener(null)
-            } else {
-                itemView.setOnClickListener { onChatClick(chat) }
-                itemView.setOnLongClickListener { view -> onChatLongClick(chat, view); true }
-            }
-        }
-    }
 }
 
 // ======= Flat list items =======
@@ -352,5 +303,4 @@ class ChatAdapter(
 sealed class FlatItem {
     data class SectionHeader(val section: Section, val count: Int) : FlatItem()
     data class ChatItem(val chat: ChatInfo) : FlatItem()
-    data class FavoritesItem(val chat: ChatInfo) : FlatItem()
 }

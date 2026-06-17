@@ -9,10 +9,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import lavender.client.android.data.db.AppDatabase
-import lavender.client.android.data.db.toDomain
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.MessageAdapter
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +26,7 @@ class FavoritesActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: MessageAdapter
     private lateinit var emptyText: TextView
+    private lateinit var swipeRefresh: SwipeRefreshLayout
     private var username: String = ""
 
     override fun attachBaseContext(newBase: Context) {
@@ -40,24 +41,25 @@ class FavoritesActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // setDecorFitsSystemWindows(true) — default, needed for adjustResize
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_favorites)
 
-        username = intent.getStringExtra("USERNAME") ?: ""
+        username = SessionManager.session.value.username
         ThemeUi.bind(this, username)
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = getString(R.string.favorites)
         toolbar.setNavigationOnClickListener { finish() }
 
         recyclerView = findViewById(R.id.favoritesRecyclerView)
         emptyText = findViewById(R.id.emptyText)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
 
         adapter = MessageAdapter(
             currentUsername = username,
-            isGroupChat = true, // To show sender names
+            isGroupChat = true,
             onMessageClick = { message ->
                 showFavoritesActionDialog(message)
             },
@@ -71,14 +73,19 @@ class FavoritesActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = false }
         recyclerView.adapter = adapter
 
+        swipeRefresh.setOnRefreshListener {
+            loadFavorites()
+        }
+
         loadFavorites()
     }
 
     private fun loadFavorites() {
-        val userId = intent.getStringExtra("USER_ID") ?: GrpcClient.getUserId() ?: ""
+        val userId = SessionManager.session.value.userId
         if (userId.isEmpty()) {
             emptyText.isVisible = true
             emptyText.text = getString(R.string.user_id_not_loaded)
+            swipeRefresh.isRefreshing = false
             return
         }
 
@@ -92,16 +99,21 @@ class FavoritesActivity : AppCompatActivity() {
                 if (cached.isNotEmpty()) {
                     withContext(Dispatchers.Main) {
                         adapter.submitList(cached)
+                        emptyText.isVisible = false
                     }
                 }
             } catch (_: Exception) {}
         }
 
-        // Step 2: Refresh from server (async, non-blocking)
+        // Step 2: Refresh from server
         GrpcClient.getFavorites(userId) { messages ->
             runOnUiThread {
+                swipeRefresh.isRefreshing = false
                 adapter.submitList(messages)
                 emptyText.isVisible = messages.isEmpty()
+                if (messages.isEmpty()) {
+                    emptyText.text = getString(R.string.no_favorites_yet)
+                }
             }
         }
     }
@@ -123,7 +135,8 @@ class FavoritesActivity : AppCompatActivity() {
     }
 
     private fun removeFromFavorites(message: Message) {
-        val userId = GrpcClient.getUserId() ?: ""
+        val userId = SessionManager.session.value.userId
+        if (userId.isEmpty()) return
         GrpcClient.removeFavorite(userId, message.id) { success ->
             if (success) {
                 runOnUiThread { loadFavorites() }

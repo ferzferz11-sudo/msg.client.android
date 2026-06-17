@@ -1,5 +1,53 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 36 (2026-06-17) — FAB [+] восстановление + Favorites fix
+
+### Контекст
+- FAB [+] использовал NewChatBottomSheet с 4 пунктами, которые просто открывали NewChatActivity с extras
+- Favorites был секцией в списке чатов (Section.FAVORITES), что дублировал функционал
+- FavoritesActivity не работал корректно — userId получался из intent, но данные не загружались
+
+### Что сделано
+
+#### 1. FAB [+] — восстановление как в v1
+- **ChatListActivity.showChatActionSheet()** — ActionBottomSheet с 4 действиями:
+  - Add Contact → SearchableListBottomSheet (поиск, мультивыбор, добавление в контакты, чекбокс "Create direct chat after")
+  - Start Chat → SearchableListBottomSheet (1 пользователь → direct, 2+ → group с полем имени)
+  - Secret Chat → SearchableListBottomSheet (одиночный выбор, E2EE ключи, createSecretChat)
+  - Conference → SearchableListBottomSheet (мультивыбор, поле topic, type="conference")
+- **setupFABs()** — замена NewChatBottomSheet на showChatActionSheet()
+- Все методы используют существующие компоненты: ActionBottomSheet, SearchableListBottomSheet, UserAdapter
+- Все GrpcClient методы уже были на месте: getContacts, addContact, createDirectChat, createGroupChat, createSecretChat
+
+#### 2. Favorites — убрать из секций
+- **ChatListViewModel.buildSections()** — убрана секция Favorites, убран loadFavorites()
+- **ChatAdapter** — убран FavoritesItem, TYPE_FAVORITES, FavoritesViewHolder
+- **ChatListSections.kt** — убран Section.FAVORITES
+- **navigateToChat()** — убрана навигация на FavoritesActivity из списка
+
+#### 3. Favorites — добавить в шторку профиля
+- **bottom_sheet_user_menu.xml** — добавлен пункт actionFavorites (ic_star)
+- **ChatListActivity.showSettingsSheet()** — добавлен обработчик Favorites → FavoritesActivity
+
+#### 4. FavoritesActivity — исправления
+- userId получается из SessionManager.session.value.userId напрямую
+- Добавлен SwipeRefreshLayout для pull-to-refresh
+- Добавлено пустое состояние "No favorites yet" / "Избранного пока нет"
+- Обновлён layout activity_favorites.xml
+
+#### 5. Строки
+- Добавлены: no_favorites_yet, contacts_added (en + ru)
+
+### Совместимость v1/v2
+- Все методы (getContacts, addContact, createDirectChat, createGroupChat, createSecretChat) работают на v1 и v2
+- Не требуют проверки isChatV2Supported — callback-паттерн
+- SearchableListBottomSheet и UserAdapter из общего widget слоя, не зависят от версии сервера
+
+### Коммиты
+- TBD — feat: restore v1 FAB [+] with ActionBottomSheet + SearchableListBottomSheet, fix Favorites
+
+---
+
 ## Сессия 35 (2026-06-17) — UI улучшения и исправления
 
 ### Контекст

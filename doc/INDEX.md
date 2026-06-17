@@ -1,9 +1,9 @@
 # Lava Messenger — Android Документация
 
-**Версия:** v1.1.3.29
-**Обновлено:** 2026-06-17 (сессия 35)
+**Версия:** v1.1.3.30
+**Обновлено:** 2026-06-17 (сессия 36)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.29 (не выпущен)
+**Тег:** v1.1.3.30 (не выпущен)
 
 ---
 
@@ -68,13 +68,16 @@ app/src/main/java/lavender/client/android/
 │   │   └── UpdateCoordinator.kt        — update system UI logic
 │   ├── adapter/
 │   │   ├── ChatAdapter.kt              — адаптер с секциями + selection state + DiffUtil
-│   │   └── MessageAdapter.kt           — адаптер сообщений + pinned badge
+│   │   ├── MessageAdapter.kt           — адаптер сообщений + pinned badge
+│   │   └── UserAdapter.kt              — адаптер пользователей с выбором + поиск
 │   ├── widget/
 │   │   ├── ServerAuthBottomSheet.kt    — шторка выбора входа
 │   │   ├── LoginBottomSheet.kt         — шторка входа
 │   │   ├── RegisterBottomSheet.kt      — шторка регистрации
 │   │   ├── AIBottomSheet.kt            — шторка выбора AI чата
-│   │   └── NewChatBottomSheet.kt       — шторка создания чата (7 пунктов)
+│   │   ├── ActionBottomSheet.kt        — шторка действий (v1 reference)
+│   │   ├── SearchableListBottomSheet.kt — шторка с поиском и списком
+│   │   └── StandardBottomSheet.kt      — базовая шторка
 │   ├── hermes/                         — Hermes AI чат
 │   ├── owl/                            — OWL AI чат
 │   └── remote/                         — Remote Agent UI
@@ -103,7 +106,7 @@ app/src/main/java/lavender/client/android/
 └── theme/ui/
 ```
 
-### gRPC Client Architecture (v1.1.3.29)
+### gRPC Client Architecture (v1.1.3.30)
 ```
 GrpcClient (facade, 779 LOC)
     ↓

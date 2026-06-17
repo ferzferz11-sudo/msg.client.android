@@ -7,7 +7,6 @@ import lavender.client.android.data.models.ChatInfo
  */
 enum class Section {
     PINNED,      // Закреплённые чаты
-    FAVORITES,   // Избранное
     ALL_CHATS,   // Все чаты
     ARCHIVED     // Архивированные (скрыты по умолчанию, доступны через меню)
 }

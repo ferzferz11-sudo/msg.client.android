@@ -118,6 +118,18 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/actionFavorites"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/favorites"
+            android:src="@drawable/ic_star" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/favorites" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/actionThemes"
         style="@style/MenuActionItemStyle">
         <ImageView

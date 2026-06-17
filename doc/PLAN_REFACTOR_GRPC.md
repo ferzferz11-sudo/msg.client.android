@@ -52,8 +52,10 @@ RealGrpcClient (orchestrator, 874 строк) — chat stream + coordination
 
 ## Следующие приоритеты (после рефакторинга gRPC)
 
-Рефакторинг gRPC завершён. Следующие приторитеты:
-1. **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel — отложено по решению ферзя
-2. **ChatListActivity разбиение** — ToolbarManager, TabManager
-3. **Read receipts** — MarkAsRead с broadcast
-4. **ProfileService v2** — проверить работу на dev сервере
+Рефакторинг gRPC завершён. Следующие приоритеты:
+1. **FAB [+] восстановление** — ✅ v1.1.3.30
+2. **Favorites fix** — ✅ v1.1.3.30 (убрать из секций, добавить в шторку, исправить FavoritesActivity)
+3. **ProfileService v2** — проверить работу на dev сервере
+4. **Read receipts** — MarkAsRead с broadcast
+5. **ChatListActivity разбиение** — ToolbarManager, TabManager
+- NewChatActivity рефакторинг — отложено по решению ферзя

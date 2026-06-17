@@ -1,8 +1,39 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.29
-**Обновлено:** 2026-06-17 (сессия 35)
+**Версия:** v1.1.3.30
+**Обновлено:** 2026-06-17 (сессия 36)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.30 — FAB [+] восстановление + Favorites fix (Сессия 36)
+
+### FAB [+] — ActionBottomSheet + SearchableListBottomSheet
+- ✅ **ChatListActivity.showChatActionSheet()** — ActionBottomSheet с 4 пунктами (Add Contact, Start Chat, Secret Chat, Conference)
+- ✅ **showAddContactDialog()** — SearchableListBottomSheet: поиск пользователей, фильтрация контактов, мультивыбор, чекбокс "Create direct chat after"
+- ✅ **showCreateChatDialog()** — SearchableListBottomSheet: выбор 1 пользователя → direct chat, 2+ → group chat с полем имени
+- ✅ **showCreateSecretChatDialog()** — SearchableListBottomSheet: одиночный выбор, E2EE ключи через E2EEManager.getPublicKeyBase64()
+- ✅ **showCreateConferenceDialog()** — SearchableListBottomSheet: мультивыбор, поле topic, createGroupChat с type="conference"
+- ✅ **setupFABs()** — замена NewChatBottomSheet на showChatActionSheet()
+
+### Favorites — убрать из секций
+- ✅ **ChatListViewModel.buildSections()** — убрана секция Favorites, убран loadFavorites()
+- ✅ **ChatAdapter** — убран FavoritesItem, TYPE_FAVORITES, FavoritesViewHolder
+- ✅ **ChatListSections.kt** — убран Section.FAVORITES
+- ✅ **navigateToChat()** — убрана навигация на FavoritesActivity из списка
+
+### Favorites — добавить в шторку профиля
+- ✅ **bottom_sheet_user_menu.xml** — добавлен пункт actionFavorites (ic_star)
+- ✅ **ChatListActivity.showSettingsSheet()** — добавлен обработчик Favorites → FavoritesActivity
+
+### FavoritesActivity — исправления
+- ✅ userId получается из SessionManager.session.value.userId напрямую
+- ✅ Добавлен SwipeRefreshLayout для pull-to-refresh
+- ✅ Добавлено пустое состояние "No favorites yet" / "Избранного пока нет"
+- ✅ Обновлён layout activity_favorites.xml (SwipeRefreshLayout)
+
+### Строки
+- ✅ Добавлены строки: no_favorites_yet, contacts_added (en + ru)
 
 ---
 
@@ -194,17 +225,15 @@
 
 ## 📋 Активные задачи
 
-### Высокий приоритет (v1.1.3.30)
-- [ ] **Восстановить шторку FAB [+] как в v1** — ActionBottomSheet + SearchableListBottomSheet
-- [ ] **Favorites** — убрать из секций, добавить в шторку профиля, исправить FavoritesActivity
-
-### Средний приоритет
+### Высокий приоритет (v1.1.3.31)
 - [ ] **ProfileService v2** — проверить работу на dev сервере
 - [ ] **Read receipts** — MarkAsRead с broadcast
 
+### Средний приоритет
+- [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
+
 ### Отложено
 - [ ] NewChatActivity рефакторинг — отложено по решению ферзя
-- [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
 - [ ] Qdrant + CLIP (production RAG)
 - [ ] Shared element transitions
 - [ ] Infinite scroll + pagination
@@ -245,7 +274,10 @@
 | `ui/widget/ServerAuthBottomSheet.kt` | Шторка выбора входа (лого + сервер + статус + login/register) |
 | `ui/widget/LoginBottomSheet.kt` | Шторка входа (username/password) |
 | `ui/widget/RegisterBottomSheet.kt` | Шторка регистрации |
-| `ui/widget/NewChatBottomSheet.kt` | Шторка создания чата |
+| `ui/widget/ActionBottomSheet.kt` | Шторка действий (Add Contact, Start Chat, Secret Chat, Conference) |
+| `ui/widget/SearchableListBottomSheet.kt` | Шторка с поиском, списком пользователей, кнопкой действия |
+| `ui/adapter/UserAdapter.kt` | Адаптер пользователей с выбором + поиск + аватарами |
+| `FavoritesActivity.kt` | Экран избранных сообщений (SwipeRefresh, empty state) |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
 || `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~874 строк, цель достигнута) |

@@ -52,13 +52,22 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
+import lavender.client.android.ui.widget.ActionBottomSheet
+import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.LoginBottomSheet
 import lavender.client.android.ui.widget.RegisterBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import lavender.client.android.ui.widget.NewChatBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.adapter.ChatAdapter
+import lavender.client.android.ui.adapter.UserAdapter
 import lavender.client.android.ui.LogViewerActivity
+import lavender.client.android.data.crypto.E2EEManager
+import lavender.client.android.data.proto.UserInfoProto
+import org.json.JSONArray
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * ChatListActivity — единый Activity для списка чатов.
@@ -307,6 +316,12 @@ class ChatListActivity : AppCompatActivity() {
             startActivity(Intent(this, ContactsActivity::class.java).apply {
                 putExtra("USERNAME", username)
             })
+        }
+
+        // Favorites
+        sheet.findViewById<View>(R.id.actionFavorites)?.setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, lavender.client.android.FavoritesActivity::class.java))
         }
 
         // Themes
@@ -564,8 +579,353 @@ class ChatListActivity : AppCompatActivity() {
             showAIBottomSheet()
         }
         findViewById<View>(R.id.fabAddChat)?.setOnClickListener {
-            NewChatBottomSheet.newInstance().show(supportFragmentManager, "new_chat")
+            showChatActionSheet()
         }
+    }
+
+    // ======= FAB [+] Action Sheet =======
+
+    private fun showChatActionSheet() {
+        ActionBottomSheet(this)
+            .setActions(listOf(
+                SheetAction(R.id.actionAddContact, R.drawable.ic_contacts, getString(R.string.add_contact)) {
+                    showAddContactDialog()
+                },
+                SheetAction(R.id.actionCreateChat, R.drawable.ic_add, getString(R.string.start_chat)) {
+                    showCreateChatDialog()
+                },
+                SheetAction(R.id.actionCreateSecretChat, R.drawable.ic_lock, getString(R.string.secret_chat)) {
+                    showCreateSecretChatDialog()
+                },
+                SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, getString(R.string.conference_in_development)) {
+                    showCreateConferenceDialog()
+                }
+            )).show()
+    }
+
+    // ======= Add Contact Dialog =======
+
+    private fun showAddContactDialog() {
+        val username = SessionManager.session.value.username
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.add_contact))
+            .setActionButtonText(getString(R.string.add))
+            .setExtraInputVisible(false)
+            .setLoading(true)
+            .setCreateChatCheckboxVisible(true, getString(R.string.create_direct_chat_after))
+
+        val currentContacts = mutableSetOf<String>()
+
+        val userAdapter = UserAdapter(
+            scope = lifecycleScope,
+            onUserClick = { selected ->
+                (sheet.recyclerView?.adapter as? UserAdapter)?.toggleSelection(selected)
+            },
+            onSelectionChanged = { count ->
+                sheet.setActionButtonEnabled(count > 0)
+                sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
+            },
+            avatarCache = GrpcClient.getAvatarCache(),
+            onlineUsers = GrpcClient.users.value
+        )
+
+        sheet.setAdapter(userAdapter)
+
+        // Load contacts first, then filter all users
+        GrpcClient.getContacts(username) { contacts ->
+            currentContacts.clear()
+            currentContacts.addAll(contacts)
+
+            lifecycleScope.launch {
+                GrpcClient.allUsers.collect { allUsersList ->
+                    val filtered = allUsersList
+                        .map { it.username }
+                        .filter { it != username && !currentContacts.contains(it) }
+                    runOnUiThread {
+                        sheet.setLoading(false)
+                        userAdapter.setUsers(filtered)
+                    }
+                }
+            }
+        }
+
+        sheet.onSearchTextChanged { query ->
+            userAdapter.filter(query)
+        }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+
+            var added = 0
+            val total = selected.size
+            for (contact in selected) {
+                GrpcClient.addContact(username, contact) { success, _ ->
+                    if (success) added++
+                    if (added == total || (added + (total - selected.indexOf(contact) - 1)) == total) {
+                        runOnUiThread {
+                            sheet.dismiss()
+                            // Optionally create direct chat with first added contact
+                            if (sheet.isCreateChatChecked() && selected.isNotEmpty()) {
+                                val firstContact = selected.first()
+                                GrpcClient.createDirectChat(username, firstContact) { chatId ->
+                                    if (chatId != null) {
+                                        runOnUiThread {
+                                            val intent = Intent(this, NewChatActivity::class.java).apply {
+                                                putExtra("USERNAME", username)
+                                                putExtra("ROOM_ID", chatId)
+                                                putExtra("CHAT_NAME", firstContact)
+                                                putExtra("IS_DIRECT", true)
+                                                putExtra("PARTICIPANTS", JSONArray(listOf(username, firstContact)).toString())
+                                            }
+                                            startActivity(intent)
+                                        }
+                                    }
+                                }
+                            }
+                            Toast.makeText(this, getString(R.string.contacts_added, added), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+        sheet.show()
+    }
+
+    // ======= Create Chat Dialog =======
+
+    private fun showCreateChatDialog() {
+        val username = SessionManager.session.value.username
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.start_chat))
+            .setActionButtonText(getString(R.string.create))
+            .setExtraInputVisible(false, getString(R.string.enter_group_name))
+            .setLoading(true)
+
+        val userAdapter = UserAdapter(
+            scope = lifecycleScope,
+            onUserClick = { selected ->
+                (sheet.recyclerView?.adapter as? UserAdapter)?.toggleSelection(selected)
+            },
+            onSelectionChanged = { count ->
+                sheet.setActionButtonEnabled(count > 0)
+                sheet.setActionButtonText(if (count > 1) "${getString(R.string.create)} ($count)" else getString(R.string.create))
+                sheet.setExtraInputVisible(count > 1, getString(R.string.enter_group_name))
+            },
+            avatarCache = GrpcClient.getAvatarCache(),
+            onlineUsers = GrpcClient.users.value
+        )
+
+        sheet.setAdapter(userAdapter)
+
+        GrpcClient.getContacts(username) { contacts ->
+            runOnUiThread {
+                sheet.setLoading(false)
+                userAdapter.setUsers(contacts)
+            }
+        }
+
+        sheet.onSearchTextChanged { query ->
+            userAdapter.filter(query)
+        }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+
+            if (selected.size == 1) {
+                // Direct chat
+                val targetUser = selected.first()
+                GrpcClient.createDirectChat(username, targetUser) { chatId ->
+                    if (chatId != null) {
+                        runOnUiThread {
+                            sheet.dismiss()
+                            val intent = Intent(this, NewChatActivity::class.java).apply {
+                                putExtra("USERNAME", username)
+                                putExtra("ROOM_ID", chatId)
+                                putExtra("CHAT_NAME", targetUser)
+                                putExtra("IS_DIRECT", true)
+                                putExtra("PARTICIPANTS", JSONArray(listOf(username, targetUser)).toString())
+                            }
+                            startActivity(intent)
+                        }
+                    } else {
+                        runOnUiThread {
+                            Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else {
+                // Group chat
+                val groupName = sheet.extraEditText?.text?.toString()?.trim()?.ifEmpty {
+                    getString(R.string.default_group_name)
+                } ?: getString(R.string.default_group_name)
+                val participants = selected + username
+                GrpcClient.createGroupChat(groupName, participants, username) { chatId ->
+                    if (chatId != null) {
+                        runOnUiThread {
+                            sheet.dismiss()
+                            val intent = Intent(this, NewChatActivity::class.java).apply {
+                                putExtra("USERNAME", username)
+                                putExtra("ROOM_ID", chatId)
+                                putExtra("CHAT_NAME", groupName)
+                                putExtra("IS_DIRECT", false)
+                                putExtra("PARTICIPANTS", JSONArray(participants).toString())
+                                putExtra("CREATOR", username)
+                            }
+                            startActivity(intent)
+                        }
+                    } else {
+                        runOnUiThread {
+                            Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+        sheet.show()
+    }
+
+    // ======= Create Secret Chat Dialog =======
+
+    private fun showCreateSecretChatDialog() {
+        val username = SessionManager.session.value.username
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.secret_chat))
+            .setActionButtonText(getString(R.string.create))
+            .setLoading(true)
+
+        val userAdapter = UserAdapter(
+            scope = lifecycleScope,
+            onUserClick = { selected ->
+                val clickAdapter = sheet.recyclerView?.adapter as? UserAdapter
+                clickAdapter?.let {
+                    it.clearSelection()
+                    it.toggleSelection(selected)
+                }
+            },
+            onSelectionChanged = { count ->
+                sheet.setActionButtonEnabled(count == 1)
+            },
+            avatarCache = GrpcClient.getAvatarCache(),
+            onlineUsers = GrpcClient.users.value
+        )
+
+        sheet.setAdapter(userAdapter)
+
+        GrpcClient.getContacts(username) { contacts ->
+            runOnUiThread {
+                sheet.setLoading(false)
+                userAdapter.setUsers(contacts)
+            }
+        }
+
+        sheet.onSearchTextChanged { query ->
+            userAdapter.filter(query)
+        }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+            val targetUser = selected.first()
+
+            sheet.setLoading(true)
+
+            // Generate E2EE key pair and create secret chat
+            val publicKey = E2EEManager.getPublicKeyBase64(this@ChatListActivity)
+
+            GrpcClient.createSecretChat(targetUser, publicKey) { chatId, success, message, _ ->
+                runOnUiThread {
+                    sheet.setLoading(false)
+                    if (success && chatId.isNotEmpty()) {
+                        sheet.dismiss()
+                        val intent = Intent(this@ChatListActivity, NewChatActivity::class.java).apply {
+                            putExtra("USERNAME", username)
+                            putExtra("ROOM_ID", chatId)
+                            putExtra("CHAT_NAME", "🔒 $targetUser")
+                            putExtra("CHAT_TYPE", "secret")
+                            putExtra("IS_DIRECT", true)
+                            putExtra("PARTICIPANTS", JSONArray(listOf(username, targetUser)).toString())
+                            putExtra("IS_SECRET", "true")
+                        }
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(this@ChatListActivity, message.ifEmpty { "Failed to create secret chat" }, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+        sheet.show()
+    }
+
+    // ======= Create Conference Dialog =======
+
+    private fun showCreateConferenceDialog() {
+        val username = SessionManager.session.value.username
+        val sheet = SearchableListBottomSheet(this)
+            .setTitle(getString(R.string.conference))
+            .setActionButtonText(getString(R.string.create))
+            .setExtraInputVisible(true, getString(R.string.edit_topic))
+            .setLoading(true)
+
+        val userAdapter = UserAdapter(
+            scope = lifecycleScope,
+            onUserClick = { selected ->
+                (sheet.recyclerView?.adapter as? UserAdapter)?.toggleSelection(selected)
+            },
+            onSelectionChanged = { count ->
+                sheet.setActionButtonEnabled(count > 0)
+                sheet.setActionButtonText(if (count > 0) "${getString(R.string.create)} ($count)" else getString(R.string.create))
+            },
+            avatarCache = GrpcClient.getAvatarCache(),
+            onlineUsers = GrpcClient.users.value
+        )
+
+        sheet.setAdapter(userAdapter)
+
+        GrpcClient.getContacts(username) { contacts ->
+            runOnUiThread {
+                sheet.setLoading(false)
+                userAdapter.setUsers(contacts)
+            }
+        }
+
+        sheet.onSearchTextChanged { query ->
+            userAdapter.filter(query)
+        }
+
+        sheet.onActionClick {
+            val selected = userAdapter.getSelectedUsers()
+            if (selected.isEmpty()) return@onActionClick
+
+            val topic = sheet.extraEditText?.text?.toString()?.trim()?.ifEmpty {
+                val sdf = SimpleDateFormat("dd.MM", Locale.getDefault())
+                getString(R.string.new_conference_format, sdf.format(Date()))
+            } ?: getString(R.string.new_conference_format, SimpleDateFormat("dd.MM", Locale.getDefault()).format(Date()))
+
+            val participants = selected + username
+            GrpcClient.createGroupChat(topic, participants, username, "conference") { chatId ->
+                if (chatId != null) {
+                    runOnUiThread {
+                        sheet.dismiss()
+                        val intent = Intent(this, NewChatActivity::class.java).apply {
+                            putExtra("USERNAME", username)
+                            putExtra("ROOM_ID", chatId)
+                            putExtra("CHAT_NAME", topic)
+                            putExtra("CHAT_TYPE", "conference")
+                            putExtra("PARTICIPANTS", JSONArray(participants).toString())
+                            putExtra("CREATOR", username)
+                        }
+                        startActivity(intent)
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, R.string.failed_to_create_chat, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        sheet.show()
     }
 
     // ======= AI Bottom Sheet =======
@@ -823,13 +1183,6 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun navigateToChat(chat: ChatInfo, username: String) {
         when (chat.type) {
-            "favorites" -> {
-                val intent = Intent(this, lavender.client.android.FavoritesActivity::class.java).apply {
-                    putExtra("USERNAME", username)
-                    putExtra("USER_ID", SessionManager.session.value.userId)
-                }
-                startActivity(intent)
-            }
             "hermes" -> {
                 val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
                     putExtra("CHAT_ID", chat.id)

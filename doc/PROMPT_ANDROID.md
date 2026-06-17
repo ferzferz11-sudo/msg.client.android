@@ -1,61 +1,36 @@
-# Промпт для новой сессии — Android v1.1.3.30+
+# Промпт для новой сессии — Android v1.1.3.31+
 
 **Дата:** 2026-06-17
-**Версия:** 1.1.3.29
+**Версия:** 1.1.3.30
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.29 — завершена
+## СТАТУС: v1.1.3.30 — завершена
 
 ### Что сделано в этой сессии:
-- ✅ Кастомные темы — полная адаптация тулбара (AppBarLayout, TabLayout, toolbar title/subtitle)
-- ✅ ThemeStore.init() в applyTheme() для загрузки кастомной темы из кэша
-- ✅ Favorites — убран таб, возвращён как секция в списке
-- ✅ Убрана шестерёнка настроек (дублировала шторку профиля)
-- ✅ Обновления — убрана автозагрузка, текстовый индикатор "New version available"
-- ✅ Серверы — logout сбрасывает на prod, dev всегда зелёный
-- ✅ Исправлен краш updateCoordinator при возврате из профиля
+- ✅ FAB [+] — восстановлен как в v1: ActionBottomSheet + SearchableListBottomSheet
+- ✅ showAddContactDialog() — поиск пользователей, добавление в контакты, чекбокс "Create direct chat after"
+- ✅ showCreateChatDialog() — выбор 1 пользователя → direct, 2+ → group
+- ✅ showCreateSecretChatDialog() — одиночный выбор, E2EE ключи
+- ✅ showCreateConferenceDialog() — мультивыбор, поле topic
+- ✅ Favorites — убран из секций списка (Section.FAVORITES, FavoritesItem)
+- ✅ Favorites — добавлен в шторку профиля (actionFavorites)
+- ✅ FavoritesActivity — исправлена загрузка (SessionManager, SwipeRefresh, empty state)
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.30)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.31)
 
 ### 🔴 Высокий приоритет
-
-#### 1. Восстановить шторку FAB [+] как в v1
-Сейчас: простая шторка с 4 пунктами и extras которые NewChatActivity не понимает.
-Нужно: ActionBottomSheet → SearchableListBottomSheet для выбора пользователей.
-
-**Пункты шторки:**
-- **Add Contact** → SearchableListBottomSheet с поиском пользователей, добавление в контакты
-- **Start Chat** → SearchableListBottomSheet, выбор 1 пользователя → createDirectChat, выбор 2+ → createGroupChat
-- **Secret Chat** → SearchableListBottomSheet, выбор 1 пользователя → createSecretChat (E2EE)
-- **Conference (in development)** → SearchableListBottomSheet, выбор участников → createConference
-
-**Нужно создать:**
-- `ActionBottomSheet` — простая шторка со списком действий (аналог из v1)
-- `SearchableListBottomSheet` — шторка с поиском, списком пользователей, кнопкой действия
-- `UserAdapter` — адаптер для списка пользователей с выбором
-
-**v1 reference:** `doc/ChatListActivity_v1_REFERENCE.kt` строки 1996-2412
-
-#### 2. Favorites — убрать из секций, добавить в шторку профиля
-- Убрать Favorites из `ChatListViewModel.buildSections()`
-- Добавить пункт "Favorites" в `showSettingsSheet()` (шторка профиля по клику на аватар)
-- По тапу открывать `FavoritesActivity` с передачей USER_ID
-
-#### 3. FavoritesActivity — исправить загрузку данных
-- Получать userId из intent напрямую
-- Исправить отображение списка избранных сообщений
+1. ProfileService v2 — проверить работу на dev сервере
+2. Read receipts — MarkAsRead с broadcast
 
 ### 🟡 Средний приоритет
-4. ProfileService v2 — проверить работу на dev сервере
-5. Read receipts — MarkAsRead с broadcast
+3. ChatListActivity разбиение (ToolbarManager, TabManager)
 
 ### 🟢 Отложено
 - NewChatActivity рефакторинг — отложено по решению ферзя
-- ChatListActivity разбиение (ToolbarManager, TabManager)
 - Qdrant + CLIP (production RAG)
 - Shared element transitions
 - Infinite scroll + pagination

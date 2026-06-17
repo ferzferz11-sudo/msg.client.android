@@ -232,6 +232,12 @@ onView(withId(R.id.rvChatList))
 - ✅ **ChatAdapterV2 notifyDataSetChanged** — заменён на DiffUtil + dispatchUpdatesTo с анимациями
 - ✅ **Unread badges** — цвета по теме, real-time update через SharedFlow
 
+### Исправлено в v1.1.3.30
+- ✅ **FAB [+] восстановлен** — ActionBottomSheet + SearchableListBottomSheet как в v1
+- ✅ **Favorites убран из секций** — Section.FAVORITES, FavoritesItem удалены
+- ✅ **Favorites добавлен в шторку профиля** — actionFavorites в bottom_sheet_user_menu.xml
+- ✅ **FavoritesActivity исправлен** — SessionManager вместо intent, SwipeRefresh, empty state
+
 ### Исправлено в v1.1.3.29
 - ✅ **NewChatBottomSheet** — восстановлен с полным набором пунктов из v1 (7 пунктов)
 - ✅ **Favorites в табах** — добавлен таб "Favorites" с фильтрацией
