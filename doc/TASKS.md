@@ -6,21 +6,21 @@
 
 ---
 
-## ✅ v1.1.3.29 — FAB [+] восстановление, Favorites в табах, кастомные темы (Сессия 35)
+## ✅ v1.1.3.29 — UI улучшения (Сессия 35)
 
 ### FAB [+] — шторка создания нового чата
-- ✅ **bottom_sheet_new_chat.xml** — обновлён с полным набором пунктов (Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI)
-- ✅ **NewChatBottomSheet.kt** — переписан с обработкой всех пунктов
+- ✅ **bottom_sheet_new_chat.xml** — 4 пункта (Add Contact, Start Chat, Group, Secret Chat)
+- ✅ **NewChatBottomSheet.kt** — переписан, AI чаты убраны (отдельно через FAB AI)
 - ✅ **ChatListActivity.kt** — добавлен `showAddContactDialogPublic()` для ContactsActivity
 
-### Favorites в табах
-- ✅ **strings.xml** (en + ru) — добавлена `tab_favorites`
-- ✅ **ChatListActivity.setupTabs()** — добавлен таб "Favorites"
-- ✅ **ChatListViewModel.buildSections()** — добавлена фильтрация `favorites` + дедупликация
+### Favorites — секция в списке
+- ✅ Favorites — секция в списке чатов (не таб), открывается FavoritesActivity
+- ✅ **ChatListViewModel.loadFavorites()** — загрузка данных Favorites с сервера
+- ✅ Таб "Favorites" убран, остались All/AI/Groups
 
 ### Кастомные темы
-- ✅ **activity_chat_list.xml** — AppBarLayout получил ID, фон transparent, ivActionSettings всегда виден
-- ✅ **ThemeApplier.kt** — AppBarLayout красится в customPrimary, toolbar title/subtitle красятся явно, TabLayout transparent
+- ✅ **activity_chat_list.xml** — AppBarLayout ID, transparent bg, ivActionSettings всегда виден
+- ✅ **ThemeApplier.kt** — AppBarLayout tinting, toolbar title/subtitle explicit colors, TabLayout transparent
 - ✅ **ChatListActivity.applyTheme()** — добавлен `ThemeStore.init(this)` для загрузки кастомной темы из кэша
 
 ---

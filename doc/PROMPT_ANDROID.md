@@ -205,8 +205,8 @@ cd /root/msg.client.android
 ## CHANGELOG (последние версии)
 
 ### v1.1.3.29 — UI улучшения
-- NewChatBottomSheet — 7 пунктов меню (Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI)
-- Favorites — добавлен в табы (All/AI/Groups/Favorites)
+- NewChatBottomSheet — 4 пункта (Add Contact, Start Chat, Group, Secret Chat)
+- Favorites — секция в списке чатов (не таб), открывается FavoritesActivity
 - Тулбар — полная адаптация к кастомным темам (AppBarLayout, TabLayout, title/subtitle)
 - ThemeStore.init() в applyTheme() для загрузки кастомной темы из кэша
 - ivActionSettings — всегда виден после авторизации

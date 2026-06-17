@@ -827,7 +827,6 @@
     <string name="tab_all">Все</string>
     <string name="tab_ai">ИИ</string>
     <string name="tab_groups">Группы</string>
-    <string name="tab_favorites">Избранное</string>
     <string name="section_pinned">Закреплённые</string>
     <string name="section_favorites">Избранное</string>
     <string name="section_all_chats">Все чаты</string>

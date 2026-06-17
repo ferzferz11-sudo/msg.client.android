@@ -73,12 +73,41 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 } ?: emptyList()
 
                 allChats = fetchedChats
+                loadFavorites(username)
                 buildSections(fetchedChats)
                 Log.d(TAG, "Loaded ${fetchedChats.size} chats")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    private fun loadFavorites(username: String) {
+        val userId = lavender.client.android.data.session.SessionManager.session.value.userId
+        if (userId.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                GrpcClient.getFavorites(userId) { messages ->
+                    // Favorites chat exists as type="favorites" in chats list
+                    // Just ensure it's present
+                    val favoritesId = "favorites_$username"
+                    val hasFavorites = allChats.any { it.id == favoritesId }
+                    if (!hasFavorites) {
+                        val favoritesChat = lavender.client.android.data.models.ChatInfo(
+                            id = favoritesId,
+                            name = "Favorites",
+                            type = "favorites",
+                            lastMessageText = "",
+                            lastMessageTime = 0L
+                        )
+                        allChats = allChats + favoritesChat
+                        buildSections(allChats)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load favorites", e)
             }
         }
     }
@@ -246,7 +275,6 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         val filteredChats = when (tab) {
             "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
             "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
-            "favorites" -> chats.filter { it.type == "favorites" }
             else -> chats // "all"
         }
 
@@ -261,7 +289,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         if (pinned.isNotEmpty()) {
             sectionList.add(SectionItem(Section.PINNED, pinned))
         }
-        if (favorites.isNotEmpty() && tab != "favorites") {
+        if (favorites.isNotEmpty()) {
             sectionList.add(SectionItem(Section.FAVORITES, favorites))
         }
         if (allRegular.isNotEmpty()) {

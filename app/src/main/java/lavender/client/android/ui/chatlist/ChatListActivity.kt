@@ -480,7 +480,6 @@ class ChatListActivity : AppCompatActivity() {
             tabs.addTab(tabs.newTab().setText(R.string.tab_all))
             tabs.addTab(tabs.newTab().setText(R.string.tab_ai))
             tabs.addTab(tabs.newTab().setText(R.string.tab_groups))
-            tabs.addTab(tabs.newTab().setText(R.string.tab_favorites))
 
             tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -488,7 +487,6 @@ class ChatListActivity : AppCompatActivity() {
                         0 -> "all"
                         1 -> "ai"
                         2 -> "groups"
-                        3 -> "favorites"
                         else -> "all"
                     }
                     viewModel.setTabFilter(filter)
@@ -829,13 +827,9 @@ class ChatListActivity : AppCompatActivity() {
     private fun navigateToChat(chat: ChatInfo, username: String) {
         when (chat.type) {
             "favorites" -> {
-                val intent = Intent(this, NewChatActivity::class.java).apply {
+                val intent = Intent(this, lavender.client.android.FavoritesActivity::class.java).apply {
                     putExtra("USERNAME", username)
-                    putExtra("CHAT_NAME", getString(R.string.favorites))
-                    putExtra("ROOM_ID", "favorites_$username")
-                    putExtra("IS_DIRECT", false)
-                    putExtra("PARTICIPANTS", "[\"$username\"]")
-                    putExtra("CREATOR", username)
+                    putExtra("USER_ID", SessionManager.session.value.userId)
                 }
                 startActivity(intent)
             }

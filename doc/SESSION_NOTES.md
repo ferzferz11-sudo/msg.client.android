@@ -1,6 +1,6 @@
 # Lava Messenger — Android Session Notes
 
-## Сессия 35 (2026-06-17) — FAB [+] восстановление, Favorites в табах, кастомные темы
+## Сессия 35 (2026-06-17) — UI улучшения
 
 ### Контекст
 - FAB [+] уже был подключен через NewChatBottomSheet, но шторка имела ограниченный набор пунктов
@@ -9,22 +9,15 @@
 
 ### Что сделано
 
-#### 1. FAB [+] — восстановление шторки из v1
-- **bottom_sheet_new_chat.xml** — обновлён с полным набором пунктов:
-  - Add Contact (из v1)
-  - Start Chat / New Private Chat (из v1)
-  - New Group
-  - Secret Chat (из v1)
-  - Conference (из v1)
-  - Hermes AI
-  - OWL AI
-- **NewChatBottomSheet.kt** — переписан с обработкой всех пунктов
-- **ChatListActivity.kt** — добавлен публичный метод `showAddContactDialogPublic()` для открытия ContactsActivity
+#### 1. FAB [+] — шторка с 4 пунктами (как в v1)
+- **bottom_sheet_new_chat.xml** — 4 пункта: Add Contact, Start Chat, Group, Secret Chat
+- **NewChatBottomSheet.kt** — переписан, AI чаты убраны (отдельно через FAB AI робот)
+- **ChatListActivity.kt** — добавлен `showAddContactDialogPublic()` для ContactsActivity
 
-#### 2. Favorites в табах
-- **strings.xml** (en + ru) — добавлена строка `tab_favorites`
-- **ChatListActivity.setupTabs()** — добавлен таб "Favorites" (position 3)
-- **ChatListViewModel.buildSections()** — добавлена фильтрация `favorites` и дедупликация (Favorites секция не показывается когда активен таб Favorites)
+#### 2. Favorites — секция в списке (не таб)
+- Favorites — секция в списке чатов, открывается FavoritesActivity
+- **ChatListViewModel.loadFavorites()** — загрузка данных Favorites с сервера
+- Таб "Favorites" убран, остались All/AI/Groups
 
 #### 3. Кастомные темы — тулбар и Activity
 - **activity_chat_list.xml**:
@@ -40,7 +33,8 @@
 - **ChatListActivity.applyTheme()** — добавлен вызов `ThemeStore.init(this)` перед применением темы
 
 ### Коммиты
-- TBD — feat: restore NewChatBottomSheet with full menu, add Favorites tab, fix toolbar theming
+- `0b24375` — feat: restore NewChatBottomSheet with full menu, add Favorites tab, fix toolbar theming
+- `dc7b7e3` — docs: full documentation revision for v1.1.3.29
 
 ---
 

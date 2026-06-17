@@ -830,7 +830,6 @@
     <string name="tab_all">All</string>
     <string name="tab_ai">AI</string>
     <string name="tab_groups">Groups</string>
-    <string name="tab_favorites">Favorites</string>
     <string name="section_pinned">Pinned</string>
     <string name="section_favorites">Favorites</string>
     <string name="section_all_chats">All Chats</string>
