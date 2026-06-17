@@ -1,5 +1,21 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 41 (2026-06-17) — Tab order + AI rename + compile fix (v1.1.3.32)
+
+### Контекст
+- Финальные правки перед релизом v1.1.3.32
+
+### Что сделано
+- Табы: порядок изменён на Все → Группы → ИИ чаты (был Все → ИИ → Группы)
+- Переименование: "AI" → "AI Chats" (en), "ИИ" → "ИИ чаты" (ru)
+- Исправлена ошибка компиляции: `showAddContactDialogPublic()` → `showAddContactDialog()` в NewChatBottomSheet.kt
+- `showAddContactDialog` в ChatListActivity сделан internal для доступа из NewChatBottomSheet
+
+### Коммит
+- `118f178` — fix: tab order + AI rename + NewChatBottomSheet compile fix
+
+---
+
 ## Сессия 40 (2026-06-17) — ChatListActivity модуляризация (v1.1.3.32)
 
 ### Контекст

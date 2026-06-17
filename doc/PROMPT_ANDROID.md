@@ -9,17 +9,17 @@
 
 ## СТАТУС
 
-v1.1.3.32 — стабильность ChatList (аудит + 2 бага исправлены)
+v1.1.3.32 — завершена. Тег выпущен. Релиз APK отложен до выполнения всех пунктов плана.
 
 ---
 
 ## АРХИТЕКТУРА
 
-### ChatListActivity (v1.1.3.32)
+### ChatList
 ```
 ChatListActivity.kt (~600) — onCreate, setupUI, lifecycle, proxy methods
 ├── ChatListToolbar.kt (232) — toolbar + settings sheets
-├── ChatListTabs.kt (29) — tabs
+├── ChatListTabs.kt (29) — tabs (All/Groups/AI Chats)
 ├── ChatListActionMode.kt (120) — selection mode
 ├── ChatListSearch.kt (55) — search
 ├── ChatListFABs.kt (450) — FABs + action sheets + AI bottom sheet
@@ -56,10 +56,11 @@ RealGrpcClient (orchestrator, 874 LOC)
 
 ---
 
-## ПРИОРИТЕТЫ
+## ПРИОРИТЕТЫ (v1.1.3.33)
 
 ### 🟡 Средний
-- ChatListActivity дальнейшее разбиение (FABs → ChatListFABs.kt, Auth → ChatListAuth.kt, Navigation → ChatListNavigation.kt)
+- Тестирование v1.1.3.32 на реальных чатах (ferz локально)
+- Найти и исправить баги при тестировании
 
 ### 🟢 Отложено
 - NewChatActivity рефакторинг
@@ -103,9 +104,9 @@ cd /root/msg.client.android
 
 | Файл | Назначение |
 |------|-----------|
-| `doc/INDEX.md` | Индекс |
-| `doc/SESSION_NOTES.md` | Заметки сессий |
-| `doc/PATTERNS.md` | Паттерны |
+| `doc/INDEX.md` | Индекс всей документации |
+| `doc/SESSION_NOTES.md` | Заметки сессий (39-41) |
+| `doc/PATTERNS.md` | Паттерны и правила разработки |
 | `doc/CODE_AUDIT.md` | Аудит кода |
 | `doc/REMOTE_AGENT.md` | Remote Agent |
 | `doc/ChatListActivity_v1_REFERENCE.kt` | v1 reference (2802 LOC) |
@@ -115,46 +116,41 @@ cd /root/msg.client.android
 
 ## CHANGELOG
 
-### v1.1.3.32 (сессии 39-40) — ChatList stability + модуляризация
+### v1.1.3.32 (сессии 39-41) — ChatList stability + модуляризация
 - fix: loadChats() — при timeout НЕ перезаписывать allChats
 - fix: read receipts — indexOfFirst проверка перед map
 - refactor: ChatListActivity 1085→~600 LOC (-45%), 3 новых модуля (FABs, Navigation, Auth)
+- fix: табы переупорядочены: Все → Группы → ИИ чаты
+- fix: переименовано "AI" → "AI Chats" / "ИИ" → "ИИ чаты"
+- fix: исправлена ошибка компиляции в NewChatBottomSheet
 - docs: объединены TASKS.md + PROMPT_ANDROID.md
 
-### v1.1.3.31 (сессия 37-38) — Read receipts + модуляризация
+### v1.1.3.31 (сессии 37-38) — Read receipts + модуляризация
 - feat: read receipts broadcast — readReceiptEvent SharedFlow → ChatListViewModel
 - refactor: ChatListActivity 1470→1085 LOC (-26%), 4 новых модуля
 
 ### v1.1.3.30 (сессия 36) — FAB + Favorites
 - feat: FAB [+] восстановлен — ActionBottomSheet + SearchableListBottomSheet
 - fix: Favorites убран из секций, добавлен в шторку профиля
-- fix: FavoritesActivity убрана, навигация через navigateToChat с favorites_ prefix
+- fix: FavoritesActivity убрана
 
 ### v1.1.3.28-29 (сессии 33-35) — gRPC модули + UI
 - refactor: RealGrpcClient 3810→874 LOC (-77%), 12 модулей
 - feat: кастомные темы для AppBarLayout, TabLayout
-- feat: NewChatBottomSheet с полным набором пунктов
 
 ### v1.1.3.24-25 (сессии 30-31) — Auth + Updates
 - feat: полный auth flow — LoginBottomSheet + RegisterBottomSheet
 - feat: UpdateManager — silent check, manual check, progress dialog
-- refactor: Settings Sheet вместо ProfileBottomSheet
 
 ### v1.1.3.23 (сессия 28) — Единый Activity
 - Удалён v1 ChatListActivity (2802 LOC)
 - ChatListActivityV2 → ChatListActivity (единый)
-- JWT auth fallback, reconnect optimization
 
 ### v1.1.3.22 (сессия 27) — Rename
-- Lavender → Lava (все user-facing строки)
+- Lavender → Lava
 
 ### v1.1.3.21 (сессия 26) — Push
-- FCM push notifications, HIGH priority, DND bypass
-
-### v1.1.3.17-20 — AI + Stability
-- FAB AI, AIBottomSheet
-- Selection Mode, Search, Pin Message
-- JWT auth fix, DiffUtil, unread badges
+- FCM push notifications
 
 ---
 
