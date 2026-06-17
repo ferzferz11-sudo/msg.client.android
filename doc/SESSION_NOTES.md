@@ -1,5 +1,26 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 39 (2026-06-17) — ChatList stability fixes (v1.1.3.32)
+
+### Контекст
+- v1.1.3.31 выпущен, тег на месте
+- Главный приоритет: стабильность ChatList
+
+### Что сделано
+
+#### 1. loadChats() — не перезаписывать allChats при timeout
+- **Проблема:** `withTimeoutOrNull` возвращал `null` при таймауте, `?: emptyList()` заменял `allChats` на пустой список → пользователь видел пустой список чатов
+- **Исправление:** `if (fetchedChats != null)` — обновлять только при успешном ответе, при timeout логировать warning и сохранять существующий список
+
+#### 2. Read receipts — оптимизация
+- **Проблема:** `allChats.map { ... }` по всему списку даже если roomId не найден
+- **Исправление:** `indexOfFirst { it.id == roomId }` — проверять наличие перед обновлением, обновлять только конкретный элемент через `toMutableList().also { it[idx] = ... }`
+
+### Коммит
+- `dd8ba35` — fix: ChatList stability — don't clear chats on timeout, optimize read receipts
+
+---
+
 ## Сессия 38 (2026-06-17) — Read receipts broadcast (v1.1.3.31)
 
 ### Контекст

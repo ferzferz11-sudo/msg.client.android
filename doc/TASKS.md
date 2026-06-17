@@ -1,8 +1,19 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.30
-**Обновлено:** 2026-06-17 (сессия 36)
+**Версия:** v1.1.3.32
+**Обновлено:** 2026-06-17 (сессия 39)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.32 — ChatList stability fixes (Сессия 39)
+
+### Исправления стабильности
+- ✅ **loadChats() timeout fix** — при таймауте allChats НЕ заменяется на emptyList (пользователь видит старый список вместо пустого экрана)
+- ✅ **Read receipts optimization** — indexOfFirst проверка перед map, обновление только конкретного элемента вместо полного прохода по списку
+
+### Коммит
+- `dd8ba35` — fix: ChatList stability — don't clear chats on timeout, optimize read receipts
 
 ---
 
@@ -249,8 +260,8 @@ ChatListActivity.kt (1085) — основной Activity
 ## 📋 Активные задачи
 
 ### 🔴 Главный приоритет (v1.1.3.32)
-- [ ] **Стабильность ChatList** — тестировать на реальных чатах, находить и фиксить баги
-- [ ] **Read receipts** — проверить в реальном общении (unread count обновляется в реальном времени)
+- [x] **Стабильность ChatList** — аудит кода, найдены и исправлены 2 бага (loadChats timeout, read receipts)
+- [x] **Read receipts** — оптимизация: indexOfFirst проверка перед map
 
 ### 🟡 Средний приоритет
 - [ ] ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)

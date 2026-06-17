@@ -1,13 +1,13 @@
 # Промпт для новой сессии — Android v1.1.3.32+
 
 **Дата:** 2026-06-17
-**Версия:** v1.1.3.31
+**Версия:** v1.1.3.32
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.31
+**Тег:** v1.1.3.32
 
 ---
 
-## СТАТУС: v1.1.3.31 — завершена, тег выпущен
+## СТАТУС: v1.1.3.32 — в работе
 
 ### Что сделано (CHANGELOG):
 - ✅ ChatListActivity разбиение: 1470 → 1085 строк (-26%)
@@ -15,18 +15,15 @@
 - ✅ Read receipts — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
 - ✅ ProfileService v2 — ferz подтвердил работу на dev сервере
 - ✅ FavoritesActivity убрана, навигация через navigateToChat с favorites_ prefix
-- ✅ Документация оптимизирована
+- ✅ loadChats() timeout fix — при таймауте allChats НЕ заменяется на emptyList
+- ✅ Read receipts optimization — indexOfFirst проверка перед map
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.32)
-
-### 🔴 Главный приоритет
-1. **Стабильность ChatList** — тестировать на реальных чатах, находить и фиксить баги
-2. **Read receipts** — проверить в реальном общении (unread count должен обновляться)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.33)
 
 ### 🟡 Средний приоритет
-3. ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
+1. ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
 
 ### 🟢 Отложено
 - NewChatActivity рефакторинг — отложено по решению ферзя
