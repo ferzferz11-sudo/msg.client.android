@@ -251,7 +251,7 @@ ChatListActivity.kt (1085) — основной Activity
 ### Высокий приоритет (v1.1.3.32)
 - [x] **ProfileService v2** — проверить работу на dev сервере (ferz подтвердил)
 - [x] **Read receipts** — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
-- [ ] **FavoritesActivity рефакторинг** — убрать отдельную Activity, использовать navigateToChat с favorites_ prefix
+- [x] **FavoritesActivity рефакторинг** — убрана отдельная Activity, используется navigateToChat с favorites_ prefix (v1.1.3.30)
 
 ### Средний приоритет
 - [ ] ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation → отдельные файлы)

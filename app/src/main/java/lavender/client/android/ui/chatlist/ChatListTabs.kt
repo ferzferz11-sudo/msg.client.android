@@ -1,6 +1,7 @@
 package lavender.client.android.ui.chatlist
 
 import com.google.android.material.tabs.TabLayout
+import lavender.client.android.R
 
 /**
  * Tab setup for ChatListActivity.

@@ -83,7 +83,7 @@ class ChatListActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ChatListActivity"
-        private const val SEARCH_DEBOUNCE_MS = 300L
+        internal const val SEARCH_DEBOUNCE_MS = 300L
     }
 
     internal lateinit var viewModel: ChatListViewModel
