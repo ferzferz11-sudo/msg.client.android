@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.*
+import lavender.client.android.data.proto.ProtoUtils
 
 /**
  * Handles favorites operations: addFavorite, removeFavorite, getFavorites, saveFavoriteMessage.

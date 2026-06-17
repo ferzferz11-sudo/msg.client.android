@@ -1,6 +1,6 @@
 package lavender.client.android.data.grpc
 
-import Timestamp
+import com.google.protobuf.Timestamp
 import io.grpc.MethodDescriptor
 import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream

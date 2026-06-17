@@ -4,8 +4,9 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
-import AIChatInfo
+import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.*
 
 /**
