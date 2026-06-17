@@ -1,339 +1,84 @@
 # Lava Messenger — Android Changelog
 
-## [1.1.3.31] - 2026-06-17
+## [1.1.3.34] - 2026-06-17
 
-### Рефакторинг: Разбиение ChatListActivity
-- **ChatListActivity: 1470 → 1085 строк (-26%)**
-- Вынесено 4 модуля в пакет `ui/chatlist/`:
-  - `ChatListToolbar.kt` (232 строк) — toolbar actions, settings sheets, about, share, language
-  - `ChatListTabs.kt` (29 строк) — tab setup + listener
-  - `ChatListActionMode.kt` (120 строк) — selection mode callback + pin/mute/archive/delete
-  - `ChatListSearch.kt` (55 строк) — search menu + debounce
-- Поля ChatListActivity изменены с `private` на `internal` для межмодульного доступа
-- Публичные методы (`navigateToChat`, `showAddContactDialogPublic`) — `internal` для доступа из модулей
-
----
-
-## [1.1.3.23] - 2026-06-16
-
-### Рефакторинг: Единый ChatListActivity
-- **Удалён ChatListActivity (v1)** — 2802 строки мёртвого кода
-- **Удалён ChatAdapter (v1)**
-- ChatListActivityV2 → ChatListActivity (единый)
-- ChatListViewModelV2 → ChatListViewModel
-- ChatAdapterV2 → ChatAdapter
-- Убран fallbackToV1() — один Activity работает на v1 и v2 серверах
-- Обновлён SplashActivity — всегда route на ChatListActivity
-- Обновлён AndroidManifest — одна запись ChatListActivity
-- activity_chat_list_v2.xml → activity_chat_list.xml
-
-### Исправлено: Соединение
-- **JWT auth fallback** — при JWT ошибке: clear tokens → retry с password
-- **getChats retry** — при shutdownNow через 1.5с вместо emptyList
-- **Backup chat stream restart** — при shutdownNow race condition через 2с
-- **Аватар в тулбаре** — Glide + avatarCacheFlow
-- **Статус соединения** — RECONNECTING и FAILED отображаются в тулбаре
-- Убран ivActionMute из ThemeApplier (v1-only ID)
-
-### Коммиты
-- `cde8776` — chore: rename Lavender → Lava
-- `33ce3a5` — fix: update share text and descriptions
-- `86ecb9f` — fix: getChats retry after shutdownNow
-- `01313ae` — fix: force chat stream restart after shutdownNow race
-- `1b43a27` — fix: AuthManager.clearTokens null-safety
-- `44485a7` — debug: add stack trace logging for forceReconnect
-- `383292f` — refactor: merge v1/v2 ChatList into single Activity
-- `1f8ce5d` — fix: compilation errors after v1/v2 merge
-
----
-
-## [1.1.3.22] - 2026-06-16
-
-### Новое: Rename Lavender → Lava
-- Все значения strings.xml: Lavender → Lava (en), Lavender → Лава (ru)
-- Каналы уведомлений: "Lavender Calls" → "Lava Calls", "Lavender Messages" → "Lava Messages"
-- Тема: "Lavender Night" → "Lava Night" (en)
-- Hardcoded строки в Kotlin заменены на R.string.*
-- share_app_description: "Lava: secure business communications platform" / "Лава: платформа защищенных бизнес-коммуникаций"
-
-### Коммиты
-- `cde8776` — chore: rename Lavender → Lava in all user-facing strings (en + ru)
-- `33ce3a5` — fix: update share text and descriptions
-
----
-
-## [1.1.3.21] - 2026-06-16
-
-### Новое: FCM Push Notifications — HIGH Priority
-- **Сервер (v1.2.0.2)**: `AndroidConfig.Priority = "high"` + `AndroidNotification.PriorityHigh` — push проходит через Doze
-- **Сервер**: `Hub.IsUserOnline(userId, username)` — проверка онлайн-статуса по userId (v2) с fallback на username (v1)
-- **Сервер**: `sendPushNotification` пропускает push если пользователь онлайн в gRPC стриме
-- **Сервер**: `CollapseKey = roomID` — заменяет предыдущий push для того же чата
-- **Сервер**: `TTL = 5 min` — не хранит старые push
-- **Сервер**: `GetAllUsers()` теперь возвращает `UserId` (UUID)
-- **Сервер**: `SetUserId()` вызывается при v2 JWT аутентификации
-- **Android**: канал `lavender_messages` — `IMPORTANCE_HIGH` + vibration + badge
-- **Android**: `NotificationCompat.PRIORITY_HIGH` + `CATEGORY_MESSAGE` + `VISIBILITY_PUBLIC`
-- **Android**: DND bypass switch в NotificationActivity + `channel.setBypassDnd(true)` для O+
-- **Android**: `requestDndBypassPermission()` — открывает настройки если нет разрешения
-- **i18n**: `push_bypass_dnd` + `push_bypass_dnd_hint` (en + ru)
-- **i18n**: `lavender_messages_channel_desc` (en + ru)
-
-### Исправлено
-- **NotificationActivity**: добавлен недостающий `import android.content.Intent`
-- **LavenderMessagingService**: убран дубликат `val prefs`, исправлен DND bypass (channel.setBypassDnd вместо notificationBuilder)
-
-### Коммиты
-- `8b1dd90` — feat: FCM push — HIGH priority notifications
-- `a3bb5b9` — feat: FCM push — DND bypass + online user skip
-- `883eef1` — fix: Android compilation errors
-
----
-
-## [1.1.3.19] - 2026-06-16
-
-### Исправлено: JWT auth для ChatStream v2
-- **JWT token malformed** — `getBearerToken()` возвращал `"Bearer <token>"` с префиксом, а `setJwtToken()` ожидал чистый токен
-- Исправлено: используем `getAccessToken()` для JWT в ChatStream
-- **Бесконечный reconnect loop при auth failure** — `UNKNOWN - authentication failed` не ловился как auth error
-- Добавлена проверка `authentication failed` / `JWT validation failed` / `token is malformed` → FAILED status, без retry
-
-### Исправлено: Дублированный reconnect logic
-- **3 независимых источника reconnect** (onClose, onError, getChats onClose) конфликтовали
-- onClose больше не вызывает reconnect, только делегирует в onError
-- getChats() onClose не трогает connection status
-- onError — единственный источник reconnect с isRetrying guard
-
-### Новое: Unread badges
-- Бейдж стилизуется по теме (primary color bg, adaptive text color)
-- Кап 99+ для больших чисел
-- MarkAsRead при клике на чат (clear badge + server MarkAsRead)
-- Реал-тайм обновление через newMessageEvent SharedFlow
-
-### Новое: DiffUtil в ChatAdapterV2
-- Заменён notifyDataSetChanged на DiffUtil.calculateDiff() + dispatchUpdatesTo()
-- Анимации добавления/удаления элементов, нет мерцания
+### Тесты: Unit-тесты для gRPC клиента
+- **42 unit-теста** для gRPC модулей (было 0):
+  - GrpcAuthClientTest (10) — signIn, signUp, refreshToken, signOut, revokeDevice
+  - GrpcChatListClientTest (8) — getChats, pinChat, searchChats, deleteChat
+  - GrpcMessageClientTest (8) — sendMessage, addLocalMessage, loadHistory, markRead
+  - GrpcConnectionManagerTest (6) — connect, disconnect, reconnect, isConnectedTo
+  - GrpcClientFacadeTest (6) — connectionState mapping, StateFlow probing
+  - GrpcUnaryCallHelperTest (4) — unaryCall, null channel, error handling
+- Добавлены зависимости: mockk 1.13.8, turbine 1.0.0, coroutines-test 1.7.3
+- Созданы тестовые утилиты: TestChannelFactory, TestDatabaseFactory, FlowTestExtensions
 
 ### Документация
-- Создан `doc/ARCH_ANALYSIS_V2_V1.md` — полный анализ архитектуры v2 vs v1
-
-### Коммиты
-- `9726929` — fix: JWT auth and infinite reconnect on auth failure
-- `63ed73f` — fix: eliminate duplicate reconnect logic
-- `959a79f` — feat: add DiffUtil to ChatAdapterV2
-- `e029aa7` — feat: unread badges — theme colors, mark-as-read, real-time update
-- `583bf3f` — docs: add ARCH_ANALYSIS_V2_V1.md
+- Оптимизация документации: удалены 9 устаревших файлов, консолидированы актуальные
+- Создан PLAN_V1.1.3.34.md с детальным планом реализации
 
 ---
 
-## [1.1.3.18] - 2026-06-16
+## [1.1.3.33] - 2026-06-17
 
-### Исправлено: Баг загрузки чатов (сессия 19)
-- **Корневая причина**: `connect()` ставил READY сразу после `builder.build()`, до установления TCP
-- **Корневая причина**: Двойной `loadChats()` в ChatListActivityV2 (Activity + ViewModel)
-- **Корневая причина**: Cache-first логика в `getChats()` вызывала `callback(emptyList())`
-- Убран HTTP health check, используется optimistic READY
-- Убрана cache-first логика; callback всегда вызываетс
-- Добавлен reconnect при transport errors
-- onResume() safety nets для v1 и v2
+### Рефакторинг: NewChatActivity делегаты
+- **NewChatActivity: 1473 → 754 строк (-49%)**
+- Вынесено 6 модулей в `ui/chat/message/`:
+  - ChatToolbarDelegate (341) — toolbar, avatar, subtitle, navigation
+  - ChatInputDelegate (567) — input, send, attachments, audio, emoji, mentions
+  - ChatSelectionDelegate (236) — selection mode, copy/pin/delete/forward
+  - ChatSearchDelegate (135) — in-chat search
+  - ChatE2EEDelegate (72) — E2EE key exchange, encrypt/decrypt
+  - ChatMessageMenuDelegate (106) — reactions, context menu
 
-### Исправлено: Стабильность соединения (сессия 20)
-- **HTTP /info недоступен на dev** — fallback по gRPC порту (50052→v2, 50051→v1)
-- **Keepalive failures** — увеличены таймауты (30s/10s), добавлен idleTimeout 25min
-- **Множественные reconnect** — подавлен reconnect при shutdownNow
-- **Poll interval** — увеличен 5s → 30s
-- Сохранение currentServerPort для правильного reconnect
+### Рефакторинг: Унификация error handling
+- Все gRPC модули используют `ErrorHandler.handle()` (было `Log.e`)
+- ChatListViewModel.error StateFlow + Snackbar в ChatListActivity
+
+### Исправлено
+- Ошибки компиляции: импорты Lifecycle, isVisible, toColorInt, edit
+- Порядок инициализации: setupDelegates после setupRecyclerView
 
 ---
 
-## [1.1.3.17] - 2026-06-15
+## [1.1.3.32] - 2026-06-17
 
-### Новое: FAB AI — создание AI чата из ChatListActivityV2
-- **AIBottomSheet** подключён к FAB AI в ChatListActivityV2
-- Создание нового Hermes чата → HermesChatActivity (пустой chatId = создание на сервере)
-- Создание нового OWL чата → OwlChatActivity (пустой chatId = создание на сервере)
-- Существующие AI чаты отображаются в списке (Hermes + OWL)
-- Удаление AI чатов через контекстное меню
-- Настройки AI чатов → OwlSettingsActivity (для OWL и Hermes)
-- Навигация: таб AI фильтрует hermes/owl типы
+### Рефакторинг: Разбиение ChatListActivity
+- **ChatListActivity: 1085 → ~600 строк (-45%)**
+- Вынесено 3 модуля в `ui/chatlist/`:
+  - ChatListFABs (470) — FABs + action sheets + AI bottom sheet
+  - ChatListNavigation (60) — navigateToChat
+  - ChatListAuth (212) — auth dialogs
+
+### Исправлено
+- loadChats() — при timeout НЕ перезаписывать allChats
+- read receipts — indexOfFirst проверка перед map
+- Табы переупорядочены: Все → Группы → ИИ чаты
+- "AI" → "AI Chats" / "ИИ" → "ИИ чаты"
+
+---
+
+## [1.1.3.31] - 2026-06-17
+
+### Новое: Read receipts broadcast
+- readReceiptEvent SharedFlow → ChatListViewModel → clear unread count
 
 ### Рефакторинг
-- ChatListViewModelV2: добавлен публичный метод `getChats()` для доступа к списку чатов
-- ChatListActivityV2: импорты обновлены (AIChatInfo, AIBottomSheet)
+- ChatListActivity 1470→1085 строк (-26%), 4 новых модуля
 
 ---
 
-## [1.1.3.16] - 2026-06-16
+## [1.1.3.30] - 2026-06-16
 
-### Новое: Selection Mode (множественный выбор чатов)
-- **Long press** на чате → ActionMode toolbar с действиями (Pin/Unpin, Mute, Archive, Delete)
-- **Тап** в режиме выбора → toggle selection с checkbox
-- **Визуальная подсветка** выбранных элементов (primary color с alpha)
-- **Back press** → выход из selection mode (OnBackPressedDispatcher)
-- Массовые действия над выбранными чатами
-
-### Новое: Поиск чатов
-- **SearchView** в toolbar через inflateMenu
-- **Debounce 300ms** через coroutine Job
-- Локальная фильтрация allChats (работает на v1 и v2)
-
-### Новое: Pin Message
-- **PinMessage/UnPinMessage/GetPinnedMessages** RPC в ChatService
-- **Selection toolbar** — кнопка pin/unpin при выборе 1 сообщения
-- **Pinned badge** в MessageAdapter для закреплённых сообщений
-- Graceful fallback на v1 серверы
-
-### Новое: ServersActivity improvements
-- **Prefill** последнего логина в login bottom sheet
-- **Splash** после успешного входа/регистрации
-- Все серверы (включая dev) доступны всем пользователям
-
-### Новое: Очистка кэша при входе
-- **CacheUtils** — единый утилитный метод очистки кэша
-- Синхронная очистка БД (messages, chats) при входе (без Toast)
-- Полная очистка + Glide из настроек (с Toast)
-
-### Рефакторинг
-- Удалён дублирующийся код очистки кэша из всех Activity
-- Использование CacheUtils.clearAllSync() и CacheUtils.clearAllWithGlide()
-
-### Новое: ChatList v2 UI — полная реализация (сессия 13)
-- **ChatListActivityV2** — полная переработка: RecyclerView+SwipeRefresh напрямую в Activity (без фрагмента)
-- **TabLayout** — табы All / AI / Groups с фильтрацией через ViewModel (setTabFilter)
-- **Toolbar** — avatar→ProfileActivity, title→ServersActivity, search/settings icons
-- **FABs** — fabAi (TODO AI chat), fabAddChat→NewChatActivity
-- **Навигация** — favorites→NewChat, hermes→HermesChat, owl→OwlChat, other→NewChat
-- **Connection status** — subtitle с connecting/online/offline
-- **SplashActivity** — маршрутизация v1/v2 по наличию server host
-- **ChatAdapterV2** — исправлено дублирование cachedColors (единый кэш в адаптере)
-- **AndroidManifest** — регистрация ChatListActivityV2, удалены дубликаты activity
-- **strings.xml** — добавлены connection status строки (en+ru)
-- **activity_chat_list_v2.xml** — SwipeRefresh+RecyclerView вместо FragmentContainer, убран XML tint с FAB
-- Backward compatible: v1 пользователи не получают изменений
-
-### Новое: ChatList v2 UI scaffold (сессия 12)
-- **ChatListActivityV2** — новый Activity с определением версии сервера (v1/v2)
-- **ChatListFragmentV2** — фрагмент с SwipeRefresh + RecyclerView
-- **ChatAdapterV2** — адаптер с секциями (Pinned/Favorites/All Chats)
-- **ChatListViewModelV2** — ViewModel: loadChats, pinChat, archiveChat, searchChats
-- **ChatListSections.kt** — управление секциями
-- **TabLayout** — табы All / AI / Groups (заглушка)
-- **v2 context menu** — Pin/Mute/Delete в списке чатов (long press)
-- **Fallback на v1** — при подключении к prod серверу автоматически запускается ChatListActivity v1
-- **i18n** — 17 новых строк (en + ru)
+### Новое: FAB + Favorites
+- FAB [+] восстановлен — ActionBottomSheet + SearchableListBottomSheet
+- Favorites убран из секций, добавлен в шторку профиля
 
 ---
 
-## [1.1.3.15] - 2026-06-16
+## [1.1.3.28-29] - 2026-06-16
 
-### Последняя версия с полной поддержкой v1 (prod сервер)
-- **Стабильная версия** для пользователей на prod сервере (v1.1.3.10)
-- Все v1 API работают без изменений
-- Полная обратная совместимость
-
----
-
-## [1.1.3.14] - 2026-06-16
-
-### Новое: ChatStream v2 (JWT auth в Chat stream)
-- **BearerTokenInterceptor** — теперь прикрепляет JWT token к Chat stream на v2 серверах
-- **RealGrpcClient.startChat()** — использует JWT token для v2, password для v1
-- **ProfileClient.fetchServerInfo()** — парсит все версии сервисов (chat/auth/profile/ai)
-- Добавлены `isChatV2Supported()`, `isAuthV2Supported()` helpers
-- Backward compatible: v1 серверы работают без изменений
-
-### Новое: ChatList v2
-- **ProfileClient.fetchServerInfo()** — проверка `chat >= "2.0"` для ChatList v2 API
-- **GrpcClient** — добавлены `pinChat()`, `unpinChat()`, `searchChats()`, `archiveChat()`, `unarchiveChat()`
-- **RealGrpcClient** — низкоуровневый `unaryCallChatListV2()` для новых RPC методов
-- **ChatInfo** — добавлены `isPinned`, `isArchived`, `pinnedAt` поля
-- Все v2 методы возвращают `false`/empty на v1 серверах — не требуют explicit проверки версии
-
-### Proto updates
-- **MessengerProto.kt** — добавлены ChatList v2 proto classes (PinChatRequestProto, SearchChatsResponseProto, etc.)
-- **MessageProto** — добавлены `jwtToken`, `isE2Ee`, `e2EePayload` + Builder методы
-- **GetChatsRequestProto** — добавлены `limit`, `offset`, `filter` для пагинации
-
-### Исправлено
-- MessageProtoMarshaller — сериализация/deserialization jwt_token (field 26), isE2Ee, e2EePayload
-- Обратная совместимость: v1 клиенты работают с новым сервером без изменений
-
----
-
-## [1.1.3.13] - 2026-06-14
-
-### Новое: ProfileService v2 client
-- **ProfileClient** — клиент для ProfileService v2 с JWT Bearer auth
-- Автоопределение версии сервера через /info endpoint (profile >= "2.0")
-- Fallback на legacy ChatService методы для prod сервера
-- Методы: getProfile, updateProfile, updateAvatar, getUserSettings, updateUserSettings
-- fetchServerInfo() вызывается автоматически при connect()
-
-### Исправлено: Typing/CallSession compat
-- v1 клиенты теперь могут вызывать Typing и CallSession без JWT (server-side fix)
-
----
-
-## [1.1.3.12] - 2026-06-14
-
-### Новое: Bearer Token Interceptor
-- **BearerTokenInterceptor** — автоматически подставляет JWT Bearer token во все gRPC вызовы (кроме AuthService и Chat stream)
-- Работает только при JWT v2 аутентификации — для legacy v1 (prod сервер) является no-op
-- Полная совместимость с серверами v1 (без JWT)
-
-### Новое: Proactive Token Refresh
-- Автоматическая проверка истечения access token каждые 60 секунд
-- Тихий refresh через `AuthService/RefreshToken` за 5 минут до истечения
-- Корректная остановка при logout / FORCE_LOGOUT
-
-### Новое: Per-server token validation
-- Токены привязаны к серверу, который их выдал (`jwt_server_address`)
-- При смене сервера через ServersActivity — старые токены автоматически очищаются
-- При восстановлении сессии из prefs — проверка совпадения сервера
-
-### Исправлено
-- `SessionManager.login()` — очистка старых JWT токенов перед новым логином (предотвращает конфликты при смене сервера)
-- `AuthManager.clearTokens()` — также очищает `jwt_server_address`
-
----
-
-## [1.1.3.11] - 2026-06-14
-
-### Исправлено
-- **Двойной вход при смене сервера** — исправлен баг с тремя последовательными входами при переключении между prod/dev серверами
-  - `ServersActivity`: `setServerAddress` вызывается только после успешного входа, а до него
-  - `ChatListActivity`: убран auto-login из `serversActivityLauncher` — пользователь уже вошёл через ServersActivity
-  - `ChatListActivity.onResume`: добавлен флаг `justReturnedFromServersActivity` для предотвращения лишнего reconnect
-
----
-
-## [1.1.3.10] - 2026-06-14
-
-### Новое: Полная локализация (i18n)
-- Все user-facing строки вынесены в `values/strings.xml` (en) + `values-ru/strings.xml`
-- Поддержка двух языков: английский и русский
-- Локализованы: ошибки, уведомления, подписи кнопок, статусы звонков, SSH-ошибки, команды агента, онлайн-статусы
-
-### Новое: Unit-тесты
-- **ErrorHandlerTest** — 11 тестов маршрутизации ошибок
-- **ChatAdapterTest** — 15 тестов фильтрации и отображения чатов
-
-### Исправлено
-- Онлайн-статус пользователей теперь корректно обновляется (очистка истекших grace period)
-- Исправлены краши при запуске OwlSettingsActivity
-
----
-
-## [1.1.3.9] - 2026-06-13
-
-### Новое: Espresso-тесты
-- **ChatListActivityTest** — 18 тестов
-- **RemoteAgentActivityTest** — 12 тестов
-- **ChatWidgetTest**, **EmptyChatTextTest**
-
-### Новое: Мультиязычность (i18n)
-- Вынесено 100+ строк в strings.xml (en + ru)
-
-### Исправлено
-- Empty chat text для Favorites vs обычных чатов
-- RemoteActivity crash (NPE при инициализации taskTypes)
+### Рефакторинг: gRPC модули
+- **RealGrpcClient: 3810 → 882 строк (-77%)**
+- 12 модулей вместо God Object
+- Кастомные темы для AppBarLayout, TabLayout

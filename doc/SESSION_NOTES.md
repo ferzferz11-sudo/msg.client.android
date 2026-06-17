@@ -1,39 +1,34 @@
 # Lava Messenger — Android Session Notes
 
-## Сессия 42 (2026-06-17) — Фаза 1: NewChatActivity рефакторинг
+## Сессия 43 (2026-06-17) — Фаза 3: Unit-тесты для gRPC клиента
 
 ### Что сделано
-- NewChatActivity: 1473 → 754 LOC (-49%)
-- Создано 6 модулей в `ui/chat/message/`:
-  - `ChatToolbarDelegate.kt` (341 LOC) — toolbar, avatar, subtitle, navigation, group avatars, lobby, secret chat
-  - `ChatInputDelegate.kt` (567 LOC) — text input, send, attachments (camera/gallery/file/location), audio recording, emoji picker, mentions, image preview, image upload
-  - `ChatSelectionDelegate.kt` (236 LOC) — selection mode, copy/pin/delete/forward/star actions
-  - `ChatSearchDelegate.kt` (135 LOC) — in-chat search with next/prev navigation
-  - `ChatE2EEDelegate.kt` (72 LOC) — E2EE key exchange, encrypt/decrypt
-  - `ChatMenuDelegate.kt` (106 LOC) — message context menu (reactions, reply, copy, edit, delete)
-- Исправлены ошибки компиляции: импорты Lifecycle, isVisible, toColorInt, edit
-- Исправлен порядок инициализации: setupDelegates после setupRecyclerView
-- Добавлено логирование для отладки отправки изображений
+- Добавлены тестовые зависимости: mockk 1.13.8, turbine 1.0.0, coroutines-test 1.7.3
+- Созданы тестовые утилиты: TestChannelFactory, FlowTestExtensions
+- Создано 42 unit-теста в 6 файлах:
+  - GrpcAuthClientTest (10) — signIn, signUp, refreshToken, signOut, revokeDevice
+  - GrpcUnaryCallHelperTest (4) — unaryCall, null channel, server error, class-based
+  - GrpcChatListClientTest (8) — getChats, pinChat, searchChats, deleteChat, createChat
+  - GrpcMessageClientTest (8) — sendMessage, addLocalMessage, loadHistory, markRead, signals
+  - GrpcConnectionManagerTest (6) — connect, disconnect, reconnect, isConnectedTo
+  - GrpcClientFacadeTest (6) — connectionState mapping, StateFlow probing, delegation
+- Оптимизация документации: удалены 9 устаревших файлов, консолидированы актуальные
+- Создан ANALYSIS_AND_PLAN.md — подробный анализ текущего состояния и план оптимизации
+- Обновлён CHANGELOG.md, version.txt → 1.1.3.34
 
 ### Коммиты
-- `bae73d5` — refactor: split NewChatActivity into 6 modules
-- `28feddf` — fix: add missing imports
-- `e690368` — fix: add missing toColorInt import
-- `472e91f` — fix: move setupDelegates after setupRecyclerView
-- `169471c` — debug: add logging for image send flow
-- `1488d39` — debug: remove debug logging
+- (pending) — test: 42 unit-тестов для gRPC модулей + оптимизация документации
 
 ---
 
-## Сессия 42 (2026-06-17) — Фаза 2: Унификация error handling
+## Сессия 42 (2026-06-17) — Фаза 1-2: NewChatActivity рефакторинг + Error handling
 
 ### Что сделано
-- `RealGrpcClient`: `Log.e` → `ErrorHandler.handle` для ошибок стрима
-- `GrpcMessageClient`: `Log.e` → `ErrorHandler.handle` для ошибок отправки
-- `GrpcChatListClient`: `Log.e` → `ErrorHandler.handle` для ошибок статуса (getAllChats, getAllUsers, getAIChats)
-- `HermesGrpc`: `Log.e`/`AppLog.error` → `ErrorHandler.handle/warn` для ошибок оркестратора
-- `ChatListViewModel`: добавлен `error` StateFlow + `clearError()`
-- `ChatListActivity`: подписка на `viewModel.error` → отображение Snackbar
+- NewChatActivity: 1473 → 754 LOC (-49%)
+- Создано 6 модулей в `ui/chat/message/`
+- Унификация error handling: все gRPC модули → ErrorHandler.handle()
+- ChatListViewModel.error StateFlow + Snackbar в ChatListActivity
 
 ### Коммиты
-- `14950a5` — refactor: unify error handling across gRPC modules and UI
+- bae73d5 — refactor: split NewChatActivity into 6 modules
+- 14950a5 — refactor: unify error handling across gRPC modules and UI
