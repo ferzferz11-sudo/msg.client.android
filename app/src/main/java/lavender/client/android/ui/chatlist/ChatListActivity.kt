@@ -97,7 +97,7 @@ class ChatListActivity : AppCompatActivity() {
     private val aiChats = mutableListOf<AIChatInfo>()
 
     // Update
-    private lateinit var updateCoordinator: UpdateCoordinator
+    private var updateCoordinator: UpdateCoordinator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -171,7 +171,7 @@ class ChatListActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             updateManager.isDownloadingInstance.collect { downloading ->
-                updateCoordinator.updateIndicatorVisibility()
+                updateCoordinator?.updateIndicatorVisibility()
             }
         }
         lifecycleScope.launch {
@@ -183,11 +183,11 @@ class ChatListActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             updateManager.isDownloadedInstance.collect { downloaded ->
-                updateCoordinator.updateIndicatorVisibility()
+                updateCoordinator?.updateIndicatorVisibility()
             }
         }
         // Silent update check on startup
-        updateCoordinator.checkForUpdatesSilently()
+        updateCoordinator?.checkForUpdatesSilently()
 
         // Note: GrpcClient.connect() is already called from SessionManager.initFromPrefs()
         // when serverAddress is set. No need to connect again here.
@@ -232,9 +232,11 @@ class ChatListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // Register update prefs listener
-        getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-            .registerOnSharedPreferenceChangeListener(updateCoordinator.prefsListener)
-        updateCoordinator.updateIndicatorVisibility()
+        updateCoordinator?.let { coord ->
+            getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                .registerOnSharedPreferenceChangeListener(coord.prefsListener)
+            coord.updateIndicatorVisibility()
+        }
         // Safety net: if chats list is empty but we're connected, reload.
         // This handles the case where loadChats() was called before READY
         // (e.g. race condition during server switch).
@@ -248,8 +250,10 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
-            .unregisterOnSharedPreferenceChangeListener(updateCoordinator.prefsListener)
+        updateCoordinator?.let { coord ->
+            getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
+                .unregisterOnSharedPreferenceChangeListener(coord.prefsListener)
+        }
     }
 
     private fun setupToolbarActions(username: String) {
@@ -323,7 +327,7 @@ class ChatListActivity : AppCompatActivity() {
         // Update
         sheet.findViewById<View>(R.id.actionUpdate)?.setOnClickListener {
             sheet.dismiss()
-            updateCoordinator.checkManualUpdate()
+            updateCoordinator?.checkManualUpdate()
         }
 
         // Language toggle
