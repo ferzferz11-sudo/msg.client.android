@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import lavender.client.android.R
