@@ -1,40 +1,56 @@
 # Lava Messenger — Android Session Notes
 
-## Сессия 35 (2026-06-17) — UI улучшения
+## Сессия 35 (2026-06-17) — UI улучшения и исправления
 
 ### Контекст
 - FAB [+] уже был подключен через NewChatBottomSheet, но шторка имела ограниченный набор пунктов
 - Favorites был в секциях списка, но не в табах
 - Тулбар и Activity не полностью адаптировались к кастомным темам
+- Шестерёнка настроек дублировала функционал шторки профиля
 
 ### Что сделано
 
-#### 1. FAB [+] — шторка с 4 пунктами (как в v1)
-- **bottom_sheet_new_chat.xml** — 4 пункта: Add Contact, Start Chat, Group, Secret Chat
-- **NewChatBottomSheet.kt** — переписан, AI чаты убраны (отдельно через FAB AI робот)
-- **ChatListActivity.kt** — добавлен `showAddContactDialogPublic()` для ContactsActivity
+#### 1. Кастомные темы — тулбар и Activity
+- **activity_chat_list.xml** — AppBarLayout получил ID, фон transparent
+- **ThemeApplier.kt** — AppBarLayout tinting, toolbar title/subtitle explicit colors, TabLayout transparent
+- **ChatListActivity.applyTheme()** — добавлен `ThemeStore.init(this)` для загрузки кастомной темы из кэша
 
-#### 2. Favorites — секция в списке (не таб)
+#### 2. Favorites — убран таб, возвращён как секция
+- Таб "Favorites" убран, остались All/AI/Groups
 - Favorites — секция в списке чатов, открывается FavoritesActivity
 - **ChatListViewModel.loadFavorites()** — загрузка данных Favorites с сервера
-- Таб "Favorites" убран, остались All/AI/Groups
 
-#### 3. Кастомные темы — тулбар и Activity
-- **activity_chat_list.xml**:
-  - AppBarLayout получил ID `appBarLayout`
-  - AppBarLayout background изменён на `@android:color/transparent` (красится программно)
-  - `ivActionSettings` — убран `visibility="gone"` (всегда виден после авторизации)
-- **ThemeApplier.kt**:
-  - Добавлен import для `AppBarLayout`
-  - Добавлена краска `AppBarLayout` в цвет `customPrimary`
-  - Добавлена явная краска `tvToolbarTitle` и `tvToolbarSubtitle` через `customOnPrimary`
-  - Добавлен `ivToolbarUserAvatar` в список красимых иконок
-  - TabLayout — фон изменён на `TRANSPARENT`, цвета текста через `customOnPrimary`
-- **ChatListActivity.applyTheme()** — добавлен вызов `ThemeStore.init(this)` перед применением темы
+#### 3. Убрана шестерёнка настроек
+- `ivActionSettings` удалена из layout и кода
+- Настройки доступны через аватар → "Additional Settings"
+
+#### 4. Обновления — убрана автозагрузка
+- **UpdateCoordinator.checkForUpdatesSilently()** — убран auto-download, только проверка версии
+- Индикатор в тулбаре — текст "New version available" вместо иконки
+- Тап на индикатор открывает шторку с прогрессом/установкой
+
+#### 5. Исправления серверов
+- **SessionManager.logout()** — сбрасывает на prod сервер (13.140.25.249:50051)
+- **showAuthChoiceDialog()** — всегда показывает prod по умолчанию
+- **ServerAuthBottomSheet** — dev сервер (50052) всегда зелёный (skip HTTP health check)
+
+#### 6. Исправление краша
+- **updateCoordinator** — сделан nullable, добавлены проверки в onResume/onPause
+- Исправлен краш `UninitializedPropertyAccessException` при возврате из профиля
+
+### Обнаруженные проблемы (не исправлено)
+1. **FavoritesActivity** — не работает корректно, получает userId из intent но данные не загружаются
+2. **FAB [+] шторка** — сейчас 4 пункта с простыми extras, нужно вернуть SearchableListBottomSheet как в v1
+3. **Создание чатов/групп** — NewChatActivity не обрабатывает CREATE_GROUP, SECRET_CHAT, CONFERENCE extras
 
 ### Коммиты
 - `0b24375` — feat: restore NewChatBottomSheet with full menu, add Favorites tab, fix toolbar theming
 - `dc7b7e3` — docs: full documentation revision for v1.1.3.29
+- `5bd0418` — fix: restore v1 behavior - 4-item NewChatBottomSheet, Favorites as section not tab
+- `4082850` — fix: remove settings gear, update indicator as text label
+- `d380ec3` — fix: always show prod server on login, dev server health check
+- `f16527c` — fix: updateCoordinator nullable to prevent crash on resume
+- `2974ee9` — docs: update next session priorities - restore v1 FAB+ sheet
 
 ---
 

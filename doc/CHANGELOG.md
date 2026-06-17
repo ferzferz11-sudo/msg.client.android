@@ -1,8 +1,34 @@
 # Lava Messenger — Android CHANGELOG
 
-## v1.1.3.29 (2026-06-17) — UI улучшения
+## v1.1.3.29 (2026-06-17) — UI улучшения и исправления
 
-### NewChatBottomSheet — полное меню
+### Кастомные темы
+- AppBarLayout красится программно в customPrimary
+- Toolbar title/subtitle явно красятся через ThemeApplier
+- TabLayout — прозрачный фон, цвета через customOnPrimary
+- ThemeStore.init() в applyTheme() для загрузки кастомной темы из кэша
+
+### Серверы
+- logout() сбрасывает на prod сервер (13.140.25.249:50051)
+- showAuthChoiceDialog() всегда показывает prod по умолчанию
+- Dev сервер (50052) — зелёный индикатор (skip HTTP health check)
+
+### Обновления
+- Убрана автозагрузка при старте
+- Индикатор "New version available" — текст вместо иконки
+- Тап открывает шторку с прогрессом/установкой
+
+### Исправления
+- Убрана шестерёнка настроек (дублировала шторку профиля)
+- updateCoordinator nullable — исправлен краш при возврате из профиля
+- Favorites — убран таб, возвращён как секция
+
+### Коммиты
+- 0b24375, dc7b7e3, 5bd0418, 4082850, d380ec3, f16527c, 2974ee9
+
+---
+
+## v1.1.3.28 (2026-06-17) — Финальная модуляризация gRPC
 - **bottom_sheet_new_chat.xml** — 7 пунктов: Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI
 - **NewChatBottomSheet.kt** — переписан с обработкой всех пунктов
 - **ChatListActivity** — добавлен `showAddContactDialogPublic()` для ContactsActivity

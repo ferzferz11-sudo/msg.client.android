@@ -194,25 +194,16 @@
 
 ## 📋 Активные задачи
 
-### Высокий приоритет
-- [x] **Модуляризация RealGrpcClient** — God Object разделён на 12 модулей
-  - ✅ GrpcChatListClient (638 LOC) — chat list, pin/search/archive, chat management
-  - ✅ GrpcProfileClient (506 LOC) — profile, avatar, contacts, themes, devices
-  - ✅ GrpcDraftClient (86 LOC) — drafts
-  - ✅ GrpcFavoritesClient (120 LOC) — favorites
-  - ✅ GrpcUnaryCallHelper (111 LOC) — universal unary call helper
-  - ✅ GrpcMarshallers (1394 LOC) — all 111 marshaller classes
-  - ✅ GrpcMessageClient (341 LOC) — messages, history, reactions, mark read
-  - ✅ GrpcServerDiscoveryClient (145 LOC) — server discovery, proto parsing
-  - ✅ RealGrpcClient: 3810 → 874 LOC (-77%)
-  - ✅ Осталось в RealGrpcClient: chat stream + proxy methods (~874 строк)
+### Высокий приоритет (v1.1.3.30)
+- [ ] **Восстановить шторку FAB [+] как в v1** — ActionBottomSheet + SearchableListBottomSheet
+- [ ] **Favorites** — убрать из секций, добавить в шторку профиля, исправить FavoritesActivity
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
 - [ ] **Read receipts** — MarkAsRead с broadcast
 
 ### Отложено
-- [ ] NewChatActivity рефакторинг — 1473 строки, выделить ViewModel (отложено по решению ферзя)
+- [ ] NewChatActivity рефакторинг — отложено по решению ферзя
 - [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
 - [ ] Qdrant + CLIP (production RAG)
 - [ ] Shared element transitions
