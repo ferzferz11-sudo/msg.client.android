@@ -161,23 +161,27 @@
 
 ### Высокий приоритет
 - [x] **Восстановить функциональность обновлений** — UpdateManager интегрирован, silent check, manual check, progress dialog, APK install
-- [x] **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
-  - ✅ GrpcChatListClient (638 LOC) — getChats, pinChat, searchChats, archiveChat
+- [x] **Модуляризация RealGrpcClient** — God Object разделён на 10 модулей
+  - ✅ GrpcChatListClient (638 LOC) — chat list, pin/search/archive, chat management
   - ✅ GrpcProfileClient (506 LOC) — profile, avatar, contacts, themes, devices
-  - ✅ GrpcDraftClient (86 LOC) — saveDraft, getDraft, deleteDraft
-  - ✅ GrpcFavoritesClient (120 LOC) — addFavorite, removeFavorite, getFavorites
+  - ✅ GrpcDraftClient (86 LOC) — drafts
+  - ✅ GrpcFavoritesClient (120 LOC) — favorites
   - ✅ GrpcUnaryCallHelper (111 LOC) — universal unary call helper
   - ✅ GrpcMarshallers (1394 LOC) — all 111 marshaller classes
-  - ⬜ Осталось в RealGrpcClient: ~1611 строк (chat stream, messages, history, reactions, AI chats, server discovery)
+  - ✅ RealGrpcClient: 3810 → 1611 LOC (-57%)
+  - ⬜ Осталось в RealGrpcClient: ~1611 строк (chat stream, messages, history, reactions, server discovery)
+  - ⬜ Следующий шаг: GrpcMessageClient (~800 строк)
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
-- [ ] **Read receipts** — MarkAsRead
+- [ ] **Read receipts** — MarkAsRead с broadcast
+- [ ] **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel
 
 ### Отложено
 - [ ] Qdrant + CLIP (production RAG)
 - [ ] Shared element transitions
 - [ ] Infinite scroll + pagination
+- [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
 
 ---
 

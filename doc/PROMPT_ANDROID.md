@@ -198,18 +198,25 @@ cd /root/msg.client.android
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.25)
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.27)
 
 ### Высокий приоритет
-1. **Выделить GrpcChatClient** — из оставшихся ~3700 строк RealGrpcClient
-   - Методы: getChats, sendMessage, loadHistory, pinChat, searchChats, archiveChat, draft, favorites, reactions, profile, chat management
-   - ~2000 строк — самый большой оставшийся кусок
+1. **Выделить GrpcMessageClient** — из оставшихся ~1611 строк RealGrpcClient
+   - Методы: sendMessage, addLocalMessage, loadHistory, editMessage, deleteMessage, setReaction, markRead
+   - ~800 строк — самый большой оставшийся кусок
+   - После этого RealGrpcClient станет ~800 строк (orchestrator only)
+
+2. **Выделить GrpcServerDiscoveryClient** — server discovery, raw protobuf parsing (~150 строк)
+
+3. **Финальный рефакторинг RealGrpcClient** — до ~200 строк (только orchestrator)
 
 ### Средний приоритет
-2. **ProfileService v2** — проверить работу на dev сервере
-3. **Read receipts** — MarkAsRead
+4. **ProfileService v2** — проверить работу на dev сервере
+5. **Read receipts** — MarkAsRead с broadcast
+6. **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel
 
 ### Отложено
 - Qdrant + CLIP (production RAG)
 - Shared element transitions
 - Infinite scroll + pagination
+- ChatListActivity разбиение (ToolbarManager, TabManager)

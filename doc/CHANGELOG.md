@@ -53,7 +53,44 @@
 
 ---
 
-## v1.1.3.23 (2026-06-16) — Рефакторинг соединений, единый ChatListActivity
+## v1.1.3.27 (2026-06-17) — RealGrpcClient модуляризация (Сессии 32-33)
+
+### Рефакторинг gRPC клиента
+- **RealGrpcClient: 3810 → 1611 строк (-57%)**
+- Создано 5 новых модулей:
+  - `GrpcChatListClient` (638 LOC) — chat list, pin/search/archive, chat management, users, AI chats
+  - `GrpcProfileClient` (506 LOC) — profile, avatar, contacts, themes, devices, username/password
+  - `GrpcDraftClient` (86 LOC) — saveDraft, getDraft, deleteDraft
+  - `GrpcFavoritesClient` (120 LOC) — addFavorite, removeFavorite, getFavorites
+  - `GrpcUnaryCallHelper` (111 LOC) — universal unaryCall helper
+- `GrpcMarshallers` (1394 LOC) — все 111 marshaller classes вынесены в отдельный файл
+- RealGrpcClient теперь orchestrator с 10 модулями
+- Все inline gRPC вызовы заменены на делегирование в модули
+- GrpcClient facade без изменений (обратная совместимость)
+
+### Архитектура после рефакторинга
+```
+RealGrpcClient (1611 LOC) — orchestrator
+├── GrpcConnectionManager (167) — channel lifecycle
+├── GrpcAuthClient (232) — JWT auth
+├── GrpcTypingClient (87) — typing stream
+├── GrpcCallClient (125) — calls
+├── GrpcChatListClient (638) — chat list CRUD + management
+├── GrpcProfileClient (506) — profile/avatar/themes/devices
+├── GrpcDraftClient (86) — drafts
+├── GrpcFavoritesClient (120) — favorites
+└── GrpcUnaryCallHelper (111) — universal helper
+```
+
+### Коммиты
+- `fbdbbd2` — refactor: modularize RealGrpcClient — extract 5 modules
+- `82b16b8` — docs: update documentation for v1.1.3.26
+- `0cdbc9d` — fix: add missing Timestamp import to GrpcMarshallers
+- `320f7b2` — fix: correct imports in new modules
+
+---
+
+## v1.1.3.25 (2026-06-17) — Update System восстановление
 
 ### Архитектура
 - **Единый ChatListActivity** — v1/v2 объединены, один Activity работает на обоих серверах
