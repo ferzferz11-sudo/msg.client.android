@@ -251,7 +251,7 @@ class ChatListActivity : AppCompatActivity() {
     // FABs
     private fun setupFABs() = setupFABs(this)
     private fun showChatActionSheet() = showChatActionSheet(this)
-    private fun showAddContactDialog() = showAddContactDialog(this)
+    internal fun showAddContactDialog() = showAddContactDialog(this)
     private fun showCreateChatDialog() = showCreateChatDialog(this)
     private fun showCreateSecretChatDialog() = showCreateSecretChatDialog(this)
     private fun showCreateConferenceDialog() = showCreateConferenceDialog(this)

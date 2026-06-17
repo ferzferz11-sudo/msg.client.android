@@ -827,7 +827,7 @@
 
     <!-- i18n: ChatList v2 (tabs, sections, actions) -->
     <string name="tab_all">Все</string>
-    <string name="tab_ai">ИИ</string>
+    <string name="tab_ai">ИИ чаты</string>
     <string name="tab_groups">Группы</string>
     <string name="section_pinned">Закреплённые</string>
     <string name="section_favorites">Избранное</string>

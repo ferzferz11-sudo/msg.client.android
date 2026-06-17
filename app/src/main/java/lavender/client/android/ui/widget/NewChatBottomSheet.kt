@@ -33,7 +33,7 @@ class NewChatBottomSheet : BottomSheetDialogFragment() {
         // Add Contact
         view.findViewById<View>(R.id.btnAddContact)?.setOnClickListener {
             dismiss()
-            (activity as? ChatListActivity)?.showAddContactDialogPublic()
+            (activity as? ChatListActivity)?.showAddContactDialog()
         }
 
         // Start Chat (New Private Chat)
