@@ -528,9 +528,8 @@ object SessionManager {
     }
 
     fun logout(context: Context) {
-        Log.d("SessionManager", "Logging out, clearing credentials but keeping username and server")
+        Log.d("SessionManager", "Logging out, clearing credentials, resetting to prod server")
         val currentUsername = _session.value.username
-        val currentServer = CredentialStore.getServerAddress(context)
         _session.value = UserSession(username = currentUsername)
 
         // Stop token refresh
@@ -542,10 +541,8 @@ object SessionManager {
         // Clear encrypted credentials (password, tokens, etc.)
         CredentialStore.clear(context)
 
-        // Restore server address so auth dialog can show the server on next launch
-        if (currentServer.isNotEmpty()) {
-            CredentialStore.setServerAddress(context, currentServer)
-        }
+        // Always reset to prod server on logout
+        CredentialStore.setServerAddress(context, "13.140.25.249:50051")
 
         // Clear non-sensitive legacy prefs but keep username for pre-fill
         CredentialStore.getLegacyPrefs(context).edit {

@@ -872,19 +872,12 @@ class ChatListActivity : AppCompatActivity() {
         var serverName: String
 
         if (serverAddress.isEmpty()) {
-            // No saved server — try to get default from server list
-            val defaultServer = CredentialStore.getDefaultServer(this)
-            if (defaultServer != null) {
-                serverAddress = "${defaultServer.host}:${defaultServer.port}"
-                host = defaultServer.host
-                port = defaultServer.port
-                serverName = defaultServer.name
-                // Save as current server so next time it's available
-                CredentialStore.setServerAddress(this, serverAddress)
-            } else {
-                Log.w(TAG, "No server address and no default server — cannot show auth dialog")
-                return
-            }
+            // No saved server — always default to prod
+            serverAddress = "13.140.25.249:50051"
+            host = "13.140.25.249"
+            port = 50051
+            serverName = "Lava Germany"
+            CredentialStore.setServerAddress(this, serverAddress)
         } else {
             val parts = serverAddress.split(":")
             host = parts[0]

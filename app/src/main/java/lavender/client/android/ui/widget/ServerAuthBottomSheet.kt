@@ -74,6 +74,12 @@ class ServerAuthBottomSheet(
     }
 
     private fun checkServerHealth() {
+        // For dev server (50052), skip HTTP health check — it may be behind NAT/firewall
+        // gRPC port is what matters, and we'll know if it works when we try to connect
+        if (serverPort == 50052) {
+            updateStatusIndicator(true)
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val url = URL("http://$serverHost:$httpPort/health")
