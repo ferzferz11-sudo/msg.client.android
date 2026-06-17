@@ -58,14 +58,17 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         // Listen for read receipts — clear unread count in chat list
         viewModelScope.launch {
             GrpcClient.readReceiptEvent.collect { (roomId, reader) ->
-                val currentUsername = lavender.client.android.data.session.SessionManager.session.value.username
+                val currentUsername = SessionManager.session.value.username
                 // Only clear unread if another user read our messages (not ourselves)
                 if (reader != currentUsername) {
-                    allChats = allChats.map {
-                        if (it.id == roomId) it.copy(unreadCount = 0) else it
+                    val idx = allChats.indexOfFirst { it.id == roomId }
+                    if (idx >= 0) {
+                        allChats = allChats.toMutableList().also {
+                            it[idx] = it[idx].copy(unreadCount = 0)
+                        }
+                        buildSections(allChats)
+                        Log.d(TAG, "Read receipt from $reader for room $roomId — cleared unread")
                     }
-                    buildSections(allChats)
-                    Log.d(TAG, "Read receipt from $reader for room $roomId — cleared unread")
                 }
             }
         }
@@ -84,11 +87,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             if (cont.isActive) cont.resumeWith(Result.success(chats))
                         }
                     }
-                } ?: emptyList()
+                }
 
-                allChats = fetchedChats
-                buildSections(fetchedChats)
-                Log.d(TAG, "Loaded ${fetchedChats.size} chats")
+                if (fetchedChats != null) {
+                    allChats = fetchedChats
+                    buildSections(fetchedChats)
+                    Log.d(TAG, "Loaded ${fetchedChats.size} chats")
+                } else {
+                    // Timeout — keep existing chats, don't clear the list
+                    Log.w(TAG, "loadChats timeout — keeping ${allChats.size} existing chats")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load chats", e)
             } finally {
