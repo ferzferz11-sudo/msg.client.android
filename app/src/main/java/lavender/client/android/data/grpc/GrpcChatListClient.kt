@@ -2,6 +2,7 @@ package lavender.client.android.data.grpc
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.proto.*
