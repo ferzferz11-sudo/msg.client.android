@@ -14,12 +14,14 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -607,8 +609,8 @@ class NewChatActivity : AppCompatActivity() {
         val customTheme = ThemeStore.currentTheme()
         try {
             val textColor = customTheme.onPrimaryColor.toColorInt()
-            for (i in 0 until menu.size) {
-                val item = menu[i]
+            for (i in 0 until menu.size()) {
+                val item = menu.getItem(i)
                 val span = android.text.SpannableString(item.title)
                 span.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, span.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 item.title = span
@@ -675,7 +677,7 @@ class NewChatActivity : AppCompatActivity() {
     }
 
     private fun getSavedUserId(): String? = getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("user_id", null)
-    private fun saveUserId(userId: String) { getSharedPreferences("lavender_prefs", MODE_PRIVATE) { putString("user_id", userId) } }
+    private fun saveUserId(userId: String) { getSharedPreferences("lavender_prefs", MODE_PRIVATE).edit { putString("user_id", userId) } }
 
     // ======= Lifecycle =======
 

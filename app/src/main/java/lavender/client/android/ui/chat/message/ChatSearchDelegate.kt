@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.graphics.toColorInt
 import lavender.client.android.R
 import lavender.client.android.ui.adapter.MessageAdapter
 import lavender.client.android.theme.ThemeStore

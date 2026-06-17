@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
