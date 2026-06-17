@@ -16,9 +16,10 @@
         android:contentDescription="@null" />
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/toolbar_background"
+        android:background="@android:color/transparent"
         android:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
@@ -128,7 +129,6 @@
                     android:padding="8dp"
                     android:src="@drawable/ic_settings"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:visibility="gone"
                     app:tint="?attr/colorOnPrimary"
                     android:contentDescription="@string/admin_label" />
 

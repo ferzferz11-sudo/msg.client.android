@@ -18,7 +18,7 @@ import lavender.client.android.ui.owl.OwlChatActivity
 
 /**
  * NewChatBottomSheet — шторка создания нового чата при тапе на FAB +.
- * Варианты: Новый чат, Группа, Hermes AI, OWL AI.
+ * Пункты: Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI.
  */
 class NewChatBottomSheet : BottomSheetDialogFragment() {
 
@@ -35,17 +35,41 @@ class NewChatBottomSheet : BottomSheetDialogFragment() {
 
         val context = requireContext()
 
-        // New private chat
+        // Add Contact
+        view.findViewById<View>(R.id.btnAddContact)?.setOnClickListener {
+            dismiss()
+            (activity as? ChatListActivity)?.showAddContactDialogPublic()
+        }
+
+        // Start Chat (New Private Chat)
         view.findViewById<View>(R.id.btnNewChat)?.setOnClickListener {
             dismiss()
             context.startActivity(Intent(context, NewChatActivity::class.java))
         }
 
-        // New group
+        // New Group
         view.findViewById<View>(R.id.btnNewGroup)?.setOnClickListener {
             dismiss()
             val intent = Intent(context, NewChatActivity::class.java).apply {
                 putExtra("CREATE_GROUP", true)
+            }
+            context.startActivity(intent)
+        }
+
+        // Secret Chat
+        view.findViewById<View>(R.id.btnSecretChat)?.setOnClickListener {
+            dismiss()
+            val intent = Intent(context, NewChatActivity::class.java).apply {
+                putExtra("SECRET_CHAT", true)
+            }
+            context.startActivity(intent)
+        }
+
+        // Conference
+        view.findViewById<View>(R.id.btnConference)?.setOnClickListener {
+            dismiss()
+            val intent = Intent(context, NewChatActivity::class.java).apply {
+                putExtra("CONFERENCE", true)
             }
             context.startActivity(intent)
         }

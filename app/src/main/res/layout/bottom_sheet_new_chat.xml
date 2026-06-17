@@ -13,14 +13,27 @@
         android:textStyle="bold"
         android:paddingBottom="16dp" />
 
-    <!-- New Private Chat -->
+    <!-- Add Contact -->
+    <TextView
+        android:id="@+id/btnAddContact"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:text="@string/add_contact"
+        android:textSize="16sp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Start Chat (New Private Chat) -->
     <TextView
         android:id="@+id/btnNewChat"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:gravity="center_vertical"
         android:paddingStart="16dp"
-        android:text="@string/create_private_chat"
+        android:text="@string/start_chat"
         android:textSize="16sp"
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
@@ -34,6 +47,32 @@
         android:gravity="center_vertical"
         android:paddingStart="16dp"
         android:text="@string/create_group"
+        android:textSize="16sp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Secret Chat -->
+    <TextView
+        android:id="@+id/btnSecretChat"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:text="@string/secret_chat"
+        android:textSize="16sp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Conference -->
+    <TextView
+        android:id="@+id/btnConference"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:text="@string/conference_in_development"
         android:textSize="16sp"
         android:background="?attr/selectableItemBackground"
         android:clickable="true"

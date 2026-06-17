@@ -480,6 +480,7 @@ class ChatListActivity : AppCompatActivity() {
             tabs.addTab(tabs.newTab().setText(R.string.tab_all))
             tabs.addTab(tabs.newTab().setText(R.string.tab_ai))
             tabs.addTab(tabs.newTab().setText(R.string.tab_groups))
+            tabs.addTab(tabs.newTab().setText(R.string.tab_favorites))
 
             tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -487,6 +488,7 @@ class ChatListActivity : AppCompatActivity() {
                         0 -> "all"
                         1 -> "ai"
                         2 -> "groups"
+                        3 -> "favorites"
                         else -> "all"
                     }
                     viewModel.setTabFilter(filter)
@@ -1093,6 +1095,7 @@ class ChatListActivity : AppCompatActivity() {
     }
 
     private fun applyTheme() {
+        ThemeStore.init(this)
         val prefs = getSharedPreferences("ThemePrefs", MODE_PRIVATE)
         val isDarkMode = prefs.getBoolean("dark_mode", false)
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
@@ -1100,5 +1103,12 @@ class ChatListActivity : AppCompatActivity() {
             else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         )
         ThemeApplier.apply(this, ThemeStore.currentTheme())
+    }
+
+    // Public method for NewChatBottomSheet to open contacts
+    fun showAddContactDialogPublic() {
+        startActivity(Intent(this, ContactsActivity::class.java).apply {
+            putExtra("USERNAME", SessionManager.session.value.username)
+        })
     }
 }

@@ -1,8 +1,27 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.28
-**Обновлено:** 2026-06-17 (сессия 34)
+**Версия:** v1.1.3.29
+**Обновлено:** 2026-06-17 (сессия 35)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.29 — FAB [+] восстановление, Favorites в табах, кастомные темы (Сессия 35)
+
+### FAB [+] — шторка создания нового чата
+- ✅ **bottom_sheet_new_chat.xml** — обновлён с полным набором пунктов (Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI)
+- ✅ **NewChatBottomSheet.kt** — переписан с обработкой всех пунктов
+- ✅ **ChatListActivity.kt** — добавлен `showAddContactDialogPublic()` для ContactsActivity
+
+### Favorites в табах
+- ✅ **strings.xml** (en + ru) — добавлена `tab_favorites`
+- ✅ **ChatListActivity.setupTabs()** — добавлен таб "Favorites"
+- ✅ **ChatListViewModel.buildSections()** — добавлена фильтрация `favorites` + дедупликация
+
+### Кастомные темы
+- ✅ **activity_chat_list.xml** — AppBarLayout получил ID, фон transparent, ivActionSettings всегда виден
+- ✅ **ThemeApplier.kt** — AppBarLayout красится в customPrimary, toolbar title/subtitle красятся явно, TabLayout transparent
+- ✅ **ChatListActivity.applyTheme()** — добавлен `ThemeStore.init(this)` для загрузки кастомной темы из кэша
 
 ---
 

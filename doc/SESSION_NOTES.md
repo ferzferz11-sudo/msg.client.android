@@ -1,5 +1,49 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 35 (2026-06-17) — FAB [+] восстановление, Favorites в табах, кастомные темы
+
+### Контекст
+- FAB [+] уже был подключен через NewChatBottomSheet, но шторка имела ограниченный набор пунктов
+- Favorites был в секциях списка, но не в табах
+- Тулбар и Activity не полностью адаптировались к кастомным темам
+
+### Что сделано
+
+#### 1. FAB [+] — восстановление шторки из v1
+- **bottom_sheet_new_chat.xml** — обновлён с полным набором пунктов:
+  - Add Contact (из v1)
+  - Start Chat / New Private Chat (из v1)
+  - New Group
+  - Secret Chat (из v1)
+  - Conference (из v1)
+  - Hermes AI
+  - OWL AI
+- **NewChatBottomSheet.kt** — переписан с обработкой всех пунктов
+- **ChatListActivity.kt** — добавлен публичный метод `showAddContactDialogPublic()` для открытия ContactsActivity
+
+#### 2. Favorites в табах
+- **strings.xml** (en + ru) — добавлена строка `tab_favorites`
+- **ChatListActivity.setupTabs()** — добавлен таб "Favorites" (position 3)
+- **ChatListViewModel.buildSections()** — добавлена фильтрация `favorites` и дедупликация (Favorites секция не показывается когда активен таб Favorites)
+
+#### 3. Кастомные темы — тулбар и Activity
+- **activity_chat_list.xml**:
+  - AppBarLayout получил ID `appBarLayout`
+  - AppBarLayout background изменён на `@android:color/transparent` (красится программно)
+  - `ivActionSettings` — убран `visibility="gone"` (всегда виден после авторизации)
+- **ThemeApplier.kt**:
+  - Добавлен import для `AppBarLayout`
+  - Добавлена краска `AppBarLayout` в цвет `customPrimary`
+  - Добавлена явная краска `tvToolbarTitle` и `tvToolbarSubtitle` через `customOnPrimary`
+  - Добавлен `ivToolbarUserAvatar` в список красимых иконок
+  - TabLayout — фон изменён на `TRANSPARENT`, цвета текста через `customOnPrimary`
+- **ChatListActivity.applyTheme()** — добавлен вызов `ThemeStore.init(this)` перед применением темы
+
+### Коммиты
+- TBD — feat: restore NewChatBottomSheet with full menu, add Favorites tab, fix toolbar theming
+
+---
+
 ## Сессия 34 (2026-06-17) — Финальная модуляризация RealGrpcClient
 
 ### Контекст

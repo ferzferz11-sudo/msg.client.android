@@ -246,6 +246,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         val filteredChats = when (tab) {
             "ai" -> chats.filter { it.type == "owl" || it.type == "hermes" }
             "groups" -> chats.filter { it.type == "group" || it.type == "general" || it.type == "conference" }
+            "favorites" -> chats.filter { it.type == "favorites" }
             else -> chats // "all"
         }
 
@@ -260,7 +261,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         if (pinned.isNotEmpty()) {
             sectionList.add(SectionItem(Section.PINNED, pinned))
         }
-        if (favorites.isNotEmpty()) {
+        if (favorites.isNotEmpty() && tab != "favorites") {
             sectionList.add(SectionItem(Section.FAVORITES, favorites))
         }
         if (allRegular.isNotEmpty()) {
