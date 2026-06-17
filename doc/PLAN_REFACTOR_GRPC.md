@@ -1,74 +1,77 @@
-# План рефакторинга RealGrpcClient — v1.1.3.20+
+# План рефакторинга RealGrpcClient — v1.1.3.26+
 
-## Текущее состояние (после сессии 23)
-- ✅ RealGrpcClient: 4081 → 3739 строк (-342)
-- ✅ 4 модуля извлечены и работают
-- ⏳ Осталось ~3700 строк в RealGrpcClient (цель: ~200)
+## Текущее состояние (после сессии 32)
+- ✅ RealGrpcClient: 3810 → 1615 строк (-57%)
+- ✅ 8 модулей выделены и работают
+- ✅ GrpcClient facade без изменений
 
 ## Выполнено
 
-### ✅ Шаг 1: Выделить GrpcConnectionManager (сессия 23)
-**Файл:** `data/grpc/GrpcConnectionManager.kt` (167 строк)
-- `connect()`, `disconnect()`, `reconnect()`
-- `scheduleReconnect()`, `resetReconnectBackoff()`
-- `getChannel()`, `isConnectedTo()`
-- StateFlow: `connectionStatus`, `currentServerAddress`, `currentServerPort`
-
-### ✅ Шаг 5: Выделить GrpcCallClient (сессия 23)
-**Файл:** `data/grpc/GrpcCallClient.kt` (124 строки)
-- `startCallSession()`, `sendCallSignal()`
-- StateFlow: `callSignals`
-
-### ✅ Шаг 6: Выделить GrpcTypingClient (сессия 23)
-**Файл:** `data/grpc/GrpcTypingClient.kt` (87 строк)
-- `startTypingStream()`, `sendTypingSignal()`
-- StateFlow: `typingUsers`
-
-### ✅ Шаг 3: Выделить GrpcAuthClient (сессия 23)
-**Файл:** `data/grpc/GrpcAuthClient.kt` (232 строки)
-- `signInV2()`, `signUpV2()`, `refreshToken()`, `signOut()`, `revokeDevice()`
-- StateFlow: `authStatus`
+### ✅ Шаг 1: GrpcConnectionManager (сессия 23)
+### ✅ Шаг 2: GrpcChatListClient (сессия 32)
+### ✅ Шаг 3: GrpcAuthClient (сессия 23)
+### ✅ Шаг 4: GrpcProfileClient (сессия 32)
+### ✅ Шаг 5: GrpcCallClient (сессия 23)
+### ✅ Шаг 6: GrpcTypingClient (сессия 23)
+### ✅ Шаг 7: GrpcDraftClient + GrpcFavoritesClient (сессия 32)
+### ✅ Шаг 8: GrpcUnaryCallHelper (сессия 32)
+### ✅ Шаг 9: GrpcMarshallers (предыдущая сессия)
 
 ---
 
 ## Осталось сделать
 
-### ⏳ Шаг 2: Выделить GrpcChatClient (СЛЕДУЮЩИЙ)
-**Файл:** `data/grpc/GrpcChatClient.kt` (~2000 строк из RealGrpcClient)
-**Ответственность:** чат-стрим, отправка сообщений, получение чатов
+### ⏳ Шаг 10: Выделить GrpcMessageClient (СЛЕДУЮЩИЙ)
+**Файл:** `data/grpc/GrpcMessageClient.kt` (~800 строк из RealGrpcClient)
+**Ответственность:** отправка сообщений, история, реакции, редактирование, удаление
 **Методы:**
-- `startChat()`, `sendMessage()`, `addLocalMessage()`
-- `getChats()`, `pollChats()`
-- `pinChat()`, `unpinChat()`, `searchChats()`
-- `archiveChat()`, `unarchiveChat()`
-- `markRead()`, `deleteChat()`
-**StateFlow:** `messages`, `users`, `typingUsers`, `chatDeletedEvent`, `newMessageEvent`
+- `sendMessage()`, `addLocalMessage()`
+- `loadHistory()`, `resendPendingMessages()`
+- `editMessage()`, `deleteMessage()`
+- `setReaction()`, `markRead()`, `resendPendingReads()`
+**StateFlow:** `messages`, `newMessageEvent`
 
-**Сложность:** ВЫСОКАЯ — это самый большой и связанный блок кода
+**Сложность:** ВЫСОКАЯ — тесно связан с chat stream и message cache
 **Риск:** Средний — нужно аккуратно вынести не сломав стримы
 
-### ⏳ Шаг 4: Выделить GrpcProfileClient
-**Файл:** `data/grpc/GrpcProfileClient.kt`
-**Ответственность:** профиль пользователя, настройки, server info
+### ⏳ Шаг 11: Выделить GrpcServerDiscoveryClient
+**Файл:** `data/grpc/GrpcServerDiscoveryClient.kt` (~150 строк)
+**Ответственность:** обнаружение серверов, raw protobuf parsing
 **Методы:**
-- `getProfile()`, `updateProfile()`
-- `getUserSettings()`, `updateUserSettings()`
-- `fetchServerInfo()`
-**StateFlow:** `serviceProfileVersion`, `serviceChatVersion`, `serviceAuthVersion`
-**Примечание:** ProfileClient (object) уже существует — нужно интегрировать
+- `fetchServersList()`, `fetchServersFromHost()`
+- `parseServerList()`, `parseServerInfo()`
+- `readVarint()`, `skipField()`
 
-### ⏳ Шаг 7: Рефакторинг RealGrpcClient
-RealGrpcClient становится тонкой обёрткой (~200 строк):
-- Содержит экземпляры всех модулей
-- Проксирует StateFlow/SharedFlow из модулей
-- Инициализация и lifecycle
-- GrpcClient facade остаётся без изменений
+### ⏳ Шаг 12: Рефакторинг RealGrpcClient в тонкий orchestrator (~200 строк)
+RealGrpcClient содержит только:
+- Ссылку на GrpcClient (facade)
+- Инициализацию модулей
+- Проксирование StateFlow/SharedFlow из модулей
 
 ---
 
+## Архитектура после полного рефакторинга
+```
+GrpcClient (facade, 779 строк) — публичный API
+    ↓
+RealGrpcClient (orchestrator, ~200 строк) — координация модулей
+    ├── GrpcConnectionManager (170)
+    ├── GrpcAuthClient (232)
+    ├── GrpcTypingClient (87)
+    ├── GrpcCallClient (125)
+    ├── GrpcChatListClient (639)
+    ├── GrpcProfileClient (506)
+    ├── GrpcDraftClient (86)
+    ├── GrpcFavoritesClient (121)
+    ├── GrpcMessageClient (~800) — следующий
+    ├── GrpcServerDiscoveryClient (~150)
+    └── GrpcMarshallers (1394) — отдельный файл
+```
+
 ## Приоритет реализации
-1. **GrpcChatClient** (самый большой оставшийся кусок, ~2000 строк)
-2. **GrpcProfileClient**, затем рефакторинг RealGrpcClient
+1. **GrpcMessageClient** (самый большой оставшийся кусок)
+2. **GrpcServerDiscoveryClient** (легко выделяется)
+3. **Финальный рефакторинг RealGrpcClient**
 
 ## Риски
 - Нельзя сломать существующий функционал

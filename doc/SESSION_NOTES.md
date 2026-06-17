@@ -1,5 +1,67 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 32 (2026-06-17) — RealGrpcClient модуляризация
+
+### Контекст
+- RealGrpcClient был God Object — 3810 строк, ~445 методов
+- Содержал: chat stream, messages, history, chats, favorites, drafts, reactions, profile, avatar, contacts, themes, AI chats, server discovery, proto parsers, 60+ Marshaller классов
+- 4 модуля уже были выделены (ConnectionManager, Auth, Call, Typing)
+- Marshaller'ы уже были вынесены в GrpcMarshallers.kt (предыдущая сессия)
+
+### Что сделано
+1. **Создан GrpcChatListClient** (639 строк):
+   - getChats, getAllChats, getChatListVersion
+   - pinChat, unpinChat, searchChats, archiveChat, unarchiveChat (ChatList v2)
+   - pinMessage, unpinMessage, getPinnedMessages
+   - deleteChat, deleteChatWithUserId, createDirectChat, createGroupChat
+   - updateChatAvatar, updateChatSettings, updateChatName
+   - addParticipant, addParticipants, removeParticipant
+   - loadAllUsers, fetchUserId, registerToken
+   - getMutedChats, setMutedChat
+   - getAIChats, renameAIChat
+
+2. **Создан GrpcProfileClient** (506 строк):
+   - updateProfile, getUserProfile, deleteProfile
+   - updateAvatar, getUserAvatar, updateAvatarCache
+   - updateUsername, updatePassword, adminUpdatePassword
+   - requestPasswordReset, resetPassword
+   - addContact, removeContact, getContacts
+   - getThemes, saveTheme, setCurrentTheme, deleteTheme
+   - getFCMLogs, getDevices, deleteDevice, deleteOtherDevices
+
+3. **Создан GrpcDraftClient** (86 строк):
+   - saveDraft, getDraft, deleteDraft
+
+4. **Создан GrpcFavoritesClient** (121 строка):
+   - addFavorite, removeFavorite, getFavorites, saveFavoriteMessage
+
+5. **Создан GrpcUnaryCallHelper** (111 строк):
+   - Универсальный unaryCall helper для устранения дублирования MethodDescriptor/call/listener паттерна
+
+6. **RealGrpcClient обновлён** (3810 → 1615 строк, -57%):
+   - Добавлены 8 модулей: connectionManager, authClient, typingClient, callClient, chatListClient, profileClient, draftClient, favoritesClient
+   - Все inline gRPC вызовы заменены на делегирование в модули
+   - Удалены дублирующиеся объявления полей (avatarCache, fullAvatarCache, avatarCacheFlow, deletedMessageHashes, pendingReads)
+
+### Архитектура после рефакторинга
+```
+RealGrpcClient (1615 строк) — orchestrator
+├── GrpcConnectionManager (170) — connect/reconnect/disconnect
+├── GrpcAuthClient (232) — signInV2/signUpV2/refreshToken/signOut
+├── GrpcTypingClient (87) — typing stream
+├── GrpcCallClient (125) — call session
+├── GrpcChatListClient (639) — chat list, pin/search/archive, chat management
+├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices
+├── GrpcDraftClient (86) — drafts
+├── GrpcFavoritesClient (121) — favorites
+└── GrpcMarshallers (1394) — 60+ marshaller classes
+```
+
+### Коммиты
+- `fbdbbd2` — refactor: modularize RealGrpcClient — extract 5 modules, reduce by 57%
+
+---
+
 ## Сессия 31 (2026-06-17) — UpdateActivity восстановление
 
 ### Контекст

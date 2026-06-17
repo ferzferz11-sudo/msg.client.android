@@ -1,11 +1,36 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.25
-**Обновлено:** 2026-06-17 (сессия 31)
+**Версия:** v1.1.3.26
+**Обновлено:** 2026-06-17 (сессия 32)
 
 ---
 
 ## Паттерны
+
+### gRPC Client Modular Pattern (v1.1.3.26)
+RealGrpcClient разделён на специализированные модули по доменной ответственности:
+
+```
+RealGrpcClient (orchestrator) делегирует в:
+├── GrpcConnectionManager (170) — connect/reconnect/disconnect/keepalive
+├── GrpcAuthClient (232) — signInV2/signUpV2/refreshToken/signOut/revokeDevice
+├── GrpcTypingClient (87) — startTypingStream/sendTypingSignal
+├── GrpcCallClient (125) — startCallSession/sendCallSignal
+├── GrpcChatListClient (639) — chat list, pin/search/archive, chat management, users, AI chats
+├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices, username/password
+├── GrpcDraftClient (86) — saveDraft/getDraft/deleteDraft
+├── GrpcFavoritesClient (121) — addFavorite/removeFavorite/getFavorites
+└── GrpcMarshallers (1394) — 60+ marshaller classes (separate file)
+```
+
+**Принципы:**
+- Каждый модуль — отдельный класс с чёткой ответственностью
+- Модуль получает `getChannel` и `scope` через конструктор (DI без фреймворка)
+- RealGrpcClient содержит только StateFlow declarations, module initialization и proxy-методы
+- GrpcClient facade остаётся без изменений — обратная совместимость
+
+**До:** RealGrpcClient 3810 строк, ~445 методов (God Object)
+**После:** RealGrpcClient 1615 строк, 8 модулей (-57%)
 
 ### UpdateCoordinator pattern (v1.1.3.25)
 Вынос сложной логики из Activity в отдельный координирующий класс:
