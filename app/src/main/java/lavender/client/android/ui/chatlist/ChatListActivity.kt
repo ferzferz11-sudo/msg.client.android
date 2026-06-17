@@ -322,7 +322,14 @@ class ChatListActivity : AppCompatActivity() {
         // Favorites
         sheet.findViewById<View>(R.id.actionFavorites)?.setOnClickListener {
             sheet.dismiss()
-            startActivity(Intent(this, lavender.client.android.FavoritesActivity::class.java))
+            val favoritesChat = lavender.client.android.data.models.ChatInfo(
+                id = "favorites_$username",
+                name = getString(R.string.favorites),
+                type = "favorites",
+                lastMessageText = "",
+                lastMessageTime = 0L
+            )
+            navigateToChat(favoritesChat, username)
         }
 
         // Themes
@@ -1184,6 +1191,17 @@ class ChatListActivity : AppCompatActivity() {
 
     private fun navigateToChat(chat: ChatInfo, username: String) {
         when (chat.type) {
+            "favorites" -> {
+                val intent = Intent(this, NewChatActivity::class.java).apply {
+                    putExtra("USERNAME", username)
+                    putExtra("CHAT_NAME", getString(R.string.favorites))
+                    putExtra("ROOM_ID", "favorites_$username")
+                    putExtra("IS_DIRECT", false)
+                    putExtra("PARTICIPANTS", "[\"$username\"]")
+                    putExtra("CREATOR", username)
+                }
+                startActivity(intent)
+            }
             "hermes" -> {
                 val intent = Intent(this, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
                     putExtra("CHAT_ID", chat.id)
