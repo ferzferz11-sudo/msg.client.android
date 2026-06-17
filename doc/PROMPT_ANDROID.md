@@ -15,13 +15,16 @@ v1.1.3.32 — стабильность ChatList (аудит + 2 бага исп�
 
 ## АРХИТЕКТУРА
 
-### ChatList
+### ChatListActivity (v1.1.3.32)
 ```
-ChatListActivity.kt (1085) — основной Activity
+ChatListActivity.kt (~600) — onCreate, setupUI, lifecycle, proxy methods
 ├── ChatListToolbar.kt (232) — toolbar + settings sheets
 ├── ChatListTabs.kt (29) — tabs
 ├── ChatListActionMode.kt (120) — selection mode
 ├── ChatListSearch.kt (55) — search
+├── ChatListFABs.kt (450) — FABs + action sheets + AI bottom sheet
+├── ChatListNavigation.kt (60) — navigateToChat
+├── ChatListAuth.kt (250) — auth dialogs
 ├── ChatListViewModel.kt (290) — ViewModel
 ├── ChatListSections.kt (20) — sections
 └── UpdateCoordinator.kt (245) — updates
@@ -112,10 +115,11 @@ cd /root/msg.client.android
 
 ## CHANGELOG
 
-### v1.1.3.32 (сессия 39) — ChatList stability
-- fix: loadChats() — при timeout НЕ перезаписывать allChats (пользователь видит старый список вместо пустого экрана)
-- fix: read receipts — indexOfFirst проверка перед map, обновление только конкретного элемента
-- fix: добавлен импорт SessionManager, убран неиспользуемый Intent
+### v1.1.3.32 (сессии 39-40) — ChatList stability + модуляризация
+- fix: loadChats() — при timeout НЕ перезаписывать allChats
+- fix: read receipts — indexOfFirst проверка перед map
+- refactor: ChatListActivity 1085→~600 LOC (-45%), 3 новых модуля (FABs, Navigation, Auth)
+- docs: объединены TASKS.md + PROMPT_ANDROID.md
 
 ### v1.1.3.31 (сессия 37-38) — Read receipts + модуляризация
 - feat: read receipts broadcast — readReceiptEvent SharedFlow → ChatListViewModel

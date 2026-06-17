@@ -1,5 +1,27 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 40 (2026-06-17) — ChatListActivity модуляризация (v1.1.3.32)
+
+### Контекст
+- v1.1.3.32 stability fixes завершены
+- ChatListActivity всё ещё 1085 LOC — нужно разбить дальше
+
+### Что сделано
+
+#### Вынос в отдельные файлы
+- **ChatListFABs.kt** (~450 LOC) — setupFABs, showChatActionSheet, showAddContactDialog, showCreateChatDialog, showCreateSecretChatDialog, showCreateConferenceDialog, showAIBottomSheet, openHermesChat, openOwlChat, openHermesSettings, openOwlSettings
+- **ChatListNavigation.kt** (~60 LOC) — navigateToChat
+- **ChatListAuth.kt** (~250 LOC) — showAuthChoiceDialog, showLoginBottomSheet, showRegisterBottomSheet
+
+#### Результат
+- ChatListActivity: 1085 → ~600 LOC (-45%)
+- Всего модулей: 10 (Toolbar, Tabs, ActionMode, Search, FABs, Navigation, Auth, ViewModel, Sections, UpdateCoordinator)
+
+### Коммит
+- `335b5a6` — refactor: split ChatListActivity into modules (1085→~600 LOC)
+
+---
+
 ## Сессия 39 (2026-06-17) — ChatList stability fixes (v1.1.3.32)
 
 ### Контекст
