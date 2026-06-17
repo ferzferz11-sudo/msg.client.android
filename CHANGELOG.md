@@ -1,5 +1,19 @@
 # Lava Messenger — Android Changelog
 
+## [1.1.3.31] - 2026-06-17
+
+### Рефакторинг: Разбиение ChatListActivity
+- **ChatListActivity: 1470 → 1085 строк (-26%)**
+- Вынесено 4 модуля в пакет `ui/chatlist/`:
+  - `ChatListToolbar.kt` (232 строк) — toolbar actions, settings sheets, about, share, language
+  - `ChatListTabs.kt` (29 строк) — tab setup + listener
+  - `ChatListActionMode.kt` (120 строк) — selection mode callback + pin/mute/archive/delete
+  - `ChatListSearch.kt` (55 строк) — search menu + debounce
+- Поля ChatListActivity изменены с `private` на `internal` для межмодульного доступа
+- Публичные методы (`navigateToChat`, `showAddContactDialogPublic`) — `internal` для доступа из модулей
+
+---
+
 ## [1.1.3.23] - 2026-06-16
 
 ### Рефакторинг: Единый ChatListActivity

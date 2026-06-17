@@ -55,6 +55,20 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+        // Listen for read receipts — clear unread count in chat list
+        viewModelScope.launch {
+            GrpcClient.readReceiptEvent.collect { (roomId, reader) ->
+                val currentUsername = lavender.client.android.data.session.SessionManager.session.value.username
+                // Only clear unread if another user read our messages (not ourselves)
+                if (reader != currentUsername) {
+                    allChats = allChats.map {
+                        if (it.id == roomId) it.copy(unreadCount = 0) else it
+                    }
+                    buildSections(allChats)
+                    Log.d(TAG, "Read receipt from $reader for room $roomId — cleared unread")
+                }
+            }
+        }
     }
 
     fun loadChats() {

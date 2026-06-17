@@ -232,6 +232,10 @@ onView(withId(R.id.rvChatList))
 - ✅ **ChatAdapterV2 notifyDataSetChanged** — заменён на DiffUtil + dispatchUpdatesTo с анимациями
 - ✅ **Unread badges** — цвета по теме, real-time update через SharedFlow
 
+### Исправлено в v1.1.3.31
+- ✅ **Read receipts broadcast** — readReceiptEvent SharedFlow: RealGrpcClient → GrpcClient → ChatListViewModel
+- ✅ **ChatListActivity модуляризация** — разбит на ChatListToolbar, ChatListTabs, ChatListActionMode, ChatListSearch
+
 ### Исправлено в v1.1.3.30
 - ✅ **FAB [+] восстановлен** — ActionBottomSheet + SearchableListBottomSheet как в v1
 - ✅ **Favorites убран из секций** — Section.FAVORITES, FavoritesItem удалены

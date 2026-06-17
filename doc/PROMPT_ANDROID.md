@@ -1,31 +1,31 @@
-# Промпт для новой сессии — Android v1.1.3.31+
+# Промпт для новой сессии — Android v1.1.3.32+
 
 **Дата:** 2026-06-17
-**Версия:** v1.1.3.30
+**Версия:** 1.1.3.31
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.30
+**Тег:** v1.1.3.31 (TODO)
 
 ---
 
-## СТАТУС: v1.1.3.30 — завершена, тег выпущен
+## СТАТУС: v1.1.3.31 — завершена
 
-### Что сделано (CHANGELOG):
-- ✅ FAB [+] — ActionBottomSheet + SearchableListBottomSheet (Add Contact, Start Chat, Secret Chat, Conference)
-- ✅ Favorites — убран из секций, добавлен в шторку профиля (звёздочка)
-- ✅ Favorites — навигация через navigateToChat() → NewChatActivity (ROOM_ID=favorites_$username)
-- ✅ Удалён FavoritesActivity.kt (не нужен, всё через NewChatActivity)
-- ✅ Добавлены строки: no_favorites_yet, contacts_added (en + ru)
+### Что сделано:
+- ✅ ChatListActivity разбиение: 1470 → 1085 строк (-26%)
+- ✅ ChatListToolbar.kt (232) — toolbar + settings sheets
+- ✅ ChatListTabs.kt (29) — tabs
+- ✅ ChatListActionMode.kt (120) — selection mode
+- ✅ ChatListSearch.kt (55) — search
+- ✅ Поля ChatListActivity: `private` → `internal` для межмодульного доступа
+- ✅ Read receipts — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
+- ✅ ProfileService v2 — ferz подтвердил работу на dev сервере
 
 ---
 
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.31)
-
-### 🔴 Высокий приоритет
-1. ProfileService v2 — проверить работу на dev сервере
-2. Read receipts — MarkAsRead с broadcast
+## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.32)
 
 ### 🟡 Средний приоритет
-3. ChatListActivity разбиение (ToolbarManager, TabManager)
+1. FavoritesActivity рефакторинг — убрать отдельную Activity, использовать navigateToChat с favorites_ prefix
+2. ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
 
 ### 🟢 Отложено
 - NewChatActivity рефакторинг — отложено по решению ферзя
@@ -36,6 +36,18 @@
 ---
 
 ## АРХИТЕКТУРА
+
+### ChatListActivity (v1.1.3.31)
+```
+ChatListActivity.kt (1085) — основной Activity
+├── ChatListToolbar.kt (232) — toolbar + settings sheets
+├── ChatListTabs.kt (29) — tabs
+├── ChatListActionMode.kt (120) — selection mode
+├── ChatListSearch.kt (55) — search
+├── ChatListViewModel.kt (268) — ViewModel
+├── ChatListSections.kt (20) — sections
+└── UpdateCoordinator.kt (245) — updates
+```
 
 ### gRPC Client (v1.1.3.30)
 ```
@@ -60,7 +72,7 @@ RealGrpcClient (orchestrator, 874 LOC)
 |--|-----|------|
 | Порт gRPC | 50052 | 50051 |
 | Порт HTTP | 8083 | 8082 |
-| Версия | v1.1.3.0 | v1.1.3.0 |
+| Версия | v1.2.0.2 | v1.1.3.0 |
 
 ---
 
@@ -75,6 +87,7 @@ RealGrpcClient (orchestrator, 874 LOC)
 7. Kotlin 2.3.21: cont.resume(value, onCancellation = {})
 8. НЕТ forceReconnect — один connect при старте, reconnect только если FAILED
 9. Favorites — НЕ секция в списке, а отдельный чат (type="favorites"), открывается из шторки профиля
+10. При выносе кода из ChatListActivity — использовать `internal` для полей/методов, прокси-методы в Activity
 
 ---
 
@@ -98,7 +111,8 @@ cd /root/msg.client.android
 | `doc/INDEX.md` | Индекс всей документации |
 | `doc/TASKS.md` | Таск-трекер |
 | `doc/PROMPT_ANDROID.md` | Этот файл |
-| `doc/SESSION_NOTES.md` | История сессий |
-| `doc/CHANGELOG.md` | История изменений |
-| `doc/PATTERNS.md` | Паттерны и анти-patterns |
-| `doc/ChatListActivity_v1_REFERENCE.kt` | Копия v1 Activity (2802 строки) |
+| `doc/SESSION_NOTES.md` | Заметки сессий (35-38) |
+| `doc/SESSION_NOTES_ARCHIVE.md` | Архив сессий (23-34) |
+| `doc/PATTERNS.md` | Паттерны разработки |
+| `doc/REMOTE_AGENT.md` | Remote Agent интеграция |
+| `../CHANGELOG.md` | История изменений |

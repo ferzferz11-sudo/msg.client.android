@@ -34,7 +34,8 @@ class GrpcMessageClient(
     private val deletedMessageHashes: MutableSet<String>,
     private val pendingReads: MutableSet<String>,
     private val scope: CoroutineScope,
-    private val appContext: () -> Context?
+    private val appContext: () -> Context?,
+    private val onReadReceipt: ((String, String) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcMessageClient"
@@ -318,6 +319,8 @@ class GrpcMessageClient(
             scope.launch(Dispatchers.IO) {
                 db()?.messageDao()?.markRoomAsRead(targetRoomId)
             }
+            // Broadcast read receipt to update chat list unread count
+            onReadReceipt?.invoke(targetRoomId, reader)
         }
     }
 

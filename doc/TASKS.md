@@ -6,6 +6,29 @@
 
 ---
 
+## ✅ v1.1.3.31 — ChatListActivity рефакторинг (Сессия 37)
+
+### Разбиение ChatListActivity (1470 → 1085 строк, -26%)
+- ✅ **ChatListToolbar.kt** (232 строк) — setupToolbarActions, showSettingsSheet, showAdditionalSettingsSheet, confirmDeleteProfile, showAboutDialog, shareApp, toggleLanguage
+- ✅ **ChatListTabs.kt** (29 строк) — setupTabs с TabLayout
+- ✅ **ChatListActionMode.kt** (120 строк) — createActionModeCallback, updateActionModeTitle, pinSelectedChats, muteSelectedChats, archiveSelectedChats, deleteSelectedChats
+- ✅ **ChatListSearch.kt** (55 строк) — setupSearchMenu с SearchView + debounce
+- Поля ChatListActivity изменены с `private` на `internal` для доступа из модулей того же пакета
+
+### Архитектура после рефакторинга
+```
+ChatListActivity.kt (1085) — основной Activity
+├── ChatListToolbar.kt (232) — toolbar + settings sheets
+├── ChatListTabs.kt (29) — tabs
+├── ChatListActionMode.kt (120) — selection mode
+├── ChatListSearch.kt (55) — search
+├── ChatListViewModel.kt (268) — ViewModel
+├── ChatListSections.kt (20) — sections
+└── UpdateCoordinator.kt (245) — updates
+```
+
+---
+
 ## ✅ v1.1.3.30 — FAB [+] восстановление + Favorites fix (Сессия 36)
 
 ### FAB [+] — ActionBottomSheet + SearchableListBottomSheet
@@ -225,12 +248,13 @@
 
 ## 📋 Активные задачи
 
-### Высокий приоритет (v1.1.3.31)
-- [ ] **ProfileService v2** — проверить работу на dev сервере
-- [ ] **Read receipts** — MarkAsRead с broadcast
+### Высокий приоритет (v1.1.3.32)
+- [x] **ProfileService v2** — проверить работу на dev сервере (ferz подтвердил)
+- [x] **Read receipts** — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
+- [ ] **FavoritesActivity рефакторинг** — убрать отдельную Activity, использовать navigateToChat с favorites_ prefix
 
 ### Средний приоритет
-- [ ] ChatListActivity разбиение (ToolbarManager, TabManager)
+- [ ] ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation → отдельные файлы)
 
 ### Отложено
 - [ ] NewChatActivity рефакторинг — отложено по решению ферзя

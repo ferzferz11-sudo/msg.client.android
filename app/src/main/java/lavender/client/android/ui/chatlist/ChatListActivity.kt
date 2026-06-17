@@ -86,27 +86,27 @@ class ChatListActivity : AppCompatActivity() {
         private const val SEARCH_DEBOUNCE_MS = 300L
     }
 
-    private lateinit var viewModel: ChatListViewModel
-    private lateinit var chatAdapter: ChatAdapter
-    private var swipeRefresh: SwipeRefreshLayout? = null
-    private var rvChatList: RecyclerView? = null
-    private var tabLayout: TabLayout? = null
-    private var toolbar: MaterialToolbar? = null
-    private var tvToolbarTitle: TextView? = null
-    private var tvToolbarSubtitle: TextView? = null
-    private var ivToolbarUserAvatar: ImageView? = null
+    internal lateinit var viewModel: ChatListViewModel
+    internal lateinit var chatAdapter: ChatAdapter
+    internal var swipeRefresh: SwipeRefreshLayout? = null
+    internal var rvChatList: RecyclerView? = null
+    internal var tabLayout: TabLayout? = null
+    internal var toolbar: MaterialToolbar? = null
+    internal var tvToolbarTitle: TextView? = null
+    internal var tvToolbarSubtitle: TextView? = null
+    internal var ivToolbarUserAvatar: ImageView? = null
 
     // ActionMode
-    private var actionMode: ActionMode? = null
-    private var searchView: androidx.appcompat.widget.SearchView? = null
-    private var searchDebounceJob: Job? = null
+    internal var actionMode: ActionMode? = null
+    internal var searchView: androidx.appcompat.widget.SearchView? = null
+    internal var searchDebounceJob: Job? = null
 
     // AI Bottom Sheet
-    private var aiBottomSheet: AIBottomSheet? = null
-    private val aiChats = mutableListOf<AIChatInfo>()
+    internal var aiBottomSheet: AIBottomSheet? = null
+    internal val aiChats = mutableListOf<AIChatInfo>()
 
     // Update
-    private var updateCoordinator: UpdateCoordinator? = null
+    internal var updateCoordinator: UpdateCoordinator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -264,259 +264,15 @@ class ChatListActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupToolbarActions(username: String) {
-        // Avatar click -> User menu sheet (profile, themes, contacts, etc.)
-        ivToolbarUserAvatar?.setOnClickListener {
-            showSettingsSheet()
-        }
+    private fun setupToolbarActions(username: String) = lavender.client.android.ui.chatlist.setupToolbarActions(this, username)
+    private fun showSettingsSheet() = lavender.client.android.ui.chatlist.showSettingsSheet(this)
+    private fun showAdditionalSettingsSheet() = lavender.client.android.ui.chatlist.showAdditionalSettingsSheet(this)
+    private fun confirmDeleteProfile() = lavender.client.android.ui.chatlist.confirmDeleteProfile(this)
+    private fun showAboutDialog() = lavender.client.android.ui.chatlist.showAboutDialog(this)
+    private fun shareApp() = lavender.client.android.ui.chatlist.shareApp(this)
+    private fun toggleLanguage() = lavender.client.android.ui.chatlist.toggleLanguage(this)
 
-        // Title click -> ServersActivity
-        tvToolbarTitle?.setOnClickListener {
-            val intent = Intent(this, ServersActivity::class.java)
-            startActivity(intent)
-        }
-    }
-
-    // ======= Settings Sheet (avatar click) =======
-
-    private fun showSettingsSheet() {
-        val username = SessionManager.session.value.username
-        val avatarUrl = GrpcClient.getAvatarCache()[username] ?: ""
-        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_user_menu)
-
-        // Avatar in header
-        val menuUserAvatar = sheet.findViewById<ImageView>(R.id.menuUserAvatar)
-        if (avatarUrl.isNotEmpty() && menuUserAvatar != null) {
-            Glide.with(this)
-                .load(avatarUrl)
-                .apply(RequestOptions.circleCropTransform().placeholder(R.drawable.ic_default_avatar))
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .into(menuUserAvatar)
-        }
-
-        // Username in header
-        sheet.findViewById<TextView>(R.id.menuUsername)?.text = username
-
-        // Share
-        sheet.findViewById<View>(R.id.actionShareHeader)?.setOnClickListener {
-            sheet.dismiss()
-            shareApp()
-        }
-
-        // Edit Profile
-        sheet.findViewById<View>(R.id.actionEditProfile)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, EditProfileActivity::class.java).apply {
-                putExtra("USERNAME", username)
-            })
-        }
-
-        // Contacts
-        sheet.findViewById<View>(R.id.actionContacts)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, ContactsActivity::class.java).apply {
-                putExtra("USERNAME", username)
-            })
-        }
-
-        // Favorites
-        sheet.findViewById<View>(R.id.actionFavorites)?.setOnClickListener {
-            sheet.dismiss()
-            val favoritesChat = lavender.client.android.data.models.ChatInfo(
-                id = "favorites_$username",
-                name = getString(R.string.favorites),
-                type = "favorites",
-                lastMessageText = "",
-                lastMessageTime = 0L
-            )
-            navigateToChat(favoritesChat, username)
-        }
-
-        // Themes
-        sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, ThemesActivity::class.java).apply {
-                putExtra("username", username)
-            })
-        }
-
-        // Update
-        sheet.findViewById<View>(R.id.actionUpdate)?.setOnClickListener {
-            sheet.dismiss()
-            updateCoordinator?.checkManualUpdate()
-        }
-
-        // Language toggle
-        sheet.findViewById<View>(R.id.actionToggleLanguage)?.setOnClickListener {
-            sheet.dismiss()
-            toggleLanguage()
-        }
-
-        // Additional Settings
-        sheet.findViewById<View>(R.id.actionAdditionalSettings)?.setOnClickListener {
-            sheet.dismiss()
-            showAdditionalSettingsSheet()
-        }
-
-        sheet.show()
-    }
-
-    // ======= Additional Settings Sheet (settings icon click) =======
-
-    private fun showAdditionalSettingsSheet() {
-        val username = SessionManager.session.value.username
-        val isSuperAdmin = SessionManager.session.value.isSuperAdmin
-        val sheet = StandardBottomSheet(this, R.layout.bottom_sheet_additional_settings)
-
-        // Show Admin Panel only for super admins
-        sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
-
-        // Security
-        sheet.findViewById<View>(R.id.actionSecurity)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, SecurityActivity::class.java).apply {
-                putExtra("username", username)
-            })
-        }
-
-        // Notifications
-        sheet.findViewById<View>(R.id.actionNotifications)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, NotificationActivity::class.java))
-        }
-
-        // Logs
-        sheet.findViewById<View>(R.id.actionLogs)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, LogViewerActivity::class.java))
-        }
-
-        // Clear Cache
-        sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
-            sheet.dismiss()
-            try {
-                runBlocking(Dispatchers.IO) {
-                    CacheUtils.clearAllWithGlide(this@ChatListActivity)
-                }
-                Toast.makeText(this, R.string.cache_cleared, Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Log.e(TAG, "Error clearing cache", e)
-            }
-        }
-
-        // About
-        sheet.findViewById<View>(R.id.actionAbout)?.setOnClickListener {
-            sheet.dismiss()
-            showAboutDialog()
-        }
-
-        // Admin
-        sheet.findViewById<View>(R.id.actionAdmin)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, SuperAdminActivity::class.java))
-        }
-
-        // Servers
-        sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
-            sheet.dismiss()
-            startActivity(Intent(this, ServersActivity::class.java))
-        }
-
-        // Delete Profile
-        sheet.findViewById<View>(R.id.actionDeleteProfile)?.setOnClickListener {
-            sheet.dismiss()
-            confirmDeleteProfile()
-        }
-
-        // Logout
-        sheet.findViewById<View>(R.id.actionLogout)?.setOnClickListener {
-            sheet.dismiss()
-            GrpcClient.disconnect()
-            SessionManager.logout(this)
-            val intent = Intent(this, ChatListActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
-        }
-
-        sheet.show()
-    }
-
-    private fun confirmDeleteProfile() {
-        val username = SessionManager.session.value.username
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_profile)
-            .setMessage(R.string.delete_profile_confirm)
-            .setPositiveButton(R.string.delete) { _, _ ->
-                GrpcClient.deleteProfile(username) { success, _ ->
-                    runOnUiThread {
-                        if (success) {
-                            Toast.makeText(this, R.string.profile_deleted, Toast.LENGTH_LONG).show()
-                            GrpcClient.disconnect()
-                            SessionManager.logout(this)
-                            val intent = Intent(this, ChatListActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            }
-                            startActivity(intent)
-                        } else {
-                            Toast.makeText(this, R.string.failed_to_delete_profile, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun showAboutDialog() {
-        val sheet = StandardBottomSheet(this, R.layout.dialog_about)
-        try {
-            val versionName = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
-            sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = getString(R.string.app_version_format, versionName)
-        } catch (_: Exception) {}
-        sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
-        sheet.show()
-    }
-
-    private fun shareApp() {
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.share_app))
-            putExtra(Intent.EXTRA_TEXT, getString(R.string.share_app_description))
-        }
-        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_app)))
-    }
-
-    private fun toggleLanguage() {
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
-        val currentLang = prefs.getString("language", "ru") ?: "ru"
-        val newLang = if (currentLang == "ru") "en" else "ru"
-        prefs.edit().putString("language", newLang).apply()
-        recreate()
-    }
-
-    private fun setupTabs() {
-        tabLayout?.let { tabs ->
-            tabs.addTab(tabs.newTab().setText(R.string.tab_all))
-            tabs.addTab(tabs.newTab().setText(R.string.tab_ai))
-            tabs.addTab(tabs.newTab().setText(R.string.tab_groups))
-
-            tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab?) {
-                    val filter = when (tab?.position) {
-                        0 -> "all"
-                        1 -> "ai"
-                        2 -> "groups"
-                        else -> "all"
-                    }
-                    viewModel.setTabFilter(filter)
-                }
-                override fun onTabUnselected(tab: TabLayout.Tab?) {}
-                override fun onTabReselected(tab: TabLayout.Tab?) {}
-            })
-        }
-    }
-
+    private fun setupTabs() = setupTabs(this)
     private fun setupRecyclerView(username: String) {
         viewModel = ChatListViewModel(application)
 
@@ -1033,163 +789,22 @@ class ChatListActivity : AppCompatActivity() {
 
     // ======= ActionMode (Selection Mode) =======
 
-    private val actionModeCallback = object : ActionMode.Callback {
-        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            actionMode = mode
-            mode.menuInflater.inflate(R.menu.chat_list_action_mode, menu)
-            return true
-        }
+    private val actionModeCallback = createActionModeCallback(this)
 
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-            return false
-        }
+    private fun updateActionModeTitle() = updateActionModeTitle(this)
 
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            val selectedChats = chatAdapter.getSelectedChats()
-            if (selectedChats.isEmpty()) return false
-
-            return when (item.itemId) {
-                R.id.action_pin -> {
-                    pinSelectedChats(selectedChats)
-                    true
-                }
-                R.id.action_mute -> {
-                    muteSelectedChats(selectedChats)
-                    true
-                }
-                R.id.action_archive -> {
-                    archiveSelectedChats(selectedChats)
-                    true
-                }
-                R.id.action_delete -> {
-                    deleteSelectedChats(selectedChats)
-                    true
-                }
-                else -> false
-            }
-        }
-
-        override fun onDestroyActionMode(mode: ActionMode) {
-            actionMode = null
-            chatAdapter.clearSelection()
-        }
-    }
-
-    private fun updateActionModeTitle() {
-        val count = chatAdapter.getSelectedIds().size
-        actionMode?.title = getString(R.string.selected_count, count)
-    }
-
-    private fun pinSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            var pinned = 0
-            var unpinned = 0
-            for (chat in chats) {
-                if (chat.isPinned) {
-                    if (GrpcClient.unpinChat(this@ChatListActivity, chat.id)) unpinned++
-                } else {
-                    if (GrpcClient.pinChat(this@ChatListActivity, chat.id)) pinned++
-                }
-            }
-            if (pinned > 0 || unpinned > 0) {
-                viewModel.loadChats()
-            }
-            actionMode?.finish()
-        }
-    }
-
-    private fun muteSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            for (chat in chats) {
-                viewModel.toggleMute(chat.id, !chat.isMuted)
-            }
-            actionMode?.finish()
-        }
-    }
-
-    private fun archiveSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            var archived = 0
-            var unarchived = 0
-            for (chat in chats) {
-                if (chat.isArchived) {
-                    if (GrpcClient.unarchiveChat(this@ChatListActivity, chat.id)) unarchived++
-                } else {
-                    if (GrpcClient.archiveChat(this@ChatListActivity, chat.id)) archived++
-                }
-            }
-            if (archived > 0 || unarchived > 0) {
-                viewModel.loadChats()
-            }
-            actionMode?.finish()
-        }
-    }
-
-    private fun deleteSelectedChats(chats: List<ChatInfo>) {
-        lifecycleScope.launch {
-            var deleted = 0
-            for (chat in chats) {
-                viewModel.deleteChat(chat.id)
-                deleted++
-            }
-            if (deleted > 0) {
-                viewModel.loadChats()
-            }
-            actionMode?.finish()
-        }
-    }
+    private fun pinSelectedChats(chats: List<ChatInfo>) = pinSelectedChats(this, chats)
+    private fun muteSelectedChats(chats: List<ChatInfo>) = muteSelectedChats(this, chats)
+    private fun archiveSelectedChats(chats: List<ChatInfo>) = archiveSelectedChats(this, chats)
+    private fun deleteSelectedChats(chats: List<ChatInfo>) = deleteSelectedChats(this, chats)
 
     // ======= Search =======
 
-    private fun setupSearchMenu() {
-        toolbar?.inflateMenu(R.menu.chat_list_search)
-        toolbar?.setOnMenuItemClickListener { menuItem ->
-            if (menuItem.itemId == R.id.action_search) {
-                // SearchView is handled by its own listener in onMenuItemClick
-                true
-            } else {
-                false
-            }
-        }
-
-        // Find SearchView from menu and set listener
-        val searchItem = toolbar?.menu?.findItem(R.id.action_search)
-        searchView = searchItem?.actionView as? androidx.appcompat.widget.SearchView
-        searchItem?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-            override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                return true
-            }
-            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                viewModel.loadChats()
-                return true
-            }
-        })
-
-        searchView?.apply {
-            queryHint = getString(R.string.search_chats)
-            setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(query: String?): Boolean = true
-
-                override fun onQueryTextChange(newText: String?): Boolean {
-                    searchDebounceJob?.cancel()
-                    searchDebounceJob = lifecycleScope.launch {
-                        delay(SEARCH_DEBOUNCE_MS)
-                        val query = newText ?: ""
-                        if (query.isEmpty()) {
-                            viewModel.loadChats()
-                        } else {
-                            viewModel.searchChats(query)
-                        }
-                    }
-                    return true
-                }
-            })
-        }
-    }
+    private fun setupSearchMenu() = setupSearchMenu(this)
 
     // ======= Navigation =======
 
-    private fun navigateToChat(chat: ChatInfo, username: String) {
+    internal fun navigateToChat(chat: ChatInfo, username: String) {
         when (chat.type) {
             "favorites" -> {
                 val intent = Intent(this, NewChatActivity::class.java).apply {

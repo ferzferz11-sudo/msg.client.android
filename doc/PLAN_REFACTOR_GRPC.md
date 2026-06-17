@@ -56,6 +56,6 @@ RealGrpcClient (orchestrator, 874 строк) — chat stream + coordination
 1. **FAB [+] восстановление** — ✅ v1.1.3.30
 2. **Favorites fix** — ✅ v1.1.3.30 (убрать из секций, добавить в шторку, исправить FavoritesActivity)
 3. **ProfileService v2** — проверить работу на dev сервере
-4. **Read receipts** — MarkAsRead с broadcast
-5. **ChatListActivity разбиение** — ToolbarManager, TabManager
+4. **Read receipts** — ✅ v1.1.3.31 (readReceiptEvent SharedFlow → ChatListViewModel)
+5. **ChatListActivity разбиение** — ✅ v1.1.3.31 (ToolbarManager, TabManager, ActionMode, Search)
 - NewChatActivity рефакторинг — отложено по решению ферзя

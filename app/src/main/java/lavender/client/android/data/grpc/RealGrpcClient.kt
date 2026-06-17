@@ -83,6 +83,10 @@ object RealGrpcClient {
     private val _newMessageEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
     val newMessageEvent: SharedFlow<Pair<String, String>> = _newMessageEvent
 
+    // Read receipts broadcast: roomId → reader username
+    private val _readReceiptEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
+    val readReceiptEvent: SharedFlow<Pair<String, String>> = _readReceiptEvent
+
     var hasCheckedForUpdates = false
     var isAppInBackground = false
         set(value) {
@@ -188,7 +192,10 @@ object RealGrpcClient {
         deletedMessageHashes = deletedMessageHashes,
         pendingReads = pendingReads,
         scope = scope,
-        appContext = { appContext }
+        appContext = { appContext },
+        onReadReceipt = { roomId, reader ->
+            scope.launch { _readReceiptEvent.emit(Pair(roomId, reader)) }
+        }
     )
 
     // ====== Module: Server Discovery Client ======
