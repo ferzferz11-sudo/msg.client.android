@@ -1,5 +1,6 @@
 package lavender.client.android.data.grpc
 
+import Timestamp
 import io.grpc.MethodDescriptor
 import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream
@@ -483,7 +484,7 @@ class GetUserProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetU
 class GetUserProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserProfileResponseProto> {
     override fun stream(v: GetUserProfileResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetUserProfileResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""; var ls: com.google.protobuf.Timestamp? = null; var fau = ""
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""; var ls: Timestamp? = null; var fau = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> u = cis.readString(); 2 -> b = cis.readString(); 3 -> st = cis.readString(); 4 -> au = cis.readString(); 5 -> { val len = cis.readUInt32(); ls = ProtoUtils.parseTimestampFromProto(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }; 6 -> fau = cis.readString(); else -> cis.skipField(tag) } }
         return GetUserProfileResponseProto(u, b, st, au, ls, fau)
     }
@@ -618,7 +619,7 @@ class UserInfoProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<UserInfoProt
 class GetAllUsersResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetAllUsersResponseProto> {
     override fun stream(v: GetAllUsersResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetAllUsersResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val users = mutableListOf<UserInfoProto>(); val um = UserInfoProtoMarshaller(); var serverTime: com.google.protobuf.Timestamp? = null
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val users = mutableListOf<UserInfoProto>(); val um = UserInfoProtoMarshaller(); var serverTime: Timestamp? = null
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> { val len = cis.readUInt32(); users.add(um.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } 2 -> { val len = cis.readUInt32(); serverTime = ProtoUtils.parseTimestampFromProto(java.io.ByteArrayInputStream(cis.readRawBytes(len))) } else -> cis.skipField(tag) } }
         return GetAllUsersResponseProto(users, serverTime)
     }
@@ -999,12 +1000,12 @@ class GetDevicesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetDevi
             val tag = cis.readTag(); if (tag == 0) break
             if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) {
                 val len = cis.readUInt32(); val b = cis.readRawBytes(len); val cisis = com.google.protobuf.CodedInputStream.newInstance(b)
-                var id = ""; var name = ""; var cv = ""; var ts: com.google.protobuf.Timestamp? = null; var ip = ""
+                var id = ""; var name = ""; var cv = ""; var ts: Timestamp? = null; var ip = ""
                 while (!cisis.isAtEnd) {
                     val t2 = cisis.readTag(); if (t2 == 0) break
                     when (com.google.protobuf.WireFormat.getTagFieldNumber(t2)) {
                         1 -> id = cisis.readString(); 2 -> name = cisis.readString(); 3 -> cv = cisis.readString()
-                        4 -> { val l2 = cisis.readUInt32(); ts = com.google.protobuf.Timestamp.parseFrom(cisis.readRawBytes(l2)) }
+                        4 -> { val l2 = cisis.readUInt32(); ts = Timestamp.parseFrom(cisis.readRawBytes(l2)) }
                         5 -> ip = cisis.readString(); else -> cisis.skipField(t2)
                     }
                 }

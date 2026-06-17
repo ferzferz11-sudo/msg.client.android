@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.data.models.ChatInfo
+import AIChatInfo
 import lavender.client.android.data.proto.*
 
 /**
@@ -209,7 +210,7 @@ class GrpcChatListClient(
         )?.success ?: false
     }
 
-    suspend fun getPinnedMessages(chatId: String): List<lavender.client.android.data.models.Message> {
+    suspend fun getPinnedMessages(chatId: String): List<Message> {
         val userId = getUserId() ?: return emptyList()
         val response = unaryCallWithClass(
             getChannel = getChannel,
@@ -218,7 +219,7 @@ class GrpcChatListClient(
             responseType = GetPinnedMessagesResponseProto::class.java
         )
         return response?.messages?.map { proto ->
-            lavender.client.android.data.models.Message(
+            Message(
                 id = proto.id, user = proto.user, text = proto.text,
                 timestamp = proto.createdAt?.seconds ?: 0L
             )
@@ -526,7 +527,7 @@ class GrpcChatListClient(
 
     // ======= AI Chats =======
 
-    fun getAIChats(userId: String, callback: (List<lavender.client.android.data.models.AIChatInfo>) -> Unit) {
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetAIChatsRequestProto, GetAIChatsResponseProto>()
@@ -540,7 +541,7 @@ class GrpcChatListClient(
         call.start(object : io.grpc.ClientCall.Listener<GetAIChatsResponseProto>() {
             override fun onMessage(message: GetAIChatsResponseProto) {
                 callback(message.chats.map { proto ->
-                    lavender.client.android.data.models.AIChatInfo(
+                    AIChatInfo(
                         id = proto.id, name = proto.name, type = proto.type, createdAt = proto.createdAt
                     )
                 })

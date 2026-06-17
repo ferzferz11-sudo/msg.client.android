@@ -4,8 +4,8 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import lavender.client.android.data.proto.*
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.proto.*
 
 /**
  * Handles favorites operations: addFavorite, removeFavorite, getFavorites, saveFavoriteMessage.
@@ -114,7 +114,7 @@ class GrpcFavoritesClient(
             override fun onMessage(message: AddFavoriteResponseProto) { callback(message.success, message.message) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(lavender.client.android.data.proto.ProtoUtils.createMessageProto(message))
+        call.sendMessage(ProtoUtils.createMessageProto(message))
         call.halfClose()
         call.request(1)
     }
