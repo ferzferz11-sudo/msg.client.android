@@ -455,7 +455,6 @@ class ChatInputDelegate(
     private fun sendGalleryMessage(text: String, imageUrls: List<String>) {
         typingJob?.cancel()
         if (isTypingSignalSent) { isTypingSignalSent = false; onTypingSignal?.invoke(false) }
-        android.util.Log.d("ChatInputDelegate", "sendGalleryMessage: text=$text, imageUrls=$imageUrls")
         val et = when { text.isEmpty() && imageUrls.isEmpty() -> "Message"; imageUrls.isNotEmpty() && text.isEmpty() -> ""; else -> text }
         val msg = Message(
             id = java.util.UUID.randomUUID().toString(), user = username, text = et,
@@ -464,7 +463,6 @@ class ChatInputDelegate(
             repliedToMessageId = replyingTo?.id ?: "", repliedToUser = replyingTo?.user ?: "",
             repliedToText = replyingTo?.text ?: "", userId = grpcClient.getUserId() ?: "", isSent = false
         )
-        android.util.Log.d("ChatInputDelegate", "addLocalMessage: id=${msg.id}, imageUrl=${msg.imageUrl}, imageUrls=${msg.imageUrls}")
         grpcClient.addLocalMessage(msg)
         grpcClient.sendMessage(msg)
         grpcClient.deleteDraft(roomId)
