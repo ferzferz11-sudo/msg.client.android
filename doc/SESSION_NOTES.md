@@ -131,3 +131,21 @@ ChatListActivity.kt (1085) — основной Activity
 
 ---
 
+## Сессия 38 (2026-06-17) — Завершение v1.1.3.31
+
+### Итоги
+- ✅ Read receipts broadcast — readReceiptEvent SharedFlow работает
+- ✅ ChatListActivity модуляризация — разбит на 4 модуля
+- ✅ Исправлены все ошибки компиляции модулей
+- ✅ Документация оптимизирована (SESSION_NOTES 818→133 строки, архив старых сессий)
+- ✅ Тег v1.1.3.31 выпущен
+
+### Коммиты
+- `c7c373d` — feat: read receipts broadcast
+- `37ebb1c` — fix: compilation errors in ChatList modules
+- `9d8b5a5` — fix: add missing import kotlinx.coroutines.launch
+
+### Следующие шаги (v1.1.3.32)
+- Тестировать read receipts в реальном общении
+- Стабильность ChatList — основной приоритет
+

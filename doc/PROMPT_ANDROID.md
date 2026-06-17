@@ -1,31 +1,32 @@
 # Промпт для новой сессии — Android v1.1.3.32+
 
 **Дата:** 2026-06-17
-**Версия:** 1.1.3.31
+**Версия:** v1.1.3.31
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.31 (TODO)
+**Тег:** v1.1.3.31
 
 ---
 
-## СТАТУС: v1.1.3.31 — завершена
+## СТАТУС: v1.1.3.31 — завершена, тег выпущен
 
-### Что сделано:
+### Что сделано (CHANGELOG):
 - ✅ ChatListActivity разбиение: 1470 → 1085 строк (-26%)
-- ✅ ChatListToolbar.kt (232) — toolbar + settings sheets
-- ✅ ChatListTabs.kt (29) — tabs
-- ✅ ChatListActionMode.kt (120) — selection mode
-- ✅ ChatListSearch.kt (55) — search
-- ✅ Поля ChatListActivity: `private` → `internal` для межмодульного доступа
+- ✅ ChatListToolbar.kt (232), ChatListTabs.kt (29), ChatListActionMode.kt (120), ChatListSearch.kt (55)
 - ✅ Read receipts — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
 - ✅ ProfileService v2 — ferz подтвердил работу на dev сервере
+- ✅ FavoritesActivity убрана, навигация через navigateToChat с favorites_ prefix
+- ✅ Документация оптимизирована
 
 ---
 
 ## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.32)
 
+### 🔴 Главный приоритет
+1. **Стабильность ChatList** — тестировать на реальных чатах, находить и фиксить баги
+2. **Read receipts** — проверить в реальном общении (unread count должен обновляться)
+
 ### 🟡 Средний приоритет
-1. FavoritesActivity рефакторинг — убрать отдельную Activity, использовать navigateToChat с favorites_ prefix
-2. ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
+3. ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
 
 ### 🟢 Отложено
 - NewChatActivity рефакторинг — отложено по решению ферзя

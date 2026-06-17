@@ -248,19 +248,35 @@ ChatListActivity.kt (1085) — основной Activity
 
 ## 📋 Активные задачи
 
-### Высокий приоритет (v1.1.3.32)
-- [x] **ProfileService v2** — проверить работу на dev сервере (ferz подтвердил)
-- [x] **Read receipts** — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
-- [x] **FavoritesActivity рефакторинг** — убрана отдельная Activity, используется navigateToChat с favorites_ prefix (v1.1.3.30)
+### 🔴 Главный приоритет (v1.1.3.32)
+- [ ] **Стабильность ChatList** — тестировать на реальных чатах, находить и фиксить баги
+- [ ] **Read receipts** — проверить в реальном общении (unread count обновляется в реальном времени)
 
-### Средний приоритет
-- [ ] ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation → отдельные файлы)
+### 🟡 Средний приоритет
+- [ ] ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
 
-### Отложено
+### 🟢 Отложено
 - [ ] NewChatActivity рефакторинг — отложено по решению ферзя
 - [ ] Qdrant + CLIP (production RAG)
 - [ ] Shared element transitions
 - [ ] Infinite scroll + pagination
+
+---
+
+## ✅ Выполнено (v1.1.3.31)
+
+### v1.1.3.31 — Read receipts + ChatList модуляризация
+- [x] ProfileService v2 — ferz подтвердил работу на dev сервере
+- [x] Read receipts — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
+- [x] ChatListActivity разбиение: 1470 → 1085 строк (-26%)
+- [x] ChatListToolbar.kt (232), ChatListTabs.kt (29), ChatListActionMode.kt (120), ChatListSearch.kt (55)
+- [x] Исправлены ошибки компиляции модулей (imports: lifecycleScope, R, isVisible, launch)
+
+### v1.1.3.30 — FAB [+] + Favorites fix
+- [x] FAB [+] — ActionBottomSheet + SearchableListBottomSheet
+- [x] Favorites — убран из секций, добавлен в шторку профиля
+- [x] FavoritesActivity убрана, навигация через navigateToChat с favorites_ prefix
+- [x] Удалён FavoritesActivity.kt
 
 ---
 
