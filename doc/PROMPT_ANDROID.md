@@ -1,4 +1,4 @@
-# Промпт для новой сессии — Android v1.1.3.32+
+# Lava Messenger — Android Session Prompt
 
 **Дата:** 2026-06-17
 **Версия:** v1.1.3.32
@@ -7,70 +7,62 @@
 
 ---
 
-## СТАТУС: v1.1.3.32 — в работе
+## СТАТУС
 
-### Что сделано (CHANGELOG):
-- ✅ ChatListActivity разбиение: 1470 → 1085 строк (-26%)
-- ✅ ChatListToolbar.kt (232), ChatListTabs.kt (29), ChatListActionMode.kt (120), ChatListSearch.kt (55)
-- ✅ Read receipts — MarkAsRead с broadcast (readReceiptEvent SharedFlow → ChatListViewModel)
-- ✅ ProfileService v2 — ferz подтвердил работу на dev сервере
-- ✅ FavoritesActivity убрана, навигация через navigateToChat с favorites_ prefix
-- ✅ loadChats() timeout fix — при таймауте allChats НЕ заменяется на emptyList
-- ✅ Read receipts optimization — indexOfFirst проверка перед map
-
----
-
-## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.33)
-
-### 🟡 Средний приоритет
-1. ChatListActivity дальнейшее разбиение (FABs, Auth, Navigation)
-
-### 🟢 Отложено
-- NewChatActivity рефакторинг — отложено по решению ферзя
-- Qdrant + CLIP (production RAG)
-- Shared element transitions
-- Infinite scroll + pagination
+v1.1.3.32 — стабильность ChatList (аудит + 2 бага исправлены)
 
 ---
 
 ## АРХИТЕКТУРА
 
-### ChatListActivity (v1.1.3.31)
+### ChatList
 ```
 ChatListActivity.kt (1085) — основной Activity
 ├── ChatListToolbar.kt (232) — toolbar + settings sheets
 ├── ChatListTabs.kt (29) — tabs
 ├── ChatListActionMode.kt (120) — selection mode
 ├── ChatListSearch.kt (55) — search
-├── ChatListViewModel.kt (268) — ViewModel
+├── ChatListViewModel.kt (290) — ViewModel
 ├── ChatListSections.kt (20) — sections
 └── UpdateCoordinator.kt (245) — updates
 ```
 
-### gRPC Client (v1.1.3.30)
+### gRPC Client
 ```
 GrpcClient (facade, 779 LOC)
     ↓
 RealGrpcClient (orchestrator, 874 LOC)
-    ├── GrpcConnectionManager (167) — channel lifecycle
-    ├── GrpcAuthClient (232) — JWT auth
-    ├── GrpcTypingClient (87) — typing stream
-    ├── GrpcCallClient (125) — calls
-    ├── GrpcChatListClient (638) — chat list, pin/search/archive, management
-    ├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices
-    ├── GrpcDraftClient (86) — drafts
-    ├── GrpcFavoritesClient (120) — favorites
-    ├── GrpcMessageClient (341) — messages, history, reactions, mark read
-    ├── GrpcServerDiscoveryClient (145) — server discovery, proto parsing
-    └── GrpcMarshallers (1394) — all marshaller classes (separate file)
+    ├── GrpcConnectionManager (167)
+    ├── GrpcAuthClient (232)
+    ├── GrpcTypingClient (87)
+    ├── GrpcCallClient (125)
+    ├── GrpcChatListClient (638)
+    ├── GrpcProfileClient (506)
+    ├── GrpcDraftClient (86)
+    ├── GrpcFavoritesClient (120)
+    ├── GrpcMessageClient (341)
+    ├── GrpcServerDiscoveryClient (145)
+    └── GrpcMarshallers (1394)
 ```
 
 ### Серверы
 | | Dev | Prod |
 |--|-----|------|
-| Порт gRPC | 50052 | 50051 |
-| Порт HTTP | 8083 | 8082 |
-| Версия | v1.2.0.2 | v1.1.3.0 |
+| gRPC | 50052 | 50051 |
+| HTTP | 8083 | 8082 |
+
+---
+
+## ПРИОРИТЕТЫ
+
+### 🟡 Средний
+- ChatListActivity дальнейшее разбиение (FABs → ChatListFABs.kt, Auth → ChatListAuth.kt, Navigation → ChatListNavigation.kt)
+
+### 🟢 Отложено
+- NewChatActivity рефакторинг
+- Qdrant + CLIP
+- Shared element transitions
+- Infinite scroll
 
 ---
 
@@ -85,7 +77,9 @@ RealGrpcClient (orchestrator, 874 LOC)
 7. Kotlin 2.3.21: cont.resume(value, onCancellation = {})
 8. НЕТ forceReconnect — один connect при старте, reconnect только если FAILED
 9. Favorites — НЕ секция в списке, а отдельный чат (type="favorites"), открывается из шторки профиля
-10. При выносе кода из ChatListActivity — использовать `internal` для полей/методов, прокси-методы в Activity
+10. При выносе кода из ChatListActivity — `internal` для полей/методов, прокси-методы в Activity
+11. НЕ добавлять новые фичи без прямого запроса
+12. НЕ рефакторить работающий код без прямого запроса
 
 ---
 
@@ -106,11 +100,69 @@ cd /root/msg.client.android
 
 | Файл | Назначение |
 |------|-----------|
-| `doc/INDEX.md` | Индекс всей документации |
-| `doc/TASKS.md` | Таск-трекер |
-| `doc/PROMPT_ANDROID.md` | Этот файл |
-| `doc/SESSION_NOTES.md` | Заметки сессий (35-38) |
-| `doc/SESSION_NOTES_ARCHIVE.md` | Архив сессий (23-34) |
-| `doc/PATTERNS.md` | Паттерны разработки |
-| `doc/REMOTE_AGENT.md` | Remote Agent интеграция |
+| `doc/INDEX.md` | Индекс |
+| `doc/SESSION_NOTES.md` | Заметки сессий |
+| `doc/PATTERNS.md` | Паттерны |
+| `doc/CODE_AUDIT.md` | Аудит кода |
+| `doc/REMOTE_AGENT.md` | Remote Agent |
+| `doc/ChatListActivity_v1_REFERENCE.kt` | v1 reference (2802 LOC) |
 | `../CHANGELOG.md` | История изменений |
+
+---
+
+## CHANGELOG
+
+### v1.1.3.32 (сессия 39) — ChatList stability
+- fix: loadChats() — при timeout НЕ перезаписывать allChats (пользователь видит старый список вместо пустого экрана)
+- fix: read receipts — indexOfFirst проверка перед map, обновление только конкретного элемента
+- fix: добавлен импорт SessionManager, убран неиспользуемый Intent
+
+### v1.1.3.31 (сессия 37-38) — Read receipts + модуляризация
+- feat: read receipts broadcast — readReceiptEvent SharedFlow → ChatListViewModel
+- refactor: ChatListActivity 1470→1085 LOC (-26%), 4 новых модуля
+
+### v1.1.3.30 (сессия 36) — FAB + Favorites
+- feat: FAB [+] восстановлен — ActionBottomSheet + SearchableListBottomSheet
+- fix: Favorites убран из секций, добавлен в шторку профиля
+- fix: FavoritesActivity убрана, навигация через navigateToChat с favorites_ prefix
+
+### v1.1.3.28-29 (сессии 33-35) — gRPC модули + UI
+- refactor: RealGrpcClient 3810→874 LOC (-77%), 12 модулей
+- feat: кастомные темы для AppBarLayout, TabLayout
+- feat: NewChatBottomSheet с полным набором пунктов
+
+### v1.1.3.24-25 (сессии 30-31) — Auth + Updates
+- feat: полный auth flow — LoginBottomSheet + RegisterBottomSheet
+- feat: UpdateManager — silent check, manual check, progress dialog
+- refactor: Settings Sheet вместо ProfileBottomSheet
+
+### v1.1.3.23 (сессия 28) — Единый Activity
+- Удалён v1 ChatListActivity (2802 LOC)
+- ChatListActivityV2 → ChatListActivity (единый)
+- JWT auth fallback, reconnect optimization
+
+### v1.1.3.22 (сессия 27) — Rename
+- Lavender → Lava (все user-facing строки)
+
+### v1.1.3.21 (сессия 26) — Push
+- FCM push notifications, HIGH priority, DND bypass
+
+### v1.1.3.17-20 — AI + Stability
+- FAB AI, AIBottomSheet
+- Selection Mode, Search, Pin Message
+- JWT auth fix, DiffUtil, unread badges
+
+---
+
+## КЛЮЧЕВЫЕ РЕШЕНИЯ
+
+| Решение | Обоснование |
+|---------|-------------|
+| v1/v2 разделение | Новые файлы в ui/chatlist/, v1 без изменений |
+| Long press = режим выбора | ActionMode toolbar с Pin/Delete/Archive |
+| fetchServerInfo strategy | Dev (50052): skip HTTP, assume v2. Prod (50051): try HTTP /info, fallback v1 |
+| Optimistic READY | gRPC channel подключается лениво |
+| onCancellation = {} | Обязательно в Kotlin 2.3.21 |
+| Keepalive 30s/10s | Для мобильных сетей |
+| Poll 30s | Уменьшение нагрузки на сервер |
+| Gradle wrapper удалён | OOM protection на сервере |
