@@ -1,7 +1,7 @@
 # Lava Messenger — Android Code Audit
 
 **Дата:** 2026-06-17
-**Версия:** v1.1.3.25
+**Версия:** v1.1.3.28
 **Аудитор:** OWL (автоматический аудит)
 
 ---
@@ -10,11 +10,9 @@
 
 | Метрика | Значение |
 |---------|----------|
-| Всего Kotlin файлов | 139 |
-| Общий LOC | 38,492 |
-| Топ-5 файлов по размеру | RealGrpcClient (3810), HermesGrpc (1880), MessengerProto (1791), NewChatActivity (1473), OwlGrpc (1145) |
-| TODO/FIXME/HACK | 1 (avatar загрузка) |
-| Пустых методов | 0 |
+| Всего Kotlin файлов | 141 |
+| RealGrpcClient | 874 (было 3810, -77%) |
+| gRPC модулей | 12 + Marshallers |
 
 ---
 
@@ -22,16 +20,16 @@
 
 | # | Файл | LOC | Статус |
 |---|------|-----|--------|
-| 1 | RealGrpcClient.kt | 3810 | 🔴 Критично — требует немедленного рефакторинга |
-| 2 | HermesGrpc.kt | 1880 | 🟡 Большой, но изолированный |
-| 3 | MessengerProto.kt | 1791 | 🟢 Proto-код, генерируемый |
-| 4 | NewChatActivity.kt | 1473 | 🟡 Требует рефакторинга (можно разбить) |
+| 1 | HermesGrpc.kt | 1880 | 🟡 Большой, но изолированный |
+| 2 | MessengerProto.kt | 1791 | 🟢 Proto-код, генерируемый |
+| 3 | NewChatActivity.kt | 1473 | 🟡 Требует рефакторинга (можно разбить) |
+| 4 | GrpcMarshallers.kt | 1394 | 🟢 Marshaller classes, отдельный файл |
 | 5 | OwlGrpc.kt | 1145 | 🟢 Изолированный AI-модуль |
 | 6 | ChatListActivity.kt | 1104 | 🟡 Улучшить после UpdateCoordinator |
 | 7 | MessageAdapter.kt | 870 | 🟢 Нормальный для адаптера |
-| 8 | GrpcClient.kt | 779 | 🟢 Facade, стабильный |
-| 9 | ProfileActivity.kt | 719 | 🟡 Можно разбить на фрагменты |
-| 10 | ShareReceiverActivity.kt | 641 | 🟢 Нормальный |
+| 8 | RealGrpcClient.kt | 874 | 🟢 Orchestrator, рефакторинг завершён |
+| 9 | GrpcClient.kt | 779 | 🟢 Facade, стабильный |
+| 10 | ProfileActivity.kt | 719 | 🟡 Можно разбить на фрагменты |
 
 ---
 
@@ -154,20 +152,15 @@
 
 ## 8. Рекомендации по приоритету
 
-### 🔴 Немедленно (эта сессия)
-1. Выделить модули из RealGrpcClient (GrpcChatClient, GrpcChatListClient, GrpcProfileClient, etc.)
-2. Создать универсальный unaryCall helper
-3. Удалить мёртвый код (updateMessage, loadUsers как no-op)
-
 ### 🟡 Следующие 2-3 сессии
-4. Рефакторинг NewChatActivity (ViewModel + Fragments)
-5. Унификация error handling
-6. Разбиение ChatListActivity (ToolbarManager, TabManager)
+1. Рефакторинг NewChatActivity (ViewModel + Fragments)
+2. Унификация error handling
+3. Разбиение ChatListActivity (ToolbarManager, TabManager)
 
 ### 🟢 Backlog
-7. Тесты для gRPC клиента
-8. HermesGrpc/OwlGrpc выделение в domain layer
-9. Pagination для чатов
-10. Incremental history loading
-11. Certificate pinning
-12. Encrypted SharedPreferences
+4. Тесты для gRPC клиента
+5. HermesGrpc/OwlGrpc выделение в domain layer
+6. Pagination для чатов
+7. Incremental history loading
+8. Certificate pinning
+9. Encrypted SharedPreferences

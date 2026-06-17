@@ -1,5 +1,57 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 34 (2026-06-17) — Финальная модуляризация RealGrpcClient
+
+### Контекст
+- RealGrpcClient: 1615 строк после сессии 33
+- Осталось вынести: messages, history, reactions, mark read, server discovery
+
+### Что сделано
+1. **Создан GrpcMessageClient** (341 строка):
+   - sendMessage, addLocalMessage, loadHistory, editMessage, deleteMessage
+   - setReaction, markRead, resendPendingMessages, resendPendingReads
+   - handleDeleteMessageSignal, handleReadAllSignal, handleClearCacheSignal
+   - Конструктор принимает: getChannel, getUserId, getUsername, messages StateFlow, deletedMessageHashes, pendingReads, scope, appContext
+
+2. **Создан GrpcServerDiscoveryClient** (145 строк):
+   - fetchServersList, fetchServersFromHost
+   - parseServerList, parseServerInfo, readVarint, skipField
+   - Конструктор принимает: getSavedServerAddress (лямбда)
+
+3. **RealGrpcClient обновлён** (1615 → 874 строки, -46%):
+   - Добавлены 2 модуля: messageClient, serverDiscoveryClient
+   - Все inline gRPC вызовы заменены на делегирование
+   - Удалены: fetchServersList, fetchServersFromHost, parseServerList, parseServerInfo, readVarint, skipField
+   - Удалены: sendMessage, addLocalMessage, loadHistory, editMessage, deleteMessage, setReaction, markRead, resendPendingMessages, resendPendingReads
+   - Удалены: handleDeleteMessageSignal, handleReadAllSignal, handleClearCacheSignal (вынесены как методы GrpcMessageClient)
+   - Осталось: chat stream, StateFlow declarations, module init, proxy methods
+
+### Архитектура после рефакторинга
+```
+RealGrpcClient (874 строки) — orchestrator
+├── GrpcConnectionManager (167) — connect/reconnect/disconnect
+├── GrpcAuthClient (232) — signInV2/signUpV2/refreshToken/signOut
+├── GrpcTypingClient (87) — typing stream
+├── GrpcCallClient (125) — calls
+├── GrpcChatListClient (638) — chat list, pin/search/archive, chat management
+├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices
+├── GrpcDraftClient (86) — drafts
+├── GrpcFavoritesClient (120) — favorites
+├── GrpcMessageClient (341) — messages, history, reactions, mark read
+├── GrpcServerDiscoveryClient (145) — server discovery, proto parsing
+└── GrpcMarshallers (1394) — 111 marshaller classes (separate file)
+```
+
+### Итого с начала рефакторинга (сессии 23-34)
+- RealGrpcClient: 3810 → 874 строк (-77%)
+- Создано 12 модулей + 1 файл маршаллеров
+- Всего вынесено: ~4700 строк из монолита
+
+### Коммит
+- TBD — refactor: extract GrpcMessageClient + GrpcServerDiscoveryClient, RealGrpcClient 1615→874 LOC
+
+---
+
 ## Сессия 32 (2026-06-17) — RealGrpcClient модуляризация
 
 ### Контекст

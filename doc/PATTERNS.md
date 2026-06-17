@@ -1,36 +1,38 @@
 # Android — Паттерны и правила разработки
 
-**Версия:** v1.1.3.26
-**Обновлено:** 2026-06-17 (сессия 32)
+**Версия:** v1.1.3.28
+**Обновлено:** 2026-06-17 (сессия 34)
 
 ---
 
 ## Паттерны
 
-### gRPC Client Modular Pattern (v1.1.3.26)
+### gRPC Client Modular Pattern (v1.1.3.28)
 RealGrpcClient разделён на специализированные модули по доменной ответственности:
 
 ```
-RealGrpcClient (orchestrator) делегирует в:
-├── GrpcConnectionManager (170) — connect/reconnect/disconnect/keepalive
+RealGrpcClient (orchestrator, 874 LOC) делегирует в:
+├── GrpcConnectionManager (167) — connect/reconnect/disconnect/keepalive
 ├── GrpcAuthClient (232) — signInV2/signUpV2/refreshToken/signOut/revokeDevice
 ├── GrpcTypingClient (87) — startTypingStream/sendTypingSignal
 ├── GrpcCallClient (125) — startCallSession/sendCallSignal
-├── GrpcChatListClient (639) — chat list, pin/search/archive, chat management, users, AI chats
+├── GrpcChatListClient (638) — chat list, pin/search/archive, chat management, users, AI chats
 ├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices, username/password
 ├── GrpcDraftClient (86) — saveDraft/getDraft/deleteDraft
-├── GrpcFavoritesClient (121) — addFavorite/removeFavorite/getFavorites
-└── GrpcMarshallers (1394) — 60+ marshaller classes (separate file)
+├── GrpcFavoritesClient (120) — addFavorite/removeFavorite/getFavorites
+├── GrpcMessageClient (341) — sendMessage, loadHistory, editMessage, deleteMessage, setReaction, markRead
+├── GrpcServerDiscoveryClient (145) — fetchServersList, fetchServersFromHost, proto parsing
+└── GrpcMarshallers (1394) — 111 marshaller classes (separate file)
 ```
 
 **Принципы:**
 - Каждый модуль — отдельный класс с чёткой ответственностью
-- Модуль получает `getChannel` и `scope` через конструктор (DI без фреймворка)
-- RealGrpcClient содержит только StateFlow declarations, module initialization и proxy-методы
+- Модуль получает зависимости через конструктор (DI без фреймворка)
+- RealGrpcClient содержит только StateFlow declarations, module initialization, chat stream и proxy-методы
 - GrpcClient facade остаётся без изменений — обратная совместимость
 
 **До:** RealGrpcClient 3810 строк, ~445 методов (God Object)
-**После:** RealGrpcClient 1615 строк, 8 модулей (-57%)
+**После:** RealGrpcClient 874 строк, 12 модулей (-77%)
 
 ### UpdateCoordinator pattern (v1.1.3.25)
 Вынос сложной логики из Activity в отдельный координирующий класс:
@@ -230,11 +232,10 @@ onView(withId(R.id.rvChatList))
 - ✅ **ChatAdapterV2 notifyDataSetChanged** — заменён на DiffUtil + dispatchUpdatesTo с анимациями
 - ✅ **Unread badges** — цвета по теме, real-time update через SharedFlow
 
-### Исправлено в v1.1.3.20
-- ✅ **ChatListFragmentV2** — мёртвый код удалён (144 строки)
-- ✅ **RealGrpcClient модуляризация** — 4 модуля выделены (ConnectionManager, Auth, Call, Typing)
-- **DeployAgentTaskStream** — done=True отправлялся дважды (пустой + полный). Теперь один done=True с полными данными из TaskResult
-- **ChatAdapter filter()** — notifyItemRangeChanged не обновлял размер списка при фильтрации с Favorites → crash. Исправлено на dispatchUpdatesTo с offset +1
+### Исправлено в v1.1.3.28
+- ✅ **RealGrpcClient модуляризация** — 12 модулей выделено, God Object устранён (-77%)
+- ✅ **GrpcMessageClient** — все message operations вынесены (341 LOC)
+- ✅ **GrpcServerDiscoveryClient** — server discovery вынесен (145 LOC)
 
 ### Исправлено в v1.1.3.7
 - **Favorites flickering** — вынесен как отдельный favoritesItem, не участвует в DiffUtil

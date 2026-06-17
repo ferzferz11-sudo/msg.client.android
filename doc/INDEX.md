@@ -1,9 +1,9 @@
 # Lava Messenger — Android Документация
 
-**Версия:** v1.1.3.27
-**Обновлено:** 2026-06-17 (сессия 33)
+**Версия:** v1.1.3.28
+**Обновлено:** 2026-06-17 (сессия 34)
 **Ветка:** feat/1.1.3.x
-**Тег:** v1.1.3.27 (не выпущен)
+**Тег:** v1.1.3.28 (не выпущен)
 
 ---
 
@@ -101,11 +101,11 @@ app/src/main/java/lavender/client/android/
 └── theme/ui/
 ```
 
-### gRPC Client Architecture (v1.1.3.27)
+### gRPC Client Architecture (v1.1.3.28)
 ```
 GrpcClient (facade, 779 LOC)
     ↓
-RealGrpcClient (orchestrator, 1611 LOC)
+RealGrpcClient (orchestrator, 874 LOC)
     ├── GrpcConnectionManager (167) — channel lifecycle
     ├── GrpcAuthClient (232) — JWT auth
     ├── GrpcTypingClient (87) — typing stream
@@ -114,9 +114,9 @@ RealGrpcClient (orchestrator, 1611 LOC)
     ├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices
     ├── GrpcDraftClient (86) — drafts
     ├── GrpcFavoritesClient (120) — favorites
-    └── GrpcUnaryCallHelper (111) — universal unary helper
-
-GrpcMarshallers (1394) — all marshaller classes (separate file)
+    ├── GrpcMessageClient (341) — messages, history, reactions, mark read
+    ├── GrpcServerDiscoveryClient (145) — server discovery, proto parsing
+    └── GrpcMarshallers (1394) — all marshaller classes (separate file)
 ```
 
 ---

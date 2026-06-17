@@ -1,8 +1,24 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.27
-**Обновлено:** 2026-06-17 (сессия 33)
+**Версия:** v1.1.3.28
+**Обновлено:** 2026-06-17 (сессия 34)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.28 — Финальная модуляризация RealGrpcClient (Сессия 34)
+
+### Новые модули
+- ✅ **GrpcMessageClient** (341 LOC) — sendMessage, addLocalMessage, loadHistory, editMessage, deleteMessage, setReaction, markRead, resendPendingMessages, resendPendingReads, signal handlers
+- ✅ **GrpcServerDiscoveryClient** (145 LOC) — fetchServersList, fetchServersFromHost, parseServerList, parseServerInfo, readVarint, skipField
+
+### Результат
+- RealGrpcClient: 1615 → 874 LOC (-741 LOC, -46%)
+- Всего выделено модулей: 12 (ConnectionManager, Auth, Call, Typing, ChatList, Profile, Draft, Favorites, UnaryCallHelper, Marshallers, Message, ServerDiscovery)
+- Итого с начала рефакторинга: RealGrpcClient 3810 → 874 LOC (-77%)
+
+### Коммит
+- TBD — refactor: extract GrpcMessageClient + GrpcServerDiscoveryClient, RealGrpcClient 1615→874 LOC
 
 ---
 
@@ -160,17 +176,17 @@
 ## 📋 Активные задачи
 
 ### Высокий приоритет
-- [x] **Восстановить функциональность обновлений** — UpdateManager интегрирован, silent check, manual check, progress dialog, APK install
-- [x] **Модуляризация RealGrpcClient** — God Object разделён на 10 модулей
+- [x] **Модуляризация RealGrpcClient** — God Object разделён на 12 модулей
   - ✅ GrpcChatListClient (638 LOC) — chat list, pin/search/archive, chat management
   - ✅ GrpcProfileClient (506 LOC) — profile, avatar, contacts, themes, devices
   - ✅ GrpcDraftClient (86 LOC) — drafts
   - ✅ GrpcFavoritesClient (120 LOC) — favorites
   - ✅ GrpcUnaryCallHelper (111 LOC) — universal unary call helper
   - ✅ GrpcMarshallers (1394 LOC) — all 111 marshaller classes
-  - ✅ RealGrpcClient: 3810 → 1611 LOC (-57%)
-  - ⬜ Осталось в RealGrpcClient: ~1611 строк (chat stream, messages, history, reactions, server discovery)
-  - ⬜ Следующий шаг: GrpcMessageClient (~800 строк)
+  - ✅ GrpcMessageClient (341 LOC) — messages, history, reactions, mark read
+  - ✅ GrpcServerDiscoveryClient (145 LOC) — server discovery, proto parsing
+  - ✅ RealGrpcClient: 3810 → 874 LOC (-77%)
+  - ✅ Осталось в RealGrpcClient: chat stream + proxy methods (~874 строк)
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
@@ -222,7 +238,9 @@
 | `ui/widget/NewChatBottomSheet.kt` | Шторка создания чата |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
-|| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~1611 строк, цель: ~200) |
+|| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~874 строк, цель достигнута) |
+| `data/grpc/GrpcMessageClient.kt` | sendMessage/loadHistory/editMessage/deleteMessage/setReaction/markRead (341 строк) |
+| `data/grpc/GrpcServerDiscoveryClient.kt` | fetchServersList/fetchServersFromHost/proto parsing (145 строк) |
 || `data/grpc/GrpcConnectionManager.kt` | connect/reconnect/disconnect/keepalive (167 строк) |
 || `data/grpc/GrpcAuthClient.kt` | signInV2/signUpV2/refreshToken/signOut (232 строки) |
 || `data/grpc/GrpcCallClient.kt` | startCallSession/sendCallSignal (124 строки) |

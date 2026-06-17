@@ -1,8 +1,8 @@
-# План рефакторинга RealGrpcClient — v1.1.3.26+
+# План рефакторинга RealGrpcClient — v1.1.3.28
 
-## Текущее состояние (после сессии 32)
-- ✅ RealGrpcClient: 3810 → 1615 строк (-57%)
-- ✅ 8 модулей выделены и работают
+## Текущее состояние (после сессии 34)
+- ✅ RealGrpcClient: 3810 → 874 строк (-77%)
+- ✅ 12 модулей выделены и работают
 - ✅ GrpcClient facade без изменений
 
 ## Выполнено
@@ -15,38 +15,10 @@
 ### ✅ Шаг 6: GrpcTypingClient (сессия 23)
 ### ✅ Шаг 7: GrpcDraftClient + GrpcFavoritesClient (сессия 32)
 ### ✅ Шаг 8: GrpcUnaryCallHelper (сессия 32)
-### ✅ Шаг 9: GrpcMarshallers (предыдущая сессия)
-
----
-
-## Осталось сделать
-
-### ⏳ Шаг 10: Выделить GrpcMessageClient (СЛЕДУЮЩИЙ)
-**Файл:** `data/grpc/GrpcMessageClient.kt` (~800 строк из RealGrpcClient)
-**Ответственность:** отправка сообщений, история, реакции, редактирование, удаление
-**Методы:**
-- `sendMessage()`, `addLocalMessage()`
-- `loadHistory()`, `resendPendingMessages()`
-- `editMessage()`, `deleteMessage()`
-- `setReaction()`, `markRead()`, `resendPendingReads()`
-**StateFlow:** `messages`, `newMessageEvent`
-
-**Сложность:** ВЫСОКАЯ — тесно связан с chat stream и message cache
-**Риск:** Средний — нужно аккуратно вынести не сломав стримы
-
-### ⏳ Шаг 11: Выделить GrpcServerDiscoveryClient
-**Файл:** `data/grpc/GrpcServerDiscoveryClient.kt` (~150 строк)
-**Ответственность:** обнаружение серверов, raw protobuf parsing
-**Методы:**
-- `fetchServersList()`, `fetchServersFromHost()`
-- `parseServerList()`, `parseServerInfo()`
-- `readVarint()`, `skipField()`
-
-### ⏳ Шаг 12: Рефакторинг RealGrpcClient в тонкий orchestrator (~200 строк)
-RealGrpcClient содержит только:
-- Ссылку на GrpcClient (facade)
-- Инициализацию модулей
-- Проксирование StateFlow/SharedFlow из модулей
+### ✅ Шаг 9: GrpcMarshallers (сессия 33)
+### ✅ Шаг 10: GrpcMessageClient (сессия 34)
+### ✅ Шаг 11: GrpcServerDiscoveryClient (сессия 34)
+### ✅ Шаг 12: Финальный рефакторинг RealGrpcClient (сессия 34)
 
 ---
 
@@ -54,26 +26,31 @@ RealGrpcClient содержит только:
 ```
 GrpcClient (facade, 779 строк) — публичный API
     ↓
-RealGrpcClient (orchestrator, ~200 строк) — координация модулей
-    ├── GrpcConnectionManager (170)
-    ├── GrpcAuthClient (232)
-    ├── GrpcTypingClient (87)
-    ├── GrpcCallClient (125)
-    ├── GrpcChatListClient (639)
-    ├── GrpcProfileClient (506)
-    ├── GrpcDraftClient (86)
-    ├── GrpcFavoritesClient (121)
-    ├── GrpcMessageClient (~800) — следующий
-    ├── GrpcServerDiscoveryClient (~150)
-    └── GrpcMarshallers (1394) — отдельный файл
+RealGrpcClient (orchestrator, 874 строк) — chat stream + coordination
+    ├── GrpcConnectionManager (167) — channel lifecycle
+    ├── GrpcAuthClient (232) — JWT auth
+    ├── GrpcTypingClient (87) — typing stream
+    ├── GrpcCallClient (125) — calls
+    ├── GrpcChatListClient (638) — chat list, pin/search/archive, management
+    ├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices
+    ├── GrpcDraftClient (86) — drafts
+    ├── GrpcFavoritesClient (120) — favorites
+    ├── GrpcMessageClient (341) — messages, history, reactions, mark read
+    ├── GrpcServerDiscoveryClient (145) — server discovery, proto parsing
+    └── GrpcMarshallers (1394) — 111 marshaller classes (separate file)
 ```
 
-## Приоритет реализации
-1. **GrpcMessageClient** (самый большой оставшийся кусок)
-2. **GrpcServerDiscoveryClient** (легко выделяется)
-3. **Финальный рефакторинг RealGrpcClient**
+## Статистика
 
-## Риски
-- Нельзя сломать существующий функционал
-- Все изменения должны быть обратно совместимы
-- Тестировать на dev сервере после каждого шага
+| Метрика | До | После | Изменение |
+|---------|-----|-------|-----------|
+| RealGrpcClient | 3810 | 874 | -77% |
+| Всего модулей | 0 | 12 | +12 |
+| Новых файлов | 0 | 13 | +13 |
+| Вынесено строк | 0 | ~4700 | - |
+
+## Следующие приоритеты (после рефакторинга gRPC)
+1. **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel
+2. **ChatListActivity разбиение** — ToolbarManager, TabManager
+3. **Read receipts** — MarkAsRead с broadcast
+4. **ProfileService v2** — проверить работу на dev сервере
