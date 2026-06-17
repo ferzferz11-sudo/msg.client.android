@@ -1,22 +1,20 @@
 # Промпт для новой сессии — Android v1.1.3.31+
 
 **Дата:** 2026-06-17
-**Версия:** 1.1.3.30
+**Версия:** v1.1.3.30
 **Ветка:** feat/1.1.3.x
+**Тег:** v1.1.3.30
 
 ---
 
-## СТАТУС: v1.1.3.30 — завершена
+## СТАТУС: v1.1.3.30 — завершена, тег выпущен
 
-### Что сделано в этой сессии:
-- ✅ FAB [+] — восстановлен как в v1: ActionBottomSheet + SearchableListBottomSheet
-- ✅ showAddContactDialog() — поиск пользователей, добавление в контакты, чекбокс "Create direct chat after"
-- ✅ showCreateChatDialog() — выбор 1 пользователя → direct, 2+ → group
-- ✅ showCreateSecretChatDialog() — одиночный выбор, E2EE ключи
-- ✅ showCreateConferenceDialog() — мультивыбор, поле topic
-- ✅ Favorites — убран из секций списка (Section.FAVORITES, FavoritesItem)
-- ✅ Favorites — добавлен в шторку профиля (actionFavorites)
-- ✅ FavoritesActivity — исправлена загрузка (SessionManager, SwipeRefresh, empty state)
+### Что сделано (CHANGELOG):
+- ✅ FAB [+] — ActionBottomSheet + SearchableListBottomSheet (Add Contact, Start Chat, Secret Chat, Conference)
+- ✅ Favorites — убран из секций, добавлен в шторку профиля (звёздочка)
+- ✅ Favorites — навигация через navigateToChat() → NewChatActivity (ROOM_ID=favorites_$username)
+- ✅ Удалён FavoritesActivity.kt (не нужен, всё через NewChatActivity)
+- ✅ Добавлены строки: no_favorites_yet, contacts_added (en + ru)
 
 ---
 
@@ -39,22 +37,22 @@
 
 ## АРХИТЕКТУРА
 
-### gRPC Client (v1.1.3.29)
+### gRPC Client (v1.1.3.30)
 ```
 GrpcClient (facade, 779 LOC)
     ↓
 RealGrpcClient (orchestrator, 874 LOC)
-    ├── GrpcConnectionManager (167)
-    ├── GrpcAuthClient (232)
-    ├── GrpcTypingClient (87)
-    ├── GrpcCallClient (125)
-    ├── GrpcChatListClient (638)
-    ├── GrpcProfileClient (506)
-    ├── GrpcDraftClient (86)
-    ├── GrpcFavoritesClient (120)
-    ├── GrpcMessageClient (341)
-    ├── GrpcServerDiscoveryClient (145)
-    └── GrpcMarshallers (1394)
+    ├── GrpcConnectionManager (167) — channel lifecycle
+    ├── GrpcAuthClient (232) — JWT auth
+    ├── GrpcTypingClient (87) — typing stream
+    ├── GrpcCallClient (125) — calls
+    ├── GrpcChatListClient (638) — chat list, pin/search/archive, management
+    ├── GrpcProfileClient (506) — profile, avatar, contacts, themes, devices
+    ├── GrpcDraftClient (86) — drafts
+    ├── GrpcFavoritesClient (120) — favorites
+    ├── GrpcMessageClient (341) — messages, history, reactions, mark read
+    ├── GrpcServerDiscoveryClient (145) — server discovery, proto parsing
+    └── GrpcMarshallers (1394) — all marshaller classes (separate file)
 ```
 
 ### Серверы
@@ -76,6 +74,7 @@ RealGrpcClient (orchestrator, 874 LOC)
 6. НЕ инициализировать getString() в полях класса Activity
 7. Kotlin 2.3.21: cont.resume(value, onCancellation = {})
 8. НЕТ forceReconnect — один connect при старте, reconnect только если FAILED
+9. Favorites — НЕ секция в списке, а отдельный чат (type="favorites"), открывается из шторки профиля
 
 ---
 

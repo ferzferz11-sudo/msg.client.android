@@ -277,7 +277,6 @@
 | `ui/widget/ActionBottomSheet.kt` | Шторка действий (Add Contact, Start Chat, Secret Chat, Conference) |
 | `ui/widget/SearchableListBottomSheet.kt` | Шторка с поиском, списком пользователей, кнопкой действия |
 | `ui/adapter/UserAdapter.kt` | Адаптер пользователей с выбором + поиск + аватарами |
-| `FavoritesActivity.kt` | Экран избранных сообщений (SwipeRefresh, empty state) |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
 || `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~874 строк, цель достигнута) |
