@@ -75,10 +75,10 @@ class FavoritesActivity : AppCompatActivity() {
     }
 
     private fun loadFavorites() {
-        val userId = GrpcClient.getUserId() ?: ""
+        val userId = intent.getStringExtra("USER_ID") ?: GrpcClient.getUserId() ?: ""
         if (userId.isEmpty()) {
             emptyText.isVisible = true
-            emptyText.text = "Error: User ID not loaded"
+            emptyText.text = getString(R.string.user_id_not_loaded)
             return
         }
 

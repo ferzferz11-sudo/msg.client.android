@@ -228,9 +228,20 @@ cd /root/msg.client.android
 
 ## ПРИОРИТЕТЫ СЛЕДУЮЩЕЙ СЕССИИ (v1.1.3.30)
 
+### Высокий приоритет
+1. **Восстановить шторку FAB [+] как в v1** — ActionBottomSheet с 4 пунктами:
+   - Add Contact → SearchableListBottomSheet с поиском пользователей
+   - Start Chat → SearchableListBottomSheet для создания чата/группы
+   - Secret Chat → SearchableListBottomSheet для создания секретного чата
+   - Conference (in development) → SearchableListBottomSheet для создания конференции
+   - Нужно создать SearchableListBottomSheet, ActionBottomSheet, UserAdapter
+   - Ссылка на v1 reference: doc/ChatListActivity_v1_REFERENCE.kt (строки 1996-2412)
+
+2. **Favorites** — убрать из секций списка чатов. Оставить как пункт в шторке профиль (avatar click). По тапу открывать FavoritesActivity.
+
 ### Средний приоритет
-1. **ProfileService v2** — проверить работу на dev сервере
-2. **Read receipts** — MarkAsRead с broadcast
+3. **ProfileService v2** — проверить работу на dev сервере
+4. **Read receipts** — MarkAsRead с broadcast
 
 ### Отложено (пока не делаем)
 - NewChatActivity рефакторинг (1473 строки → ViewModel) — отложено по решению ферзя
