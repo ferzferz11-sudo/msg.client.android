@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import lavender.client.android.BuildConfig
 import lavender.client.android.data.auth.AuthManager
 import lavender.client.android.data.db.*

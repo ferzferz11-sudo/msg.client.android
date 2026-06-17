@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import lavender.client.android.data.db.AppDatabase
+import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 import lavender.client.android.data.proto.*
