@@ -142,11 +142,12 @@ class NewChatActivity : AppCompatActivity() {
         // Init delegates
         initDelegates()
         initSharedViews()
-        setupDelegates()
 
         ThemeUi.bind(this, username)
         setupTheme()
         setupRecyclerView()
+
+        setupDelegates()
         setupObservers()
         setupKeyboardHandling()
         fetchChatMetadataIfNeeded()
