@@ -1,12 +1,12 @@
 # Lava Messenger — Android Session Prompt
 
-**Дата:** 2026-06-17 | **Версия:** v1.1.3.32 | **Ветка:** feat/1.1.3.x
+**Дата:** 2026-06-17 | **Версия:** v1.1.3.33 | **Ветка:** feat/1.1.3.x
 
 ---
 
 ## СТАТУС
 
-v1.1.3.32 — завершена. Тег выпущен. Релиз APK отложен до тестирования на реальных чатах.
+v1.1.3.33 — разработка. Фазы 1-2 завершены. Релиз APK отложен до выполнения всех пунктов плана.
 
 ---
 
@@ -22,9 +22,20 @@ ChatListActivity (~364) — onCreate, setupUI, lifecycle, proxy methods
 ├── ChatListFABs (470) — FABs + action sheets + AI bottom sheet
 ├── ChatListNavigation (60) — navigateToChat
 ├── ChatListAuth (212) — auth dialogs
-├── ChatListViewModel (290) — ViewModel
+├── ChatListViewModel (295) — ViewModel + error StateFlow
 ├── ChatListSections (20) — sections
 └── UpdateCoordinator (245) — updates
+```
+
+### Chat (NewChatActivity)
+```
+NewChatActivity (~754) — onCreate, lifecycle, observers, wiring
+├── ChatToolbarDelegate (341) — toolbar, avatar, subtitle, navigation
+├── ChatInputDelegate (567) — input, send, attachments, audio, emoji, mentions
+├── ChatSelectionDelegate (236) — selection mode, copy/pin/delete/forward
+├── ChatSearchDelegate (135) — in-chat search
+├── ChatE2EEDelegate (72) — E2EE key exchange, encrypt/decrypt
+└── ChatMessageMenuDelegate (106) — reactions, context menu
 ```
 
 ### gRPC Client
@@ -55,16 +66,15 @@ RealGrpcClient (orchestrator, 882 LOC)
 
 ## ПРИОРИТЕТЫ
 
-### 🔴 Высокий (v1.1.3.33)
-- Тестирование v1.1.3.32 на реальных чатах (ferz локально)
-- Найти и исправить баги при тестировании
+### ✅ Завершено (v1.1.3.33)
+- Фаза 0: Тестирование v1.1.3.32 на реальных чатах ✅
+- Фаза 1: NewChatActivity рефакторинг (1473→754 LOC, -49%) ✅
+- Фаза 2: Унификация error handling ✅
 
-### 🟡 Средний (v1.1.3.34-38)
-1. NewChatActivity рефакторинг (1473 → <400 LOC) — v1.1.3.34
-2. Унификация error handling — v1.1.3.35
-3. Тесты для gRPC клиента — v1.1.3.36
-4. GrpcClient facade оптимизация (780 → <400 LOC) — v1.1.3.37
-5. AI Chats domain layer — v1.1.3.38
+### 🟡 Следующие (v1.1.3.34-38)
+1. **Фаза 3** (v1.1.3.34): Unit-тесты для gRPC клиента — 0 тестов → >20
+2. **Фаза 4** (v1.1.3.35): GrpcClient facade оптимизация (780→<400 LOC)
+3. **Фаза 5** (v1.1.3.36): AI Chats domain layer (выделение из gRPC слоя)
 
 ### 🟢 Отложено
 - Pagination для чатов
@@ -72,6 +82,8 @@ RealGrpcClient (orchestrator, 882 LOC)
 - Certificate pinning
 - Qdrant + CLIP
 - Shared element transitions
+- ProfileActivity рефакторинг (719 LOC)
+- ConferenceLobbyActivity рефакторинг (581 LOC)
 
 **Детальный план:** `doc/PLAN_V1.1.3.33.md`
 
@@ -91,6 +103,7 @@ RealGrpcClient (orchestrator, 882 LOC)
 10. При выносе кода из Activity — `internal` для полей/методов, прокси-методы в Activity
 11. НЕ добавлять новые фичи без прямого запроса
 12. НЕ рефакторить работающий код без прямого запроса
+13. Все ошибки логировать через `ErrorHandler.handle()` — НЕ через `Log.e` напрямую
 
 ---
 
@@ -112,7 +125,7 @@ cd /root/msg.client.android
 | Файл | Назначение |
 |------|-----------|
 | `doc/INDEX.md` | Индекс всей документации |
-| `doc/SESSION_NOTES.md` | Заметки сессий |
+| `doc/SESSION_NOTES.md` | Заметки сессий (42) |
 | `doc/PATTERNS.md` | Паттерны и правила разработки |
 | `doc/CODE_AUDIT.md` | Аудит кода |
 | `doc/PLAN_V1.1.3.33.md` | План реализации v1.1.3.33+ |
@@ -124,40 +137,31 @@ cd /root/msg.client.android
 
 ## CHANGELOG
 
-### v1.1.3.32 — ChatList stability + модуляризация
+### v1.1.3.33 (сессия 42) — NewChatActivity рефакторинг + Error handling
+- refactor: NewChatActivity 1473→754 LOC (-49%), 6 новых модулей в ui/chat/message/
+- refactor: унификация error handling — все gRPC модули используют ErrorHandler.handle()
+- feat: ChatListViewModel.error StateFlow + Snackbar в ChatListActivity
+- fix: исправлены ошибки компиляции (импорты Lifecycle, isVisible, toColorInt, edit)
+
+### v1.1.3.32 (сессии 39-41) — ChatList stability + модуляризация
 - fix: loadChats() — при timeout НЕ перезаписывать allChats
 - fix: read receipts — indexOfFirst проверка перед map
 - refactor: ChatListActivity 1085→~600 LOC (-45%), 3 новых модуля (FABs, Navigation, Auth)
 - fix: табы переупорядочены: Все → Группы → ИИ чаты
 - fix: "AI" → "AI Chats" / "ИИ" → "ИИ чаты"
 - fix: исправлена ошибка компиляции в NewChatBottomSheet
-- docs: объединены TASKS.md + PROMPT_ANDROID.md
 
-### v1.1.3.31 — Read receipts + модуляризация
+### v1.1.3.31 (сессии 37-38) — Read receipts + модуляризация
 - feat: read receipts broadcast — readReceiptEvent SharedFlow → ChatListViewModel
 - refactor: ChatListActivity 1470→1085 LOC (-26%), 4 новых модуля
 
-### v1.1.3.30 — FAB + Favorites
+### v1.1.3.30 (сессия 36) — FAB + Favorites
 - feat: FAB [+] восстановлен — ActionBottomSheet + SearchableListBottomSheet
 - fix: Favorites убран из секций, добавлен в шторку профиля
 
-### v1.1.3.28-29 — gRPC модули + UI
+### v1.1.3.28-29 (сессии 33-35) — gRPC модули + UI
 - refactor: RealGrpcClient 3810→882 LOC (-77%), 12 модулей
 - feat: кастомные темы для AppBarLayout, TabLayout
-
-### v1.1.3.24-25 — Auth + Updates
-- feat: полный auth flow — LoginBottomSheet + RegisterBottomSheet
-- feat: UpdateManager — silent check, manual check, progress dialog
-
-### v1.1.3.23 — Единый Activity
-- Удалён v1 ChatListActivity (2802 LOC)
-- ChatListActivityV2 → ChatListActivity (единый)
-
-### v1.1.3.22 — Rename
-- Lavender → Lava
-
-### v1.1.3.21 — Push
-- FCM push notifications
 
 ---
 
@@ -173,3 +177,5 @@ cd /root/msg.client.android
 | Keepalive 30s/10s | Для мобильных сетей |
 | Poll 30s | Уменьшение нагрузки на сервер |
 | Gradle wrapper удалён | OOM protection на сервере |
+| ErrorHandler единый | Все ошибки через ErrorHandler → AppLog + Log |
+| Chat модули | 6 делегатов вместо монолитного NewChatActivity |

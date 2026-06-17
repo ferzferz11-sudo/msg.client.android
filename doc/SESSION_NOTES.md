@@ -1,31 +1,39 @@
 # Lava Messenger — Android Session Notes
 
-## Сессия 41 (2026-06-17) — v1.1.3.32 final
-- Табы: порядок Все → Группы → ИИ чаты
-- "AI" → "AI Chats" (en), "ИИ" → "ИИ чаты" (ru)
-- Исправлена компиляция: `showAddContactDialogPublic()` → `showAddContactDialog()` в NewChatBottomSheet
-- Коммит: `118f178`
+## Сессия 42 (2026-06-17) — Фаза 1: NewChatActivity рефакторинг
 
-## Сессия 40 (2026-06-17) — ChatListActivity модуляризация
-- Вынесены: ChatListFABs (~450 LOC), ChatListNavigation (~60), ChatListAuth (~250)
-- ChatListActivity: 1085 → ~600 LOC (-45%), всего 10 модулей
-- Коммит: `335b5a6`
+### Что сделано
+- NewChatActivity: 1473 → 754 LOC (-49%)
+- Создано 6 модулей в `ui/chat/message/`:
+  - `ChatToolbarDelegate.kt` (341 LOC) — toolbar, avatar, subtitle, navigation, group avatars, lobby, secret chat
+  - `ChatInputDelegate.kt` (567 LOC) — text input, send, attachments (camera/gallery/file/location), audio recording, emoji picker, mentions, image preview, image upload
+  - `ChatSelectionDelegate.kt` (236 LOC) — selection mode, copy/pin/delete/forward/star actions
+  - `ChatSearchDelegate.kt` (135 LOC) — in-chat search with next/prev navigation
+  - `ChatE2EEDelegate.kt` (72 LOC) — E2EE key exchange, encrypt/decrypt
+  - `ChatMenuDelegate.kt` (106 LOC) — message context menu (reactions, reply, copy, edit, delete)
+- Исправлены ошибки компиляции: импорты Lifecycle, isVisible, toColorInt, edit
+- Исправлен порядок инициализации: setupDelegates после setupRecyclerView
+- Добавлено логирование для отладки отправки изображений
 
-## Сессия 39 (2026-06-17) — ChatList stability fixes
-- loadChats(): при timeout НЕ перезаписывать allChats (indexOfFirst проверка перед map)
-- Read receipts: indexOfFirst вместо map по всему списку
-- Коммит: `dd8ba35`
+### Коммиты
+- `bae73d5` — refactor: split NewChatActivity into 6 modules
+- `28feddf` — fix: add missing imports
+- `e690368` — fix: add missing toColorInt import
+- `472e91f` — fix: move setupDelegates after setupRecyclerView
+- `169471c` — debug: add logging for image send flow
+- `1488d39` — debug: remove debug logging
 
-## Сессия 38 (2026-06-17) — Read receipts broadcast
-- readReceiptEvent SharedFlow: RealGrpcClient → GrpcClient → ChatListViewModel
-- GrpcMessageClient: onReadReceipt callback
-- Цепочка: Server MarkRead → Broadcast → handleReadAllSignal → emit → clear unread
+---
 
-## Сессия 37 (2026-06-17) — ChatListActivity первичная модуляризация
-- Вынесены: ChatListToolbar (232), ChatListTabs (29), ChatListActionMode (120), ChatListSearch (55)
-- ChatListActivity: 1470 → 1085 LOC (-26%)
+## Сессия 42 (2026-06-17) — Фаза 2: Унификация error handling
 
-## Сессия 36 (2026-06-17) — FAB + Favorites
-- FAB [+] восстановлен: ActionBottomSheet + SearchableListBottomSheet (v1 паттерн)
-- Favorites убран из секций, добавлен в шторку профиля
-- FavoritesActivity исправлен: SessionManager, SwipeRefresh, empty state
+### Что сделано
+- `RealGrpcClient`: `Log.e` → `ErrorHandler.handle` для ошибок стрима
+- `GrpcMessageClient`: `Log.e` → `ErrorHandler.handle` для ошибок отправки
+- `GrpcChatListClient`: `Log.e` → `ErrorHandler.handle` для ошибок статуса (getAllChats, getAllUsers, getAIChats)
+- `HermesGrpc`: `Log.e`/`AppLog.error` → `ErrorHandler.handle/warn` для ошибок оркестратора
+- `ChatListViewModel`: добавлен `error` StateFlow + `clearError()`
+- `ChatListActivity`: подписка на `viewModel.error` → отображение Snackbar
+
+### Коммиты
+- `14950a5` — refactor: unify error handling across gRPC modules and UI
