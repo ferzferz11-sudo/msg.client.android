@@ -35,13 +35,14 @@
 |------|-----------|-------------|
 | `PATTERNS.md` | Паттерны и анти-patterns разработки | Перед написанием кода |
 | `ARCH_ANALYSIS_V2_V1.md` | Анализ архитектуры v2 vs v1 | При планировании рефакторинга |
-| `PLAN_REFACTOR_GRPC.md` | План рефакторинга RealGrpcClient | При продолжении модуляризации |
+| `PLAN_REFACTOR_GRPC.md` | План рефакторинга RealGrpcClient (ЗАВЕРШЁН) | Справочно |
 | `CODE_AUDIT.md` | Аудит кода — сильные/слабые места | При планировании оптимизаций |
 
 ### Компоненты
 | Файл | Назначение | Когда читать |
 |------|-----------|-------------|
 | `REMOTE_AGENT.md` | Remote Agent: архитектура, протокол, streaming | При работе с Remote Agent |
+| `ChatListActivity_v1_REFERENCE.kt` | Копия удалённого v1 Activity (2802 строки) | Для переноса кода из v1 |
 
 ### Сервер
 | Файл | Назначение |
@@ -59,41 +60,42 @@
 
 ```
 app/src/main/java/lavender/client/android/
-├── ChatListActivity.kt          ← ЕДИНЫЙ Activity (v1+v2)
 ├── ui/
 │   ├── chatlist/
-│   │   ├── ChatListActivity.kt
-│   │   ├── ChatListViewModel.kt
-│   │   ├── ChatListSections.kt
-│   │   └── UpdateCoordinator.kt
+│   │   ├── ChatListActivity.kt         — ЕДИНЫЙ Activity (~1113 LOC)
+│   │   ├── ChatListViewModel.kt        — loadChats, pinChat, setTabFilter
+│   │   ├── ChatListSections.kt         — Section enum + SectionItem
+│   │   └── UpdateCoordinator.kt        — update system UI logic
 │   ├── adapter/
-│   │   ├── ChatAdapter.kt
-│   │   └── MessageAdapter.kt
+│   │   ├── ChatAdapter.kt              — адаптер с секциями + selection state + DiffUtil
+│   │   └── MessageAdapter.kt           — адаптер сообщений + pinned badge
 │   ├── widget/
-│   │   ├── ServerAuthBottomSheet.kt
-│   │   ├── LoginBottomSheet.kt
-│   │   ├── RegisterBottomSheet.kt
-│   │   ├── AIBottomSheet.kt
-│   │   └── NewChatBottomSheet.kt
-│   ├── hermes/
-│   ├── owl/
-│   └── remote/
+│   │   ├── ServerAuthBottomSheet.kt    — шторка выбора входа
+│   │   ├── LoginBottomSheet.kt         — шторка входа
+│   │   ├── RegisterBottomSheet.kt      — шторка регистрации
+│   │   ├── AIBottomSheet.kt            — шторка выбора AI чата
+│   │   └── NewChatBottomSheet.kt       — шторка создания чата (7 пунктов)
+│   ├── hermes/                         — Hermes AI чат
+│   ├── owl/                            — OWL AI чат
+│   └── remote/                         — Remote Agent UI
 ├── data/
-│   ├── cache/CacheUtils.kt
+│   ├── cache/CacheUtils.kt             — единый утилит очистки кэша
 │   ├── grpc/
-│   │   ├── GrpcClient.kt                    ← facade (779 LOC)
-│   │   ├── RealGrpcClient.kt                ← orchestrator (1611 LOC)
-│   │   ├── GrpcMarshallerers.kt             ← 111 marshaller classes (1394 LOC)
-│   │   ├── GrpcUnaryCallHelper.kt           ← universal unary call (111 LOC)
-│   │   ├── GrpcConnectionManager.kt         ← connect/reconnect (167 LOC)
-│   │   ├── GrpcAuthClient.kt                ← JWT auth (232 LOC)
-│   │   ├── GrpcCallClient.kt               ← call session (125 LOC)
-│   │   ├── GrpcTypingClient.kt              ← typing stream (87 LOC)
-│   │   ├── GrpcChatListClient.kt            ← chat list CRUD (638 LOC)
-│   │   ├── GrpcProfileClient.kt             ← profile/avatar/themes (506 LOC)
-│   │   ├── GrpcDraftClient.kt              ← drafts (86 LOC)
-│   │   ├── GrpcFavoritesClient.kt          ← favorites (120 LOC)
-│   │   ├── ProfileClient.kt                ← ProfileService v2
+│   │   ├── GrpcClient.kt              — facade (779 LOC)
+│   │   ├── RealGrpcClient.kt           — orchestrator (874 LOC)
+│   │   ├── GrpcMarshallers.kt          — 111 marshaller classes (1394 LOC)
+│   │   ├── GrpcUnaryCallHelper.kt      — universal unary call (111 LOC)
+│   │   ├── GrpcConnectionManager.kt    — connect/reconnect (167 LOC)
+│   │   ├── GrpcAuthClient.kt           — JWT auth (232 LOC)
+│   │   ├── GrpcCallClient.kt           — call session (125 LOC)
+│   │   ├── GrpcTypingClient.kt         — typing stream (87 LOC)
+│   │   ├── GrpcChatListClient.kt       — chat list CRUD (638 LOC)
+│   │   ├── GrpcProfileClient.kt        — profile/avatar/themes (506 LOC)
+│   │   ├── GrpcDraftClient.kt          — drafts (86 LOC)
+│   │   ├── GrpcFavoritesClient.kt      — favorites (120 LOC)
+│   │   ├── GrpcMessageClient.kt        — messages/history/reactions (341 LOC)
+│   │   ├── GrpcServerDiscoveryClient.kt — server discovery (145 LOC)
+│   │   ├── ProfileClient.kt            — ProfileService v2
 │   │   └── BearerTokenInterceptor.kt
 │   ├── session/
 │   ├── auth/
@@ -101,7 +103,7 @@ app/src/main/java/lavender/client/android/
 └── theme/ui/
 ```
 
-### gRPC Client Architecture (v1.1.3.28)
+### gRPC Client Architecture (v1.1.3.29)
 ```
 GrpcClient (facade, 779 LOC)
     ↓
@@ -121,14 +123,6 @@ RealGrpcClient (orchestrator, 874 LOC)
 
 ---
 
-## Архивные файлы
-
-| Файл | Назначение |
-|------|-----------|
-| `doc/ChatListActivity_v1_REFERENCE.kt` | Копия удалённого ChatListActivity (v1) — 2802 строки |
-
----
-
 ## Серверы
 
 | | Dev | Prod |
@@ -136,4 +130,4 @@ RealGrpcClient (orchestrator, 874 LOC)
 | Порт gRPC | 50052 | 50051 |
 | Порт HTTP | 8083 | 8082 |
 | Имя | Lava Germany dev | Lava Germany |
-| Версия | v1.2.0.2 | v1.1.3.10 |
+| Версия | v1.1.3.0 | v1.1.3.0 |

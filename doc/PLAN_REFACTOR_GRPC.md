@@ -1,9 +1,8 @@
-# План рефакторинга RealGrpcClient — v1.1.3.28
+# План рефакторинга RealGrpcClient — v1.1.3.28+
 
-## Текущее состояние (после сессии 34)
-- ✅ RealGrpcClient: 3810 → 874 строк (-77%)
-- ✅ 12 модулей выделены и работают
-- ✅ GrpcClient facade без изменений
+## СТАТУС: ✅ ЗАВЕРШЁН (все 12 шагов выполнены)
+
+---
 
 ## Выполнено
 
@@ -49,8 +48,12 @@ RealGrpcClient (orchestrator, 874 строк) — chat stream + coordination
 | Новых файлов | 0 | 13 | +13 |
 | Вынесено строк | 0 | ~4700 | - |
 
+---
+
 ## Следующие приоритеты (после рефакторинга gRPC)
-1. **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel
+
+Рефакторинг gRPC завершён. Следующие приторитеты:
+1. **NewChatActivity рефакторинг** — 1473 строки, выделить ViewModel — отложено по решению ферзя
 2. **ChatListActivity разбиение** — ToolbarManager, TabManager
 3. **Read receipts** — MarkAsRead с broadcast
 4. **ProfileService v2** — проверить работу на dev сервере

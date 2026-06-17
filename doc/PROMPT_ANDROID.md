@@ -1,21 +1,21 @@
-# Промпт для новой сессии — Android v1.1.3.29+
+# Промпт для новой сессии — Android v1.1.3.30+
 
 **Дата:** 2026-06-17
-**Версия:** 1.1.3.28 (разработка)
+**Версия:** 1.1.3.29 (разработка)
 **Ветка:** feat/1.1.3.x
 
 ---
 
-## СТАТУС: v1.1.3.28 — Рефакторинг gRPC завершён
+## СТАТУС: v1.1.3.29 — UI улучшения завершены
 
 **Ключевые изменения:**
-- GrpcMessageClient (341 LOC) — все message operations вынесены
-- GrpcServerDiscoveryClient (145 LOC) — server discovery вынесен
-- RealGrpcClient: 3810 → 874 строк (-77% от оригинала)
-- 12 модулей выделено, рефакторинг gRPC завершён
+- NewChatBottomSheet — 7 пунктов меню (Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI)
+- Favorites — добавлен в табы (All/AI/Groups/Favorites)
+- Тулбар и Activity — полная адаптация к кастомным темам (AppBarLayout, TabLayout, toolbar title/subtitle)
+- ThemeStore.init() вызывается в applyTheme() для загрузки кастомной темы из кэша
 
-Сервер dev: v1.2.0.2
-Сервер prod: v1.1.3.10
+Сервер dev: v1.1.3.0 (порт 50052)
+Сервер prod: v1.1.3.0 (порт 50051)
 
 ---
 
@@ -24,23 +24,27 @@
 ### Сервер (/root/msg)
 ```
 main.go                    — Entry point, gRPC server, graceful shutdown
-server.go                  — ServerVersion = "1.2.0.2", service version constants
-auth_service.go            — AuthService v1 (deprecated)
-auth_service_v2.go         — AuthService v2 (JWT, основной)
-auth_interceptor.go        — gRPC Bearer token interceptor (unary + streaming)
-auth_jwt.go                — JWT генерация/валидация
-db_auth_devices.go         — CRUD для user_devices + device_auth_log
-db_auth_migrations.go      — миграция таблиц (включая user_settings)
-db_chatlist_v2.go          — ChatList v2 DB methods + Pin Message DB methods
-server_profile_v2.go       — ProfileService v2 (JWT, dev only)
-server_chatlist_v2.go      — ChatList v2 RPC + Pin Message RPC handlers
-server_chat.go             — Chat stream v2 (JWT + password)
-server_remote.go           — Remote Agent RPC
-hermes_remote_manager.go   — HandleTaskStream
-ai_chat_manager.go         — AI чаты
-owl.go                     — OWL AI
-hermes_orchestrator.go     — Hermes Orchestrator
-http_server.go             — HTTP (/health, /info)
+server.go                  — ServerVersion = "1.1.3.0", service version constants
+server_chat.go             — Chat, Typing, CallSession, GetClients
+server_users.go            — GetAllUsers, UpdateProfile, GetUserProfile, GetUserAvatar
+server_chats.go            — GetAllChats, GetChats, CreateDirectChat, CreateGroupChat, DeleteChat
+server_messages.go         — GetHistory, SetReaction, DeleteMessages, EditMessage
+server_profile.go          — UpdateUsername, UpdatePassword, AdminUpdatePassword, MarkRead, UpdateAvatar, DeleteProfile
+server_push.go             — RegisterToken, sendPushNotification, broadcastOnlineUsers
+server_contacts.go         — AddContact, RemoveContact, GetContacts, GetChatListVersion
+server_themes.go           — GetThemes, SaveTheme, SetCurrentTheme, DeleteTheme
+server_drafts.go           — GetFCMLogs, SaveDraft, GetDraft, DeleteDraft
+server_muted.go            — GetMutedChats, SetMutedChat
+server_favorites.go        — GetUserId, AddFavorite, RemoveFavorite, GetFavorites
+server_ai.go               — ChatWithOWL, ChatWithAI, ChatWithOrchestrator, Hermes sessions
+server_management.go       — ServerServiceServer
+auth_service.go            — AuthService: SignIn, SignUp
+owl.go                     — OWL AI: ChatWithOWL streaming, сессии, история
+bot_commands.go            — Bot Commands: /status, /deploy, /logs, /restart, /ai, /help, /version
+hermes_orchestrator.go     — Hermes: оркестратор, маршрутизация агентов
+hermes_agent_service.go    — Hermes: управление агентами
+ai_chat_manager.go         — AI чаты (единый менеджер для OWL + Hermes)
+db.go                      — Database layer
 messenger.proto            — ChatService v2, AuthService v2, ProfileService v2, Pin Message
 ```
 
@@ -48,7 +52,7 @@ messenger.proto            — ChatService v2, AuthService v2, ProfileService v2
 ```
 ui/
 ├── chatlist/
-│   ├── ChatListActivity.kt         — ЕДИНЫЙ Activity (1104 LOC)
+│   ├── ChatListActivity.kt         — ЕДИНЫЙ Activity (~1113 LOC)
 │   ├── ChatListViewModel.kt        — loadChats, pinChat, setTabFilter
 │   ├── ChatListSections.kt         — Section enum + SectionItem
 │   └── UpdateCoordinator.kt        — update system UI logic
@@ -60,7 +64,7 @@ ui/
 │   ├── LoginBottomSheet.kt         — шторка входа
 │   ├── RegisterBottomSheet.kt      — шторка регистрации
 │   ├── AIBottomSheet.kt            — шторка выбора AI чата
-│   └── NewChatBottomSheet.kt       — шторка создания чата
+│   └── NewChatBottomSheet.kt       — шторка создания чата (7 пунктов)
 ├── hermes/                         — Hermes AI чат
 ├── owl/                            — OWL AI чат
 └── remote/                         — Remote Agent UI
@@ -90,7 +94,7 @@ data/
 └── models/Message.kt
 ```
 
-### gRPC Client Architecture (v1.1.3.28)
+### gRPC Client Architecture (v1.1.3.29)
 ```
 GrpcClient (facade, 779 LOC)
     ↓
@@ -119,6 +123,9 @@ RealGrpcClient (orchestrator, 874 LOC)
 - **enableOnBackInvokedCallback** — добавлен в манифест
 - **i18n** — "Lava" (en) / "Лава" (ru)
 - **fetchServerInfo** — Dev (50052): skip HTTP, assume v2. Prod (50051): try HTTP /info, fallback v1
+- **ThemeStore.init()** — вызывается в applyTheme() для загрузки кастомной темы из кэша
+- **AppBarLayout tinting** — красится программно в customPrimary через ThemeApplier
+- **TabLayout transparent** — прозрачный фон, цвета текста через customOnPrimary
 
 ---
 
@@ -178,7 +185,7 @@ cd /root/msg.client.android
 | Порт gRPC | 50052 | 50051 |
 | Порт HTTP | 8083 | 8082 |
 | Имя | Lava Germany dev | Lava Germany |
-| Версия | v1.2.0.2 | v1.1.3.10 |
+| Версия | v1.1.3.0 | v1.1.3.0 |
 
 ---
 
@@ -197,11 +204,17 @@ cd /root/msg.client.android
 
 ## CHANGELOG (последние версии)
 
+### v1.1.3.29 — UI улучшения
+- NewChatBottomSheet — 7 пунктов меню (Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI)
+- Favorites — добавлен в табы (All/AI/Groups/Favorites)
+- Тулбар — полная адаптация к кастомным темам (AppBarLayout, TabLayout, title/subtitle)
+- ThemeStore.init() в applyTheme() для загрузки кастомной темы из кэша
+- ivActionSettings — всегда виден после авторизации
+
 ### v1.1.3.28 — Финальная модуляризация gRPC
 - GrpcMessageClient (341 LOC) — sendMessage, addLocalMessage, loadHistory, editMessage, deleteMessage, setReaction, markRead
 - GrpcServerDiscoveryClient (145 LOC) — fetchServersList, parseServerList, proto parsing
 - RealGrpcClient: 3810 → 874 строк (-77%), 12 модулей
-- Компиляция: ✅ проходит
 
 ### v1.1.3.27 — Извлечение GrpcMarshallers
 - GrpcMarshallers (1394 LOC) — 111 marshaller classes

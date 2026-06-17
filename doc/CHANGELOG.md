@@ -1,5 +1,27 @@
 # Lava Messenger — Android CHANGELOG
 
+## v1.1.3.29 (2026-06-17) — UI улучшения
+
+### NewChatBottomSheet — полное меню
+- **bottom_sheet_new_chat.xml** — 7 пунктов: Add Contact, Start Chat, Group, Secret Chat, Conference, Hermes AI, OWL AI
+- **NewChatBottomSheet.kt** — переписан с обработкой всех пунктов
+- **ChatListActivity** — добавлен `showAddContactDialogPublic()` для ContactsActivity
+
+### Favorites в табах
+- **strings.xml** (en + ru) — добавлена `tab_favorites`
+- **setupTabs()** — добавлен таб "Favorites" (position 3)
+- **ChatListViewModel.buildSections()** — фильтрация `favorites` + дедупликация
+
+### Кастомные темы
+- **activity_chat_list.xml** — AppBarLayout ID, transparent bg, ivActionSettings всегда виден
+- **ThemeApplier.kt** — AppBarLayout tinting, toolbar title/subtitle explicit colors, TabLayout transparent
+- **ChatListActivity.applyTheme()** — добавлен `ThemeStore.init(this)` для загрузки кастомной темы из кэша
+
+### Коммиты
+- `0b24375` — feat: restore NewChatBottomSheet with full menu, add Favorites tab, fix toolbar theming
+
+---
+
 ## v1.1.3.25 (2026-06-17) — Update System восстановление + модуляризация
 
 ### Новая архитектура — UpdateCoordinator

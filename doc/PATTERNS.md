@@ -232,6 +232,13 @@ onView(withId(R.id.rvChatList))
 - ✅ **ChatAdapterV2 notifyDataSetChanged** — заменён на DiffUtil + dispatchUpdatesTo с анимациями
 - ✅ **Unread badges** — цвета по теме, real-time update через SharedFlow
 
+### Исправлено в v1.1.3.29
+- ✅ **NewChatBottomSheet** — восстановлен с полным набором пунктов из v1 (7 пунктов)
+- ✅ **Favorites в табах** — добавлен таб "Favorites" с фильтрацией
+- ✅ **Кастомные темы** — AppBarLayout, TabLayout, toolbar title/subtitle красятся через ThemeApplier
+- ✅ **ThemeStore.init()** — вызывается в applyTheme() для загрузки кастомной темы из кэша
+- ✅ **ivActionSettings** — всегда виден после авторизации (убран visibility="gone")
+
 ### Исправлено в v1.1.3.28
 - ✅ **RealGrpcClient модуляризация** — 12 модулей выделено, God Object устранён (-77%)
 - ✅ **GrpcMessageClient** — все message operations вынесены (341 LOC)
