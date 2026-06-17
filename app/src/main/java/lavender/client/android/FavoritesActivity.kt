@@ -15,10 +15,6 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.MessageAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class FavoritesActivity : AppCompatActivity() {
@@ -84,28 +80,14 @@ class FavoritesActivity : AppCompatActivity() {
         val userId = SessionManager.session.value.userId
         if (userId.isEmpty()) {
             emptyText.isVisible = true
-            emptyText.text = getString(R.string.user_id_not_loaded)
+            emptyText.text = getString(R.string.user_not_found)
             swipeRefresh.isRefreshing = false
             return
         }
 
         val favoritesRoomId = "favorites_$username"
 
-        // Step 1: Show cached data immediately
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val db = AppDatabase.getDatabase(this@FavoritesActivity)
-                val cached = db.messageDao().getFavorites(favoritesRoomId).map { it.toDomain() }
-                if (cached.isNotEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        adapter.submitList(cached)
-                        emptyText.isVisible = false
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-
-        // Step 2: Refresh from server
+        // Load from server
         GrpcClient.getFavorites(userId) { messages ->
             runOnUiThread {
                 swipeRefresh.isRefreshing = false

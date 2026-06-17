@@ -59,6 +59,7 @@ import lavender.client.android.ui.widget.RegisterBottomSheet
 import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import lavender.client.android.ui.widget.NewChatBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.ui.widget.SheetAction
 import lavender.client.android.ui.adapter.ChatAdapter
 import lavender.client.android.ui.adapter.UserAdapter
 import lavender.client.android.ui.LogViewerActivity

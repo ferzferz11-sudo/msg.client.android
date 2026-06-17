@@ -175,7 +175,6 @@ class ChatAdapter(
         return when (flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> TYPE_SECTION_HEADER
             is FlatItem.ChatItem -> TYPE_CHAT_ITEM
-            is FlatItem.FavoritesItem -> TYPE_FAVORITES
             null -> TYPE_CHAT_ITEM
         }
     }
