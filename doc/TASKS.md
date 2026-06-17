@@ -1,8 +1,23 @@
 # Lava Messenger (Android) — Задачи
 
-**Версия:** v1.1.3.26
-**Обновлено:** 2026-06-17 (сессия 32)
+**Версия:** v1.1.3.27
+**Обновлено:** 2026-06-17 (сессия 33)
 **Ветка:** feat/1.1.3.x
+
+---
+
+## ✅ v1.1.3.27 — Извлечение GrpcMarshallers (Сессия 33)
+
+### Новый модуль
+- ✅ **GrpcMarshallers.kt** (1394 LOC) — все 111 классов MethodDescriptor.Marshaller, извлечены из RealGrpcClient
+
+### Результат
+- RealGrpcClient: 2992 → 1611 LOC (-1381 LOC, -46%)
+- Всего выделено модулей: 10 (ConnectionManager, Auth, Call, Typing, ChatList, Profile, Draft, Favorites, UnaryCallHelper, Marshallers)
+- Дублирование маршаллеров устранено (были в обоих файлах — оставлены только в GrpcMarshallers.kt)
+
+### Коммит
+- TBD — refactor: extract GrpcMarshallers.kt — 111 marshaller classes, RealGrpcClient 2992→1611 LOC
 
 ---
 
@@ -134,7 +149,8 @@
   - ✅ GrpcDraftClient (86 LOC) — saveDraft, getDraft, deleteDraft
   - ✅ GrpcFavoritesClient (120 LOC) — addFavorite, removeFavorite, getFavorites
   - ✅ GrpcUnaryCallHelper (111 LOC) — universal unary call helper
-  - ⬜ Осталось в RealGrpcClient: ~2992 строк (chat stream, messages, history, reactions, AI chats, server discovery)
+  - ✅ GrpcMarshallers (1394 LOC) — all 111 marshaller classes
+  - ⬜ Осталось в RealGrpcClient: ~1611 строк (chat stream, messages, history, reactions, AI chats, server discovery)
 
 ### Средний приоритет
 - [ ] **ProfileService v2** — проверить работу на dev сервере
@@ -184,7 +200,7 @@
 | `ui/widget/NewChatBottomSheet.kt` | Шторка создания чата |
 | `data/cache/CacheUtils.kt` | Единый утилит очистки кэша |
 | `data/grpc/GrpcClient.kt` | Facade (pinChat, pinMessage, searchChats, etc.) |
-|| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~2992 строк, цель: ~200) |
+|| `data/grpc/RealGrpcClient.kt` | Оркестратор модулей (~1611 строк, цель: ~200) |
 || `data/grpc/GrpcConnectionManager.kt` | connect/reconnect/disconnect/keepalive (167 строк) |
 || `data/grpc/GrpcAuthClient.kt` | signInV2/signUpV2/refreshToken/signOut (232 строки) |
 || `data/grpc/GrpcCallClient.kt` | startCallSession/sendCallSignal (124 строки) |
@@ -194,5 +210,6 @@
 || `data/grpc/GrpcDraftClient.kt` | saveDraft/getDraft/deleteDraft (86 строк) |
 || `data/grpc/GrpcFavoritesClient.kt` | addFavorite/removeFavorite/getFavorites (120 строк) |
 || `data/grpc/GrpcUnaryCallHelper.kt` | универсальный unary call helper (111 строк) |
+| `data/grpc/GrpcMarshallers.kt` | все 111 marshaller classes (1394 LOC) |
 || `data/grpc/ProfileClient.kt` | ProfileService v2 client + version detection |
 | `data/models/Message.kt` | Message (isPinned), ChatInfo (isPinned, isArchived, pinnedAt), AIChatInfo |
