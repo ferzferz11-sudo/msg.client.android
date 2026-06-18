@@ -15,7 +15,7 @@ import lavender.client.android.data.models.ErrorHandler
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 // ======= Hermes Multi-Agent Orchestrator =======
 

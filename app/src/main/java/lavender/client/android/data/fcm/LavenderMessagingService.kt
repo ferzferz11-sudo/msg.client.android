@@ -12,7 +12,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.R
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class LavenderMessagingService : FirebaseMessagingService() {
 

@@ -4,7 +4,7 @@ import android.content.Context
 import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.Theme
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class ThemeRepository(
     private val remote: ThemeRemoteDataSource = ThemeRemoteDataSource(),

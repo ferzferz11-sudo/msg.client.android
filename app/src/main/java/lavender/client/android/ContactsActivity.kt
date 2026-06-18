@@ -22,7 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 import lavender.client.android.databinding.ActivityContactsBinding
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils

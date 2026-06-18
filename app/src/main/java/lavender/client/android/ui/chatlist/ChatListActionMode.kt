@@ -9,7 +9,7 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 /**
  * ActionMode (Selection Mode) for ChatListActivity.

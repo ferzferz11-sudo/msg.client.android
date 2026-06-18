@@ -6,7 +6,7 @@ import lavender.client.android.R
 import lavender.client.android.data.crypto.E2EEManager
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 /**
  * E2EE (end-to-end encryption) for secret chats.

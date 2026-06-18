@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.UserInfoProto
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class ChatViewModel : ViewModel() {
     val grpcClient = GrpcClient
