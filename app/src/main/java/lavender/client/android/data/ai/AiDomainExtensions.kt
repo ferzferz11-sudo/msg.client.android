@@ -25,7 +25,7 @@ fun RemoteAgentInfoProto.toDomain(): RemoteAgentInfo = RemoteAgentInfo(
     ipAddress = ipAddress,
     os = os,
     status = status,
-    capabilities = capabilitiesList,
+    capabilities = capabilities,
     activeTasks = activeTasks,
     lastHeartbeat = lastHeartbeat
 )
