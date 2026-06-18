@@ -1,5 +1,3 @@
-@file:JvmName("GrpcClientExtensions")
-
 package lavender.client.android.data.grpc
 
 import android.content.Context
@@ -10,10 +8,16 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.AIChatInfo
 
-// =============================================================================
-// GrpcClient Extension Functions — Domain Grouping
-// All proxy methods extracted from GrpcClient to reduce facade LOC.
-// =============================================================================
+/**
+ * GrpcClient Extension Functions — Domain Grouping
+ * All proxy methods extracted from GrpcClient to reduce facade LOC.
+ *
+ * Usage: import lavender.client.android.data.grpc.GrpcClientExtensions.*
+ */
+object GrpcClientExtensions {
+    // This object serves as a namespace for extension functions.
+    // Extension functions are defined at package level below.
+}
 
 // ======= AuthService V2 (JWT) =======
 
