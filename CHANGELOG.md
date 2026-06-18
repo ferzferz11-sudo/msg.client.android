@@ -1,5 +1,22 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.7] - 2026-06-18
+
+### Исправления
+
+**SuperAdmin (критический):**
+- Исправлен баг: кнопка "Admin" не отображалась ни для кого
+- `ProfileClient.unaryCall()` использовал рефлексию для response marshaller — всегда возвращал дефолтный объект с `isSuperAdmin = false`
+- Созданы `GetProfileResponseMarshaller` и `GetProfileRequestMarshaller` — корректная десериализация 11 полей ответа
+- Созданы marshallers для всех ProfileService v2 методов (UpdateProfile, UpdateAvatar, GetUserSettings, UpdateUserSettings)
+
+**ProfileService marshallers:**
+- `GetProfileResponseMarshaller` — десериализует userId, username, email, avatarUrl, fullAvatarUrl, bio, status, locale, isSuperAdmin, createdAt, lastSeenAt
+- `UpdateProfileV2ResponseMarshaller` — десериализует success, message, вложенный profile
+- `UpdateAvatarV2ResponseMarshaller` — десериализует success, message, avatarUrl, fullAvatarUrl
+- `GetUserSettingsResponseMarshaller` — десериализует locale, themeId, pushEnabled, custom map
+- Все request marshallers — корректная сериализация полей
+
 ## [1.2.0.6] - 2026-06-18
 
 ### Исправления

@@ -1492,3 +1492,131 @@ class BoolResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatRespon
         return PinChatResponseProto(ok)
     }
 }
+
+// ======= ProfileService V2 Marshallers =======
+
+class GetProfileRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetProfileRequestProto> {
+    override fun stream(v: GetProfileRequestProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetProfileRequestProto = GetProfileRequestProto()
+}
+
+class GetProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetProfileResponseProto> {
+    override fun stream(v: GetProfileResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetProfileResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var userId = ""; var username = ""; var email = ""; var avatarUrl = ""; var fullAvatarUrl = ""
+        var bio = ""; var status = ""; var locale = "en"; var isSuperAdmin = false; var createdAt = ""; var lastSeenAt = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> userId = cis.readString(); 2 -> username = cis.readString(); 3 -> email = cis.readString()
+                4 -> avatarUrl = cis.readString(); 5 -> fullAvatarUrl = cis.readString()
+                6 -> bio = cis.readString(); 7 -> status = cis.readString(); 8 -> locale = cis.readString()
+                9 -> isSuperAdmin = cis.readBool(); 10 -> createdAt = cis.readString(); 11 -> lastSeenAt = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetProfileResponseProto(userId, username, email, avatarUrl, fullAvatarUrl, bio, status, locale, isSuperAdmin, createdAt, lastSeenAt)
+    }
+}
+
+class UpdateProfileV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateProfileV2RequestProto> {
+    override fun stream(v: UpdateProfileV2RequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.username.isNotEmpty()) cos.writeString(1, v.username)
+        if (v.bio.isNotEmpty()) cos.writeString(2, v.bio)
+        if (v.status.isNotEmpty()) cos.writeString(3, v.status)
+        if (v.locale.isNotEmpty()) cos.writeString(4, v.locale)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UpdateProfileV2RequestProto = UpdateProfileV2RequestProto()
+}
+
+class UpdateProfileV2ResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateProfileV2ResponseProto> {
+    override fun stream(v: UpdateProfileV2ResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UpdateProfileV2ResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var message = ""; var profile: GetProfileResponseProto? = null
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool(); 2 -> message = cis.readString()
+                3 -> { val len = cis.readUInt32(); profile = GetProfileResponseMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateProfileV2ResponseProto(success, message, profile)
+    }
+}
+
+class UpdateAvatarV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateAvatarV2RequestProto> {
+    override fun stream(v: UpdateAvatarV2RequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.avatarUrl.isNotEmpty()) cos.writeString(1, v.avatarUrl)
+        if (v.fullAvatarUrl.isNotEmpty()) cos.writeString(2, v.fullAvatarUrl)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UpdateAvatarV2RequestProto = UpdateAvatarV2RequestProto()
+}
+
+class UpdateAvatarV2ResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateAvatarV2ResponseProto> {
+    override fun stream(v: UpdateAvatarV2ResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UpdateAvatarV2ResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var message = ""; var avatarUrl = ""; var fullAvatarUrl = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool(); 2 -> message = cis.readString()
+                3 -> avatarUrl = cis.readString(); 4 -> fullAvatarUrl = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateAvatarV2ResponseProto(success, message, avatarUrl, fullAvatarUrl)
+    }
+}
+
+class GetUserSettingsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserSettingsRequestProto> {
+    override fun stream(v: GetUserSettingsRequestProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetUserSettingsRequestProto = GetUserSettingsRequestProto()
+}
+
+class GetUserSettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetUserSettingsResponseProto> {
+    override fun stream(v: GetUserSettingsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetUserSettingsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var locale = "en"; var themeId = ""; var pushEnabled = true; val custom = mutableMapOf<String, String>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> locale = cis.readString(); 2 -> themeId = cis.readString(); 3 -> pushEnabled = cis.readBool()
+                4 -> { val len = cis.readUInt32(); val b = cis.readRawBytes(len); val mcis = com.google.protobuf.CodedInputStream.newInstance(b)
+                    var mk = ""; var mv = ""
+                    while (!mcis.isAtEnd) { val mtag = mcis.readTag(); if (mtag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(mtag)) { 1 -> mk = mcis.readString(); 2 -> mv = mcis.readString(); else -> mcis.skipField(mtag) } }
+                    if (mk.isNotEmpty()) custom[mk] = mv }
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetUserSettingsResponseProto(locale, themeId, pushEnabled, custom)
+    }
+}
+
+class UpdateUserSettingsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateUserSettingsRequestProto> {
+    override fun stream(v: UpdateUserSettingsRequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.locale.isNotEmpty()) cos.writeString(1, v.locale)
+        if (v.themeId.isNotEmpty()) cos.writeString(2, v.themeId)
+        v.pushEnabled?.let { cos.writeBool(3, it) }
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UpdateUserSettingsRequestProto = UpdateUserSettingsRequestProto()
+}
+
+class UpdateUserSettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UpdateUserSettingsResponseProto> {
+    override fun stream(v: UpdateUserSettingsResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UpdateUserSettingsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var success = false; var message = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> success = cis.readBool(); 2 -> message = cis.readString(); else -> cis.skipField(tag) } }
+        return UpdateUserSettingsResponseProto(success, message)
+    }
+}

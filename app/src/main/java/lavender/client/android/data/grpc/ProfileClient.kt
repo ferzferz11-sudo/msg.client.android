@@ -78,8 +78,9 @@ object ProfileClient {
         return try {
             unaryCall(
                 fullMethod = "messenger.ProfileService/GetProfile",
-                request = GetProfileRequestProto(),
-                responseType = GetProfileResponseProto::class.java
+                requestMarshaller = GetProfileRequestMarshaller(),
+                responseMarshaller = GetProfileResponseMarshaller(),
+                request = GetProfileRequestProto()
             )
         } catch (e: Exception) {
             Log.w(TAG, "getProfile failed: ${e.message}")
@@ -100,8 +101,9 @@ object ProfileClient {
             )
             val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateProfile",
-                request = request,
-                responseType = UpdateProfileV2ResponseProto::class.java
+                requestMarshaller = UpdateProfileV2RequestMarshaller(),
+                responseMarshaller = UpdateProfileV2ResponseMarshaller(),
+                request = request
             )
             response?.success ?: false
         } catch (e: Exception) {
@@ -119,8 +121,9 @@ object ProfileClient {
             val request = UpdateAvatarV2RequestProto(avatarUrl = avatarUrl, fullAvatarUrl = fullAvatarUrl)
             val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateAvatar",
-                request = request,
-                responseType = UpdateAvatarV2ResponseProto::class.java
+                requestMarshaller = UpdateAvatarV2RequestMarshaller(),
+                responseMarshaller = UpdateAvatarV2ResponseMarshaller(),
+                request = request
             )
             response?.success ?: false
         } catch (e: Exception) {
@@ -133,8 +136,9 @@ object ProfileClient {
         return try {
             unaryCall(
                 fullMethod = "messenger.ProfileService/GetUserSettings",
-                request = GetUserSettingsRequestProto(),
-                responseType = GetUserSettingsResponseProto::class.java
+                requestMarshaller = GetUserSettingsRequestMarshaller(),
+                responseMarshaller = GetUserSettingsResponseMarshaller(),
+                request = GetUserSettingsRequestProto()
             )
         } catch (e: Exception) {
             Log.w(TAG, "getUserSettings failed: ${e.message}")
@@ -154,8 +158,9 @@ object ProfileClient {
             )
             val response = unaryCall(
                 fullMethod = "messenger.ProfileService/UpdateUserSettings",
-                request = request,
-                responseType = UpdateUserSettingsResponseProto::class.java
+                requestMarshaller = UpdateUserSettingsRequestMarshaller(),
+                responseMarshaller = UpdateUserSettingsResponseMarshaller(),
+                request = request
             )
             response?.success ?: false
         } catch (e: Exception) {
@@ -167,8 +172,9 @@ object ProfileClient {
     @Suppress("UNCHECKED_CAST")
     private suspend fun <ReqT, RespT> unaryCall(
         fullMethod: String,
-        request: ReqT,
-        responseType: Class<RespT>
+        requestMarshaller: io.grpc.MethodDescriptor.Marshaller<ReqT>,
+        responseMarshaller: io.grpc.MethodDescriptor.Marshaller<RespT>,
+        request: ReqT
     ): RespT? = suspendCancellableCoroutine { cont ->
         val channel = RealGrpcClient.getChannel()
         if (channel == null) {
@@ -179,15 +185,8 @@ object ProfileClient {
         val method = MethodDescriptor.newBuilder<ReqT, RespT>()
             .setType(MethodDescriptor.MethodType.UNARY)
             .setFullMethodName(fullMethod)
-            .setRequestMarshaller(object : MethodDescriptor.Marshaller<ReqT> {
-                override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                override fun parse(stream: java.io.InputStream): ReqT = request
-            })
-            .setResponseMarshaller(object : MethodDescriptor.Marshaller<RespT> {
-                override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                @Suppress("DEPRECATION")
-                override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
-            })
+            .setRequestMarshaller(requestMarshaller)
+            .setResponseMarshaller(responseMarshaller)
             .build()
 
         val call = channel.newCall(method, CallOptions.DEFAULT)

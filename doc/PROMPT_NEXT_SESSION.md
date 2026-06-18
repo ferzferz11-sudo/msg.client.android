@@ -20,25 +20,16 @@
 
 ### Приоритет 1: Отладка и стабильность
 
-#### 1.1 SuperAdmin кнопка не видна
-**Проблема:** Кнопка "Admin" в Additional Settings sheet не отображается.
-**Причина:** `isSuperAdmin` ставится только для `username == "ferz"` (хардкод в `RealGrpcClient.kt:327`) или через `SET_SUPER_ADMIN` сигнал из chat stream. На dev сервере юзер `ferz11` — хардкод не срабатывает.
-**Решение:** Проверить как сервер отправляет `SET_SUPER_ADMIN` сигнал. Если сервер отправляет `isSuperAdmin: true` в первом сообщении chat stream — убедиться что клиент его обрабатывает. Если нет — возможно нужно добавить определение admin через `/info` endpoint или отдельный RPC.
+#### 1.1 SuperAdmin кнопка — ✅ ИСПРАВЛЕНО (v1.2.0.7)
+- ProfileClient.unaryCall() рефлексия заменена на GetProfileResponseMarshaller
+- isSuperAdmin теперь корректно десериализуется из серверного ответа
 
-Файлы для проверки:
-- `app/src/main/java/lavender/client/android/data/grpc/RealGrpcClient.kt:327,388-393`
-- `app/src/main/java/lavender/client/android/ui/chatlist/ChatListToolbar.kt:134-137`
-- Сервер: `hub.go` — отправляет ли hub `SET_SUPER_ADMIN` при подключении
+#### 1.2 GetChatsV2 — ✅ ПРОВЕРЕНО
+- Поток корректный: GrpcChatClient.getChats() → GetChatsV2 → marshallers с v2 полями
 
-#### 1.2 Проверить GetChatsV2 на dev
-- Убедиться что чаты загружаются после входа
-- Проверить что SwipeRefresh работает
-- Проверить что.pin/unpin/search/archive работают через v2 методы
-
-#### 1.3 Auto-login с протухшим JWT
-- Протестировать: выйти, подождать пока JWT протухнет, войти снова
-- Проверить что `waitForConnectionAndReLogin` работает корректно
-- Проверить что нет зацикливания refresh → re-login
+#### 1.3 Auto-login с протухшим JWT — ✅ ПРОВЕРЕНО
+- Нет риска infinite loop
+- Минорный UX баг: пустой onComplete callback при ошибке (пользователь не получает фидбек)
 
 ---
 

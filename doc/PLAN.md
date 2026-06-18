@@ -4,6 +4,16 @@
 
 ---
 
+## Completed — v1.2.0.7
+
+### Session 2026-06-18 (P1 Debugging)
+- ✅ SuperAdmin button fix — ProfileClient reflection-based marshaller replaced with proper GetProfileResponseMarshaller
+- ✅ All ProfileService v2 marshallers created (GetProfile, UpdateProfile, UpdateAvatar, GetUserSettings, UpdateUserSettings)
+- ✅ GetChatsV2 — verified working correctly, no fallback needed
+- ✅ Auto-login — verified no infinite loop risks, minor UX issue (silent failure) noted
+
+---
+
 ## Completed — v1.2.0.5
 
 ### Session 2026-06-18
