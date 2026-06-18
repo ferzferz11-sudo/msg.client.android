@@ -260,6 +260,7 @@ object RealGrpcClient {
         _isSuperAdmin.value = false
         loadDeletedMessages()
         connectionManager.connect(serverAddress, useTls, port, context, forceReconnect)
+        fetchAdminStatus()
     }
 
     fun reconnect() = connectionManager.reconnect()
@@ -274,6 +275,21 @@ object RealGrpcClient {
 
     fun shouldForceReconnect(): Boolean =
         isAppInBackground && (System.currentTimeMillis() - backgroundStartTime) > 5 * 60 * 1000
+
+    private fun fetchAdminStatus() {
+        val ctx = appContext ?: return
+        scope.launch {
+            try {
+                val profile = ProfileClient.getProfile(ctx)
+                if (profile != null) {
+                    _isSuperAdmin.value = profile.isSuperAdmin
+                    Log.d(TAG, "Admin status from profile: ${profile.isSuperAdmin}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "fetchAdminStatus failed: ${e.message}")
+            }
+        }
+    }
 
     // ====== Chat Stream (core — kept in orchestrator) ======
 
@@ -324,7 +340,6 @@ object RealGrpcClient {
         }
 
         currentUsername = username
-        if (username == "ferz") _isSuperAdmin.value = true
 
         try { requestObserver?.onCompleted() } catch (_: Exception) {}
         requestObserver = null
