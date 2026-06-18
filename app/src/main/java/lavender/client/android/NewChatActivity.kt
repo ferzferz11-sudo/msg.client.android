@@ -372,7 +372,10 @@ class NewChatActivity : AppCompatActivity() {
                     grpcClient.connectionStatus,
                     grpcClient.typingUsers
                 ) { onlineUsers, status, typingMap ->
-                    val currentTypists = typingMap[roomId]?.filter { it != username } ?: emptyList()
+                    val currentUserId = grpcClient.getUserId() ?: ""
+                    val currentTypists = typingMap[roomId]?.filter {
+                        it != username && it != currentUserId
+                    } ?: emptyList()
                     Triple(onlineUsers, status, currentTypists)
                 }.collect { (onlineUsers, status, currentTypists) ->
                     val isConnected = status == ConnectionStatus.READY

@@ -58,7 +58,13 @@ class GrpcTypingClient(
             override fun onNext(value: TypingSignalProto) {
                 typingUsers.update { current ->
                     val roomTyping = current[value.roomId]?.toMutableSet() ?: mutableSetOf()
-                    if (value.isTyping) roomTyping.add(value.username) else roomTyping.remove(value.username)
+                    if (value.isTyping) {
+                        roomTyping.add(value.username)
+                        if (value.userId.isNotEmpty()) roomTyping.add(value.userId)
+                    } else {
+                        roomTyping.remove(value.username)
+                        if (value.userId.isNotEmpty()) roomTyping.remove(value.userId)
+                    }
                     current + (value.roomId to roomTyping)
                 }
             }

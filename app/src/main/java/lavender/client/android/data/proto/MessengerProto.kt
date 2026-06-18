@@ -535,7 +535,8 @@ data class TypingRequestProto(
 data class TypingSignalProto(
     val roomId: String = "",
     val username: String = "",
-    val isTyping: Boolean = false
+    val isTyping: Boolean = false,
+    val userId: String = ""
 )
 
 // Contacts management

@@ -121,9 +121,9 @@ class TypingRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingReques
 class TypingSignalMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingSignalProto> {
     override fun stream(v: TypingSignalProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): TypingSignalProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var rid = ""; var u = ""; var it = false
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> rid = cis.readString(); 2 -> u = cis.readString(); 3 -> it = cis.readBool(); else -> cis.skipField(tag) } }
-        return TypingSignalProto(rid, u, it)
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var rid = ""; var u = ""; var it = false; var uid = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> rid = cis.readString(); 2 -> u = cis.readString(); 3 -> it = cis.readBool(); 4 -> uid = cis.readString(); else -> cis.skipField(tag) } }
+        return TypingSignalProto(rid, u, it, uid)
     }
 }
 
