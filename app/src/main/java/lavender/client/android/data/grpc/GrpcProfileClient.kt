@@ -319,14 +319,14 @@ class GrpcProfileClient(
                 if (found && !fetchedId.isNullOrEmpty()) {
                     setUserId?.invoke(fetchedId)
                 }
-                doGetContacts(username, fetchedId ?: "")
+                doGetContacts(username, fetchedId ?: "", callback)
             }
         } else {
-            doGetContacts(username, userId ?: "")
+            doGetContacts(username, userId ?: "", callback)
         }
     }
 
-    private fun doGetContacts(username: String, userId: String) {
+    private fun doGetContacts(username: String, userId: String, callback: (List<String>) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetContactsRequestProto, GetContactsResponseProto>()
