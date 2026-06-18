@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.R
+import lavender.client.android.data.grpc.*
 
 class LavenderMessagingService : FirebaseMessagingService() {
 
@@ -34,7 +35,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         }
 
         // Извлекаем данные (приоритет payload из data, затем notification)
-        val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: "Новое сообщение"
+        val title = remoteMessage.data["title"] ?: remoteMessage.notification?.title ?: getString(R.string.new_message)
         val body = remoteMessage.data["body"] ?: remoteMessage.notification?.body ?: ""
         val roomId = remoteMessage.data["room_id"] ?: "general"
 
@@ -82,7 +83,7 @@ class LavenderMessagingService : FirebaseMessagingService() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Звонки Lavender",
+                getString(R.string.lavender_calls_channel),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 setSound(null, null) // Use custom ringtone or handle in activity
@@ -93,8 +94,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_notification_small)
-            .setContentTitle("Входящий звонок")
-            .setContentText("Звонит $senderId")
+            .setContentTitle(getString(R.string.incoming_call))
+            .setContentText(getString(R.string.call_from, senderId))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
@@ -114,9 +115,13 @@ class LavenderMessagingService : FirebaseMessagingService() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Сообщения Lavender",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
+                getString(R.string.lavender_messages_channel),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = getString(R.string.lavender_messages_channel_desc)
+                enableVibration(true)
+                setShowBadge(true)
+            }
             notificationManager.createNotificationChannel(channel)
         }
 
@@ -160,7 +165,18 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+        // Apply DND bypass if enabled (requires NOTIFICATION_POLICY_ACCESS)
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        if (prefs.getBoolean("push_bypass_dnd", false)) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channel = notificationManager.getNotificationChannel(channelId)
+                channel?.setBypassDnd(true)
+            }
+        }
 
         // Добавляем ID комнаты в экстра для возможности удаления программно
         val extras = android.os.Bundle()
@@ -168,7 +184,6 @@ class LavenderMessagingService : FirebaseMessagingService() {
         notificationBuilder.addExtras(extras)
 
         // Применяем стиль (если выбран messaging)
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         val style = prefs.getString("notification_style", "standard")
         if (style == "messaging") {
             val user = androidx.core.app.Person.Builder().setName(title).build()

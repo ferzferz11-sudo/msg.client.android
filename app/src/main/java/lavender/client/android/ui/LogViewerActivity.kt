@@ -39,7 +39,7 @@ class LogViewerActivity : AppCompatActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Логи ошибок"
+        supportActionBar?.title = getString(R.string.error_logs)
         toolbar.setNavigationOnClickListener { finish() }
 
         recyclerView = findViewById(R.id.recyclerView)
@@ -48,7 +48,7 @@ class LogViewerActivity : AppCompatActivity() {
         adapter = LogAdapter { entry ->
             // Долгое нажатие — копировать полный лог
             copyToClipboard(entry.toFullString())
-            Toast.makeText(this, "Скопировано", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.copied), Toast.LENGTH_SHORT).show()
         }
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -87,13 +87,13 @@ class LogViewerActivity : AppCompatActivity() {
             R.id.action_copy_all -> {
                 val text = AppLog.getLogsText()
                 copyToClipboard(text)
-                Toast.makeText(this, "Все логи скопированы", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.all_logs_copied), Toast.LENGTH_SHORT).show()
                 true
             }
             R.id.action_clear -> {
                 AppLog.clear()
                 loadLogs()
-                Toast.makeText(this, "Логи очищены", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.logs_cleared), Toast.LENGTH_SHORT).show()
                 true
             }
             else -> super.onOptionsItemSelected(item)

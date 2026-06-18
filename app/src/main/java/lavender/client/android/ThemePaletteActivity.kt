@@ -37,6 +37,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
+import lavender.client.android.data.grpc.*
 
 data class ColorItem(
     val name: String,
@@ -447,7 +448,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                                 setResult(RESULT_OK)
                             } else {
                                 saveButton.isVisible = true
-                                Toast.makeText(this, "Theme saved but failed to set as current", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, getString(R.string.theme_saved_failed_to_set), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }

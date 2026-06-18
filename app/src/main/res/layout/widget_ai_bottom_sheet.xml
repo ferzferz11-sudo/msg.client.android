@@ -18,7 +18,7 @@
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="AI Сервисы"
+        android:text="AI Сервисы (в разработке)"
         android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="?attr/colorPrimary"

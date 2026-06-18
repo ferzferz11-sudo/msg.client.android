@@ -142,7 +142,7 @@
     <string name="history_load_error">Не удалось загрузить историю: %s</string>
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
     <string name="share_app">Поделиться Лавой</string>
-    <string name="share_text">Попробуй Лаву — свою собственную систему коммуникаций!</string>
+    <string name="share_text">Попробуй Лаву — платформу защищенных бизнес-коммуникаций!</string>
     <string name="exit">Выход</string>
     <string name="disconnected">Отключено</string>
     <string name="connecting">Подключение…</string>
@@ -239,7 +239,6 @@
     <string name="tell_about_yourself">Расскажите о себе</string>
     <string name="edit_profile_title">Редактировать профиль</string>
     <string name="fcm_token_label">Токен FCM:</string>
-    <string name="copy_token">Копировать токен</string>
     <string name="test_notification">Тестовое уведомление</string>
     <string name="notifications_label">Уведомления:</string>
     <string name="no_notifications_received">Уведомлений пока нет</string>
@@ -251,8 +250,9 @@
     <string name="add_emoji">Добавить эмодзи</string>
     <string name="contacts">Контакты</string>
     <string name="add_contact">Добавить контакт</string>
-    <string name="create_direct_chat_after">Сразу создать личный чат</string>
-    <string name="contact_added">Контакт успешно добавлен</string>
+    <string name="create_direct_chat_after">Создать чат сразу</string>
+        <string name="contacts_added">Добавлено контактов: %d</string>
+        <string name="contact_added">Контакт успешно добавлен</string>
     <string name="already_in_contacts">Пользователь уже в контактах</string>
     <string name="no_contacts">Контактов пока нет. Добавьте кого-нибудь, чтобы начать общение!</string>
     <string name="remove_contact">Удалить контакт</string>
@@ -304,6 +304,8 @@
     <string name="receive_push_hint">Если отключено, вы не будете получать никаких пуш-уведомлений.</string>
     <string name="send_push">Уведомлять других (от меня)</string>
     <string name="send_push_hint">Если отключено, ваши сообщения не будут вызывать пуш-уведомления у других.</string>
+    <string name="push_bypass_dnd">Пробивать режим Не беспокоить</string>
+    <string name="push_bypass_dnd_hint">Разрешить уведомлениям пробивать режим ДНД (требуется разрешение)</string>
     <string name="incoming">Входящие</string>
     <string name="outgoing">Исходящие</string>
     <string name="notification_history">История уведомлений</string>
@@ -350,6 +352,7 @@
     <string name="action_about">О программе</string>
     <string name="action_super_admin">Админ панель</string>
     <string name="favorites">Избранное</string>
+    <string name="no_favorites_yet">Избранного пока нет</string>
     <string name="added_to_favorites">Добавлено в Избранное</string>
     <string name="remove_multiple_contacts_confirm">Удалить выбранные контакты (%d)?</string>
 
@@ -394,6 +397,7 @@
     <string name="yes">Да</string>
     <string name="no">Нет</string>
     <string name="user_not_found">Пользователь не найден</string>
+    <string name="wrong_password">Неверное имя пользователя или пароль</string>
     <string name="register_confirm">Пользователь \"%s\" не зарегистрирован. Хотите создать новую учетную запись?</string>
     <string name="preset_colors">Готовые цвета</string>
     <string name="custom_color">Свой цвет</string>
@@ -408,6 +412,7 @@
     <string name="error_loading_image">Ошибка загрузки изображения</string>
     <string name="additional_settings">Дополнительные настройки</string>
     <string name="clear_cache">Очистка локального кэша</string>
+    <string name="error_log">Журнал ошибок</string>
     <string name="cache_cleared">Кэш успешно очищен</string>
     <string name="servers">Серверы</string>
     <string name="add_server">Добавить сервер</string>
@@ -431,6 +436,133 @@
     <string name="under_development">В разработке</string>
     <string name="image_placeholder">Фото</string>
     <string name="favorites_description">Личное хранилище</string>
+    <string name="no_messages">Нет сообщений</string>
+    <string name="ai_notifications">Уведомления</string>
+    <string name="ai_lava_section">🎼 Лава ИИ (Оркестратор)</string>
+    <string name="ai_owl_section">🦉 OWL агент</string>
+    <string name="ai_agents_section">🖥 Агенты</string>
+    <string name="ai_create_new_chat">Создать новый чат</string>
+    <string name="ai_manage_agents">Управление агентами</string>
+    <string name="ai_settings">Настройки</string>
+    <string name="ai_delete">Удалить</string>
+    <string name="ai_sheet_title">AI Сервисы (в разработке)</string>
+    <string name="agent_connected">Агент подключён</string>
+    <string name="agent_disconnected">Агент отключён</string>
+    <string name="agent_executing">Агент выполняет...</string>
+    <string name="agent_typing">Агент печатает...</string>
+    <string name="agent_not_connected">Не подключён</string>
+    <string name="agent_selected">Агент выбран</string>
+    <string name="agent_not_selected">Агент не выбран</string>
+    <string name="agent_started">Агент запущен (PID: %d)</string>
+    <string name="agent_stopped">Агент остановлен</string>
+    <string name="agent_created">Агент создан</string>
+    <string name="agent_updated">Агент обновлён</string>
+    <string name="agent_deleted">Агент удалён</string>
+    <string name="via_ssh">через SSH</string>
+    <string name="via_token">через Токен</string>
+    <string name="you">Вы</string>
+    <string name="agent">Агент</string>
+    <string name="lava_ai_n">Лава ИИ #%d</string>
+    <string name="owl_agent_n">Агент OWL #%d</string>
+    <string name="tab_gateway">Шлюз</string>
+    <string name="tab_token">Токен</string>
+    <string name="remote_agent_title">Удалённый агент</string>
+    <string name="agent_connected_via_gateway">Агент подключён через SSH (%s)</string>
+    <string name="agent_connected_token">Агент подключён через Токен (%s)</string>
+    <string name="agent_disconnected_name">%s — отключён</string>
+    <string name="agent_starting">Запуск агента...</string>
+    <string name="agent_stopping">Остановка агента...</string>
+    <string name="task_shell">Shell</string>
+    <string name="task_git">Git</string>
+    <string name="task_build">Сборка</string>
+    <string name="task_deploy">Деплой</string>
+    <string name="task_file">Файлы</string>
+    <string name="task_docker">Docker</string>
+    <string name="task_ai">AI</string>
+    <string name="send_task_hint">Отправить задачу агенту...</string>
+    <string name="agent_typing_suffix">печатает...</string>
+    <string name="settings_lava_ai">Настройки Лава ИИ</string>
+    <string name="settings_owl">Настройки OWL</string>
+    <!-- Session & Auth -->
+    <string name="session_terminated">Сессия завершена</string>
+    <string name="system_notification">Системное уведомление</string>
+    <string name="rename_chat">Переименовать чат</string>
+    <string name="reset_password">Сбросить пароль</string>
+    <string name="code_sent_to_email">Код отправлен на ваш email</string>
+    <string name="enter_code">Введите код</string>
+    <string name="password_changed">Пароль успешно изменен</string>
+    <!-- Conference -->
+    <string name="left_conference">Вы покинули конференцию</string>
+    <string name="conference_participants">Участников в звонке: %d</string>
+    <!-- Upload -->
+    <!-- OWL Settings -->
+    <string name="own_model_option">Своя модель (ввести вручную)</string>
+    <string name="enter_model_id">Введите ID модели</string>
+    <string name="enter_model_id_hint">Введите ID модели (например: openai/gpt-4o)</string>
+    <string name="your_key_all_models">Ваш ключ: все модели, без ограничений</string>
+    <string name="shared_key_free_models">Общий ключ: бесплатные модели, 20 запросов/час</string>
+    <string name="set_api_key_for_all_models">Установите свой API ключ OpenRouter для доступа ко всем моделям и снятия ограничений</string>
+    <string name="saving">Сохранение...</string>
+    <string name="settings_saved">Настройки сохранены</string>
+    <string name="saved">Сохранено</string>
+    <string name="save">Сохранить</string>
+    <!-- OWL Chat -->
+    <string name="loading_commands">Загрузка команд...</string>
+    <string name="owl_unavailable">⚠️ OWL AI временно недоступен. Попробуйте позже.</string>
+    <string name="system">Система</string>
+    <string name="your_key_model">Ваш ключ · %s</string>
+    <string name="your_key_all_models_short">Ваш ключ · все модели</string>
+    <string name="shared_key">Общий ключ</string>
+    <string name="requests_count"> · %1$d/%2$d запросов</string>
+    <string name="owl_typing">OWL печатает...</string>
+    <!-- Log Viewer -->
+    <string name="error_logs">Логи ошибок</string>
+    <string name="copied">Скопировано</string>
+    <string name="all_logs_copied">Все логи скопированы</string>
+    <string name="logs_cleared">Логи очищены</string>
+    <!-- Hermes Chat -->
+    <string name="switching_to_agent">Переключение на %s</string>
+    <string name="session_not_created">Сессия не создана</string>
+    <string name="show_help">Показать справку</string>
+    <string name="agent_status">Статус агента</string>
+    <!-- Agent Settings -->
+    <string name="new_agent">Новый агент</string>
+    <string name="editing">Редактирование</string>
+    <string name="error_loading_presets">Ошибка загрузки пресетов</string>
+    <string name="select_preset">Выберите пресет</string>
+    <string name="enter_agent_name">Введите имя агента</string>
+    <string name="delete_agent_title">Удалить агента?</string>
+    <string name="delete_agent_message">Это действие необратимо.</string>
+    <!-- Remote Agent Settings -->
+    <string name="connect">Подключить</string>
+    <string name="gateway_format">Шлюз: %1$s:%2$d</string>
+    <string name="tunnel_format">Туннель: %s</string>
+    <string name="agent_via_gateway">Агент через шлюз (%s)</string>
+    <string name="active">Активен</string>
+    <string name="token_hash_format">Хэш: %s...</string>
+    <string name="capabilities_format">Возможности: %s</string>
+    <string name="expires_format">Истёк: %s</string>
+    <string name="no_expiry">Бессрочный</string>
+    <string name="command_copied">Команда скопирована</string>
+    <string name="revoke_token_title">Отозвать токен?</string>
+    <string name="revoke_token_message">Токен агента «%s» будет отозван. Агент потеряет доступ.</string>
+    <string name="revoke">Отозвать</string>
+    <string name="generate_token_first">Сначала сгенерируйте токен</string>
+    <string name="status_connected">Статус: ✅ подключён</string>
+    <string name="status_disconnected">Статус: ❌ %s</string>
+    <string name="status_not_running">Статус: не запущен (сгенерируйте токен или подключите шлюз)</string>
+    <string name="status_check_error">Статус: ошибка проверки</string>
+    <string name="error_loading_settings">Ошибка загрузки настроек: %s</string>
+    <string name="error_sending">Ошибка отправки: %s</string>
+    <string name="commands">Команды</string>
+    <string name="notif_initializing">Инициализация...</string>
+    <string name="notif_connected_via_gateway">Подключено через шлюз → %s</string>
+    <string name="notif_connected">Подключено</string>
+    <string name="notif_disconnected">Отключено</string>
+    <string name="notif_error">Ошибка: %s</string>
+    <string name="notif_background_connection">Фоновое подключение Remote Agent</string>
+    <string name="notif_disconnect">Отключить</string>
+    <string name="error_exit_code">Ошибка (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Личный чат</string>
     <string name="group_chat_type">Групповой чат</string>
     <string name="share_to_lavender">Поделиться в Лаве</string>
@@ -503,6 +635,7 @@
     <string name="call_status_calling">Вызов…</string>
     <string name="call_status_incoming">Входящий вызов…</string>
     <string name="conference">Конференция</string>
+    <string name="conference_in_development">Конференция (в разработке)</string>
     <string name="group_conference">Групповая конференция</string>
     <string name="in_conference_format">В конференции: %s</string>
     <string name="update_ready_title">Обновление готово</string>
@@ -513,7 +646,6 @@
     <string name="participants_already_joined">%d участников уже в звонке</string>
     <string name="join_conference_action">Присоединиться к конференции</string>
     <string name="lobby_title">Лобби конференции</string>
-    <string name="conference_ended">Конференция завершена</string>
     <string name="new_conference_format">Конференция %s</string>
     <string name="edit_topic">Редактировать тему</string>
     <string name="plus_5_min">+5 мин</string>
@@ -546,4 +678,197 @@
     <string name="changelog_client_full">Ченджлог клиента (GitHub)</string>
     <string name="changelog_full_description">Полный ченджлог со всеми техническими деталями</string>
     <string name="changelog_loading_from_cache">Показан локальный ченджлог</string>
+
+    <!-- Remote Agent - Additional strings -->
+    <string name="remote_agent_connected">✅ Подключено через шлюз</string>
+    <string name="gateway_status_placeholder">Шлюз: —</string>
+    <string name="tunnel_status_placeholder">Туннель: —</string>
+    <string name="token_generated_hint">Токен агента (скопируйте — он показывается только один раз):</string>
+    <string name="token_generated_title">Токен сгенерирован</string>
+    <string name="agent_command_hint">Команда для запуска агента:</string>
+    <string name="copy_token">Копировать токен</string>
+    <string name="copy_command">Копировать команду</string>
+    <string name="agent_name_hint">Имя агента</string>
+    <string name="agent_name_default">Агент 1</string>
+    <string name="agent_name_empty">Введите имя агента</string>
+    <string name="capabilities_label">Возможности:</string>
+    <string name="select_all">Выбрать все</string>
+    <string name="generate_token_title">Сгенерировать токен</string>
+    <string name="generate">Сгенерировать</string>
+    <string name="cap_shell">Shell</string>
+    <string name="cap_git">Git</string>
+    <string name="cap_build">Сборка</string>
+    <string name="cap_deploy">Деплой</string>
+    <string name="cap_file">Файлы</string>
+    <string name="cap_docker">Docker</string>
+    <string name="cap_ai">AI</string>
+    <string name="ttl_hours_hint">TTL (часы)</string>
+    <string name="ssh_host_empty">Введите SSH хост</string>
+    <string name="gateway_connected">Шлюз подключён</string>
+    <string name="owl_settings_title">Настройки OWL</string>
+    <string name="api_key_label">API Key</string>
+    <string name="api_key_hint">Введите API ключ (OpenRouter)</string>
+    <string name="model_label">Модель</string>
+    <string name="model_hint">Выберите модель</string>
+    <string name="model_custom_hint">Доступно только с заполненным полем API OpenRouter</string>
+    <string name="model_custom_input_hint">Введите ID модели</string>
+    <string name="logs_empty">Логи пусты</string>
+    <string name="update_preview_content">Обновить предпросмотр</string>
+    <string name="action_hermes_agents">Lava AI — Агенты</string>
+    <string name="lava_ai_name">Lava AI</string>
+    <string name="login_to_server">Вход на %s</string>
+    <string name="register_to_server">Регистрация на %s</string>
+    <string name="server_default_name">Lava Germany</string>
+    <string name="app_version_format">Lava: приложение Android %s</string>
+    <string name="delete_chat_confirmation">Удалить этот чат?</string>
+    <string name="delete_message_confirmation">Удалить это сообщение?</string>
+    <string name="delete_messages_confirmation">Удалить %d выбранных сообщений?</string>
+    <string name="e2ee_enabled">🔒 E2EE</string>
+    <string name="e2ee_pending">🔒 Обмен ключами…</string>
+    <string name="e2ee_verified">🔒 Сквозное шифрование</string>
+    <string name="e2ee_not_ready">Ожидание подключения собеседника…</string>
+    <string name="fingerprint_label">Отпечаток:</string>
+    <string name="key_exchange_failed">Не удалось обменяться ключами</string>
+    <string name="verify_identity">Проверить личность</string>
+
+
+    <string name="gateway_disconnected">Шлюз отключён</string>
+
+    <!-- i18n: EditProfileActivity -->
+    <string name="bio_saved">Био сохранено</string>
+    <string name="error_colon">Ошибка: %s</string>
+    <string name="avatar_updated">Аватар обновлен</string>
+    <string name="enter_both_passwords">Введите оба пароля</string>
+
+    <!-- i18n: FullScreenImageActivity -->
+    <string name="image_saved_to_gallery">Изображение сохранено в галерею</string>
+    <string name="save_image_error">Ошибка при сохранении: %s</string>
+
+    <!-- i18n: OwlGrpc / HermesGrpc streaming timeout -->
+    <string name="stream_timeout">Таймаут ожидания ответа (%dс). Попробуйте ещё раз.</string>
+
+    <!-- i18n: CallController -->
+    <string name="conference_ended">Конференция завершена</string>
+    <string name="call_ended">Звонок завершен</string>
+
+    <!-- i18n: ProtoUtils online status -->
+    <string name="was_online_just_now">был(а) в сети только что</string>
+    <string name="was_online_minutes">был(а) в сети %d мин назад</string>
+    <string name="was_online_hours">был(а) в сети %d ч назад</string>
+    <string name="was_online_days">был(а) в сети %d дн назад</string>
+    <string name="was_online_date">был(а) в сети %s</string>
+
+    <!-- i18n: FCM notifications -->
+    <string name="new_message">Новое сообщение</string>
+    <string name="incoming_call">Входящий звонок</string>
+    <string name="call_from">Звонит %s</string>
+    <string name="lavender_calls_channel">Звонки Лава</string>
+    <string name="lavender_messages_channel">Сообщения Лава</string>
+    <string name="lavender_messages_channel_desc">Входящие сообщения чатов</string>
+
+    <!-- i18n: BuiltInThemes theme names -->
+    <string name="theme_graphite_dark">Графит темный</string>
+    <string name="theme_lavender_night">Лавовый ночной</string>
+    <string name="theme_graphite_gold">Графит и золото</string>
+    <string name="theme_modern_blue">Современный синий</string>
+    <string name="theme_green_forest">Зеленый лес</string>
+    <string name="theme_cyber_mint">Кибер Мята</string>
+
+    <!-- i18n: SecurityActivity -->
+    <string name="sessions_terminated">Другие сеансы завершены</string>
+    <string name="sessions_terminate_error">Ошибка при завершении сеансов</string>
+
+    <!-- i18n: RemoteAgentManager -->
+    <string name="service_not_started">Сервис не запущен. Попробуйте позже.</string>
+
+    <!-- i18n: HermesGatewayManager SSH errors -->
+    <string name="ssh_auth_error">Ошибка авторизации SSH. Проверьте логин и пароль.</string>
+    <string name="ssh_connection_refused">Соединение отклонено на порту %d. Проверьте SSH хост и порт.</string>
+    <string name="ssh_timeout">Таймаут подключения к %1$s:%2$d. Проверьте хост и порт.</string>
+    <string name="ssh_connect_error">Не удалось подключиться к %1$s:%2$d</string>
+    <string name="ssh_error">SSH ошибка: %s</string>
+    <string name="ssh_port_in_use">Локальный порт %d уже занят. Выберите другой порт.</string>
+    <string name="ssh_unknown_host">Не удалось найти хост «%s». Введите IP адрес.</string>
+
+    <!-- i18n: RemoteAgentViewModel -->
+    <string name="no_output">(нет вывода)</string>
+
+    <!-- i18n: MessageAdapter call status -->
+    <string name="call_not_accepted">Вызов не принят</string>
+    <string name="call_missed">Пропущенный вызов</string>
+    <string name="call_outgoing_with_duration">Исходящий (%s)</string>
+    <string name="call_incoming_with_duration">Входящий (%s)</string>
+    <string name="call_outgoing_video">Исходящий видеозвонок</string>
+    <string name="call_incoming_video">Входящий видеозвонок</string>
+
+    <!-- i18n: RemoteAgentActivity commands -->
+    <string name="cmd_help">Показать справку по командам</string>
+    <string name="cmd_status">Статус агента и подключения</string>
+    <string name="cmd_logs">Показать логи сервера</string>
+    <string name="cmd_deploy">Деплой проекта</string>
+    <string name="cmd_restart">Перезапустить сервис</string>
+    <string name="cmd_git_pull">Обновить код из Git</string>
+    <string name="cmd_git_status">Статус Git репозитория</string>
+    <string name="cmd_docker_ps">Список запущенных контейнеров</string>
+    <string name="cmd_docker_logs">Логи контейнера</string>
+    <string name="cmd_ps">Список процессов</string>
+    <string name="cmd_df">Свободное место на диске</string>
+    <string name="cmd_uptime">Время работы сервера</string>
+
+    <!-- i18n: AgentListActivity -->
+    <string name="tell_more_about_model">Расскажи подробнее о модели %s</string>
+
+    <!-- i18n: NewChatActivity -->
+    <string name="uploading_images">Загрузка изображений... (%1$d/%2$d)</string>
+
+    <!-- i18n: CallActivity -->
+    <string name="call_connection_failed">Не удалось соединиться</string>
+    <string name="call_connection_error">Ошибка соединения</string>
+
+    <!-- i18n: ChatList v2 (tabs, sections, actions) -->
+    <string name="tab_all">Все</string>
+    <string name="tab_ai">ИИ чаты</string>
+    <string name="tab_groups">Группы</string>
+    <string name="section_pinned">Закреплённые</string>
+    <string name="section_favorites">Избранное</string>
+    <string name="section_all_chats">Все чаты</string>
+    <string name="section_archived">Архив</string>
+    <string name="action_pin">Закрепить</string>
+    <string name="action_unpin">Открепить</string>
+    <string name="action_archive">Архивировать</string>
+    <string name="action_unarchive">Разархивировать</string>
+    <string name="action_mute">Отключить звук</string>
+    <string name="action_unmute">Включить звук</string>
+    <string name="search_chats">Поиск чатов…</string>
+    <string name="search_no_results">Ничего не найдено</string>
+
+    <!-- Pin Message -->
+    <string name="pinned_message">Закреплённое сообщение</string>
+    <string name="pin_message">Закрепить</string>
+    <string name="unpin_message">Открепить</string>
+    <string name="pinned_message_format">📌 %s</string>
+
+    <!-- i18n: English hardcoded strings -->
+    <string name="failed_to_resize_image">Не удалось изменить размер изображения</string>
+    <string name="failed_to_read_image">Не удалось прочитать изображение</string>
+    <string name="failed_to_parse_response">Не удалось разобрать ответ сервера</string>
+    <string name="location_permission_denied">Доступ к местоположению запрещён</string>
+    <string name="camera_mic_permissions_required">Требуются разрешения камеры и микрофона</string>
+    <string name="error_user_id_not_found">Ошибка: ID пользователя не найден. Подождите или войдите снова.</string>
+    <string name="failed_to_terminate_session">Не удалось завершить сессию</string>
+    <string name="failed_to_upload_file">Не удалось загрузить файл</string>
+    <string name="download_started">Загрузка начата</string>
+    <string name="theme_saved_failed_to_set">Тема сохранена, но не установлена как текущая</string>
+    <string name="failed_to_start_recording">Не удалось начать запись</string>
+    <string name="default_model_saved">Модель по умолчанию сохранена</string>
+
+    <!-- ChatList v2: connection status -->
+    <string name="connection_online">В сети</string>
+    <string name="connection_offline">Не в сети</string>
+
+    <!-- File/Feedback -->
+    <string name="filename_prefix">Лава</string>
+    <string name="share_app_description">Лава: платформа защищенных бизнес-коммуникаций</string>
+    <string name="feedback_subject">Лава Обратная связь</string>
+
 </resources>

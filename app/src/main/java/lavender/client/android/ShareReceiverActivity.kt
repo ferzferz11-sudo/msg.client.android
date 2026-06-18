@@ -42,6 +42,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URL
 import java.util.regex.Pattern
+import lavender.client.android.data.grpc.*
 
 class ShareReceiverActivity : AppCompatActivity() {
 
@@ -332,7 +333,7 @@ class ShareReceiverActivity : AppCompatActivity() {
         try {
             val request = DownloadManager.Request(Uri.parse(url))
                 .setTitle("Downloading Video")
-                .setDescription("Lavender Messenger")
+                .setDescription(getString(R.string.share_app_description))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "video_${System.currentTimeMillis()}.mp4")
                 .setAllowedOverMetered(true)
@@ -364,7 +365,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             chatAdapter.setSelectedChat(chat)
             binding.selectedChatLabel.isVisible = true
             binding.selectedChatText.isVisible = true
-            binding.selectedChatText.text = chat.name
+            binding.selectedChatText.text = chat.getDisplayName(username)
         }
         
         binding.chatsRecyclerView.apply {
@@ -427,7 +428,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 Toast.makeText(this@ShareReceiverActivity, R.string.loading, Toast.LENGTH_SHORT).show()
                 imageUrl = uploadFile(sharedUri!!) ?: ""
                 if (imageUrl.isEmpty()) {
-                    Toast.makeText(this@ShareReceiverActivity, "Failed to upload file", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ShareReceiverActivity, getString(R.string.failed_to_upload_file), Toast.LENGTH_SHORT).show()
                     binding.sendButton.isEnabled = true
                     return@launch
                 }
@@ -617,8 +618,8 @@ class ShareReceiverActivity : AppCompatActivity() {
         override fun getItemCount() = chats.size
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val chatName: TextView = itemView.findViewById(R.id.chatName)
-            private val chatType: TextView = itemView.findViewById(R.id.chatType)
+            private val chatName: TextView = itemView.findViewById(R.id.tvChatName)
+            private val chatType: TextView = itemView.findViewById(R.id.tvChatType)
             private val selectedIndicator: ImageView = itemView.findViewById(R.id.selectedIndicator)
             private val avatarView: ImageView = itemView.findViewById(R.id.chatAvatar)
 

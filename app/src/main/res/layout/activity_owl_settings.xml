@@ -19,7 +19,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@drawable/toolbar_background"
         android:elevation="4dp"
-        app:title="Настройки OWL"
+        app:title="@string/owl_settings_title"
         app:titleTextColor="?attr/colorOnPrimary"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
@@ -38,18 +38,19 @@
 
             <!-- API Key section -->
             <TextView
+                android:id="@+id/tvApiKeyLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="API Key"
+                android:text="@string/api_key_label"
                 android:textSize="14sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginBottom="8dp" />
 
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/apiKeyLayout"
+                android:id="@+id/tilApiKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Введите API ключ (OpenRouter)"
+                android:hint="@string/api_key_hint"
                 app:boxBackgroundMode="outline"
                 app:boxStrokeColor="?attr/colorOnSurfaceVariant"
                 app:hintTextColor="?attr/colorOnSurfaceVariant"
@@ -57,7 +58,7 @@
                 android:layout_marginBottom="8dp">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/apiKeyInput"
+                    android:id="@+id/etApiKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textPassword"
@@ -88,26 +89,27 @@
 
             <!-- Model selector section -->
             <TextView
+                android:id="@+id/tvModelLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Модель"
+                android:text="@string/model_label"
                 android:textSize="14sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginBottom="8dp" />
 
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/modelLayout"
+                android:id="@+id/tilModel"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Выберите модель"
+                android:hint="@string/model_hint"
                 app:boxBackgroundMode="outline"
                 app:boxStrokeColor="?attr/colorOnSurfaceVariant"
                 app:hintTextColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginBottom="24dp">
 
                 <AutoCompleteTextView
-                    android:id="@+id/modelDropdown"
+                    android:id="@+id/actvModel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="none"
@@ -119,20 +121,20 @@
 
             <!-- Custom model input (shown only when "Own model" selected with custom key) -->
             <TextView
-                android:id="@+id/modelCustomHint"
+                android:id="@+id/tvModelCustomHint"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Доступно только с заполненным полем API OpenRouter"
+                android:text="@string/model_custom_hint"
                 android:textSize="12sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone"
                 android:layout_marginBottom="8dp" />
 
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/modelCustomLayout"
+                android:id="@+id/tilModelCustom"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Введите ID модели"
+                android:hint="@string/model_custom_input_hint"
                 app:boxBackgroundMode="outline"
                 app:boxStrokeColor="?attr/colorOnSurfaceVariant"
                 app:hintTextColor="?attr/colorOnSurfaceVariant"
@@ -140,7 +142,7 @@
                 android:layout_marginBottom="24dp">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/modelCustomInput"
+                    android:id="@+id/etModelCustom"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
@@ -151,11 +153,11 @@
 
             <!-- Save button -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/saveButton"
+                android:id="@+id/btnSave"
                 style="@style/PrimaryButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Сохранить"
+                android:text="@string/save"
                 android:layout_marginTop="8dp" />
 
             <!-- Status text -->

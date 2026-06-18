@@ -45,9 +45,15 @@ class MessageAdapter(
     private val selectedPositions = mutableSetOf<Int>()
     private var selectionMode = false
     private var searchHighlight: String? = null
+    private var pinnedMessageIds = mutableSetOf<String>()
 
     fun setSearchHighlight(query: String?) {
         searchHighlight = query
+        notifyItemRangeChanged(0, itemCount)
+    }
+
+    fun updatePinnedMessages(ids: Set<String>) {
+        pinnedMessageIds = ids.toMutableSet()
         notifyItemRangeChanged(0, itemCount)
     }
 
@@ -154,19 +160,19 @@ class MessageAdapter(
     inner class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val messageContainer: LinearLayout = itemView.findViewById(R.id.messageContainer)
         val messageBubble: LinearLayout = itemView.findViewById(R.id.messageBubble)
-        private val dateText: TextView = itemView.findViewById(R.id.dateText)
-        private val selectionIndicator: ImageView = itemView.findViewById(R.id.selectionIndicator)
-        private val avatarImageView: com.google.android.material.imageview.ShapeableImageView = itemView.findViewById(R.id.avatarImageView)
-        private val userText: TextView = itemView.findViewById(R.id.userText)
-        private val messageText: TextView = itemView.findViewById(R.id.messageText)
-        private val timeText: TextView = itemView.findViewById(R.id.timeText)
-        private val editedText: TextView = itemView.findViewById(R.id.editedText)
-        private val readStatusIcon: ImageView = itemView.findViewById(R.id.readStatusIcon)
-        private val replyQuoteContainer: View = itemView.findViewById(R.id.replyQuoteContainer)
-        private val replyQuoteUser: TextView = itemView.findViewById(R.id.replyQuoteUser)
-        private val replyQuoteText: TextView = itemView.findViewById(R.id.replyQuoteText)
-        private val replyQuoteBar: View = itemView.findViewById(R.id.replyQuoteBar)
-        private val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.messageImageView).apply {
+        private val dateText: TextView = itemView.findViewById(R.id.tvDateSeparator)
+        private val selectionIndicator: ImageView = itemView.findViewById(R.id.ivSelectionIndicator)
+        private val avatarImageView: com.google.android.material.imageview.ShapeableImageView = itemView.findViewById(R.id.ivAvatar)
+        private val userText: TextView = itemView.findViewById(R.id.tvUserName)
+        private val messageText: TextView = itemView.findViewById(R.id.tvMessageText)
+        private val timeText: TextView = itemView.findViewById(R.id.tvMessageTime)
+        private val editedText: TextView = itemView.findViewById(R.id.tvEditedLabel)
+        private val readStatusIcon: ImageView = itemView.findViewById(R.id.ivReadStatus)
+        private val replyQuoteContainer: View = itemView.findViewById(R.id.llReplyQuote)
+        private val replyQuoteUser: TextView = itemView.findViewById(R.id.tvReplyUser)
+        private val replyQuoteText: TextView = itemView.findViewById(R.id.tvReplyText)
+        private val replyQuoteBar: View = itemView.findViewById(R.id.vReplyBar)
+        private val messageImageView: ImageView = itemView.findViewById<ImageView>(R.id.ivMessageImage).apply {
             clipToOutline = true
             outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) {
@@ -175,10 +181,10 @@ class MessageAdapter(
                 }
             }
         }
-        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.galleryCountIndicator)
+        private val galleryCountIndicator: TextView = itemView.findViewById(R.id.tvGalleryCount)
         private val audioMessageView: lavender.client.android.ui.audio.AudioMessageView = itemView.findViewById(R.id.audioMessageView)
         
-        private val reactionsText: TextView = itemView.findViewById(R.id.reactionsText)
+        private val reactionsText: TextView = itemView.findViewById(R.id.tvReactions)
         private val btnDownloadFile: ImageButton = itemView.findViewById(R.id.btnDownloadFile)
         
         // Track pending image load requests to cancel them when ViewHolder is reused
@@ -269,7 +275,7 @@ class MessageAdapter(
                 } else {
                     lp.addRule(RelativeLayout.ALIGN_PARENT_START)
                     if (isSelectionMode) {
-                        lp.addRule(RelativeLayout.END_OF, R.id.selectionIndicator)
+                        lp.addRule(RelativeLayout.END_OF, R.id.ivSelectionIndicator)
                     }
                     lp.marginStart = 0
                     lp.marginEnd = 40.dpToPx()
@@ -335,13 +341,14 @@ class MessageAdapter(
                         else -> if (isOutgoing) "📞↗️" else "📹"
                     }
                     
+                    val ctx = itemView.context
                     val statusText = when {
-                        isMissed -> if (isOutgoing) "Вызов не принят" else "Пропущенный вызов"
+                        isMissed -> if (isOutgoing) ctx.getString(R.string.call_not_accepted) else ctx.getString(R.string.call_missed)
                         isCompleted -> {
                              val duration = rawText.substringAfter("(").substringBefore(")")
-                             if (isOutgoing) "Исходящий ($duration)" else "Входящий ($duration)"
+                             if (isOutgoing) ctx.getString(R.string.call_outgoing_with_duration, duration) else ctx.getString(R.string.call_incoming_with_duration, duration)
                         }
-                        else -> if (isOutgoing) "Исходящий видеозвонок" else "Входящий видеозвонок"
+                        else -> if (isOutgoing) ctx.getString(R.string.call_outgoing_video) else ctx.getString(R.string.call_incoming_video)
                     }
                     
                     messageText.text = "$icon $statusText"
@@ -787,6 +794,23 @@ class MessageAdapter(
                 }
             }
             
+            // Pinned message badge
+            val llPinnedBadge: LinearLayout? = itemView.findViewById(R.id.llPinnedBadge)
+            val ivPinnedIcon: ImageView? = itemView.findViewById(R.id.ivPinnedIcon)
+            val tvPinnedText: TextView? = itemView.findViewById(R.id.tvPinnedText)
+
+            if (llPinnedBadge != null && ivPinnedIcon != null && tvPinnedText != null) {
+                val isPinned = pinnedMessageIds.contains(message.id)
+                llPinnedBadge.isVisible = isPinned
+                if (isPinned) {
+                    tvPinnedText.text = message.text.ifEmpty { context.getString(R.string.pinned_message) }
+                    try {
+                        val surfaceVariant = ThemeUtils.parseSafeColor(theme.surfaceColor, Color.LTGRAY)
+                        llPinnedBadge.backgroundTintList = ColorStateList.valueOf(surfaceVariant)
+                    } catch (_: Exception) {}
+                }
+            }
+
             // reactionsText should also be clickable to show the dialog
             reactionsText.setOnClickListener { if (isSelectionMode) onClick() else onMessageClick(message) }
         }

@@ -150,7 +150,7 @@
 
     <!-- Messages list -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/messagesRecyclerView"
+        android:id="@+id/rvMessages"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
@@ -172,13 +172,13 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="6dp"
         app:cardBackgroundColor="?attr/colorSurface"
-        app:layout_constraintBottom_toTopOf="@id/replyPreview"
+        app:layout_constraintBottom_toTopOf="@id/cvReplyPreview"
         app:layout_constrainedHeight="true"
         app:layout_constraintHeight_max="200dp"
         tools:visibility="gone">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/mentionList"
+            android:id="@+id/rvMentionList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="4dp"
@@ -188,7 +188,7 @@
 
     <!-- Reply preview -->
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/replyPreview"
+        android:id="@+id/cvReplyPreview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
@@ -196,30 +196,32 @@
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
         app:cardBackgroundColor="?attr/colorSurfaceVariant"
-        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
+        app:layout_constraintBottom_toTopOf="@id/cvBottomPanel"
         tools:visibility="visible">
 
         <LinearLayout
+            android:id="@+id/llReplyPreviewContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:padding="8dp">
 
             <View
-                android:id="@+id/replyBar"
+                android:id="@+id/vReplyBar"
                 android:layout_width="4dp"
                 android:layout_height="match_parent"
                 android:background="?attr/colorPrimary"
                 android:layout_marginEnd="8dp" />
 
             <LinearLayout
+                android:id="@+id/llReplyPreviewText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/replyUser"
+                    android:id="@+id/tvReplyUser"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="?attr/colorPrimary"
@@ -228,7 +230,7 @@
                     tools:text="Pavel" />
 
                 <TextView
-                    android:id="@+id/replyText"
+                    android:id="@+id/tvReplyText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="?attr/colorOnSurfaceVariant"
@@ -239,7 +241,7 @@
             </LinearLayout>
 
             <ImageButton
-                android:id="@+id/cancelReply"
+                android:id="@+id/btnCancelReply"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -250,7 +252,7 @@
 
     <!-- Bottom input panel -->
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/bottomPanel"
+        android:id="@+id/cvBottomPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardCornerRadius="0dp"
@@ -260,7 +262,7 @@
 
         <!-- Search bar -->
         <LinearLayout
-            android:id="@+id/searchBar"
+            android:id="@+id/llSearchBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -270,7 +272,7 @@
             android:background="?attr/colorPrimary">
 
             <EditText
-                android:id="@+id/searchInput"
+                android:id="@+id/etSearchInput"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -283,14 +285,14 @@
                 android:imeOptions="actionSearch" />
 
             <TextView
-                android:id="@+id/searchResultsCount"
+                android:id="@+id/tvSearchResultsCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="?attr/colorOnPrimary"
                 android:padding="8dp" />
 
             <ImageButton
-                android:id="@+id/searchPrev"
+                android:id="@+id/btnSearchPrev"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -298,7 +300,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
-                android:id="@+id/searchNext"
+                android:id="@+id/btnSearchNext"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -308,7 +310,7 @@
 
         <!-- Selection toolbar -->
         <LinearLayout
-            android:id="@+id/selectionToolbar"
+            android:id="@+id/llSelectionToolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -318,7 +320,7 @@
             android:background="?attr/colorPrimary">
 
             <ImageButton
-                android:id="@+id/selectionClose"
+                android:id="@+id/btnSelectionClose"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -326,7 +328,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <TextView
-                android:id="@+id/selectionCountText"
+                android:id="@+id/tvSelectionCount"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -334,7 +336,7 @@
                 android:paddingStart="8dp" />
 
             <ImageButton
-                android:id="@+id/selectionReply"
+                android:id="@+id/btnSelectionReply"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -342,7 +344,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
-                android:id="@+id/selectionCopy"
+                android:id="@+id/btnSelectionCopy"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -350,7 +352,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
-                android:id="@+id/selectionForward"
+                android:id="@+id/btnSelectionForward"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -358,7 +360,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
-                android:id="@+id/selectionDelete"
+                android:id="@+id/btnSelectionDelete"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -366,7 +368,7 @@
                 app:tint="?attr/colorOnPrimary" />
 
             <ImageButton
-                android:id="@+id/selectionStar"
+                android:id="@+id/btnSelectionStar"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -376,14 +378,14 @@
 
         <!-- Image preview strip -->
         <HorizontalScrollView
-            android:id="@+id/imagePreviewScroll"
+            android:id="@+id/hsvImagePreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
             android:background="?attr/colorSurfaceVariant">
 
             <LinearLayout
-                android:id="@+id/imagePreviewContainer"
+                android:id="@+id/llImagePreviewContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -392,7 +394,7 @@
 
         <!-- Upload progress -->
         <LinearLayout
-            android:id="@+id/uploadProgressContainer"
+            android:id="@+id/llUploadProgress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -401,14 +403,14 @@
             android:background="?attr/colorSurfaceVariant">
 
             <ProgressBar
-                android:id="@+id/uploadProgressBar"
+                android:id="@+id/pbUpload"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="4dp"
                 android:progressTint="?attr/colorPrimary" />
 
             <TextView
-                android:id="@+id/uploadProgressText"
+                android:id="@+id/tvUploadProgress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
@@ -418,6 +420,7 @@
 
         <!-- Main input row -->
         <LinearLayout
+            android:id="@+id/llInputRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -425,7 +428,7 @@
             android:padding="4dp">
 
             <ImageButton
-                android:id="@+id/commandButton"
+                android:id="@+id/btnCommand"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -434,7 +437,7 @@
                 android:contentDescription="Commands" />
 
             <EditText
-                android:id="@+id/messageInput"
+                android:id="@+id/etMessageInput"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -452,7 +455,7 @@
                 android:textColorHint="?attr/colorOnSurfaceVariant" />
 
             <ImageButton
-                android:id="@+id/attachButton"
+                android:id="@+id/btnAttach"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -462,7 +465,7 @@
                 android:visibility="gone" />
 
             <ImageButton
-                android:id="@+id/audioButton"
+                android:id="@+id/btnAudio"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
@@ -472,7 +475,7 @@
                 android:visibility="gone" />
 
             <ImageButton
-                android:id="@+id/sendButton"
+                android:id="@+id/btnSend"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"

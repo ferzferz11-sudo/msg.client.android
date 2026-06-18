@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.tabs.TabLayout
@@ -108,8 +109,12 @@ object ThemeApplier {
             setTitleTextColor(customOnPrimary)
             setNavigationIconTint(customOnPrimary)
             
+            // Tint toolbar child views (title, subtitle, icons) — MaterialToolbar title is a TextView
+            toolbar.findViewById<TextView>(R.id.tvToolbarTitle)?.setTextColor(customOnPrimary)
+            toolbar.findViewById<TextView>(R.id.tvToolbarSubtitle)?.setTextColor(ThemeUtils.adjustAlpha(customOnPrimary, 0.8f))
+            
             // Tint toolbar icons
-            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionMute, R.id.actionEdit, R.id.actionSettings, R.id.updateAvailableIcon, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby)
+            val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionEdit, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby, R.id.ivToolbarUserAvatar)
             toolbarActions.forEach { id ->
                 findViewById<ImageView>(id)?.let { iv ->
                     iv.imageTintList = ColorStateList.valueOf(customOnPrimary)
@@ -118,6 +123,11 @@ object ThemeApplier {
                     }
                 }
             }
+        }
+
+        // Tint AppBarLayout background
+        activity.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)?.let { appBar ->
+            appBar.setBackgroundColor(customPrimary)
         }
 
         // Tint FAB (e.g. AgentListActivity)
@@ -136,7 +146,7 @@ object ThemeApplier {
                 if (v is ImageView) v.imageTintList = ColorStateList.valueOf(customPrimary)
             }
         }
-
+        // Tint TabLayout
         activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {
             if (tag == "transparent") {
                 setBackgroundColor(Color.TRANSPARENT)
@@ -144,9 +154,9 @@ object ThemeApplier {
                 setTabTextColors(adjustAlpha(pColor, 0.6f), pColor)
                 setSelectedTabIndicatorColor(pColor)
             } else {
-                setBackgroundColor(surfaceColor)
-                setTabTextColors(adjustAlpha(onSurfaceColor, 0.75f), customPrimary)
-                setSelectedTabIndicatorColor(customPrimary)
+                setBackgroundColor(Color.TRANSPARENT)
+                setTabTextColors(adjustAlpha(customOnPrimary, 0.75f), customOnPrimary)
+                setSelectedTabIndicatorColor(customOnPrimary)
             }
         }
 
@@ -214,7 +224,10 @@ object ThemeApplier {
         val commonInputs = listOf(
             R.id.messageInput, R.id.searchInput, R.id.editMessageInput, 
             R.id.editTextBio, R.id.editTextUsername, R.id.editTextPassword,
-            R.id.editNewUsername, R.id.editTextOldPassword, R.id.editTextNewPassword
+            R.id.editNewUsername, R.id.editTextOldPassword, R.id.editTextNewPassword,
+            // Remote Agent settings fields
+            R.id.etSshHost, R.id.etSshPort, R.id.etSshUser, R.id.etSshPassword,
+            R.id.etServerHost, R.id.etServerPort, R.id.etLocalPort
         )
         commonInputs.forEach { id ->
             activity.findViewById<android.widget.EditText>(id)?.apply {
@@ -229,7 +242,7 @@ object ThemeApplier {
         }
 
         // FABs
-        listOf(R.id.aiFab, R.id.addChatFab, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
+        listOf(R.id.fabAi, R.id.fabAddChat, R.id.addContactFab, R.id.addThemeFab).forEach { id ->
             (activity.findViewById<View>(id) as? com.google.android.material.floatingactionbutton.FloatingActionButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 imageTintList = ColorStateList.valueOf(customOnPrimary)

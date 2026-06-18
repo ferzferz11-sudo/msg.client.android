@@ -3,6 +3,7 @@ package lavender.client.android.theme.data
 import android.content.Context
 import lavender.client.android.theme.BuiltInThemes
 import lavender.client.android.theme.Theme
+import lavender.client.android.data.grpc.*
 
 class ThemeRepository(
     private val remote: ThemeRemoteDataSource = ThemeRemoteDataSource(),

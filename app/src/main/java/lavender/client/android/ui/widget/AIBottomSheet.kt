@@ -50,6 +50,8 @@ class AIBottomSheet(
 
     fun rebuildContent() {
         if (isShowing()) {
+            val theme = ThemeStore.currentTheme()
+            applyTheme(theme)
             buildContent()
         }
     }
@@ -77,7 +79,7 @@ class AIBottomSheet(
         val notifBadge = notifItem.findViewById<TextView>(R.id.actionBadge)
         notifIcon.setImageResource(R.drawable.ic_notifications)
         notifIcon.imageTintList = ColorStateList.valueOf(primColor)
-        notifText.text = "Уведомления"
+        notifText.text = context.getString(R.string.ai_notifications)
         notifText.setTextColor(txtColor)
         if (unreadNotifCount > 0) {
             notifBadge.text = if (unreadNotifCount > 99) "99+" else unreadNotifCount.toString()
@@ -103,7 +105,7 @@ class AIBottomSheet(
         // === Section 1: Hermes (Лава ИИ Оркестратор) ===
         val hermesHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        hermesHeader.text = "🎼 Лава ИИ (Оркестратор)"
+        hermesHeader.text = context.getString(R.string.ai_lava_section)
         contentContainer?.addView(hermesHeader)
 
         // Hermes chat list
@@ -122,7 +124,7 @@ class AIBottomSheet(
         val hermesBadge = hermesCreate.findViewById<TextView>(R.id.actionBadge)
         hermesIcon.setImageResource(R.drawable.ic_hermes)
         hermesIcon.imageTintList = ColorStateList.valueOf(primColor)
-        hermesText.text = "Создать новый чат"
+        hermesText.text = context.getString(R.string.ai_create_new_chat)
         hermesText.setTextColor(primColor)
         hermesBadge.visibility = View.GONE
         hermesCreate.setOnClickListener {
@@ -139,7 +141,7 @@ class AIBottomSheet(
 
         val owlHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        owlHeader.text = "🦉 OWL агент"
+        owlHeader.text = context.getString(R.string.ai_owl_section)
         contentContainer?.addView(owlHeader)
 
         // OWL chat list
@@ -158,7 +160,7 @@ class AIBottomSheet(
         val owlBadge = owlCreate.findViewById<TextView>(R.id.actionBadge)
         owlIcon.setImageResource(R.drawable.ic_owl)
         owlIcon.imageTintList = ColorStateList.valueOf(primColor)
-        owlText.text = "Создать новый чат"
+        owlText.text = context.getString(R.string.ai_create_new_chat)
         owlText.setTextColor(primColor)
         owlBadge.visibility = View.GONE
         owlCreate.setOnClickListener {
@@ -175,7 +177,7 @@ class AIBottomSheet(
 
         val remoteHeader = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        remoteHeader.text = "🖥 Агенты"
+        remoteHeader.text = context.getString(R.string.ai_agents_section)
         contentContainer?.addView(remoteHeader)
 
         // Open Remote Agents button
@@ -186,7 +188,7 @@ class AIBottomSheet(
         val remoteBadge = remoteOpen.findViewById<TextView>(R.id.actionBadge)
         remoteIcon.setImageResource(R.drawable.ic_agents)
         remoteIcon.imageTintList = ColorStateList.valueOf(primColor)
-        remoteText.text = "Управление агентами"
+        remoteText.text = context.getString(R.string.ai_manage_agents)
         remoteText.setTextColor(primColor)
         remoteBadge.visibility = View.GONE
         remoteOpen.setOnClickListener {
@@ -204,14 +206,11 @@ class AIBottomSheet(
         val icon = itemView.findViewById<ImageView>(R.id.chatIcon)
         val text = itemView.findViewById<TextView>(R.id.chatName)
         val settingsBtn = itemView.findViewById<ImageView>(R.id.chatSettings)
-        val typeLabel = itemView.findViewById<TextView>(R.id.chatTypeLabel)
 
         if (chat.type == "hermes") {
             icon.setImageResource(R.drawable.ic_hermes)
-            typeLabel.text = "Лава ИИ"
         } else {
             icon.setImageResource(R.drawable.ic_owl)
-            typeLabel.text = "OWL"
         }
         icon.imageTintList = ColorStateList.valueOf(primColor)
 
@@ -239,8 +238,8 @@ class AIBottomSheet(
 
     private fun showChatPopupMenu(anchor: View, chat: AIChatInfo, primColor: Int, txtColor: Int) {
         val popup = PopupMenu(context, anchor, Gravity.END)
-        popup.menu.add(0, 1, 0, "Настройки")
-        popup.menu.add(0, 2, 1, "Удалить")
+        popup.menu.add(0, 1, 0, context.getString(R.string.ai_settings))
+        popup.menu.add(0, 2, 1, context.getString(R.string.ai_delete))
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -250,8 +249,14 @@ class AIBottomSheet(
                     true
                 }
                 2 -> {
+                    // Remove from local list immediately for instant UI update
+                    existingChats.removeAll { it.id == chat.id }
+                    // Notify caller to delete on server in background
                     onDeleteChat(chat)
-                    // Do NOT dismiss — let the caller decide (rebuild or dismiss)
+                    // Rebuild UI after popup is dismissed
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        rebuildContent()
+                    }, 300)
                     true
                 }
                 else -> false

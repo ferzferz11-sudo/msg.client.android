@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import lavender.client.android.data.grpc.*
 
 // ======= OWL AI Assistant — completely separate from Hermes orchestrator =======
 
@@ -759,7 +760,7 @@ fun chatWithOwl(
                                 Log.w("OwlGrpc", "chatWithOwl: stream timeout after ${streamTimeoutMs}ms")
                                 hadError = true
                                 val errResp = OwlResponseProto(text = "", finished = true,
-                                    error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.")
+                                    error = "Response timeout (${streamTimeoutMs / 1000}s). Please try again.")
                                 _owlResponses.tryEmit(errResp)
                                 onResponse("", true, errResp.error)
                                 streamDone.complete(true)
@@ -790,7 +791,7 @@ fun chatWithOwl(
                     Log.w("OwlGrpc", "chatWithOwl: initial stream timeout after ${streamTimeoutMs}ms")
                     hadError = true
                     val errResp = OwlResponseProto(text = "", finished = true,
-                        error = "Таймаут ожидания ответа (${streamTimeoutMs/1000}с). Попробуйте ещё раз.")
+                        error = "Response timeout (${streamTimeoutMs / 1000}s). Please try again.")
                     _owlResponses.tryEmit(errResp)
                     onResponse("", true, errResp.error)
                     streamDone.complete(true)

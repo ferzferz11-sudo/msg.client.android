@@ -36,7 +36,7 @@ class AgentListActivity : AppCompatActivity() {
     private lateinit var defaultsContainer: FrameLayout
 
     private var userId: String = ""
-    private var currentTab = 0 // 0 = presets, 1 = my agents, 2 = defaults
+    private var currentTab = 0 // 0 = presets, 1 = my agents, 2 = defaults, 3 = remote
 
     private val availableModels = arrayOf(
         "google/gemini-pro",
@@ -98,11 +98,17 @@ class AgentListActivity : AppCompatActivity() {
         })
 
         fab.setOnClickListener {
-            if (currentTab == 1) {
-                val intent = Intent(this, AgentSettingsActivity::class.java)
-                intent.putExtra("USER_ID", userId)
-                intent.putExtra("MODE", "create")
-                startActivity(intent)
+            when (currentTab) {
+                1 -> {
+                    val intent = Intent(this, AgentSettingsActivity::class.java)
+                    intent.putExtra("USER_ID", userId)
+                    intent.putExtra("MODE", "create")
+                    startActivity(intent)
+                }
+                3 -> {
+                    // Open Remote Agent settings (token management)
+                    startActivity(Intent(this, lavender.client.android.ui.remote.RemoteAgentSettingsActivity::class.java))
+                }
             }
         }
     }
@@ -169,7 +175,20 @@ class AgentListActivity : AppCompatActivity() {
                 fab.hide()
                 setupDefaultsTab()
             }
+            3 -> {
+                // Remote agents tab — open RemoteAgentActivity
+                recyclerView.visibility = View.VISIBLE
+                defaultsContainer.visibility = View.GONE
+                fab.show()
+                loadRemoteAgents()
+            }
         }
+    }
+
+    private fun loadRemoteAgents() {
+        startActivity(Intent(this, lavender.client.android.ui.remote.RemoteAgentActivity::class.java))
+        // Reset to first tab after opening
+        tabLayout.getTabAt(0)?.select()
     }
 
     private fun setupDefaultsTab() {
@@ -184,7 +203,7 @@ class AgentListActivity : AppCompatActivity() {
         saveButton.setOnClickListener {
             val newModel = input.text.toString()
             prefs.edit().putString("default_model", newModel).apply()
-            Toast.makeText(this, "Default model saved", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.default_model_saved), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -197,12 +216,12 @@ class AgentListActivity : AppCompatActivity() {
 
     private fun confirmDeleteAgent(agent: Any) {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Удалить агента?")
-            .setMessage("Это действие необратимо.")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle(getString(R.string.delete_agent_title))
+            .setMessage(getString(R.string.delete_agent_message))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 // viewModel.deleteAgent(agent.id, userId) { success -> ... }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -233,7 +252,7 @@ class AgentListActivity : AppCompatActivity() {
 
     private fun openChatWithModelMention(agent: AgentInfo) {
         val intent = Intent(this, HermesChatActivity::class.java)
-        intent.putExtra("PREFILL_MESSAGE", "Расскажи подробнее о модели ${agent.model}")
+        intent.putExtra("PREFILL_MESSAGE", getString(R.string.tell_more_about_model, agent.model))
         startActivity(intent)
     }
 }

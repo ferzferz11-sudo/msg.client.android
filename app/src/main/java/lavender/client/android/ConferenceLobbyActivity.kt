@@ -44,6 +44,7 @@ import java.util.*
 
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
+import lavender.client.android.data.grpc.*
 
 class ConferenceLobbyActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConferenceLobbyBinding
@@ -111,7 +112,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                 GrpcClient.removeParticipant(roomId, myId) { success, _ ->
                     if (success) {
                         runOnUiThread {
-                            Toast.makeText(this, "Вы покинули конференцию", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, R.string.left_conference, Toast.LENGTH_SHORT).show()
                             finish()
                         }
                     }
@@ -376,7 +377,7 @@ class ConferenceLobbyActivity : AppCompatActivity() {
                 invitedAdapter.updateUsers(invitedList, isCreator)
                 
                 val pCount = participants.length()
-                binding.toolbar.subtitle = "Участников в звонке: $pCount"
+                binding.toolbar.subtitle = getString(R.string.conference_participants, pCount)
             }
         } catch (e: Exception) {
             Log.e("Lobby", "Failed to parse participants", e)

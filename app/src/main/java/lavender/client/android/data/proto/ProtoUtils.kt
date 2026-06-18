@@ -1,6 +1,7 @@
 package lavender.client.android.data.proto
 
 import com.google.protobuf.Timestamp
+import lavender.client.android.R
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.Reaction
 
@@ -123,14 +124,14 @@ object ProtoUtils {
         val diffDays = diffMillis / (1000 * 60 * 60 * 24)
         
         return when {
-            diffMinutes < 1 -> "был(а) в сети только что"
-            diffMinutes < 60 -> "был(а) в сети $diffMinutes мин назад"
-            diffHours < 24 -> "был(а) в сети $diffHours ч назад"
-            diffDays < 7 -> "был(а) в сети $diffDays дн назад"
+            diffMinutes < 1 -> context.getString(R.string.was_online_just_now)
+            diffMinutes < 60 -> context.getString(R.string.was_online_minutes, diffMinutes.toInt())
+            diffHours < 24 -> context.getString(R.string.was_online_hours, diffHours.toInt())
+            diffDays < 7 -> context.getString(R.string.was_online_days, diffDays.toInt())
             else -> {
                 val date = java.util.Date(lastSeenMillis)
                 val format = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.forLanguageTag("ru"))
-                "был(а) в сети ${format.format(date)}"
+                context.getString(R.string.was_online_date, format.format(date))
             }
         }
     }

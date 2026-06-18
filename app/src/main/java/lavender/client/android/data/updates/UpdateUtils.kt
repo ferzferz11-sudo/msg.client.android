@@ -61,7 +61,7 @@ object UpdateUtils {
         )
 
         // Intent to show changelog
-        val whatsNewIntent = Intent(context, lavender.client.android.ChatListActivity::class.java).apply {
+        val whatsNewIntent = Intent(context, lavender.client.android.ui.chatlist.ChatListActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("extra_show_whats_new", true)
         }

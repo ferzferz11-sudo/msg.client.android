@@ -3,6 +3,7 @@ package lavender.client.android
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
+import lavender.client.android.ui.chatlist.ChatListActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -12,6 +13,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
 import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.data.session.SessionManager
 
 @SuppressLint("CustomSplashScreen")
@@ -31,7 +34,22 @@ class SplashActivity : AppCompatActivity() {
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
 
+        // Sync language from server if logged in
         val session = SessionManager.session.value
+        if (session.isLoggedIn) {
+            lifecycleScope.launch {
+                try {
+                    val settings = lavender.client.android.data.grpc.GrpcClient.getUserSettingsV2(this@SplashActivity)
+                    val serverLocale = settings?.locale
+                    if (!serverLocale.isNullOrEmpty() && serverLocale != prefs.getString("language", "ru")) {
+                        prefs.edit { putString("language", serverLocale) }
+                    }
+                } catch (e: Exception) {
+                    // Ignore - use local setting
+                }
+            }
+        }
+
         val isLoggedIn = session.isLoggedIn
 
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
@@ -79,8 +97,7 @@ class SplashActivity : AppCompatActivity() {
 
         // App name — localized
         val appNameText = TextView(this).apply {
-            val lang = prefs.getString("language", "ru")
-            text = if (lang == "en") "Lava" else "Лава"
+            text = getString(R.string.lavender_messenger)
             textSize = 28f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(resources.getColor(R.color.lavender_mist, null))
@@ -95,7 +112,24 @@ class SplashActivity : AppCompatActivity() {
             }
         }
 
+        // Version text
+        val versionText = TextView(this).apply {
+            text = BuildConfig.VERSION_NAME
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.lavender_mist, null))
+            alpha = 0.5f
+            gravity = android.view.Gravity.CENTER
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            ).apply {
+                topMargin = (56 * resources.displayMetrics.density).toInt()
+            }
+        }
+
         splashView.addView(logoImage)
+        splashView.addView(versionText)
         splashView.addView(appNameText)
         setContentView(splashView)
 
@@ -136,6 +170,14 @@ class SplashActivity : AppCompatActivity() {
         session: lavender.client.android.data.session.UserSession,
         prefs: android.content.SharedPreferences
     ) {
+        val serverAddress = prefs.getString("server_address", "") ?: ""
+        val host = serverAddress.split(":").getOrNull(0) ?: ""
+
+        // Clear local cache on successful login (silent, no toast)
+        if (shouldProceed) {
+            clearAllCache()
+        }
+
         val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {
@@ -156,18 +198,18 @@ class SplashActivity : AppCompatActivity() {
                             putExtra("from_notification", true)
                         }
                     } else {
-                        Log.d("SplashActivity", "Directing to NewChatActivity")
+                        Log.d("SplashActivity", "NewChatActivity")
                         Intent(this, NewChatActivity::class.java).apply {
                             putExtra("USERNAME", session.username)
-                            putExtra("SERVER_ADDRESS", prefs.getString("server_address", ""))
+                            putExtra("SERVER_ADDRESS", serverAddress)
                             putExtra("ROOM_ID", roomIdFromPush)
                             putExtra("from_notification", true)
                         }
                     }
                 }
                 else -> {
-                    Log.d("SplashActivity", "Directing to ChatListActivity")
-                    Intent(this, ChatListActivity::class.java)
+                    navigateToChatList(host)
+                    return
                 }
             }
         } else {
@@ -179,5 +221,17 @@ class SplashActivity : AppCompatActivity() {
 
         startActivity(targetIntent)
         finish()
+    }
+
+    private fun navigateToChatList(host: String) {
+        // Always use ChatListActivity — works on both v1 and v2 servers
+        Log.d("SplashActivity", "Directing to ChatListActivity (server: $host)")
+        startActivity(Intent(this, ChatListActivity::class.java))
+        finish()
+    }
+
+    /** Clear all local cache silently on successful login. */
+    private fun clearAllCache() {
+        lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
     }
 }

@@ -129,7 +129,13 @@ dependencies {
     // EncryptedSharedPreferences for secure credential storage
     implementation(libs.androidx.security.crypto)
 
+    // JSch for SSH tunnel (Hermes Gateway)
+    implementation("com.jcraft:jsch:0.1.55")
+
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

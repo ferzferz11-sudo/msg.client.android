@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import lavender.client.android.R
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,6 +19,7 @@ import lavender.client.android.data.db.toMessageEntity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.*
 import lavender.client.android.data.repository.HermesRepository
+import lavender.client.android.data.grpc.*
 
 class HermesChatViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -211,7 +213,7 @@ class HermesChatViewModel(application: Application) : AndroidViewModel(applicati
                 val errorMsg = _messages.value.toMutableList()
                 if (errorMsg.isNotEmpty()) {
                     errorMsg[errorMsg.size - 1] = errorMsg.last().copy(
-                        content = "Ошибка: $error",
+                        content = getApplication<Application>().getString(R.string.error_colon, error),
                         isStreaming = false
                     )
                 }

@@ -16,9 +16,13 @@
         android:background="?attr/colorOnSurfaceVariant" />
 
     <RelativeLayout
+        android:id="@+id/headerSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp">
+        android:layout_marginBottom="24dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
 
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/menuUserAvatar"
@@ -54,6 +58,14 @@
                 android:visibility="gone"
                 android:maxLines="2"
                 android:ellipsize="end" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/edit"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginTop="4dp" />
         </LinearLayout>
 
         <LinearLayout
@@ -94,18 +106,6 @@
         android:layout_marginBottom="16dp" />
 
     <LinearLayout
-        android:id="@+id/actionEditProfile"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:contentDescription="@string/edit_profile_title"
-            android:src="@drawable/ic_edit" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/edit" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionContacts"
         style="@style/MenuActionItemStyle">
         <ImageView
@@ -115,6 +115,18 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/contacts" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionFavorites"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:contentDescription="@string/favorites"
+            android:src="@drawable/ic_star" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/favorites" />
     </LinearLayout>
 
     <LinearLayout

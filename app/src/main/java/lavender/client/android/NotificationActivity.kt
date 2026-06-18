@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
@@ -68,6 +69,17 @@ class NotificationActivity : AppCompatActivity() {
         switchSend.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean("push_send_enabled", isChecked) }
             updateTokenOnServer()
+        }
+
+        // DND Bypass
+        val switchBypassDnd = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchBypassDnd)
+        switchBypassDnd.isChecked = prefs.getBoolean("push_bypass_dnd", false)
+
+        switchBypassDnd.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("push_bypass_dnd", isChecked) }
+            if (isChecked) {
+                requestDndBypassPermission()
+            }
         }
 
         // Preview views
@@ -138,7 +150,7 @@ class NotificationActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         when (item.itemId) {
             1 -> startActivity(android.content.Intent(this, NotificationLogActivity::class.java))
-            2 -> startActivity(android.content.Intent(this, FCMLogsActivity::class.java))
+            //2 -> startActivity(android.content.Intent(this, FCMLogsActivity::class.java))
         }
         return super.onOptionsItemSelected(item)
     }
@@ -168,13 +180,23 @@ class NotificationActivity : AppCompatActivity() {
         val username = prefs.getString("username", "") ?: ""
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
-        
+
         if (username.isNotEmpty()) {
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val token = if (receiveEnabled) task.result else "DISABLED"
                     grpcClient.registerToken(username, token, sendEnabled)
                 }
+            }
+        }
+    }
+
+    private fun requestDndBypassPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            if (!nm.isNotificationPolicyAccessGranted) {
+                val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                startActivity(intent)
             }
         }
     }

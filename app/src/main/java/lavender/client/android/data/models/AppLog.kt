@@ -61,13 +61,10 @@ object AppLog {
     private fun add(entry: LogEntry) {
         synchronized(logs) {
             logs.add(entry)
-            // Удаляем старые если превышен лимит
             while (logs.size > MAX_LOGS) {
                 logs.removeAt(0)
             }
         }
-        // Также пишем в Android Log
-        android.util.Log.d("AppLog", entry.toDisplayString())
     }
 
     fun getAll(): List<LogEntry> = synchronized(logs) { logs.toList() }
@@ -77,7 +74,7 @@ object AppLog {
     fun clear() = synchronized(logs) { logs.clear() }
 
     fun getLogsText(): String = synchronized(logs) {
-        if (logs.isEmpty()) return@synchronized "Логи пусты"
+        if (logs.isEmpty()) return@synchronized "Logs empty"
         buildString {
             logs.forEach { entry ->
                 appendLine(entry.toDisplayString())

@@ -1153,3 +1153,59 @@ message GetUnreadCountRequest {
 message GetUnreadCountResponse {
   int32 count = 1;
 }
+
+// ======= Auth Service v2 (JWT-based) =======
+
+message SignInRequestV2 {
+  string username = 1;
+  string password = 2;
+  string device_id = 3;
+  string device_name = 4;
+  string device_type = 5;
+  string client_version = 6;
+}
+
+message SignUpRequestV2 {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+  string device_id = 4;
+  string device_name = 5;
+  string device_type = 6;
+  string client_version = 7;
+}
+
+message AuthResponseV2 {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  int64 access_expires_at = 5;
+  int64 refresh_expires_at = 6;
+  User user = 7;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_expires_at = 3;
+  int64 refresh_expires_at = 4;
+}
+
+message SignOutRequest {
+  string refresh_token = 1;
+  bool all_devices = 2;
+}
+
+message RevokeDeviceRequest {
+  string device_id = 1;
+}
+
+message SimpleAuthResponse {
+  bool success = 1;
+  string message = 2;
+}

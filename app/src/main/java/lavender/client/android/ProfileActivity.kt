@@ -3,6 +3,7 @@ package lavender.client.android
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import lavender.client.android.ui.chatlist.ChatListActivity
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
@@ -578,12 +579,12 @@ class ProfileActivity : AppCompatActivity() {
                     } else {
                         val thumbResizedBytes = resizeImageForGroup(uri); val fullResizedBytes = resizeImageFull(uri)
                         if (thumbResizedBytes == null || fullResizedBytes == null) {
-                            runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Failed to resize image", Toast.LENGTH_SHORT).show() }; return@withContext
+                            runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, getString(R.string.failed_to_resize_image), Toast.LENGTH_SHORT).show() }; return@withContext
                         }
                         thumbBytes = thumbResizedBytes; fullBytes = fullResizedBytes; mediaType = "image/jpeg"
                     }
                     if (thumbBytes.isEmpty()) {
-                        runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show() }; return@withContext
+                        runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, getString(R.string.failed_to_read_image), Toast.LENGTH_SHORT).show() }; return@withContext
                     }
                     val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull())).addFormDataPart("avatar_full", if (isGif) "avatar_full.gif" else "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull())).build()
                     val request = Request.Builder().url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@ProfileActivity)}/upload-avatar").post(requestBody).build()
@@ -616,7 +617,7 @@ class ProfileActivity : AppCompatActivity() {
                                     } else Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()
                                 }
                             }
-                        } else runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Failed to parse server response", Toast.LENGTH_SHORT).show() }
+                        } else runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_SHORT).show() }
                     } else runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show() }
                 }
             } catch (e: Exception) { runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show() } }

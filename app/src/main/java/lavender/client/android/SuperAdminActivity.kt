@@ -33,6 +33,7 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.ui.LogViewerActivity
 import lavender.client.android.ui.adapter.SuperAdminAdapter
 import lavender.client.android.ui.widget.StandardBottomSheet
 import java.util.Locale
@@ -144,7 +145,7 @@ class SuperAdminActivity : AppCompatActivity() {
                     toggleChatSelection(chat.id)
                 } else {
                     val intent = Intent(this, ProfileActivity::class.java).apply {
-                        putExtra("username", chat.name)
+                        putExtra("username", chat.getDisplayName(username))
                         putExtra("is_group", !chat.type.equals("direct", true))
                         putExtra("room_id", chat.id)
                         putExtra("avatar_url", chat.avatarUrl)
@@ -188,13 +189,11 @@ class SuperAdminActivity : AppCompatActivity() {
         menu.findItem(R.id.action_show_users)?.iconTintList = ColorStateList.valueOf(iconColor)
         menu.findItem(R.id.action_show_groups)?.iconTintList = ColorStateList.valueOf(iconColor)
         menu.findItem(R.id.action_search)?.iconTintList = ColorStateList.valueOf(iconColor)
+        menu.findItem(R.id.action_logs)?.iconTintList = ColorStateList.valueOf(iconColor)
         
         // Hide tabs from menu, now using TabLayout
         menu.findItem(R.id.action_show_users)?.isVisible = false
         menu.findItem(R.id.action_show_groups)?.isVisible = false
-
-        // Remove action_logs if it's there
-        menu.removeItem(R.id.action_logs)
         
         val hasSelection = selectedUsernames.isNotEmpty() || selectedChatIds.isNotEmpty()
         if (hasSelection) {
@@ -247,6 +246,10 @@ class SuperAdminActivity : AppCompatActivity() {
                 }
                 return true
             }
+            R.id.action_logs -> {
+                startActivity(Intent(this, LogViewerActivity::class.java))
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -255,9 +258,8 @@ class SuperAdminActivity : AppCompatActivity() {
         swipeRefreshLayout.isRefreshing = true
         progressOverlay.isVisible = true
 
-        // Add timeout to prevent infinite loading
         val loadTimeout = lifecycleScope.launch {
-            delay(15000) // 15 second timeout
+            delay(15000)
             if (swipeRefreshLayout.isRefreshing) {
                 Log.w("SuperAdminActivity", "Load data timeout, stopping refresh")
                 runOnUiThread {
@@ -369,10 +371,10 @@ class SuperAdminActivity : AppCompatActivity() {
 
     private fun confirmDeleteSelectedUsers() {
         val count = selectedUsernames.size
-        val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats) // Reusing delete layout
+        val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats)
         sheet.setTitle(getString(R.string.delete_profile))
         
-        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+        sheet.findViewById<TextView>(R.id.tvMessageText)?.text = 
             "${getString(R.string.delete_profile)}: $count ${getString(R.string.users)}?"
 
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
@@ -402,7 +404,7 @@ class SuperAdminActivity : AppCompatActivity() {
         val sheet = StandardBottomSheet(this, R.layout.dialog_delete_chats)
         sheet.setTitle(getString(R.string.delete_group))
 
-        sheet.findViewById<TextView>(R.id.messageText)?.text = 
+        sheet.findViewById<TextView>(R.id.tvMessageText)?.text = 
             "${getString(R.string.delete_group)}: $count ${getString(R.string.chats)}?"
 
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
@@ -434,7 +436,6 @@ class SuperAdminActivity : AppCompatActivity() {
         val editNewPw = sheet.findViewById<EditText>(R.id.editTextNewPassword)
         val editOldPw = sheet.findViewById<EditText>(R.id.editTextOldPassword)
         
-        // Hide old password field since admin doesn't need it
         sheet.findViewById<View>(R.id.editTextOldPassword)?.parent?.parent?.let {
             if (it is View) it.visibility = View.GONE
         }

@@ -63,7 +63,7 @@ class OwlSettingsActivity : AppCompatActivity() {
     private var freeModels: List<FreeModelInfoProto> = emptyList()
 
     // "Own model" option — always available with custom key
-    private val ownModelOption = "Своя модель (ввести вручную)"
+    private lateinit var ownModelOption: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,13 +73,14 @@ class OwlSettingsActivity : AppCompatActivity() {
         chatId = intent.getStringExtra("chatId") ?: ""
         sessionId = intent.getStringExtra("sessionId") ?: ""
         isHermes = intent.getBooleanExtra("isHermes", false)
+        ownModelOption = getString(R.string.own_model_option)
 
         initViews()
         setupToolbar()
         setupSaveButton()
         ThemeUi.bind(this, userId)
 
-        val title = if (isHermes) "Настройки Лава ИИ" else "Настройки OWL"
+        val title = if (isHermes) getString(R.string.settings_lava_ai) else getString(R.string.settings_owl)
         findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).title = title
 
         Log.d(TAG, "onCreate: userId=$userId chatId=$chatId sessionId=$sessionId isHermes=$isHermes")
@@ -88,13 +89,13 @@ class OwlSettingsActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        apiKeyInput = findViewById(R.id.apiKeyInput)
-        apiKeyLayout = findViewById(R.id.apiKeyLayout)
-        modelDropdown = findViewById(R.id.modelDropdown)
-        modelCustomInput = findViewById(R.id.modelCustomInput)
-        modelCustomLayout = findViewById(R.id.modelCustomLayout)
-        modelCustomHint = findViewById(R.id.modelCustomHint)
-        saveButton = findViewById(R.id.saveButton)
+        apiKeyInput = findViewById(R.id.etApiKey)
+        apiKeyLayout = findViewById(R.id.tilApiKey)
+        modelDropdown = findViewById(R.id.actvModel)
+        modelCustomInput = findViewById(R.id.etModelCustom)
+        modelCustomLayout = findViewById(R.id.tilModelCustom)
+        modelCustomHint = findViewById(R.id.tvModelCustomHint)
+        saveButton = findViewById(R.id.btnSave)
         statusText = findViewById(R.id.statusText)
         keySourceText = findViewById(R.id.keySourceText)
         rateLimitText = findViewById(R.id.rateLimitText)
@@ -115,7 +116,7 @@ class OwlSettingsActivity : AppCompatActivity() {
                 // User selected "Own model" — read from text input
                 selectedModel = modelCustomInput.text?.toString()?.trim() ?: ""
                 if (selectedModel.isEmpty()) {
-                    showStatus("Введите ID модели", false)
+                    showStatus(getString(R.string.enter_model_id), false)
                     return@setOnClickListener
                 }
             } else {
@@ -124,7 +125,7 @@ class OwlSettingsActivity : AppCompatActivity() {
                 if (hasCustomKey && displayName == ownModelOption) {
                     selectedModel = modelCustomInput.text?.toString()?.trim() ?: ""
                     if (selectedModel.isEmpty()) {
-                        showStatus("Введите ID модели", false)
+                        showStatus(getString(R.string.enter_model_id), false)
                         return@setOnClickListener
                     }
                 } else {
@@ -197,7 +198,7 @@ class OwlSettingsActivity : AppCompatActivity() {
                 Log.d(TAG, "Settings loaded: model=$loadedModel customKey=$loadedIsCustom freeModels=${freeModels.size}")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load settings", e)
-                showStatus("Ошибка загрузки настроек: ${e.message}", false)
+                showStatus(getString(R.string.error_loading_settings, e.message), false)
                 // Fallback to hardcoded free models
                 freeModels = listOf(
                     FreeModelInfoProto("openrouter/owl-alpha", "OWL Alpha (free)", 0),
@@ -258,16 +259,16 @@ class OwlSettingsActivity : AppCompatActivity() {
 
     private fun updateKeySourceInfo(hasCustomKey: Boolean) {
         if (hasCustomKey) {
-            keySourceText.text = "Ваш ключ: все модели, без ограничений"
+            keySourceText.text = getString(R.string.your_key_all_models)
             keySourceText.setTextColor(getColor(android.R.color.holo_green_dark))
             rateLimitText.visibility = View.GONE
             modelCustomHint.visibility = View.GONE
-            modelCustomLayout.hint = "Введите ID модели (например: openai/gpt-4o)"
+            modelCustomLayout.hint = getString(R.string.enter_model_id_hint)
         } else {
-            keySourceText.text = "Общий ключ: бесплатные модели, 20 запросов/час"
+            keySourceText.text = getString(R.string.shared_key_free_models)
             keySourceText.setTextColor(getColor(android.R.color.holo_orange_dark))
             rateLimitText.visibility = View.VISIBLE
-            rateLimitText.text = "Установите свой API ключ OpenRouter для доступа ко всем моделям и снятия ограничений"
+            rateLimitText.text = getString(R.string.set_api_key_for_all_models)
             // Show hint that custom model input is only available with own key
             modelCustomHint.visibility = View.VISIBLE
         }
@@ -276,7 +277,7 @@ class OwlSettingsActivity : AppCompatActivity() {
 
     private fun saveSettings(apiKey: String, model: String) {
         saveButton.isEnabled = false
-        saveButton.text = "Сохранение..."
+        saveButton.text = getString(R.string.saving)
 
         lifecycleScope.launch {
             try {
@@ -294,17 +295,17 @@ class OwlSettingsActivity : AppCompatActivity() {
                 }
 
                 if (success) {
-                    showStatus("Настройки сохранены", true)
-                    Toast.makeText(this@OwlSettingsActivity, "Сохранено", Toast.LENGTH_SHORT).show()
+                    showStatus(getString(R.string.settings_saved), true)
+                    Toast.makeText(this@OwlSettingsActivity, getString(R.string.saved), Toast.LENGTH_SHORT).show()
                 } else {
-                    showStatus("Ошибка: $message", false)
+                    showStatus(getString(R.string.error_colon, message), false)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save settings", e)
-                showStatus("Ошибка: ${e.message}", false)
+                showStatus(getString(R.string.error_colon, e.message), false)
             } finally {
                 saveButton.isEnabled = true
-                saveButton.text = "Сохранить"
+                saveButton.text = getString(R.string.save)
             }
         }
     }

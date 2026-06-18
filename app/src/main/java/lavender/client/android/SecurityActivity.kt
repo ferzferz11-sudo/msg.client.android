@@ -33,6 +33,7 @@ import java.util.Locale
 
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
+import lavender.client.android.data.grpc.*
 
 class SecurityActivity : AppCompatActivity() {
 
@@ -200,9 +201,9 @@ class SecurityActivity : AppCompatActivity() {
             runOnUiThread {
                 if (success) {
                     loadDevices()
-                    Toast.makeText(this, "Другие сеансы завершены", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.sessions_terminated), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Ошибка при завершении сеансов", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.sessions_terminate_error), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -264,7 +265,7 @@ class SecurityActivity : AppCompatActivity() {
                 if (success) {
                     loadDevices()
                 } else {
-                    Toast.makeText(this, "Failed to terminate session", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.failed_to_terminate_session), Toast.LENGTH_SHORT).show()
                 }
             }
         }

@@ -37,6 +37,7 @@ object CredentialStore {
     private const val KEY_SERVER = "server_address"
     private const val KEY_USER_ID = "user_id"
     private const val KEY_EMAIL = "email"
+    private const val KEY_JWT_SERVER = "jwt_server_address" // server that issued the JWT tokens
 
     private var encryptedPrefs: EncryptedSharedPreferences? = null
 
@@ -68,11 +69,29 @@ object CredentialStore {
         return context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
     }
 
+    /**
+     * Returns EncryptedSharedPreferences for JWT auth tokens.
+     * Separate from credentials (password) to allow independent lifecycle.
+     */
+    fun getAuthPrefs(context: Context): SharedPreferences {
+        return getEncryptedPrefs(context)
+    }
+
     // --- Read credentials ---
 
     fun getUsername(context: Context): String {
         return getEncryptedPrefs(context).getString(KEY_USERNAME, null)
             ?: migrateIfNeeded(context)
+    }
+
+    /** Get last successfully used username (for prefill in login forms). */
+    fun getLastUsername(context: Context): String {
+        return getUsername(context)
+    }
+
+    /** Save username for future prefill. */
+    fun setLastUsername(context: Context, username: String) {
+        setCredentials(context, username, getPassword(context), getServerAddress(context))
     }
 
     fun getPassword(context: Context): String {
@@ -277,5 +296,32 @@ object CredentialStore {
 
     fun getDefaultServer(context: Context): ServerEntry? {
         return getServerList(context).firstOrNull { it.isDefault }
+    }
+
+    // --- JWT server tracking ---
+
+    /**
+     * Returns the server address that issued the current JWT tokens.
+     * Used to detect server switches — if the current server doesn't match,
+     * JWT tokens must be cleared to avoid sending stale tokens to the wrong server.
+     */
+    fun getJwtServerAddress(context: Context): String {
+        return getEncryptedPrefs(context).getString(KEY_JWT_SERVER, "") ?: ""
+    }
+
+    /**
+     * Stores the server address that issued the current JWT tokens.
+     * Called after successful SignInV2/SignUpV2.
+     */
+    fun setJwtServerAddress(context: Context, serverAddress: String) {
+        getEncryptedPrefs(context).edit().putString(KEY_JWT_SERVER, serverAddress).apply()
+    }
+
+    /**
+     * Clears the stored JWT server address.
+     * Called on logout or token clear.
+     */
+    fun clearJwtServerAddress(context: Context) {
+        getEncryptedPrefs(context).edit().remove(KEY_JWT_SERVER).apply()
     }
 }

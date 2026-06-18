@@ -111,7 +111,7 @@ class ChatMessageAdapter(
     // ===== Holders =====
 
     inner class DateSeparatorHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val dateText: TextView = itemView.findViewById(R.id.dateText)
+        private val dateText: TextView = itemView.findViewById(R.id.tvDateSeparator)
 
         fun bind(item: ChatMessageItem) {
             dateText.text = dateFormat.format(Date(item.timestamp))
@@ -132,9 +132,9 @@ class ChatMessageAdapter(
             typingContainer.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
             itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = false
-            itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
+            itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
-            val name = item.senderName.ifEmpty { "Агент" }
+            val name = item.senderName.ifEmpty { itemView.context.getString(R.string.agent) }
             // Start animated dots
             startAnimatedDots(name)
         }
@@ -149,7 +149,7 @@ class ChatMessageAdapter(
                 addUpdateListener { anim ->
                     val dotCount = anim.animatedValue as Int
                     val dots = ".".repeat(dotCount).padEnd(3, ' ')
-                    typingText.text = "$name печатает $dots"
+                    typingText.text = "$name " + itemView.context.getString(R.string.agent_typing_suffix) + dots
                 }
                 start()
             }
@@ -174,7 +174,7 @@ class ChatMessageAdapter(
             container.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.agentMessageContainer)?.isVisible = false
             itemView.findViewById<LinearLayout>(R.id.typingContainer)?.isVisible = false
-            itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
+            itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
             messageText.text = item.content
             messageTime.text = timeFormat.format(Date(item.timestamp))
@@ -208,7 +208,7 @@ class ChatMessageAdapter(
             container.isVisible = true
             itemView.findViewById<LinearLayout>(R.id.userMessageContainer)?.isVisible = false
             itemView.findViewById<LinearLayout>(R.id.typingContainer)?.isVisible = false
-            itemView.findViewById<TextView>(R.id.dateText)?.isVisible = false
+            itemView.findViewById<TextView>(R.id.tvDateSeparator)?.isVisible = false
 
             messageText.text = item.content
             messageTime.text = timeFormat.format(Date(item.timestamp))

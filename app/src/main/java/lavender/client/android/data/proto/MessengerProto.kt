@@ -34,7 +34,8 @@ data class MessageProto(
     val deviceName: String = "",
     val userId: String = "",
     val isE2Ee: Boolean = false,
-    val e2EePayload: String = ""
+    val e2EePayload: String = "",
+    val jwtToken: String = ""
 ) {
     class Builder {
         private var user: String = ""
@@ -61,6 +62,7 @@ data class MessageProto(
         private var userId: String = ""
         private var isE2Ee: Boolean = false
         private var e2EePayload: String = ""
+        private var jwtToken: String = ""
         private val reactions = mutableListOf<ReactionProto>()
         
         fun setUser(user: String): Builder {
@@ -178,6 +180,11 @@ data class MessageProto(
             return this
         }
 
+        fun setJwtToken(jwtToken: String): Builder {
+            this.jwtToken = jwtToken
+            return this
+        }
+
         @Suppress("unused")
         fun addReaction(reaction: ReactionProto): Builder {
             this.reactions.add(reaction)
@@ -191,7 +198,7 @@ data class MessageProto(
         }
 
         fun build(): MessageProto {
-            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId, isE2Ee, e2EePayload)
+            return MessageProto(id, user, text, createdAt, reactions, password, repliedToMessageId, repliedToUser, repliedToText, roomId, isRead, avatarUrl, imageUrl, imageUrls, edited, clientVersion, isSuperAdmin, voiceUrl, duration, register, deviceId, deviceName, userId, isE2Ee, e2EePayload, jwtToken)
         }
     }
     
@@ -221,7 +228,11 @@ data class ChatInfoProto(
     val peerPublicKey: String = "",
     val e2eeReady: Boolean = false,
     val activeAgentId: String = "",   // For hermes sessions: current active agent
-    val agentMode: String = ""        // For hermes sessions: single/parallel/pipeline
+    val agentMode: String = "",       // For hermes sessions: single/parallel/pipeline
+    val isPinned: Boolean = false,    // ChatList v2: pinned status
+    val isMuted: Boolean = false,     // ChatList v2: muted status
+    val isArchived: Boolean = false,  // ChatList v2: archived status
+    val pinnedAt: Long = 0L           // ChatList v2: timestamp when pinned (for sort order)
 )
 
 // Mark Read Request/Response
@@ -250,7 +261,10 @@ data class DeleteChatResponseProto(
 // Get Chats Request/Response
 data class GetChatsRequestProto(
     val username: String = "",
-    val userId: String = ""
+    val userId: String = "",
+    val limit: Int = 0,
+    val offset: Int = 0,
+    val filter: String = ""
 )
 
 data class GetChatsResponseProto(
@@ -521,7 +535,8 @@ data class TypingRequestProto(
 data class TypingSignalProto(
     val roomId: String = "",
     val username: String = "",
-    val isTyping: Boolean = false
+    val isTyping: Boolean = false,
+    val userId: String = ""
 )
 
 // Contacts management
@@ -1032,13 +1047,38 @@ data class DeployAgentTaskRequestProto(
     val taskType: String = "",
     val params: Map<String, String> = emptyMap(),
     val workingDir: String = "",
-    val timeoutSec: Int = 0
+    val timeoutSec: Int = 0,
+    val tunnelMode: Int = 0,          // 0 = TUNNEL_NONE, 1 = TUNNEL_SSH
+    val tunnelHost: String = "",      // SSH хост туннеля
+    val tunnelPort: Int = 22,         // SSH порт
+    val tunnelUser: String = "",      // SSH пользователь
+    val tunnelPassword: String = "",  // SSH пароль
+    val tunnelServerHost: String = "localhost",  // хост сервера за туннелем
+    val tunnelServerPort: Int = 50051,           // порт сервера за туннелем
+    val tunnelLocalPort: Int = 50052             // локальный порт для проброса
 )
 
 data class DeployAgentTaskResponseProto(
     val taskId: String = "",
     val success: Boolean = false,
-    val message: String = ""
+    val message: String = "",
+    val stdout: String = "",
+    val stderr: String = "",
+    val exitCode: Int = 0
+)
+
+data class DeployAgentTaskStreamResponseProto(
+    val taskId: String = "",
+    val stdoutChunk: String = "",
+    val stderrChunk: String = "",
+    val progress: String = "",
+    val status: String = "",
+    val stdout: String = "",
+    val stderr: String = "",
+    val exitCode: Int = 0,
+    val durationMs: Long = 0,
+    val error: String = "",
+    val done: Boolean = false
 )
 
 data class GetRemoteAgentStatusRequestProto(
@@ -1393,4 +1433,360 @@ data class UpdateAIChatSettingsRequestProto(
 data class UpdateAIChatSettingsResponseProto(
     val success: Boolean = false,
     val message: String = ""
+)
+
+// ======= Remote Agent streaming (hermes_remote.proto) =======
+
+// AgentMessage — от агента к оркестратору
+data class AgentMessageProto(
+    val agentId: String = "",
+    val type: Int = 0,  // AgentMessageType enum
+    val payload: ByteArray = byteArrayOf(),
+    val timestampMs: Long = 0
+)
+
+// OrchestratorMessage — от оркестратору к агенту
+data class OrchestratorMessageProto(
+    val targetAgentId: String = "",
+    val type: Int = 0,  // OrchestratorMessageType enum
+    val payload: ByteArray = byteArrayOf(),
+    val timestampMs: Long = 0
+)
+
+// RegistrationInfo — данные при регистрации агента
+data class RegistrationInfoProto(
+    val agentId: String = "",
+    val agentName: String = "",
+    val version: String = "",
+    val host: String = "",
+    val ipAddress: String = "",
+    val os: String = "",
+    val capabilities: List<String> = emptyList(),
+    val authToken: String = ""
+)
+
+// Task — задача для удалённого агента
+data class TaskProto(
+    val taskId: String = "",
+    val taskType: Int = 0,  // TaskType enum
+    val params: Map<String, String> = emptyMap(),
+    val workingDir: String = "",
+    val timeoutSec: Int = 0,
+    val streamOutput: Boolean = false
+)
+
+// TaskResult — результат выполнения задачи
+data class TaskResultProto(
+    val taskId: String = "",
+    val status: Int = 0,  // TaskStatus enum
+    val stdout: String = "",
+    val stderr: String = "",
+    val exitCode: Int = 0,
+    val durationMs: Long = 0
+)
+
+// AgentMessageType enum values
+object AgentMessageType {
+    const val AGENT_MESSAGE_UNKNOWN = 0
+    const val AGENT_REGISTER = 1
+    const val AGENT_HEARTBEAT = 2
+    const val AGENT_TASK_RESULT = 3
+    const val AGENT_LOG = 4
+    const val AGENT_DISCONNECT = 5
+    const val AGENT_ERROR = 6
+}
+
+// OrchestratorMessageType enum values
+object OrchestratorMessageType {
+    const val ORCHESTRATOR_MESSAGE_UNKNOWN = 0
+    const val ORCHESTRATOR_TASK = 1
+    const val ORCHESTRATOR_CONFIG_UPDATE = 2
+    const val ORCHESTRATOR_PING = 3
+    const val ORCHESTRATOR_DISCONNECT = 4
+    const val ORCHESTRATOR_BROADCAST = 5
+}
+
+// TaskType enum values
+object TaskType {
+    const val TASK_UNKNOWN = 0
+    const val TASK_SHELL = 1
+    const val TASK_FILE_READ = 2
+    const val TASK_FILE_WRITE = 3
+    const val TASK_GIT = 4
+    const val TASK_BUILD = 5
+    const val TASK_DEPLOY = 6
+    const val TASK_DOCKER = 7
+    const val TASK_CUSTOM = 8
+    const val TASK_AI = 9
+}
+
+// TaskStatus enum values
+object TaskStatus {
+    const val TASK_STATUS_UNKNOWN = 0
+    const val TASK_SUCCESS = 1
+    const val TASK_ERROR = 2
+    const val TASK_TIMEOUT = 3
+    const val TASK_CANCELLED = 4
+}
+
+// ===== Agent Process Management (server-side) =====
+
+data class StartAgentRequestProto(
+    val agentId: String = "",
+    val agentName: String = "",
+    val token: String = "",
+    val serverAddress: String = "",
+    val capabilities: List<String> = emptyList(),
+    val adminUserId: String = ""
+)
+
+data class StartAgentResponseProto(
+    val success: Boolean = false,
+    val error: String = "",
+    val pid: Int = 0
+)
+
+data class StopAgentRequestProto(
+    val agentId: String = "",
+    val adminUserId: String = ""
+)
+
+data class StopAgentResponseProto(
+    val success: Boolean = false,
+    val error: String = ""
+)
+
+data class GetAgentProcessStatusRequestProto(
+    val agentId: String = "",
+    val adminUserId: String = ""
+)
+
+data class GetAgentProcessStatusResponseProto(
+    val running: Boolean = false,
+    val pid: Int = 0,
+    val agentId: String = "",
+    val startedAt: String = "",
+    val error: String = ""
+)
+
+// ======= Auth V2 Proto Classes =======
+
+data class SignInRequestV2Proto(
+    val username: String = "",
+    val password: String = "",
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val deviceType: String = "android",
+    val clientVersion: String = ""
+)
+
+data class SignUpRequestV2Proto(
+    val username: String = "",
+    val password: String = "",
+    val email: String = "",
+    val deviceId: String = "",
+    val deviceName: String = "",
+    val deviceType: String = "android",
+    val clientVersion: String = ""
+)
+
+data class AuthResponseV2Proto(
+    val success: Boolean = false,
+    val message: String = "",
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val accessExpiresAt: Long = 0L,
+    val refreshExpiresAt: Long = 0L,
+    val userId: String = "",
+    val username: String = "",
+    val email: String = "",
+    val avatarUrl: String = "",
+    val bio: String = "",
+    val status: String = ""
+)
+
+data class RefreshTokenRequestProto(
+    val refreshToken: String = ""
+)
+
+data class RefreshTokenResponseProto(
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val accessExpiresAt: Long = 0L,
+    val refreshExpiresAt: Long = 0L
+)
+
+data class SignOutRequestProto(
+    val refreshToken: String = "",
+    val allDevices: Boolean = false
+)
+
+data class SimpleAuthResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class RevokeDeviceRequestProto(
+    val deviceId: String = ""
+)
+
+// ======= ProfileService V2 Messages =======
+
+data class GetProfileRequestProto(
+    val placeholder: Boolean = false // empty message, user_id from JWT
+)
+
+data class GetProfileResponseProto(
+    val userId: String = "",
+    val username: String = "",
+    val email: String = "",
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = "",
+    val bio: String = "",
+    val status: String = "",
+    val locale: String = "en",
+    val isSuperAdmin: Boolean = false,
+    val createdAt: String = "",
+    val lastSeenAt: String = ""
+)
+
+data class UpdateProfileV2RequestProto(
+    val username: String = "",
+    val bio: String = "",
+    val status: String = "",
+    val locale: String = ""
+)
+
+data class UpdateProfileV2ResponseProto(
+    val success: Boolean = false,
+    val message: String = "",
+    val profile: GetProfileResponseProto? = null
+)
+
+data class UpdateAvatarV2RequestProto(
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = ""
+)
+
+data class UpdateAvatarV2ResponseProto(
+    val success: Boolean = false,
+    val message: String = "",
+    val avatarUrl: String = "",
+    val fullAvatarUrl: String = ""
+)
+
+data class DeleteProfileV2RequestProto(
+    val password: String = ""
+)
+
+data class DeleteProfileV2ResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+data class GetUserSettingsRequestProto(
+    val placeholder: Boolean = false // empty message, user_id from JWT
+)
+
+data class GetUserSettingsResponseProto(
+    val locale: String = "en",
+    val themeId: String = "",
+    val pushEnabled: Boolean = true,
+    val custom: Map<String, String> = emptyMap()
+)
+
+data class UpdateUserSettingsRequestProto(
+    val locale: String = "",
+    val themeId: String = "",
+    val pushEnabled: Boolean? = null,
+    val custom: Map<String, String> = emptyMap()
+)
+
+data class UpdateUserSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
+// ======= ChatList v2: PinChat / UnPinChat =======
+
+data class PinChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class PinChatResponseProto(
+    val success: Boolean = false
+)
+
+data class UnPinChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class UnPinChatResponseProto(
+    val success: Boolean = false
+)
+
+// ======= Pin Message =======
+
+data class PinMessageRequestProto(
+    val userId: String = "",
+    val chatId: String = "",
+    val messageId: String = ""
+)
+
+data class PinMessageResponseProto(
+    val success: Boolean = false
+)
+
+data class UnPinMessageRequestProto(
+    val userId: String = "",
+    val chatId: String = "",
+    val messageId: String = ""
+)
+
+data class UnPinMessageResponseProto(
+    val success: Boolean = false
+)
+
+data class GetPinnedMessagesRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class GetPinnedMessagesResponseProto(
+    val messages: List<MessageProto> = emptyList()
+)
+
+// ======= ChatList v2: SearchChats =======
+
+data class SearchChatsRequestProto(
+    val userId: String = "",
+    val query: String = "",
+    val limit: Int = 20,
+    val offset: Int = 0
+)
+
+data class SearchChatsResponseProto(
+    val chats: List<ChatInfoProto> = emptyList()
+)
+
+// ======= ChatList v2: ArchiveChat / UnarchiveChat =======
+
+data class ArchiveChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class ArchiveChatResponseProto(
+    val success: Boolean = false
+)
+
+data class UnarchiveChatRequestProto(
+    val userId: String = "",
+    val chatId: String = ""
+)
+
+data class UnarchiveChatResponseProto(
+    val success: Boolean = false
 )

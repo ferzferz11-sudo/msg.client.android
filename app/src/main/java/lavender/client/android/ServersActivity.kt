@@ -1,6 +1,7 @@
 package lavender.client.android
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -27,10 +29,21 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.CredentialStore.ServerEntry
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.ui.widget.LoginBottomSheet
+import lavender.client.android.ui.widget.RegisterBottomSheet
+import lavender.client.android.ui.widget.ServerAuthBottomSheet
 import java.util.UUID
 
+/**
+ * ServersActivity — управление списком серверов.
+ *
+ * Все сервары (включая dev) доступны всем пользователям.
+ * По умолчанию предустановлены Lava Germany (prod) и Lava Germany dev.
+ * При входе через сервер — prefill последнего логина + splash перед навигацией.
+ */
 class ServersActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
@@ -66,7 +79,6 @@ class ServersActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
-        // Title is set via custom TextView in XML (toolbarTitle)
 
         // Status bar insets
         val systemBars = WindowInsetsCompat.Type.systemBars()
@@ -102,7 +114,6 @@ class ServersActivity : AppCompatActivity() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.bindingAdapterPosition
                 if (pos in servers.indices) {
-                    // Reset the item view so it doesn't disappear
                     adapter.notifyItemChanged(pos)
                     confirmDeleteServer(servers[pos])
                 }
@@ -157,18 +168,18 @@ class ServersActivity : AppCompatActivity() {
         servers.clear()
         val list = CredentialStore.getServerList(this)
         if (list.isEmpty()) {
-            // First run — seed with default servers
+            // First run — seed with default servers (all servers available to all users)
             val defaultServers = listOf(
                 CredentialStore.ServerEntry(
                     id = "default-server-1",
-                    name = "Lavender (production)",
+                    name = "Lava Germany",
                     host = "13.140.25.249",
                     port = 50051,
                     isDefault = true
                 ),
                 CredentialStore.ServerEntry(
                     id = "default-server-2",
-                    name = "Lavender (dev)",
+                    name = "Lava Germany dev",
                     host = "13.140.25.249",
                     port = 50052,
                     isDefault = false
@@ -204,7 +215,6 @@ class ServersActivity : AppCompatActivity() {
         val wasDefault = server.isDefault
         CredentialStore.removeServer(this, server.id)
 
-        // If we deleted the default server, make the first remaining one default
         if (wasDefault) {
             val remaining = CredentialStore.getServerList(this)
             if (remaining.isNotEmpty()) {
@@ -218,18 +228,127 @@ class ServersActivity : AppCompatActivity() {
     }
 
     private fun selectServer(server: ServerEntry) {
-        val address = "${server.host}:${server.port}"
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.server_connect_title))
-            .setMessage(getString(R.string.server_connect_confirm, server.name))
-            .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                CredentialStore.setServerAddress(this, address)
-                Toast.makeText(this, getString(R.string.server_selected, server.name), Toast.LENGTH_SHORT).show()
-                setResult(RESULT_OK)
-                finish()
+        // Show server auth bottom sheet with logo, health check, login/register
+        val authSheet = ServerAuthBottomSheet(
+            context = this,
+            serverName = server.name,
+            serverHost = server.host,
+            serverPort = server.port,
+            onLogin = { showServerLoginSheet(server) },
+            onRegister = { showServerRegisterSheet(server) }
+        )
+        authSheet.show()
+    }
+
+    private fun showServerLoginSheet(server: ServerEntry) {
+        val serverAddress = "${server.host}:${server.port}"
+        val lastUsername = CredentialStore.getLastUsername(this)
+
+        lateinit var loginSheet: LoginBottomSheet
+
+        loginSheet = LoginBottomSheet(
+            context = this,
+            onLogin = { u: String, p: String ->
+                SessionManager.login(this, u, p, serverAddress, register = false, email = "") { result: String? ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS" -> {
+                                CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
+                                CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
+                                CredentialStore.setLastUsername(this@ServersActivity, u)
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    CredentialStore.setUserId(this@ServersActivity, userId)
+                                }
+                                loginSheet.dismiss()
+                                showSplashAndFinish()
+                            }
+                            "USER_NOT_FOUND" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.user_not_found, Toast.LENGTH_LONG).show()
+                            }
+                            "AUTH_FAILED" -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, R.string.wrong_password, Toast.LENGTH_LONG).show()
+                            }
+                            else -> {
+                                loginSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            },
+            onCancel = {
+                loginSheet.dismiss()
+                selectServer(server)
             }
-            .setNegativeButton(getString(R.string.no), null)
-            .show()
+        )
+
+        // Prefill last username
+        if (lastUsername.isNotEmpty()) {
+            loginSheet.prefillUsername(lastUsername)
+        }
+
+        loginSheet.show()
+    }
+
+    private fun showServerRegisterSheet(server: ServerEntry, prefillUser: String = "", prefillPass: String = "") {
+        val serverAddress = "${server.host}:${server.port}"
+
+        lateinit var registerSheet: RegisterBottomSheet
+
+        registerSheet = RegisterBottomSheet(
+            context = this,
+            onRegister = { u: String, p: String, email: String ->
+                SessionManager.login(this, u, p, serverAddress, register = true, email = email) { result: String? ->
+                    runOnUiThread {
+                        when (result) {
+                            "SUCCESS", "REGISTRATION_SUCCESS" -> {
+                                CredentialStore.setServerAddress(this@ServersActivity, serverAddress)
+                                CredentialStore.setCredentials(this@ServersActivity, u, p, serverAddress)
+                                CredentialStore.setLastUsername(this@ServersActivity, u)
+                                val userId = SessionManager.session.value.userId
+                                if (userId.isNotEmpty()) {
+                                    CredentialStore.setUserId(this@ServersActivity, userId)
+                                }
+                                registerSheet.dismiss()
+                                showSplashAndFinish()
+                            }
+                            else -> {
+                                registerSheet.setLoading(false)
+                                Toast.makeText(this@ServersActivity, result ?: "Unknown error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+            },
+            onCancel = {
+                registerSheet.dismiss()
+                selectServer(server)
+            },
+            prefillUsername = prefillUser,
+            prefillPassword = prefillPass
+        )
+
+        registerSheet.setTitle(getString(R.string.register_to_server, server.name))
+        registerSheet.show()
+    }
+
+    private fun showSplashAndFinish() {
+        // Clear local cache silently on successful login
+        clearAllCache()
+        // Show splash screen before navigating to chat list (same as normal login flow)
+        val intent = Intent(this, SplashActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    /** Clear all local cache silently on successful login. */
+    private fun clearAllCache() {
+        lavender.client.android.data.cache.CacheUtils.clearAllSync(this)
     }
 
     private fun showAddServerDialog() {
@@ -320,7 +439,6 @@ class ServersActivity : AppCompatActivity() {
             holder.address.text = address
             holder.defaultBadge.visibility = if (server.isDefault) View.VISIBLE else View.GONE
 
-            // Highlight if this is the currently selected server
             val isSelected = address == currentServerAddress
             if (isSelected) {
                 holder.card.strokeWidth = 2
@@ -329,13 +447,11 @@ class ServersActivity : AppCompatActivity() {
                 holder.card.strokeWidth = 0
             }
 
-            // Colors
             holder.card.setCardBackgroundColor(surfaceColor)
             holder.name.setTextColor(textPrimaryColor)
             holder.address.setTextColor(textSecondaryColor)
 
             holder.card.setOnClickListener { onSelect(server) }
-            // Hide delete button for default or protected servers
             if (server.isDefault || server.isProtected) {
                 holder.deleteBtn.visibility = View.GONE
             } else {

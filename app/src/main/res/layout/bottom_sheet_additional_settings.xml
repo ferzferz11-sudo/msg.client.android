@@ -38,17 +38,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/actionClearCache"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_delete" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/clear_cache" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionSecurity"
         style="@style/MenuActionItemStyle">
         <ImageView
@@ -68,17 +57,6 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/notifications" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/actionLogs"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_logs" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="Logs" />
     </LinearLayout>
 
     <LinearLayout
@@ -103,6 +81,17 @@
         <TextView
             style="@style/MenuActionTextStyle"
             android:text="@string/servers" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionClearCache"
+        style="@style/MenuActionItemStyle">
+        <ImageView
+            style="@style/MenuActionIconStyle"
+            android:src="@drawable/ic_delete" />
+        <TextView
+            style="@style/MenuActionTextStyle"
+            android:text="@string/clear_cache" />
     </LinearLayout>
 
     <LinearLayout

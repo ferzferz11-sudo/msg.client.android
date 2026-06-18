@@ -62,7 +62,7 @@ class VideoPlayerActivity : AppCompatActivity() {
         try {
             val request = DownloadManager.Request(Uri.parse(url))
                 .setTitle("Downloading Video")
-                .setDescription("Lavender Messenger")
+                .setDescription(getString(R.string.share_app_description))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "video_${System.currentTimeMillis()}.mp4")
                 .setAllowedOverMetered(true)
@@ -70,7 +70,7 @@ class VideoPlayerActivity : AppCompatActivity() {
 
             val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             downloadManager.enqueue(request)
-            Toast.makeText(this, "Download started", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.download_started), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }

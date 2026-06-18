@@ -100,7 +100,7 @@ class EditProfileActivity : AppCompatActivity() {
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
-        val avatarImageView = findViewById<CircleImageView>(R.id.avatarImageView)
+        val avatarImageView = findViewById<CircleImageView>(R.id.ivProfileAvatar)
         val editTextBio = findViewById<EditText>(R.id.editTextBio)
         val btnChangeUsername = findViewById<Button>(R.id.btnChangeUsername)
         val btnChangeBio = findViewById<Button>(R.id.btnChangeBio)
@@ -194,8 +194,8 @@ class EditProfileActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val newBio = s?.toString()?.trim() ?: ""
-                // Only show save button if bio is different and it was already loaded from server
-                btnChangeBio.isVisible = initialBio.isNotEmpty() && newBio != initialBio.trim()
+                // Show save button if bio is different from initial (or if initial was empty and user typed something)
+                btnChangeBio.isVisible = newBio != initialBio.trim()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -217,7 +217,7 @@ class EditProfileActivity : AppCompatActivity() {
                 Log.d("EditProfile", "Update bio result: success=$success, message=$message")
                 runOnUiThread {
                     if (success) {
-                        Toast.makeText(this, "Био сохранено", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.bio_saved), Toast.LENGTH_SHORT).show()
                         initialBio = newBio
                         btnChangeBio.isVisible = false
                         // Reload profile to verify
@@ -232,7 +232,7 @@ class EditProfileActivity : AppCompatActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Ошибка: $message", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, getString(R.string.error_colon, message), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -282,7 +282,7 @@ class EditProfileActivity : AppCompatActivity() {
                         if (resizedBytes == null) {
                             runOnUiThread {
                                 currentAvatarProgressBar?.isVisible = false
-                                Toast.makeText(this@EditProfileActivity, "Failed to resize image", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_resize_image), Toast.LENGTH_SHORT).show()
                             }
                             return@withContext
                         }
@@ -295,7 +295,7 @@ class EditProfileActivity : AppCompatActivity() {
                     if (thumbBytes.isEmpty()) {
                         runOnUiThread {
                             currentAvatarProgressBar?.isVisible = false
-                            Toast.makeText(this@EditProfileActivity, "Failed to read image", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_read_image), Toast.LENGTH_SHORT).show()
                         }
                         return@withContext
                     }
@@ -330,7 +330,7 @@ class EditProfileActivity : AppCompatActivity() {
                                 runOnUiThread {
                                     currentAvatarProgressBar?.isVisible = false
                                     if (success) {
-                                        Toast.makeText(this@EditProfileActivity, "Аватар обновлен", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@EditProfileActivity, getString(R.string.avatar_updated), Toast.LENGTH_SHORT).show()
                                         // Update current full avatar URL
                                         currentFullAvatarUrl = fullUrl.ifEmpty { url }
                                         // Explicitly update cache to ensure other parts of app see it
@@ -354,7 +354,7 @@ class EditProfileActivity : AppCompatActivity() {
                         } else {
                             runOnUiThread {
                                 currentAvatarProgressBar?.isVisible = false
-                                Toast.makeText(this@EditProfileActivity, "Failed to parse server response", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
@@ -526,7 +526,7 @@ class EditProfileActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                Toast.makeText(this@EditProfileActivity, "Введите оба пароля", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@EditProfileActivity, getString(R.string.enter_both_passwords), Toast.LENGTH_SHORT).show()
             }
         }
 
