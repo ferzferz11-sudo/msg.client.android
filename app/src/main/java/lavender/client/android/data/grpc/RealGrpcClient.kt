@@ -349,25 +349,24 @@ object RealGrpcClient {
             appContext?.let { SessionManager.ensureFreshToken(it) }
             val ctx = appContext ?: return
             if (AuthManager.isTokenExpiredOrExpiring(ctx)) {
-                Log.w(TAG, "ChatStream v2: JWT still expired after refresh attempt — clearing tokens, falling back to password")
-                AuthManager.clearTokens(ctx)
-                firstMessageBuilder.setPassword(password)
-                lastAuthWasJwt = false
+                Log.w(TAG, "ChatStream v2: JWT still expired after refresh attempt — cannot start chat")
+                _authStatus.value = "AUTH_FAILED"
+                return
+            }
+            val accessToken = AuthManager.getAccessToken(ctx)
+            if (!accessToken.isNullOrEmpty()) {
+                firstMessageBuilder.setJwtToken(accessToken)
+                lastAuthWasJwt = true
+                Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
             } else {
-                val accessToken = AuthManager.getAccessToken(ctx)
-                if (!accessToken.isNullOrEmpty()) {
-                    firstMessageBuilder.setJwtToken(accessToken)
-                    lastAuthWasJwt = true
-                    Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
-                } else {
-                    firstMessageBuilder.setPassword(password)
-                    lastAuthWasJwt = false
-                    Log.d(TAG, "ChatStream v2: no JWT token, falling back to password auth for $username")
-                }
+                Log.w(TAG, "ChatStream v2: no JWT token available — cannot start chat")
+                _authStatus.value = "AUTH_FAILED"
+                return
             }
         } else {
-            firstMessageBuilder.setPassword(password)
-            lastAuthWasJwt = false
+            Log.e(TAG, "ChatStream: v1 not supported, v2 JWT required")
+            _authStatus.value = "AUTH_FAILED"
+            return
         }
 
         _authStatus.value = null

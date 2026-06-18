@@ -27,7 +27,7 @@ class GrpcChatClient(
         }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetChats")
+            .setFullMethodName("messenger.ChatService/GetChatsV2")
             .setRequestMarshaller(GetChatsRequestMarshaller())
             .setResponseMarshaller(GetChatsResponseMarshaller())
             .build()
