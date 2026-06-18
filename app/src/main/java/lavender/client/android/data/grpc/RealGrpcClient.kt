@@ -347,15 +347,23 @@ object RealGrpcClient {
 
         if (ProfileClient.isChatV2Supported()) {
             appContext?.let { SessionManager.ensureFreshToken(it) }
-            val accessToken = AuthManager.getAccessToken(appContext ?: return)
-            if (!accessToken.isNullOrEmpty()) {
-                firstMessageBuilder.setJwtToken(accessToken)
-                lastAuthWasJwt = true
-                Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
-            } else {
+            val ctx = appContext ?: return
+            if (AuthManager.isTokenExpiredOrExpiring(ctx)) {
+                Log.w(TAG, "ChatStream v2: JWT still expired after refresh attempt — clearing tokens, falling back to password")
+                AuthManager.clearTokens(ctx)
                 firstMessageBuilder.setPassword(password)
                 lastAuthWasJwt = false
-                Log.d(TAG, "ChatStream v2: no JWT token, falling back to password auth for $username")
+            } else {
+                val accessToken = AuthManager.getAccessToken(ctx)
+                if (!accessToken.isNullOrEmpty()) {
+                    firstMessageBuilder.setJwtToken(accessToken)
+                    lastAuthWasJwt = true
+                    Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
+                } else {
+                    firstMessageBuilder.setPassword(password)
+                    lastAuthWasJwt = false
+                    Log.d(TAG, "ChatStream v2: no JWT token, falling back to password auth for $username")
+                }
             }
         } else {
             firstMessageBuilder.setPassword(password)

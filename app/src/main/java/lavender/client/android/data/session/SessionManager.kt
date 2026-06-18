@@ -242,23 +242,28 @@ object SessionManager {
                     AuthManager.clearTokens(context)
                     updateSession(username = username, password = password, userId = userId, email = email)
                 } else {
-                    Log.d("SessionManager", "Restoring JWT session for $username (server=$jwtServer)")
                     val jwtUserId = AuthManager.getUserId(context)
                     val jwtUsername = AuthManager.getUsername(context)
                     val deviceId = AuthManager.getDeviceId(context)
 
-                    updateSession(
-                        username = jwtUsername.ifEmpty { username },
-                        password = password,
-                        userId = jwtUserId.ifEmpty { userId },
-                        email = email
-                    )
-                    _session.value = _session.value.copy(
-                        accessToken = AuthManager.getAccessToken(context) ?: "",
-                        refreshToken = AuthManager.getRefreshToken(context) ?: "",
-                        authMethod = "v2_jwt",
-                        deviceId = deviceId
-                    )
+                    if (AuthManager.isTokenExpiredOrExpiring(context) && password.isNotEmpty()) {
+                        Log.d("SessionManager", "JWT expired on startup — will re-login with saved password after connection")
+                        updateSession(username = username, password = password, userId = userId, email = email)
+                    } else {
+                        Log.d("SessionManager", "Restoring JWT session for $username (server=$jwtServer)")
+                        updateSession(
+                            username = jwtUsername.ifEmpty { username },
+                            password = password,
+                            userId = jwtUserId.ifEmpty { userId },
+                            email = email
+                        )
+                        _session.value = _session.value.copy(
+                            accessToken = AuthManager.getAccessToken(context) ?: "",
+                            refreshToken = AuthManager.getRefreshToken(context) ?: "",
+                            authMethod = "v2_jwt",
+                            deviceId = deviceId
+                        )
+                    }
                 }
             } else {
                 updateSession(username = username, password = password, userId = userId, email = email)
@@ -270,7 +275,64 @@ object SessionManager {
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                 GrpcClient.connect(host, useTls = false, port = port, context = context)
 
+                if (AuthManager.isTokenExpiredOrExpiring(context) && password.isNotEmpty()) {
+                    waitForConnectionAndReLogin(context, username, password, serverAddress)
+                }
+
                 syncFcmToken(context, username)
+            }
+        }
+    }
+
+    private fun waitForConnectionAndReLogin(context: Context, username: String, password: String, serverAddress: String) {
+        scope.launch {
+            val status = withTimeoutOrNull(10000) {
+                GrpcClient.connectionStatus.filter {
+                    it == ConnectionStatus.READY || it == ConnectionStatus.FAILED
+                }.first()
+            }
+            if (status != ConnectionStatus.READY) {
+                Log.w("SessionManager", "Re-login: connection failed")
+                return@launch
+            }
+
+            Log.d("SessionManager", "Re-login: connection ready, refreshing tokens for $username")
+            val refreshToken = AuthManager.getRefreshToken(context)
+            if (!refreshToken.isNullOrEmpty()) {
+                val latch = java.util.concurrent.CountDownLatch(1)
+                GrpcClient.refreshToken(refreshToken) { response, error ->
+                    if (response != null && response.accessToken.isNotEmpty()) {
+                        val deviceId = AuthManager.getDeviceId(context)
+                        AuthManager.storeTokens(
+                            context = context,
+                            accessToken = response.accessToken,
+                            refreshToken = response.refreshToken,
+                            accessExpiresAt = response.accessExpiresAt,
+                            refreshExpiresAt = response.refreshExpiresAt,
+                            userId = response.userId.ifEmpty { AuthManager.getUserId(context) },
+                            username = response.username.ifEmpty { username },
+                            deviceId = deviceId
+                        )
+                        _session.value = _session.value.copy(
+                            accessToken = response.accessToken,
+                            refreshToken = response.refreshToken
+                        )
+                        Log.d("SessionManager", "Re-login: tokens refreshed successfully")
+                    } else {
+                        Log.w("SessionManager", "Re-login: refresh failed ($error), re-authenticating with password")
+                        val parts = serverAddress.split(":")
+                        val host = parts[0]
+                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                        GrpcClient.disconnect()
+                        GrpcClient.connect(host, false, port, context, forceReconnect = true)
+                        loginV2(context, username, password, serverAddress, false, "", {})
+                    }
+                    latch.countDown()
+                }
+                latch.await(8, java.util.concurrent.TimeUnit.SECONDS)
+            } else {
+                Log.w("SessionManager", "Re-login: no refresh token, re-authenticating with password")
+                loginV2(context, username, password, serverAddress, false, "", {})
             }
         }
     }
