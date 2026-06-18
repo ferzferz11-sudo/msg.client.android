@@ -168,7 +168,9 @@ object RealGrpcClient {
         avatarCache = avatarCache,
         fullAvatarCache = fullAvatarCache,
         avatarCacheFlow = avatarCacheFlow,
-        scope = scope
+        scope = scope,
+        fetchUserId = { username, cb -> chatListClient.fetchUserId(username, cb) },
+        setUserId = { id -> currentUserId = id }
     )
 
     // ====== Module: Draft Client ======

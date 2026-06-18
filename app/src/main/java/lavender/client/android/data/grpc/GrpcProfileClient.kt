@@ -20,7 +20,9 @@ class GrpcProfileClient(
     private val avatarCache: MutableMap<String, String>,
     private val fullAvatarCache: MutableMap<String, String>,
     private val avatarCacheFlow: kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>,
-    private val scope: kotlinx.coroutines.CoroutineScope
+    private val scope: kotlinx.coroutines.CoroutineScope,
+    private val fetchUserId: ((String, (String?, Boolean) -> Unit) -> Unit)? = null,
+    private val setUserId: ((String) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GrpcProfileClient"
@@ -311,6 +313,20 @@ class GrpcProfileClient(
     }
 
     fun getContacts(username: String, callback: (List<String>) -> Unit) {
+        val userId = getUserId()
+        if (userId.isNullOrEmpty() && fetchUserId != null) {
+            fetchUserId.invoke(username) { fetchedId, found ->
+                if (found && !fetchedId.isNullOrEmpty()) {
+                    setUserId?.invoke(fetchedId)
+                }
+                doGetContacts(username, fetchedId ?: "")
+            }
+        } else {
+            doGetContacts(username, userId ?: "")
+        }
+    }
+
+    private fun doGetContacts(username: String, userId: String) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<GetContactsRequestProto, GetContactsResponseProto>()
@@ -325,7 +341,7 @@ class GrpcProfileClient(
             override fun onMessage(message: GetContactsResponseProto) { callback(message.contacts) }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
-        call.sendMessage(GetContactsRequestProto(username = username, userId = getUserId() ?: ""))
+        call.sendMessage(GetContactsRequestProto(username = username, userId = userId))
         call.halfClose()
         call.request(1)
     }
