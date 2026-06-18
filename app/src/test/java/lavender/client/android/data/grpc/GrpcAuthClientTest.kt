@@ -12,14 +12,13 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.*
+import io.mockk.*
 
 /**
  * Unit-тесты для GrpcAuthClient.
  *
  * Тестируем: signInV2, signUpV2, refreshToken, signOut, revokeDevice.
- * Мокаем: ManagedChannel, ClientCall, StreamObserver.
+ * Мокаем: ManagedChannel, ClientCall через MockK.
  */
 class GrpcAuthClientTest {
 
@@ -31,7 +30,7 @@ class GrpcAuthClientTest {
 
     @Before
     fun setup() {
-        channel = mock(ManagedChannel::class.java)
+        channel = mockk(relaxed = true)
         connectionStatus = MutableStateFlow(ConnectionStatus.READY)
         authStatus = MutableStateFlow(null)
         authFailureFlag = false
@@ -48,24 +47,24 @@ class GrpcAuthClientTest {
 
     @Test
     fun signInV2_success_returnsToken() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                // Simulate server response
-                val response = AuthResponseV2Proto.newBuilder()
-                    .setSuccess(true)
-                    .setAccessToken("test-access-token")
-                    .setRefreshToken("test-refresh-token")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = AuthResponseV2Proto.newBuilder()
+                .setSuccess(true)
+                .setAccessToken("test-access-token")
+                .setRefreshToken("test-refresh-token")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var result: AuthResponseV2Proto? = null
         var error: String? = null
@@ -90,22 +89,23 @@ class GrpcAuthClientTest {
 
     @Test
     fun signInV2_wrongPassword_returnsError() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = AuthResponseV2Proto.newBuilder()
-                    .setSuccess(false)
-                    .setMessage("Invalid password")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = AuthResponseV2Proto.newBuilder()
+                .setSuccess(false)
+                .setMessage("Invalid password")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var result: AuthResponseV2Proto? = null
         var error: String? = null
@@ -155,17 +155,18 @@ class GrpcAuthClientTest {
 
     @Test
     fun signInV2_serverError_returnsError() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                listener.onClose(Status.INTERNAL.withDescription("Server error"), Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            listener.onClose(Status.INTERNAL.withDescription("Server error"), Metadata())
+        }
 
         var result: AuthResponseV2Proto? = null
         var error: String? = null
@@ -188,23 +189,23 @@ class GrpcAuthClientTest {
 
     @Test
     fun signInV2_emptyUsername_sendsRequest() = runTest {
-        // Even with empty username, the client sends the request (server validates)
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = AuthResponseV2Proto.newBuilder()
-                    .setSuccess(false)
-                    .setMessage("Username is required")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = AuthResponseV2Proto.newBuilder()
+                .setSuccess(false)
+                .setMessage("Username is required")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var result: AuthResponseV2Proto? = null
         var error: String? = null
@@ -228,23 +229,24 @@ class GrpcAuthClientTest {
 
     @Test
     fun signUpV2_success_returnsToken() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = AuthResponseV2Proto.newBuilder()
-                    .setSuccess(true)
-                    .setAccessToken("new-access-token")
-                    .setRefreshToken("new-refresh-token")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = AuthResponseV2Proto.newBuilder()
+                .setSuccess(true)
+                .setAccessToken("new-access-token")
+                .setRefreshToken("new-refresh-token")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var result: AuthResponseV2Proto? = null
         var error: String? = null
@@ -269,22 +271,23 @@ class GrpcAuthClientTest {
 
     @Test
     fun signUpV2_duplicateUsername_returnsError() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = AuthResponseV2Proto.newBuilder()
-                    .setSuccess(false)
-                    .setMessage("Username already exists")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = AuthResponseV2Proto.newBuilder()
+                .setSuccess(false)
+                .setMessage("Username already exists")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var result: AuthResponseV2Proto? = null
         var error: String? = null
@@ -309,22 +312,23 @@ class GrpcAuthClientTest {
 
     @Test
     fun refreshToken_success_returnsNewTokens() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = RefreshTokenResponseProto.newBuilder()
-                    .setAccessToken("refreshed-access")
-                    .setRefreshToken("refreshed-refresh")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = RefreshTokenResponseProto.newBuilder()
+                .setAccessToken("refreshed-access")
+                .setRefreshToken("refreshed-refresh")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var result: RefreshTokenResponseProto? = null
         var error: String? = null
@@ -347,22 +351,23 @@ class GrpcAuthClientTest {
 
     @Test
     fun signOut_success_returnsTrue() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = SimpleAuthResponseProto.newBuilder()
-                    .setSuccess(true)
-                    .setMessage("Signed out")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = SimpleAuthResponseProto.newBuilder()
+                .setSuccess(true)
+                .setMessage("Signed out")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var success = false
         var error: String? = null
@@ -383,22 +388,23 @@ class GrpcAuthClientTest {
 
     @Test
     fun revokeDevice_success_returnsTrue() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every {
+            channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = SimpleAuthResponseProto.newBuilder()
-                    .setSuccess(true)
-                    .setMessage("Device revoked")
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = SimpleAuthResponseProto.newBuilder()
+                .setSuccess(true)
+                .setMessage("Device revoked")
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         var success = false
         var error: String? = null

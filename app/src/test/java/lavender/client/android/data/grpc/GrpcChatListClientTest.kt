@@ -13,8 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.*
+import io.mockk.*
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.proto.*
 
@@ -35,7 +34,7 @@ class GrpcChatListClientTest {
 
     @Before
     fun setup() {
-        channel = mock(ManagedChannel::class.java)
+        channel = mockk(relaxed = true)
         chatDeletedEvent = MutableStateFlow(null)
         allUsers = MutableStateFlow(emptyList())
         serverTime = MutableStateFlow(null)
@@ -55,14 +54,14 @@ class GrpcChatListClientTest {
 
     @Test
     fun getChats_success_returnsChatList() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
+        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+            .answers {
                 @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
+                val listener = firstArg<ClientCall.Listener<Any>>()
                 val chatProto = ChatInfoProto.newBuilder()
                     .setId("chat-1")
                     .setName("Test Chat")
@@ -76,7 +75,6 @@ class GrpcChatListClientTest {
                     .build()
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
-                null
             }
 
         var result: List<ChatInfo>? = null
@@ -91,18 +89,17 @@ class GrpcChatListClientTest {
 
     @Test
     fun getChats_emptyServerResponse_returnsEmptyList() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
+        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+            .answers {
                 @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
+                val listener = firstArg<ClientCall.Listener<Any>>()
                 val response = GetChatsResponseProto.newBuilder().build() // empty
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
-                null
             }
 
         var result: List<ChatInfo>? = null
@@ -134,16 +131,15 @@ class GrpcChatListClientTest {
 
     @Test
     fun getChats_serverError_returnsEmptyList() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
+        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+            .answers {
                 @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
+                val listener = firstArg<ClientCall.Listener<Any>>()
                 listener.onClose(Status.UNAVAILABLE.withDescription("Server unavailable"), Metadata())
-                null
             }
 
         var result: List<ChatInfo>? = "not-called"
@@ -158,7 +154,7 @@ class GrpcChatListClientTest {
     @Test
     fun pinChat_v2Supported_callsPin() = runTest {
         // ProfileClient.isChatV2Supported() checks serviceChatVersion >= "2.0"
-        // We need to mock this — but ProfileClient is an object. 
+        // We need to mock this — but ProfileClient is an object.
         // For now we test the method exists and can be called.
         // Full integration test would require mocking ProfileClient.
 
@@ -170,9 +166,9 @@ class GrpcChatListClientTest {
     @Test
     fun searchChats_v1Fallback_returnsEmptyList() = runTest {
         // ProfileClient.serviceChatVersion = "" → v1 fallback
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
         // Even if we try to search, v1 should return empty
         // The actual searchChats method in GrpcClient checks isChatV2Supported()
@@ -184,47 +180,45 @@ class GrpcChatListClientTest {
 
     @Test
     fun deleteChat_sendsRequest() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
+        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+            .answers {
                 @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
+                val listener = firstArg<ClientCall.Listener<Any>>()
                 val response = DeleteChatResponseProto.newBuilder()
                     .setSuccess(true)
                     .build()
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
-                null
             }
 
         // deleteChat is a proxy method in RealGrpcClient, not in GrpcChatListClient
         // But we can verify the channel is called
         client.getChats(username = "testuser", callback = { })
 
-        verify(channel).newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java))
+        verify { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
     }
 
     // ====== Chat creation ======
 
     @Test
     fun createDirectChat_sendsRequest() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
+        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+            .answers {
                 @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
+                val listener = firstArg<ClientCall.Listener<Any>>()
                 val response = CreateChatResponseProto.newBuilder()
                     .setChatId("new-chat-id")
                     .build()
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
-                null
             }
 
         var chatId: String? = null
@@ -235,20 +229,19 @@ class GrpcChatListClientTest {
 
     @Test
     fun createGroupChat_sendsRequest() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+            .returns(mockCall)
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
+        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+            .answers {
                 @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
+                val listener = firstArg<ClientCall.Listener<Any>>()
                 val response = CreateChatResponseProto.newBuilder()
                     .setChatId("group-chat-id")
                     .build()
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
-                null
             }
 
         var chatId: String? = null

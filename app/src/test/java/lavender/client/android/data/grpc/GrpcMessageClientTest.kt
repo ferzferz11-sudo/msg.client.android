@@ -14,8 +14,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.*
+import io.mockk.mockk
+import io.mockk.every
+import io.mockk.verify
+import io.mockk.firstArg
+import io.mockk.any
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
@@ -37,7 +40,7 @@ class GrpcMessageClientTest {
 
     @Before
     fun setup() {
-        channel = mock(ManagedChannel::class.java)
+        channel = mockk(relaxed = true)
         messages = MutableStateFlow(emptyList())
         deletedMessageHashes = mutableSetOf()
         pendingReads = mutableSetOf()
@@ -59,7 +62,7 @@ class GrpcMessageClientTest {
 
     @Test
     fun sendMessage_validMessage_callsOnNext() {
-        val mockObserver = mock(StreamObserver::class.java)
+        val mockObserver = mockk<StreamObserver<MessageProto>>(relaxed = true)
 
         val message = Message(
             id = "msg-1",
@@ -71,7 +74,7 @@ class GrpcMessageClientTest {
 
         client.sendMessage(message, mockObserver)
 
-        verify(mockObserver).onNext(any(MessageProto::class.java))
+        verify { mockObserver.onNext(any()) }
     }
 
     @Test
@@ -142,28 +145,26 @@ class GrpcMessageClientTest {
 
     @Test
     fun loadHistory_success_updatesMessages() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val msgProto = MessageProto.newBuilder()
-                    .setId("hist-msg-1")
-                    .setUser("otheruser")
-                    .setText("History message")
-                    .setRoomId("room-1")
-                    .setCreatedAt(com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build())
-                    .build()
-                val response = GetHistoryResponseProto.newBuilder()
-                    .addMessages(msgProto)
-                    .build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val msgProto = MessageProto.newBuilder()
+                .setId("hist-msg-1")
+                .setUser("otheruser")
+                .setText("History message")
+                .setRoomId("room-1")
+                .setCreatedAt(com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build())
+                .build()
+            val response = GetHistoryResponseProto.newBuilder()
+                .addMessages(msgProto)
+                .build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+            null
+        }
 
         var completionCalled = false
         client.loadHistory("room-1") { completionCalled = true }
@@ -202,23 +203,21 @@ class GrpcMessageClientTest {
 
     @Test
     fun markRead_connectionReady_sendsMarkRead() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = MarkReadResponseProto.newBuilder().build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = MarkReadResponseProto.newBuilder().build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+            null
+        }
 
         client.markRead("room-1", "testuser", ConnectionStatus.READY, null)
 
-        verify(channel).newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java))
+        verify { channel.newCall<Any, Any>(any(), any()) }
     }
 
     @Test
@@ -248,17 +247,15 @@ class GrpcMessageClientTest {
         pendingReads.add("room-1")
         pendingReads.add("room-2")
 
-        val mockCall = mock(ClientCall::class.java)
-        `when`(channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            listener.onClose(Status.OK, Metadata())
+            null
+        }
 
         client.resendPendingReads("testuser", ConnectionStatus.READY)
 

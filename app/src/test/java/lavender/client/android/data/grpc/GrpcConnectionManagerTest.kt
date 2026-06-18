@@ -1,6 +1,7 @@
 package lavender.client.android.data.grpc
 
 import io.grpc.ManagedChannel
+import io.mockk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,7 +9,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.*
 
 /**
  * Unit-тесты для GrpcConnectionManager.
@@ -61,9 +61,9 @@ class GrpcConnectionManagerTest {
         connectionStatus.value = ConnectionStatus.READY
 
         // Create a mock channel
-        val mockChannel = mock(ManagedChannel::class.java)
-        `when`(mockChannel.isShutdown).thenReturn(false)
-        `when`(mockChannel.isTerminated).thenReturn(false)
+        val mockChannel = mockk<ManagedChannel>(relaxed = true)
+        every { mockChannel.isShutdown } returns false
+        every { mockChannel.isTerminated } returns false
 
         // Connect to same address should be no-op
         manager.connect("127.0.0.1", false, 50051)

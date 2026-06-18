@@ -9,8 +9,7 @@ import io.grpc.Status
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.*
+import io.mockk.*
 
 /**
  * Unit-тесты для GrpcUnaryCallHelper (top-level функции unaryCall, unaryCallWithClass).
@@ -21,22 +20,22 @@ class GrpcUnaryCallHelperTest {
 
     @Test
     fun unaryCall_success_returnsResponse() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        val mockChannel = mock(ManagedChannel::class.java)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        val mockChannel = mockk<ManagedChannel>(relaxed = true)
 
-        `when`(mockChannel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        every {
+            mockChannel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                // Simulate response
-                val response = GetChatsResponseProto.newBuilder().build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = GetChatsResponseProto.newBuilder().build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         val result = unaryCall(
             getChannel = { mockChannel },
@@ -64,19 +63,20 @@ class GrpcUnaryCallHelperTest {
 
     @Test
     fun unaryCall_serverError_returnsNull() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        val mockChannel = mock(ManagedChannel::class.java)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        val mockChannel = mockk<ManagedChannel>(relaxed = true)
 
-        `when`(mockChannel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        every {
+            mockChannel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                listener.onClose(Status.INTERNAL.withDescription("Internal error"), Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            listener.onClose(Status.INTERNAL.withDescription("Internal error"), Metadata())
+        }
 
         val result = unaryCall(
             getChannel = { mockChannel },
@@ -91,21 +91,22 @@ class GrpcUnaryCallHelperTest {
 
     @Test
     fun unaryCallWithClass_success_returnsResponse() = runTest {
-        val mockCall = mock(ClientCall::class.java)
-        val mockChannel = mock(ManagedChannel::class.java)
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        val mockChannel = mockk<ManagedChannel>(relaxed = true)
 
-        `when`(mockChannel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)))
-            .thenReturn(mockCall)
+        every {
+            mockChannel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
+        } returns mockCall
 
-        `when`(mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)))
-            .thenAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST")
-                val listener = invocation.arguments[0] as ClientCall.Listener<Any>
-                val response = GetChatsResponseProto.newBuilder().build()
-                listener.onMessage(response)
-                listener.onClose(Status.OK, Metadata())
-                null
-            }
+        every {
+            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val response = GetChatsResponseProto.newBuilder().build()
+            listener.onMessage(response)
+            listener.onClose(Status.OK, Metadata())
+        }
 
         val result = unaryCallWithClass(
             getChannel = { mockChannel },
