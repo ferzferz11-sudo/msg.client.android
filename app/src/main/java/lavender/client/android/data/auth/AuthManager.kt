@@ -183,6 +183,13 @@ object AuthManager {
         return CredentialStore.getAuthPrefs(context).getString(KEY_AUTH_METHOD, "") ?: ""
     }
 
+    fun isTokenExpiredOrExpiring(context: Context): Boolean {
+        val expiresAt = getAccessExpiresAt(context)
+        if (expiresAt == 0L) return true
+        val now = System.currentTimeMillis() / 1000
+        return now >= (expiresAt - 60)
+    }
+
     // --- Private helpers ---
 
     private fun getAccessExpiresAt(context: Context): Long {

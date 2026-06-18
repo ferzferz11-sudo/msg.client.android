@@ -119,6 +119,50 @@ object SessionManager {
         tokenRefreshJob = null
     }
 
+    /**
+     * Synchronous token refresh — called before chat stream to ensure fresh JWT.
+     * Blocks up to 5 seconds. Safe to call from non-suspend context.
+     */
+    fun ensureFreshToken(context: Context) {
+        if (!AuthManager.isTokenExpiredOrExpiring(context)) return
+        val refreshToken = AuthManager.getRefreshToken(context) ?: return
+        Log.d("SessionManager", "Token expired/expiring, refreshing synchronously before chat stream...")
+
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var refreshed = false
+
+        GrpcClient.refreshToken(refreshToken) { response, error ->
+            if (response != null && response.accessToken.isNotEmpty()) {
+                val currentUsername = AuthManager.getUsername(context)
+                val currentUserId = AuthManager.getUserId(context)
+                val currentDeviceId = AuthManager.getDeviceId(context)
+
+                AuthManager.storeTokens(
+                    context = context,
+                    accessToken = response.accessToken,
+                    refreshToken = response.refreshToken,
+                    accessExpiresAt = response.accessExpiresAt,
+                    refreshExpiresAt = response.refreshExpiresAt,
+                    userId = currentUserId,
+                    username = currentUsername,
+                    deviceId = currentDeviceId
+                )
+                _session.value = _session.value.copy(
+                    accessToken = response.accessToken,
+                    refreshToken = response.refreshToken
+                )
+                refreshed = true
+                Log.d("SessionManager", "Sync token refresh succeeded")
+            } else {
+                Log.w("SessionManager", "Sync token refresh failed: $error")
+            }
+            latch.countDown()
+        }
+
+        latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+        if (!refreshed) Log.w("SessionManager", "Sync token refresh timed out")
+    }
+
     private suspend fun performTokenRefresh(context: Context) {
         val refreshToken = AuthManager.getRefreshToken(context) ?: return
         Log.d("SessionManager", "Refreshing JWT token...")

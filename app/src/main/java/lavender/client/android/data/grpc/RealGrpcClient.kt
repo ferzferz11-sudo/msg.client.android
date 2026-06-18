@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import lavender.client.android.BuildConfig
 import lavender.client.android.data.auth.AuthManager
+import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
@@ -321,6 +322,7 @@ object RealGrpcClient {
             .setRegister(register).setDeviceId(deviceId).setDeviceName(deviceName)
 
         if (ProfileClient.isChatV2Supported()) {
+            appContext?.let { SessionManager.ensureFreshToken(it) }
             val accessToken = AuthManager.getAccessToken(appContext ?: return)
             if (!accessToken.isNullOrEmpty()) {
                 firstMessageBuilder.setJwtToken(accessToken)
