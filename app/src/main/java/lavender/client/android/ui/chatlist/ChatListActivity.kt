@@ -143,12 +143,30 @@ class ChatListActivity : AppCompatActivity() {
         // Toolbar styling: 30% transparency + bottom shadow
         // Applied after ThemeApplier to layer on top of theme colors
         toolbar?.let { tb ->
-            val bg = tb.background
+            val bg = tb.background?.mutate()
             if (bg != null) {
-                bg.alpha = 204 // 80% opacity = 30% transparent
-                tb.background = bg
+                val color = when (bg) {
+                    is android.graphics.drawable.GradientDrawable -> bg.color?.defaultColor ?: 0
+                    else -> 0
+                }
+                val alpha = (0.8f * 255).toInt() // 80% opacity = 30% transparent
+                if (color != 0) {
+                    val shape = android.graphics.drawable.GradientDrawable().apply {
+                        shapeType = android.graphics.drawable.GradientDrawable.RECTANGLE
+                        setColor(android.graphics.Color.argb(alpha, android.graphics.Color.red(color), android.graphics.Color.green(color), android.graphics.Color.blue(color)))
+                    }
+                    tb.background = shape
+                } else {
+                    bg.alpha = alpha
+                    tb.background = bg
+                }
             }
             tb.elevation = 6f
+        }
+
+        // Make AppBarLayout transparent so toolbar transparency shows through
+        findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)?.let { appBar ->
+            appBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
 
         // Setup toolbar actions
