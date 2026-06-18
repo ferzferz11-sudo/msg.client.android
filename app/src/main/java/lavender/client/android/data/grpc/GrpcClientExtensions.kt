@@ -1,3 +1,5 @@
+@file:JvmName("GrpcClientExtensions")
+
 package lavender.client.android.data.grpc
 
 import android.content.Context
