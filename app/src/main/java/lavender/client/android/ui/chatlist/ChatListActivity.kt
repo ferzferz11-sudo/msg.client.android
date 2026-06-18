@@ -97,6 +97,25 @@ class ChatListActivity : AppCompatActivity() {
     // Update
     internal var updateCoordinator: UpdateCoordinator? = null
 
+    // Sheet navigation: re-open parent sheet after returning from activity
+    internal var isNavigatingDeeper = false
+    internal val settingsActivityLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (isNavigatingDeeper) {
+            isNavigatingDeeper = false
+            showAdditionalSettingsSheet(this)
+        }
+    }
+    internal val editProfileLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (isNavigatingDeeper) {
+            isNavigatingDeeper = false
+            showSettingsSheet(this)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

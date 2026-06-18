@@ -41,6 +41,10 @@ internal fun setupToolbarActions(activity: ChatListActivity, username: String) {
 }
 
 internal fun showSettingsSheet(activity: ChatListActivity) {
+    showSettingsSheet(activity, null)
+}
+
+internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val username = SessionManager.session.value.username
     val avatarUrl = GrpcClient.getAvatarCache()[username] ?: ""
     val sheet = StandardBottomSheet(activity, R.layout.bottom_sheet_user_menu)
@@ -62,15 +66,18 @@ internal fun showSettingsSheet(activity: ChatListActivity) {
     }
 
     sheet.findViewById<View>(R.id.headerSection)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        activity.startActivity(Intent(activity, EditProfileActivity::class.java).apply {
-            putExtra("USERNAME", username)
-        })
+        activity.editProfileLauncher.launch(
+            android.content.Intent(activity, EditProfileActivity::class.java).apply {
+                putExtra("USERNAME", username)
+            }
+        )
     }
 
     sheet.findViewById<View>(R.id.actionContacts)?.setOnClickListener {
         sheet.dismiss()
-        activity.startActivity(Intent(activity, ContactsActivity::class.java).apply {
+        activity.startActivity(android.content.Intent(activity, ContactsActivity::class.java).apply {
             putExtra("USERNAME", username)
         })
     }
@@ -89,7 +96,7 @@ internal fun showSettingsSheet(activity: ChatListActivity) {
 
     sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
         sheet.dismiss()
-        activity.startActivity(Intent(activity, ThemesActivity::class.java).apply {
+        activity.startActivity(android.content.Intent(activity, ThemesActivity::class.java).apply {
             putExtra("username", username)
         })
     }
@@ -105,14 +112,24 @@ internal fun showSettingsSheet(activity: ChatListActivity) {
     }
 
     sheet.findViewById<View>(R.id.actionAdditionalSettings)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        showAdditionalSettingsSheet(activity)
+        showAdditionalSettingsSheet(activity) { showSettingsSheet(activity) }
+    }
+
+    sheet.setOnDismissListener {
+        if (!activity.isNavigatingDeeper) onBack?.invoke()
+        activity.isNavigatingDeeper = false
     }
 
     sheet.show()
 }
 
 internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
+    showAdditionalSettingsSheet(activity, null)
+}
+
+internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val username = SessionManager.session.value.username
     val isSuperAdmin = SessionManager.session.value.isSuperAdmin
     val sheet = StandardBottomSheet(activity, R.layout.bottom_sheet_additional_settings)
@@ -120,15 +137,21 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
     sheet.findViewById<View>(R.id.actionAdmin)?.isVisible = isSuperAdmin
 
     sheet.findViewById<View>(R.id.actionSecurity)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        activity.startActivity(Intent(activity, lavender.client.android.SecurityActivity::class.java).apply {
-            putExtra("username", username)
-        })
+        activity.settingsActivityLauncher.launch(
+            android.content.Intent(activity, lavender.client.android.SecurityActivity::class.java).apply {
+                putExtra("username", username)
+            }
+        )
     }
 
     sheet.findViewById<View>(R.id.actionNotifications)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        activity.startActivity(Intent(activity, lavender.client.android.NotificationActivity::class.java))
+        activity.settingsActivityLauncher.launch(
+            android.content.Intent(activity, lavender.client.android.NotificationActivity::class.java)
+        )
     }
 
     sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
@@ -144,18 +167,25 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
     }
 
     sheet.findViewById<View>(R.id.actionAbout)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        showAboutDialog(activity)
+        showAboutDialog(activity) { showAdditionalSettingsSheet(activity, onBack) }
     }
 
     sheet.findViewById<View>(R.id.actionAdmin)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        activity.startActivity(Intent(activity, lavender.client.android.SuperAdminActivity::class.java))
+        activity.settingsActivityLauncher.launch(
+            android.content.Intent(activity, lavender.client.android.SuperAdminActivity::class.java)
+        )
     }
 
     sheet.findViewById<View>(R.id.actionServers)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
         sheet.dismiss()
-        activity.startActivity(Intent(activity, ServersActivity::class.java))
+        activity.settingsActivityLauncher.launch(
+            android.content.Intent(activity, ServersActivity::class.java)
+        )
     }
 
     sheet.findViewById<View>(R.id.actionDeleteProfile)?.setOnClickListener {
@@ -167,10 +197,15 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
         sheet.dismiss()
         GrpcClient.disconnect()
         SessionManager.logout(activity)
-        val intent = Intent(activity, ChatListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val intent = android.content.Intent(activity, ChatListActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         activity.startActivity(intent)
+    }
+
+    sheet.setOnDismissListener {
+        if (!activity.isNavigatingDeeper) onBack?.invoke()
+        activity.isNavigatingDeeper = false
     }
 
     sheet.show()
@@ -203,6 +238,10 @@ internal fun confirmDeleteProfile(activity: ChatListActivity) {
 }
 
 internal fun showAboutDialog(activity: ChatListActivity) {
+    showAboutDialog(activity, null)
+}
+
+internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val sheet = StandardBottomSheet(activity, R.layout.dialog_about)
     try {
         val versionName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
@@ -217,6 +256,10 @@ internal fun showAboutDialog(activity: ChatListActivity) {
         serverVersionText?.visibility = View.GONE
     }
     sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
+    sheet.setOnDismissListener {
+        if (!activity.isNavigatingDeeper) onBack?.invoke()
+        activity.isNavigatingDeeper = false
+    }
     sheet.show()
 }
 
