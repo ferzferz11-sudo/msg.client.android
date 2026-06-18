@@ -33,6 +33,9 @@ internal fun setupToolbarActions(activity: ChatListActivity, username: String) {
     activity.ivToolbarUserAvatar?.setOnClickListener {
         showSettingsSheet(activity)
     }
+    activity.tvToolbarTitle?.setOnClickListener {
+        showSettingsSheet(activity)
+    }
 }
 
 internal fun showSettingsSheet(activity: ChatListActivity) {
