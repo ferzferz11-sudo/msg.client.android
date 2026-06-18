@@ -176,7 +176,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
             GrpcClient.allUsers.collect { allUsersList ->
                 val filtered = allUsersList
                     .map { it.username }
-                    .filter { it != username }
+                    .filter { it != username && currentContacts.contains(it) }
                 activity.runOnUiThread {
                     sheet.setLoading(false)
                     userAdapter.setUsers(filtered)
@@ -277,7 +277,7 @@ internal fun showCreateSecretChatDialog(activity: ChatListActivity) {
             GrpcClient.allUsers.collect { allUsersList ->
                 val filtered = allUsersList
                     .map { it.username }
-                    .filter { it != username }
+                    .filter { it != username && currentContacts.contains(it) }
                 activity.runOnUiThread {
                     sheet.setLoading(false)
                     userAdapter.setUsers(filtered)
@@ -354,7 +354,7 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
             GrpcClient.allUsers.collect { allUsersList ->
                 val filtered = allUsersList
                     .map { it.username }
-                    .filter { it != username }
+                    .filter { it != username && currentContacts.contains(it) }
                 activity.runOnUiThread {
                     sheet.setLoading(false)
                     userAdapter.setUsers(filtered)
