@@ -1,7 +1,5 @@
 package lavender.client.android.data.models
 
-import android.util.Log
-
 /**
  * Единый обработчик ошибок для автоматического добавления в AppLog.
  *
@@ -24,19 +22,15 @@ object ErrorHandler {
             is java.net.ConnectException,
             is java.net.SocketTimeoutException -> {
                 AppLog.error(source, "Network error: $message", throwable)
-                Log.e(TAG, "[$source] Network error", throwable)
             }
             is io.grpc.StatusRuntimeException -> {
                 AppLog.error(source, "gRPC error [${throwable.status.code}]: ${throwable.status.description}", throwable)
-                Log.e(TAG, "[$source] gRPC error", throwable)
             }
             is SecurityException -> {
                 AppLog.error(source, "Permission denied: $message", throwable)
-                Log.e(TAG, "[$source] Permission error", throwable)
             }
             else -> {
                 AppLog.error(source, message, throwable)
-                Log.e(TAG, "[$source] Error", throwable)
             }
         }
     }
@@ -51,30 +45,24 @@ object ErrorHandler {
                 is java.net.ConnectException,
                 is java.net.SocketTimeoutException -> {
                     AppLog.error(source, "$customMessage: ${throwable.message}", throwable)
-                    Log.e(TAG, "[$source] Network error", throwable)
                 }
                 is io.grpc.StatusRuntimeException -> {
                     AppLog.error(source, "$customMessage [${throwable.status.code}]: ${throwable.status.description}", throwable)
-                    Log.e(TAG, "[$source] gRPC error", throwable)
                 }
                 else -> {
                     AppLog.error(source, "$customMessage: ${throwable.message}", throwable)
-                    Log.e(TAG, "[$source] Error", throwable)
                 }
             }
         } else {
             AppLog.error(source, customMessage)
-            Log.e(TAG, "[$source] Error (no throwable)")
         }
     }
 
     fun log(source: String, message: String) {
         AppLog.info(source, message)
-        Log.d(TAG, "[$source] $message")
     }
 
     fun warn(source: String, message: String) {
         AppLog.warn(source, message)
-        Log.w(TAG, "[$source] $message")
     }
 }

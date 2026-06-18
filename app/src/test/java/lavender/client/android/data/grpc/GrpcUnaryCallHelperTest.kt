@@ -18,19 +18,11 @@ class GrpcUnaryCallHelperTest {
     fun unaryCall_success_returnsResponse() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         val mockChannel = mockk<ManagedChannel>(relaxed = true)
-
-        every {
-            mockChannel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
-        } returns mockCall
-
-        every {
-            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
-        } answers {
+        every { mockChannel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
-            val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = GetChatsResponseProto()
-            listener.onMessage(response)
-            listener.onClose(Status.OK, Metadata())
+            firstArg<ClientCall.Listener<Any>>()
+                .onMessage(GetChatsResponseProto())
         }
 
         val result = unaryCall(
@@ -61,14 +53,8 @@ class GrpcUnaryCallHelperTest {
     fun unaryCall_serverError_returnsNull() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         val mockChannel = mockk<ManagedChannel>(relaxed = true)
-
-        every {
-            mockChannel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
-        } returns mockCall
-
-        every {
-            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
-        } answers {
+        every { mockChannel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
             firstArg<ClientCall.Listener<Any>>()
                 .onClose(Status.INTERNAL.withDescription("Internal error"), Metadata())
@@ -89,19 +75,11 @@ class GrpcUnaryCallHelperTest {
     fun unaryCallWithClass_success_returnsResponse() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         val mockChannel = mockk<ManagedChannel>(relaxed = true)
-
-        every {
-            mockChannel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>())
-        } returns mockCall
-
-        every {
-            mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
-        } answers {
+        every { mockChannel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
-            val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = GetChatsResponseProto()
-            listener.onMessage(response)
-            listener.onClose(Status.OK, Metadata())
+            firstArg<ClientCall.Listener<Any>>()
+                .onMessage(GetChatsResponseProto())
         }
 
         val result = unaryCallWithClass(

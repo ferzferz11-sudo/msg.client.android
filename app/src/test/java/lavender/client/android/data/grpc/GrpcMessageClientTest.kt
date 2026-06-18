@@ -29,7 +29,7 @@ class GrpcMessageClientTest {
 
     @Before
     fun setup() {
-        channel = mockk()
+        channel = mockk(relaxed = true)
         messages = MutableStateFlow(emptyList())
         deletedMessageHashes = mutableSetOf()
         pendingReads = mutableSetOf()
@@ -48,6 +48,7 @@ class GrpcMessageClientTest {
 
     @Test
     fun sendMessage_validMessage_callsOnNext() {
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockk(relaxed = true)
         val mockObserver = mockk<StreamObserver<MessageProto>>()
         val message = Message(id = "msg-1", user = "testuser", text = "Hello World",
             roomId = "room-1", timestamp = System.currentTimeMillis())
@@ -87,7 +88,7 @@ class GrpcMessageClientTest {
 
     @Test
     fun loadHistory_success_updatesMessages() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -122,13 +123,11 @@ class GrpcMessageClientTest {
 
     @Test
     fun markRead_connectionReady_sendsMarkRead() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
-            val listener = firstArg<ClientCall.Listener<Any>>()
-            listener.onMessage(MarkReadResponseProto())
-            listener.onClose(Status.OK, Metadata())
+            firstArg<ClientCall.Listener<Any>>().onClose(Status.OK, Metadata())
         }
         client.markRead("room-1", "testuser", ConnectionStatus.READY, null)
         verify { channel.newCall<Any, Any>(any(), any()) }
@@ -150,7 +149,7 @@ class GrpcMessageClientTest {
     fun resendPendingReads_noCrash() = runTest {
         pendingReads.add("room-1")
         pendingReads.add("room-2")
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")

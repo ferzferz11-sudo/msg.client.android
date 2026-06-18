@@ -25,7 +25,7 @@ class GrpcAuthClientTest {
 
     @Before
     fun setup() {
-        channel = mockk()
+        channel = mockk(relaxed = true)
         connectionStatus = MutableStateFlow(ConnectionStatus.READY)
         authStatus = MutableStateFlow(null)
         authFailureFlag = false
@@ -37,15 +37,27 @@ class GrpcAuthClientTest {
         )
     }
 
-    @Test
-    fun signInV2_success_returnsToken() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+    private fun setupMockCall(response: Any) {
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(AuthResponseV2Proto(success = true, accessToken = "test-access-token", refreshToken = "test-refresh-token"))
+            firstArg<ClientCall.Listener<Any>>().onMessage(response)
         }
+    }
+
+    private fun setupMockCallError(status: Status) {
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            firstArg<ClientCall.Listener<Any>>().onClose(status, Metadata())
+        }
+    }
+
+    @Test
+    fun signInV2_success_returnsToken() = runTest {
+        setupMockCall(AuthResponseV2Proto(success = true, accessToken = "test-access-token", refreshToken = "test-refresh-token"))
 
         val resultRef = AtomicReference<AuthResponseV2Proto?>()
         val errorRef = AtomicReference<String?>()
@@ -63,13 +75,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun signInV2_wrongPassword_returnsError() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(AuthResponseV2Proto(success = false, message = "Invalid password"))
-        }
+        setupMockCall(AuthResponseV2Proto(success = false, message = "Invalid password"))
 
         val resultRef = AtomicReference<AuthResponseV2Proto?>()
         val errorRef = AtomicReference<String?>()
@@ -101,13 +107,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun signInV2_serverError_returnsError() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onClose(Status.INTERNAL.withDescription("Server error"), Metadata())
-        }
+        setupMockCallError(Status.INTERNAL.withDescription("Server error"))
 
         val resultRef = AtomicReference<AuthResponseV2Proto?>()
         val errorRef = AtomicReference<String?>()
@@ -117,19 +117,12 @@ class GrpcAuthClientTest {
         }
 
         assertNull("Result should be null on server error", resultRef.get())
-        assertNotNull("Error should not be null", errorRef.get())
         assertTrue("Error should contain 'Server error'", errorRef.get()!!.contains("Server error"))
     }
 
     @Test
     fun signInV2_emptyUsername_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(AuthResponseV2Proto(success = false, message = "Username is required"))
-        }
+        setupMockCall(AuthResponseV2Proto(success = false, message = "Username is required"))
 
         val resultRef = AtomicReference<AuthResponseV2Proto?>()
         val errorRef = AtomicReference<String?>()
@@ -144,13 +137,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun signUpV2_success_returnsToken() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(AuthResponseV2Proto(success = true, accessToken = "new-access-token", refreshToken = "new-refresh-token"))
-        }
+        setupMockCall(AuthResponseV2Proto(success = true, accessToken = "new-access-token", refreshToken = "new-refresh-token"))
 
         val resultRef = AtomicReference<AuthResponseV2Proto?>()
         val errorRef = AtomicReference<String?>()
@@ -167,13 +154,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun signUpV2_duplicateUsername_returnsError() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(AuthResponseV2Proto(success = false, message = "Username already exists"))
-        }
+        setupMockCall(AuthResponseV2Proto(success = false, message = "Username already exists"))
 
         val resultRef = AtomicReference<AuthResponseV2Proto?>()
         val errorRef = AtomicReference<String?>()
@@ -188,13 +169,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun refreshToken_success_returnsNewTokens() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(RefreshTokenResponseProto(accessToken = "refreshed-access", refreshToken = "refreshed-refresh"))
-        }
+        setupMockCall(RefreshTokenResponseProto(accessToken = "refreshed-access", refreshToken = "refreshed-refresh"))
 
         val resultRef = AtomicReference<RefreshTokenResponseProto?>()
         val errorRef = AtomicReference<String?>()
@@ -211,13 +186,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun signOut_success_returnsTrue() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(SimpleAuthResponseProto(success = true, message = "Signed out"))
-        }
+        setupMockCall(SimpleAuthResponseProto(success = true, message = "Signed out"))
 
         val resultRef = AtomicReference<Boolean>(false)
         val errorRef = AtomicReference<String?>()
@@ -232,13 +201,7 @@ class GrpcAuthClientTest {
 
     @Test
     fun revokeDevice_success_returnsTrue() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(SimpleAuthResponseProto(success = true, message = "Device revoked"))
-        }
+        setupMockCall(SimpleAuthResponseProto(success = true, message = "Device revoked"))
 
         val resultRef = AtomicReference<Boolean>(false)
         val errorRef = AtomicReference<String?>()

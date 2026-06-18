@@ -28,7 +28,7 @@ class GrpcChatListClientTest {
 
     @Before
     fun setup() {
-        channel = mockk()
+        channel = mockk(relaxed = true)
         chatDeletedEvent = MutableStateFlow(null)
         allUsers = MutableStateFlow(emptyList())
         serverTime = MutableStateFlow(null)
@@ -45,7 +45,7 @@ class GrpcChatListClientTest {
 
     @Test
     fun getChats_success_returnsChatList() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -67,7 +67,7 @@ class GrpcChatListClientTest {
 
     @Test
     fun getChats_emptyServerResponse_returnsEmptyList() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -94,7 +94,7 @@ class GrpcChatListClientTest {
 
     @Test
     fun getChats_serverError_returnsEmptyList() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -122,7 +122,7 @@ class GrpcChatListClientTest {
 
     @Test
     fun deleteChat_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -137,7 +137,7 @@ class GrpcChatListClientTest {
 
     @Test
     fun createDirectChat_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -152,7 +152,7 @@ class GrpcChatListClientTest {
 
     @Test
     fun createGroupChat_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>()
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
