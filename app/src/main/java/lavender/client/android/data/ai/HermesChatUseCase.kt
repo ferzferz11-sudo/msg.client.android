@@ -192,7 +192,7 @@ object HermesChatUseCase {
         workingDir: String = "",
         timeoutSec: Int = 60
     ): kotlinx.coroutines.flow.Flow<lavender.client.android.data.proto.DeployAgentTaskStreamResponseProto> {
-        return lavender.client.android.data.grpc.deployTaskStream(
+        return lavender.client.android.data.grpc.deployAgentTaskStream(
             agentId, taskType, params, workingDir, timeoutSec
         )
     }

@@ -101,7 +101,6 @@ object OwlChatUseCase {
                         isStreaming = !finished
                     )
                     AiChatManager.emitOwlResponse(msg)
-                    retryDelay = INITIAL_RETRY_DELAY_MS
 
                     if (finished && error.isNotEmpty()) {
                         hadError = true
