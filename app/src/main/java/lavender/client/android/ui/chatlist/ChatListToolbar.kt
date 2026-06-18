@@ -207,7 +207,15 @@ internal fun showAboutDialog(activity: ChatListActivity) {
     try {
         val versionName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
         sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = activity.getString(R.string.app_version_format, versionName)
+        sheet.findViewById<TextView>(R.id.clientVersionText)?.text = activity.getString(R.string.app_version_format, versionName)
     } catch (_: Exception) {}
+    val serverVersion = GrpcClient.serverVersion.value
+    val serverVersionText = sheet.findViewById<TextView>(R.id.serverVersionText)
+    if (serverVersion.isNotEmpty()) {
+        serverVersionText?.text = activity.getString(R.string.server_version_format, serverVersion)
+    } else {
+        serverVersionText?.visibility = View.GONE
+    }
     sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
     sheet.show()
 }
