@@ -123,11 +123,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     fun searchChats(query: String) {
         _searchQuery.value = query
+        val currentUsername = SessionManager.session.value.username
         if (query.isEmpty()) {
             buildSections(allChats)
         } else {
             val filtered = allChats.filter { chat ->
-                chat.name.lowercase().contains(query.lowercase()) ||
+                chat.getDisplayName(currentUsername).lowercase().contains(query.lowercase()) ||
                 chat.lastMessageText.lowercase().contains(query.lowercase())
             }
             buildSections(filtered)
@@ -240,7 +241,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun getChats(): List<ChatInfo> = allChats
 
     fun onChatClick(chat: ChatInfo) {
-        Log.d(TAG, "Chat clicked: ${chat.name} (${chat.id})")
+                Log.d(TAG, "Chat clicked: ${chat.getDisplayName(SessionManager.session.value.username)} (${chat.id})")
     }
 
     /**

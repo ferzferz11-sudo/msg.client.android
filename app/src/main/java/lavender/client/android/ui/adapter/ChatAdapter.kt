@@ -38,6 +38,7 @@ import lavender.client.android.theme.ThemeUtils
  */
 class ChatAdapter(
     private val scope: CoroutineScope,
+    private val currentUsername: String,
     private val onChatClick: (ChatInfo) -> Unit,
     private val onChatLongClick: (ChatInfo, View) -> Unit,
     private val onSelectionChanged: (Int) -> Unit = {}
@@ -199,7 +200,7 @@ class ChatAdapter(
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id)
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername
             )
             null -> {}
         }
@@ -214,7 +215,7 @@ class ChatAdapter(
                 section.chats
             } else {
                 section.chats.filter { chat ->
-                    chat.name.lowercase().contains(currentFilter) ||
+                    chat.getDisplayName(currentUsername).lowercase().contains(currentFilter) ||
                     chat.lastMessageText.lowercase().contains(currentFilter)
                 }
             }
@@ -252,8 +253,8 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean) {
-            tvChatName.text = chat.name
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String) {
+            tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(textPrimary)
 
             if (chat.lastMessageText.isNotEmpty()) {

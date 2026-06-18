@@ -145,7 +145,7 @@ class SuperAdminActivity : AppCompatActivity() {
                     toggleChatSelection(chat.id)
                 } else {
                     val intent = Intent(this, ProfileActivity::class.java).apply {
-                        putExtra("username", chat.name)
+                        putExtra("username", chat.getDisplayName(username))
                         putExtra("is_group", !chat.type.equals("direct", true))
                         putExtra("room_id", chat.id)
                         putExtra("avatar_url", chat.avatarUrl)

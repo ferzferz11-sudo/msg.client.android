@@ -365,7 +365,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             chatAdapter.setSelectedChat(chat)
             binding.selectedChatLabel.isVisible = true
             binding.selectedChatText.isVisible = true
-            binding.selectedChatText.text = chat.name
+            binding.selectedChatText.text = chat.getDisplayName(username)
         }
         
         binding.chatsRecyclerView.apply {

@@ -12,6 +12,7 @@ import lavender.client.android.data.session.CredentialStore
  */
 
 internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username: String) {
+    val displayName = chat.getDisplayName(username)
     when (chat.type) {
         "favorites" -> {
             val intent = Intent(activity, NewChatActivity::class.java).apply {
@@ -27,7 +28,7 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
         "hermes" -> {
             val intent = Intent(activity, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
                 putExtra("CHAT_ID", chat.id)
-                putExtra("CHAT_NAME", chat.name)
+                putExtra("CHAT_NAME", displayName)
                 putExtra("ACTIVE_AGENT_ID", chat.activeAgentId)
                 putExtra("AGENT_MODE", chat.agentMode)
             }
@@ -36,7 +37,7 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
         "owl" -> {
             val intent = Intent(activity, lavender.client.android.ui.owl.OwlChatActivity::class.java).apply {
                 putExtra("CHAT_ID", chat.id)
-                putExtra("CHAT_NAME", chat.name)
+                putExtra("CHAT_NAME", displayName)
             }
             activity.startActivity(intent)
         }
@@ -45,7 +46,7 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
             val intent = Intent(activity, NewChatActivity::class.java).apply {
                 putExtra("USERNAME", username)
                 putExtra("SERVER_ADDRESS", serverAddress)
-                putExtra("CHAT_NAME", chat.name)
+                putExtra("CHAT_NAME", displayName)
                 putExtra("ROOM_ID", chat.id)
                 putExtra("IS_DIRECT", chat.type == "direct")
                 putExtra("CHAT_TYPE", chat.type)

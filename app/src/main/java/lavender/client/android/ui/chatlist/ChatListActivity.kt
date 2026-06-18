@@ -301,6 +301,7 @@ class ChatListActivity : AppCompatActivity() {
 
         chatAdapter = ChatAdapter(
             scope = lifecycleScope,
+            currentUsername = username,
             onChatClick = { chat ->
                 if (chatAdapter.isSelectionMode()) {
                     chatAdapter.toggleSelection(chat.id)
