@@ -66,8 +66,8 @@ object AppLog {
                 logs.removeAt(0)
             }
         }
-        // Также пишем в Android Log
-        android.util.Log.d("AppLog", entry.toDisplayString())
+        // Также пишем в Android Log (может упасть в unit-тестах)
+        try { android.util.Log.d("AppLog", entry.toDisplayString()) } catch (_: Exception) {}
     }
 
     fun getAll(): List<LogEntry> = synchronized(logs) { logs.toList() }

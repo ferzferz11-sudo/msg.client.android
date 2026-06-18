@@ -10,14 +10,11 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Unit-тесты для GrpcConnectionManager.
- */
 class GrpcConnectionManagerTest {
 
     private lateinit var connectionStatus: MutableStateFlow<ConnectionStatus>
     private lateinit var manager: GrpcConnectionManager
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
     fun setup() {
@@ -34,9 +31,8 @@ class GrpcConnectionManagerTest {
     fun connect_validAddress_attemptsConnection() = runTest {
         manager.connect("127.0.0.1", false, 0)
         kotlinx.coroutines.delay(500)
-
         val status = connectionStatus.value
-        assertTrue("Should be in connecting/reconnecting/failed state",
+        assertTrue("Should attempt connection",
             status == ConnectionStatus.CONNECTING ||
             status == ConnectionStatus.RECONNECTING ||
             status == ConnectionStatus.FAILED)
@@ -46,7 +42,7 @@ class GrpcConnectionManagerTest {
     fun connect_alreadyConnected_skipsReconnect() = runTest {
         connectionStatus.value = ConnectionStatus.READY
         manager.connect("127.0.0.1", false, 50051)
-        assertEquals("Should remain READY", ConnectionStatus.READY, connectionStatus.value)
+        assertEquals(ConnectionStatus.READY, connectionStatus.value)
     }
 
     @Test
@@ -54,9 +50,8 @@ class GrpcConnectionManagerTest {
         manager.connect("127.0.0.1", false, 0)
         kotlinx.coroutines.delay(200)
         manager.disconnect()
-
-        assertEquals("Should be DISCONNECTED", ConnectionStatus.DISCONNECTED, connectionStatus.value)
-        assertNull("Channel should be null", manager.channel)
+        assertEquals(ConnectionStatus.DISCONNECTED, connectionStatus.value)
+        assertNull(manager.channel)
     }
 
     @Test
@@ -64,7 +59,6 @@ class GrpcConnectionManagerTest {
         manager.connect("127.0.0.1", false, 0)
         kotlinx.coroutines.delay(200)
         manager.reconnect()
-
         val status = connectionStatus.value
         assertTrue("Should attempt reconnection",
             status == ConnectionStatus.RECONNECTING ||
@@ -72,32 +66,20 @@ class GrpcConnectionManagerTest {
     }
 
     @Test
-    fun isConnectedTo_sameAddressReady_returnsTrue() = runTest {
-        connectionStatus.value = ConnectionStatus.READY
-        // currentServerAddress is public getter, set via realGrpcClient.connect
-        // In test, the manager creates a real channel so isConnectedTo will check channel state
-        // We can test the method exists and can be called
-        val result = manager.isConnectedTo("127.0.0.1", 50051)
-        // Channel may or may not be null depending on timing
-        // Just verify no crash
+    fun isConnectedTo_notConnected_returnsFalse() = runTest {
+        assertFalse(manager.isConnectedTo("192.168.1.1", 50051))
     }
 
     @Test
-    fun isConnectedTo_differentAddress_returnsFalse() = runTest {
-        val result = manager.isConnectedTo("192.168.1.1", 50051)
-        assertFalse("Should return false when not connected", result)
-    }
-
-    @Test
-    fun resetReconnectBackoff_resetsDelay() = runTest {
+    fun resetReconnectBackoff_noCrash() = runTest {
         manager.connect("127.0.0.1", false, 0)
         kotlinx.coroutines.delay(200)
         manager.resetReconnectBackoff()
-        assertTrue("Reset should complete without error", true)
+        assertTrue(true)
     }
 
     @Test
     fun isAuthFailure_defaultIsFalse() {
-        assertFalse("Default isAuthFailure should be false", manager.isAuthFailure)
+        assertFalse(manager.isAuthFailure)
     }
 }

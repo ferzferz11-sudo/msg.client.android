@@ -18,9 +18,6 @@ import io.mockk.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.*
 
-/**
- * Unit-тесты для GrpcMessageClient.
- */
 class GrpcMessageClientTest {
 
     private lateinit var channel: ManagedChannel
@@ -28,15 +25,14 @@ class GrpcMessageClientTest {
     private lateinit var deletedMessageHashes: MutableSet<String>
     private lateinit var pendingReads: MutableSet<String>
     private lateinit var client: GrpcMessageClient
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
     fun setup() {
-        channel = mockk(relaxed = true)
+        channel = mockk()
         messages = MutableStateFlow(emptyList())
         deletedMessageHashes = mutableSetOf()
         pendingReads = mutableSetOf()
-
         client = GrpcMessageClient(
             getChannel = { channel },
             getUserId = { "user-uuid-123" },
@@ -52,34 +48,28 @@ class GrpcMessageClientTest {
 
     @Test
     fun sendMessage_validMessage_callsOnNext() {
-        val mockObserver = mockk<StreamObserver<MessageProto>>(relaxed = true)
-        val message = Message(
-            id = "msg-1", user = "testuser", text = "Hello World",
-            roomId = "room-1", timestamp = System.currentTimeMillis()
-        )
+        val mockObserver = mockk<StreamObserver<MessageProto>>()
+        val message = Message(id = "msg-1", user = "testuser", text = "Hello World",
+            roomId = "room-1", timestamp = System.currentTimeMillis())
         client.sendMessage(message, mockObserver)
         verify { mockObserver.onNext(any<MessageProto>()) }
     }
 
     @Test
     fun sendMessage_nullObserver_noCrash() {
-        val message = Message(
-            id = "msg-1", user = "testuser", text = "Hello",
-            roomId = "room-1", timestamp = System.currentTimeMillis()
-        )
+        val message = Message(id = "msg-1", user = "testuser", text = "Hello",
+            roomId = "room-1", timestamp = System.currentTimeMillis())
         client.sendMessage(message, null)
     }
 
     @Test
     fun addLocalMessage_addsToStateFlow() = runTest {
-        val message = Message(
-            id = "local-msg-1", user = "testuser", text = "Local message",
-            roomId = "room-1", timestamp = System.currentTimeMillis()
-        )
+        val message = Message(id = "local-msg-1", user = "testuser", text = "Local message",
+            roomId = "room-1", timestamp = System.currentTimeMillis())
         client.addLocalMessage(message)
         kotlinx.coroutines.delay(100)
-        assertEquals("Should have 1 message", 1, messages.value.size)
-        assertEquals("Message text", "Local message", messages.value[0].text)
+        assertEquals(1, messages.value.size)
+        assertEquals("Local message", messages.value[0].text)
     }
 
     @Test
@@ -91,82 +81,76 @@ class GrpcMessageClientTest {
         kotlinx.coroutines.delay(50)
         client.addLocalMessage(m2)
         kotlinx.coroutines.delay(50)
-        assertEquals("Should have 1 message (deduped)", 1, messages.value.size)
-        assertEquals("Should be updated", "Updated", messages.value[0].text)
+        assertEquals(1, messages.value.size)
+        assertEquals("Updated", messages.value[0].text)
     }
 
     @Test
     fun loadHistory_success_updatesMessages() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        val mockCall = mockk<ClientCall<Any, Any>>()
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val msgProto = MessageProto(
-                id = "hist-msg-1", user = "otheruser", text = "History message",
-                roomId = "room-1",
-                createdAt = com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build()
-            )
-            val response = GetHistoryResponseProto(messages = listOf(msgProto))
-            listener.onMessage(response)
+            val ts = com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build()
+            val msgProto = MessageProto(id = "hist-msg-1", user = "otheruser", text = "History message",
+                roomId = "room-1", createdAt = ts)
+            listener.onMessage(GetHistoryResponseProto(messages = listOf(msgProto)))
             listener.onClose(Status.OK, Metadata())
         }
 
-        var completionCalled = false
-        client.loadHistory("room-1") { completionCalled = true }
+        var called = false
+        client.loadHistory("room-1") { called = true }
         kotlinx.coroutines.delay(200)
 
-        assertEquals("Should have 1 message", 1, messages.value.size)
-        assertEquals("Message text", "History message", messages.value[0].text)
-        assertTrue("Completion should be called", completionCalled)
+        assertEquals(1, messages.value.size)
+        assertEquals("History message", messages.value[0].text)
+        assertTrue("Completion called", called)
     }
 
     @Test
     fun loadHistory_nullChannel_noCrash() = runTest {
-        val nullChannelClient = GrpcMessageClient(
+        val nullClient = GrpcMessageClient(
             getChannel = { null }, getUserId = { "user-uuid" }, getUsername = { "testuser" },
             messages = messages, deletedMessageHashes = deletedMessageHashes, pendingReads = pendingReads,
             scope = scope, appContext = { null }, onReadReceipt = null
         )
         var called = false
-        nullChannelClient.loadHistory("room-1") { called = true }
-        assertTrue("Completion should be called", called)
+        nullClient.loadHistory("room-1") { called = true }
+        assertTrue("Completion called", called)
     }
 
     @Test
     fun markRead_connectionReady_sendsMarkRead() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        val mockCall = mockk<ClientCall<Any, Any>>()
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = MarkReadResponseProto()
-            listener.onMessage(response)
+            listener.onMessage(MarkReadResponseProto())
             listener.onClose(Status.OK, Metadata())
         }
-
         client.markRead("room-1", "testuser", ConnectionStatus.READY, null)
         verify { channel.newCall<Any, Any>(any(), any()) }
     }
 
     @Test
     fun markRead_connectionNotReady_queuesPendingRead() = runTest {
-        val nullChannelClient = GrpcMessageClient(
+        val nullClient = GrpcMessageClient(
             getChannel = { null }, getUserId = { "user-uuid" }, getUsername = { "testuser" },
             messages = messages, deletedMessageHashes = deletedMessageHashes, pendingReads = pendingReads,
             scope = scope, appContext = { null }, onReadReceipt = null
         )
         pendingReads.clear()
-        nullChannelClient.markRead("room-1", "testuser", ConnectionStatus.CONNECTING, null)
-        assertTrue("Pending reads should contain room-1", pendingReads.contains("room-1"))
+        nullClient.markRead("room-1", "testuser", ConnectionStatus.CONNECTING, null)
+        assertTrue("Pending reads contain room-1", pendingReads.contains("room-1"))
     }
 
     @Test
     fun resendPendingReads_noCrash() = runTest {
         pendingReads.add("room-1")
         pendingReads.add("room-2")
-        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        val mockCall = mockk<ClientCall<Any, Any>>()
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
@@ -177,47 +161,42 @@ class GrpcMessageClientTest {
 
     @Test
     fun handleDeleteMessageSignal_removesFromMessages() = runTest {
-        val message = Message(id = "msg-to-delete", user = "testuser", text = "Will be deleted",
+        val message = Message(id = "msg-to-delete", user = "testuser", text = "Deleted",
             roomId = "room-1", timestamp = System.currentTimeMillis())
         client.addLocalMessage(message)
         kotlinx.coroutines.delay(100)
-        assertEquals("Should have 1 message", 1, messages.value.size)
+        assertEquals(1, messages.value.size)
 
         client.handleDeleteMessageSignal("msg-to-delete")
         kotlinx.coroutines.delay(100)
-
-        assertTrue("Messages should be empty after delete",
-            messages.value.none { it.id == "msg-to-delete" })
+        assertTrue("Messages empty after delete", messages.value.none { it.id == "msg-to-delete" })
     }
 
     @Test
     fun handleReadAllSignal_sameRoom_marksAllRead() = runTest {
-        val msg1 = Message(id = "msg-r1", user = "otheruser", text = "Msg 1",
-            roomId = "room-1", timestamp = System.currentTimeMillis(), isRead = false)
-        val msg2 = Message(id = "msg-r2", user = "otheruser", text = "Msg 2",
-            roomId = "room-1", timestamp = System.currentTimeMillis() + 1000, isRead = false)
-        client.addLocalMessage(msg1)
+        val ts = System.currentTimeMillis()
+        val m1 = Message(id = "msg-r1", user = "otheruser", text = "M1", roomId = "room-1", timestamp = ts, isRead = false)
+        val m2 = Message(id = "msg-r2", user = "otheruser", text = "M2", roomId = "room-1", timestamp = ts + 1000, isRead = false)
+        client.addLocalMessage(m1)
         kotlinx.coroutines.delay(50)
-        client.addLocalMessage(msg2)
+        client.addLocalMessage(m2)
         kotlinx.coroutines.delay(50)
-        assertEquals("Should have 2 messages", 2, messages.value.size)
+        assertEquals(2, messages.value.size)
 
-        client.handleReadAllSignal("reader-user", "room-1", "room-1")
+        client.handleReadAllSignal("reader", "room-1", "room-1")
         kotlinx.coroutines.delay(100)
-
-        assertTrue("All messages should be marked read", messages.value.all { it.isRead })
+        assertTrue("All read", messages.value.all { it.isRead })
     }
 
     @Test
     fun handleReadAllSignal_differentRoom_doesNotMarkRead() = runTest {
-        val msg = Message(id = "msg-r3", user = "otheruser", text = "Msg",
+        val msg = Message(id = "msg-r3", user = "otheruser", text = "M",
             roomId = "room-1", timestamp = System.currentTimeMillis(), isRead = false)
         client.addLocalMessage(msg)
         kotlinx.coroutines.delay(100)
 
-        client.handleReadAllSignal("reader-user", "room-2", "room-1")
+        client.handleReadAllSignal("reader", "room-2", "room-1")
         kotlinx.coroutines.delay(100)
-
-        assertFalse("Message should NOT be marked read", messages.value[0].isRead)
+        assertFalse("Not marked read", messages.value[0].isRead)
     }
 }
