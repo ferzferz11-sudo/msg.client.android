@@ -3,7 +3,7 @@ package lavender.client.android.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 class ChatListViewModel : ViewModel() {
     var currentChats: List<ChatInfo> = emptyList()

@@ -51,7 +51,7 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ui.ThemeUi
 import java.io.File
 import java.util.Locale
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 /**
  * Chat screen — thin Activity delegating to specialized modules.

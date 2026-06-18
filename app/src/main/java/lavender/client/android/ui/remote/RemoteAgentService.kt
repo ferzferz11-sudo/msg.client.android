@@ -16,7 +16,7 @@ import kotlinx.coroutines.*
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.AppLog
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 /**
  * RemoteAgentService — foreground service для фонового подключения Remote Agent.

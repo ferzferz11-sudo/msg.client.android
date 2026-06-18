@@ -36,7 +36,7 @@ import lavender.client.android.theme.ui.ThemeApplier
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.adapter.ChatAdapter
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 /**
  * ChatListActivity — единый Activity для списка чатов.

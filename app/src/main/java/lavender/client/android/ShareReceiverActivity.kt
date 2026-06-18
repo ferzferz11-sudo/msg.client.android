@@ -42,7 +42,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URL
 import java.util.regex.Pattern
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 class ShareReceiverActivity : AppCompatActivity() {
 

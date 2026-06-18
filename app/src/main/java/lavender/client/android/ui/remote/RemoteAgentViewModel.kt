@@ -13,7 +13,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.models.RemoteAgentInfo
 import lavender.client.android.R
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
 

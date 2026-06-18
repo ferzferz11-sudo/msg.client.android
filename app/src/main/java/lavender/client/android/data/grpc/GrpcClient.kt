@@ -5,10 +5,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.CallMessageProto
 import lavender.client.android.data.proto.ServerInfoProto
+import lavender.client.android.data.proto.UserInfoProto
 
 /**
  * GrpcClient — unified facade for gRPC operations.
@@ -17,7 +18,7 @@ import lavender.client.android.data.proto.ServerInfoProto
  * Domain methods: delegated to GrpcClientExtensions (grouped by domain).
  *
  * Extensions import brings all domain methods into scope:
- *   import lavender.client.android.data.grpc.GrpcClientExtensions.*
+ *   import lavender.client.android.data.grpc.*
  */
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient

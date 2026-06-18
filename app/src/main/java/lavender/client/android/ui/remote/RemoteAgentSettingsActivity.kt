@@ -26,7 +26,7 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
-import lavender.client.android.data.grpc.GrpcClientExtensions.*
+import lavender.client.android.data.grpc.*
 
 class RemoteAgentSettingsActivity : AppCompatActivity(),
     RemoteAgentManager.RemoteAgentStateListener {
