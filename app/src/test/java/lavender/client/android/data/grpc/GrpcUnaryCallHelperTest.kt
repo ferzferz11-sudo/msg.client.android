@@ -12,9 +12,6 @@ import org.junit.Test
 import io.mockk.*
 import lavender.client.android.data.proto.*
 
-/**
- * Unit-тесты для GrpcUnaryCallHelper (top-level функции unaryCall, unaryCallWithClass).
- */
 class GrpcUnaryCallHelperTest {
 
     @Test
@@ -31,7 +28,7 @@ class GrpcUnaryCallHelperTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = GetChatsResponseProto.newBuilder().build()
+            val response = GetChatsResponseProto()
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -39,7 +36,7 @@ class GrpcUnaryCallHelperTest {
         val result = unaryCall(
             getChannel = { mockChannel },
             fullMethod = "messenger.ChatService/GetChats",
-            request = GetChatsRequestProto.newBuilder().build(),
+            request = GetChatsRequestProto(),
             requestMarshaller = GetChatsRequestMarshaller(),
             responseMarshaller = GetChatsResponseMarshaller()
         )
@@ -52,7 +49,7 @@ class GrpcUnaryCallHelperTest {
         val result = unaryCall(
             getChannel = { null },
             fullMethod = "messenger.ChatService/GetChats",
-            request = GetChatsRequestProto.newBuilder().build(),
+            request = GetChatsRequestProto(),
             requestMarshaller = GetChatsRequestMarshaller(),
             responseMarshaller = GetChatsResponseMarshaller()
         )
@@ -80,7 +77,7 @@ class GrpcUnaryCallHelperTest {
         val result = unaryCall(
             getChannel = { mockChannel },
             fullMethod = "messenger.ChatService/GetChats",
-            request = GetChatsRequestProto.newBuilder().build(),
+            request = GetChatsRequestProto(),
             requestMarshaller = GetChatsRequestMarshaller(),
             responseMarshaller = GetChatsResponseMarshaller()
         )
@@ -102,7 +99,7 @@ class GrpcUnaryCallHelperTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = GetChatsResponseProto.newBuilder().build()
+            val response = GetChatsResponseProto()
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -110,7 +107,7 @@ class GrpcUnaryCallHelperTest {
         val result = unaryCallWithClass(
             getChannel = { mockChannel },
             fullMethod = "messenger.ChatService/GetChats",
-            request = GetChatsRequestProto.newBuilder().build(),
+            request = GetChatsRequestProto(),
             responseType = GetChatsResponseProto::class.java
         )
 

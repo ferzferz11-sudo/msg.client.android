@@ -62,17 +62,15 @@ class GrpcChatListClientTest {
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
-                val chatProto = ChatInfoProto.newBuilder()
-                    .setId("chat-1")
-                    .setName("Test Chat")
-                    .setType("group")
-                    .setParticipants("[\"user1\",\"user2\"]")
-                    .setUnreadCount(3)
-                    .setCreatedAt(com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build())
-                    .build()
-                val response = GetChatsResponseProto.newBuilder()
-                    .addChats(chatProto)
-                    .build()
+                val chatProto = ChatInfoProto(
+                    id = "chat-1",
+                    name = "Test Chat",
+                    type = "group",
+                    participants = "[\"user1\",\"user2\"]",
+                    unreadCount = 3,
+                    createdAt = com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build()
+                )
+                val response = GetChatsResponseProto(chats = listOf(chatProto))
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
             }
@@ -97,7 +95,7 @@ class GrpcChatListClientTest {
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
-                val response = GetChatsResponseProto.newBuilder().build() // empty
+                val response = GetChatsResponseProto()
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
             }
@@ -188,9 +186,7 @@ class GrpcChatListClientTest {
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
-                val response = DeleteChatResponseProto.newBuilder()
-                    .setSuccess(true)
-                    .build()
+                val response = DeleteChatResponseProto(success = true)
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
             }
@@ -214,9 +210,7 @@ class GrpcChatListClientTest {
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
-                val response = CreateChatResponseProto.newBuilder()
-                    .setChatId("new-chat-id")
-                    .build()
+                val response = CreateDirectChatResponseProto(chatId = "new-chat-id", success = true)
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
             }
@@ -237,9 +231,7 @@ class GrpcChatListClientTest {
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
-                val response = CreateChatResponseProto.newBuilder()
-                    .setChatId("group-chat-id")
-                    .build()
+                val response = CreateGroupChatResponseProto(chatId = "group-chat-id", success = true)
                 listener.onMessage(response)
                 listener.onClose(Status.OK, Metadata())
             }

@@ -103,12 +103,12 @@ class GrpcMessageClientTest {
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val msgProto = MessageProto.newBuilder()
-                .setId("hist-msg-1").setUser("otheruser").setText("History message")
-                .setRoomId("room-1")
-                .setCreatedAt(com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build())
-                .build()
-            val response = GetHistoryResponseProto.newBuilder().addMessages(msgProto).build()
+            val msgProto = MessageProto(
+                id = "hist-msg-1", user = "otheruser", text = "History message",
+                roomId = "room-1",
+                createdAt = com.google.protobuf.Timestamp.newBuilder().setSeconds(1000).build()
+            )
+            val response = GetHistoryResponseProto(messages = listOf(msgProto))
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -141,7 +141,7 @@ class GrpcMessageClientTest {
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = MarkReadResponseProto.newBuilder().build()
+            val response = MarkReadResponseProto()
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }

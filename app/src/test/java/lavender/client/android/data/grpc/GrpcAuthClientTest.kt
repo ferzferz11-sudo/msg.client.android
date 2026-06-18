@@ -6,6 +6,10 @@ import io.grpc.ManagedChannel
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
 import io.grpc.Status
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import lavender.client.android.data.proto.*
 import org.junit.Assert.*
@@ -57,11 +61,11 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = AuthResponseV2Proto.newBuilder()
-                .setSuccess(true)
-                .setAccessToken("test-access-token")
-                .setRefreshToken("test-refresh-token")
-                .build()
+            val response = AuthResponseV2Proto(
+                success = true,
+                accessToken = "test-access-token",
+                refreshToken = "test-refresh-token"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -101,10 +105,10 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = AuthResponseV2Proto.newBuilder()
-                .setSuccess(false)
-                .setMessage("Invalid password")
-                .build()
+            val response = AuthResponseV2Proto(
+                success = false,
+                message = "Invalid password"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -207,10 +211,10 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = AuthResponseV2Proto.newBuilder()
-                .setSuccess(false)
-                .setMessage("Username is required")
-                .build()
+            val response = AuthResponseV2Proto(
+                success = false,
+                message = "Username is required"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -249,11 +253,11 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = AuthResponseV2Proto.newBuilder()
-                .setSuccess(true)
-                .setAccessToken("new-access-token")
-                .setRefreshToken("new-refresh-token")
-                .build()
+            val response = AuthResponseV2Proto(
+                success = true,
+                accessToken = "new-access-token",
+                refreshToken = "new-refresh-token"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -293,10 +297,10 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = AuthResponseV2Proto.newBuilder()
-                .setSuccess(false)
-                .setMessage("Username already exists")
-                .build()
+            val response = AuthResponseV2Proto(
+                success = false,
+                message = "Username already exists"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -336,10 +340,10 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = RefreshTokenResponseProto.newBuilder()
-                .setAccessToken("refreshed-access")
-                .setRefreshToken("refreshed-refresh")
-                .build()
+            val response = RefreshTokenResponseProto(
+                accessToken = "refreshed-access",
+                refreshToken = "refreshed-refresh"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -377,10 +381,10 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = SimpleAuthResponseProto.newBuilder()
-                .setSuccess(true)
-                .setMessage("Signed out")
-                .build()
+            val response = SimpleAuthResponseProto(
+                success = true,
+                message = "Signed out"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
@@ -416,10 +420,10 @@ class GrpcAuthClientTest {
         } answers {
             @Suppress("UNCHECKED_CAST")
             val listener = firstArg<ClientCall.Listener<Any>>()
-            val response = SimpleAuthResponseProto.newBuilder()
-                .setSuccess(true)
-                .setMessage("Device revoked")
-                .build()
+            val response = SimpleAuthResponseProto(
+                success = true,
+                message = "Device revoked"
+            )
             listener.onMessage(response)
             listener.onClose(Status.OK, Metadata())
         }
