@@ -30,7 +30,7 @@ object AuthManager {
     private const val KEY_AUTH_USER_ID = "jwt_user_id"
     private const val KEY_AUTH_USERNAME = "jwt_username"
     private const val KEY_AUTH_DEVICE_ID = "jwt_device_id"
-    private const val KEY_AUTH_METHOD = "auth_method" // "v1_legacy" or "v2_jwt"
+    private const val KEY_AUTH_METHOD = "auth_method"
 
     // Buffer before actual expiry to trigger refresh early (5 minutes)
     private const val REFRESH_BUFFER_SECONDS = 5 * 60
@@ -39,8 +39,6 @@ object AuthManager {
      * Checks if the user is authenticated via AuthService v2 (JWT)
      */
     fun isJwtAuthenticated(context: Context): Boolean {
-        val method = getAuthMethod(context)
-        if (method != "v2_jwt") return false
         val accessToken = getAccessToken(context)
         return accessToken != null && accessToken.length > 0
     }
@@ -183,15 +181,6 @@ object AuthManager {
      */
     fun getAuthMethod(context: Context): String {
         return CredentialStore.getAuthPrefs(context).getString(KEY_AUTH_METHOD, "") ?: ""
-    }
-
-    /**
-     * Mark that we're using legacy auth (v1)
-     */
-    fun setLegacyAuth(context: Context) {
-        CredentialStore.getAuthPrefs(context).edit {
-            putString(KEY_AUTH_METHOD, "v1_legacy")
-        }
     }
 
     // --- Private helpers ---
