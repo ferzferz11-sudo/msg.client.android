@@ -33,9 +33,10 @@ internal fun setupToolbarActions(activity: ChatListActivity, username: String) {
     activity.ivToolbarUserAvatar?.setOnClickListener {
         showSettingsSheet(activity)
     }
-    activity.tvToolbarTitle?.setOnClickListener {
+    activity.tvToolbarTitle?.setOnLongClickListener {
         val intent = Intent(activity, ServersActivity::class.java)
         activity.startActivity(intent)
+        true
     }
 }
 

@@ -128,6 +128,16 @@ class ChatListActivity : AppCompatActivity() {
         // Set title
         tvToolbarTitle?.text = getString(R.string.chats)
 
+        // Toolbar styling: 30% transparency + bottom shadow
+        toolbar?.let { tb ->
+            val bg = tb.background
+            if (bg != null) {
+                bg.alpha = 204 // 80% opacity = 30% transparent
+                tb.background = bg
+            }
+            tb.elevation = 6f
+        }
+
         // Setup toolbar actions
         setupToolbarActions(this, username)
 
