@@ -171,9 +171,17 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
     sheet.setAdapter(userAdapter)
 
     GrpcClient.getContacts(username) { contacts ->
-        activity.runOnUiThread {
-            sheet.setLoading(false)
-            userAdapter.setUsers(contacts)
+        val currentContacts = contacts.toSet()
+        activity.lifecycleScope.launch {
+            GrpcClient.allUsers.collect { allUsersList ->
+                val filtered = allUsersList
+                    .map { it.username }
+                    .filter { it != username }
+                activity.runOnUiThread {
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filtered)
+                }
+            }
         }
     }
 
@@ -264,9 +272,17 @@ internal fun showCreateSecretChatDialog(activity: ChatListActivity) {
     sheet.setAdapter(userAdapter)
 
     GrpcClient.getContacts(username) { contacts ->
-        activity.runOnUiThread {
-            sheet.setLoading(false)
-            userAdapter.setUsers(contacts)
+        val currentContacts = contacts.toSet()
+        activity.lifecycleScope.launch {
+            GrpcClient.allUsers.collect { allUsersList ->
+                val filtered = allUsersList
+                    .map { it.username }
+                    .filter { it != username }
+                activity.runOnUiThread {
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filtered)
+                }
+            }
         }
     }
 
@@ -333,9 +349,17 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
     sheet.setAdapter(userAdapter)
 
     GrpcClient.getContacts(username) { contacts ->
-        activity.runOnUiThread {
-            sheet.setLoading(false)
-            userAdapter.setUsers(contacts)
+        val currentContacts = contacts.toSet()
+        activity.lifecycleScope.launch {
+            GrpcClient.allUsers.collect { allUsersList ->
+                val filtered = allUsersList
+                    .map { it.username }
+                    .filter { it != username }
+                activity.runOnUiThread {
+                    sheet.setLoading(false)
+                    userAdapter.setUsers(filtered)
+                }
+            }
         }
     }
 
