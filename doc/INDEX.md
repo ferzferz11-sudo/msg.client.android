@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.2.0.0 | **Updated:** 2026-06-18
+**Version:** v1.2.0.4 | **Updated:** 2026-06-18
 
 ---
 
@@ -36,33 +36,34 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | 163 |
-| Total LOC | ~40,449 |
-| Activities | 30 |
+| Kotlin files | ~160 |
+| Total LOC | ~39,000 |
+| Activities | 28 |
 | gRPC modules | 21 |
-| Unit tests | 9 files, ~5.5% coverage |
-| Layout XML | 109 |
+| Unit tests | 9 files |
+| Layout XML | 108 |
 | String entries | 767 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
+| Branch | feat/1.2.0.x (v2 server) |
 
 ---
 
 ## Architecture Overview
 
 ```
-GrpcClient (facade, 711 LOC)
-  └── RealGrpcClient (883 LOC) — orchestrator
+GrpcClient (facade, ~700 LOC)
+  └── RealGrpcClient (~880 LOC) — orchestrator
         ├── GrpcConnectionManager, GrpcAuthClient, GrpcTypingClient
         ├── GrpcCallClient, GrpcChatListClient, GrpcProfileClient
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient, GrpcMarshallers
-        ├── HermesGrpc (1872), OwlGrpc (1146) — AI
+        ├── HermesGrpc, OwlGrpc — AI
         └── AiChatGrpc, SecretChatGrpc, ProfileClient
 
-ChatListActivity (382) → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity (755) → 6 delegates (toolbar, input, selection, search, E2EE, menu)
-ProfileActivity (719) — monolithic, not refactored
+ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
+NewChatActivity → 6 delegates (toolbar, input, selection, search, E2EE, menu)
+ProfileActivity — monolithic, not refactored
 ```
 
 ---
@@ -82,6 +83,9 @@ ProfileActivity (719) — monolithic, not refactored
 11. Do not add new features without explicit request
 12. Do not refactor working code without explicit request
 13. All errors via `ErrorHandler.handle()` — NOT direct `Log.e`
+14. v2 server only — no v1 legacy fallbacks in client code
+15. All chat activities must call `WindowCompat.setDecorFitsSystemWindows(window, false)` in onCreate
+16. Chat toolbars must use fixed `@dimen/custom_toolbar_height`, elevation 0dp
 
 ---
 
@@ -91,3 +95,13 @@ ProfileActivity (719) — monolithic, not refactored
 |--|-----|------|
 | gRPC | 50052 | 50051 |
 | HTTP | 8083 | 8082 |
+
+---
+
+## Branches
+
+| Branch | Purpose |
+|--------|---------|
+| `master` | Production (v1.1.3.38) |
+| `feat/1.2.0.x` | v2 server development (current) |
+| `feat/1.1.3.x` | Previous release (merged to master) |

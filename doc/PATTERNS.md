@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.1.3.38 | **Updated:** 2026-06-18
+**Version:** v1.2.0.4 | **Updated:** 2026-06-18
 
 ---
 
@@ -8,25 +8,24 @@
 
 ### GrpcClient Facade Pattern
 ```
-GrpcClient (facade, 711 LOC) — StateFlow declarations + inline domain delegates
+GrpcClient (facade, ~700 LOC) — StateFlow declarations + inline domain delegates
     ├── StateFlow/SharedFlow declarations (15)
     ├── Mutable state properties (4)
-    ├── V2 service detection (4)
     ├── Core lifecycle: connect, disconnect, startChat, loadHistory
     └── Domain methods: signInV2, getChats, sendMessage, etc. (inline delegates)
 
-RealGrpcClient (orchestrator, 883 LOC) delegates to:
+RealGrpcClient (orchestrator, ~880 LOC) delegates to:
 ├── GrpcConnectionManager (167) — connect/reconnect/disconnect
-├── GrpcAuthClient (232) — JWT auth
+├── GrpcAuthClient (232) — JWT auth (v2 only)
 ├── GrpcTypingClient (87) — typing stream
 ├── GrpcCallClient (125) — calls
-├── GrpcChatListClient (642) — chat list, pin/search/archive
+├── GrpcChatListClient (647) — chat list, pin/search/archive
 ├── GrpcProfileClient (506) — profile, avatar, contacts, themes
 ├── GrpcDraftClient (86) — drafts
 ├── GrpcFavoritesClient (120) — favorites
 ├── GrpcMessageClient (345) — messages, history, reactions, mark read
 ├── GrpcServerDiscoveryClient (145) — server discovery
-└── GrpcMarshallers (1395) — 111 marshaller classes
+└── GrpcMarshallers (~1500) — all marshaller classes
 ```
 - Each module: separate class with clear responsibility
 - DI via constructor (no framework)
@@ -36,17 +35,28 @@ RealGrpcClient (orchestrator, 883 LOC) delegates to:
 
 ### ChatListActivity Modular Pattern
 ```
-ChatListActivity (382) — onCreate, setupUI, lifecycle, proxy methods
-├── ChatListToolbar (232) — toolbar + settings sheets
-├── ChatListTabs (30) — tabs (All/Groups/AI Chats)
-├── ChatListActionMode (120) — selection mode
-├── ChatListSearch (56) — search
-├── ChatListFABs (470) — FABs + action sheets + AI bottom sheet
-├── ChatListNavigation (60) — navigateToChat
-├── ChatListAuth (212) — auth dialogs
-├── ChatListViewModel (302) — ViewModel with StateFlow
-├── ChatListSections (20) — sections
-└── UpdateCoordinator (245) — updates
+ChatListActivity — onCreate, setupUI, lifecycle, proxy methods
+├── ChatListToolbar — toolbar + settings sheets
+├── ChatListTabs — tabs (All/Groups/AI Chats)
+├── ChatListActionMode — selection mode
+├── ChatListSearch — search
+├── ChatListFABs — FABs + action sheets + AI bottom sheet
+├── ChatListNavigation — navigateToChat
+├── ChatListAuth — auth dialogs
+├── ChatListViewModel — ViewModel with StateFlow
+├── ChatListSections — sections
+└── UpdateCoordinator — updates
+```
+
+### Chat Delegates Pattern (NewChatActivity)
+```
+NewChatActivity → 6 delegates:
+├── ChatToolbarDelegate — toolbar, avatar, subtitle, navigation
+├── ChatInputDelegate — text input, send, attachments, audio, emoji, mentions
+├── ChatSelectionDelegate — selection mode, copy/pin/delete/forward
+├── ChatSearchDelegate — in-chat search
+├── ChatE2EEDelegate — end-to-end encryption for secret chats
+├── ChatMessageMenuDelegate — reactions, context menu
 ```
 - При выносе: `internal` для полей/методов, прокси-методы в Activity
 - Top-level internal fun файлы в том же пакете — нужны явные импорты
@@ -59,21 +69,32 @@ Activity → Coordinator → Manager → Utils. Activity только созда
 Drag handle автоматически. Dismiss listener через `setOnDismissListener`.
 
 ### Bearer Token Interceptor Pattern
-- Подставляет JWT во все gRPC вызовы (кроме AuthService, Chat stream)
-- No-op если токен null (совместимость с v1)
+- Подставляет JWT во все gRPC вызовы (кроме AuthService)
+- v2 only — нет fallback на v1
 - Proactive refresh каждые 60с, за 5 мин до истечения
 - Per-server validation: токены привязаны к серверу
+- **ensureFreshToken()** — синхронный refresh перед Chat stream
+
+### JWT Auth Pattern (v2 Only)
+```
+AuthManager: storeTokens, getAccessToken, isTokenExpiredOrExpiring
+BearerTokenInterceptor: attach JWT to all calls except AuthService
+SessionManager: ensureFreshToken() sync refresh before chat stream
+Token refresh: proactive every 60s + sync before chat stream
+```
 
 ### Server Switch Pattern
 - `serverAddress` сохраняется ТОЛЬКО после успешного `SessionManager.login()`
 - НЕ сохранять до входа — двойной вход
 
-### ChatStream v2 Auth Pattern
+### ChatStream Auth Pattern (v2 Only)
 ```kotlin
-if (ProfileClient.isChatV2Supported()) {
-    token?.let { builder.setJwtToken(it) } ?: builder.setPassword(password)
+SessionManager.ensureFreshToken(context) // sync refresh if needed
+val accessToken = AuthManager.getAccessToken(context)
+if (!accessToken.isNullOrEmpty()) {
+    firstMessageBuilder.setJwtToken(accessToken)
 } else {
-    builder.setPassword(password)
+    firstMessageBuilder.setPassword(password) // fallback
 }
 ```
 
@@ -82,9 +103,18 @@ if (ProfileClient.isChatV2Supported()) {
 - Keepalive: 30s interval, 10s timeout, idleTimeout 25min
 - Reconnect только при FAILED, не при shutdownNow
 
-### Server Version Detection
-- Dev (50052): skip HTTP, assume v2
-- Prod (50051): try HTTP /info, fallback v1
+### Toolbar Pattern (Contacts Style)
+```xml
+<MaterialToolbar
+    android:layout_height="@dimen/custom_toolbar_height"
+    android:background="@drawable/toolbar_background"
+    android:elevation="0dp"
+    app:navigationIcon="@drawable/ic_back_arrow"
+    app:navigationIconTint="?attr/colorOnPrimary" />
+```
+- Fixed height, not wrap_content
+- Elevation 0dp (handled by toolbar_background drawable)
+- `setDecorFitsSystemWindows(window, false)` required in Activity.onCreate
 
 ### getChats() Callback Pattern
 - Всегда вызывать callback (success/error/timeout)
@@ -97,63 +127,33 @@ Server: MarkRead → Broadcast("READ_ALL:username") → Hub → All clients
   → RealGrpcClient.chatStream → handleReadAllSignal()
   → GrpcMessageClient.onReadReceipt(targetRoomId, reader)
   → RealGrpcClient._readReceiptEvent.emit(Pair(roomId, reader))
-  → ChatListViewModel → clear unread count
 ```
 
----
-
-## Правила
-
-### Kotlin
-- `is` не `instanceof`; прямой доступ к proto полям: `proto.fieldName`
-- `cont.resume(value, onCancellation = {})` — обязательно в Kotlin 2.3.21
-- CancellationException ловить ОТДЕЛЬНО, re-throw, НЕ показывать toast
-- Channel(UNLIMITED) + flow{} + trySend() вместо callbackFlow/awaitClose
-
-### Error Handling
-- Все Toast ошибки дублировать в AppLog.error()
-- CancellationException → AppLog.info() (не ERROR)
-- gRPC StatusRuntimeException → AppLog.error() с кодом статуса
-
-### Темы
-- НЕ использовать `?attr/` в XML для текста на кастомных тёмных темах
-- Цвета программно через ThemeUtils.parseSafeColor()
-- ThemeApplier.apply() ДО setContentView()
-
-### Сборка
-- ⚠️ НЕ компилировать Android на сервере (OOM)
-- `compileDebugKotlin` / `assembleRelease` — ТОЛЬКО локально
-
-### i18n (ОБЯЗАТЕЛЬНО)
-- ВСЕ user-facing строки в `values/strings.xml` (en) + `values-ru/strings.xml` (ru)
-- Приложение: "Lava" (en) / "Лава" (ru)
-- НЕ инициализировать getString() в полях Activity (crash до onCreate)
-- Проверка: `grep -rn '"[А-Яа-я]' app/src/main/java/ --include="*.kt" | grep -v "R\.string"` → 0 результатов
-
-### Версии
-- Версия Android в `version.txt`
-- НЕ менять версию без явного указания пользователя
+### Marshallers Pattern
+- Custom marshallers for each proto type (not using protobuf-java reflection)
+- Request marshallers: serialize all fields
+- Response marshallers: parse by field number, skip unknown fields
+- v2 fields (isPinned, isMuted, etc.) must be included in parser
 
 ---
 
-## Серверы
+## Rules
 
-| | Dev | Prod |
-|--|-----|------|
-| gRPC | 50052 | 50051 |
-| HTTP | 8083 | 8082 |
-| Сервис | lavender-server-dev | lavender-server |
-| DB | chat_db_dev | chat_db |
-
----
-
-## ID Naming Convention
-
-| Префикс | Тип | Пример |
-|---------|-----|--------|
-| `btn_` | Кнопки | `btnSend` |
-| `et_` | Поля ввода | `etSearch` |
-| `tv_` | Текст | `tvChatName` |
-| `iv_` | Изображения | `ivAvatar` |
-| `rv_` | RecyclerView | `rvChatList` |
-| `fab_` | FAB | `fabAi` |
+1. Do NOT compile Android on server (OOM)
+2. Do NOT deploy to prod without explicit instruction
+3. Commit after each significant change
+4. userId (UUID) — always as key, NOT username
+5. i18n: all new strings simultaneously in values/strings.xml + values-ru/strings.xml
+6. Do NOT initialize getString() in Activity class fields
+7. Kotlin 2.3.21: cont.resume(value, onCancellation = {})
+8. No forceReconnect — one connect at start, reconnect only on FAILED
+9. Favorites — not a section in list, but a separate chat (type="favorites")
+10. When extracting code from Activity — `internal` for fields/methods, proxy methods in Activity
+11. Do not add new features without explicit request
+12. Do not refactor working code without explicit request
+13. All errors via `ErrorHandler.handle()` — NOT direct `Log.e`
+14. v2 server only — no v1 legacy fallbacks
+15. All chat activities must call `setDecorFitsSystemWindows(window, false)`
+16. Chat toolbars: fixed `@dimen/custom_toolbar_height`, elevation 0dp
+17. Always include v2 proto fields in marshallers
+18. Ensure JWT token freshness before Chat stream via `ensureFreshToken()`
