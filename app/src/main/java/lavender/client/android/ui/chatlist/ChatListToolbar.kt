@@ -61,7 +61,7 @@ internal fun showSettingsSheet(activity: ChatListActivity) {
         shareApp(activity)
     }
 
-    sheet.findViewById<View>(R.id.actionEditProfile)?.setOnClickListener {
+    sheet.findViewById<View>(R.id.headerSection)?.setOnClickListener {
         sheet.dismiss()
         activity.startActivity(Intent(activity, EditProfileActivity::class.java).apply {
             putExtra("USERNAME", username)

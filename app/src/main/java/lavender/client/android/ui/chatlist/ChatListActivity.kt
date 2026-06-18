@@ -152,7 +152,7 @@ class ChatListActivity : AppCompatActivity() {
                 val alpha = (0.8f * 255).toInt() // 80% opacity = 30% transparent
                 if (color != 0) {
                     val shape = android.graphics.drawable.GradientDrawable().apply {
-                        shapeType = android.graphics.drawable.GradientDrawable.RECTANGLE
+                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                         setColor(android.graphics.Color.argb(alpha, android.graphics.Color.red(color), android.graphics.Color.green(color), android.graphics.Color.blue(color)))
                     }
                     tb.background = shape
