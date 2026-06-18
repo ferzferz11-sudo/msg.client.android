@@ -219,7 +219,7 @@ class GrpcAuthClientTest {
                 .onMessage(SimpleAuthResponseProto(success = true, message = "Signed out"))
         }
 
-        val resultRef = AtomicReference<Boolean?>()
+        val resultRef = AtomicReference<Boolean>(false)
         val errorRef = AtomicReference<String?>()
 
         client.signOut("some-token") { s, err ->
@@ -240,7 +240,7 @@ class GrpcAuthClientTest {
                 .onMessage(SimpleAuthResponseProto(success = true, message = "Device revoked"))
         }
 
-        val resultRef = AtomicReference<Boolean?>()
+        val resultRef = AtomicReference<Boolean>(false)
         val errorRef = AtomicReference<String?>()
 
         client.revokeDevice("device-to-revoke") { s, err ->

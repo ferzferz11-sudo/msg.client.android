@@ -75,7 +75,7 @@ class GrpcChatListClientTest {
                 .onMessage(GetChatsResponseProto())
         }
 
-        var result: List<ChatInfo>? = "not-called"
+        var result: List<ChatInfo>? = null
         client.getChats(username = "testuser", callback = { result = it })
         assertNull("Result should be null for empty response", result)
     }
@@ -86,7 +86,7 @@ class GrpcChatListClientTest {
             getChannel = { null }, getUserId = { "user-uuid" }, getUsername = { "testuser" },
             chatDeletedEvent = chatDeletedEvent, allUsers = allUsers, serverTime = serverTime, scope = scope
         )
-        var result: List<ChatInfo>? = "not-called"
+        var result: List<ChatInfo>? = null
         nullChannelClient.getChats(username = "testuser", callback = { result = it })
         assertNotNull("Result should not be null", result)
         assertTrue("Result should be empty list", result!!.isEmpty())
@@ -102,7 +102,7 @@ class GrpcChatListClientTest {
                 .onClose(Status.UNAVAILABLE.withDescription("Server unavailable"), Metadata())
         }
 
-        var result: List<ChatInfo>? = "not-called"
+        var result: List<ChatInfo>? = null
         client.getChats(username = "testuser", callback = { result = it })
         assertNotNull("Result should not be null", result)
         assertTrue("Result should be empty list on error", result!!.isEmpty())
@@ -131,7 +131,7 @@ class GrpcChatListClientTest {
         }
 
         var success = false
-        client.deleteChat("chat-1", "user-1", "testuser") { s, _ -> success = s }
+        client.deleteChat("chat-1", "testuser") { s, _ -> success = s }
         assertTrue("Delete should succeed", success)
     }
 
@@ -146,7 +146,7 @@ class GrpcChatListClientTest {
         }
 
         var chatId: String? = null
-        client.createDirectChat("user1", "user2", callback = { chatId = it })
+        client.createDirectChat("user1", "user2") { chatId = it }
         assertEquals("Chat ID", "new-chat-id", chatId)
     }
 
