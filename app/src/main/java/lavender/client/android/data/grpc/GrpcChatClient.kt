@@ -3,30 +3,20 @@ package lavender.client.android.data.grpc
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 
-/**
- * Chat list core operations: getChats, create/delete chats, manage participants, settings.
- *
- * Extracted from RealGrpcClient v1.1.3.25.
- * ChatList v2 → GrpcChatListV2Client, Users/AI/FCM/Mute → GrpcChatAuxClient.
- */
-class GrpcChatListClient(
+class GrpcChatClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
     private val getUsername: () -> String?,
-    private val chatDeletedEvent: kotlinx.coroutines.flow.MutableStateFlow<String?>,
-    private val allUsers: kotlinx.coroutines.flow.MutableStateFlow<List<UserInfoProto>>,
-    private val serverTime: kotlinx.coroutines.flow.MutableStateFlow<com.google.protobuf.Timestamp?>,
     private val scope: kotlinx.coroutines.CoroutineScope
 ) {
     companion object {
-        private const val TAG = "GrpcChatListClient"
+        private const val TAG = "GrpcChatClient"
     }
-
-    // ======= Chat List =======
 
     fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
         val currentChannel = getChannel()
@@ -103,15 +93,13 @@ class GrpcChatListClient(
                 })
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatListClient.getAllChats", "Status: ${status.code} — ${status.description}")
+                if (!status.isOk) ErrorHandler.handle("GrpcChatClient.getAllChats", "Status: ${status.code} — ${status.description}")
             }
         }, io.grpc.Metadata())
         call.sendMessage(GetAllChatsRequestProto())
         call.halfClose()
         call.request(1)
     }
-
-    // ======= Chat Management =======
 
     fun getChatListVersion(username: String, callback: (Long) -> Unit) {
         val currentChannel = getChannel() ?: return
@@ -146,7 +134,9 @@ class GrpcChatListClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
             override fun onMessage(message: DeleteChatResponseProto) {
-                if (message.success) { scope.launch(Dispatchers.IO) {} }
+                if (message.success) {
+                    scope.launch(Dispatchers.IO) { }
+                }
                 callback(message.success, message.message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
@@ -171,7 +161,9 @@ class GrpcChatListClient(
         )
         call.start(object : io.grpc.ClientCall.Listener<DeleteChatResponseProto>() {
             override fun onMessage(message: DeleteChatResponseProto) {
-                if (message.success) { scope.launch(Dispatchers.IO) {} }
+                if (message.success) {
+                    scope.launch(Dispatchers.IO) { }
+                }
                 callback(message.success, message.message)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {

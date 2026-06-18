@@ -160,6 +160,28 @@ object RealGrpcClient {
         scope = scope
     )
 
+    // ====== Module: Chat Client (core chat ops) ======
+    private val chatClient = GrpcChatClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        getUsername = { currentUsername },
+        scope = scope
+    )
+
+    // ====== Module: ChatList v2 Client ======
+    private val chatListV2Client = GrpcChatListV2Client(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId }
+    )
+
+    // ====== Module: Chat Aux Client (users/AI/FCM/mute) ======
+    private val chatAuxClient = GrpcChatAuxClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        allUsers = _allUsers,
+        serverTime = _serverTime
+    )
+
     // ====== Module: Profile Client ======
     private val profileClient = GrpcProfileClient(
         getChannel = { getChannel() },
@@ -169,7 +191,7 @@ object RealGrpcClient {
         fullAvatarCache = fullAvatarCache,
         avatarCacheFlow = avatarCacheFlow,
         scope = scope,
-        fetchUserId = { username, cb -> chatListClient.fetchUserId(username, cb) },
+        fetchUserId = { username, cb -> chatAuxClient.fetchUserId(username, cb) },
         setUserId = { id -> currentUserId = id }
     )
 
@@ -635,26 +657,26 @@ object RealGrpcClient {
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) { messageClient.markRead(rid, u, _connectionStatus.value, onComp) }
 
     // ====== Chat List (delegated) ======
-    fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) { chatListClient.getChats(username, skipCache, callback) }
-    fun getAllChats(callback: (List<ChatInfo>) -> Unit) { chatListClient.getAllChats(callback) }
-    fun getChatListVersion(u: String, cb: (Long) -> Unit) { chatListClient.getChatListVersion(u, cb) }
-    fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatListClient.registerToken(user, token, pushEnabled) }
-    fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatListClient.fetchUserId(username, callback) }
-    fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatListClient.loadAllUsers(cb) }
-    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) { chatListClient.getAIChats(userId, callback) }
-    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) { chatListClient.renameAIChat(chatId, userId, newName, callback) }
-    fun getMutedChats(callback: (List<String>) -> Unit) { chatListClient.getMutedChats(callback) }
-    fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatListClient.setMutedChat(roomId, muted, callback) }
-    fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatListClient.deleteChat(cid, requesterUsername, cb) }
-    fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) { chatListClient.deleteChatWithUserId(cid, userId, username, cb) }
-    fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) { chatListClient.createDirectChat(u1, u2, cb) }
-    fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) { chatListClient.createGroupChat(n, ps, c, type, cb) }
-    fun updateChatAvatar(cid: String, a: String, u: String, fa: String, cb: (Boolean, String) -> Unit) { chatListClient.updateChatAvatar(cid, a, u, fa, cb) }
-    fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) { chatListClient.updateChatSettings(chatId, allowAdd, callback) }
-    fun updateChatName(cid: String, n: String, cb: (Boolean, String) -> Unit) { chatListClient.updateChatName(cid, n, cb) }
-    fun addParticipants(cid: String, us: List<String>, cb: (Boolean, String) -> Unit) { chatListClient.addParticipants(cid, us, cb) }
-    fun addParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatListClient.addParticipant(cid, u, cb) }
-    fun removeParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatListClient.removeParticipant(cid, u, cb) }
+    fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) { chatClient.getChats(username, skipCache, callback) }
+    fun getAllChats(callback: (List<ChatInfo>) -> Unit) { chatClient.getAllChats(callback) }
+    fun getChatListVersion(u: String, cb: (Long) -> Unit) { chatClient.getChatListVersion(u, cb) }
+    fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatAuxClient.registerToken(user, token, pushEnabled) }
+    fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatAuxClient.fetchUserId(username, callback) }
+    fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatAuxClient.loadAllUsers(cb) }
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) { chatAuxClient.getAIChats(userId, callback) }
+    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) { chatAuxClient.renameAIChat(chatId, userId, newName, callback) }
+    fun getMutedChats(callback: (List<String>) -> Unit) { chatAuxClient.getMutedChats(callback) }
+    fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatAuxClient.setMutedChat(roomId, muted, callback) }
+    fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChat(cid, requesterUsername, cb) }
+    fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChatWithUserId(cid, userId, username, cb) }
+    fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) { chatClient.createDirectChat(u1, u2, cb) }
+    fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) { chatClient.createGroupChat(n, ps, c, type, cb) }
+    fun updateChatAvatar(cid: String, a: String, u: String, fa: String, cb: (Boolean, String) -> Unit) { chatClient.updateChatAvatar(cid, a, u, fa, cb) }
+    fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) { chatClient.updateChatSettings(chatId, allowAdd, callback) }
+    fun updateChatName(cid: String, n: String, cb: (Boolean, String) -> Unit) { chatClient.updateChatName(cid, n, cb) }
+    fun addParticipants(cid: String, us: List<String>, cb: (Boolean, String) -> Unit) { chatClient.addParticipants(cid, us, cb) }
+    fun addParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatClient.addParticipant(cid, u, cb) }
+    fun removeParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatClient.removeParticipant(cid, u, cb) }
 
     // ====== Profile (delegated) ======
     fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) { profileClient.getDevices(uid, cb) }
@@ -724,141 +746,21 @@ object RealGrpcClient {
     }
 
     // ====== ChatList v2 (delegated to unaryCallChatListV2) ======
-    suspend fun pinChat(chatId: String): Boolean {
-        val userId = currentUserId ?: return false
-        return unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/PinChat",
-            request = PinChatRequestProto(userId = userId, chatId = chatId),
-            responseType = PinChatResponseProto::class.java,
-            requestMarshaller = PinChatRequestMarshaller()
-        )?.success ?: false
-    }
+    suspend fun pinChat(chatId: String): Boolean = chatListV2Client.pinChat(chatId)
 
-    suspend fun unpinChat(chatId: String): Boolean {
-        val userId = currentUserId ?: return false
-        return unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/UnPinChat",
-            request = UnPinChatRequestProto(userId = userId, chatId = chatId),
-            responseType = UnPinChatResponseProto::class.java,
-            requestMarshaller = UnPinChatRequestMarshaller()
-        )?.success ?: false
-    }
+    suspend fun unpinChat(chatId: String): Boolean = chatListV2Client.unpinChat(chatId)
 
-    suspend fun searchChats(query: String, limit: Int, offset: Int): List<ChatInfo> {
-        val userId = currentUserId ?: return emptyList()
-        val response = unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/SearchChats",
-            request = SearchChatsRequestProto(userId = userId, query = query, limit = limit, offset = offset),
-            responseType = SearchChatsResponseProto::class.java,
-            requestMarshaller = SearchChatsRequestMarshaller()
-        )
-        return response?.chats?.map { proto ->
-            ChatInfo(
-                id = proto.id, name = proto.name, type = proto.type,
-                participants = proto.participants,
-                createdAt = proto.createdAt?.seconds ?: 0L,
-                unreadCount = proto.unreadCount,
-                lastMessageTime = proto.lastMessageTime?.seconds ?: 0L,
-                creator = proto.creator, lastMessageText = proto.lastMessageText,
-                avatarUrl = proto.avatarUrl, fullAvatarUrl = proto.fullAvatarUrl,
-                lastMessageUsername = proto.lastMessageUsername,
-                lastMessageHasImage = proto.lastMessageHasImage,
-                allowMembersToAdd = proto.allowMembersToAdd,
-                isPinned = proto.isPinned, isMuted = proto.isMuted,
-                isArchived = proto.isArchived, pinnedAt = proto.pinnedAt
-            )
-        } ?: emptyList()
-    }
+    suspend fun searchChats(query: String, limit: Int, offset: Int): List<ChatInfo> = chatListV2Client.searchChats(query, limit, offset)
 
-    suspend fun archiveChat(chatId: String): Boolean {
-        val userId = currentUserId ?: return false
-        return unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/ArchiveChat",
-            request = ArchiveChatRequestProto(userId = userId, chatId = chatId),
-            responseType = ArchiveChatResponseProto::class.java,
-            requestMarshaller = ArchiveChatRequestMarshaller()
-        )?.success ?: false
-    }
+    suspend fun archiveChat(chatId: String): Boolean = chatListV2Client.archiveChat(chatId)
 
-    suspend fun unarchiveChat(chatId: String): Boolean {
-        val userId = currentUserId ?: return false
-        return unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/UnarchiveChat",
-            request = UnarchiveChatRequestProto(userId = userId, chatId = chatId),
-            responseType = UnarchiveChatResponseProto::class.java,
-            requestMarshaller = UnarchiveChatRequestMarshaller()
-        )?.success ?: false
-    }
+    suspend fun unarchiveChat(chatId: String): Boolean = chatListV2Client.unarchiveChat(chatId)
 
-    suspend fun pinMessage(chatId: String, messageId: String): Boolean {
-        val userId = currentUserId ?: return false
-        return unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/PinMessage",
-            request = PinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
-            responseType = PinMessageResponseProto::class.java,
-            requestMarshaller = PinMessageRequestMarshaller()
-        )?.success ?: false
-    }
+    suspend fun pinMessage(chatId: String, messageId: String): Boolean = chatListV2Client.pinMessage(chatId, messageId)
 
-    suspend fun unpinMessage(chatId: String, messageId: String): Boolean {
-        val userId = currentUserId ?: return false
-        return unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/UnPinMessage",
-            request = UnPinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
-            responseType = UnPinMessageResponseProto::class.java,
-            requestMarshaller = UnPinMessageRequestMarshaller()
-        )?.success ?: false
-    }
+    suspend fun unpinMessage(chatId: String, messageId: String): Boolean = chatListV2Client.unpinMessage(chatId, messageId)
 
-    suspend fun getPinnedMessages(chatId: String): List<Message> {
-        val userId = currentUserId ?: return emptyList()
-        val response = unaryCallChatListV2(
-            fullMethod = "messenger.ChatService/GetPinnedMessages",
-            request = GetPinnedMessagesRequestProto(userId = userId, chatId = chatId),
-            responseType = GetPinnedMessagesResponseProto::class.java,
-            requestMarshaller = GetPinnedMessagesRequestMarshaller()
-        )
-        return response?.messages?.map { proto ->
-            Message(id = proto.id, user = proto.user, text = proto.text, timestamp = proto.createdAt?.seconds ?: 0L)
-        } ?: emptyList()
-    }
-
-    // ====== Low-level unary call helper (kept for v2 ChatList methods) ======
-    @Suppress("DEPRECATION", "UNCHECKED_CAST")
-    private suspend fun <ReqT, RespT> unaryCallChatListV2(
-        fullMethod: String, request: ReqT, responseType: Class<RespT>,
-        requestMarshaller: io.grpc.MethodDescriptor.Marshaller<ReqT>? = null
-    ): RespT? = suspendCancellableCoroutine { cont ->
-        val ch = getChannel()
-        if (ch == null) { cont.resume(null, onCancellation = {}); return@suspendCancellableCoroutine }
-        val rm = requestMarshaller ?: object : io.grpc.MethodDescriptor.Marshaller<ReqT> {
-            override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-            override fun parse(stream: java.io.InputStream): ReqT = request
-        }
-        val method = io.grpc.MethodDescriptor.newBuilder<ReqT, RespT>()
-            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName(fullMethod)
-            .setRequestMarshaller(rm)
-            .setResponseMarshaller(object : io.grpc.MethodDescriptor.Marshaller<RespT> {
-                override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                @Suppress("DEPRECATION")
-                override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
-            })
-            .build()
-        val call = ch.newCall(method, io.grpc.CallOptions.DEFAULT)
-        val listener = object : io.grpc.ClientCall.Listener<RespT>() {
-            private var response: RespT? = null
-            override fun onMessage(message: RespT) { response = message }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (status.isOk) cont.resume(response, onCancellation = {})
-                else { Log.w(TAG, "ChatList V2 call failed: ${status.code}"); cont.resume(null, onCancellation = {}) }
-            }
-        }
-        call.start(listener, io.grpc.Metadata())
-        call.sendMessage(request)
-        call.halfClose()
-        call.request(1)
-    }
+    suspend fun getPinnedMessages(chatId: String): List<Message> = chatListV2Client.getPinnedMessages(chatId)
 
     // ====== Helpers ======
     private fun getMessageHash(message: Message): String =
