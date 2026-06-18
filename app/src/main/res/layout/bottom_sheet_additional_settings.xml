@@ -95,17 +95,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/actionLogs"
-        style="@style/MenuActionItemStyle">
-        <ImageView
-            style="@style/MenuActionIconStyle"
-            android:src="@drawable/ic_logs" />
-        <TextView
-            style="@style/MenuActionTextStyle"
-            android:text="@string/error_log" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/actionDeleteProfile"
         style="@style/MenuActionItemStyle">
         <ImageView

@@ -130,11 +130,6 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
         activity.startActivity(Intent(activity, lavender.client.android.NotificationActivity::class.java))
     }
 
-    sheet.findViewById<View>(R.id.actionLogs)?.setOnClickListener {
-        sheet.dismiss()
-        activity.startActivity(Intent(activity, lavender.client.android.ui.LogViewerActivity::class.java))
-    }
-
     sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {
         sheet.dismiss()
         try {
