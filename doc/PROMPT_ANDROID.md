@@ -1,12 +1,12 @@
 # Lava Messenger — Android Session Prompt
 
-**Дата:** 2026-06-17 | **Версия:** v1.1.3.34 | **Ветка:** feat/1.1.3.x
+**Дата:** 2026-06-17 | **Версия:** v1.1.3.35 | **Ветка:** feat/1.1.3.x
 
 ---
 
 ## СТАТУС
 
-v1.1.3.34 — в разработке. Фаза 3: Unit-тесты для gRPC клиента.
+v1.1.3.35 — планирование. Фаза 3 завершена (42 unit-теста). Фаза 4: GrpcClient facade оптимизация.
 
 ---
 
@@ -66,18 +66,24 @@ RealGrpcClient (orchestrator, 882 LOC)
 
 ## ПРИОРИТЕТЫ
 
-### ✅ Завершено (v1.1.3.33)
-- Фаза 0: Тестирование v1.1.3.32 на реальных чатах ✅
+### ✅ Завершено
+- Фаза 0: Тестирование v1.1.3.32 ✅
 - Фаза 1: NewChatActivity рефакторинг (1473→754 LOC, -49%) ✅
 - Фаза 2: Унификация error handling ✅
+- Фаза 3: Unit-тесты для gRPC клиента (42 теста) ✅ v1.1.3.34
 
-### 🟡 Текущая (v1.1.3.34)
-1. **Фаза 3: Unit-тесты для gRPC клиента** — 0 тестов → >20
-   - Подробный план см. ниже
+### 🟡 Текущая (v1.1.3.35)
+1. **Фаза 4: GrpcClient facade оптимизация** (780→<400 LOC)
+   - Заменить proxy-методы на extension functions
+   - Группировать по доменам
+   - Подробный план: `doc/ANALYSIS_AND_PLAN.md`
 
-### 🟢 Следующие (v1.1.3.35-36)
-2. **Фаза 4** (v1.1.3.35): GrpcClient facade оптимизация (780→<400 LOC)
-3. **Фаза 5** (v1.1.3.36): AI Chats domain layer (выделение из gRPC слоя)
+### 🟢 Следующие
+2. **Фаза 5** (v1.1.3.36): AI Chats domain layer (HermesGrpc 1876 + OwlGrpc 1145 → domain)
+3. **Фаза 6** (v1.1.3.37): NewChatActivity финальный рефакторинг (754→<400 LOC)
+4. **Фаза 7** (v1.1.3.38): ProfileActivity рефакторинг (719→<300 LOC)
+5. **Фаза 8** (v1.1.3.39): GrpcChatListClient разделение (642→3x200)
+6. **Фаза 9** (v1.1.3.40): MessageAdapter разделение (870→<300 LOC)
 
 ### 📦 Отложено
 - Pagination для чатов
@@ -85,170 +91,45 @@ RealGrpcClient (orchestrator, 882 LOC)
 - Certificate pinning
 - Qdrant + CLIP
 - Shared element transitions
-- ProfileActivity рефакторинг (719 LOC)
 - ConferenceLobbyActivity рефакторинг (581 LOC)
 
 ---
 
-## ПЛАН РЕАЛИЗАЦИИ v1.1.3.34 — ФАЗА 3: UNIT-ТЕСТЫ ДЛЯ gRPC КЛИЕНТА
+## ПЛАН v1.1.3.35 — ФАЗА 4: GrpcClient FACADE ОПТИМИЗАЦИЯ
 
 ### Проблема
-0 unit-тестов для gRPC клиента. Код работает, но нет защиты от регрессий.
+GrpcClient — 780 facade-методов, каждый из которых просто делегирует вызов в `realGrpcClient`. 
 
-### Стратегия тестирования
+### Решение
+Заменить proxy-методы на extension functions + группировку по доменам.
 
-**Инструменты:**
-- JUnit 4 (уже используется в ErrorHandlerTest, ChatAdapterTest)
-- MockK для мокирования gRPC stubs
-- `grpc-inprocess` для in-process сервера (без реального сервера)
-- Turbine для тестирования Flow/StateFlow
+### Шаги
 
-**Структура тестов:**
-```
-app/src/test/java/lavender/client/android/data/grpc/
-├── GrpcAuthClientTest.kt      — 10 тестов
-├── GrpcChatListClientTest.kt  — 8 тестов
-├── GrpcMessageClientTest.kt   — 8 тестов
-├── GrpcConnectionManagerTest.kt — 6 тестов
-├── GrpcClientFacadeTest.kt    — 6 тестов
-└── GrpcUnaryCallHelperTest.kt — 4 теста
-```
+1. Создать `GrpcClientExtensions.kt` с extension functions:
+```kotlin
+// Auth domain
+fun GrpcClient.signInV2(...) = realGrpcClient.signInV2(...)
+fun GrpcClient.signUpV2(...) = realGrpcClient.signUpV2(...)
+fun GrpcClient.refreshToken(...) = realGrpcClient.refreshToken(...)
 
-### Детальный план по модулям
+// Chat domain  
+fun GrpcClient.getChats(...) = realGrpcClient.getChats(...)
+fun GrpcClient.getAllChats(...) = realGrpcClient.getAllChats(...)
 
-#### 1. GrpcAuthClientTest (10 тестов)
-Файл: `app/src/test/java/lavender/client/android/data/grpc/GrpcAuthClientTest.kt`
-
-```
-Тесты:
-- testSignInV2_Success — валидные credentials → success=true, token не пустой
-- testSignInV2_WrongPassword — неправильный пароль → success=false
-- testSignInV2_UserNotFound — несуществующий пользователь → success=false
-- testSignInV2_EmptyUsername — пустой username → success=false
-- testSignInV2_EmptyPassword — пустой password → success=false
-- testSignUpV2_Success — новый пользователь → success=true
-- testSignUpV2_DuplicateUsername — существующий username → success=false
-- testRefreshToken_Success — валидный refresh token → новая пара токенов
-- testSignOut_Success — валидный sign out → success=true
-- testRevokeDevice_Success — revoke device → success=true
-
-Мокирование:
-- ManagedChannel → mock, возвращает mock stub
-- Проверять callback-и через CountDownLatch
+// Message domain
+fun GrpcClient.sendMessage(...) = realGrpcClient.sendMessage(...)
+fun GrpcClient.loadHistory(...) = realGrpcClient.loadHistory(...)
 ```
 
-#### 2. GrpcChatListClientTest (8 тестов)
-Файл: `app/src/test/java/lavender/client/android/data/grpc/GrpcChatListClientTest.kt`
-
-```
-Тесты:
-- testGetChats_Success — сервер возвращает список чатов → callback с чатами
-- testGetChats_EmptyList — сервер возвращает пустой список → callback с emptyList
-- testGetChats_NullChannel — channel = null → callback с emptyList, без crash
-- testPinChat_V2Supported — v2 сервер → pin вызывается
-- testPinChat_V1Fallback — v1 сервер → возвращает false
-- testSearchChats_V2Supported — v2 сервер → search возвращает результаты
-- testSearchChats_V1Fallback — v1 сервер → возвращает emptyList
-- testDeleteChat_Success — delete chat → callback с success
-
-Мокирование:
-- ProfileClient.isChatV2Supported() → контролируем через mock
-- ManagedChannel → mock
-```
-
-#### 3. GrpcMessageClientTest (8 тестов)
-Файл: `app/src/test/java/lavender/client/android/data/grpc/GrpcMessageClientTest.kt`
-
-```
-Тесты:
-- testSendMessage_ValidMessage — message отправляется через requestObserver
-- testSendMessage_NullObserver — observer = null → нет crash, лог ошибки
-- testAddLocalMessage — message добавляется в StateFlow
-- testLoadHistory_Success — история загружается → messages StateFlow обновляется
-- testLoadHistory_CacheFirst — кэш загружается первым
-- testMarkRead_Ready — connection READY → markRead вызывается
-- testMarkRead_NotReady — connection не READY → pendingReads добавляется
-- testResendPendingReads — pending reads отправляются при reconnect
-
-Мокирование:
-- AppDatabase → in-memory Room database (androidTest)
-- StateFlow → проверяем значения через Turbine
-```
-
-#### 4. GrpcConnectionManagerTest (6 тестов)
-Файл: `app/src/test/java/lavender/client/android/data/grpc/GrpcConnectionManagerTest.kt`
-
-```
-Тесты:
-- testConnect_Success — валидный адрес → connectionStatus = READY
-- testConnect_AlreadyConnected — тот же адрес → без переподключения
-- testDisconnect — disconnect → connectionStatus = DISCONNECTED
-- testReconnect — reconnect → вызывается connect с forceReconnect
-- testIsConnectedTo_True — совпадение адреса + READY → true
-- testIsConnectedTo_False — другой адрес → false
-
-Мокирование:
-- OkHttpChannelBuilder → нельзя мокать напрямую, используем in-process канал
-- Или: тестируем через реальный in-process gRPC канал
-```
-
-#### 5. GrpcClientFacadeTest (6 тестов)
-Файл: `app/src/test/java/lavender/client/android/data/grpc/GrpcClientFacadeTest.kt`
-
-```
-Тесты:
-- testConnectionState_MapsReady — connectionStatus = READY → connectionState = true
-- testConnectionState_MapsDisconnected — connectionStatus = DISCONNECTED → connectionState = false
-- testStateFlow_ConnectionStatus — проброс connectionStatus из RealGrpcClient
-- testStateFlow_Messages — проброс messages из RealGrpcClient
-- testStateFlow_Error — проброс error из RealGrpcClient
-- testChatV2Supported_Delegates — isChatV2Supported делегирует в ProfileClient
-```
-
-#### 6. GrpcUnaryCallHelperTest (4 теста)
-Файл: `app/src/test/java/lavender/client/android/data/grpc/GrpcUnaryCallHelperTest.kt`
-
-```
-Тесты:
-- testUnaryCall_Success — валидный запрос → возвращает response
-- testUnaryCall_NullChannel — channel = null → возвращает null
-- testUnaryCall_Error — сервер возвращает error → возвращает null
-- testUnaryCallWithClass_Success — class-based variant → возвращает response
-```
-
-### Итого: ~42 теста
-
-### Подготовка инфраструктуры тестов
-
-1. **Добавить зависимости в build.gradle:**
-   ```
-   testImplementation "io.mockk:mockk:1.13.8"
-   testImplementation "app.cash.turbine:turbine:1.0.0"
-   testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
-   ```
-
-2. **Создать тестовые утилиты:**
-   - `TestChannelFactory` — создаёт mock ManagedChannel
-   - `TestDatabaseFactory` — создаёт in-memory Room database
-   - `FlowTestExtensions` — extension для тестирования StateFlow/SharedFlow
-
-3. **Порядок реализации:**
-   - Шаг 1: Добавить зависимости
-   - Шаг 2: Создать тестовые утилиты
-   - Шаг 3: GrpcAuthClientTest (самый независимый модуль)
-   - Шаг 4: GrpcUnaryCallHelperTest
-   - Шаг 5: GrpcChatListClientTest
-   - Шаг 6: GrpcMessageClientTest
-   - Шаг 7: GrpcConnectionManagerTest
-   - Шаг 8: GrpcClientFacadeTest
-   - Шаг 9: Исправление ошибок, финализация
+2. Убрать proxy-методы из `GrpcClient.kt`
+3. Оставить только: StateFlow declarations, scope, connect/disconnect, version checks
+4. Цель: GrpcClient < 300 LOC
 
 ### Критерии приёмки
-- [ ] Все 42 теста проходят (`./gradlew testDebugUnitTest`)
-- [ ] Покрытие gRPC модулей > 70%
-- [ ] Тесты изолированы (не зависят от порядка выполнения)
-- [ ] Тесты не требуют реального сервера
-- [ ] CI-совместимость (можно запускать в GitHub Actions)
+- [ ] GrpcClient < 300 LOC
+- [ ] Все вызовы из UI работают через extension functions
+- [ ] Тесты проходят
+- [ ] Нет изменений в поведении
 
 ---
 
@@ -290,6 +171,7 @@ cd /root/msg.client.android
 | `doc/SESSION_NOTES.md` | Заметки сессий (42-43) |
 | `doc/PATTERNS.md` | Паттерны и правила разработки |
 | `doc/CODE_AUDIT.md` | Аудит кода |
+| `doc/ANALYSIS_AND_PLAN.md` | Анализ + план оптимизации (v1.1.3.35-40) |
 | `doc/REMOTE_AGENT.md` | Remote Agent (справочная) |
 | `doc/ChatListActivity_v1_REFERENCE.kt` | v1 reference (2802 LOC) |
 | `../CHANGELOG.md` | История изменений |
@@ -298,36 +180,28 @@ cd /root/msg.client.android
 
 ## CHANGELOG
 
+### v1.1.3.35 (следующая) — GrpcClient facade оптимизация
+- refactor: GrpcClient 780→<400 LOC через extension functions
+- refactor: группировка proxy-методов по доменам
+
 ### v1.1.3.34 (сессия 43) — Unit-тесты для gRPC клиента
 - test: 42 unit-теста для gRPC модулей (Auth, ChatList, Message, ConnectionManager, Facade, UnaryCallHelper)
 - test: добавлены mockk, turbine, coroutines-test зависимости
-- test: созданы тестовые утилиты (TestChannelFactory, TestDatabaseFactory)
+- test: созданы тестовые утилиты (TestChannelFactory, FlowTestExtensions)
+- docs: оптимизация документации (удалены 9 устаревших файлов)
+- docs: создан ANALYSIS_AND_PLAN.md
 
 ### v1.1.3.33 (сессия 42) — NewChatActivity рефакторинг + Error handling
 - refactor: NewChatActivity 1473→754 LOC (-49%), 6 новых модулей в ui/chat/message/
 - refactor: унификация error handling — все gRPC модули используют ErrorHandler.handle()
-- feat: ChatListViewModel.error StateFlow + Snackbar в ChatListActivity
-- fix: исправлены ошибки компиляции (импорты Lifecycle, isVisible, toColorInt, edit)
 
 ### v1.1.3.32 (сессии 39-41) — ChatList stability + модуляризация
 - fix: loadChats() — при timeout НЕ перезаписывать allChats
-- fix: read receipts — indexOfFirst проверка перед map
-- refactor: ChatListActivity 1085→~600 LOC (-45%), 3 новых модуля (FABs, Navigation, Auth)
-- fix: табы переупорядочены: Все → Группы → ИИ чаты
-- fix: "AI" → "AI Chats" / "ИИ" → "ИИ чаты"
-- fix: исправлена ошибка компиляции в NewChatBottomSheet
+- refactor: ChatListActivity 1085→~600 LOC (-45%), 3 новых модуля
 
 ### v1.1.3.31 (сессии 37-38) — Read receipts + модуляризация
 - feat: read receipts broadcast — readReceiptEvent SharedFlow → ChatListViewModel
 - refactor: ChatListActivity 1470→1085 LOC (-26%), 4 новых модуля
-
-### v1.1.3.30 (сессия 36) — FAB + Favorites
-- feat: FAB [+] восстановлен — ActionBottomSheet + SearchableListBottomSheet
-- fix: Favorites убран из секций, добавлен в шторку профиля
-
-### v1.1.3.28-29 (сессии 33-35) — gRPC модули + UI
-- refactor: RealGrpcClient 3810→882 LOC (-77%), 12 модулей
-- feat: кастомные темы для AppBarLayout, TabLayout
 
 ---
 
@@ -345,3 +219,4 @@ cd /root/msg.client.android
 | Gradle wrapper удалён | OOM protection на сервере |
 | ErrorHandler единый | Все ошибки через ErrorHandler → AppLog + Log |
 | Chat модули | 6 делегатов вместо монолитного NewChatActivity |
+| MockK для тестов | Не Mockito — не добавлен в deps |
