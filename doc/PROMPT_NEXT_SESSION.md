@@ -22,14 +22,15 @@
 
 #### 1.1 SuperAdmin кнопка — ✅ ИСПРАВЛЕНО (v1.2.0.7)
 - ProfileClient.unaryCall() рефлексия заменена на GetProfileResponseMarshaller
-- isSuperAdmin теперь корректно десериализуется из серверного ответа
 
 #### 1.2 GetChatsV2 — ✅ ПРОВЕРЕНО
 - Поток корректный: GrpcChatClient.getChats() → GetChatsV2 → marshallers с v2 полями
 
 #### 1.3 Auto-login с протухшим JWT — ✅ ПРОВЕРЕНО
 - Нет риска infinite loop
-- Минорный UX баг: пустой onComplete callback при ошибке (пользователь не получает фидбек)
+
+### Приоритет 2: Баги найдены пользователем
+- Описать найденные баги в следующей сессии
 
 ---
 
