@@ -725,7 +725,8 @@ object RealGrpcClient {
         return unaryCallChatListV2(
             fullMethod = "messenger.ChatService/PinChat",
             request = PinChatRequestProto(userId = userId, chatId = chatId),
-            responseType = PinChatResponseProto::class.java
+            responseType = PinChatResponseProto::class.java,
+            requestMarshaller = PinChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -734,7 +735,8 @@ object RealGrpcClient {
         return unaryCallChatListV2(
             fullMethod = "messenger.ChatService/UnPinChat",
             request = UnPinChatRequestProto(userId = userId, chatId = chatId),
-            responseType = UnPinChatResponseProto::class.java
+            responseType = UnPinChatResponseProto::class.java,
+            requestMarshaller = UnPinChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -743,7 +745,8 @@ object RealGrpcClient {
         val response = unaryCallChatListV2(
             fullMethod = "messenger.ChatService/SearchChats",
             request = SearchChatsRequestProto(userId = userId, query = query, limit = limit, offset = offset),
-            responseType = SearchChatsResponseProto::class.java
+            responseType = SearchChatsResponseProto::class.java,
+            requestMarshaller = SearchChatsRequestMarshaller()
         )
         return response?.chats?.map { proto ->
             ChatInfo(
@@ -768,7 +771,8 @@ object RealGrpcClient {
         return unaryCallChatListV2(
             fullMethod = "messenger.ChatService/ArchiveChat",
             request = ArchiveChatRequestProto(userId = userId, chatId = chatId),
-            responseType = ArchiveChatResponseProto::class.java
+            responseType = ArchiveChatResponseProto::class.java,
+            requestMarshaller = ArchiveChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -777,7 +781,8 @@ object RealGrpcClient {
         return unaryCallChatListV2(
             fullMethod = "messenger.ChatService/UnarchiveChat",
             request = UnarchiveChatRequestProto(userId = userId, chatId = chatId),
-            responseType = UnarchiveChatResponseProto::class.java
+            responseType = UnarchiveChatResponseProto::class.java,
+            requestMarshaller = UnarchiveChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -786,7 +791,8 @@ object RealGrpcClient {
         return unaryCallChatListV2(
             fullMethod = "messenger.ChatService/PinMessage",
             request = PinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
-            responseType = PinMessageResponseProto::class.java
+            responseType = PinMessageResponseProto::class.java,
+            requestMarshaller = PinMessageRequestMarshaller()
         )?.success ?: false
     }
 
@@ -795,7 +801,8 @@ object RealGrpcClient {
         return unaryCallChatListV2(
             fullMethod = "messenger.ChatService/UnPinMessage",
             request = UnPinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
-            responseType = UnPinMessageResponseProto::class.java
+            responseType = UnPinMessageResponseProto::class.java,
+            requestMarshaller = UnPinMessageRequestMarshaller()
         )?.success ?: false
     }
 
@@ -804,7 +811,8 @@ object RealGrpcClient {
         val response = unaryCallChatListV2(
             fullMethod = "messenger.ChatService/GetPinnedMessages",
             request = GetPinnedMessagesRequestProto(userId = userId, chatId = chatId),
-            responseType = GetPinnedMessagesResponseProto::class.java
+            responseType = GetPinnedMessagesResponseProto::class.java,
+            requestMarshaller = GetPinnedMessagesRequestMarshaller()
         )
         return response?.messages?.map { proto ->
             Message(id = proto.id, user = proto.user, text = proto.text, timestamp = proto.createdAt?.seconds ?: 0L)
@@ -814,17 +822,19 @@ object RealGrpcClient {
     // ====== Low-level unary call helper (kept for v2 ChatList methods) ======
     @Suppress("DEPRECATION", "UNCHECKED_CAST")
     private suspend fun <ReqT, RespT> unaryCallChatListV2(
-        fullMethod: String, request: ReqT, responseType: Class<RespT>
+        fullMethod: String, request: ReqT, responseType: Class<RespT>,
+        requestMarshaller: io.grpc.MethodDescriptor.Marshaller<ReqT>? = null
     ): RespT? = suspendCancellableCoroutine { cont ->
         val ch = getChannel()
         if (ch == null) { cont.resume(null, onCancellation = {}); return@suspendCancellableCoroutine }
+        val rm = requestMarshaller ?: object : io.grpc.MethodDescriptor.Marshaller<ReqT> {
+            override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+            override fun parse(stream: java.io.InputStream): ReqT = request
+        }
         val method = io.grpc.MethodDescriptor.newBuilder<ReqT, RespT>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
             .setFullMethodName(fullMethod)
-            .setRequestMarshaller(object : io.grpc.MethodDescriptor.Marshaller<ReqT> {
-                override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-                override fun parse(stream: java.io.InputStream): ReqT = request
-            })
+            .setRequestMarshaller(rm)
             .setResponseMarshaller(object : io.grpc.MethodDescriptor.Marshaller<RespT> {
                 override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
                 @Suppress("DEPRECATION")

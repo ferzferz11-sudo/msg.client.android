@@ -72,6 +72,8 @@ internal suspend fun <ReqT, RespT> unaryCallWithClass(
     fullMethod: String,
     request: ReqT,
     responseType: Class<RespT>,
+    requestMarshaller: MethodDescriptor.Marshaller<ReqT>? = null,
+    responseMarshaller: MethodDescriptor.Marshaller<RespT>? = null,
     tag: String = "RealGrpcClient"
 ): RespT? = suspendCancellableCoroutine { cont ->
     val ch = getChannel()
@@ -79,17 +81,19 @@ internal suspend fun <ReqT, RespT> unaryCallWithClass(
         cont.resume(null, onCancellation = {})
         return@suspendCancellableCoroutine
     }
+    val rm = requestMarshaller ?: object : MethodDescriptor.Marshaller<ReqT> {
+        override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+        override fun parse(stream: java.io.InputStream): ReqT = request
+    }
+    val rsm = responseMarshaller ?: object : MethodDescriptor.Marshaller<RespT> {
+        override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
+        override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
+    }
     val method = MethodDescriptor.newBuilder<ReqT, RespT>()
         .setType(MethodDescriptor.MethodType.UNARY)
         .setFullMethodName(fullMethod)
-        .setRequestMarshaller(object : MethodDescriptor.Marshaller<ReqT> {
-            override fun stream(value: ReqT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-            override fun parse(stream: java.io.InputStream): ReqT = request
-        })
-        .setResponseMarshaller(object : MethodDescriptor.Marshaller<RespT> {
-            override fun stream(value: RespT): java.io.InputStream = java.io.ByteArrayInputStream(ByteArray(0))
-            override fun parse(stream: java.io.InputStream): RespT = responseType.getDeclaredConstructor().newInstance()
-        })
+        .setRequestMarshaller(rm)
+        .setResponseMarshaller(rsm)
         .build()
     val call = ch.newCall(method, io.grpc.CallOptions.DEFAULT)
     val listener = object : ClientCall.Listener<RespT>() {

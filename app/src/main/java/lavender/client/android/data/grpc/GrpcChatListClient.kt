@@ -57,15 +57,13 @@ class GrpcChatListClient(
                         proto.unreadCount,
                         proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         proto.creator, proto.lastMessageText, proto.avatarUrl, proto.fullAvatarUrl,
-                        proto.lastMessageUsername, false, proto.lastMessageHasImage, proto.allowMembersToAdd,
+                        proto.lastMessageUsername, proto.isMuted, proto.lastMessageHasImage, proto.allowMembersToAdd,
                         proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         proto.isSecret, proto.peerPublicKey, proto.e2eeReady,
-                        proto.activeAgentId, proto.agentMode
+                        proto.activeAgentId, proto.agentMode, proto.isPinned, proto.isArchived, proto.pinnedAt
                     )
                 }
-                if (chats.isNotEmpty()) {
-                    callback(chats)
-                }
+                callback(chats)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
@@ -126,7 +124,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/PinChat",
             request = PinChatRequestProto(userId = userId, chatId = chatId),
-            responseType = PinChatResponseProto::class.java
+            responseType = PinChatResponseProto::class.java,
+            requestMarshaller = PinChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -136,7 +135,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/UnPinChat",
             request = UnPinChatRequestProto(userId = userId, chatId = chatId),
-            responseType = UnPinChatResponseProto::class.java
+            responseType = UnPinChatResponseProto::class.java,
+            requestMarshaller = UnPinChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -148,7 +148,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/SearchChats",
             request = SearchChatsRequestProto(userId = userId, query = query, limit = limit, offset = offset),
-            responseType = SearchChatsResponseProto::class.java
+            responseType = SearchChatsResponseProto::class.java,
+            requestMarshaller = SearchChatsRequestMarshaller()
         )
         return response?.chats?.map { proto ->
             ChatInfo(
@@ -176,7 +177,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/ArchiveChat",
             request = ArchiveChatRequestProto(userId = userId, chatId = chatId),
-            responseType = ArchiveChatResponseProto::class.java
+            responseType = ArchiveChatResponseProto::class.java,
+            requestMarshaller = ArchiveChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -186,7 +188,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/UnarchiveChat",
             request = UnarchiveChatRequestProto(userId = userId, chatId = chatId),
-            responseType = UnarchiveChatResponseProto::class.java
+            responseType = UnarchiveChatResponseProto::class.java,
+            requestMarshaller = UnarchiveChatRequestMarshaller()
         )?.success ?: false
     }
 
@@ -198,7 +201,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/PinMessage",
             request = PinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
-            responseType = PinMessageResponseProto::class.java
+            responseType = PinMessageResponseProto::class.java,
+            requestMarshaller = PinMessageRequestMarshaller()
         )?.success ?: false
     }
 
@@ -208,7 +212,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/UnPinMessage",
             request = UnPinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
-            responseType = UnPinMessageResponseProto::class.java
+            responseType = UnPinMessageResponseProto::class.java,
+            requestMarshaller = UnPinMessageRequestMarshaller()
         )?.success ?: false
     }
 
@@ -218,7 +223,8 @@ class GrpcChatListClient(
             getChannel = getChannel,
             fullMethod = "messenger.ChatService/GetPinnedMessages",
             request = GetPinnedMessagesRequestProto(userId = userId, chatId = chatId),
-            responseType = GetPinnedMessagesResponseProto::class.java
+            responseType = GetPinnedMessagesResponseProto::class.java,
+            requestMarshaller = GetPinnedMessagesRequestMarshaller()
         )
         return response?.messages?.map { proto ->
             Message(

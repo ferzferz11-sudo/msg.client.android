@@ -1,6 +1,6 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.1.3.38 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-18
+**Version:** v1.2.0.0 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-18
 
 ---
 
