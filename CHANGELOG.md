@@ -31,10 +31,6 @@
 - `RealGrpcClient`: delegate to new clients, удалён `unaryCallChatListV2` (-40 LOC)
 - Удалены дубликаты `getChats`/`getAllChats` из `GrpcChatListClient`
 
-### Документация
-- `PROMPT_ANDROID_DEPRECATED.md` — аудит deprecated v1 паттернов, чистка клиента
-- Обновлён `PLAN.md`, `PATTERNS.md`, `INDEX.md`
-
 ---
 
 ## [1.1.3.38] - 2026-06-18
@@ -69,10 +65,6 @@
 - Исправлен вызов `deployAgentTaskStream` в HermesChatUseCase
 - Исправлен scope leak в OwlChatUseCase
 
-### Документация
-- Очищена папка doc/ — создан PLAN.md с актуальным анализом
-- Обновлены INDEX.md, PATTERNS.md, REMOTE_AGENT.md
-
 ---
 
 ## [1.1.3.35] - 2026-06-18
@@ -99,10 +91,6 @@
   - GrpcUnaryCallHelperTest (4) — unaryCall, null channel, error handling
 - Добавлены зависимости: mockk 1.13.8, turbine 1.0.0, coroutines-test 1.7.3
 - Созданы тестовые утилиты: TestChannelFactory, TestDatabaseFactory, FlowTestExtensions
-
-### Документация
-- Оптимизация документации: удалены 9 устаревших файлов, консолидированы актуальные
-- Создан ANALYSIS_AND_PLAN.md — анализ + план оптимизации (v1.1.3.35-40)
 
 ### Исправления инфраструктуры тестов
 - AppLog: try-catch вокруг android.util.Log.d для работы в unit-тестах
