@@ -129,6 +129,7 @@ class ChatListActivity : AppCompatActivity() {
         tvToolbarTitle?.text = getString(R.string.chats)
 
         // Toolbar styling: 30% transparency + bottom shadow
+        // Applied after ThemeApplier to layer on top of theme colors
         toolbar?.let { tb ->
             val bg = tb.background
             if (bg != null) {
@@ -252,6 +253,10 @@ class ChatListActivity : AppCompatActivity() {
         ) {
             Log.d(TAG, "onResume: chats empty but READY — reloading")
             viewModel.loadChats()
+        }
+        // Pre-load users for add contact/create chat sheets
+        if (GrpcClient.connectionStatus.value == ConnectionStatus.READY) {
+            GrpcClient.loadUsers()
         }
     }
 
