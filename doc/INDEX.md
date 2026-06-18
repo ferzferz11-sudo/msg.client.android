@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.2.0.4 | **Updated:** 2026-06-18
+**Version:** v1.2.0.5 | **Updated:** 2026-06-18
 
 ---
 
@@ -20,6 +20,7 @@
 | `doc/PLAN.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `CHANGELOG.md` | Version history | Reference |
+| `PROMPT_ANDROID_DEPRECATED.md` | Deprecated v1 methods to remove | When cleaning up legacy code |
 
 ---
 
@@ -36,10 +37,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~160 |
-| Total LOC | ~39,000 |
+| Kotlin files | ~163 |
+| Total LOC | ~40,000 |
 | Activities | 28 |
-| gRPC modules | 21 |
+| gRPC modules | 24 |
 | Unit tests | 9 files |
 | Layout XML | 108 |
 | String entries | 767 (EN + RU) |
@@ -49,21 +50,30 @@
 
 ---
 
-## Architecture Overview
+## Architecture Overview (v1.2.0.5)
 
 ```
-GrpcClient (facade, ~700 LOC)
-  └── RealGrpcClient (~880 LOC) — orchestrator
-        ├── GrpcConnectionManager, GrpcAuthClient, GrpcTypingClient
-        ├── GrpcCallClient, GrpcChatListClient, GrpcProfileClient
+GrpcClient (facade)
+  └── RealGrpcClient — orchestrator
+        ├── GrpcConnectionManager — connect/reconnect/disconnect
+        ├── GrpcAuthClient — JWT auth (v2 only)
+        ├── GrpcTypingClient — typing stream
+        ├── GrpcCallClient — calls
+        ├── GrpcChatClient (~250) — getChats, create/delete, participants
+        ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
+        ├── GrpcChatAuxClient (~130) — users, AI, FCM, mute
+        ├── GrpcChatListClient (~255) — chat list version
+        ├── GrpcProfileClient — profile, avatar, contacts, themes
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
-        ├── GrpcServerDiscoveryClient, GrpcMarshallers
+        ├── GrpcServerDiscoveryClient — server discovery
         ├── HermesGrpc, OwlGrpc — AI
         └── AiChatGrpc, SecretChatGrpc, ProfileClient
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates (toolbar, input, selection, search, E2EE, menu)
-ProfileActivity — monolithic, not refactored
+
+Auth: JWT only (v2), no password fallback
+Session: SessionManager (token refresh, auto-login recovery, FCM)
 ```
 
 ---
@@ -86,6 +96,8 @@ ProfileActivity — monolithic, not refactored
 14. v2 server only — no v1 legacy fallbacks in client code
 15. All chat activities must call `WindowCompat.setDecorFitsSystemWindows(window, false)` in onCreate
 16. Chat toolbars must use fixed `@dimen/custom_toolbar_height`, elevation 0dp
+17. Chat stream: JWT only, no password fallback
+18. Use GetChatsV2 (not v1 GetChats) for chat list
 
 ---
 
@@ -103,5 +115,5 @@ ProfileActivity — monolithic, not refactored
 | Branch | Purpose |
 |--------|---------|
 | `master` | Production (v1.1.3.38) |
-| `feat/1.2.0.x` | v2 server development (current) |
+| `feat/1.2.0.x` | v2 server development (current, v1.2.0.5) |
 | `feat/1.1.3.x` | Previous release (merged to master) |

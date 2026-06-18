@@ -1,5 +1,42 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.5] - 2026-06-18
+
+### Исправления
+
+**Контакты:**
+- При создании чата/секретного чата/конференции показываются только добавленные контакты (был весь список пользователей)
+- `getContacts()` — fallback `fetchUserId` если `currentUserId` пуст
+
+**Авторизация:**
+- Авто-вход с протухшим JWT: refresh → если не выходит → перелогин по сохранённому паролю
+- Chat stream: удалён password fallback, теперь только JWT (deprecated v1)
+- `GetChats` v1 → `GetChatsV2` (JWT-based, server uses `GetUserID(ctx)`)
+- При холодном запуске с expired токеном — `AUTH_FAILED` вместо застревания
+
+**Навигация:**
+- Возврат к родительской шторке (Settings/Additional Settings) после Back из Activity
+- Восстановлен `isNavigatingDeeper` + `settingsActivityLauncher`/`editProfileLauncher`
+
+**UI:**
+- Диалог "О программе" показывает версию сервера из `GrpcClient.serverVersion`
+
+### Рефакторинг
+
+**gRPC модули:**
+- `GrpcChatListClient` (648→255 LOC) → разделён на 3:
+  - `GrpcChatClient` (~250 LOC) — getChats, create/delete, participants, settings
+  - `GrpcChatListV2Client` (~120 LOC) — pin/unpin, search, archive, pinned messages
+  - `GrpcChatAuxClient` (~130 LOC) — users/AI chats/FCM/mute
+- `RealGrpcClient`: delegate to new clients, удалён `unaryCallChatListV2` (-40 LOC)
+- Удалены дубликаты `getChats`/`getAllChats` из `GrpcChatListClient`
+
+### Документация
+- `PROMPT_ANDROID_DEPRECATED.md` — аудит deprecated v1 паттернов, чистка клиента
+- Обновлён `PLAN.md`, `PATTERNS.md`, `INDEX.md`
+
+---
+
 ## [1.1.3.38] - 2026-06-18
 
 ### 🚀 v2 Клиент для v2 Сервера

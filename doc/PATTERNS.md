@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.2.0.4 | **Updated:** 2026-06-18
+**Version:** v1.2.0.5 | **Updated:** 2026-06-18
 
 ---
 
@@ -8,23 +8,26 @@
 
 ### GrpcClient Facade Pattern
 ```
-GrpcClient (facade, ~700 LOC) — StateFlow declarations + inline domain delegates
+GrpcClient (facade) — StateFlow declarations + inline domain delegates
     ├── StateFlow/SharedFlow declarations (15)
     ├── Mutable state properties (4)
     ├── Core lifecycle: connect, disconnect, startChat, loadHistory
     └── Domain methods: signInV2, getChats, sendMessage, etc. (inline delegates)
 
-RealGrpcClient (orchestrator, ~880 LOC) delegates to:
-├── GrpcConnectionManager (167) — connect/reconnect/disconnect
-├── GrpcAuthClient (232) — JWT auth (v2 only)
-├── GrpcTypingClient (87) — typing stream
-├── GrpcCallClient (125) — calls
-├── GrpcChatListClient (647) — chat list, pin/search/archive
-├── GrpcProfileClient (506) — profile, avatar, contacts, themes
-├── GrpcDraftClient (86) — drafts
-├── GrpcFavoritesClient (120) — favorites
-├── GrpcMessageClient (345) — messages, history, reactions, mark read
-├── GrpcServerDiscoveryClient (145) — server discovery
+RealGrpcClient (orchestrator) delegates to:
+├── GrpcConnectionManager — connect/reconnect/disconnect
+├── GrpcAuthClient — JWT auth (v2 only)
+├── GrpcTypingClient — typing stream
+├── GrpcCallClient — calls
+├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
+├── GrpcChatListV2Client (~120) — pin/unpin, search, archive, pinned messages
+├── GrpcChatAuxClient (~130) — users, AI chats, FCM, mute
+├── GrpcChatListClient (~255) — chat list version, create/delete
+├── GrpcProfileClient — profile, avatar, contacts, themes
+├── GrpcDraftClient — drafts
+├── GrpcFavoritesClient — favorites
+├── GrpcMessageClient — messages, history, reactions, mark read
+├── GrpcServerDiscoveryClient — server discovery
 └── GrpcMarshallers (~1500) — all marshaller classes
 ```
 - Each module: separate class with clear responsibility
@@ -90,13 +93,15 @@ Token refresh: proactive every 60s + sync before chat stream
 ### ChatStream Auth Pattern (v2 Only)
 ```kotlin
 SessionManager.ensureFreshToken(context) // sync refresh if needed
-val accessToken = AuthManager.getAccessToken(context)
-if (!accessToken.isNullOrEmpty()) {
-    firstMessageBuilder.setJwtToken(accessToken)
-} else {
-    firstMessageBuilder.setPassword(password) // fallback
+if (AuthManager.isTokenExpiredOrExpiring(context)) {
+    _authStatus.value = "AUTH_FAILED" // cannot connect
+    return
 }
+val accessToken = AuthManager.getAccessToken(context)
+firstMessageBuilder.setJwtToken(accessToken) // JWT only, no password fallback
 ```
+- Password-based auth removed (deprecated v1)
+- If JWT expired → AUTH_FAILED, user must re-login
 
 ### Connection Readiness Pattern
 - Optimistic READY сразу после `builder.build()`
@@ -134,6 +139,22 @@ Server: MarkRead → Broadcast("READ_ALL:username") → Hub → All clients
 - Request marshallers: serialize all fields
 - Response marshallers: parse by field number, skip unknown fields
 - v2 fields (isPinned, isMuted, etc.) must be included in parser
+
+### Sheet Navigation Pattern
+- `isNavigatingDeeper` flag prevents `onBack` callback when navigating to child sheet/activity
+- `settingsActivityLauncher`/`editProfileLauncher` — `ActivityResultContracts` for lifecycle-aware launching
+- `setOnDismissListener` on each sheet: if `!isNavigatingDeeper` → call `onBack` to reopen parent
+- Chain: Settings → Additional Settings → About → back to Additional Settings → back to Settings
+
+### Auto-login Recovery Pattern (v1.2.0.5)
+```
+initFromPrefs: JWT expired?
+  → waitForConnectionAndReLogin
+    → try refresh token
+    → if refresh fails → loginV2 with saved password
+startChat: JWT expired after refresh?
+  → AUTH_FAILED (no password fallback)
+```
 
 ---
 
