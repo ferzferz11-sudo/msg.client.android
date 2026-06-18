@@ -309,8 +309,8 @@ object SessionManager {
                             refreshToken = response.refreshToken,
                             accessExpiresAt = response.accessExpiresAt,
                             refreshExpiresAt = response.refreshExpiresAt,
-                            userId = response.userId.ifEmpty { AuthManager.getUserId(context) },
-                            username = response.username.ifEmpty { username },
+                            userId = AuthManager.getUserId(context),
+                            username = AuthManager.getUsername(context),
                             deviceId = deviceId
                         )
                         _session.value = _session.value.copy(
