@@ -53,6 +53,7 @@ import androidx.appcompat.app.AlertDialog
 
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 class ProfileActivity : AppCompatActivity() {
 

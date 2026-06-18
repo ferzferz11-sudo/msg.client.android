@@ -9,6 +9,7 @@ import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import lavender.client.android.data.grpc.*
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 // ======= OWL AI Assistant — completely separate from Hermes orchestrator =======
 

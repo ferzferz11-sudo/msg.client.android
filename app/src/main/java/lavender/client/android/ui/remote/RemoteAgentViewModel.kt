@@ -14,6 +14,7 @@ import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.models.RemoteAgentInfo
 import lavender.client.android.R
 import lavender.client.android.data.grpc.*
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 class RemoteAgentViewModel(application: Application) : AndroidViewModel(application) {
 

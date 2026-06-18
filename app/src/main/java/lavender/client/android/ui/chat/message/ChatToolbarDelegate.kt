@@ -22,6 +22,7 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import org.json.JSONArray
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 /**
  * Toolbar setup and management for chat screen.

@@ -20,6 +20,7 @@ import lavender.client.android.data.proto.FCMLogEntryProto
 import java.util.*
 import androidx.core.graphics.toColorInt
 import lavender.client.android.theme.ui.ThemeUi
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 class FCMLogsActivity : AppCompatActivity() {
 

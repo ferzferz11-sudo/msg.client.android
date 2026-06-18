@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import lavender.client.android.data.proto.*
 import kotlin.coroutines.resume
 import lavender.client.android.data.grpc.*
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 /**
  * ProfileClient — client for ProfileService v2 (JWT Bearer auth).
