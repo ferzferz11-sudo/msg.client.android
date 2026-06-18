@@ -13,8 +13,8 @@ import org.junit.Assert.*
 class ChatAdapterTest {
 
     private fun createChat(
-        id: String = "chat-$id",
-        name: String = "Chat $id",
+        id: String = "chat-1",
+        name: String = "Chat 1",
         type: String = "regular",
         participants: String = "",
         lastMessageText: String = ""
@@ -31,7 +31,6 @@ class ChatAdapterTest {
         avatarUrl = "",
         fullAvatarUrl = "",
         lastMessageUsername = "",
-        isOnline = false,
         lastMessageHasImage = false,
         allowMembersToAdd = true,
         conferenceStartTime = 0,
