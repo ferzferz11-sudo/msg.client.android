@@ -13,6 +13,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
 import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lavender.client.android.data.session.SessionManager
 
 @SuppressLint("CustomSplashScreen")
@@ -35,7 +37,7 @@ class SplashActivity : AppCompatActivity() {
         // Sync language from server if logged in
         val session = SessionManager.session.value
         if (session.isLoggedIn) {
-            androidx.lifecycle.lifecycleScope.launch {
+            lifecycleScope.launch {
                 try {
                     val settings = lavender.client.android.data.grpc.GrpcClient.getUserSettingsV2(this@SplashActivity)
                     val serverLocale = settings?.locale
@@ -48,7 +50,6 @@ class SplashActivity : AppCompatActivity() {
             }
         }
 
-        val session = SessionManager.session.value
         val isLoggedIn = session.isLoggedIn
 
         val skipAutoLogin = intent.getBooleanExtra("extra_skip_autologin", false)
