@@ -1,5 +1,20 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.8] - 2026-06-18
+
+### Исправления
+
+**ChatList V2 — Response Marshallers (критический):**
+- Pin/Unpin Chat — response marshaller отсутствовал, `unaryCallWithClass` использовал рефлексию и всегда возвращал `success=false`
+- Archive/Unarchive Chat — аналогичный баг
+- Pin/Unpin Message — аналогичный баг
+- Search Chats — response marshaller отсутствовал, поиск всегда возвращал пустой список
+- GetPinned Messages — response marshaller отсутствовал
+- Созданы: `PinChatResponseMarshaller`, `UnPinChatResponseMarshaller`, `ArchiveChatResponseMarshaller`, `UnarchiveChatResponseMarshaller`, `PinMessageResponseMarshaller`, `UnPinMessageResponseMarshaller`, `GetPinnedMessagesResponseMarshaller`
+- Все V2 boolean-response методы теперь корректно десериализуют ответ сервера
+
+**Примечание:** ChatList V2 фичи (pin, archive, mute) работали ранее только благодаря `loadChats()` в `ChatListActionMode` — полный re-fetch после каждого действия. Теперь optimistic update в ViewModel тоже работает корректно.
+
 ## [1.2.0.7] - 2026-06-18
 
 ### Исправления

@@ -1620,3 +1620,68 @@ class UpdateUserSettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller
         return UpdateUserSettingsResponseProto(success, message)
     }
 }
+
+// ======= ChatList V2 Boolean Response Marshallers =======
+
+class PinChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatResponseProto> {
+    override fun stream(v: PinChatResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): PinChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return PinChatResponseProto(ok)
+    }
+}
+
+class UnPinChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinChatResponseProto> {
+    override fun stream(v: UnPinChatResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UnPinChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return UnPinChatResponseProto(ok)
+    }
+}
+
+class ArchiveChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ArchiveChatResponseProto> {
+    override fun stream(v: ArchiveChatResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ArchiveChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return ArchiveChatResponseProto(ok)
+    }
+}
+
+class UnarchiveChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UnarchiveChatResponseProto> {
+    override fun stream(v: UnarchiveChatResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UnarchiveChatResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return UnarchiveChatResponseProto(ok)
+    }
+}
+
+class PinMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<PinMessageResponseProto> {
+    override fun stream(v: PinMessageResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): PinMessageResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return PinMessageResponseProto(ok)
+    }
+}
+
+class UnPinMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinMessageResponseProto> {
+    override fun stream(v: UnPinMessageResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UnPinMessageResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
+        return UnPinMessageResponseProto(ok)
+    }
+}
+
+class GetPinnedMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetPinnedMessagesResponseProto> {
+    override fun stream(v: GetPinnedMessagesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetPinnedMessagesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageProto>(); val mm = MessageProtoMarshaller()
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(mm.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
+        return GetPinnedMessagesResponseProto(msgs)
+    }
+}

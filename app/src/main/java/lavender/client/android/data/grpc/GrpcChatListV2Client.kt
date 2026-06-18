@@ -19,7 +19,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/PinChat",
             request = PinChatRequestProto(userId = userId, chatId = chatId),
             responseType = PinChatResponseProto::class.java,
-            requestMarshaller = PinChatRequestMarshaller()
+            requestMarshaller = PinChatRequestMarshaller(),
+            responseMarshaller = PinChatResponseMarshaller()
         )?.success ?: false
     }
 
@@ -30,7 +31,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/UnPinChat",
             request = UnPinChatRequestProto(userId = userId, chatId = chatId),
             responseType = UnPinChatResponseProto::class.java,
-            requestMarshaller = UnPinChatRequestMarshaller()
+            requestMarshaller = UnPinChatRequestMarshaller(),
+            responseMarshaller = UnPinChatResponseMarshaller()
         )?.success ?: false
     }
 
@@ -41,7 +43,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/SearchChats",
             request = SearchChatsRequestProto(userId = userId, query = query, limit = limit, offset = offset),
             responseType = SearchChatsResponseProto::class.java,
-            requestMarshaller = SearchChatsRequestMarshaller()
+            requestMarshaller = SearchChatsRequestMarshaller(),
+            responseMarshaller = SearchChatsResponseMarshaller()
         )
         return response?.chats?.map { proto ->
             ChatInfo(
@@ -68,7 +71,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/ArchiveChat",
             request = ArchiveChatRequestProto(userId = userId, chatId = chatId),
             responseType = ArchiveChatResponseProto::class.java,
-            requestMarshaller = ArchiveChatRequestMarshaller()
+            requestMarshaller = ArchiveChatRequestMarshaller(),
+            responseMarshaller = ArchiveChatResponseMarshaller()
         )?.success ?: false
     }
 
@@ -79,7 +83,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/UnarchiveChat",
             request = UnarchiveChatRequestProto(userId = userId, chatId = chatId),
             responseType = UnarchiveChatResponseProto::class.java,
-            requestMarshaller = UnarchiveChatRequestMarshaller()
+            requestMarshaller = UnarchiveChatRequestMarshaller(),
+            responseMarshaller = UnarchiveChatResponseMarshaller()
         )?.success ?: false
     }
 
@@ -90,7 +95,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/PinMessage",
             request = PinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
             responseType = PinMessageResponseProto::class.java,
-            requestMarshaller = PinMessageRequestMarshaller()
+            requestMarshaller = PinMessageRequestMarshaller(),
+            responseMarshaller = PinMessageResponseMarshaller()
         )?.success ?: false
     }
 
@@ -101,7 +107,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/UnPinMessage",
             request = UnPinMessageRequestProto(userId = userId, chatId = chatId, messageId = messageId),
             responseType = UnPinMessageResponseProto::class.java,
-            requestMarshaller = UnPinMessageRequestMarshaller()
+            requestMarshaller = UnPinMessageRequestMarshaller(),
+            responseMarshaller = UnPinMessageResponseMarshaller()
         )?.success ?: false
     }
 
@@ -112,7 +119,8 @@ class GrpcChatListV2Client(
             fullMethod = "messenger.ChatService/GetPinnedMessages",
             request = GetPinnedMessagesRequestProto(userId = userId, chatId = chatId),
             responseType = GetPinnedMessagesResponseProto::class.java,
-            requestMarshaller = GetPinnedMessagesRequestMarshaller()
+            requestMarshaller = GetPinnedMessagesRequestMarshaller(),
+            responseMarshaller = GetPinnedMessagesResponseMarshaller()
         )
         return response?.messages?.map { proto ->
             Message(
