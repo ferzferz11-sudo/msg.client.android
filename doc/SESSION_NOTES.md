@@ -1,5 +1,44 @@
 # Lava Messenger — Android Session Notes
 
+## Сессия 44 (2026-06-18) — Фаза 4: GrpcClient Facade Оптимизация
+
+### Что сделано
+- **GrpcClient: 780 → 106 LOC (-86%)**
+- Создан `GrpcClientExtensions.kt` (~600 LOC) с extension functions по доменам:
+  - Auth, Chat, Message, Profile, Theme, Draft, Favorite, Call, AI/Hermes, RemoteAgent, SecretChat, Notification
+- В GrpcClient.kt оставлено: StateFlow declarations, scope, connect/disconnect, startChat, loadHistory, setRoomId, loadUsers, V2 service detection
+- Добавлен `import GrpcClientExtensions.*` в 29 UI файлов
+- RealGrpcClient.scope: `private` → `internal` (для extensions)
+- Все методы резолвятся корректно (проверено скриптом)
+
+### Структура после рефакторинга
+```
+GrpcClient (106 LOC)
+  ├── StateFlow/SharedFlow declarations (15)
+  ├── Mutable state properties (4)
+  ├── V2 service detection (4)
+  └── Core lifecycle: connect, disconnect, startChat, loadHistory, setRoomId, loadUsers
+
+GrpcClientExtensions (~600 LOC)
+  ├── Auth domain: signInV2, signUpV2, refreshToken, signOut, revokeDevice
+  ├── Chat domain: getChats, getAllChats, createDirectChat, createGroupChat, deleteChat, etc.
+  ├── ChatList V2: pinChat, unpinChat, searchChats, archiveChat, unarchiveChat
+  ├── Message domain: sendMessage, addLocalMessage, deleteMessage, editMessage, etc.
+  ├── Profile domain: updateProfile, updateAvatar, getUserProfile, getContacts, etc.
+  ├── Theme domain: getThemes, saveTheme, setCurrentTheme, deleteTheme
+  ├── Draft domain: saveDraft, getDraft, deleteDraft
+  ├── Favorites domain: addFavorite, removeFavorite, getFavorites
+  ├── Call domain: startCallSession, sendCallSignal
+  ├── AI/Hermes domain: chatWithOrchestrator, chatWithAI, listAgents, etc.
+  ├── RemoteAgent domain: deployAgentTask, generateAgentToken, etc.
+  ├── SecretChat domain: createSecretChat, exchangeSecretKey, etc.
+  └── Notification domain: subscribeNotifications, getNotificationHistory, etc.
+```
+
+### Следующая сессия: v1.1.3.36 — AI Chats domain layer (HermesGrpc 1876 + OwlGrpc 1145 → domain)
+
+---
+
 ## Сессия 43 (2026-06-17) — Фаза 3: Unit-тесты для gRPC клиента
 
 ### Что сделано

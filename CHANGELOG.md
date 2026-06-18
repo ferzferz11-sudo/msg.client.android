@@ -1,5 +1,17 @@
 # Lava Messenger — Android Changelog
 
+## [1.1.3.35] - 2026-06-18
+
+### Рефакторинг: GrpcClient Facade Оптимизация
+- **GrpcClient: 780 → 106 LOC (-86%)**
+- Создан `GrpcClientExtensions.kt` (~600 LOC) с extension functions по доменам:
+  - Auth, Chat, Message, Profile, Theme, Draft, Favorite, Call, AI/Hermes, RemoteAgent, SecretChat, Notification
+- В GrpcClient.kt оставлено: StateFlow declarations, scope, connect/disconnect, startChat, loadHistory, setRoomId, loadUsers, V2 service detection
+- Добавлен `import GrpcClientExtensions.*` в 29 UI файлов
+- RealGrpcClient.scope: `private` → `internal`
+
+---
+
 ## [1.1.3.34] - 2026-06-17
 
 ### Тесты: Unit-тесты для gRPC клиента

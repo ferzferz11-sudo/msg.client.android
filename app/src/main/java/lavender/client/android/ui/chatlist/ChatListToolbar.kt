@@ -22,6 +22,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.cache.CacheUtils
 import lavender.client.android.ui.widget.StandardBottomSheet
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 /**
  * Toolbar setup and settings sheet logic for ChatListActivity.

@@ -44,6 +44,7 @@ import java.util.*
 
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 class ConferenceLobbyActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConferenceLobbyBinding

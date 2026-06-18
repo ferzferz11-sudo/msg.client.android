@@ -3,6 +3,7 @@ package lavender.client.android.data.repository
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.*
 import lavender.client.android.data.proto.*
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 class HermesRepository {
 

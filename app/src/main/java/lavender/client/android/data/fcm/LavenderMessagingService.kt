@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.R
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 class LavenderMessagingService : FirebaseMessagingService() {
 

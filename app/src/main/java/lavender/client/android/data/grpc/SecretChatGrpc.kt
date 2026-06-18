@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 // ======= Secret Chat (E2EE) gRPC helpers =======
 

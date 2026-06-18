@@ -39,7 +39,7 @@ enum class ConnectionStatus {
  */
 object RealGrpcClient {
     private const val TAG = "RealGrpcClient"
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    internal val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // ====== StateFlow declarations (must come before module initialization) ======
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)

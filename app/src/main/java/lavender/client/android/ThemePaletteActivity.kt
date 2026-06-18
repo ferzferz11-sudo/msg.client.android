@@ -37,6 +37,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 data class ColorItem(
     val name: String,

@@ -6,6 +6,29 @@
 
 ## Паттерны
 
+### GrpcClient Extensions Pattern
+```
+GrpcClient (object, 106 LOC) — StateFlow facade + core lifecycle
+    ↓ import GrpcClientExtensions.*
+GrpcClientExtensions (~600 LOC) — domain-grouped extension functions
+    ├── Auth: signInV2, signUpV2, refreshToken, signOut, revokeDevice
+    ├── Chat: getChats, createDirectChat, createGroupChat, deleteChat, etc.
+    ├── ChatList V2: pinChat, unpinChat, searchChats, archiveChat
+    ├── Message: sendMessage, deleteMessage, editMessage, setReaction, markRead
+    ├── Profile: updateProfile, updateAvatar, getUserProfile, getContacts
+    ├── Theme: getThemes, saveTheme, setCurrentTheme, deleteTheme
+    ├── Draft: saveDraft, getDraft, deleteDraft
+    ├── Favorite: addFavorite, removeFavorite, getFavorites
+    ├── Call: startCallSession, sendCallSignal
+    ├── AI: chatWithOrchestrator, chatWithAI, listAgents, createAgent, etc.
+    ├── RemoteAgent: deployAgentTask, generateAgentToken, etc.
+    ├── SecretChat: createSecretChat, exchangeSecretKey, etc.
+    └── Notification: subscribeNotifications, getNotificationHistory, etc.
+```
+- Extensions в том же пакете `data/grpc/`
+- UI файлы добавляют `import lavender.client.android.data.grpc.GrpcClientExtensions.*`
+- Чистый рефакторинг — без изменения поведения
+
 ### gRPC Client Modular Pattern
 ```
 RealGrpcClient (orchestrator, 882 LOC) делегирует в:

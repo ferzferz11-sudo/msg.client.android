@@ -1,12 +1,12 @@
 # Lava Messenger — Android Session Prompt
 
-**Дата:** 2026-06-17 | **Версия:** v1.1.3.35 | **Ветка:** feat/1.1.3.x
+**Дата:** 2026-06-18 | **Версия:** v1.1.3.35 | **Ветка:** feat/1.1.3.x
 
 ---
 
 ## СТАТУС
 
-v1.1.3.35 — планирование. Фаза 3 завершена (42 unit-теста). Фаза 4: GrpcClient facade оптимизация.
+v1.1.3.35 — Фаза 4 завершена. GrpcClient 780→106 LOC. Фаза 5: AI Chats domain layer.
 
 ---
 
@@ -40,9 +40,13 @@ NewChatActivity (~754) — onCreate, lifecycle, observers, wiring
 
 ### gRPC Client
 ```
-GrpcClient (facade, 780 LOC)
+GrpcClient (106 LOC) — StateFlow facade + core lifecycle
     ↓
-RealGrpcClient (orchestrator, 882 LOC)
+GrpcClientExtensions (~600 LOC) — domain-grouped extension functions
+    ├── Auth, Chat, Message, Profile, Theme, Draft, Favorite
+    ├── Call, AI/Hermes, RemoteAgent, SecretChat, Notification
+    ↓
+RealGrpcClient (883 LOC) — orchestrator
     ├── GrpcConnectionManager (167)
     ├── GrpcAuthClient (232)
     ├── GrpcTypingClient (87)
@@ -71,19 +75,18 @@ RealGrpcClient (orchestrator, 882 LOC)
 - Фаза 1: NewChatActivity рефакторинг (1473→754 LOC, -49%) ✅
 - Фаза 2: Унификация error handling ✅
 - Фаза 3: Unit-тесты для gRPC клиента (42 теста) ✅ v1.1.3.34
+- Фаза 4: GrpcClient facade оптимизация (780→106 LOC, -86%) ✅ v1.1.3.35
 
-### 🟡 Текущая (v1.1.3.35)
-1. **Фаза 4: GrpcClient facade оптимизация** (780→<400 LOC)
-   - Заменить proxy-методы на extension functions
-   - Группировать по доменам
+### 🟡 Текущая (v1.1.3.36)
+1. **Фаза 5: AI Chats domain layer** (HermesGrpc 1876 + OwlGrpc 1145 → domain)
+   - Выделить AI логику в отдельный domain слой
    - Подробный план: `doc/ANALYSIS_AND_PLAN.md`
 
 ### 🟢 Следующие
-2. **Фаза 5** (v1.1.3.36): AI Chats domain layer (HermesGrpc 1876 + OwlGrpc 1145 → domain)
-3. **Фаза 6** (v1.1.3.37): NewChatActivity финальный рефакторинг (754→<400 LOC)
-4. **Фаза 7** (v1.1.3.38): ProfileActivity рефакторинг (719→<300 LOC)
-5. **Фаза 8** (v1.1.3.39): GrpcChatListClient разделение (642→3x200)
-6. **Фаза 9** (v1.1.3.40): MessageAdapter разделение (870→<300 LOC)
+2. **Фаза 6** (v1.1.3.37): NewChatActivity финальный рефакторинг (754→<400 LOC)
+3. **Фаза 7** (v1.1.3.38): ProfileActivity рефакторинг (719→<300 LOC)
+4. **Фаза 8** (v1.1.3.39): GrpcChatListClient разделение (642→3x200)
+5. **Фаза 9** (v1.1.3.40): MessageAdapter разделение (870→<300 LOC)
 
 ### 📦 Отложено
 - Pagination для чатов
@@ -180,9 +183,11 @@ cd /root/msg.client.android
 
 ## CHANGELOG
 
-### v1.1.3.35 (следующая) — GrpcClient facade оптимизация
-- refactor: GrpcClient 780→<400 LOC через extension functions
-- refactor: группировка proxy-методов по доменам
+### v1.1.3.35 (сессия 44) — GrpcClient facade оптимизация
+- refactor: GrpcClient 780→106 LOC (-86%) через extension functions
+- refactor: создан GrpcClientExtensions.kt (~600 LOC) с группировкой по доменам
+- refactor: добавлен import extensions в 29 UI файлов
+- refactor: RealGrpcClient.scope: private → internal
 
 ### v1.1.3.34 (сессия 43) — Unit-тесты для gRPC клиента
 - test: 42 unit-теста для gRPC модулей (Auth, ChatList, Message, ConnectionManager, Facade, UnaryCallHelper)
@@ -218,5 +223,6 @@ cd /root/msg.client.android
 | Poll 30s | Уменьшение нагрузки на сервер |
 | Gradle wrapper удалён | OOM protection на сервере |
 | ErrorHandler единый | Все ошибки через ErrorHandler → AppLog + Log |
-| Chat модули | 6 делегатов вместо монолитного NewChatActivity |
-| MockK для тестов | Не Mockito — не добавлен в deps |
+|| Chat модули | 6 делегатов вместо монолитного NewChatActivity ||
+|| MockK для тестов | Не Mockito — не добавлен в deps ||
+|| GrpcClient extensions | Proxy-методы → extension functions по доменам |

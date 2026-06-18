@@ -20,6 +20,7 @@ import lavender.client.android.ui.widget.ListBottomSheet
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
 import lavender.client.android.theme.ThemeStore
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 /**
  * Selection mode: toolbar with copy/reply/pin/delete/forward actions.

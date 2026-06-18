@@ -13,6 +13,7 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.data.grpc.GrpcClientExtensions.*
 
 /**
  * ChatListViewModel — ViewModel для ChatListActivity.
