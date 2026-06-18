@@ -60,6 +60,7 @@ class OwlChatActivity : AppCompatActivity() {
     private var isCommandPopupVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owl_chat)
 

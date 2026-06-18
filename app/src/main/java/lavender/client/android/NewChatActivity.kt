@@ -122,6 +122,7 @@ class NewChatActivity : AppCompatActivity() {
     private lateinit var uploadProgressText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_chat)
 

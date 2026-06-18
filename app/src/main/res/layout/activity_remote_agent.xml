@@ -17,7 +17,7 @@
         android:layout_width="match_parent"
         android:layout_height="@dimen/custom_toolbar_height"
         android:background="@drawable/toolbar_background"
-        android:elevation="4dp"
+        android:elevation="0dp"
         app:titleTextColor="?attr/colorOnPrimary"
         app:navigationIconTint="?attr/colorOnPrimary" />
 

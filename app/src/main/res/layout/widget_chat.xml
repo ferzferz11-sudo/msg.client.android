@@ -34,10 +34,9 @@
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="@dimen/custom_toolbar_height"
+        android:layout_height="@dimen/custom_toolbar_height"
         android:background="@drawable/toolbar_background"
-        android:elevation="4dp"
+        android:elevation="0dp"
         app:navigationIcon="@drawable/ic_back_arrow"
         app:navigationIconTint="?attr/colorOnPrimary"
         app:layout_constraintTop_toTopOf="parent">

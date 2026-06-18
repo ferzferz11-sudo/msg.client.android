@@ -49,6 +49,7 @@ class RemoteAgentActivity : AppCompatActivity(),
     private lateinit var agentCommands: List<CommandBottomSheet.CommandInfo>
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_remote_agent)
 
