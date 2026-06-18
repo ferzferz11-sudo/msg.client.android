@@ -1,57 +1,42 @@
-# Android — Паттерны и правила разработки
+# Android — Code Patterns and Rules
 
-**Версия:** v1.1.3.34 | **Обновлено:** 2026-06-17
+**Version:** v1.1.3.36 | **Updated:** 2026-06-18
 
 ---
 
-## Паттерны
+## Patterns
 
-### GrpcClient Extensions Pattern
+### GrpcClient Facade Pattern
 ```
-GrpcClient (object, 106 LOC) — StateFlow facade + core lifecycle
-    ↓ import GrpcClientExtensions.*
-GrpcClientExtensions (~600 LOC) — domain-grouped extension functions
-    ├── Auth: signInV2, signUpV2, refreshToken, signOut, revokeDevice
-    ├── Chat: getChats, createDirectChat, createGroupChat, deleteChat, etc.
-    ├── ChatList V2: pinChat, unpinChat, searchChats, archiveChat
-    ├── Message: sendMessage, deleteMessage, editMessage, setReaction, markRead
-    ├── Profile: updateProfile, updateAvatar, getUserProfile, getContacts
-    ├── Theme: getThemes, saveTheme, setCurrentTheme, deleteTheme
-    ├── Draft: saveDraft, getDraft, deleteDraft
-    ├── Favorite: addFavorite, removeFavorite, getFavorites
-    ├── Call: startCallSession, sendCallSignal
-    ├── AI: chatWithOrchestrator, chatWithAI, listAgents, createAgent, etc.
-    ├── RemoteAgent: deployAgentTask, generateAgentToken, etc.
-    ├── SecretChat: createSecretChat, exchangeSecretKey, etc.
-    └── Notification: subscribeNotifications, getNotificationHistory, etc.
-```
-- Extensions в том же пакете `data/grpc/`
-- UI файлы добавляют `import lavender.client.android.data.grpc.GrpcClientExtensions.*`
-- Чистый рефакторинг — без изменения поведения
+GrpcClient (facade, 711 LOC) — StateFlow declarations + inline domain delegates
+    ├── StateFlow/SharedFlow declarations (15)
+    ├── Mutable state properties (4)
+    ├── V2 service detection (4)
+    ├── Core lifecycle: connect, disconnect, startChat, loadHistory
+    └── Domain methods: signInV2, getChats, sendMessage, etc. (inline delegates)
 
-### gRPC Client Modular Pattern
-```
-RealGrpcClient (orchestrator, 882 LOC) делегирует в:
+RealGrpcClient (orchestrator, 883 LOC) delegates to:
 ├── GrpcConnectionManager (167) — connect/reconnect/disconnect
 ├── GrpcAuthClient (232) — JWT auth
 ├── GrpcTypingClient (87) — typing stream
 ├── GrpcCallClient (125) — calls
-├── GrpcChatListClient (638) — chat list, pin/search/archive
+├── GrpcChatListClient (642) — chat list, pin/search/archive
 ├── GrpcProfileClient (506) — profile, avatar, contacts, themes
 ├── GrpcDraftClient (86) — drafts
 ├── GrpcFavoritesClient (120) — favorites
-├── GrpcMessageClient (341) — messages, history, reactions, mark read
+├── GrpcMessageClient (345) — messages, history, reactions, mark read
 ├── GrpcServerDiscoveryClient (145) — server discovery
-└── GrpcMarshallers (1394) — 111 marshaller classes
+└── GrpcMarshallers (1395) — 111 marshaller classes
 ```
-- Каждый модуль — отдельный класс с чёткой ответственностью
-- DI через конструктор (без фреймворка)
-- RealGrpcClient: StateFlow declarations → module init → chat stream → proxy-методы
-- **КРИТИЧНО:** StateFlow объявляются ДО модулей (Kotlin object top-to-bottom init)
+- Each module: separate class with clear responsibility
+- DI via constructor (no framework)
+- RealGrpcClient: StateFlow declarations → module init → chat stream → proxy methods
+- **CRITICAL:** StateFlow declared BEFORE modules (Kotlin object top-to-bottom init)
+- GrpcClient: extension functions don't work via star import — all methods inline
 
 ### ChatListActivity Modular Pattern
 ```
-ChatListActivity (~600) — onCreate, setupUI, lifecycle, proxy methods
+ChatListActivity (382) — onCreate, setupUI, lifecycle, proxy methods
 ├── ChatListToolbar (232) — toolbar + settings sheets
 ├── ChatListTabs (30) — tabs (All/Groups/AI Chats)
 ├── ChatListActionMode (120) — selection mode
@@ -59,7 +44,7 @@ ChatListActivity (~600) — onCreate, setupUI, lifecycle, proxy methods
 ├── ChatListFABs (470) — FABs + action sheets + AI bottom sheet
 ├── ChatListNavigation (60) — navigateToChat
 ├── ChatListAuth (212) — auth dialogs
-├── ChatListViewModel (290) — ViewModel
+├── ChatListViewModel (302) — ViewModel with StateFlow
 ├── ChatListSections (20) — sections
 └── UpdateCoordinator (245) — updates
 ```

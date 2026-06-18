@@ -1,6 +1,6 @@
-# Remote Agent — Документация (справочная)
+# Remote Agent — Reference Documentation
 
-**Версия:** v1.1.3.34 | **Статус:** Стабильный, не развивается активно
+**Version:** v1.1.3.36 | **Status:** Stable, not actively developed
 
 ---
 
