@@ -32,6 +32,22 @@ class SplashActivity : AppCompatActivity() {
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
 
+        // Sync language from server if logged in
+        val session = SessionManager.session.value
+        if (session.isLoggedIn) {
+            androidx.lifecycle.lifecycleScope.launch {
+                try {
+                    val settings = lavender.client.android.data.grpc.GrpcClient.getUserSettingsV2(this@SplashActivity)
+                    val serverLocale = settings?.locale
+                    if (!serverLocale.isNullOrEmpty() && serverLocale != prefs.getString("language", "ru")) {
+                        prefs.edit { putString("language", serverLocale) }
+                    }
+                } catch (e: Exception) {
+                    // Ignore - use local setting
+                }
+            }
+        }
+
         val session = SessionManager.session.value
         val isLoggedIn = session.isLoggedIn
 

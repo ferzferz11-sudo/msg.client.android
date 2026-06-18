@@ -224,5 +224,15 @@ internal fun toggleLanguage(activity: ChatListActivity) {
     val currentLang = prefs.getString("language", "ru") ?: "ru"
     val newLang = if (currentLang == "ru") "en" else "ru"
     prefs.edit().putString("language", newLang).apply()
+
+    // Sync to server
+    activity.lifecycleScope.launch {
+        try {
+            GrpcClient.updateUserSettingsV2(activity, locale = newLang)
+        } catch (e: Exception) {
+            android.util.Log.e("ChatListToolbar", "Failed to sync language to server", e)
+        }
+    }
+
     activity.recreate()
 }
