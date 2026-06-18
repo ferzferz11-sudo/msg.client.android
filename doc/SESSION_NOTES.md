@@ -17,11 +17,24 @@
 - Создан ANALYSIS_AND_PLAN.md — подробный анализ и план оптимизации на 6 фаз
 - Обновлён CHANGELOG.md, version.txt → 1.1.3.34
 
+### Исправления тестов (вторая часть сессии)
+- AppLog: добавлен try-catch вокруг android.util.Log.d для unit-тестов
+- Все тесты: Dispatchers.Main → Dispatchers.Unconfined (Main недоступен в unit-тестах)
+- Все тесты: mockk(relaxed=true) → mockk() + явные стабы (relaxed возвращает null для newCall)
+- GrpcAuthClientTest: исправлен smart cast через AtomicReference для callback-ов
+- GrpcChatListClientTest: исправлен type mismatch, ClassCastException
+- GrpcMessageClientTest: исправлены все 8 тестов
+- GrpcConnectionManagerTest: убраны обращения к private полям
+- GrpcClientFacadeTest: CoroutineScope создаётся в каждом тесте с Dispatchers.Unconfined
+- Все proto-классы: newBuilder() → прямые вызовы конструкторов (data classes не имеют newBuilder)
+
 ### Коммиты
 - 9c40963 — test: 42 unit tests for gRPC modules + docs cleanup
 - beca222 — fix: remove isOnline param from ChatAdapterTest
 - 571f6ab — fix: convert all gRPC tests from Mockito to MockK
 - 39afbc0 — fix: resolve compilation errors in gRPC unit tests
+- 6bee09f — fix: replace newBuilder() with direct constructors in test files
+- a41168f — fix: resolve test runtime failures
 
 ### Следующая сессия: v1.1.3.35 — GrpcClient facade оптимизация (780→<400 LOC)
 

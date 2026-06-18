@@ -15,7 +15,14 @@
 
 ### Документация
 - Оптимизация документации: удалены 9 устаревших файлов, консолидированы актуальные
-- Создан PLAN_V1.1.3.34.md с детальным планом реализации
+- Создан ANALYSIS_AND_PLAN.md — анализ + план оптимизации (v1.1.3.35-40)
+
+### Исправления инфраструктуры тестов
+- AppLog: try-catch вокруг android.util.Log.d для работы в unit-тестах
+- Все тесты: Dispatchers.Main → Dispatchers.Unconfined (Main недоступен без Android)
+- Все тесты: переведены с Mockito на MockK
+- Все тесты: исправлены runtime ошибки ( smart cast, relaxed mock returning null)
+- Proto data classes: newBuilder() заменены на прямые конструкторы
 
 ---
 
