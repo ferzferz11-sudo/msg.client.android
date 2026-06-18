@@ -6,13 +6,13 @@ import io.grpc.ManagedChannel
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
 import io.grpc.Status
-import io.grpc.stub.StreamObserver
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import lavender.client.android.data.proto.*
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import io.mockk.*
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Unit-тесты для GrpcAuthClient.
@@ -66,8 +66,8 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.signInV2(
             username = "testuser",
@@ -75,11 +75,13 @@ class GrpcAuthClientTest {
             deviceId = "device-123",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNotNull("Result should not be null", result)
         assertTrue("Success should be true", result!!.success)
         assertEquals("Access token", "test-access-token", result!!.accessToken)
@@ -107,8 +109,8 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.signInV2(
             username = "testuser",
@@ -116,11 +118,13 @@ class GrpcAuthClientTest {
             deviceId = "device-123",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNull("Result should be null on failure", result)
         assertNotNull("Error should not be null", error)
         assertEquals("Error message", "Invalid password", error)
@@ -135,8 +139,8 @@ class GrpcAuthClientTest {
             setAuthFailure = { authFailureFlag = it }
         )
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         clientWithNullChannel.signInV2(
             username = "testuser",
@@ -144,11 +148,13 @@ class GrpcAuthClientTest {
             deviceId = "device-123",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNull("Result should be null when channel is null", result)
         assertEquals("Error should be 'Not connected'", "Not connected", error)
     }
@@ -168,8 +174,8 @@ class GrpcAuthClientTest {
             listener.onClose(Status.INTERNAL.withDescription("Server error"), Metadata())
         }
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.signInV2(
             username = "testuser",
@@ -177,11 +183,13 @@ class GrpcAuthClientTest {
             deviceId = "device-123",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNull("Result should be null on server error", result)
         assertNotNull("Error should not be null", error)
         assertTrue("Error should contain 'Server error'", error!!.contains("Server error"))
@@ -207,8 +215,8 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.signInV2(
             username = "",
@@ -216,11 +224,13 @@ class GrpcAuthClientTest {
             deviceId = "device-123",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNull("Result should be null", result)
         assertEquals("Error message", "Username is required", error)
     }
@@ -248,8 +258,8 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.signUpV2(
             username = "newuser",
@@ -258,11 +268,13 @@ class GrpcAuthClientTest {
             deviceId = "device-456",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNotNull("Result should not be null", result)
         assertTrue("Success should be true", result!!.success)
         assertEquals("Access token", "new-access-token", result!!.accessToken)
@@ -289,8 +301,8 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var result: AuthResponseV2Proto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<AuthResponseV2Proto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.signUpV2(
             username = "existinguser",
@@ -299,11 +311,13 @@ class GrpcAuthClientTest {
             deviceId = "device-789",
             deviceName = "Test Device",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNull("Result should be null on duplicate", result)
         assertEquals("Error message", "Username already exists", error)
     }
@@ -330,17 +344,19 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var result: RefreshTokenResponseProto? = null
-        var error: String? = null
+        val resultRef = AtomicReference<RefreshTokenResponseProto?>()
+        val errorRef = AtomicReference<String?>()
 
         client.refreshToken(
             refreshToken = "old-refresh-token",
             callback = { res, err ->
-                result = res
-                error = err
+                resultRef.set(res)
+                errorRef.set(err)
             }
         )
 
+        val result = resultRef.get()
+        val error = errorRef.get()
         assertNotNull("Result should not be null", result)
         assertEquals("Access token", "refreshed-access", result!!.accessToken)
         assertEquals("Refresh token", "refreshed-refresh", result!!.refreshToken)
@@ -369,17 +385,19 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var success = false
-        var error: String? = null
+        val successRef = AtomicReference<Boolean>()
+        val errorRef = AtomicReference<String?>()
 
         client.signOut(
             refreshToken = "some-token",
             callback = { s, err ->
-                success = s
-                error = err
+                successRef.set(s)
+                errorRef.set(err)
             }
         )
 
+        val success = successRef.get()
+        val error = errorRef.get()
         assertTrue("Sign out should succeed", success)
         assertNull("Error should be null", error)
     }
@@ -406,17 +424,19 @@ class GrpcAuthClientTest {
             listener.onClose(Status.OK, Metadata())
         }
 
-        var success = false
-        var error: String? = null
+        val successRef = AtomicReference<Boolean>()
+        val errorRef = AtomicReference<String?>()
 
         client.revokeDevice(
             deviceId = "device-to-revoke",
             callback = { s, err ->
-                success = s
-                error = err
+                successRef.set(s)
+                errorRef.set(err)
             }
         )
 
+        val success = successRef.get()
+        val error = errorRef.get()
         assertTrue("Revoke should succeed", success)
         assertNull("Error should be null", error)
     }

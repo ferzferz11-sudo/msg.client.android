@@ -10,11 +10,10 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 import io.mockk.*
+import lavender.client.android.data.proto.*
 
 /**
  * Unit-тесты для GrpcUnaryCallHelper (top-level функции unaryCall, unaryCallWithClass).
- *
- * Тестируем: успешный вызов, null channel, server error, class-based variant.
  */
 class GrpcUnaryCallHelperTest {
 
@@ -74,8 +73,8 @@ class GrpcUnaryCallHelperTest {
             mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>())
         } answers {
             @Suppress("UNCHECKED_CAST")
-            val listener = firstArg<ClientCall.Listener<Any>>()
-            listener.onClose(Status.INTERNAL.withDescription("Internal error"), Metadata())
+            firstArg<ClientCall.Listener<Any>>()
+                .onClose(Status.INTERNAL.withDescription("Internal error"), Metadata())
         }
 
         val result = unaryCall(

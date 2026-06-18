@@ -55,10 +55,10 @@ class GrpcChatListClientTest {
     @Test
     fun getChats_success_returnsChatList() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
-        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+        every { mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>()) }
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
@@ -90,10 +90,10 @@ class GrpcChatListClientTest {
     @Test
     fun getChats_emptyServerResponse_returnsEmptyList() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
-        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+        every { mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>()) }
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
@@ -122,7 +122,7 @@ class GrpcChatListClientTest {
             scope = scope
         )
 
-        var result: List<ChatInfo>? = "not-called"
+        var result: List<ChatInfo>? = null
         nullChannelClient.getChats(username = "testuser", callback = { result = it })
 
         assertNotNull("Result should not be null", result)
@@ -132,17 +132,17 @@ class GrpcChatListClientTest {
     @Test
     fun getChats_serverError_returnsEmptyList() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
-        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+        every { mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>()) }
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
                 listener.onClose(Status.UNAVAILABLE.withDescription("Server unavailable"), Metadata())
             }
 
-        var result: List<ChatInfo>? = "not-called"
+        var result: List<ChatInfo>? = null
         client.getChats(username = "testuser", callback = { result = it })
 
         assertNotNull("Result should not be null", result)
@@ -167,7 +167,7 @@ class GrpcChatListClientTest {
     fun searchChats_v1Fallback_returnsEmptyList() = runTest {
         // ProfileClient.serviceChatVersion = "" → v1 fallback
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
         // Even if we try to search, v1 should return empty
@@ -181,10 +181,10 @@ class GrpcChatListClientTest {
     @Test
     fun deleteChat_sendsRequest() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
-        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+        every { mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>()) }
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
@@ -199,7 +199,7 @@ class GrpcChatListClientTest {
         // But we can verify the channel is called
         client.getChats(username = "testuser", callback = { })
 
-        verify { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        verify { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
     }
 
     // ====== Chat creation ======
@@ -207,10 +207,10 @@ class GrpcChatListClientTest {
     @Test
     fun createDirectChat_sendsRequest() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
-        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+        every { mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>()) }
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()
@@ -230,10 +230,10 @@ class GrpcChatListClientTest {
     @Test
     fun createGroupChat_sendsRequest() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(MethodDescriptor::class.java), any(CallOptions::class.java)) }
+        every { channel.newCall<Any, Any>(any<MethodDescriptor<Any, Any>>(), any<CallOptions>()) }
             .returns(mockCall)
 
-        every { mockCall.start(any(ClientCall.Listener::class.java), any(Metadata::class.java)) }
+        every { mockCall.start(any<ClientCall.Listener<Any>>(), any<Metadata>()) }
             .answers {
                 @Suppress("UNCHECKED_CAST")
                 val listener = firstArg<ClientCall.Listener<Any>>()

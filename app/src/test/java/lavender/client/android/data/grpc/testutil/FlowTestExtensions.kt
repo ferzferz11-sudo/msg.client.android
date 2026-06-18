@@ -5,42 +5,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import app.cash.turbine.test
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Extension-функции для тестирования StateFlow и SharedFlow.
- */
-
-/**
- * Следит за StateFlow и собирает все эмиссии за timeout.
- * Возвращает список значений.
- */
-suspend fun <T> StateFlow<T>.testCollect(
-    timeout: kotlin.time.Duration = 2.seconds,
-    block: suspend () -> Unit
-): List<T> {
-    val results = mutableListOf<T>()
-    val job = kotlinx.coroutines.coroutineScope {
-        val collectJob = kotlinx.coroutines.launch {
-            this@testCollect.collect { results.add(it) }
-        }
-        try {
-            withTimeout(timeout) {
-                block()
-            }
-        } finally {
-            collectJob.cancel()
-        }
-    }
-    return results
-}
-
-/**
- * Проверяет, что StateFlow содержит ожидаемое значение.
- */
 suspend fun <T> StateFlow<T>.assertValue(expected: T, message: String? = null) {
     val actual = this.value
     if (actual != expected) {
@@ -50,9 +19,6 @@ suspend fun <T> StateFlow<T>.assertValue(expected: T, message: String? = null) {
     }
 }
 
-/**
- * Проверяет, что StateFlow содержит список ожидаемых значений.
- */
 suspend fun <T> StateFlow<List<T>>.assertListContains(expected: T, message: String? = null) {
     val actual = this.value
     if (!actual.contains(expected)) {
@@ -62,9 +28,6 @@ suspend fun <T> StateFlow<List<T>>.assertListContains(expected: T, message: Stri
     }
 }
 
-/**
- * Проверяет, что StateFlow пуст.
- */
 suspend fun <T> StateFlow<List<T>>.assertEmpty(message: String? = null) {
     val actual = this.value
     if (actual.isNotEmpty()) {
@@ -74,9 +37,6 @@ suspend fun <T> StateFlow<List<T>>.assertEmpty(message: String? = null) {
     }
 }
 
-/**
- * Проверяет, что StateFlow не пуст.
- */
 suspend fun <T> StateFlow<List<T>>.assertNotEmpty(message: String? = null) {
     val actual = this.value
     if (actual.isEmpty()) {
@@ -86,9 +46,6 @@ suspend fun <T> StateFlow<List<T>>.assertNotEmpty(message: String? = null) {
     }
 }
 
-/**
- * Проверяет, что StateFlow имеет определённый размер.
- */
 suspend fun <T> StateFlow<List<T>>.assertSize(expected: Int, message: String? = null) {
     val actual = this.value.size
     if (actual != expected) {
@@ -98,9 +55,6 @@ suspend fun <T> StateFlow<List<T>>.assertSize(expected: Int, message: String? = 
     }
 }
 
-/**
- * Проверяет, что StateFlow<String?> содержит null.
- */
 suspend fun StateFlow<String?>.assertNull(message: String? = null) {
     val actual = this.value
     if (actual != null) {
@@ -110,9 +64,6 @@ suspend fun StateFlow<String?>.assertNull(message: String? = null) {
     }
 }
 
-/**
- * Проверяет, что StateFlow<String?> не null и содержит подстроку.
- */
 suspend fun StateFlow<String?>.assertContains(substring: String, message: String? = null) {
     val actual = this.value
     if (actual == null || !actual.contains(substring)) {
