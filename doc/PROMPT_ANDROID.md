@@ -1,5 +1,8 @@
 # Lava Messenger — Android Session Prompt
 
+> **Репо Android:** `/root/msg/client.android/`
+> **Репо сервер:** `/root/msg/`
+
 **Дата:** 2026-06-18 | **Версия:** v1.1.3.35 | **Ветка:** feat/1.1.3.x
 
 ---
@@ -13,7 +16,7 @@ v1.1.3.35 — Фаза 4 завершена. GrpcClient 780→~400 LOC. Комп
 
 ## АРХИТЕКТУРА
 
-### gRPC Client
+### gRPC Client (репо `/root/msg/client.android/`)
 ```
 GrpcClient (~400 LOC) — StateFlow facade + inline domain delegates
     ↓
@@ -114,7 +117,11 @@ cd /root/msg.client.android
 | `doc/ANALYSIS_AND_PLAN.md` | Анализ + план оптимизации (v1.1.3.35-40) |
 | `doc/REMOTE_AGENT.md` | Remote Agent (справочная) |
 | `doc/ChatListActivity_v1_REFERENCE.kt` | v1 reference (2802 LOC) |
-| `../CHANGELOG.md` | История изменений |
+| `CHANGELOG.md` | История изменений |
+
+**Серверная документация** (репо `/root/msg/`): `doc/INDEX.md`, `doc/INTEGRATION_SESSION.md`
+
+**Исходники** (репо `/root/msg/client.android/`): `app/src/main/java/lavender/client/android/`
 
 ---
 

@@ -26,16 +26,17 @@
 | `doc/ANALYSIS_AND_PLAN.md` | Анализ + план оптимизации | При планировании следующих фаз |
 | `doc/REMOTE_AGENT.md` | Remote Agent | При работе с Remote Agent |
 | `doc/ChatListActivity_v1_REFERENCE.kt` | v1 reference (2802 LOC) | Для переноса кода из v1 |
-| `../CHANGELOG.md` | История изменений | Справочно |
+| `CHANGELOG.md` | История изменений | Справочно |
 
 ---
 
-## Сервер
+## Репозитории
 
-| Файл | Назначение |
-|------|-----------|
-| `/root/msg/doc/INDEX.md` | Индекс серверной документации |
-| `/root/msg/doc/INTEGRATION_SESSION.md` | Интеграционная сессия |
+| Репо | Путь | Что |
+|------|------|-----|
+| **Android клиент** | `/root/msg/client.android/` | Kotlin-код в `app/src/main/java/lavender/client/android/` |
+| **Сервер** | `/root/msg/` | Go-код, proto-файлы |
+| **Android документация** | `/root/msg/client.android/doc/` | Этот файл и остальные doc |
 
 ---
 

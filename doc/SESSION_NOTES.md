@@ -1,5 +1,7 @@
 # Lava Messenger — Android Session Notes
 
+> Репо: `/root/msg/client.android/` | Сервер: `/root/msg/`
+
 ## Сессия 44 (2026-06-18) — Фаза 4: GrpcClient Facade Оптимизация
 
 ### Что сделано

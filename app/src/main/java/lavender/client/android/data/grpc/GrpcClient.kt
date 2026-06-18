@@ -696,4 +696,16 @@ object GrpcClient {
         agentId: String, adminUserId: String = ""
     ): GetAgentProcessStatusResponseProto =
         lavender.client.android.data.grpc.getAgentProcessStatus(agentId, adminUserId)
+
+    // ====== Hermes Settings ======
+
+    suspend fun getHermesSettings(
+        sessionId: String, userId: String
+    ): GetHermesSettingsResponseProto =
+        lavender.client.android.data.grpc.getHermesSettings(sessionId, userId)
+
+    suspend fun updateHermesSettings(
+        sessionId: String, userId: String, apiKey: String, model: String
+    ): UpdateHermesSettingsResponseProto =
+        lavender.client.android.data.grpc.updateHermesSettings(sessionId, userId, apiKey, model)
 }
