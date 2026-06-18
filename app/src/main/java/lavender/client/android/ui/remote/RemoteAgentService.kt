@@ -17,7 +17,6 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 /**
  * RemoteAgentService — foreground service для фонового подключения Remote Agent.

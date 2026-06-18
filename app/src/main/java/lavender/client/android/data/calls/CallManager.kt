@@ -13,7 +13,6 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 import org.json.JSONObject
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 object CallManager {
     private const val TAG = "CallManager"

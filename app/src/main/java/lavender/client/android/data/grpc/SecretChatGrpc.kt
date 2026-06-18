@@ -8,7 +8,6 @@ import lavender.client.android.data.proto.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 // ======= Secret Chat (E2EE) gRPC helpers =======
 

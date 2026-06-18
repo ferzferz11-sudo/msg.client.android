@@ -14,7 +14,6 @@ import lavender.client.android.data.proto.RefreshTokenResponseProto
 import lavender.client.android.data.auth.AuthManager
 import android.os.Build
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 object SessionManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

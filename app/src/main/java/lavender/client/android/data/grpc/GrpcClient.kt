@@ -5,25 +5,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
-import lavender.client.android.data.grpc.*
+import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
-import lavender.client.android.data.proto.CallMessageProto
-import lavender.client.android.data.proto.ServerInfoProto
-import lavender.client.android.data.proto.UserInfoProto
+import lavender.client.android.data.models.ChatInfo
+import lavender.client.android.data.models.AIChatInfo
+import lavender.client.android.data.proto.*
 
 /**
  * GrpcClient — unified facade for gRPC operations.
- *
- * Owns: StateFlow declarations, connection scope, core connection lifecycle.
- * Domain methods: delegated to GrpcClientExtensions (grouped by domain).
- *
- * Extensions import brings all domain methods into scope:
- *   import lavender.client.android.data.grpc.*
+ * All domain methods delegate directly to RealGrpcClient.
+ * Target: ~400 LOC (down from 780).
  */
 object GrpcClient {
     private val realGrpcClient = RealGrpcClient
-
-    // ====== Coroutine scope for flow conversions ======
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // ====== Connection State ======
@@ -78,7 +72,7 @@ object GrpcClient {
     val profileServiceVersion: String
         get() = ProfileClient.serviceProfileVersion
 
-    // ====== Core Connection Lifecycle (kept in facade) ======
+    // ====== Core Connection Lifecycle ======
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         realGrpcClient.connect(serverAddress, useTls, port, context, forceReconnect)
     }
@@ -104,4 +98,602 @@ object GrpcClient {
     fun loadAllUsers(callback: ((List<UserInfoProto>) -> Unit)? = null) {
         realGrpcClient.loadAllUsers(callback ?: {})
     }
+
+    // ======= AuthService V2 (JWT) =======
+
+    fun signInV2(
+        username: String, password: String,
+        deviceId: String, deviceName: String,
+        deviceType: String = "android", clientVersion: String = "",
+        callback: (AuthResponseV2Proto?, String?) -> Unit
+    ) = realGrpcClient.signInV2(username, password, deviceId, deviceName, deviceType, clientVersion, callback)
+
+    fun signUpV2(
+        username: String, password: String, email: String,
+        deviceId: String, deviceName: String,
+        deviceType: String = "android", clientVersion: String = "",
+        callback: (AuthResponseV2Proto?, String?) -> Unit
+    ) = realGrpcClient.signUpV2(username, password, email, deviceId, deviceName, deviceType, clientVersion, callback)
+
+    fun refreshToken(
+        refreshToken: String, callback: (RefreshTokenResponseProto?, String?) -> Unit
+    ) = realGrpcClient.refreshToken(refreshToken, callback)
+
+    fun signOut(
+        refreshToken: String = "", allDevices: Boolean = false,
+        callback: (Boolean, String) -> Unit = { _, _ -> }
+    ) = realGrpcClient.signOut(refreshToken, allDevices, callback)
+
+    fun revokeDevice(
+        deviceId: String, callback: (Boolean, String) -> Unit = { _, _ -> }
+    ) = realGrpcClient.revokeDevice(deviceId, callback)
+
+    // ======= Chat Operations =======
+
+    fun getChats(
+        username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit
+    ) = realGrpcClient.getChats(username, skipCache, callback)
+
+    fun getChatListVersion(username: String, callback: (Long) -> Unit) =
+        realGrpcClient.getChatListVersion(username, callback)
+
+    fun getAllChats(callback: (List<ChatInfo>) -> Unit) =
+        realGrpcClient.getAllChats(callback)
+
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) =
+        realGrpcClient.getAIChats(userId, callback)
+
+    fun renameAIChat(
+        chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.renameAIChat(chatId, userId, newName, callback)
+
+    fun createDirectChat(user1: String, user2: String, callback: (String?) -> Unit) =
+        realGrpcClient.createDirectChat(user1, user2, callback)
+
+    fun createGroupChat(
+        name: String, participants: List<String>, creator: String,
+        type: String = "group", callback: (String?) -> Unit
+    ) = realGrpcClient.createGroupChat(name, participants, creator, type, callback)
+
+    fun deleteChat(
+        chatId: String, requesterUsername: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.deleteChat(chatId, requesterUsername, callback)
+
+    fun deleteChat(
+        chatId: String, userId: String, username: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.deleteChatWithUserId(chatId, userId, username, callback)
+
+    fun updateChatName(
+        chatId: String, newName: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updateChatName(chatId, newName, callback)
+
+    fun removeParticipant(
+        chatId: String, username: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.removeParticipant(chatId, username, callback)
+
+    fun addParticipant(
+        chatId: String, username: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.addParticipant(chatId, username, callback)
+
+    fun addParticipants(
+        chatId: String, usernames: List<String>, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.addParticipants(chatId, usernames, callback)
+
+    fun updateChatSettings(
+        chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updateChatSettings(chatId, allowAdd, callback)
+
+    fun updateChatAvatar(
+        chatId: String, avatarUrl: String, username: String,
+        fullAvatarUrl: String = "", callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updateChatAvatar(chatId, avatarUrl, username, fullAvatarUrl, callback)
+
+    // ======= ChatList V2 (suspend) =======
+
+    suspend fun pinChat(context: Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.pinChat(chatId)
+    }
+
+    suspend fun unpinChat(context: Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.unpinChat(chatId)
+    }
+
+    suspend fun searchChats(context: Context, query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> {
+        if (!ProfileClient.isChatV2Supported()) return emptyList()
+        return realGrpcClient.searchChats(query, limit, offset)
+    }
+
+    suspend fun archiveChat(context: Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.archiveChat(chatId)
+    }
+
+    suspend fun unarchiveChat(context: Context, chatId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.unarchiveChat(chatId)
+    }
+
+    // ======= Pin Message =======
+
+    suspend fun pinMessage(context: Context, chatId: String, messageId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.pinMessage(chatId, messageId)
+    }
+
+    suspend fun unpinMessage(context: Context, chatId: String, messageId: String): Boolean {
+        if (!ProfileClient.isChatV2Supported()) return false
+        return realGrpcClient.unpinMessage(chatId, messageId)
+    }
+
+    suspend fun getPinnedMessages(context: Context, chatId: String): List<Message> {
+        if (!ProfileClient.isChatV2Supported()) return emptyList()
+        return realGrpcClient.getPinnedMessages(chatId)
+    }
+
+    // ======= Message Operations =======
+
+    fun sendMessage(message: Message) =
+        realGrpcClient.sendMessage(message)
+
+    fun addLocalMessage(message: Message) =
+        realGrpcClient.addLocalMessage(message)
+
+    fun deleteMessage(message: Message) =
+        realGrpcClient.deleteMessage(message)
+
+    fun editMessage(
+        messageId: String, text: String, callback: (Boolean, String) -> Unit = { _, _ -> }
+    ) = realGrpcClient.editMessage(messageId, text, callback)
+
+    fun updateMessage(message: Message) =
+        realGrpcClient.updateMessage(message)
+
+    fun setReaction(messageId: String, username: String, emoji: String) =
+        realGrpcClient.setReaction(messageId, username, emoji)
+
+    fun markRead(
+        roomId: String, username: String, onCompletion: (() -> Unit)? = null
+    ) = realGrpcClient.markRead(roomId, username, onCompletion)
+
+    fun sendTypingSignal(username: String, isTyping: Boolean) =
+        realGrpcClient.sendTypingSignal(username, isTyping)
+
+    fun registerToken(user: String, token: String, pushEnabled: Boolean = true) =
+        realGrpcClient.registerToken(user, token, pushEnabled)
+
+    fun clearMessages() = realGrpcClient.clearMessages()
+
+    // ======= Profile Operations =======
+
+    fun updateUsername(
+        oldUsername: String, newUsername: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updateUsername(oldUsername, newUsername, callback)
+
+    fun updatePassword(
+        username: String, oldPassword: String, newPassword: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updatePassword(username, oldPassword, newPassword, callback)
+
+    fun adminUpdatePassword(
+        targetUsername: String, newPassword: String, adminUsername: String,
+        callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.adminUpdatePassword(targetUsername, newPassword, adminUsername, callback)
+
+    fun updateAvatar(
+        username: String, avatarUrl: String, fullAvatarUrl: String = "",
+        callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updateAvatar(username, avatarUrl, fullAvatarUrl, callback)
+
+    fun getUserAvatar(
+        username: String, userId: String = "", callback: (String) -> Unit
+    ) = realGrpcClient.getUserAvatar(username, userId, callback)
+
+    fun getUserProfile(
+        userId: String, callback: (GetUserProfileResponseProto?) -> Unit
+    ) = realGrpcClient.getUserProfile(userId, callback)
+
+    fun updateProfile(
+        username: String, bio: String, status: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.updateProfile(username, bio, status, callback)
+
+    fun deleteProfile(
+        username: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.deleteProfile(username, callback)
+
+    fun requestPasswordReset(
+        email: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.requestPasswordReset(email, callback)
+
+    fun resetPassword(
+        token: String, newPw: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.resetPassword(token, newPw, callback)
+
+    fun getDevices(
+        userId: String, callback: (List<DeviceInfoProto>) -> Unit
+    ) = realGrpcClient.getDevices(userId, callback)
+
+    fun deleteDevice(
+        userId: String, deviceId: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.deleteDevice(userId, deviceId, callback)
+
+    fun deleteOtherDevices(
+        userId: String, currentDeviceId: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.deleteOtherDevices(userId, currentDeviceId, callback)
+
+    // ======= Contacts =======
+
+    fun addContact(
+        username: String, contactUsername: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.addContact(username, contactUsername, callback)
+
+    fun removeContact(
+        username: String, contactUsername: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.removeContact(username, contactUsername, callback)
+
+    fun getContacts(
+        username: String, callback: (List<String>) -> Unit
+    ) = realGrpcClient.getContacts(username, callback)
+
+    // ======= ProfileService V2 (suspend) =======
+
+    suspend fun fetchServerInfo(
+        context: Context, serverAddress: String, port: Int = 8083, grpcPort: Int = 50051
+    ) = ProfileClient.fetchServerInfo(context, serverAddress, port, grpcPort)
+
+    suspend fun getProfileV2(context: Context): GetProfileResponseProto? =
+        ProfileClient.getProfile(context)
+
+    suspend fun updateProfileV2(
+        context: Context, username: String = "", bio: String = "",
+        status: String = "", locale: String = ""
+    ): Boolean = ProfileClient.updateProfile(context, username, bio, status, locale)
+
+    suspend fun updateAvatarV2(
+        context: Context, avatarUrl: String, fullAvatarUrl: String = ""
+    ): Boolean = ProfileClient.updateAvatar(context, avatarUrl, fullAvatarUrl)
+
+    suspend fun getUserSettingsV2(context: Context): GetUserSettingsResponseProto? =
+        ProfileClient.getUserSettings(context)
+
+    suspend fun updateUserSettingsV2(
+        context: Context, locale: String = "", themeId: String = "", pushEnabled: Boolean? = null
+    ): Boolean = ProfileClient.updateUserSettings(context, locale, themeId, pushEnabled)
+
+    // ======= Theme Operations =======
+
+    fun getThemes(
+        username: String, callback: (String, List<CustomThemeProto>) -> Unit
+    ) = realGrpcClient.getThemes(username, callback)
+
+    fun saveTheme(
+        username: String, theme: CustomThemeProto, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.saveTheme(username, theme, callback)
+
+    fun setCurrentTheme(
+        username: String, themeId: String, callback: (Boolean) -> Unit
+    ) = realGrpcClient.setCurrentTheme(username, themeId, callback)
+
+    fun deleteTheme(
+        username: String, themeId: String, callback: (Boolean) -> Unit
+    ) = realGrpcClient.deleteTheme(username, themeId, callback)
+
+    // ======= Draft Operations =======
+
+    fun saveDraft(
+        roomId: String, draftText: String,
+        repliedToMessageId: String = "", repliedToUser: String = "",
+        repliedToText: String = "", callback: (Boolean, String) -> Unit = { _, _ -> }
+    ) = realGrpcClient.saveDraft(roomId, draftText, repliedToMessageId, repliedToUser, repliedToText, callback)
+
+    fun getDraft(
+        roomId: String,
+        callback: (draftText: String, repliedToMessageId: String, repliedToUser: String, repliedToText: String, hasDraft: Boolean) -> Unit
+    ) = realGrpcClient.getDraft(roomId, callback)
+
+    fun deleteDraft(
+        roomId: String, callback: (Boolean) -> Unit = {}
+    ) = realGrpcClient.deleteDraft(roomId, callback)
+
+    // ======= Muted Chats =======
+
+    fun getMutedChats(callback: (List<String>) -> Unit) =
+        realGrpcClient.getMutedChats(callback)
+
+    fun setMutedChat(
+        roomId: String, muted: Boolean, callback: (Boolean) -> Unit = {}
+    ) = realGrpcClient.setMutedChat(roomId, muted, callback)
+
+    // ======= Favorites =======
+
+    fun addFavorite(
+        userId: String, messageId: String, callback: (Boolean, String) -> Unit
+    ) = realGrpcClient.addFavorite(userId, messageId, callback)
+
+    fun removeFavorite(
+        userId: String, messageId: String, callback: (Boolean) -> Unit
+    ) = realGrpcClient.removeFavorite(userId, messageId, callback)
+
+    fun getFavorites(
+        userId: String, callback: (List<Message>) -> Unit
+    ) = realGrpcClient.getFavorites(userId, callback)
+
+    // ======= Call Operations =======
+
+    fun startCallSession() = realGrpcClient.startCallSession()
+
+    fun sendCallSignal(signal: CallMessageProto) =
+        realGrpcClient.sendCallSignal(signal)
+
+    // ======= FCM Logs =======
+
+    fun getFCMLogs(callback: (List<FCMLogEntryProto>) -> Unit) =
+        realGrpcClient.getFCMLogs(callback)
+
+    // ======= Server Discovery =======
+
+    fun getServers(context: Context, cb: (List<ServerInfoProto>) -> Unit) =
+        realGrpcClient.fetchServersList(context, cb)
+
+    // ======= Avatar Cache =======
+
+    fun getAvatarCache(): Map<String, String> =
+        realGrpcClient.getAvatarCache()
+
+    fun getFullAvatarCache(): Map<String, String> =
+        realGrpcClient.getFullAvatarCache()
+
+    fun getFullAvatarUrl(username: String): String? =
+        realGrpcClient.getFullAvatarUrl(username)
+
+    fun updateAvatarCache(username: String, avatarUrl: String, fullAvatarUrl: String = "") =
+        realGrpcClient.updateAvatarCache(username, avatarUrl, fullAvatarUrl)
+
+    // ======= User Identity =======
+
+    fun getCurrentUsername(): String? = realGrpcClient.getCurrentUsername()
+
+    fun setUserId(userId: String) = realGrpcClient.setUserId(userId)
+
+    fun getUserId(): String? = realGrpcClient.getUserId()
+
+    fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) =
+        realGrpcClient.fetchUserId(username, callback)
+
+    // ======= Secret Chat =======
+
+    fun createSecretChat(
+        targetUsername: String, publicKey: String,
+        callback: (String, Boolean, String, String) -> Unit
+    ) {
+        val clientVersion = lavender.client.android.BuildConfig.VERSION_NAME
+        realGrpcClient.scope.launch(Dispatchers.Main) {
+            val (chatId, success, message) = lavender.client.android.data.grpc.createSecretChat(
+                targetUsername = targetUsername, targetUserId = "",
+                publicKey = publicKey, clientVersion = clientVersion
+            )
+            callback(chatId, success, message, "")
+        }
+    }
+
+    fun exchangeSecretKey(
+        chatId: String, publicKey: String, callback: (Boolean, String, Boolean) -> Unit
+    ) {
+        realGrpcClient.scope.launch(Dispatchers.Main) {
+            val (success, peerKey, peerHasKey) = lavender.client.android.data.grpc.exchangeSecretKey(chatId, publicKey)
+            callback(success, peerKey, peerHasKey)
+        }
+    }
+
+    fun getSecretChatKey(
+        chatId: String, callback: (String, Boolean) -> Unit
+    ) {
+        realGrpcClient.scope.launch(Dispatchers.Main) {
+            val (peerKey, peerHasKey) = lavender.client.android.data.grpc.getSecretChatKey(chatId)
+            callback(peerKey, peerHasKey)
+        }
+    }
+
+    fun sendE2EEMessage(chatId: String, encryptedPayload: String) {
+        val msg = Message(
+            id = java.util.UUID.randomUUID().toString(),
+            user = getCurrentUsername() ?: "",
+            text = "",
+            timestamp = System.currentTimeMillis(),
+            roomId = chatId,
+            userId = getUserId() ?: "",
+            isE2EE = true,
+            e2eePayload = encryptedPayload
+        )
+        addLocalMessage(msg)
+        sendMessage(msg)
+    }
+
+    // ======= Hermes Multi-Agent Orchestrator =======
+
+    fun chatWithOrchestrator(
+        userId: String, sessionId: String, message: String,
+        agentId: String = "", mode: String = "",
+        scope: CoroutineScope,
+        onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
+    ) = lavender.client.android.data.grpc.chatWithOrchestrator(
+        userId, sessionId, message, agentId, mode, scope, onResponse
+    )
+
+    val hermesResponses: SharedFlow<OrchestratorResponseProto>
+        get() = lavender.client.android.data.grpc.hermesResponses
+
+    val hermesTyping: SharedFlow<Boolean>
+        get() = lavender.client.android.data.grpc.hermesTyping
+
+    val owlResponses: SharedFlow<OwlResponseProto>
+        get() = lavender.client.android.data.grpc.owlResponses
+
+    val owlTyping: SharedFlow<Boolean>
+        get() = lavender.client.android.data.grpc.owlTyping
+
+    val serverNotifications: SharedFlow<ServerNotificationProto>
+        get() = lavender.client.android.data.grpc.serverNotifications
+
+    fun subscribeNotifications(userId: String, types: List<String> = emptyList()) =
+        lavender.client.android.data.grpc.subscribeNotifications(userId, types, realGrpcClient.scope)
+
+    suspend fun getNotificationHistory(
+        userId: String, limit: Int = 50
+    ): List<ServerNotificationProto> = lavender.client.android.data.grpc.getNotificationHistory(userId, limit)
+
+    suspend fun markNotificationsRead(
+        userId: String, notificationIds: List<String>
+    ): Boolean = lavender.client.android.data.grpc.markNotificationsRead(userId, notificationIds)
+
+    suspend fun getUnreadCount(userId: String): Int =
+        lavender.client.android.data.grpc.getUnreadCount(userId)
+
+    // ======= Hermes Unary Methods =======
+
+    suspend fun listAgents(userId: String = ""): List<AgentInfoProto> =
+        lavender.client.android.data.grpc.listAgents(userId)
+
+    suspend fun listAgentPresets(): List<AgentPresetInfoProto> =
+        lavender.client.android.data.grpc.listAgentPresets()
+
+    suspend fun createAgent(
+        userId: String, presetId: String, customName: String = "",
+        customPrompt: String = "", model: String = "", maxTokens: Int = 0
+    ): CreateAgentResponseProto =
+        lavender.client.android.data.grpc.createAgent(userId, presetId, customName, customPrompt, model, maxTokens)
+
+    suspend fun updateAgent(
+        agentId: String, userId: String, name: String = "",
+        systemPrompt: String = "", model: String = "", maxTokens: Int = 0
+    ): Boolean = lavender.client.android.data.grpc.updateAgent(agentId, userId, name, systemPrompt, model, maxTokens)
+
+    suspend fun deleteAgent(agentId: String, userId: String): Boolean =
+        lavender.client.android.data.grpc.deleteAgent(agentId, userId)
+
+    suspend fun listUserAgents(userId: String): List<AgentInfoProto> =
+        lavender.client.android.data.grpc.listUserAgents(userId)
+
+    suspend fun createHermesSession(
+        userId: String, agentId: String = "", mode: String = ""
+    ): CreateHermesSessionResponseProto =
+        lavender.client.android.data.grpc.createHermesSession(userId, agentId, mode)
+
+    suspend fun deleteHermesSession(sessionId: String, userId: String): Boolean =
+        lavender.client.android.data.grpc.deleteHermesSession(sessionId, userId)
+
+    suspend fun getOrchestratorHistory(
+        sessionId: String, limit: Int = 50
+    ): List<OrchestratorHistoryMessageProto> =
+        lavender.client.android.data.grpc.getOrchestratorHistory(sessionId, limit)
+
+    // ======= AI Chat (unified for OWL + Hermes) =======
+
+    fun chatWithAI(
+        userId: String, sessionId: String, message: String, agentId: String = "",
+        scope: CoroutineScope, onResponse: (token: String, finished: Boolean, error: String) -> Unit
+    ) = lavender.client.android.data.grpc.chatWithAI(userId, sessionId, message, agentId, scope, onResponse)
+
+    val aiChatResponses: SharedFlow<AIChatResponseProto>
+        get() = lavender.client.android.data.grpc.aiChatResponses
+
+    val aiChatTyping: SharedFlow<Boolean>
+        get() = lavender.client.android.data.grpc.aiChatTyping
+
+    suspend fun getAIChatHistory(
+        sessionId: String, userId: String, limit: Int = 50
+    ): List<AIChatMessageProto> =
+        lavender.client.android.data.grpc.getAIChatHistory(sessionId, userId, limit)
+
+    suspend fun getAIChatSettings(
+        sessionId: String, userId: String
+    ): AIChatSettingsProto =
+        lavender.client.android.data.grpc.getAIChatSettings(sessionId, userId)
+
+    suspend fun updateAIChatSettings(
+        sessionId: String, userId: String, apiKey: String = "", model: String = ""
+    ): UpdateAIChatSettingsResponseProto =
+        lavender.client.android.data.grpc.updateAIChatSettings(sessionId, userId, apiKey, model)
+
+    // ======= Remote Agent =======
+
+    suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoProto> =
+        lavender.client.android.data.grpc.listRemoteAgents(filterStatus)
+
+    suspend fun getRemoteAgentStatus(agentId: String): GetRemoteAgentStatusResponseProto =
+        lavender.client.android.data.grpc.getRemoteAgentStatus(agentId)
+
+    suspend fun deployAgentTask(
+        agentId: String, taskType: String,
+        params: Map<String, String> = emptyMap(), workingDir: String = "",
+        timeoutSec: Int = 60, tunnelMode: Int = 0,
+        tunnelHost: String = "", tunnelPort: Int = 22,
+        tunnelUser: String = "", tunnelPassword: String = "",
+        tunnelServerHost: String = "localhost", tunnelServerPort: Int = 50051,
+        tunnelLocalPort: Int = 50052
+    ): DeployAgentTaskResponseProto =
+        lavender.client.android.data.grpc.deployAgentTask(
+            agentId, taskType, params, workingDir, timeoutSec,
+            tunnelMode, tunnelHost, tunnelPort, tunnelUser, tunnelPassword,
+            tunnelServerHost, tunnelServerPort, tunnelLocalPort
+        )
+
+    fun deployAgentTaskStream(
+        agentId: String, taskType: String,
+        params: Map<String, String> = emptyMap(), workingDir: String = "",
+        timeoutSec: Int = 60, tunnelMode: Int = 0,
+        tunnelHost: String = "", tunnelPort: Int = 22,
+        tunnelUser: String = "", tunnelPassword: String = "",
+        tunnelServerHost: String = "localhost", tunnelServerPort: Int = 50051,
+        tunnelLocalPort: Int = 50052
+    ): Flow<DeployAgentTaskStreamResponseProto> =
+        lavender.client.android.data.grpc.deployAgentTaskStream(
+            agentId, taskType, params, workingDir, timeoutSec,
+            tunnelMode, tunnelHost, tunnelPort, tunnelUser, tunnelPassword,
+            tunnelServerHost, tunnelServerPort, tunnelLocalPort
+        )
+
+    // ======= Agent Token Management =======
+
+    suspend fun generateAgentToken(
+        agentId: String, agentName: String, capabilities: List<String>,
+        ttlHours: Int, adminUserId: String
+    ): GenerateAgentTokenResponseProto {
+        android.util.Log.d("GrpcClient", "generateAgentToken CALLED: agentId=$agentId name=$agentName")
+        return lavender.client.android.data.grpc.generateAgentToken(
+            agentId, agentName, capabilities, ttlHours, adminUserId
+        )
+    }
+
+    suspend fun revokeAgentToken(
+        agentId: String, adminUserId: String
+    ): RevokeAgentTokenResponseProto =
+        lavender.client.android.data.grpc.revokeAgentToken(agentId, adminUserId)
+
+    suspend fun listAgentTokens(
+        adminUserId: String
+    ): ListAgentTokensResponseProto =
+        lavender.client.android.data.grpc.listAgentTokens(adminUserId)
+
+    // ======= Agent Process Management =======
+
+    suspend fun startAgentOnServer(
+        agentId: String, agentName: String, token: String,
+        serverAddress: String = "",
+        capabilities: List<String> = listOf("shell", "git", "build", "file", "docker", "ai"),
+        adminUserId: String = ""
+    ): StartAgentResponseProto =
+        lavender.client.android.data.grpc.startAgentOnServer(
+            agentId, agentName, token, serverAddress, capabilities, adminUserId
+        )
+
+    suspend fun stopAgentOnServer(
+        agentId: String, adminUserId: String = ""
+    ): StopAgentResponseProto =
+        lavender.client.android.data.grpc.stopAgentOnServer(agentId, adminUserId)
+
+    suspend fun getAgentProcessStatus(
+        agentId: String, adminUserId: String = ""
+    ): GetAgentProcessStatusResponseProto =
+        lavender.client.android.data.grpc.getAgentProcessStatus(agentId, adminUserId)
 }

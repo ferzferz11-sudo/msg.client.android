@@ -6,7 +6,6 @@ import lavender.client.android.data.proto.CustomThemeProto
 import kotlin.coroutines.resume
 
 import kotlinx.coroutines.withTimeoutOrNull
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class ThemeRemoteDataSource(
     private val grpcClient: GrpcClient = GrpcClient,

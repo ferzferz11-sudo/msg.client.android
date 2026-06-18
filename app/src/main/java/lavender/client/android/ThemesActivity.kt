@@ -20,7 +20,6 @@ import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.ThemeAdapter
 import java.util.Locale
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class ThemesActivity : AppCompatActivity() {
 

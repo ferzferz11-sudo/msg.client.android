@@ -48,7 +48,6 @@ import java.util.Locale
 
 import lavender.client.android.ui.widget.StandardBottomSheet
 import lavender.client.android.ui.widget.WidgetManager
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class EditProfileActivity : AppCompatActivity() {
 

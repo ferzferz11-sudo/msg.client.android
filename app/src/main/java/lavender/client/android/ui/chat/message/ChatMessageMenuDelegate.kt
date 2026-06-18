@@ -14,7 +14,6 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 /**
  * Message context menu: reactions, reply, copy, edit, delete.

@@ -23,7 +23,6 @@ import lavender.client.android.ui.calls.CallViewModel
 import org.webrtc.*
 import org.json.JSONObject
 import lavender.client.android.data.grpc.*
-import lavender.client.android.data.grpc.GrpcClientExtensionsKt.*
 
 class CallActivity : AppCompatActivity(), WebRtcClient.Observer {
     private lateinit var binding: ActivityCallBinding
