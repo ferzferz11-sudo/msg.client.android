@@ -135,7 +135,6 @@ class ChatAdapter(
     private fun buildFlatList(sections: List<SectionItem>): List<FlatItem> {
         val result = mutableListOf<FlatItem>()
         for (section in sections) {
-            result.add(FlatItem.SectionHeader(section.section, section.chats.size))
             for (chat in section.chats) {
                 result.add(FlatItem.ChatItem(chat))
             }
