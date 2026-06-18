@@ -6,58 +6,39 @@
 
 ## СТАТУС
 
-v1.1.3.35 — Фаза 4 завершена. GrpcClient 780→106 LOC. Фаза 5: AI Chats domain layer.
+v1.1.3.35 — Фаза 4 завершена. GrpcClient 780→~400 LOC. Компиляция проходит.
+Фаза 5 (v1.1.3.36): AI Chats domain layer.
 
 ---
 
 ## АРХИТЕКТУРА
 
-### ChatList
-```
-ChatListActivity (~364) — onCreate, setupUI, lifecycle, proxy methods
-├── ChatListToolbar (232) — toolbar + settings sheets
-├── ChatListTabs (30) — tabs (All/Groups/AI Chats)
-├── ChatListActionMode (120) — selection mode
-├── ChatListSearch (56) — search
-├── ChatListFABs (470) — FABs + action sheets + AI bottom sheet
-├── ChatListNavigation (60) — navigateToChat
-├── ChatListAuth (212) — auth dialogs
-├── ChatListViewModel (295) — ViewModel + error StateFlow
-├── ChatListSections (20) — sections
-└── UpdateCoordinator (245) — updates
-```
-
-### Chat (NewChatActivity)
-```
-NewChatActivity (~754) — onCreate, lifecycle, observers, wiring
-├── ChatToolbarDelegate (341) — toolbar, avatar, subtitle, navigation
-├── ChatInputDelegate (567) — input, send, attachments, audio, emoji, mentions
-├── ChatSelectionDelegate (236) — selection mode, copy/pin/delete/forward
-├── ChatSearchDelegate (135) — in-chat search
-├── ChatE2EEDelegate (72) — E2EE key exchange, encrypt/decrypt
-└── ChatMessageMenuDelegate (106) — reactions, context menu
-```
-
 ### gRPC Client
 ```
-GrpcClient (106 LOC) — StateFlow facade + core lifecycle
-    ↓
-GrpcClientExtensions (~600 LOC) — domain-grouped extension functions
-    ├── Auth, Chat, Message, Profile, Theme, Draft, Favorite
-    ├── Call, AI/Hermes, RemoteAgent, SecretChat, Notification
+GrpcClient (~400 LOC) — StateFlow facade + inline domain delegates
     ↓
 RealGrpcClient (883 LOC) — orchestrator
-    ├── GrpcConnectionManager (167)
-    ├── GrpcAuthClient (232)
-    ├── GrpcTypingClient (87)
-    ├── GrpcCallClient (125)
-    ├── GrpcChatListClient (641)
-    ├── GrpcProfileClient (506)
-    ├── GrpcDraftClient (86)
-    ├── GrpcFavoritesClient (120)
-    ├── GrpcMessageClient (344)
-    ├── GrpcServerDiscoveryClient (145)
-    └── GrpcMarshallers (1395)
+    ├── GrpcConnectionManager (167), GrpcAuthClient (232), GrpcTypingClient (87)
+    ├── GrpcCallClient (125), GrpcChatListClient (641), GrpcProfileClient (506)
+    ├── GrpcDraftClient (86), GrpcFavoritesClient (120), GrpcMessageClient (344)
+    ├── GrpcServerDiscoveryClient (145), GrpcMarshallers (1395)
+    ├── HermesGrpc (1876), OwlGrpc (1145)
+    └── AiChatGrpc, SecretChatGrpc, ProfileClient
+```
+
+### ChatList
+```
+ChatListActivity (~364) → ChatListToolbar (232), ChatListTabs (30), ChatListActionMode (120)
+├── ChatListSearch (56), ChatListFABs (470), ChatListNavigation (60)
+├── ChatListAuth (212), ChatListViewModel (295), ChatListSections (20)
+└── UpdateCoordinator (245)
+```
+
+### Chat
+```
+NewChatActivity (~754) → ChatToolbarDelegate (341), ChatInputDelegate (567)
+├── ChatSelectionDelegate (236), ChatSearchDelegate (135)
+├── ChatE2EEDelegate (72), ChatMessageMenuDelegate (106)
 ```
 
 ### Серверы
@@ -71,11 +52,9 @@ RealGrpcClient (883 LOC) — orchestrator
 ## ПРИОРИТЕТЫ
 
 ### ✅ Завершено
-- Фаза 0: Тестирование v1.1.3.32 ✅
-- Фаза 1: NewChatActivity рефакторинг (1473→754 LOC, -49%) ✅
-- Фаза 2: Унификация error handling ✅
+- Фаза 0-2: Тестирование, NewChatActivity рефакторинг, Error handling ✅
 - Фаза 3: Unit-тесты для gRPC клиента (42 теста) ✅ v1.1.3.34
-- Фаза 4: GrpcClient facade оптимизация (780→106 LOC, -86%) ✅ v1.1.3.35
+- Фаза 4: GrpcClient facade оптимизация (780→~400 LOC) ✅ v1.1.3.35
 
 ### 🟡 Текущая (v1.1.3.36)
 1. **Фаза 5: AI Chats domain layer** (HermesGrpc 1876 + OwlGrpc 1145 → domain)
@@ -89,50 +68,8 @@ RealGrpcClient (883 LOC) — orchestrator
 5. **Фаза 9** (v1.1.3.40): MessageAdapter разделение (870→<300 LOC)
 
 ### 📦 Отложено
-- Pagination для чатов
-- Incremental history loading
-- Certificate pinning
-- Qdrant + CLIP
-- Shared element transitions
-- ConferenceLobbyActivity рефакторинг (581 LOC)
-
----
-
-## ПЛАН v1.1.3.35 — ФАЗА 4: GrpcClient FACADE ОПТИМИЗАЦИЯ
-
-### Проблема
-GrpcClient — 780 facade-методов, каждый из которых просто делегирует вызов в `realGrpcClient`. 
-
-### Решение
-Заменить proxy-методы на extension functions + группировку по доменам.
-
-### Шаги
-
-1. Создать `GrpcClientExtensions.kt` с extension functions:
-```kotlin
-// Auth domain
-fun GrpcClient.signInV2(...) = realGrpcClient.signInV2(...)
-fun GrpcClient.signUpV2(...) = realGrpcClient.signUpV2(...)
-fun GrpcClient.refreshToken(...) = realGrpcClient.refreshToken(...)
-
-// Chat domain  
-fun GrpcClient.getChats(...) = realGrpcClient.getChats(...)
-fun GrpcClient.getAllChats(...) = realGrpcClient.getAllChats(...)
-
-// Message domain
-fun GrpcClient.sendMessage(...) = realGrpcClient.sendMessage(...)
-fun GrpcClient.loadHistory(...) = realGrpcClient.loadHistory(...)
-```
-
-2. Убрать proxy-методы из `GrpcClient.kt`
-3. Оставить только: StateFlow declarations, scope, connect/disconnect, version checks
-4. Цель: GrpcClient < 300 LOC
-
-### Критерии приёмки
-- [ ] GrpcClient < 300 LOC
-- [ ] Все вызовы из UI работают через extension functions
-- [ ] Тесты проходят
-- [ ] Нет изменений в поведении
+- Pagination для чатов, Incremental history loading, Certificate pinning
+- Qdrant + CLIP, Shared element transitions, ConferenceLobbyActivity рефакторинг
 
 ---
 
@@ -171,7 +108,7 @@ cd /root/msg.client.android
 
 | Файл | Назначение |
 |------|-----------|
-| `doc/SESSION_NOTES.md` | Заметки сессий (42-43) |
+| `doc/SESSION_NOTES.md` | Заметки сессий (42-44) |
 | `doc/PATTERNS.md` | Паттерны и правила разработки |
 | `doc/CODE_AUDIT.md` | Аудит кода |
 | `doc/ANALYSIS_AND_PLAN.md` | Анализ + план оптимизации (v1.1.3.35-40) |
@@ -183,18 +120,18 @@ cd /root/msg.client.android
 
 ## CHANGELOG
 
-### v1.1.3.35 (сессия 44) — GrpcClient facade оптимизация
-- refactor: GrpcClient 780→106 LOC (-86%) через extension functions
-- refactor: создан GrpcClientExtensions.kt (~600 LOC) с группировкой по доменам
-- refactor: добавлен import extensions в 29 UI файлов
-- refactor: RealGrpcClient.scope: private → internal
+### v1.1.3.35 (сессия 44) — GrpcClient Facade Оптимизация
+- refactor: GrpcClient 780→~400 LOC (-49%) — inline delegates вместо extension functions
+- refactor: удалён FCMLogsActivity (дублировал LogViewerActivity)
+- refactor: удалён пункт "Журнал ошибок" из шторки дополнительных настроек
+- refactor: SuperAdminActivity меню "Logs" → LogViewerActivity
+- ⚠️ Extension functions через star import не работают в Kotlin — все методы вернулись в GrpcClient.kt
 
 ### v1.1.3.34 (сессия 43) — Unit-тесты для gRPC клиента
 - test: 42 unit-теста для gRPC модулей (Auth, ChatList, Message, ConnectionManager, Facade, UnaryCallHelper)
 - test: добавлены mockk, turbine, coroutines-test зависимости
 - test: созданы тестовые утилиты (TestChannelFactory, FlowTestExtensions)
 - docs: оптимизация документации (удалены 9 устаревших файлов)
-- docs: создан ANALYSIS_AND_PLAN.md
 
 ### v1.1.3.33 (сессия 42) — NewChatActivity рефакторинг + Error handling
 - refactor: NewChatActivity 1473→754 LOC (-49%), 6 новых модулей в ui/chat/message/
@@ -221,8 +158,7 @@ cd /root/msg.client.android
 | onCancellation = {} | Обязательно в Kotlin 2.3.21 |
 | Keepalive 30s/10s | Для мобильных сетей |
 | Poll 30s | Уменьшение нагрузки на сервер |
-| Gradle wrapper удалён | OOM protection на сервере |
 | ErrorHandler единый | Все ошибки через ErrorHandler → AppLog + Log |
-|| Chat модули | 6 делегатов вместо монолитного NewChatActivity ||
-|| MockK для тестов | Не Mockito — не добавлен в deps ||
-|| GrpcClient extensions | Proxy-методы → extension functions по доменам |
+| Chat модули | 6 делегатов вместо монолитного NewChatActivity |
+| MockK для тестов | Не Mockito — не добавлен в deps |
+| GrpcClient inline delegates | Extension functions не работают через star import в Kotlin |
