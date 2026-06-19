@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.17 (релиз) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.19 (релиз) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -15,113 +15,57 @@
 
 ---
 
-## Что сделано (v1.2.0.16 → v1.2.0.17)
+## Что сделано (v1.2.0.18 → v1.2.0.19)
 
-### gRPC Marshallers fix (PinChat, ArchiveChat и др.)
-- **Корневая причина:** Все marshallers для ChatList v2 (PinChat, UnPinChat, ArchiveChat, UnarchiveChat, PinMessage, UnPinMessage, GetPinnedMessages) отправляли `userId` как field 1, а `chatId` как field 2 — а сервер ожидает `chat_id` как field 1, `user_id` как field 2
-- **Исправлено:** Поменяли field numbers во всех 7 marshallers в `GrpcMarshallers.kt`
-- **Симптом:** gRPC возвращал `UNKNOWN` status при вызове `messenger.ChatService/PinChat`
+### Навигация шторок (BottomSheet navigation)
+- **SheetNavigator:** Стек шторок с push/pop/clear — навигация между нижними панелями
+- **Back button:** Кнопка "←" в заголовке шторки (автоматически появляется при наличии стека)
+- **showWithNavigation():** Метод показа шторки с навигацией
+- **Все шторки в ChatListFABs** теперь используют навигацию (ActionBottomSheet → SearchableListBottomSheet)
 
-### Selection mode pin icon
-- **Новая иконка:** `ic_pin.xml` (pushpin) вместо `ic_lock` (замок) для action_pin в toolbar
-- **Динамические labels:** pin/unpin, mute/unmute, archive/unarchive — заголовок action кнопок меняется в зависимости от состояния выбранных чатов
-- **updateActionModeIcons():** Обновляет title всех action кнопок при изменении selection
+### Unit-тесты ChatViewModel
+- 17 тестов для `ChatViewModel.ChatMetadata` (defaults, values, copy, equals, hashCode, toString)
+- Тесты для всех типов чатов: direct, group, conference, favorites, general, secret
 
-### E2EE key exchange fix (секретные чаты)
-- **Корневая причина:** Все 3 секретных marshallers (CreateSecretChat, ExchangeSecretKey, GetSecretChatKey) не отправляли `user_id` — сервер ожидает `{ chat_id, user_id, public_key }` для ExchangeSecretKey
-- **Исправлено:** Добавлен `userId` во все 3 proto и marshallers в `SecretChatGrpc.kt`
-- **Симптом:** Бесконечный обмен ключами в toolbar (3с polling)
-
-### Secret chat name fix
-- **Корневая причина:** `getDisplayName()` для `type != "direct"` возвращал `name` как есть, а сервер для секретных чатов ставит `name` с обоими именами
-- **Исправлено:** `getDisplayName()` теперь для `isSecret` парсит participants и возвращает только имя собеседника, либо вырезает своё имя из `name`
-
-### Contacts marshaller fix
-- **Корневая причина:** `GetContactsRequestMarshaller` отправлял `username` как field 1, а `userId` как field 2 — сервер ожидает `{ user_id, contact_user_id }` (field 1 = user_id)
-- **Исправлено:** `GetContactsRequestMarshaller`, `AddContactRequestMarshaller`, `RemoveContactRequestMarshaller` — field 1 = userId
-- **Симптом:** 0 контактов в секретном чате
-
-### Empty contacts state
-- Добавлен empty state в `SearchableListBottomSheet` — текст "Контактов пока нет" если список пуст
-- Добавлен `emptyStateText` в layout `widget_searchable_list_bottom_sheet.xml`
-
-### Unified icon color (список чатов)
-- Все иконки toolbar, selection mode, back arrow, tab text/indicator используют `colorOnPrimary`
-- Avatar container: белая лого на круглом фоне `colorOnPrimary` (программный tint в ThemeApplier)
-- Avatar container скрывается в selection mode (hidden parent FrameLayout)
-
-### Chat list card color
-- Фон карточки чата теперь использует `incomingBubbleColor` из темы вместо `surfaceColor`
+### Удалено
+- `AiModelsTest.kt` — AI v1 deprecated, готовится AI v2
+- `ChatListActivity_v1_REFERENCE.kt` — устаревший файл
 
 ---
 
-## Что сделано (v1.2.0.15 → v1.2.0.16)
+## Что сделано (v1.2.0.17 → v1.2.0.18)
 
-### Reconnection fix
-- **ChatListActivity.isAppInBackground:** Теперь устанавливает `true` в `onPause()` и `false` в `onResume()` (раньше не устанавливалось)
-- **Channel health check:** `onResume()` проверяет `connectionStatus` — если не READY, принудительно вызывает `forceReconnect()`
-- **Корневая причина:** `shouldForceReconnect()` всегда возвращал `false` для ChatListActivity
+### Secret chat marshallers — field order fix
+- `CreateSecretChatRequest` — убран лишний `userId`, field order: 1=target_username, 2=target_user_id, 3=public_key, 4=client_version
+- `ExchangeSecretKeyRequest` — field order: 1=chat_id, 2=public_key
+- `GetSecretChatKeyRequest` — field order: 1=chat_id
 
-### Unread badge fix
-- **ChatListViewModel:** `newMessageEvent` handler теперь проверяет `message.user != currentUsername` — unread count не растёт от собственных сообщений
+### Secret chat display name
+- `getDisplayName()` — проверка `isSecret` вынесена на верхний уровень
+- Секретные чаты показывают `🔒 имя_собеседника`
 
-### Scroll position fix
-- **NewChatActivity:** `shouldScrollToBottom = true` при первом входе в чат (загрузка истории)
-- **Auto-scroll:** При новом сообщении от собеседника — auto-scroll если пользователь внизу чата (последние 3 сообщения видны)
+### E2EE key exchange
+- Лимит 10 попыток обмена ключами (каждые 3 сек)
+- Логирование: номер попытки, финальный warning
 
-### Online users parse fix
-- **RealGrpcClient:** `ONLINE_USERS_UPDATE:null` теперь не крашит — проверка на `null` перед парсингом JSON
-
-### Unit-тесты (35 тестов)
-- `SessionManagerTest` — UserSession data class (8 тестов)
-- `AiModelsTest` — AiSource, AiChatSession, AiChatMessage, AiChatSettings, AiStreamState (16 тестов)
-- `ProfileViewModelTest` — ProfileData, GroupData, AvatarUploadResult, contact filtering (11 тестов)
-
-### Offline mode
-- **GrpcMessageClient.loadHistory():** При отсутствии канала (офлайн) загружает сообщения из Room DB кэша и вызывает `onCompletion()` (раньше `return` без вызова callback — `isLoading` застревал в `true`)
-- **ChatListViewModel:** Загружает кэшированные чаты при старте даже без подключения (offline-first)
-
-### Chat list flickering fix
-- **ChatListViewModel.loadChats(silent):** Параметр `silent = true` — periodic sync и connection READY sync не показывают preloader
-- **Diff-проверка:** Список обновляется только при реальных изменениях (id, lastMessageTime, unreadCount, pinned, archived, lastMessageText)
-- **Pull-to-refresh:** По-прежнему показывает spinner (non-silent)
+### Selection mode
+- Убраны action_pin и action_archive (пока не готово)
+- MaterialCheckBox с адаптацией к теме
 
 ---
 
-## Что сделано (v1.2.0.14 → v1.2.0.15)
+## Критические фиксы (v1.2.0.5 → v1.2.0.17)
 
-### Secret chat fixes
-- **E2EE init:** `ChatE2EEDelegate.initE2EE()` вызывается в `NewChatActivity.setupDelegates()` — key exchange происходит при открытии секретного чата
-- **History decryption:** `GrpcMessageClient.loadHistory()` расшифровывает E2EE через `decryptE2EEMessages()` — история загружается и отображается корректно
-- **Chat list privacy:** Секретные чаты показывают "🔒 End-to-end encrypted" вместо lastMessageText
-- **newMessageEvent privacy:** Секретные чаты не показывают plaintext превью в обновлениях чат-листа
-- **Post key-exchange reload:** После завершения key exchange — очистка Room DB кэша + clearMessages + loadHistory
-
-### ServerConfig
-- **ServerConfig.kt:** Централизованный `ServerConfig.kt` — PROD_HOST, PROD_GRPC_PORT, PROD_HTTP_PORT, DEV equivalents
-- **Хардкод IP убран:** SessionManager, ChatListAuth, CallActivity — все ссылаются на ServerConfig
-
-### Серверные фиксы (E2EE)
-- **GetHistory:** `e2ee_payload` = один base64 слой (был двойной)
-- **EditMessage:** проверка `IsE2EE` при decrypt + broadcast
-- **GetFavorites:** E2EE возвращают `e2ee_payload`, не расшифровку
-- **backfillLastMessageText:** исключены `is_secret` чаты
-
----
-
-## Критические фиксы (v1.2.0.5 → v1.2.0.14)
-
-- **Токен/сессия:** `startTokenRefresh()` вызывается при каждом входе/восстановлении. Chat stream retry: refresh → retry (не password dead-end). `onResume` валидация токена.
-- **Admin menu:** `isSuperAdmin` race condition исправлен. `adminUserId` сохраняется в SharedPreferences, восстанавливается при старте.
-- **Admin discovery for non-admin users:** UserInfoProto добавлены userId (field 6) и isSuperAdmin (field 7). loadUsers() сканирует allUsers и находит адмира.
-- **Feedback retry:** openFeedbackChat() вызывает loadUsers() + retry через 1.5с если adminUserId пуст.
-- **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
+- **Токен/сессия:** `startTokenRefresh()` при каждом входе/восстановлении. Chat stream retry: refresh → retry.
+- **Admin menu:** `isSuperAdmin` race condition исправлен. `adminUserId` сохраняется в SharedPreferences.
+- **Admin discovery:** UserInfoProto добавлены userId + isSuperAdmin. loadUsers() сканирует allUsers.
 - **Chat subtitle last seen:** В direct-чатах показывается `ProtoUtils.formatLastSeen()`.
 - **Deleted chat fix:** deleteChat() удаляет чат из Room DB. chatDeletedEvent подписан в ChatListViewModel.
 - **Pull-to-refresh fix:** refreshChats() сбрасывает `_isLoading`.
-- **Chat list sync:** newMessageEvent подписан в ChatListViewModel — чат-лист обновляется в реальном времени. 30с periodic polling. ChatDao caching.
-- **Action mode toolbar:** toolbar-native selection mode — без Android ActionMode bar.
-- **Архитектура:** ChatViewModel, ProfileViewModel, MessageAdapter рефакторинг.
+- **Chat list sync:** newMessageEvent + 30с periodic polling + ChatDao caching.
+- **Action mode toolbar:** toolbar-native selection mode.
+- **E2EE:** decryptE2EEMessages(), onKeyExchangeComplete cache clear + reload.
+- **Chat list privacy:** isSecret masking в buildSections + ChatAdapter.
 
 ---
 
@@ -151,35 +95,33 @@ MessageAdapter → 12 focused bind methods
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
-Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
-Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache (Room)
-Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode), no Android ActionMode bar
-ServerConfig: centralized PROD_HOST/GRPC_PORT/HTTP_PORT in ServerConfig.kt
-E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages() in GrpcMessageClient
-
-Theme: colorOnPrimary — единый цвет для всех иконок toolbar и аватаров
-Chat card background: incomingBubbleColor (не surfaceColor)
+Admin tracking: adminUserId StateFlow + SharedPreferences persistence
+Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache
+Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode)
+Sheet navigation: SheetNavigator (push/pop/back button)
+E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages()
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.18)
+## Бэклог — Следующая сессия (v1.2.0.20)
 
-### Приоритет 1: Тесты
+### Приоритет 1: AI v2
+- Адаптация клиента под AI v2 API
+
+### Приоритет 2: Тесты
 | Задача | Статус |
 |--------|--------|
-| Unit-тесты для SessionManager (UserSession data class) | ✅ Done (v1.2.0.16) |
-| Unit-тесты для ProfileViewModel (ProfileData, GroupData, contact filtering) | ✅ Done (v1.2.0.16) |
-| Unit-тесты для data/ai/ (AiModels, AiDomainExtensions) | ✅ Done (v1.2.0.16) |
-| Unit-тесты для ChatViewModel | ⏳ Осталось |
+| Unit-тесты для ChatViewModel | ✅ Done (v1.2.0.19) |
+| Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
+| Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
 
-### Приоритет 2: UX
-| Задача | Оценка |
+### Приоритет 3: UX
+| Задача | Статус |
 |--------|--------|
-| Push notification deep link — переход в чат из уведомления | 2h |
-
-### Приоритет 3: Отладка
-- [ ] Навигация шторок в реальном приложении
+| Offline mode | ✅ Done (v1.2.0.16) |
+| Push notification deep link | ✅ Done (v1.2.0.16) |
+| Sheet navigation | ✅ Done (v1.2.0.19) |
 
 ---
 
@@ -197,11 +139,9 @@ Chat card background: incomingBubbleColor (не surfaceColor)
 10. Все chat activities: `setDecorFitsSystemWindows(window, false)` в onCreate
 11. Marshallers: всегда включать v2 proto поля
 12. JWT freshness: `ensureFreshToken()` перед Chat stream
-13. НЕ хардкодить username — использовать adminUserId / userId
-14. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
-15. **НЕ bump'ать версию — bump делает только пользователь**
-16. **Marshallers field order:** server proto определяет field numbers. `chat_id` всегда field 1, `user_id` field 2 — проверять в `CLIENT_INTEGRATION.md`
-17. **Тема:** Все иконки toolbar — `colorOnPrimary`. Карточки чатов — `incomingBubbleColor`
+13. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
+14. **НЕ bump'ать версию — bump делает только пользователь**
+15. **Marshallers field order:** server proto определяет field numbers. `chat_id` всегда field 1, `user_id` field 2
 
 ---
 
@@ -214,7 +154,7 @@ Chat card background: incomingBubbleColor (не surfaceColor)
 | Сервис | lavender-server-dev | lavender-server |
 | Сайт | http://13.140.25.249 |
 
-**Деплой сервера:** НЕ делать — другой агент управляет сервером. Если нужен серверный фикс — написать промпт-файл в `/root/msg/doc/`.
+**Деплой сервера:** НЕ делать — другой агент управляет сервером.
 
 ---
 
@@ -223,4 +163,3 @@ Chat card background: incomingBubbleColor (не surfaceColor)
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/PLAN.md`
 - Документация сервера: `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md`
 - Changelog: `CHANGELOG.md`
-- v1 reference: `doc/ChatListActivity_v1_REFERENCE.kt`

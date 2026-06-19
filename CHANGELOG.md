@@ -1,5 +1,26 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.19] - 2026-06-19
+
+### Добавлено
+
+**Навигация шторок (BottomSheet navigation):**
+- `SheetNavigator` — стек шторок с поддержкой back navigation
+- Кнопка "назад" в заголовке шторки (автоматически появляется при наличии стека)
+- `showWithNavigation()` — показ шторки с навигацией
+- Все шторки в ChatListFABs теперь используют навигацию
+
+**Unit-тесты ChatViewModel:**
+- 17 тестов для `ChatViewModel.ChatMetadata` (defaults, values, copy, equals, hashCode, toString)
+- Тесты для всех типов чатов: direct, group, conference, favorites, general, secret
+
+### Удалено
+
+**AI тесты:**
+- `AiModelsTest.kt` — удалён (AI v1 deprecated, готовится AI v2)
+
+---
+
 ## [1.2.0.18] - 2026-06-19
 
 ### Исправления

@@ -15,6 +15,7 @@ import lavender.client.android.ui.widget.AIBottomSheet
 import lavender.client.android.ui.widget.ActionBottomSheet
 import lavender.client.android.ui.widget.SearchableListBottomSheet
 import lavender.client.android.ui.widget.SheetAction
+import lavender.client.android.ui.widget.SheetNavigator
 import lavender.client.android.ui.adapter.UserAdapter
 import org.json.JSONArray
 import java.text.SimpleDateFormat
@@ -40,6 +41,7 @@ internal fun setupFABs(activity: ChatListActivity) {
 // ======= FAB [+] Action Sheet =======
 
 internal fun showChatActionSheet(activity: ChatListActivity) {
+    SheetNavigator.clear()
     ActionBottomSheet(activity)
         .setActions(listOf(
             SheetAction(R.id.actionAddContact, R.drawable.ic_contacts, activity.getString(R.string.add_contact)) {
@@ -54,7 +56,7 @@ internal fun showChatActionSheet(activity: ChatListActivity) {
             SheetAction(R.id.actionCreateConference, R.drawable.ic_videocam_on, activity.getString(R.string.conference_in_development)) {
                 showCreateConferenceDialog(activity)
             }
-        )).show()
+        )).showWithNavigation()
 }
 
 // ======= Add Contact Dialog =======
@@ -141,7 +143,7 @@ internal fun showAddContactDialog(activity: ChatListActivity) {
             }
         }
     }
-    sheet.show()
+    sheet.showWithNavigation()
 }
 
 // ======= Create Chat Dialog =======
@@ -241,7 +243,7 @@ internal fun showCreateChatDialog(activity: ChatListActivity) {
             }
         }
     }
-    sheet.show()
+    sheet.showWithNavigation()
 }
 
 // ======= Create Secret Chat Dialog =======
@@ -326,7 +328,7 @@ internal fun showCreateSecretChatDialog(activity: ChatListActivity) {
             }
         }
     }
-    sheet.show()
+    sheet.showWithNavigation()
 }
 
 // ======= Create Conference Dialog =======
@@ -404,7 +406,7 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
             }
         }
     }
-    sheet.show()
+    sheet.showWithNavigation()
 }
 
 // ======= AI Bottom Sheet =======

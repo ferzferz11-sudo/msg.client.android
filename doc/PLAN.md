@@ -1,6 +1,16 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.15 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.19 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+
+---
+
+## Completed — v1.2.0.19
+
+### Session 2026-06-19 (Sheet Navigation + ChatViewModel Tests + AI Cleanup)
+- ✅ **SheetNavigator:** BottomSheet navigation stack with back button in title bar
+- ✅ **ChatViewModel tests:** 17 unit tests (ChatMetadata data class, all chat types)
+- ✅ **AI tests removed:** AiModelsTest.kt deleted (AI v1 deprecated)
+- ✅ **v1 reference removed:** ChatListActivity_v1_REFERENCE.kt deleted
 
 ---
 
@@ -99,21 +109,21 @@
 ## Backlog — Следующая сессия (v1.2.0.16)
 
 ### Приоритет 1: Отладка
-- [ ] Навигация шторок в реальном приложении
+- [x] Навигация шторок в реальном приложении — ✅ SheetNavigator + back button
 
 ### Приоритет 2: Тесты
 | Задача | Оценка |
 |--------|--------|
-| Unit-тесты для ChatViewModel | 2h |
-| Unit-тесты для ProfileViewModel | 2h |
-| Unit-тесты для SessionManager | 2h |
-| Unit-тесты для data/ai/ | 2h |
+| Unit-тесты для ChatViewModel | ✅ Done (17 tests) |
+| Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
+| Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
+| ~~Unit-тесты для data/ai/~~ | ~~Удалено — AI v1 deprecated~~ |
 
 ### Приоритет 3: UX
 | Задача | Оценка |
 |--------|--------|
-| Offline mode — показать cached messages без подключения | 3h |
-| Push notification deep link — переход в чат из уведомления | 2h |
+| Offline mode — показать cached messages без подключения | ✅ Done (v1.2.0.16) |
+| Push notification deep link — переход в чат из уведомления | ✅ Done (LavenderMessagingService + SplashActivity) |
 
 ---
 

@@ -51,6 +51,36 @@ object WidgetManager {
 }
 
 /**
+ * Navigation stack for bottom sheets.
+ */
+object SheetNavigator {
+    private val stack = mutableListOf<StandardBottomSheet>()
+    
+    fun push(sheet: StandardBottomSheet) {
+        stack.lastOrNull()?.dismiss()
+        stack.add(sheet)
+    }
+    
+    fun pop(): StandardBottomSheet? {
+        if (stack.isNotEmpty()) {
+            val popped = stack.removeAt(stack.lastIndex)
+            popped.dismiss()
+            stack.lastOrNull()?.show()
+        }
+        return stack.lastOrNull()
+    }
+    
+    fun clear() {
+        stack.forEach { it.dismiss() }
+        stack.clear()
+    }
+    
+    fun current(): StandardBottomSheet? = stack.lastOrNull()
+    
+    fun size(): Int = stack.size
+}
+
+/**
  * Action Item for Bottom Sheets.
  */
 data class SheetAction(
@@ -76,6 +106,8 @@ open class StandardBottomSheet(
     protected var dragHandle: View? = null
     protected var titleView: TextView? = null
     protected var contentContainer: LinearLayout? = null
+    protected var backButton: ImageView? = null
+    protected var hasBackStack = false
 
     init {
         initViews(layoutId)
@@ -92,6 +124,11 @@ open class StandardBottomSheet(
         dragHandle = view.findViewById(R.id.dragHandle)
         titleView = view.findViewById(R.id.titleText)
         contentContainer = view.findViewById(R.id.contentContainer)
+        backButton = view.findViewById(R.id.backButton)
+        
+        backButton?.setOnClickListener {
+            SheetNavigator.pop()
+        }
     }
 
     override fun applyTheme(theme: Theme) {
@@ -245,6 +282,7 @@ open class StandardBottomSheet(
 
     fun show() {
         applyTheme(ThemeStore.currentTheme())
+        updateBackButton()
         dialog?.apply {
             @Suppress("DEPRECATION")
             window?.setSoftInputMode(
@@ -256,8 +294,22 @@ open class StandardBottomSheet(
         dialog?.show()
     }
 
+    fun showWithNavigation() {
+        SheetNavigator.push(this)
+        show()
+    }
+
     fun dismiss() {
         dialog?.dismiss()
+    }
+
+    private fun updateBackButton() {
+        val hasBack = SheetNavigator.size() > 1
+        backButton?.visibility = if (hasBack) View.VISIBLE else View.GONE
+        if (hasBack) {
+            val primaryColor = ThemeUtils.parseSafeColor(ThemeStore.currentTheme().primaryColor, Color.BLUE)
+            backButton?.imageTintList = ColorStateList.valueOf(primaryColor)
+        }
     }
 }
 
