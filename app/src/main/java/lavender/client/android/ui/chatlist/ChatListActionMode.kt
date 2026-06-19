@@ -15,9 +15,10 @@ import lavender.client.android.data.grpc.*
 
 internal fun enterSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = true
-    // Hide normal toolbar content
+    // Hide avatar, keep title container visible for selection count
     activity.ivToolbarUserAvatar?.isVisible = false
-    activity.llToolbarTitleContainer?.isVisible = false
+    activity.llToolbarTitleContainer?.isVisible = true
+    activity.tvToolbarSubtitle?.isVisible = false
     // Inflate selection menu into toolbar
     activity.toolbar?.menu?.clear()
     activity.toolbar?.inflateMenu(R.menu.chat_list_action_mode)
@@ -31,16 +32,16 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
     activity.toolbar?.setOnMenuItemClickListener { item ->
         onMenuItemClicked(activity, item)
     }
-    // Back arrow
+    // Back arrow — same color as icons
     activity.toolbar?.setNavigationIcon(R.drawable.ic_back_arrow)
     activity.toolbar?.navigationIcon?.let {
         val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it)
-        val theme = lavender.client.android.theme.ThemeStore.currentTheme()
-        val navColor = try { theme.onPrimaryColor.toInt() } catch (_: Exception) { iconColor }
-        androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, navColor)
+        androidx.core.graphics.drawable.DrawableCompat.setTint(wrapped, iconColor)
         activity.toolbar?.navigationIcon = wrapped
     }
     activity.toolbar?.setNavigationOnClickListener { exitSelectionMode(activity) }
+    // Title text color — same as icons
+    activity.tvToolbarTitle?.setTextColor(iconColor)
     // Update title to selection count
     updateActionModeTitle(activity)
 }
@@ -51,12 +52,16 @@ internal fun exitSelectionMode(activity: ChatListActivity) {
     // Restore toolbar
     activity.ivToolbarUserAvatar?.isVisible = true
     activity.llToolbarTitleContainer?.isVisible = true
+    activity.tvToolbarTitle?.text = activity.getString(R.string.chats)
+    // Restore title color from theme
+    val typedValue = android.util.TypedValue()
+    activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+    activity.tvToolbarTitle?.setTextColor(typedValue.data)
     activity.toolbar?.menu?.clear()
     activity.toolbar?.setNavigationIcon(null)
     activity.toolbar?.setNavigationOnClickListener(null)
     activity.toolbar?.setOnMenuItemClickListener(null)
     setupSearchMenu(activity)
-    activity.tvToolbarTitle?.text = activity.getString(R.string.chats)
 }
 
 internal fun updateActionModeTitle(activity: ChatListActivity) {
