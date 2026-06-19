@@ -29,7 +29,8 @@ internal fun createActionModeCallback(activity: ChatListActivity): ActionMode.Ca
             menu.findItem(R.id.action_delete)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
             // Replace toolbar content with action mode
             activity.ivToolbarUserAvatar?.isVisible = false
-            activity.tvToolbarSubtitle?.isVisible = false
+            activity.llToolbarTitleContainer?.isVisible = false
+            activity.toolbar?.menu?.clear()
             return true
         }
 
@@ -67,7 +68,11 @@ internal fun createActionModeCallback(activity: ChatListActivity): ActionMode.Ca
             activity.chatAdapter.clearSelection()
             // Restore toolbar content
             activity.ivToolbarUserAvatar?.isVisible = true
-            activity.tvToolbarSubtitle?.isVisible = activity.tvToolbarSubtitle?.text?.isNotEmpty() == true
+            activity.llToolbarTitleContainer?.isVisible = true
+            activity.toolbar?.let { tb ->
+                tb.menu?.clear()
+                activity.setupSearchMenu()
+            }
         }
     }
 }

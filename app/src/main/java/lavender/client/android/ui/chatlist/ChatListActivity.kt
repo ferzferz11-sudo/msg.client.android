@@ -84,6 +84,7 @@ class ChatListActivity : AppCompatActivity() {
     internal var tvToolbarTitle: TextView? = null
     internal var tvToolbarSubtitle: TextView? = null
     internal var ivToolbarUserAvatar: ImageView? = null
+    internal var llToolbarTitleContainer: android.widget.LinearLayout? = null
 
     // ActionMode
     internal var actionMode: ActionMode? = null
@@ -152,6 +153,7 @@ class ChatListActivity : AppCompatActivity() {
         tvToolbarTitle = findViewById(R.id.tvToolbarTitle)
         tvToolbarSubtitle = findViewById(R.id.tvToolbarSubtitle)
         ivToolbarUserAvatar = findViewById(R.id.ivToolbarUserAvatar)
+        llToolbarTitleContainer = findViewById(R.id.llToolbarTitleContainer)
         tabLayout = findViewById(R.id.tabLayout)
         swipeRefresh = findViewById(R.id.srlChatList)
         rvChatList = findViewById(R.id.rvChatList)
@@ -361,7 +363,7 @@ class ChatListActivity : AppCompatActivity() {
     private fun deleteSelectedChats(chats: List<ChatInfo>) = deleteSelectedChats(this, chats)
 
     // Search
-    private fun setupSearchMenu() = setupSearchMenu(this)
+    internal fun setupSearchMenu() = setupSearchMenu(this)
 
     // ======= Internal methods that stay in Activity =======
 
