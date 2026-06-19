@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.16 (в работе) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.17 (релиз) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -15,7 +15,47 @@
 
 ---
 
-## Что сделано (v1.2.0.15 → v1.2.0.16, текущая сессия)
+## Что сделано (v1.2.0.16 → v1.2.0.17)
+
+### gRPC Marshallers fix (PinChat, ArchiveChat и др.)
+- **Корневая причина:** Все marshallers для ChatList v2 (PinChat, UnPinChat, ArchiveChat, UnarchiveChat, PinMessage, UnPinMessage, GetPinnedMessages) отправляли `userId` как field 1, а `chatId` как field 2 — а сервер ожидает `chat_id` как field 1, `user_id` как field 2
+- **Исправлено:** Поменяли field numbers во всех 7 marshallers в `GrpcMarshallers.kt`
+- **Симптом:** gRPC возвращал `UNKNOWN` status при вызове `messenger.ChatService/PinChat`
+
+### Selection mode pin icon
+- **Новая иконка:** `ic_pin.xml` (pushpin) вместо `ic_lock` (замок) для action_pin в toolbar
+- **Динамические labels:** pin/unpin, mute/unmute, archive/unarchive — заголовок action кнопок меняется в зависимости от состояния выбранных чатов
+- **updateActionModeIcons():** Обновляет title всех action кнопок при изменении selection
+
+### E2EE key exchange fix (секретные чаты)
+- **Корневая причина:** Все 3 секретных marshallers (CreateSecretChat, ExchangeSecretKey, GetSecretChatKey) не отправляли `user_id` — сервер ожидает `{ chat_id, user_id, public_key }` для ExchangeSecretKey
+- **Исправлено:** Добавлен `userId` во все 3 proto и marshallers в `SecretChatGrpc.kt`
+- **Симптом:** Бесконечный обмен ключами в toolbar (3с polling)
+
+### Secret chat name fix
+- **Корневая причина:** `getDisplayName()` для `type != "direct"` возвращал `name` как есть, а сервер для секретных чатов ставит `name` с обоими именами
+- **Исправлено:** `getDisplayName()` теперь для `isSecret` парсит participants и возвращает только имя собеседника, либо вырезает своё имя из `name`
+
+### Contacts marshaller fix
+- **Корневая причина:** `GetContactsRequestMarshaller` отправлял `username` как field 1, а `userId` как field 2 — сервер ожидает `{ user_id, contact_user_id }` (field 1 = user_id)
+- **Исправлено:** `GetContactsRequestMarshaller`, `AddContactRequestMarshaller`, `RemoveContactRequestMarshaller` — field 1 = userId
+- **Симптом:** 0 контактов в секретном чате
+
+### Empty contacts state
+- Добавлен empty state в `SearchableListBottomSheet` — текст "Контактов пока нет" если список пуст
+- Добавлен `emptyStateText` в layout `widget_searchable_list_bottom_sheet.xml`
+
+### Unified icon color (список чатов)
+- Все иконки toolbar, selection mode, back arrow, tab text/indicator используют `colorOnPrimary`
+- Avatar container: белая лого на круглом фоне `colorOnPrimary` (программный tint в ThemeApplier)
+- Avatar container скрывается в selection mode (hidden parent FrameLayout)
+
+### Chat list card color
+- Фон карточки чата теперь использует `incomingBubbleColor` из темы вместо `surfaceColor`
+
+---
+
+## Что сделано (v1.2.0.15 → v1.2.0.16)
 
 ### Reconnection fix
 - **ChatListActivity.isAppInBackground:** Теперь устанавливает `true` в `onPause()` и `false` в `onResume()` (раньше не устанавливалось)
@@ -116,11 +156,14 @@ Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cac
 Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode), no Android ActionMode bar
 ServerConfig: centralized PROD_HOST/GRPC_PORT/HTTP_PORT in ServerConfig.kt
 E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages() in GrpcMessageClient
+
+Theme: colorOnPrimary — единый цвет для всех иконок toolbar и аватаров
+Chat card background: incomingBubbleColor (не surfaceColor)
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.17)
+## Бэклог — Следующая сессия (v1.2.0.18)
 
 ### Приоритет 1: Тесты
 | Задача | Статус |
@@ -157,6 +200,8 @@ E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages() 
 13. НЕ хардкодить username — использовать adminUserId / userId
 14. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
 15. **НЕ bump'ать версию — bump делает только пользователь**
+16. **Marshallers field order:** server proto определяет field numbers. `chat_id` всегда field 1, `user_id` field 2 — проверять в `CLIENT_INTEGRATION.md`
+17. **Тема:** Все иконки toolbar — `colorOnPrimary`. Карточки чатов — `incomingBubbleColor`
 
 ---
 

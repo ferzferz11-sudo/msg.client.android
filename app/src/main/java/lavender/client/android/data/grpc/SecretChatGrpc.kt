@@ -17,7 +17,8 @@ suspend fun createSecretChat(
     targetUsername: String,
     targetUserId: String,
     publicKey: String,
-    clientVersion: String
+    clientVersion: String,
+    userId: String = ""
 ): Triple<String, Boolean, String> = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
@@ -32,10 +33,11 @@ suspend fun createSecretChat(
             override fun stream(v: CreateSecretChatRequestProto): java.io.InputStream {
                 val baos = ByteArrayOutputStream()
                 val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-                if (v.targetUsername.isNotEmpty()) cos.writeString(1, v.targetUsername)
-                if (v.targetUserId.isNotEmpty()) cos.writeString(2, v.targetUserId)
-                if (v.publicKey.isNotEmpty()) cos.writeString(3, v.publicKey)
-                if (v.clientVersion.isNotEmpty()) cos.writeString(4, v.clientVersion)
+                if (v.userId.isNotEmpty()) cos.writeString(1, v.userId)
+                if (v.targetUsername.isNotEmpty()) cos.writeString(2, v.targetUsername)
+                if (v.targetUserId.isNotEmpty()) cos.writeString(3, v.targetUserId)
+                if (v.publicKey.isNotEmpty()) cos.writeString(4, v.publicKey)
+                if (v.clientVersion.isNotEmpty()) cos.writeString(5, v.clientVersion)
                 cos.flush()
                 return ByteArrayInputStream(baos.toByteArray())
             }
@@ -66,6 +68,7 @@ suspend fun createSecretChat(
         .build()
 
     val request = CreateSecretChatRequestProto(
+        userId = userId,
         targetUsername = targetUsername,
         targetUserId = targetUserId,
         publicKey = publicKey,
@@ -94,6 +97,7 @@ suspend fun createSecretChat(
 
 suspend fun exchangeSecretKey(
     chatId: String,
+    userId: String,
     publicKey: String
 ): Triple<Boolean, String, Boolean> = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
@@ -110,7 +114,8 @@ suspend fun exchangeSecretKey(
                 val baos = ByteArrayOutputStream()
                 val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
                 if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
-                if (v.publicKey.isNotEmpty()) cos.writeString(2, v.publicKey)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+                if (v.publicKey.isNotEmpty()) cos.writeString(3, v.publicKey)
                 cos.flush()
                 return ByteArrayInputStream(baos.toByteArray())
             }
@@ -138,7 +143,7 @@ suspend fun exchangeSecretKey(
         })
         .build()
 
-    val request = ExchangeSecretKeyRequestProto(chatId = chatId, publicKey = publicKey)
+    val request = ExchangeSecretKeyRequestProto(chatId = chatId, userId = userId, publicKey = publicKey)
     val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
     val result = CompletableDeferred<Triple<Boolean, String, Boolean>>()
 
@@ -161,7 +166,8 @@ suspend fun exchangeSecretKey(
 }
 
 suspend fun getSecretChatKey(
-    chatId: String
+    chatId: String,
+    userId: String
 ): Pair<String, Boolean> = withContext(Dispatchers.IO) {
     val channel = RealGrpcClient.getChannel()
     if (channel == null || channel.isShutdown || channel.isTerminated) {
@@ -177,6 +183,7 @@ suspend fun getSecretChatKey(
                 val baos = ByteArrayOutputStream()
                 val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
                 if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId)
+                if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
                 cos.flush()
                 return ByteArrayInputStream(baos.toByteArray())
             }
@@ -202,7 +209,7 @@ suspend fun getSecretChatKey(
         })
         .build()
 
-    val request = GetSecretChatKeyRequestProto(chatId = chatId)
+    val request = GetSecretChatKeyRequestProto(chatId = chatId, userId = userId)
     val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
     val result = CompletableDeferred<Pair<String, Boolean>>()
 

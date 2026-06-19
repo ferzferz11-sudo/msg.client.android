@@ -57,7 +57,21 @@ data class ChatInfo(
     val pinnedAt: Long = 0L             // ChatList v2: timestamp when pinned (for sort order)
 ) {
     fun getDisplayName(currentUsername: String): String {
-        if (type != "direct") return name
+        if (type != "direct") {
+            if (isSecret) {
+                return try {
+                    val arr = org.json.JSONArray(participants)
+                    for (i in 0 until arr.length()) {
+                        val p = arr.getString(i)
+                        if (p != currentUsername) return p
+                    }
+                    name.replace(currentUsername, "").trim().trim(',').trim()
+                } catch (e: Exception) {
+                    name.replace(currentUsername, "").trim().trim(',').trim()
+                }
+            }
+            return name
+        }
         return try {
             val arr = org.json.JSONArray(participants)
             var other = ""

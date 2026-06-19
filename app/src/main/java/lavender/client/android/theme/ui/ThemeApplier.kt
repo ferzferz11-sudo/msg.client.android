@@ -113,7 +113,7 @@ object ThemeApplier {
             toolbar.findViewById<TextView>(R.id.tvToolbarTitle)?.setTextColor(customOnPrimary)
             toolbar.findViewById<TextView>(R.id.tvToolbarSubtitle)?.setTextColor(ThemeUtils.adjustAlpha(customOnPrimary, 0.8f))
             
-            // Tint toolbar icons
+            // Tint toolbar icons — all use colorOnPrimary for consistency
             val toolbarActions = listOf(R.id.actionSearch, R.id.actionDelete, R.id.actionEdit, R.id.actionApply, R.id.actionCreateChat, R.id.btnLobby, R.id.ivToolbarUserAvatar)
             toolbarActions.forEach { id ->
                 findViewById<ImageView>(id)?.let { iv ->
@@ -128,6 +128,13 @@ object ThemeApplier {
         // Tint AppBarLayout background
         activity.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)?.let { appBar ->
             appBar.setBackgroundColor(customPrimary)
+        }
+
+        // Tint avatar circle background with colorOnPrimary
+        activity.findViewById<ImageView>(R.id.ivToolbarUserAvatar)?.parent?.let { parent ->
+            if (parent is android.widget.FrameLayout) {
+                parent.backgroundTintList = ColorStateList.valueOf(customOnPrimary)
+            }
         }
 
         // Tint FAB (e.g. AgentListActivity)
@@ -148,16 +155,9 @@ object ThemeApplier {
         }
         // Tint TabLayout
         activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {
-            if (tag == "transparent") {
-                setBackgroundColor(Color.TRANSPARENT)
-                val pColor = parseSafeColor(theme.primaryColor, Color.BLUE)
-                setTabTextColors(adjustAlpha(pColor, 0.6f), pColor)
-                setSelectedTabIndicatorColor(pColor)
-            } else {
-                setBackgroundColor(Color.TRANSPARENT)
-                setTabTextColors(adjustAlpha(customOnPrimary, 0.75f), customOnPrimary)
-                setSelectedTabIndicatorColor(customOnPrimary)
-            }
+            setBackgroundColor(Color.TRANSPARENT)
+            setTabTextColors(adjustAlpha(customOnPrimary, 0.75f), customOnPrimary)
+            setSelectedTabIndicatorColor(customOnPrimary)
         }
 
         // Chat background image

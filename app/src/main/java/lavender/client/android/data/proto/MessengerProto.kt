@@ -847,6 +847,7 @@ data class CallMessageProto(
 // ======= Secret Chat (E2EE) =======
 
 data class CreateSecretChatRequestProto(
+    val userId: String = "",
     val targetUsername: String = "",
     val targetUserId: String = "",
     val publicKey: String = "",
@@ -862,6 +863,7 @@ data class CreateSecretChatResponseProto(
 
 data class ExchangeSecretKeyRequestProto(
     val chatId: String = "",
+    val userId: String = "",
     val publicKey: String = ""
 )
 
@@ -872,7 +874,8 @@ data class ExchangeSecretKeyResponseProto(
 )
 
 data class GetSecretChatKeyRequestProto(
-    val chatId: String = ""
+    val chatId: String = "",
+    val userId: String = ""
 )
 
 data class GetSecretChatKeyResponseProto(

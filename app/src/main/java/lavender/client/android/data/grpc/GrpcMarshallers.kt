@@ -690,7 +690,7 @@ class RemoveParticipantResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<
 class AddContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<AddContactRequestProto> {
     override fun stream(v: AddContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.username.isNotEmpty()) cos.writeString(3, v.username)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): AddContactRequestProto = AddContactRequestProto()
@@ -708,7 +708,7 @@ class AddContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<AddCont
 class RemoveContactRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<RemoveContactRequestProto> {
     override fun stream(v: RemoveContactRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.contactUsername.isNotEmpty()) cos.writeString(2, v.contactUsername); if (v.username.isNotEmpty()) cos.writeString(3, v.username)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): RemoveContactRequestProto = RemoveContactRequestProto()
@@ -726,7 +726,7 @@ class RemoveContactResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Remo
 class GetContactsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetContactsRequestProto> {
     override fun stream(v: GetContactsRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.username.isNotEmpty()) cos.writeString(1, v.username); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
+        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.username.isNotEmpty()) cos.writeString(2, v.username)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetContactsRequestProto = GetContactsRequestProto()
@@ -1404,7 +1404,7 @@ class RevokeDeviceRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Revoke
 class PinChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatRequestProto> {
     override fun stream(v: PinChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): PinChatRequestProto = PinChatRequestProto()
@@ -1413,7 +1413,7 @@ class PinChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatRequ
 class UnPinChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinChatRequestProto> {
     override fun stream(v: UnPinChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UnPinChatRequestProto = UnPinChatRequestProto()
@@ -1446,7 +1446,7 @@ class SearchChatsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Search
 class ArchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ArchiveChatRequestProto> {
     override fun stream(v: ArchiveChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): ArchiveChatRequestProto = ArchiveChatRequestProto()
@@ -1455,7 +1455,7 @@ class ArchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Archive
 class UnarchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnarchiveChatRequestProto> {
     override fun stream(v: UnarchiveChatRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UnarchiveChatRequestProto = UnarchiveChatRequestProto()
@@ -1464,7 +1464,7 @@ class UnarchiveChatRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<Unarc
 class PinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinMessageRequestProto> {
     override fun stream(v: PinMessageRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.messageId.isNotEmpty()) cos.writeString(3, v.messageId)
+        if (v.messageId.isNotEmpty()) cos.writeString(1, v.messageId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): PinMessageRequestProto = PinMessageRequestProto()
@@ -1473,7 +1473,7 @@ class PinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<PinMessa
 class UnPinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinMessageRequestProto> {
     override fun stream(v: UnPinMessageRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.messageId.isNotEmpty()) cos.writeString(3, v.messageId)
+        if (v.messageId.isNotEmpty()) cos.writeString(1, v.messageId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(3, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UnPinMessageRequestProto = UnPinMessageRequestProto()
@@ -1482,7 +1482,7 @@ class UnPinMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<UnPinM
 class GetPinnedMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetPinnedMessagesRequestProto> {
     override fun stream(v: GetPinnedMessagesRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.userId.isNotEmpty()) cos.writeString(1, v.userId); if (v.chatId.isNotEmpty()) cos.writeString(2, v.chatId)
+        if (v.chatId.isNotEmpty()) cos.writeString(1, v.chatId); if (v.userId.isNotEmpty()) cos.writeString(2, v.userId)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetPinnedMessagesRequestProto = GetPinnedMessagesRequestProto()

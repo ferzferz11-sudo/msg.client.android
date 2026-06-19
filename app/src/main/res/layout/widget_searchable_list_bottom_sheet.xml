@@ -82,6 +82,17 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/emptyStateText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/no_contacts"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:visibility="gone" />
     </FrameLayout>
 
     <com.google.android.material.button.MaterialButton

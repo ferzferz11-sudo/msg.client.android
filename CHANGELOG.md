@@ -1,5 +1,33 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.17] - 2026-06-19
+
+### Исправления
+
+**gRPC Marshallers fix:**
+- Все marshallers для ChatList v2 (PinChat, UnPinChat, ArchiveChat, UnarchiveChat, PinMessage, UnPinMessage, GetPinnedMessages) — исправлен field order: `chat_id` field 1, `user_id` field 2 (было наоборот)
+- Contacts marshallers (GetContacts, AddContact, RemoveContact) — исправлен field order: `user_id` field 1
+
+**Secret chat fixes:**
+- Все 3 секретных marshallers (CreateSecretChat, ExchangeSecretKey, GetSecretChatKey) — добавлен `userId` во все proto и marshallers
+- `getDisplayName()` — для секретных чатов парсит participants и возвращает только имя собеседника
+- Добавлено логирование key exchange в `ChatE2EEDelegate`
+
+**Pin/Unpin chat:**
+- Замена иконки `ic_lock` → `ic_pin` (pushpin) для action_pin
+- Динамические labels: pin/unpin, mute/unmute, archive/unarchive — заголовок меняется по состоянию selection
+
+**Empty contacts:**
+- `SearchableListBottomSheet` — пустое состояние "Контактов пока нет" если список контактов пуст
+
+**Theme:**
+- Все иконки toolbar, selection mode, back arrow, tab text/indicator — единый цвет `colorOnPrimary`
+- Аватар: белая лого на круглом фоне `colorOnPrimary` (программный tint)
+- Аватар скрывается в selection mode
+- Фон карточки чата теперь использует `incomingBubbleColor` из темы
+
+---
+
 ## [1.2.0.16] - 2026-06-19
 
 ### Исправления

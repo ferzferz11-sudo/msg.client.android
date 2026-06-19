@@ -31,6 +31,7 @@ class ChatE2EEDelegate(
     fun initE2EE() {
         if (!isSecret) return
         val publicKey = E2EEManager.getPublicKeyBase64(activity)
+        android.util.Log.d("E2EE", "initE2EE: exchanging keys for chat: $roomId")
         grpcClient.exchangeSecretKey(roomId, publicKey) { success, peerKey, peerHasKey ->
             activity.runOnUiThread {
                 if (success && peerHasKey && peerKey.isNotEmpty()) {
@@ -40,6 +41,7 @@ class ChatE2EEDelegate(
                     android.util.Log.d("E2EE", "Key exchange complete for chat: $roomId")
                     onKeyExchangeComplete?.invoke(true)
                 } else {
+                    android.util.Log.d("E2EE", "Key exchange pending: success=$success, peerHasKey=$peerHasKey, peerKey.isNotEmpty=${peerKey.isNotEmpty()}")
                     toolbarSubtitle?.text = activity.getString(R.string.e2ee_pending)
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ initE2EE() }, 3000)
                     onKeyExchangeComplete?.invoke(false)

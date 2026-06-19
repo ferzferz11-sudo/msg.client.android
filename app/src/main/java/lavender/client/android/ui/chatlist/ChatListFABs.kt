@@ -280,7 +280,13 @@ internal fun showCreateSecretChatDialog(activity: ChatListActivity) {
                     .filter { it != username && currentContacts.contains(it) }
                 activity.runOnUiThread {
                     sheet.setLoading(false)
-                    userAdapter.setUsers(filtered)
+                    if (filtered.isEmpty()) {
+                        sheet.setEmptyState(true, activity.getString(R.string.no_contacts))
+                        sheet.setActionButtonEnabled(false)
+                    } else {
+                        sheet.setEmptyState(false)
+                        userAdapter.setUsers(filtered)
+                    }
                 }
             }
         }

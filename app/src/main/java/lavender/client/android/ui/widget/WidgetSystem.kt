@@ -403,6 +403,7 @@ class SearchableListBottomSheet(context: Context, theme: Theme = ThemeStore.curr
     val actionButton: com.google.android.material.button.MaterialButton? = root?.findViewById(R.id.actionButton)
     val progressBar: android.widget.ProgressBar? = root?.findViewById(R.id.progressBar)
     val createChatCheckbox: android.widget.CheckBox? = root?.findViewById(R.id.createChatCheckbox)
+    val emptyStateText: android.widget.TextView? = root?.findViewById(R.id.emptyStateText)
 
     override fun applyTheme(theme: Theme) {
         super.applyTheme(theme)
@@ -418,6 +419,14 @@ class SearchableListBottomSheet(context: Context, theme: Theme = ThemeStore.curr
     fun setLoading(loading: Boolean): SearchableListBottomSheet {
         progressBar?.isVisible = loading
         recyclerView?.isVisible = !loading
+        if (loading) emptyStateText?.isVisible = false
+        return this
+    }
+
+    fun setEmptyState(visible: Boolean, message: String? = null): SearchableListBottomSheet {
+        emptyStateText?.isVisible = visible
+        if (message != null) emptyStateText?.text = message
+        recyclerView?.isVisible = !visible
         return this
     }
 

@@ -1,5 +1,6 @@
 package lavender.client.android.ui.chatlist
 
+import android.util.Log
 import android.view.MenuItem
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -8,6 +9,8 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.grpc.*
+import lavender.client.android.theme.ThemeStore
+import lavender.client.android.theme.ThemeUtils
 
 /**
  * Selection mode for ChatListActivity — toolbar-native (no Android ActionMode bar).
@@ -15,11 +18,10 @@ import lavender.client.android.data.grpc.*
 
 internal fun enterSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = true
-    // Hide avatar, keep title container visible for selection count
-    activity.ivToolbarUserAvatar?.isVisible = false
+    // Hide avatar container (FrameLayout wrapper), not just the ImageView
+    activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = false }
     activity.llToolbarTitleContainer?.isVisible = true
     activity.tvToolbarSubtitle?.isVisible = false
-    // Inflate selection menu into toolbar
     activity.toolbar?.menu?.clear()
     activity.toolbar?.inflateMenu(R.menu.chat_list_action_mode)
     val typedValue = android.util.TypedValue()
@@ -32,7 +34,6 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
     activity.toolbar?.setOnMenuItemClickListener { item ->
         onMenuItemClicked(activity, item)
     }
-    // Back arrow — same color as icons
     activity.toolbar?.setNavigationIcon(R.drawable.ic_back_arrow)
     activity.toolbar?.navigationIcon?.let {
         val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(it)
@@ -40,17 +41,16 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
         activity.toolbar?.navigationIcon = wrapped
     }
     activity.toolbar?.setNavigationOnClickListener { exitSelectionMode(activity) }
-    // Title text color — same as icons
     activity.tvToolbarTitle?.setTextColor(iconColor)
-    // Update title to selection count
     updateActionModeTitle(activity)
+    updateActionModeIcons(activity)
 }
 
 internal fun exitSelectionMode(activity: ChatListActivity) {
     activity.isSelectionMode = false
     activity.chatAdapter.clearSelection()
-    // Restore toolbar
-    activity.ivToolbarUserAvatar?.isVisible = true
+    // Restore avatar container (FrameLayout wrapper)
+    activity.ivToolbarUserAvatar?.parent?.let { (it as? android.view.View)?.isVisible = true }
     activity.llToolbarTitleContainer?.isVisible = true
     activity.tvToolbarTitle?.text = activity.getString(R.string.chats)
     // Restore title color from theme
@@ -67,6 +67,24 @@ internal fun exitSelectionMode(activity: ChatListActivity) {
 internal fun updateActionModeTitle(activity: ChatListActivity) {
     val count = activity.chatAdapter.getSelectedIds().size
     activity.tvToolbarTitle?.text = activity.getString(R.string.selected_count, count)
+    updateActionModeIcons(activity)
+}
+
+private fun updateActionModeIcons(activity: ChatListActivity) {
+    val selectedChats = activity.chatAdapter.getSelectedChats()
+    if (selectedChats.isEmpty()) return
+    val allPinned = selectedChats.all { it.isPinned }
+    val allMuted = selectedChats.all { it.isMuted }
+    val allArchived = selectedChats.all { it.isArchived }
+    activity.toolbar?.menu?.findItem(R.id.action_pin)?.let { item ->
+        item.setTitle(if (allPinned) R.string.action_unpin else R.string.action_pin)
+    }
+    activity.toolbar?.menu?.findItem(R.id.action_mute)?.let { item ->
+        item.setTitle(if (allMuted) R.string.action_unmute else R.string.action_mute)
+    }
+    activity.toolbar?.menu?.findItem(R.id.action_archive)?.let { item ->
+        item.setTitle(if (allArchived) R.string.action_unarchive else R.string.action_archive)
+    }
 }
 
 private fun onMenuItemClicked(activity: ChatListActivity, item: MenuItem): Boolean {
@@ -95,16 +113,26 @@ private fun onMenuItemClicked(activity: ChatListActivity, item: MenuItem): Boole
 }
 
 internal fun pinSelectedChats(activity: ChatListActivity, chats: List<ChatInfo>) {
+    Log.d("ChatListActionMode", "pinSelectedChats: ${chats.size} chats, ids=${chats.map { it.id }}")
     activity.lifecycleScope.launch {
         var pinned = 0
         var unpinned = 0
         for (chat in chats) {
-            if (chat.isPinned) {
-                if (GrpcClient.unpinChat(activity, chat.id)) unpinned++
-            } else {
-                if (GrpcClient.pinChat(activity, chat.id)) pinned++
+            try {
+                if (chat.isPinned) {
+                    val result = GrpcClient.unpinChat(activity, chat.id)
+                    Log.d("ChatListActionMode", "unpinChat(${chat.id}) = $result")
+                    if (result) unpinned++
+                } else {
+                    val result = GrpcClient.pinChat(activity, chat.id)
+                    Log.d("ChatListActionMode", "pinChat(${chat.id}) = $result")
+                    if (result) pinned++
+                }
+            } catch (e: Exception) {
+                Log.e("ChatListActionMode", "pin/unpin failed for ${chat.id}", e)
             }
         }
+        Log.d("ChatListActionMode", "pinSelectedChats done: pinned=$pinned, unpinned=$unpinned")
         if (pinned > 0 || unpinned > 0) {
             activity.viewModel.loadChats()
         }
