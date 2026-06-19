@@ -19,6 +19,13 @@ internal fun createActionModeCallback(activity: ChatListActivity): ActionMode.Ca
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
             activity.actionMode = mode
             mode.menuInflater.inflate(R.menu.chat_list_action_mode, menu)
+            val typedValue = android.util.TypedValue()
+            activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
+            val iconColor = typedValue.data
+            menu.findItem(R.id.action_pin)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            menu.findItem(R.id.action_mute)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            menu.findItem(R.id.action_archive)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            menu.findItem(R.id.action_delete)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
             return true
         }
 
@@ -112,7 +119,11 @@ internal fun deleteSelectedChats(activity: ChatListActivity, chats: List<ChatInf
     activity.lifecycleScope.launch {
         var deleted = 0
         for (chat in chats) {
-            activity.viewModel.deleteChat(chat.id)
+            kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+                activity.viewModel.deleteChat(chat.id) {
+                    if (cont.isActive) cont.resumeWith(Result.success(Unit))
+                }
+            }
             deleted++
         }
         if (deleted > 0) {

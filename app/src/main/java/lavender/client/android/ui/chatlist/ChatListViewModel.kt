@@ -219,6 +219,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun refreshChats() {
+        _isLoading.value = false
         loadChats()
     }
 
@@ -318,7 +319,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun deleteChat(chatId: String) {
+    fun deleteChat(chatId: String, onResult: (() -> Unit)? = null) {
         viewModelScope.launch {
             try {
                 val username = lavender.client.android.data.session.SessionManager.session.value.username
@@ -333,9 +334,11 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             } catch (e: Exception) { Log.w(TAG, "Failed to delete chat from cache", e) }
                         }
                     }
+                    onResult?.invoke()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to delete chat $chatId", e)
+                onResult?.invoke()
             }
         }
     }
