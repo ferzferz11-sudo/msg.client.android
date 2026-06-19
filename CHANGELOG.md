@@ -1,5 +1,14 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.15] - 2026-06-19
+
+### Исправления
+
+**Chat subtitle last seen:**
+- `ChatToolbarDelegate.updateSubtitle()` теперь принимает `otherUserLastSeenAt: Timestamp?` — в direct-чатах вместо "офлайн" показывается время последнего входа ("был(а) в сети X мин/ч/дн назад")
+- `NewChatActivity` combine flow расширен: добавлен `grpcClient.allUsers` как 4-й параметр — subtitle пересчитывается при обновлении `allUsers`
+- `NewChatActivity.onResume()` загружает `allUsers` если пуст и соединение активно (fallback при прямом входе в чат)
+
 ## [1.2.0.14] - 2026-06-19
 
 ### Исправления

@@ -301,14 +301,18 @@ class NewChatActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                combine(grpcClient.users, grpcClient.connectionStatus, grpcClient.typingUsers) { onlineUsers, status, typingMap ->
+                combine(grpcClient.users, grpcClient.connectionStatus, grpcClient.typingUsers, grpcClient.allUsers) { onlineUsers, status, typingMap, _ ->
                     val currentUserId = grpcClient.getUserId() ?: ""
                     val currentTypists = typingMap[roomId]?.filter { it != username && it != currentUserId } ?: emptyList()
                     Triple(onlineUsers, status, currentTypists)
                 }.collect { (onlineUsers, status, currentTypists) ->
                     val isConnected = status == ConnectionStatus.READY
                     val isConnecting = status == ConnectionStatus.CONNECTING
-                    toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists)
+                    val otherUser = toolbarDelegate.getOtherParticipant()
+                    val otherUserLastSeenAt = otherUser?.let { u ->
+                        grpcClient.allUsers.value.find { it.username == u }?.lastSeenAt
+                    }
+                    toolbarDelegate.updateSubtitle(onlineUsers, isConnected, currentTypists, otherUserLastSeenAt)
                     inputDelegate.messageInput.isEnabled = !isConnecting
                     inputDelegate.sendButton.isEnabled = !isConnecting
                     inputDelegate.attachButton.isEnabled = !isConnecting
@@ -437,6 +441,9 @@ class NewChatActivity : AppCompatActivity() {
         if (lavender.client.android.data.auth.AuthManager.isJwtAuthenticated(this)
             && lavender.client.android.data.auth.AuthManager.needsRefresh(this)) {
             lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { lavender.client.android.data.session.SessionManager.ensureFreshToken(this@NewChatActivity) }
+        }
+        if (grpcClient.allUsers.value.isEmpty() && grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+            grpcClient.loadUsers()
         }
         if (grpcClient.shouldForceReconnect()) {
             val sa = intent.getStringExtra("SERVER_ADDRESS") ?: getSharedPreferences("lavender_prefs", MODE_PRIVATE).getString("server_address", "")

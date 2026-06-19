@@ -1,6 +1,15 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.14 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.15 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+
+---
+
+## Completed — v1.2.0.14
+
+### Session 2026-06-19 (Status Fix)
+- ✅ **Chat subtitle last seen:** `ChatToolbarDelegate.updateSubtitle()` теперь принимает `otherUserLastSeenAt: Timestamp?`. Если пользователь offline — показывает `ProtoUtils.formatLastSeen()` ("был(а) в сети X мин/ч/дн назад") вместо просто "офлайн".
+- ✅ **allUsers в combine flow:** `NewChatActivity` combine теперь включает `grpcClient.allUsers` как 4-й параметр. При обновлении `allUsers` subtitle пересчитывается.
+- ✅ **loadUsers fallback:** `NewChatActivity.onResume()` загружает `allUsers` если пуст и соединение активно.
 
 ---
 
@@ -80,7 +89,7 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.14)
+## Backlog — Следующая сессия (v1.2.0.15)
 
 ### Приоритет 1: Отладка
 - [ ] Навигация шторок в реальном приложении

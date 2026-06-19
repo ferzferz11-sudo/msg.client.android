@@ -269,7 +269,7 @@ class ChatToolbarDelegate(
         }
     }
 
-    fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>) {
+    fun updateSubtitle(onlineUsers: List<String>, isConnected: Boolean, typists: List<String>, otherUserLastSeenAt: com.google.protobuf.Timestamp? = null) {
         if (roomId.startsWith("favorites_")) {
             toolbarSubtitle.isVisible = true
             toolbarSubtitle.text = activity.getString(R.string.favorites)
@@ -300,7 +300,8 @@ class ChatToolbarDelegate(
                     toolbarSubtitle.text = activity.getString(R.string.connected)
                     toolbarSubtitle.setTextColor(cg)
                 } else {
-                    toolbarSubtitle.text = activity.getString(R.string.offline)
+                    val lastSeen = lavender.client.android.data.proto.ProtoUtils.formatLastSeen(otherUserLastSeenAt, activity)
+                    toolbarSubtitle.text = if (lastSeen.isNotEmpty()) lastSeen else activity.getString(R.string.offline)
                     toolbarSubtitle.setTextColor(cop)
                 }
             }
