@@ -9,7 +9,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.view.ActionMode
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -87,7 +86,7 @@ class ChatListActivity : AppCompatActivity() {
     internal var llToolbarTitleContainer: android.widget.LinearLayout? = null
 
     // ActionMode
-    internal var actionMode: ActionMode? = null
+    internal var isSelectionMode = false
     internal var searchView: androidx.appcompat.widget.SearchView? = null
     internal var searchDebounceJob: Job? = null
 
@@ -355,17 +354,6 @@ class ChatListActivity : AppCompatActivity() {
     private fun showRegisterBottomSheet(serverAddress: String) = showRegisterBottomSheet(this, serverAddress)
 
     // ActionMode
-    private val actionModeCallback = createActionModeCallback(this)
-    private fun updateActionModeTitle() = updateActionModeTitle(this)
-    private fun pinSelectedChats(chats: List<ChatInfo>) = pinSelectedChats(this, chats)
-    private fun muteSelectedChats(chats: List<ChatInfo>) = muteSelectedChats(this, chats)
-    private fun archiveSelectedChats(chats: List<ChatInfo>) = archiveSelectedChats(this, chats)
-    private fun deleteSelectedChats(chats: List<ChatInfo>) = deleteSelectedChats(this, chats)
-
-    // Search
-    internal fun setupSearchMenu() = setupSearchMenu(this)
-
-    // ======= Internal methods that stay in Activity =======
 
     private fun setupRecyclerView(username: String) {
         viewModel = ChatListViewModel(application)
@@ -376,9 +364,9 @@ class ChatListActivity : AppCompatActivity() {
             onChatClick = { chat ->
                 if (chatAdapter.isSelectionMode()) {
                     chatAdapter.toggleSelection(chat.id)
-                    updateActionModeTitle()
+                    updateActionModeTitle(this@ChatListActivity)
                     if (chatAdapter.getSelectedIds().isEmpty()) {
-                        actionMode?.finish()
+                        exitSelectionMode(this@ChatListActivity)
                     }
                 } else {
                     if (chat.unreadCount > 0) viewModel.markAsRead(chat.id)
@@ -389,14 +377,14 @@ class ChatListActivity : AppCompatActivity() {
                 if (!chatAdapter.isSelectionMode()) {
                     chatAdapter.setSelectionMode(true)
                     chatAdapter.toggleSelection(chat.id)
-                    startSupportActionMode(actionModeCallback)
-                    updateActionModeTitle()
+                    enterSelectionMode(this@ChatListActivity)
+                    updateActionModeTitle(this@ChatListActivity)
                 }
             },
             onSelectionChanged = { count ->
-                updateActionModeTitle()
-                if (count == 0 && actionMode != null) {
-                    actionMode?.finish()
+                updateActionModeTitle(this@ChatListActivity)
+                if (count == 0 && isSelectionMode) {
+                    exitSelectionMode(this@ChatListActivity)
                 }
             }
         )
@@ -432,7 +420,7 @@ class ChatListActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (::chatAdapter.isInitialized && chatAdapter.isSelectionMode()) {
-                    actionMode?.finish()
+                    exitSelectionMode(this@ChatListActivity)
                 } else {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
