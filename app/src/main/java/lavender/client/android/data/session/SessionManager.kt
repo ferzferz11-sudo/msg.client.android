@@ -524,6 +524,9 @@ object SessionManager {
             putString("last_username", currentUsername)
         }
 
+        context.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+            .edit().remove("is_super_admin").remove("admin_user_id").apply()
+
         GrpcClient.disconnect()
     }
 }

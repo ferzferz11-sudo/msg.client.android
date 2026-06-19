@@ -721,7 +721,9 @@ data class UserInfoProto(
     val avatarUrl: String = "",
     val lastClientVersion: String = "",
     val lastSeenAt: Timestamp? = null,
-    val email: String = ""
+    val email: String = "",
+    val userId: String = "",
+    val isSuperAdmin: Boolean = false
 )
 
 data class GetAllUsersResponseProto(

@@ -600,20 +600,24 @@ class UserInfoProtoMarshaller : io.grpc.MethodDescriptor.Marshaller<UserInfoProt
         if (v.lastClientVersion.isNotEmpty()) cos.writeString(3, v.lastClientVersion)
         v.lastSeenAt?.let { cos.writeTag(4, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val b = it.toByteArray(); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
         if (v.email.isNotEmpty()) cos.writeString(5, v.email)
+        if (v.userId.isNotEmpty()) cos.writeString(6, v.userId)
+        if (v.isSuperAdmin) cos.writeBool(7, v.isSuperAdmin)
         cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): UserInfoProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var a = ""; var v = ""; var ls: Timestamp? = null; var e = ""
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var a = ""; var v = ""; var ls: Timestamp? = null; var e = ""; var uid = ""; var sa = false
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> u = cis.readString(); 2 -> a = cis.readString(); 3 -> v = cis.readString()
                 4 -> { val l = cis.readUInt32(); ls = Timestamp.parseFrom(cis.readRawBytes(l)) }
                 5 -> e = cis.readString()
+                6 -> uid = cis.readString()
+                7 -> sa = cis.readBool()
                 else -> cis.skipField(tag)
             }
         }
-        return UserInfoProto(u, a, v, ls, e)
+        return UserInfoProto(u, a, v, ls, e, uid, sa)
     }
 }
 

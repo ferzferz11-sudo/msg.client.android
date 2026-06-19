@@ -260,15 +260,19 @@ object RealGrpcClient {
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         appContext = context?.applicationContext
-        if (forceReconnect) _isSuperAdmin.value = false
-        if (_adminUserId.value == null && context != null) {
-            val saved = context.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-                .getString("admin_user_id", null)
-            if (!saved.isNullOrEmpty()) _adminUserId.value = saved
+        if (context != null) {
+            val prefs = context.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+            if (_adminUserId.value == null) {
+                val savedId = prefs.getString("admin_user_id", null)
+                if (!savedId.isNullOrEmpty()) _adminUserId.value = savedId
+            }
+            if (!_isSuperAdmin.value) {
+                val savedAdmin = prefs.getBoolean("is_super_admin", false)
+                if (savedAdmin) _isSuperAdmin.value = true
+            }
         }
         loadDeletedMessages()
         connectionManager.connect(serverAddress, useTls, port, context, forceReconnect)
-        fetchAdminStatus()
     }
 
     fun reconnect() = connectionManager.reconnect()
@@ -291,10 +295,11 @@ object RealGrpcClient {
                 val profile = ProfileClient.getProfile(ctx)
                 if (profile != null) {
                     _isSuperAdmin.value = profile.isSuperAdmin
-                    if (profile.isSuperAdmin && profile.userId.isNotEmpty() && _adminUserId.value == null) {
-                        _adminUserId.value = profile.userId
-                        ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-                            .edit().putString("admin_user_id", profile.userId).apply()
+                    val prefs = ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("is_super_admin", profile.isSuperAdmin).apply()
+                    if (profile.isSuperAdmin && profile.userId.isNotEmpty()) {
+                        if (_adminUserId.value == null) _adminUserId.value = profile.userId
+                        prefs.edit().putString("admin_user_id", profile.userId).apply()
                         Log.d(TAG, "Admin userId from profile: ${profile.userId}")
                     }
                     Log.d(TAG, "Admin status from profile: ${profile.isSuperAdmin}")
@@ -412,12 +417,15 @@ object RealGrpcClient {
             override fun onNext(value: MessageProto) {
                 if (_connectionStatus.value != ConnectionStatus.READY) {
                     _connectionStatus.value = ConnectionStatus.READY
+                    fetchAdminStatus()
                 }
 
                 if (value.isSuperAdmin || value.text == "SET_SUPER_ADMIN") {
                     if (!_isSuperAdmin.value) {
                         Log.d(TAG, "Super Admin status activated")
                         _isSuperAdmin.value = true
+                        appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                            ?.edit()?.putBoolean("is_super_admin", true)?.apply()
                     }
                     if (value.userId.isNotEmpty() && _adminUserId.value == null) {
                         _adminUserId.value = value.userId
@@ -682,6 +690,7 @@ object RealGrpcClient {
             override fun onHeaders(headers: io.grpc.Metadata?) {
                 super.onHeaders(headers)
                 _connectionStatus.value = ConnectionStatus.READY
+                fetchAdminStatus()
             }
             override fun onMessage(message: MessageProto) {
                 if (_connectionStatus.value != ConnectionStatus.READY) _connectionStatus.value = ConnectionStatus.READY
@@ -864,6 +873,16 @@ object RealGrpcClient {
         return metadata
     }
 
-    fun loadUsers() { loadAllUsers {} }
+    fun loadUsers() {
+        loadAllUsers { users ->
+            val admin = users.firstOrNull { it.isSuperAdmin && it.userId.isNotEmpty() }
+            if (admin != null && _adminUserId.value == null) {
+                _adminUserId.value = admin.userId
+                appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                    ?.edit()?.putString("admin_user_id", admin.userId)?.apply()
+                Log.d(TAG, "Admin userId from allUsers: ${admin.userId} (${admin.username})")
+            }
+        }
+    }
     fun updateMessage(m: Message) {} // Local update mostly
 }

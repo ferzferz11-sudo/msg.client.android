@@ -280,9 +280,22 @@ internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) 
 private fun openFeedbackChat(activity: ChatListActivity) {
     val adminId = GrpcClient.adminUserId.value
     if (adminId.isNullOrEmpty()) {
-        android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
+        GrpcClient.loadUsers()
+        activity.lifecycleScope.launch {
+            kotlinx.coroutines.delay(1500)
+            val retryId = GrpcClient.adminUserId.value
+            if (retryId.isNullOrEmpty()) {
+                android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                doOpenFeedbackChat(activity, retryId)
+            }
+        }
         return
     }
+    doOpenFeedbackChat(activity, adminId)
+}
+
+private fun doOpenFeedbackChat(activity: ChatListActivity, adminId: String) {
     val username = lavender.client.android.data.session.SessionManager.session.value.username
     GrpcClient.createDirectChat(username, adminId) { chatId ->
         if (chatId != null) {
