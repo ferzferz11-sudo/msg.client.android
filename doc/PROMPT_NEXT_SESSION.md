@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.15 (в работе) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.15 (выпущена) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -17,11 +17,12 @@
 
 ## Что сделано (v1.2.0.14 → v1.2.0.15)
 
-### Secret chat fixes
+### Secret chat fixes + ServerConfig
 - **E2EE init:** `ChatE2EEDelegate.initE2EE()` now called in `NewChatActivity.setupDelegates()` — key exchange actually happens on chat open
 - **History decryption:** `GrpcMessageClient.loadHistory()` now decrypts E2EE messages via `decryptE2EEMessages()` — history loads and displays correctly in secret chats
 - **Chat list privacy:** Secret chats show "🔒 End-to-end encrypted" instead of last message text in chat list
 - **newMessageEvent privacy:** Secret chat messages don't show plaintext preview in chat list updates
+- **ServerConfig:** Centralized `ServerConfig.kt` — PROD_HOST, PROD_GRPC_PORT, PROD_HTTP_PORT. Hardcoded IPs replaced.
 
 ---
 
