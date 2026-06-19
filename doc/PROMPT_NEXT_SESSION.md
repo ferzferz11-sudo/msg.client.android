@@ -1,55 +1,103 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.5 → v1.2.0.6 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-18
+**Версия:** v1.2.0.13 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
-## Контекст предыдущей сессии
+## Быстрый старт
 
-### Что исправлено (серверная сторона)
-1. **GetChatsV2 RPC отсутствовал в proto** — клиент вызывал `messenger.ChatService/GetChatsV2`, но proto содержал только `GetChats`. Сервер возвращал UNIMPLEMENTED → пустой список чатов. Исправлено: добавлен `rpc GetChatsV2` в messenger.proto, перегенерирован Go код.
-2. **GetUserChatsV2 WHERE clause bug** — запрос искал по UUID в `participants`, но participants содержат usernames. Исправлено: используется `participants::jsonb @> jsonb_build_array($4::text)` с username.
-3. Серверные коммиты: `b5367e9`, `d3719bf` на `feat/1.2.0.x`
+1. `doc/PATTERNS.md` — паттерны кода, правила, архитектура
+2. `doc/PLAN.md` — текущий план и бэклог
+3. Этот файл — контекст сессии
 
-### Что в работе на сервере (другой агент)
-- Миграция `chats.participants` → добавление `participant_user_ids` (JSONB UUID массив). Промпт: `/root/msg/doc/PROMPT_USERID_MIGRATION.md`
-
----
-
-## Задачи на сессию
-
-### Приоритет 1: Отладка и стабильность
-
-#### 1.1 SuperAdmin кнопка — ✅ ИСПРАВЛЕНО (v1.2.0.7)
-- ProfileClient.unaryCall() рефлексия заменена на GetProfileResponseMarshaller
-
-#### 1.2 GetChatsV2 — ✅ ПРОВЕРЕНО
-- Поток корректный: GrpcChatClient.getChats() → GetChatsV2 → marshallers с v2 полями
-
-#### 1.3 Auto-login с протухшим JWT — ✅ ПРОВЕРЕНО
-- Нет риска infinite loop
-
-### Приоритет 2: Баги найдены пользователем
-- Описать найденные баги в следующей сессии
+Проект: `/Users/paveld/LavenderMessenger-Android`
+Сборка: `./gradlew assembleDebug` (запускать локально на Mac)
 
 ---
 
-### Приоритет 2: Архитектура (если время будет)
+## Что сделано (v1.2.0.5 → v1.2.0.13)
 
-#### 2.1 ViewModel для NewChatActivity
-- Вынести бизнес-логику из Activity в ViewModel
-- Activity только UI + наблюдение за StateFlow
-- Оценка: ~2h
+### Критические фиксы
+- **Токен/сессия:** `startTokenRefresh()` вызывается при каждом входе/восстановлении. Chat stream retry: refresh → retry (не password dead-end). `onResume` валидация токена.
+- **Admin menu:** `isSuperAdmin` race condition исправлен (connect() reset только при forceReconnect). `adminUserId` сохраняется в SharedPreferences, восстанавливается при старте.
+- **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
+- **ChatList V2 marshallers:** pin/unpin/archive/search — все response marshallers созданы.
 
-#### 2.2 ViewModel для ProfileActivity
-- Аналогично NewChatActivity
-- Оценка: ~2h
+### Архитектура
+- **ChatViewModel:** NewChatActivity 759→~450 строк. Бизнес-логика: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet.
+- **ProfileViewModel:** ProfileActivity 719→~400 строк. Бизнес-логика: loadUserProfile, loadGroupData, updateChatName, updateChatSettings, uploadGroupAvatar.
+- **MessageAdapter:** 870→324 строки (-63%). bind() → 12 выделенных методов.
+
+### UI
+- **About dialog:** текст "Лава: платформа...", ссылка http://13.140.25.249, feedback → чат с админом (adminUserId динамический), drag handle.
+- **gRPC split:** GrpcChatClient + GrpcChatListV2Client + GrpcChatAuxClient (вместо монолитного GrpcChatListClient).
+
+---
+
+## Текущая архитектура
+
+```
+GrpcClient (facade)
+  └── RealGrpcClient — orchestrator
+        ├── GrpcConnectionManager — connect/reconnect/disconnect
+        ├── GrpcAuthClient — JWT auth (v2 only)
+        ├── GrpcTypingClient — typing stream
+        ├── GrpcCallClient — calls
+        ├── GrpcChatClient (~250) — getChats, create/delete, participants
+        ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
+        ├── GrpcChatAuxClient (~130) — users, AI, FCM, mute
+        ├── GrpcChatListClient (~255) — chat list version, create/delete
+        ├── GrpcProfileClient — profile, avatar, contacts, themes
+        ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
+        ├── GrpcServerDiscoveryClient — server discovery
+        ├── HermesGrpc, OwlGrpc — AI
+        └── AiChatGrpc, SecretChatGrpc, ProfileClient
+
+ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
+NewChatActivity → 6 delegates + ChatViewModel
+ProfileActivity → ProfileViewModel
+MessageAdapter → 12 focused bind methods
+
+Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
+Session: SessionManager (token refresh EVERY entry point)
+Admin tracking: adminUserId StateFlow + SharedPreferences persistence
+```
+
+---
+
+## Бэклог — Следующая сессия (v1.2.0.14)
+
+### Приоритет 1: Отладка
+- [ ] Протестировать токен-фикс на dev сервере
+- [ ] Протестировать feedback чат с админом (adminUserId)
+- [ ] Навигация шторок в реальном приложении
+
+### Приоритет 2: Тесты
+| Задача | Оценка |
+|--------|--------|
+| Unit-тесты для ChatViewModel | 2h |
+| Unit-тесты для ProfileViewModel | 2h |
+| Unit-тесты для SessionManager | 2h |
+| Unit-тесты для data/ai/ | 2h |
+
+### Приоритет 3: Безопасность
+| Задача | Оценка |
+|--------|--------|
+| Keystore пароль → env vars | 0.5h |
+| ServerConfig.kt — единый IP | 1h |
+| EncryptedSharedPreferences | 2h |
+
+### Приоритет 4: UX
+| Задача | Оценка |
+|--------|--------|
+| Offline mode — показать cached messages без подключения | 3h |
+| Push notification deep link — переход в чат из уведомления | 2h |
 
 ---
 
 ## Правила (обязательно к прочтению)
 
-1. **НЕ компилировать Android на сервере** (OOM kill) —assembleRelease ТОЛЬКО локально
+1. **НЕ компилировать Android на сервере** (OOM kill) — assembleRelease ТОЛЬКО локально
 2. **НЕ деплоить на prod** без явного указания
 3. userId (UUID) — всегда как ключ, НЕ username
 4. Все новые строки ОДНОВРЕМЕННО в `values/strings.xml` + `values-ru/strings.xml`
@@ -61,6 +109,7 @@
 10. Все chat activities: `setDecorFitsSystemWindows(window, false)` в onCreate
 11. Marshallers: всегда включать v2 proto поля
 12. JWT freshness: `ensureFreshToken()` перед Chat stream
+13. НЕ хардкодить username — использовать adminUserId / userId
 
 ---
 
@@ -71,27 +120,9 @@
 | gRPC | 50052 | 50051 |
 | HTTP | 8083 | 8082 |
 | Сервис | lavender-server-dev | lavender-server |
+| Сайт | http://13.140.25.249 |
 
 **Деплой сервера:** НЕ делать — другой агент управляет сервером. Если нужен серверный фикс — написать промпт-файл в `/root/msg/doc/`.
-
----
-
-## Архитектура клиента
-
-```
-GrpcClient (facade) → RealGrpcClient (orchestrator)
-  ├── GrpcConnectionManager — connect/reconnect
-  ├── GrpcAuthClient — JWT auth (v2 only)
-  ├── GrpcChatClient — getChats, create/delete, participants
-  ├── GrpcChatListV2Client — pin/unpin, search, archive
-  ├── GrpcChatAuxClient — users, AI, FCM, mute
-  ├── GrpcProfileClient — profile, avatar, contacts, themes
-  ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
-  └── GrpcMarshallers (~1500 LOC)
-
-ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity → 6 delegates (toolbar, input, selection, search, E2EE, menu)
-```
 
 ---
 
@@ -99,5 +130,5 @@ NewChatActivity → 6 delegates (toolbar, input, selection, search, E2EE, menu)
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/PLAN.md`
 - Документация сервера: `/root/msg/doc/INDEX.md`
-- Промпт миграции userId: `/root/msg/doc/PROMPT_USERID_MIGRATION.md`
+- Changelog: `CHANGELOG.md`
 - v1 reference: `doc/ChatListActivity_v1_REFERENCE.kt`
