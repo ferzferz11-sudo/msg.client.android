@@ -260,7 +260,12 @@ object RealGrpcClient {
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         appContext = context?.applicationContext
-        _isSuperAdmin.value = false
+        if (forceReconnect) _isSuperAdmin.value = false
+        if (_adminUserId.value == null && context != null) {
+            val saved = context.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                .getString("admin_user_id", null)
+            if (!saved.isNullOrEmpty()) _adminUserId.value = saved
+        }
         loadDeletedMessages()
         connectionManager.connect(serverAddress, useTls, port, context, forceReconnect)
         fetchAdminStatus()
@@ -286,6 +291,12 @@ object RealGrpcClient {
                 val profile = ProfileClient.getProfile(ctx)
                 if (profile != null) {
                     _isSuperAdmin.value = profile.isSuperAdmin
+                    if (profile.isSuperAdmin && profile.userId.isNotEmpty() && _adminUserId.value == null) {
+                        _adminUserId.value = profile.userId
+                        ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("admin_user_id", profile.userId).apply()
+                        Log.d(TAG, "Admin userId from profile: ${profile.userId}")
+                    }
                     Log.d(TAG, "Admin status from profile: ${profile.isSuperAdmin}")
                 }
             } catch (e: Exception) {
@@ -410,6 +421,8 @@ object RealGrpcClient {
                     }
                     if (value.userId.isNotEmpty() && _adminUserId.value == null) {
                         _adminUserId.value = value.userId
+                        appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                            ?.edit()?.putString("admin_user_id", value.userId)?.apply()
                         Log.d(TAG, "Admin userId tracked: ${value.userId}")
                     }
                 }

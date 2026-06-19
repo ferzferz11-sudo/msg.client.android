@@ -1,6 +1,15 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.12 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-18
+**Version:** v1.2.0.13 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+
+---
+
+## Completed — v1.2.0.13
+
+### Session 2026-06-19 (Admin Fix)
+- ✅ **isSuperAdmin race condition:** connect() reset → только при forceReconnect
+- ✅ **adminUserId persistence:** сохраняется в SharedPreferences, восстанавливается при старте
+- ✅ **fetchAdminStatus():** сохраняет adminUserId из profile (userId + isSuperAdmin)
 
 ---
 

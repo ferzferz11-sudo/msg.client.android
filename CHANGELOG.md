@@ -1,5 +1,14 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.13] - 2026-06-19
+
+### Исправления
+
+**Admin menu + Feedback:**
+- `isSuperAdmin` сбрасывался в false при каждом `connect()` — race condition с async `fetchAdminStatus()`. Теперь: сброс только при `forceReconnect`
+- `adminUserId` сохраняется в SharedPreferences при обнаружении (из chat stream или profile). Восстанавливается при старте — feedback работает сразу после перезапуска
+- `fetchAdminStatus()` теперь сохраняет `adminUserId` из профиля (profile.isSuperAdmin + profile.userId)
+
 ## [1.2.0.12] - 2026-06-18
 
 ### Исправления
