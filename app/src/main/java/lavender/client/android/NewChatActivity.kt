@@ -222,7 +222,24 @@ class NewChatActivity : AppCompatActivity() {
         searchDelegate.setupListeners()
 
         e2eeDelegate.configure(roomId, isSecret, toolbarDelegate.toolbarSubtitle)
-        e2eeDelegate.onKeyExchangeComplete = { success -> if (success) inputDelegate.setSecretState(true) }
+        e2eeDelegate.onKeyExchangeComplete = { success ->
+            if (success) {
+                inputDelegate.setSecretState(true)
+                runOnUiThread {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val db = lavender.client.android.data.db.AppDatabase.getDatabase(this@NewChatActivity)
+                            db.messageDao().clearRoom(roomId)
+                        } catch (_: Exception) {}
+                        withContext(Dispatchers.Main) {
+                            grpcClient.clearMessages()
+                            viewModel.loadHistory()
+                        }
+                    }
+                }
+            }
+        }
+        if (isSecret) e2eeDelegate.initE2EE()
 
         messageMenuDelegate.configure(username)
     }

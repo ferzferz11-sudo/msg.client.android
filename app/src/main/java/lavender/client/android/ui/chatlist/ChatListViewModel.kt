@@ -17,6 +17,7 @@ import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.grpc.*
+import lavender.client.android.R
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.db.toDomain
 
@@ -96,9 +97,10 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 val chatIdx = allChats.indexOfFirst { it.id == message.roomId }
                 if (chatIdx >= 0) {
                     val chat = allChats[chatIdx]
-                    val preview = if (message.imageUrl.isNotEmpty()) "[image]"
-                        else if (message.voiceUrl.isNotEmpty()) "[voice]"
-                        else message.text.take(100)
+                    val preview = if (chat.isSecret) ""
+                    else if (message.imageUrl.isNotEmpty()) "[image]"
+                    else if (message.voiceUrl.isNotEmpty()) "[voice]"
+                    else message.text.take(100)
                     allChats = allChats.toMutableList().also {
                         it[chatIdx] = chat.copy(
                             lastMessageText = preview,
@@ -394,9 +396,13 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             else -> chats // "all"
         }
 
-        val pinned = filteredChats.filter { it.isPinned && !it.isArchived }
+        val maskedChats = filteredChats.map {
+            if (it.isSecret) it.copy(lastMessageText = "") else it
+        }
+
+        val pinned = maskedChats.filter { it.isPinned && !it.isArchived }
             .sortedByDescending { it.pinnedAt }
-        val allRegular = filteredChats.filter { !it.isPinned && !it.isArchived }
+        val allRegular = maskedChats.filter { !it.isPinned && !it.isArchived }
             .sortedByDescending { it.lastMessageTime }
 
         val sectionList = mutableListOf<SectionItem>()

@@ -22,9 +22,9 @@ internal fun showAuthChoiceDialog(activity: ChatListActivity) {
     var serverName: String
 
     if (serverAddress.isEmpty()) {
-        serverAddress = "13.140.25.249:50051"
-        host = "13.140.25.249"
-        port = 50051
+        serverAddress = lavender.client.android.data.ServerConfig.PROD_SERVER_ADDRESS
+        host = lavender.client.android.data.ServerConfig.PROD_HOST
+        port = lavender.client.android.data.ServerConfig.PROD_GRPC_PORT
         serverName = "Lava Germany"
         CredentialStore.setServerAddress(activity, serverAddress)
     } else {

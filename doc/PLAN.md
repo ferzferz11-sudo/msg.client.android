@@ -1,6 +1,17 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.14 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.15 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+
+---
+
+## Completed — v1.2.0.15
+
+### Session 2026-06-19 (Secret Chat Fixes + ServerConfig)
+- ✅ **E2EE init:** `ChatE2EEDelegate.initE2EE()` called in `NewChatActivity.setupDelegates()` — key exchange happens on chat open
+- ✅ **History decryption:** `GrpcMessageClient.loadHistory()` decrypts E2EE messages via `decryptE2EEMessages()`
+- ✅ **Chat list privacy:** Secret chats show "🔒 End-to-end encrypted" instead of last message text
+- ✅ **newMessageEvent privacy:** Secret chat messages don't show plaintext preview in chat list
+- ✅ **ServerConfig:** Centralized `ServerConfig.kt` — PROD_HOST, PROD_GRPC_PORT, PROD_HTTP_PORT, DEV equivalents. Hardcoded IPs replaced.
 
 ---
 

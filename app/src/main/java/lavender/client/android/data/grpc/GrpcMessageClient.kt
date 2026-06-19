@@ -115,12 +115,15 @@ class GrpcMessageClient(
     // ======= Load History =======
 
     fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
+        val context = appContext()
+
         // First, load from cache
         scope.launch(Dispatchers.IO) {
             val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
             if (cached.isNotEmpty() && messages.value.isEmpty()) {
-                messages.update { cached }
-                Log.d(TAG, "Loaded ${cached.size} messages from cache for $roomId")
+                val decrypted = decryptE2EEMessages(roomId, cached, context)
+                messages.update { decrypted }
+                Log.d(TAG, "Loaded ${decrypted.size} messages from cache for $roomId")
             }
         }
 
@@ -138,9 +141,11 @@ class GrpcMessageClient(
                 val history = message.messages.map { ProtoUtils.createMessageFromProto(it) }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
 
+                val decryptedHistory = decryptE2EEMessages(roomId, history, context)
+
                 messages.update { current ->
                     val currentMap = current.associateBy { getMessageHash(it) }
-                    val mergedHistory = history.map { serverMsg ->
+                    val mergedHistory = decryptedHistory.map { serverMsg ->
                         val localMsg = currentMap[getMessageHash(serverMsg)]
                         if (localMsg != null) {
                             serverMsg.copy(isRead = localMsg.isRead || serverMsg.isRead)
@@ -164,6 +169,17 @@ class GrpcMessageClient(
         call.sendMessage(GetHistoryRequestProto(limit = 100, room = roomId))
         call.halfClose()
         call.request(1)
+    }
+
+    private fun decryptE2EEMessages(roomId: String, msgs: List<Message>, context: Context?): List<Message> {
+        if (context == null) return msgs
+        return msgs.map { msg ->
+            if (msg.isE2EE && msg.e2eePayload.isNotEmpty()) {
+                val decrypted = lavender.client.android.data.crypto.E2EEManager.decryptMessage(context, roomId, msg.e2eePayload)
+                if (decrypted != null) msg.copy(text = decrypted, isE2EE = false, e2eePayload = "")
+                else msg.copy(text = "\uD83D\uDD12 Encrypted message", isE2EE = false, e2eePayload = "")
+            } else msg
+        }
     }
 
     // ======= Edit Message =======

@@ -515,7 +515,7 @@ object SessionManager {
         stopTokenRefresh()
         AuthManager.clearTokens(context)
         CredentialStore.clear(context)
-        CredentialStore.setServerAddress(context, "13.140.25.249:50051")
+        CredentialStore.setServerAddress(context, lavender.client.android.data.ServerConfig.PROD_SERVER_ADDRESS)
 
         CredentialStore.getLegacyPrefs(context).edit {
             remove("password")

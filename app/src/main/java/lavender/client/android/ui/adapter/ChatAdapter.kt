@@ -256,7 +256,10 @@ class ChatAdapter(
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(textPrimary)
 
-            if (chat.lastMessageText.isNotEmpty()) {
+            if (chat.isSecret) {
+                tvChatType.text = itemView.context.getString(R.string.e2ee_verified)
+                tvChatType.setTextColor(textSecondary)
+            } else if (chat.lastMessageText.isNotEmpty()) {
                 tvChatType.text = chat.lastMessageText
                 tvChatType.setTextColor(textSecondary)
             } else {
