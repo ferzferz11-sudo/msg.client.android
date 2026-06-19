@@ -68,32 +68,33 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.10)
+## Backlog — Следующая сессия (v1.2.0.13)
 
 ### Приоритет 1: Отладка
 - [ ] Протестировать токен-фикс на dev сервере (требуется удалённая проверка)
+- [ ] Протестировать feedback чат с админом (adminUserId из chat stream)
 - [ ] Навигация шторок в реальном приложении
 
-### Приоритет 2: Архитектура
-| Задача | Что | LOC Эффект | Оценка |
-|--------|-----|-----------|--------|
-| ~~ViewModel для NewChatActivity~~ | ~~Бизнес-логика → ViewModel~~ | ~~755→~450~~ | ✅ |
-| ~~ViewModel для ProfileActivity~~ | ~~Бизнес-логика → ViewModel~~ | ~~719→~400~~ | ✅ |
-| ~~Разделить MessageAdapter~~ | ~~ViewHolder по типам~~ | ~~870→~324~~ | ✅ |
-
-### Приоритет 3: Тесты
+### Приоритет 2: Тесты
 | Задача | Оценка |
 |--------|--------|
-| Unit-тесты для ViewModels | 3h |
+| Unit-тесты для ChatViewModel | 2h |
+| Unit-тесты для ProfileViewModel | 2h |
 | Unit-тесты для SessionManager | 2h |
 | Unit-тесты для data/ai/ | 2h |
 
-### Приоритет 4: Безопасность
+### Приоритет 3: Безопасность
 | Задача | Оценка |
 |--------|--------|
 | Keystore пароль → env vars | 0.5h |
 | ServerConfig.kt — единый IP | 1h |
 | EncryptedSharedPreferences | 2h |
+
+### Приоритет 4: UX
+| Задача | Оценка |
+|--------|--------|
+| Offline mode — показать cached messages без подключения | 3h |
+| Push notification deep link — переход в чат из уведомления | 2h |
 
 ---
 
@@ -110,10 +111,11 @@
 | Auto-login recovery | refresh → password re-login при expired JWT на startup |
 | Token refresh on session restore | startTokenRefresh() вызывается в initFromPrefs() и waitForConnectionAndReLogin() |
 | JWT failure → refresh first | Chat stream retry: refresh token → retry (не password fallback) |
+| Admin ID dynamic tracking | adminUserId из chat stream isSuperAdmin (не хардкод username) |
 
 ---
 
-## Архитектура (v1.2.0.9)
+## Архитектура (v1.2.0.12)
 
 ```
 GrpcClient (facade)
@@ -137,10 +139,12 @@ GrpcClient (facade)
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel (toolbar, input, selection, search, E2EE, menu)
 ProfileActivity → ProfileViewModel (profile/group data, avatar upload, participants)
+MessageAdapter → 12 focused bind methods (text, image, audio, file, location, call, system)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point, device sync, FCM, auto-login recovery)
 Token lifecycle: initFromPrefs → startTokenRefresh | ensureFreshToken on chat stream | refresh-on-failure in onError
+Admin tracking: adminUserId StateFlow from chat stream isSuperAdmin messages
 ```
 
 ---
@@ -159,3 +163,4 @@ Token lifecycle: initFromPrefs → startTokenRefresh | ensureFreshToken on chat 
 | 9 | v1.2.0.9 | Token refresh fix (startTokenRefresh on all entry points), ChatViewModel refactor | ✅ |
 | 10 | v1.2.0.10 | About dialog fix (buttons + drag handle) | ✅ |
 | 11 | v1.2.0.11 | ProfileViewModel, MessageAdapter split | ✅ |
+| 12 | v1.2.0.12 | About dialog UX (share/feedback/admin tracking), v1.2.0.12 release | ✅ |
