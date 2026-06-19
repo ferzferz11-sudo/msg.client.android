@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.15 (выпущена) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.16 (в работе) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -17,42 +17,38 @@
 
 ## Что сделано (v1.2.0.14 → v1.2.0.15)
 
-### Secret chat fixes + ServerConfig
-- **E2EE init:** `ChatE2EEDelegate.initE2EE()` now called in `NewChatActivity.setupDelegates()` — key exchange actually happens on chat open
-- **History decryption:** `GrpcMessageClient.loadHistory()` now decrypts E2EE messages via `decryptE2EEMessages()` — history loads and displays correctly in secret chats
-- **Chat list privacy:** Secret chats show "🔒 End-to-end encrypted" instead of last message text in chat list
-- **newMessageEvent privacy:** Secret chat messages don't show plaintext preview in chat list updates
-- **ServerConfig:** Centralized `ServerConfig.kt` — PROD_HOST, PROD_GRPC_PORT, PROD_HTTP_PORT. Hardcoded IPs replaced.
+### Secret chat fixes
+- **E2EE init:** `ChatE2EEDelegate.initE2EE()` вызывается в `NewChatActivity.setupDelegates()` — key exchange происходит при открытии секретного чата
+- **History decryption:** `GrpcMessageClient.loadHistory()` расшифровывает E2EE через `decryptE2EEMessages()` — история загружается и отображается корректно
+- **Chat list privacy:** Секретные чаты показывают "🔒 End-to-end encrypted" вместо lastMessageText
+- **newMessageEvent privacy:** Секретные чаты не показывают plaintext превью в обновлениях чат-листа
+- **Post key-exchange reload:** После завершения key exchange — очистка Room DB кэша + clearMessages + loadHistory
+
+### ServerConfig
+- **ServerConfig.kt:** Централизованный `ServerConfig.kt` — PROD_HOST, PROD_GRPC_PORT, PROD_HTTP_PORT, DEV equivalents
+- **Хардкод IP убран:** SessionManager, ChatListAuth, CallActivity — все ссылаются на ServerConfig
+
+### Серверные фиксы (E2EE)
+- **GetHistory:** `e2ee_payload` = один base64 слой (был двойной)
+- **EditMessage:** проверка `IsE2EE` при decrypt + broadcast
+- **GetFavorites:** E2EE возвращают `e2ee_payload`, не расшифровку
+- **backfillLastMessageText:** исключены `is_secret` чаты
 
 ---
 
 ## Критические фиксы (v1.2.0.5 → v1.2.0.14)
 
-### Критические фиксы
 - **Токен/сессия:** `startTokenRefresh()` вызывается при каждом входе/восстановлении. Chat stream retry: refresh → retry (не password dead-end). `onResume` валидация токена.
-- **Admin menu:** `isSuperAdmin` race condition исправлен. `adminUserId` сохраняется в SharedPreferences, восстанавливается при старте. `fetchAdminStatus()` вызывается при READY (не в `connect()`).
-- **Admin discovery for non-admin users:** `UserInfoProto` добавлены `userId` (field 6) и `isSuperAdmin` (field 7). `loadUsers()` сканирует `allUsers` и находит адмира. Feedback чат работает для ЛЮБОГО пользователя.
-- **Feedback retry:** `openFeedbackChat()` вызывает `loadUsers()` + retry через 1.5с если `adminUserId` пуст.
+- **Admin menu:** `isSuperAdmin` race condition исправлен. `adminUserId` сохраняется в SharedPreferences, восстанавливается при старте.
+- **Admin discovery for non-admin users:** UserInfoProto добавлены userId (field 6) и isSuperAdmin (field 7). loadUsers() сканирует allUsers и находит адмира.
+- **Feedback retry:** openFeedbackChat() вызывает loadUsers() + retry через 1.5с если adminUserId пуст.
 - **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
-- **Chat subtitle last seen:** В direct-чатах вместо "офлайн" теперь показывается `ProtoUtils.formatLastSeen()` ("был(а) в сети X мин/ч/дн назад"). `allUsers` добавлен в combine flow в NewChatActivity.
-- **Deleted chat fix:** `deleteChat()` удаляет чат из Room DB. `chatDeletedEvent` подписан в ChatListViewModel — чаты удаляются в реальном времени + из кэша. `deleteSelectedChats()` ждёт ответа сервера.
-- **Pull-to-refresh fix:** `refreshChats()` сбрасывает `_isLoading` — свайп вниз больше не блокируется periodic sync.
-
-### Оптимизация
-- **Chat list sync:** `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени. Тип изменён на `Message` для полных данных.
-- **Periodic polling:** 30с интервал для обновления чат-листа (как в v1).
-- **ChatDao caching:** чаты загружаются из кэша при старте (мгновенное отображение), синхронизируются с сервером в фоне.
-- **ChatEntity expansion:** добавлены `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10).
-- **Stop cache wipe:** SplashActivity больше не стирает Room кэш при каждом запуске — очистка только при logout.
-- **markAsRead on tap:** badge очищается при тапе на чат с непрочитанными.
-
-### UI
-- **Action mode toolbar (toolbar-native):** Режим выбора работает полностью внутри тулбара — без отдельной панели ActionMode. Стрелка ←, текст "Выбрано X", иконки pin/mute/archive/delete — всё в тулбаре. Аватар, заголовок, лупа скрываются при входе, восстанавливаются при выходе. Все элементы окрашены в `colorOnPrimary` — единый цвет панели.
-
-### Архитектура
-- **ChatViewModel:** NewChatActivity 759→~450 строк. Бизнес-логика: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet.
-- **ProfileViewModel:** ProfileActivity 719→~400 строк. Бизнес-логика: loadUserProfile, loadGroupData, updateChatName, updateChatSettings, uploadGroupAvatar.
-- **MessageAdapter:** 870→324 строки (-63%). bind() → 12 выделенных методов.
+- **Chat subtitle last seen:** В direct-чатах показывается `ProtoUtils.formatLastSeen()`.
+- **Deleted chat fix:** deleteChat() удаляет чат из Room DB. chatDeletedEvent подписан в ChatListViewModel.
+- **Pull-to-refresh fix:** refreshChats() сбрасывает `_isLoading`.
+- **Chat list sync:** newMessageEvent подписан в ChatListViewModel — чат-лист обновляется в реальном времени. 30с periodic polling. ChatDao caching.
+- **Action mode toolbar:** toolbar-native selection mode — без Android ActionMode bar.
+- **Архитектура:** ChatViewModel, ProfileViewModel, MessageAdapter рефакторинг.
 
 ---
 
@@ -85,11 +81,13 @@ Session: SessionManager (token refresh EVERY entry point)
 Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
 Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache (Room)
 Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode), no Android ActionMode bar
+ServerConfig: centralized PROD_HOST/GRPC_PORT/HTTP_PORT in ServerConfig.kt
+E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages() in GrpcMessageClient
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.15)
+## Бэклог — Следующая сессия (v1.2.0.16)
 
 ### Приоритет 1: Тесты
 | Задача | Оценка |
@@ -99,19 +97,14 @@ Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode), no Androi
 | Unit-тесты для SessionManager | 2h |
 | Unit-тесты для data/ai/ | 2h |
 
-### Приоритет 2: Безопасность
-| Задача | Оценка |
-|--------|--------|
-| Keystore пароль → env vars | 0.5h |
-| ServerConfig.kt — единый IP | 1h |
-| EncryptedSharedPreferences | 2h |
-
-### Приоритет 3: UX
+### Приоритет 2: UX
 | Задача | Оценка |
 |--------|--------|
 | Offline mode — показать cached messages без подключения | 3h |
 | Push notification deep link — переход в чат из уведомления | 2h |
-| Навигация шторок в реальном приложении | 1h |
+
+### Приоритет 3: Отладка
+- [ ] Навигация шторок в реальном приложении
 
 ---
 
