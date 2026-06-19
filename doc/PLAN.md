@@ -1,49 +1,6 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.17 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
-
----
-
-## Completed — v1.2.0.16
-
-### Session 2026-06-19 (Deleted Chat Fix + Action Mode)
-- ✅ **Deleted chat fix:** `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
-- ✅ **chatDeletedEvent subscription:** ChatListViewModel подписывается на `chatDeletedEvent` — чаты удаляются из списка в реальном времени + из Room DB
-- ✅ **Action mode toolbar:** Все 4 иконки (pin/mute/archive/delete) теперь `showAsAction="always"` — не уезжают в overflow
-
----
-
-## Completed — v1.2.0.15
-
-### Session 2026-06-19 (Chat List Sync Optimization)
-- ✅ **newMessageEvent subscription:** ChatListViewModel подписывается на `newMessageEvent` — чат-лист обновляется в реальном времени
-- ✅ **Message type:** `newMessageEvent` теперь эмитит `Message` вместо `Pair<String,String>` — полные данные для обновления lastMessageText/unreadCount
-- ✅ **Periodic polling:** 30с интервал для обновления чат-листа (как в v1)
-- ✅ **ChatDao caching:** чаты загружаются из кэша при старте, синхронизируются с сервером в фоне
-- ✅ **ChatEntity expansion:** добавлены `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10)
-- ✅ **Stop cache wipe:** SplashActivity больше не стирает Room кэш при каждом запуске
-- ✅ **markAsRead on tap:** badge очищается при тапе на чат с непрочитанными
-
----
-
-## Completed — v1.2.0.14
-
-### Session 2026-06-19 (Status Fix)
-- ✅ **Chat subtitle last seen:** `ChatToolbarDelegate.updateSubtitle()` теперь принимает `otherUserLastSeenAt: Timestamp?`. Если пользователь offline — показывает `ProtoUtils.formatLastSeen()` ("был(а) в сети X мин/ч/дн назад") вместо просто "офлайн".
-- ✅ **allUsers в combine flow:** `NewChatActivity` combine теперь включает `grpcClient.allUsers` как 4-й параметр. При обновлении `allUsers` subtitle пересчитывается.
-- ✅ **loadUsers fallback:** `NewChatActivity.onResume()` загружает `allUsers` если пуст и соединение активно.
-
----
-
-## Completed — v1.2.0.13
-
-### Session 2026-06-19 (Admin Fix + Feedback)
-- ✅ **isSuperAdmin race condition:** connect() reset → только при forceReconnect
-- ✅ **adminUserId persistence:** сохраняется в SharedPreferences, восстанавливается при старте
-- ✅ **fetchAdminStatus():** сохраняет adminUserId из profile (userId + isSuperAdmin)
-- ✅ **Admin discovery for non-admin users:** UserInfoProto добавлены userId (field 6) и isSuperAdmin (field 7). loadUsers() сканирует всех пользователей и находит адмира
-- ✅ **Feedback chat retry:** openFeedbackChat() вызывает loadUsers() + retry через 1.5с если adminUserId пуст
-- ✅ **SharedPreferences cleanup:** logout() очищает is_super_admin и admin_user_id
+**Version:** v1.2.0.13 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
 
 ---
 
@@ -111,7 +68,7 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.17)
+## Backlog — Следующая сессия (v1.2.0.14)
 
 ### Приоритет 1: Отладка
 - [ ] Навигация шторок в реальном приложении
@@ -186,6 +143,7 @@ Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point, device sync, FCM, auto-login recovery)
 Token lifecycle: initFromPrefs → startTokenRefresh | ensureFreshToken on chat stream | refresh-on-failure in onError
 Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
+Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache (Room)
 ```
 
 ---
@@ -205,4 +163,4 @@ Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUs
 | 10 | v1.2.0.10 | About dialog fix (buttons + drag handle) | ✅ |
 | 11 | v1.2.0.11 | ProfileViewModel, MessageAdapter split | ✅ |
 | 12 | v1.2.0.12 | About dialog UX (share/feedback/admin tracking), v1.2.0.12 release | ✅ |
-| 13 | v1.2.0.13 | Admin discovery for non-admin users (UserInfoProto, loadUsers, feedback retry) | ✅ |
+| 13 | v1.2.0.13 | Admin discovery, chat subtitle last seen, chat list sync, DB caching, deleted chat fix, action mode toolbar | ✅ |

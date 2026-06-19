@@ -1,52 +1,5 @@
 # Lava Messenger — Android Changelog
 
-## [1.2.0.17] - 2026-06-19
-
-### Исправления
-
-**Deleted chat persistence fix:**
-- `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
-- `chatDeletedEvent` теперь подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени + из Room DB
-
-**Action mode toolbar:**
-- Все 4 иконки action mode (pin/mute/archive/delete) теперь `showAsAction="always"` — не уезжают в overflow меню
-
-## [1.2.0.16] - 2026-06-19
-
-### Оптимизация
-
-**Chat list sync:**
-- `newMessageEvent` теперь подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени когда сообщения приходят в другие комнаты
-- Тип `newMessageEvent` изменён с `Pair<String,String>` на `Message` — полные данные о сообщении (текст, timestamp, read status)
-- Добавлен periodic polling каждые 30с для обновления чат-листа (как в v1)
-- `ChatDao` кэширование: чаты загружаются из кэша при старте (мгновенное отображение), синхронизируются с сервером в фоне
-- `ChatEntity` расширен: `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10)
-- `SplashActivity` больше не стирает Room кэш при каждом запуске — кэш очищается только при logout
-- `markAsRead` вызывается при тапе на чат с непрочитанными сообщениями
-
-## [1.2.0.15] - 2026-06-19
-
-### Исправления
-
-**Chat subtitle last seen:**
-- `ChatToolbarDelegate.updateSubtitle()` теперь принимает `otherUserLastSeenAt: Timestamp?` — в direct-чатах вместо "офлайн" показывается время последнего входа ("был(а) в сети X мин/ч/дн назад")
-- `NewChatActivity` combine flow расширен: добавлен `grpcClient.allUsers` как 4-й параметр — subtitle пересчитывается при обновлении `allUsers`
-- `NewChatActivity.onResume()` загружает `allUsers` если пуст и соединение активно (fallback при прямом входе в чат)
-
-## [1.2.0.14] - 2026-06-19
-
-### Исправления
-
-**Admin discovery for non-admin users:**
-- `UserInfoProto` добавлены `userId` (field 6) и `isSuperAdmin` (field 7) — серверный `GetAllUsers` теперь возвращает эти поля
-- `UserInfoProtoMarshaller` обновлён для парсинга/записи новых полей
-- `loadUsers()` сканирует `allUsers` на `isSuperAdmin` и устанавливает `adminUserId` — feedback чат работает для ЛЮБОГО пользователя
-- `openFeedbackChat()` retry: если `adminUserId` пуст → `loadUsers()` + retry через 1.5с
-- `connect()` восстанавливает `isSuperAdmin` из SharedPreferences при старте
-- `fetchAdminStatus()` вызывается при READY (не в `connect()` — канал ещё не готов)
-- `fetchAdminStatus()` сохраняет `isSuperAdmin` в SharedPreferences
-- `logout()` очищает `is_super_admin` и `admin_user_id` из SharedPreferences
-
 ## [1.2.0.13] - 2026-06-19
 
 ### Исправления
@@ -55,6 +8,39 @@
 - `isSuperAdmin` сбрасывался в false при каждом `connect()` — race condition с async `fetchAdminStatus()`. Теперь: сброс только при `forceReconnect`
 - `adminUserId` сохраняется в SharedPreferences при обнаружении (из chat stream или profile). Восстанавливается при старте — feedback работает сразу после перезапуска
 - `fetchAdminStatus()` теперь сохраняет `adminUserId` из профиля (profile.isSuperAdmin + profile.userId)
+
+**Admin discovery for non-admin users:**
+- `UserInfoProto` добавлены `userId` (field 6) и `isSuperAdmin` (field 7) — серверный `GetAllUsers` теперь возвращает эти поля
+- `loadUsers()` сканирует `allUsers` на `isSuperAdmin` и устанавливает `adminUserId` — feedback чат работает для ЛЮБОГО пользователя
+- `openFeedbackChat()` retry: если `adminUserId` пуст → `loadUsers()` + retry через 1.5с
+- `connect()` восстанавливает `isSuperAdmin` из SharedPreferences при старте
+- `fetchAdminStatus()` вызывается при READY (не в `connect()` — канал ещё не готов)
+- `logout()` очищает `is_super_admin` и `admin_user_id` из SharedPreferences
+
+**Chat subtitle last seen:**
+- `ChatToolbarDelegate.updateSubtitle()` принимает `otherUserLastSeenAt: Timestamp?` — в direct-чатах вместо "офлайн" показывается время последнего входа ("был(а) в сети X мин/ч/дн назад")
+- `NewChatActivity` combine flow расширен: добавлен `grpcClient.allUsers` как 4-й параметр
+- `NewChatActivity.onResume()` загружает `allUsers` если пуст и соединение активно
+
+**Deleted chat persistence fix:**
+- `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
+- `chatDeletedEvent` подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени + из Room DB
+
+### Оптимизация
+
+**Chat list sync:**
+- `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени когда сообщения приходят в другие комнаты
+- Тип `newMessageEvent` изменён с `Pair<String,String>` на `Message` — полные данные о сообщении
+- Добавлен periodic polling каждые 30с для обновления чат-листа (как в v1)
+- `ChatDao` кэширование: чаты загружаются из кэша при старте (мгновенное отображение), синхронизируются с сервером в фоне
+- `ChatEntity` расширен: `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10)
+- `SplashActivity` больше не стирает Room кэш при каждом запуске — кэш очищается только при logout
+- `markAsRead` вызывается при тапе на чат с непрочитанными сообщениями
+
+### UI
+
+**Action mode toolbar:**
+- Все 4 иконки action mode (pin/mute/archive/delete) `showAsAction="always"` — не уезжают в overflow меню
 
 ## [1.2.0.12] - 2026-06-18
 
