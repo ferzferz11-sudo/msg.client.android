@@ -3,6 +3,7 @@ package lavender.client.android.ui.chatlist
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.view.ActionMode
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import lavender.client.android.R
@@ -26,6 +27,9 @@ internal fun createActionModeCallback(activity: ChatListActivity): ActionMode.Ca
             menu.findItem(R.id.action_mute)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
             menu.findItem(R.id.action_archive)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
             menu.findItem(R.id.action_delete)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
+            // Replace toolbar content with action mode
+            activity.ivToolbarUserAvatar?.isVisible = false
+            activity.tvToolbarSubtitle?.isVisible = false
             return true
         }
 
@@ -61,6 +65,9 @@ internal fun createActionModeCallback(activity: ChatListActivity): ActionMode.Ca
         override fun onDestroyActionMode(mode: ActionMode) {
             activity.actionMode = null
             activity.chatAdapter.clearSelection()
+            // Restore toolbar content
+            activity.ivToolbarUserAvatar?.isVisible = true
+            activity.tvToolbarSubtitle?.isVisible = activity.tvToolbarSubtitle?.text?.isNotEmpty() == true
         }
     }
 }
