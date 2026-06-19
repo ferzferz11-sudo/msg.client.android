@@ -1,15 +1,18 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.13 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.14 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
 
 ---
 
 ## Completed — v1.2.0.13
 
-### Session 2026-06-19 (Admin Fix)
+### Session 2026-06-19 (Admin Fix + Feedback)
 - ✅ **isSuperAdmin race condition:** connect() reset → только при forceReconnect
 - ✅ **adminUserId persistence:** сохраняется в SharedPreferences, восстанавливается при старте
 - ✅ **fetchAdminStatus():** сохраняет adminUserId из profile (userId + isSuperAdmin)
+- ✅ **Admin discovery for non-admin users:** UserInfoProto добавлены userId (field 6) и isSuperAdmin (field 7). loadUsers() сканирует всех пользователей и находит адмира
+- ✅ **Feedback chat retry:** openFeedbackChat() вызывает loadUsers() + retry через 1.5с если adminUserId пуст
+- ✅ **SharedPreferences cleanup:** logout() очищает is_super_admin и admin_user_id
 
 ---
 
@@ -77,11 +80,9 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.13)
+## Backlog — Следующая сессия (v1.2.0.14)
 
 ### Приоритет 1: Отладка
-- [ ] Протестировать токен-фикс на dev сервере (требуется удалённая проверка)
-- [ ] Протестировать feedback чат с админом (adminUserId из chat stream)
 - [ ] Навигация шторок в реальном приложении
 
 ### Приоритет 2: Тесты
@@ -120,11 +121,11 @@
 | Auto-login recovery | refresh → password re-login при expired JWT на startup |
 | Token refresh on session restore | startTokenRefresh() вызывается в initFromPrefs() и waitForConnectionAndReLogin() |
 | JWT failure → refresh first | Chat stream retry: refresh token → retry (не password fallback) |
-| Admin ID dynamic tracking | adminUserId из chat stream isSuperAdmin (не хардкод username) |
+| Admin ID dynamic tracking | adminUserId из chat stream isSuperAdmin + GetAllUsers response (не хардкод username) |
 
 ---
 
-## Архитектура (v1.2.0.12)
+## Архитектура (v1.2.0.13)
 
 ```
 GrpcClient (facade)
@@ -153,7 +154,7 @@ MessageAdapter → 12 focused bind methods (text, image, audio, file, location, 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point, device sync, FCM, auto-login recovery)
 Token lifecycle: initFromPrefs → startTokenRefresh | ensureFreshToken on chat stream | refresh-on-failure in onError
-Admin tracking: adminUserId StateFlow from chat stream isSuperAdmin messages
+Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
 ```
 
 ---
@@ -173,3 +174,4 @@ Admin tracking: adminUserId StateFlow from chat stream isSuperAdmin messages
 | 10 | v1.2.0.10 | About dialog fix (buttons + drag handle) | ✅ |
 | 11 | v1.2.0.11 | ProfileViewModel, MessageAdapter split | ✅ |
 | 12 | v1.2.0.12 | About dialog UX (share/feedback/admin tracking), v1.2.0.12 release | ✅ |
+| 13 | v1.2.0.13 | Admin discovery for non-admin users (UserInfoProto, loadUsers, feedback retry) | ✅ |

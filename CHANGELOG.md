@@ -1,5 +1,19 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.14] - 2026-06-19
+
+### Исправления
+
+**Admin discovery for non-admin users:**
+- `UserInfoProto` добавлены `userId` (field 6) и `isSuperAdmin` (field 7) — серверный `GetAllUsers` теперь возвращает эти поля
+- `UserInfoProtoMarshaller` обновлён для парсинга/записи новых полей
+- `loadUsers()` сканирует `allUsers` на `isSuperAdmin` и устанавливает `adminUserId` — feedback чат работает для ЛЮБОГО пользователя
+- `openFeedbackChat()` retry: если `adminUserId` пуст → `loadUsers()` + retry через 1.5с
+- `connect()` восстанавливает `isSuperAdmin` из SharedPreferences при старте
+- `fetchAdminStatus()` вызывается при READY (не в `connect()` — канал ещё не готов)
+- `fetchAdminStatus()` сохраняет `isSuperAdmin` в SharedPreferences
+- `logout()` очищает `is_super_admin` и `admin_user_id` из SharedPreferences
+
 ## [1.2.0.13] - 2026-06-19
 
 ### Исправления

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.13 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.14 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -15,13 +15,14 @@
 
 ---
 
-## Что сделано (v1.2.0.5 → v1.2.0.13)
+## Что сделано (v1.2.0.5 → v1.2.0.14)
 
 ### Критические фиксы
 - **Токен/сессия:** `startTokenRefresh()` вызывается при каждом входе/восстановлении. Chat stream retry: refresh → retry (не password dead-end). `onResume` валидация токена.
-- **Admin menu:** `isSuperAdmin` race condition исправлен (connect() reset только при forceReconnect). `adminUserId` сохраняется в SharedPreferences, восстанавливается при старте.
+- **Admin menu:** `isSuperAdmin` race condition исправлен. `adminUserId` сохраняется в SharedPreferences, восстанавливается при старте. `fetchAdminStatus()` вызывается при READY (не в `connect()`).
+- **Admin discovery for non-admin users:** `UserInfoProto` добавлены `userId` (field 6) и `isSuperAdmin` (field 7). `loadUsers()` сканирует `allUsers` и находит адмира. Feedback чат работает для ЛЮБОГО пользователя.
+- **Feedback retry:** `openFeedbackChat()` вызывает `loadUsers()` + retry через 1.5с если `adminUserId` пуст.
 - **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
-- **ChatList V2 marshallers:** pin/unpin/archive/search — все response marshallers созданы.
 
 ### Архитектура
 - **ChatViewModel:** NewChatActivity 759→~450 строк. Бизнес-логика: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet.
@@ -29,7 +30,7 @@
 - **MessageAdapter:** 870→324 строки (-63%). bind() → 12 выделенных методов.
 
 ### UI
-- **About dialog:** текст "Лава: платформа...", ссылка http://13.140.25.249, feedback → чат с админом (adminUserId динамический), drag handle.
+- **About dialog:** текст "Лава: платформа...", ссылка http://13.140.25.249, feedback → чат с админом (adminUserId динамический из GetAllUsers), drag handle.
 - **gRPC split:** GrpcChatClient + GrpcChatListV2Client + GrpcChatAuxClient (вместо монолитного GrpcChatListClient).
 
 ---
@@ -60,16 +61,14 @@ MessageAdapter → 12 focused bind methods
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
-Admin tracking: adminUserId StateFlow + SharedPreferences persistence
+Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.14)
+## Бэклог — Следующая сессия (v1.2.0.15)
 
 ### Приоритет 1: Отладка
-- [ ] Протестировать токен-фикс на dev сервере
-- [ ] Протестировать feedback чат с админом (adminUserId)
 - [ ] Навигация шторок в реальном приложении
 
 ### Приоритет 2: Тесты
