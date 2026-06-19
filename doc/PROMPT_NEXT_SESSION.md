@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.14 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.14 (выпущена) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -24,7 +24,8 @@
 - **Feedback retry:** `openFeedbackChat()` вызывает `loadUsers()` + retry через 1.5с если `adminUserId` пуст.
 - **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
 - **Chat subtitle last seen:** В direct-чатах вместо "офлайн" теперь показывается `ProtoUtils.formatLastSeen()` ("был(а) в сети X мин/ч/дн назад"). `allUsers` добавлен в combine flow в NewChatActivity.
-- **Deleted chat fix:** `deleteChat()` удаляет чат из Room DB. `chatDeletedEvent` подписан в ChatListViewModel — чаты удаляются в реальном времени + из кэша.
+- **Deleted chat fix:** `deleteChat()` удаляет чат из Room DB. `chatDeletedEvent` подписан в ChatListViewModel — чаты удаляются в реальном времени + из кэша. `deleteSelectedChats()` ждёт ответа сервера.
+- **Pull-to-refresh fix:** `refreshChats()` сбрасывает `_isLoading` — свайп вниз больше не блокируется periodic sync.
 
 ### Оптимизация
 - **Chat list sync:** `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени. Тип изменён на `Message` для полных данных.
@@ -35,16 +36,12 @@
 - **markAsRead on tap:** badge очищается при тапе на чат с непрочитанными.
 
 ### UI
-- **Action mode toolbar:** Все 4 иконки (pin/mute/archive/delete) `showAsAction="always"` — не уезжают в overflow.
+- **Action mode toolbar (toolbar-native):** Режим выбора работает полностью внутри тулбара — без отдельной панели ActionMode. Стрелка ←, текст "Выбрано X", иконки pin/mute/archive/delete — всё в тулбаре. Аватар, заголовок, лупа скрываются при входе, восстанавливаются при выходе. Все элементы окрашены в `colorOnPrimary` — единый цвет панели.
 
 ### Архитектура
 - **ChatViewModel:** NewChatActivity 759→~450 строк. Бизнес-логика: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet.
 - **ProfileViewModel:** ProfileActivity 719→~400 строк. Бизнес-логика: loadUserProfile, loadGroupData, updateChatName, updateChatSettings, uploadGroupAvatar.
 - **MessageAdapter:** 870→324 строки (-63%). bind() → 12 выделенных методов.
-
-### UI
-- **About dialog:** текст "Лава: платформа...", ссылка http://13.140.25.249, feedback → чат с админом (adminUserId динамический из GetAllUsers), drag handle.
-- **gRPC split:** GrpcChatClient + GrpcChatListV2Client + GrpcChatAuxClient (вместо монолитного GrpcChatListClient).
 
 ---
 
@@ -76,16 +73,14 @@ Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
 Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache (Room)
+Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode), no Android ActionMode bar
 ```
 
 ---
 
 ## Бэклог — Следующая сессия (v1.2.0.15)
 
-### Приоритет 1: Отладка
-- [ ] Навигация шторок в реальном приложении
-
-### Приоритет 2: Тесты
+### Приоритет 1: Тесты
 | Задача | Оценка |
 |--------|--------|
 | Unit-тесты для ChatViewModel | 2h |
@@ -93,18 +88,19 @@ Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cac
 | Unit-тесты для SessionManager | 2h |
 | Unit-тесты для data/ai/ | 2h |
 
-### Приоритет 3: Безопасность
+### Приоритет 2: Безопасность
 | Задача | Оценка |
 |--------|--------|
 | Keystore пароль → env vars | 0.5h |
 | ServerConfig.kt — единый IP | 1h |
 | EncryptedSharedPreferences | 2h |
 
-### Приоритет 4: UX
+### Приоритет 3: UX
 | Задача | Оценка |
 |--------|--------|
 | Offline mode — показать cached messages без подключения | 3h |
 | Push notification deep link — переход в чат из уведомления | 2h |
+| Навигация шторок в реальном приложении | 1h |
 
 ---
 
@@ -123,6 +119,8 @@ Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cac
 11. Marshallers: всегда включать v2 proto поля
 12. JWT freshness: `ensureFreshToken()` перед Chat stream
 13. НЕ хардкодить username — использовать adminUserId / userId
+14. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
+15. **НЕ bump'ать версию — bump делает только пользователь**
 
 ---
 
@@ -142,6 +140,6 @@ Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cac
 ## Полезные ссылки
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/PLAN.md`
-- Документация сервера: `/root/msg/doc/INDEX.md`
+- Документация сервера: `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md`
 - Changelog: `CHANGELOG.md`
 - v1 reference: `doc/ChatListActivity_v1_REFERENCE.kt`

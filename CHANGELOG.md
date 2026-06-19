@@ -4,14 +4,6 @@
 
 ### Исправления
 
-**Pull-to-refresh fix:**
-- `refreshChats()` сбрасывает `_isLoading` перед вызовом `loadChats()` — свайп вниз больше не блокируется periodic sync
-
-**Deleted chat persistence fix:**
-- `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
-- `chatDeletedEvent` подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени
-- `deleteSelectedChats()` теперь ждёт ответа сервера перед обновлением списка — удалённые чаты не появляются обратно
-
 **Chat subtitle last seen:**
 - В direct-чатах вместо "офлайн" показывается время последнего входа ("был(а) в сети X мин/ч/дн назад")
 - `allUsers` добавлен в combine flow в NewChatActivity — subtitle обновляется при загрузке данных
@@ -19,6 +11,10 @@
 **Deleted chat persistence fix:**
 - `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
 - `chatDeletedEvent` подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени
+- `deleteSelectedChats()` теперь ждёт ответа сервера перед обновлением списка — удалённые чаты не появляются обратно
+
+**Pull-to-refresh fix:**
+- `refreshChats()` сбрасывает `_isLoading` перед вызовом `loadChats()` — свайп вниз больше не блокируется periodic sync
 
 **Chat list sync:**
 - `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени когда сообщения приходят в другие комнаты
@@ -30,9 +26,12 @@
 
 ### UI
 
-**Action mode toolbar:**
-- Все 4 иконки action mode (pin/mute/archive/delete) `showAsAction="always"` — не уезжают в overflow меню
-- Иконки окрашены в `colorOnPrimary` — соответствуют теме (цвет текста "Выбрано")
+**Action mode toolbar (toolbar-native):**
+- Режим выбора работает полностью внутри тулбара — без отдельной панели ActionMode
+- `enterSelectionMode()`/`exitSelectionMode()` управляют состоянием тулбара
+- Стрелка ←, текст "Выбрано X", иконки pin/mute/archive/delete — всё в тулбаре
+- Аватар, заголовок, лупа — скрываются при входе, восстанавливаются при выходе
+- Все элементы окрашены в `colorOnPrimary` — единый цвет панели
 
 ## [1.2.0.13] - 2026-06-19
 
