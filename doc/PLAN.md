@@ -1,6 +1,15 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.16 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.17 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+
+---
+
+## Completed — v1.2.0.16
+
+### Session 2026-06-19 (Deleted Chat Fix + Action Mode)
+- ✅ **Deleted chat fix:** `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
+- ✅ **chatDeletedEvent subscription:** ChatListViewModel подписывается на `chatDeletedEvent` — чаты удаляются из списка в реальном времени + из Room DB
+- ✅ **Action mode toolbar:** Все 4 иконки (pin/mute/archive/delete) теперь `showAsAction="always"` — не уезжают в overflow
 
 ---
 
@@ -102,7 +111,7 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.16)
+## Backlog — Следующая сессия (v1.2.0.17)
 
 ### Приоритет 1: Отладка
 - [ ] Навигация шторок в реальном приложении

@@ -113,6 +113,22 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+        // Listen for deleted chats — remove from list in real-time
+        viewModelScope.launch {
+            GrpcClient.chatDeletedEvent.collect { deletedChatId ->
+                if (deletedChatId != null && deletedChatId.isNotEmpty()) {
+                    allChats = allChats.filter { it.id != deletedChatId }
+                    buildSections(allChats)
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
+                            db.chatDao().deleteChat(deletedChatId)
+                        } catch (e: Exception) { Log.w(TAG, "Failed to delete chat from cache", e) }
+                    }
+                    Log.d(TAG, "Chat deleted: $deletedChatId — removed from list")
+                }
+            }
+        }
         // Periodic sync: refresh chat list every 30s when connected
         viewModelScope.launch {
             GrpcClient.connectionStatus.collect { status ->
@@ -310,6 +326,12 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     if (success) {
                         allChats = allChats.filter { it.id != chatId }
                         buildSections(allChats)
+                        viewModelScope.launch(Dispatchers.IO) {
+                            try {
+                                val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
+                                db.chatDao().deleteChat(chatId)
+                            } catch (e: Exception) { Log.w(TAG, "Failed to delete chat from cache", e) }
+                        }
                     }
                 }
             } catch (e: Exception) {

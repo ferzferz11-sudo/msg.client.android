@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.16 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.17 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -15,7 +15,7 @@
 
 ---
 
-## Что сделано (v1.2.0.5 → v1.2.0.16)
+## Что сделано (v1.2.0.5 → v1.2.0.17)
 
 ### Критические фиксы
 - **Токен/сессия:** `startTokenRefresh()` вызывается при каждом входе/восстановлении. Chat stream retry: refresh → retry (не password dead-end). `onResume` валидация токена.
@@ -24,6 +24,7 @@
 - **Feedback retry:** `openFeedbackChat()` вызывает `loadUsers()` + retry через 1.5с если `adminUserId` пуст.
 - **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
 - **Chat subtitle last seen:** В direct-чатах вместо "офлайн" теперь показывается `ProtoUtils.formatLastSeen()` ("был(а) в сети X мин/ч/дн назад"). `allUsers` добавлен в combine flow в NewChatActivity.
+- **Deleted chat fix:** `deleteChat()` удаляет чат из Room DB. `chatDeletedEvent` подписан в ChatListViewModel — чаты удаляются в реальном времени + из кэша.
 
 ### Оптимизация
 - **Chat list sync:** `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени. Тип изменён на `Message` для полных данных.
@@ -32,6 +33,9 @@
 - **ChatEntity expansion:** добавлены `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10).
 - **Stop cache wipe:** SplashActivity больше не стирает Room кэш при каждом запуске — очистка только при logout.
 - **markAsRead on tap:** badge очищается при тапе на чат с непрочитанными.
+
+### UI
+- **Action mode toolbar:** Все 4 иконки (pin/mute/archive/delete) `showAsAction="always"` — не уезжают в overflow.
 
 ### Архитектура
 - **ChatViewModel:** NewChatActivity 759→~450 строк. Бизнес-логика: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet.
@@ -71,11 +75,12 @@ MessageAdapter → 12 focused bind methods
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
+Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache (Room)
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.16)
+## Бэклог — Следующая сессия (v1.2.0.18)
 
 ### Приоритет 1: Отладка
 - [ ] Навигация шторок в реальном приложении

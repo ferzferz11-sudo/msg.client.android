@@ -1,5 +1,16 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.17] - 2026-06-19
+
+### Исправления
+
+**Deleted chat persistence fix:**
+- `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
+- `chatDeletedEvent` теперь подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени + из Room DB
+
+**Action mode toolbar:**
+- Все 4 иконки action mode (pin/mute/archive/delete) теперь `showAsAction="always"` — не уезжают в overflow меню
+
 ## [1.2.0.16] - 2026-06-19
 
 ### Оптимизация
