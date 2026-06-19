@@ -4,7 +4,7 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.CheckBox
+import com.google.android.material.checkbox.MaterialCheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
@@ -248,7 +248,7 @@ class ChatAdapter(
         private val tvChatType: TextView = itemView.findViewById(R.id.tvChatType)
         private val tvUnreadCount: TextView = itemView.findViewById(R.id.tvUnreadCount)
         private val ivMuteIndicator: ImageView = itemView.findViewById(R.id.ivMuteIndicator)
-        private val cbChatSelect: CheckBox = itemView.findViewById(R.id.cbChatSelect)
+        private val cbChatSelect: MaterialCheckBox = itemView.findViewById(R.id.cbChatSelect)
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 

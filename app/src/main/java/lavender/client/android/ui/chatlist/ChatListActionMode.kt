@@ -27,9 +27,7 @@ internal fun enterSelectionMode(activity: ChatListActivity) {
     val typedValue = android.util.TypedValue()
     activity.theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimary, typedValue, true)
     val iconColor = typedValue.data
-    activity.toolbar?.menu?.findItem(R.id.action_pin)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
     activity.toolbar?.menu?.findItem(R.id.action_mute)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
-    activity.toolbar?.menu?.findItem(R.id.action_archive)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
     activity.toolbar?.menu?.findItem(R.id.action_delete)?.iconTintList = android.content.res.ColorStateList.valueOf(iconColor)
     activity.toolbar?.setOnMenuItemClickListener { item ->
         onMenuItemClicked(activity, item)
@@ -73,17 +71,9 @@ internal fun updateActionModeTitle(activity: ChatListActivity) {
 private fun updateActionModeIcons(activity: ChatListActivity) {
     val selectedChats = activity.chatAdapter.getSelectedChats()
     if (selectedChats.isEmpty()) return
-    val allPinned = selectedChats.all { it.isPinned }
     val allMuted = selectedChats.all { it.isMuted }
-    val allArchived = selectedChats.all { it.isArchived }
-    activity.toolbar?.menu?.findItem(R.id.action_pin)?.let { item ->
-        item.setTitle(if (allPinned) R.string.action_unpin else R.string.action_pin)
-    }
     activity.toolbar?.menu?.findItem(R.id.action_mute)?.let { item ->
         item.setTitle(if (allMuted) R.string.action_unmute else R.string.action_mute)
-    }
-    activity.toolbar?.menu?.findItem(R.id.action_archive)?.let { item ->
-        item.setTitle(if (allArchived) R.string.action_unarchive else R.string.action_archive)
     }
 }
 
@@ -92,16 +82,8 @@ private fun onMenuItemClicked(activity: ChatListActivity, item: MenuItem): Boole
     if (selectedChats.isEmpty()) return false
 
     return when (item.itemId) {
-        R.id.action_pin -> {
-            pinSelectedChats(activity, selectedChats)
-            true
-        }
         R.id.action_mute -> {
             muteSelectedChats(activity, selectedChats)
-            true
-        }
-        R.id.action_archive -> {
-            archiveSelectedChats(activity, selectedChats)
             true
         }
         R.id.action_delete -> {

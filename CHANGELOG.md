@@ -1,5 +1,29 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.18] - 2026-06-19
+
+### Исправления
+
+**Secret chat marshallers — field order fix:**
+- `CreateSecretChatRequest` — убран лишний `userId`, field order: 1=target_username, 2=target_user_id, 3=public_key, 4=client_version (было: 1=userId, 2=target_username, 3=targetUserId, 4=publicKey, 5=clientVersion → сервер читал publicKey как client_version → "API version too old")
+- `ExchangeSecretKeyRequest` — убран лишний `userId`, field order: 1=chat_id, 2=public_key (было: 1=chat_id, 2=userId, 3=public_key)
+- `GetSecretChatKeyRequest` — убран лишний `userId`, field order: 1=chat_id (было: 1=chat_id, 2=userId)
+
+**Secret chat display name:**
+- `getDisplayName()` — проверка `isSecret` вынесена на верхний уровень (была внутри `type != "direct"`, но секретные чаты имеют `type = "direct"` → проверка пропускалась → показывалось `name` с обоими именами)
+- Секретные чаты теперь показывают `🔒 имя_собеседника`
+
+**E2EE key exchange:**
+- Лимит 10 попыток обмена ключами (каждые 3 сек). Ранее — бесконечный цикл retry
+- Логирование: номер попытки, финальный warning при исчерпании лимита
+
+**Selection mode:**
+- Убраны action_pin и action_archive из toolbar в selection mode (пока не готово)
+- CheckBox заменён на MaterialCheckBox с `buttonTint="?attr/colorPrimary"` — адаптируется к теме
+- CheckBox сдвинут левее (marginEnd 12dp → 8dp)
+
+---
+
 ## [1.2.0.17] - 2026-06-19
 
 ### Исправления

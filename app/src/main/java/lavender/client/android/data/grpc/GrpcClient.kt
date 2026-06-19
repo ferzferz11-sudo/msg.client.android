@@ -469,10 +469,9 @@ object GrpcClient {
     ) {
         val clientVersion = lavender.client.android.BuildConfig.VERSION_NAME
         realGrpcClient.scope.launch(Dispatchers.Main) {
-            val userId = getUserId() ?: ""
             val (chatId, success, message) = lavender.client.android.data.grpc.createSecretChat(
                 targetUsername = targetUsername, targetUserId = "",
-                publicKey = publicKey, clientVersion = clientVersion, userId = userId
+                publicKey = publicKey, clientVersion = clientVersion
             )
             callback(chatId, success, message, "")
         }
@@ -482,8 +481,7 @@ object GrpcClient {
         chatId: String, publicKey: String, callback: (Boolean, String, Boolean) -> Unit
     ) {
         realGrpcClient.scope.launch(Dispatchers.Main) {
-            val userId = getUserId() ?: ""
-            val (success, peerKey, peerHasKey) = lavender.client.android.data.grpc.exchangeSecretKey(chatId, userId, publicKey)
+            val (success, peerKey, peerHasKey) = lavender.client.android.data.grpc.exchangeSecretKey(chatId, publicKey)
             callback(success, peerKey, peerHasKey)
         }
     }
@@ -492,8 +490,7 @@ object GrpcClient {
         chatId: String, callback: (String, Boolean) -> Unit
     ) {
         realGrpcClient.scope.launch(Dispatchers.Main) {
-            val userId = getUserId() ?: ""
-            val (peerKey, peerHasKey) = lavender.client.android.data.grpc.getSecretChatKey(chatId, userId)
+            val (peerKey, peerHasKey) = lavender.client.android.data.grpc.getSecretChatKey(chatId)
             callback(peerKey, peerHasKey)
         }
     }
