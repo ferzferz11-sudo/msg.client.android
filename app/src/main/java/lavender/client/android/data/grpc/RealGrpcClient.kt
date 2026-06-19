@@ -85,8 +85,8 @@ object RealGrpcClient {
     private val _callSignals = MutableSharedFlow<CallMessageProto>(extraBufferCapacity = 64)
     val callSignals: SharedFlow<CallMessageProto> = _callSignals
 
-    private val _newMessageEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
-    val newMessageEvent: SharedFlow<Pair<String, String>> = _newMessageEvent
+    private val _newMessageEvent = MutableSharedFlow<Message>(extraBufferCapacity = 64)
+    val newMessageEvent: SharedFlow<Message> = _newMessageEvent
 
     // Read receipts broadcast: roomId → reader username
     private val _readReceiptEvent = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 64)
@@ -530,7 +530,7 @@ object RealGrpcClient {
                 val isFavoriteSession = currentRoomId.startsWith("favorites_")
                 if (message.roomId != currentRoomId && !isFavoriteSession) {
                     scope.launch(Dispatchers.IO) { db()?.messageDao()?.insertMessages(listOf(message.toEntity())) }
-                    scope.launch { _newMessageEvent.emit(Pair(message.roomId, message.id)) }
+                    scope.launch { _newMessageEvent.emit(message) }
                     return
                 }
 

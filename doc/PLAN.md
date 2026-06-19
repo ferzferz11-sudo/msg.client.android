@@ -1,6 +1,19 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.15 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.16 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+
+---
+
+## Completed — v1.2.0.15
+
+### Session 2026-06-19 (Chat List Sync Optimization)
+- ✅ **newMessageEvent subscription:** ChatListViewModel подписывается на `newMessageEvent` — чат-лист обновляется в реальном времени
+- ✅ **Message type:** `newMessageEvent` теперь эмитит `Message` вместо `Pair<String,String>` — полные данные для обновления lastMessageText/unreadCount
+- ✅ **Periodic polling:** 30с интервал для обновления чат-листа (как в v1)
+- ✅ **ChatDao caching:** чаты загружаются из кэша при старте, синхронизируются с сервером в фоне
+- ✅ **ChatEntity expansion:** добавлены `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10)
+- ✅ **Stop cache wipe:** SplashActivity больше не стирает Room кэш при каждом запуске
+- ✅ **markAsRead on tap:** badge очищается при тапе на чат с непрочитанными
 
 ---
 
@@ -89,7 +102,7 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.15)
+## Backlog — Следующая сессия (v1.2.0.16)
 
 ### Приоритет 1: Отладка
 - [ ] Навигация шторок в реальном приложении

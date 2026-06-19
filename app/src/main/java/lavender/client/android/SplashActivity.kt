@@ -173,11 +173,6 @@ class SplashActivity : AppCompatActivity() {
         val serverAddress = prefs.getString("server_address", "") ?: ""
         val host = serverAddress.split(":").getOrNull(0) ?: ""
 
-        // Clear local cache on successful login (silent, no toast)
-        if (shouldProceed) {
-            clearAllCache()
-        }
-
         val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {

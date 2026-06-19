@@ -40,7 +40,7 @@ object GrpcClient {
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
-    val newMessageEvent: SharedFlow<Pair<String, String>> = realGrpcClient.newMessageEvent
+    val newMessageEvent: SharedFlow<Message> = realGrpcClient.newMessageEvent
     val readReceiptEvent: SharedFlow<Pair<String, String>> = realGrpcClient.readReceiptEvent
     val avatarCacheFlow = realGrpcClient.avatarCacheFlow
 

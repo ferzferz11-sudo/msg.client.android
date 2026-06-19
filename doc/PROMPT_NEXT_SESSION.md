@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.15 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.16 | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
 
 ---
 
@@ -15,7 +15,7 @@
 
 ---
 
-## Что сделано (v1.2.0.5 → v1.2.0.15)
+## Что сделано (v1.2.0.5 → v1.2.0.16)
 
 ### Критические фиксы
 - **Токен/сессия:** `startTokenRefresh()` вызывается при каждом входе/восстановлении. Chat stream retry: refresh → retry (не password dead-end). `onResume` валидация токена.
@@ -24,6 +24,14 @@
 - **Feedback retry:** `openFeedbackChat()` вызывает `loadUsers()` + retry через 1.5с если `adminUserId` пуст.
 - **SuperAdmin marshallers:** GetProfileResponseMarshaller + все ProfileService v2 marshallers.
 - **Chat subtitle last seen:** В direct-чатах вместо "офлайн" теперь показывается `ProtoUtils.formatLastSeen()` ("был(а) в сети X мин/ч/дн назад"). `allUsers` добавлен в combine flow в NewChatActivity.
+
+### Оптимизация
+- **Chat list sync:** `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени. Тип изменён на `Message` для полных данных.
+- **Periodic polling:** 30с интервал для обновления чат-листа (как в v1).
+- **ChatDao caching:** чаты загружаются из кэша при старте (мгновенное отображение), синхронизируются с сервером в фоне.
+- **ChatEntity expansion:** добавлены `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10).
+- **Stop cache wipe:** SplashActivity больше не стирает Room кэш при каждом запуске — очистка только при logout.
+- **markAsRead on tap:** badge очищается при тапе на чат с непрочитанными.
 
 ### Архитектура
 - **ChatViewModel:** NewChatActivity 759→~450 строк. Бизнес-логика: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet.

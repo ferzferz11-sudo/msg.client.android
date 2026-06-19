@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MessageEntity::class, ChatEntity::class], version = 9, exportSchema = false)
+@Database(entities = [MessageEntity::class, ChatEntity::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun chatDao(): ChatDao
@@ -135,19 +135,24 @@ abstract class AppDatabase : RoomDatabase() {
         // Also ensure all columns from previous migrations exist (defensive)
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // New columns for v9
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN activeAgentId TEXT NOT NULL DEFAULT ''") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN agentMode TEXT NOT NULL DEFAULT ''") } catch (_: Exception) {}
-                // Defensive: ensure v6 columns exist (may be missing if DB was created at v7)
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN isSecret INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN peerPublicKey TEXT NOT NULL DEFAULT ''") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN e2eeReady INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
-                // Defensive: ensure columns from early migrations exist
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN type TEXT NOT NULL DEFAULT ''") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN unreadCount INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN allowMembersToAdd INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN lastMessageHasImage INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
                 try { db.execSQL("ALTER TABLE chats ADD COLUMN lastMessageTime INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try { db.execSQL("ALTER TABLE chats ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE chats ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE chats ADD COLUMN pinnedAt INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
             }
         }
 
@@ -158,7 +163,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lavender_cache"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                 .build()
                 INSTANCE = instance

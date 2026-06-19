@@ -52,7 +52,10 @@ data class ChatEntity(
     val peerPublicKey: String = "",
     val e2eeReady: Boolean = false,
     val activeAgentId: String = "",
-    val agentMode: String = ""
+    val agentMode: String = "",
+    val isPinned: Boolean = false,
+    val isArchived: Boolean = false,
+    val pinnedAt: Long = 0L
 )
 
 fun Message.toEntity(): MessageEntity {
@@ -134,14 +137,16 @@ fun MessageEntity.toDomain(): Message {
 fun ChatInfo.toEntity(): ChatEntity = ChatEntity(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, isMuted, lastMessageHasImage,
-    allowMembersToAdd, isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode
+    allowMembersToAdd, isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
+    isPinned, isArchived, pinnedAt
 )
 
 fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     id, name, type, participants, createdAt, unreadCount, lastMessageTime,
     creator, lastMessageText, avatarUrl, fullAvatarUrl, lastMessageUsername, muted, lastMessageHasImage,
     allowMembersToAdd, conferenceStartTime = 0L,
-    isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode
+    isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
+    isPinned, isArchived, pinnedAt
 )
 
 // ======= Hermes Message mapping =======

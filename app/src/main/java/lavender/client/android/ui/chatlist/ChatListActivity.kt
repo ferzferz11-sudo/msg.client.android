@@ -379,6 +379,7 @@ class ChatListActivity : AppCompatActivity() {
                         actionMode?.finish()
                     }
                 } else {
+                    if (chat.unreadCount > 0) viewModel.markAsRead(chat.id)
                     navigateToChat(chat, username)
                 }
             },
