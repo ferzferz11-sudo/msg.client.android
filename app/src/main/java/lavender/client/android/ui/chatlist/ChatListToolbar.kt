@@ -18,6 +18,7 @@ import lavender.client.android.EditProfileActivity
 import lavender.client.android.ContactsActivity
 import lavender.client.android.R
 import lavender.client.android.ServersActivity
+import lavender.client.android.ChangelogActivity
 import lavender.client.android.ThemesActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
@@ -243,11 +244,6 @@ internal fun showAboutDialog(activity: ChatListActivity) {
 
 internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) {
     val sheet = StandardBottomSheet(activity, R.layout.dialog_about)
-    try {
-        val versionName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
-        sheet.findViewById<TextView>(R.id.aboutLogoVersion)?.text = activity.getString(R.string.app_version_format, versionName)
-        sheet.findViewById<TextView>(R.id.clientVersionText)?.text = activity.getString(R.string.app_version_format, versionName)
-    } catch (_: Exception) {}
     val serverVersion = GrpcClient.serverVersion.value
     val serverVersionText = sheet.findViewById<TextView>(R.id.serverVersionText)
     if (serverVersion.isNotEmpty()) {
@@ -255,12 +251,52 @@ internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) 
     } else {
         serverVersionText?.visibility = View.GONE
     }
+    sheet.findViewById<View>(R.id.btnWhatsNew)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
+        sheet.dismiss()
+        activity.startActivity(android.content.Intent(activity, ChangelogActivity::class.java))
+    }
+    sheet.findViewById<View>(R.id.btnFeedback)?.setOnClickListener {
+        activity.isNavigatingDeeper = true
+        sheet.dismiss()
+        openFeedbackChat(activity)
+    }
+    sheet.findViewById<View>(R.id.btnShare)?.setOnClickListener {
+        val shareText = activity.getString(R.string.share_app_description) + "\nhttp://13.140.25.249"
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+        }
+        activity.startActivity(android.content.Intent.createChooser(intent, activity.getString(R.string.share_app)))
+    }
     sheet.findViewById<View>(R.id.btnClose)?.setOnClickListener { sheet.dismiss() }
     sheet.setOnDismissListener {
         if (!activity.isNavigatingDeeper) onBack?.invoke()
         activity.isNavigatingDeeper = false
     }
     sheet.show()
+}
+
+private fun openFeedbackChat(activity: ChatListActivity) {
+    val adminId = GrpcClient.adminUserId.value
+    if (adminId.isNullOrEmpty()) {
+        android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
+        return
+    }
+    val username = lavender.client.android.data.session.SessionManager.session.value.username
+    GrpcClient.createDirectChat(username, adminId) { chatId ->
+        if (chatId != null) {
+            val chatInfo = lavender.client.android.data.models.ChatInfo(
+                id = chatId, name = adminId, type = "direct",
+                participants = "[\"$username\",\"$adminId\"]"
+            )
+            activity.runOnUiThread { activity.navigateToChat(chatInfo, username) }
+        } else {
+            activity.runOnUiThread {
+                android.widget.Toast.makeText(activity, R.string.connection_failed, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }
 
 internal fun shareApp(activity: ChatListActivity) {

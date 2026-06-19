@@ -67,6 +67,9 @@ object RealGrpcClient {
     val _isSuperAdmin = MutableStateFlow(false)
     val isSuperAdmin: StateFlow<Boolean> = _isSuperAdmin
 
+    private val _adminUserId = MutableStateFlow<String?>(null)
+    val adminUserId: StateFlow<String?> = _adminUserId
+
     private val _serverVersion = MutableStateFlow("")
     val serverVersion: StateFlow<String> = _serverVersion
 
@@ -405,6 +408,10 @@ object RealGrpcClient {
                         Log.d(TAG, "Super Admin status activated")
                         _isSuperAdmin.value = true
                     }
+                    if (value.userId.isNotEmpty() && _adminUserId.value == null) {
+                        _adminUserId.value = value.userId
+                        Log.d(TAG, "Admin userId tracked: ${value.userId}")
+                    }
                 }
 
                 // System signals
@@ -551,18 +558,46 @@ object RealGrpcClient {
                         description.contains("token is malformed", ignoreCase = true) ||
                         description.contains("token is expired", ignoreCase = true)) {
                         if (lastAuthWasJwt) {
-                            Log.w(TAG, "JWT auth failed — clearing tokens, will retry with password: $description")
-                            appContext?.let { AuthManager.clearTokens(it) }
-                            _authStatus.value = null
-                            lastAuthWasJwt = false
+                            Log.w(TAG, "JWT auth failed — attempting token refresh: $description")
                             requestObserver = null
                             _connectionStatus.value = ConnectionStatus.RECONNECTING
                             scope.launch {
-                                delay(1000)
-                                lastChatRequest?.let { req ->
-                                    Log.d(TAG, "Retrying chat stream with password auth for ${req.u}")
-                                    startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
+                                val ctx = appContext
+                                if (ctx != null) {
+                                    val refreshToken = lavender.client.android.data.auth.AuthManager.getRefreshToken(ctx)
+                                    if (!refreshToken.isNullOrEmpty()) {
+                                        val refreshResult = kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.proto.RefreshTokenResponseProto?> { cont ->
+                                            GrpcClient.refreshToken(refreshToken) { response, error ->
+                                                if (cont.isActive) {
+                                                    if (response != null && response.accessToken.isNotEmpty()) cont.resumeWith(Result.success(response))
+                                                    else cont.resumeWith(Result.success(null))
+                                                }
+                                            }
+                                        }
+                                        if (refreshResult != null) {
+                                            val userId = lavender.client.android.data.auth.AuthManager.getUserId(ctx)
+                                            val username = lavender.client.android.data.auth.AuthManager.getUsername(ctx)
+                                            val deviceId = lavender.client.android.data.auth.AuthManager.getDeviceId(ctx)
+                                            lavender.client.android.data.auth.AuthManager.storeTokens(
+                                                context = ctx, accessToken = refreshResult.accessToken,
+                                                refreshToken = refreshResult.refreshToken,
+                                                accessExpiresAt = refreshResult.accessExpiresAt,
+                                                refreshExpiresAt = refreshResult.refreshExpiresAt,
+                                                userId = userId, username = username, deviceId = deviceId
+                                            )
+                                            _authStatus.value = null
+                                            delay(1000)
+                                            lastChatRequest?.let { req ->
+                                                Log.d(TAG, "Retrying chat stream after token refresh for ${req.u}")
+                                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
+                                            }
+                                            return@launch
+                                        }
+                                    }
                                 }
+                                Log.w(TAG, "Token refresh failed — AUTH_FAILED")
+                                _authStatus.value = "AUTH_FAILED"
+                                _connectionStatus.value = ConnectionStatus.FAILED
                             }
                             return
                         }

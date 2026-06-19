@@ -202,6 +202,18 @@ object SessionManager {
             )
 
             Log.d("SessionManager", "Token refreshed successfully")
+        } else if (AuthManager.isRefreshTokenExpired(context)) {
+            Log.w("SessionManager", "Refresh token expired — attempting re-login with saved password")
+            val username = AuthManager.getUsername(context)
+            val password = CredentialStore.getPassword(context)
+            val serverAddress = CredentialStore.getServerAddress(context)
+            if (username.isNotEmpty() && password.isNotEmpty() && serverAddress.isNotEmpty()) {
+                loginV2(context, username, password, serverAddress, false, "", {})
+            } else {
+                Log.w("SessionManager", "No saved credentials for re-login")
+                _session.value = UserSession()
+                _logoutEvent.emit(Unit)
+            }
         }
     }
 
@@ -249,21 +261,22 @@ object SessionManager {
                     if (AuthManager.isTokenExpiredOrExpiring(context) && password.isNotEmpty()) {
                         Log.d("SessionManager", "JWT expired on startup — will re-login with saved password after connection")
                         updateSession(username = username, password = password, userId = userId, email = email)
-                    } else {
-                        Log.d("SessionManager", "Restoring JWT session for $username (server=$jwtServer)")
-                        updateSession(
-                            username = jwtUsername.ifEmpty { username },
-                            password = password,
-                            userId = jwtUserId.ifEmpty { userId },
-                            email = email
-                        )
-                        _session.value = _session.value.copy(
-                            accessToken = AuthManager.getAccessToken(context) ?: "",
-                            refreshToken = AuthManager.getRefreshToken(context) ?: "",
-                            authMethod = "v2_jwt",
-                            deviceId = deviceId
-                        )
-                    }
+                } else {
+                    Log.d("SessionManager", "Restoring JWT session for $username (server=$jwtServer)")
+                    updateSession(
+                        username = jwtUsername.ifEmpty { username },
+                        password = password,
+                        userId = jwtUserId.ifEmpty { userId },
+                        email = email
+                    )
+                    _session.value = _session.value.copy(
+                        accessToken = AuthManager.getAccessToken(context) ?: "",
+                        refreshToken = AuthManager.getRefreshToken(context) ?: "",
+                        authMethod = "v2_jwt",
+                        deviceId = deviceId
+                    )
+                    startTokenRefresh(context)
+                }
                 }
             } else {
                 updateSession(username = username, password = password, userId = userId, email = email)
@@ -317,6 +330,7 @@ object SessionManager {
                             accessToken = response.accessToken,
                             refreshToken = response.refreshToken
                         )
+                        startTokenRefresh(context)
                         Log.d("SessionManager", "Re-login: tokens refreshed successfully")
                     } else {
                         Log.w("SessionManager", "Re-login: refresh failed ($error), re-authenticating with password")

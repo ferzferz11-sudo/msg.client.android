@@ -33,6 +33,7 @@
 
     <!-- Messages -->
     <string name="lavender_messenger">Lava</string>
+    <string name="about_description">Лава: платформа защищенных бизнес-коммуникаций</string>
     <string name="server_address">%s</string>
     <string name="server_address_local">192.168.1.135:50051</string>
     <string name="download_update">update</string>
@@ -622,6 +623,8 @@
     <string name="client_version_label">App Version:</string>
     <string name="last_active_label">Last Active:</string>
     <string name="whats_new">What\'s New</string>
+    <string name="no_email_client">No email client found</string>
+    <string name="admin_not_found">Admin not found on server</string>
     <string name="mark_as_read">Mark as Read</string>
     <string name="just_now">just now</string>
     <plurals name="minutes_ago">

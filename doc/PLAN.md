@@ -1,6 +1,45 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.5 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-18
+**Version:** v1.2.0.12 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-18
+
+---
+
+## Completed — v1.2.0.12
+
+### Session 2026-06-18 (About Dialog UX)
+- ✅ About dialog: текст "Лава: платформа...", убрана версия клиента, оставлена только серверная
+- ✅ Share: текст + ссылка http://13.140.25.249
+- ✅ Feedback: открывается личный чат с админом (adminUserId динамический из chat stream, без хардкода username)
+- ✅ GrpcClient.adminUserId — StateFlow, отслеживает userId адмира из isSuperAdmin сообщений
+
+---
+
+## Completed — v1.2.0.11
+
+### Session 2026-06-18 (Architecture Refactor)
+- ✅ **ProfileViewModel:** ProfileActivity 719→~400 строк. Бизнес-логика: loadUserProfile, loadGroupData, updateChatName, updateChatSettings, removeParticipant, addParticipants, uploadGroupAvatar, resizeImage
+- ✅ **MessageAdapter split:** 870→324 строки (-63%). bind() → 12 выделенных методов по типам контента
+
+---
+
+## Completed — v1.2.0.10
+
+### Session 2026-06-18 (About Dialog Fix)
+- ✅ **About dialog buttons:** btnWhatsNew → ChangelogActivity, btnFeedback → email, btnShare → shareApp
+- ✅ **About dialog drag handle:** dialog_about.xml переписан с MaterialCardView wrapper + dragHandle + contentContainer (как widget_standard_bottom_sheet)
+- ✅ **i18n:** no_email_client строка добавлена (EN + RU)
+
+---
+
+## Completed — v1.2.0.9
+
+### Session 2026-06-18 (Token Fix + Refactor)
+- ✅ **Token refresh fix (критический):** startTokenRefresh() теперь вызывается при каждом восстановлении JWT сессии (initFromPrefs, waitForConnectionAndReLogin)
+- ✅ **Chat stream retry fix:** JWT failure → refresh token → retry (вместо мёртвой петли с password fallback)
+- ✅ **performTokenRefresh fallback:** refresh_token expired → automatic re-login с saved password
+- ✅ **onResume token validation:** ChatListActivity и NewChatActivity проверяют свежесть токена
+- ✅ **NewChatActivity → ChatViewModel:** бизнес-логика перенесена (sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet)
+- ✅ **GrpcChatListClientTest fix:** getChats() тесты обновлены для GrpcChatClient
 
 ---
 
@@ -29,20 +68,18 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.6)
+## Backlog — Следующая сессия (v1.2.0.10)
 
 ### Приоритет 1: Отладка
-- [ ] SuperAdmin кнопка не видна — хардкод `username == "ferz"`, проверить SET_SUPER_ADMIN сигнал
-- [ ] Проверить GetChatsV2 работает на dev (серверные фиксы: proto + query)
-- [ ] Auto-login с протухшим JWT — протестировать refresh → re-login
+- [ ] Протестировать токен-фикс на dev сервере (требуется удалённая проверка)
 - [ ] Навигация шторок в реальном приложении
 
 ### Приоритет 2: Архитектура
 | Задача | Что | LOC Эффект | Оценка |
 |--------|-----|-----------|--------|
-| ViewModel для NewChatActivity | Бизнес-логика → ViewModel | 755→~400 | 2h |
-| ViewModel для ProfileActivity | Бизнес-логика → ViewModel | 719→~300 | 2h |
-| Разделить MessageAdapter | ViewHolder по типам | 870→~300 | 2h |
+| ~~ViewModel для NewChatActivity~~ | ~~Бизнес-логика → ViewModel~~ | ~~755→~450~~ | ✅ |
+| ~~ViewModel для ProfileActivity~~ | ~~Бизнес-логика → ViewModel~~ | ~~719→~400~~ | ✅ |
+| ~~Разделить MessageAdapter~~ | ~~ViewHolder по типам~~ | ~~870→~324~~ | ✅ |
 
 ### Приоритет 3: Тесты
 | Задача | Оценка |
@@ -71,10 +108,12 @@
 | GrpcChatClient/GrpcChatListV2Client/GrpcChatAuxClient | 3 домена вместо монолитного GrpcChatListClient |
 | Sheet navigation | isNavigatingDeeper + ActivityResultContracts + OnDismissListener |
 | Auto-login recovery | refresh → password re-login при expired JWT на startup |
+| Token refresh on session restore | startTokenRefresh() вызывается в initFromPrefs() и waitForConnectionAndReLogin() |
+| JWT failure → refresh first | Chat stream retry: refresh token → retry (не password fallback) |
 
 ---
 
-## Архитектура (v1.2.0.5)
+## Архитектура (v1.2.0.9)
 
 ```
 GrpcClient (facade)
@@ -96,10 +135,12 @@ GrpcClient (facade)
         └── AiChatGrpc, SecretChatGrpc, ProfileClient
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity → 6 delegates (toolbar, input, selection, search, E2EE, menu)
+NewChatActivity → 6 delegates + ChatViewModel (toolbar, input, selection, search, E2EE, menu)
+ProfileActivity → ProfileViewModel (profile/group data, avatar upload, participants)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
-Session: SessionManager (token refresh, device sync, FCM, auto-login recovery)
+Session: SessionManager (token refresh EVERY entry point, device sync, FCM, auto-login recovery)
+Token lifecycle: initFromPrefs → startTokenRefresh | ensureFreshToken on chat stream | refresh-on-failure in onError
 ```
 
 ---
@@ -115,3 +156,6 @@ Session: SessionManager (token refresh, device sync, FCM, auto-login recovery)
 | 6 | v1.1.3.38 | v2 Client Release — UI improvements, language sync, contacts | ✅ |
 | 7 | v1.2.0.4 | v2 Server Migration — chat list fix, toolbar, legacy cleanup, JWT refresh | ✅ |
 | 8 | v1.2.0.5 | Contacts fix, gRPC split, auto-login recovery, deprecated v1 cleanup | ✅ |
+| 9 | v1.2.0.9 | Token refresh fix (startTokenRefresh on all entry points), ChatViewModel refactor | ✅ |
+| 10 | v1.2.0.10 | About dialog fix (buttons + drag handle) | ✅ |
+| 11 | v1.2.0.11 | ProfileViewModel, MessageAdapter split | ✅ |

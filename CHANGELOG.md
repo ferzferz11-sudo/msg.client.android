@@ -1,5 +1,66 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.12] - 2026-06-18
+
+### Исправления
+
+**Диалог "О программе":**
+- Текст приложения: "Лава: платформа защищенных бизнес-коммуникаций" вместо "Lavender Messenger"
+- Версия клиента убрана — показывается только версия сервера
+- **Поделиться:** текст "Лава: платформа..." + ссылка http://13.140.25.249
+- **Отзыв:** открывается личный чат с админом (вместо email). Админ определяется динамически через `adminUserId` из chat stream (не хардкод username)
+- Добавлен `adminUserId` StateFlow в GrpcClient/RealGrpcClient — отслеживает userId админа из сообщений с `isSuperAdmin = true`
+
+**i18n:**
+- Добавлены строки: `about_description`, `admin_not_found` (EN + RU)
+
+## [1.2.0.11] - 2026-06-18
+
+### Рефакторинг
+
+**ProfileActivity → ProfileViewModel:**
+- Бизнес-логика перенесена в ProfileViewModel: loadUserProfile, loadGroupData, updateChatName, updateChatSettings, removeParticipant, addParticipants, uploadGroupAvatar, resizeImage
+- ProfileActivity: 719 → ~400 строк
+
+**MessageAdapter split:**
+- bind() 600 строк → 12 выделенных методов: bindAlignment, bindBubbleStyle, bindCallMessage, bindReadStatus, bindAudioContent, bindTextContent, bindImageContent, bindReactions, bindReplyQuote, bindSelectionIndicator, bindContainerClicks, bindPinnedBadge
+- MessageAdapter: 870 → 324 строки (-63%)
+
+## [1.2.0.10] - 2026-06-18
+
+### Исправления
+
+**Диалог "О программе":**
+- Кнопки "Что нового", "Отзыв", "Поделиться" не работали — отсутствовали click listeners (только "Закрыть" был привязан)
+- Добавлены: What's New → ChangelogActivity, Feedback → email intent, Share → shareApp()
+- **Drag handle отсутствовал** — dialog_about.xml не использовал стандартный wrapper (MaterialCardView + dragHandle). Обновлён layout: добавлен dragHandle, contentContainer, MaterialCardView
+
+**i18n:**
+- Добавлена строка `no_email_client` (EN + RU)
+
+## [1.2.0.9] - 2026-06-18
+
+### Исправления
+
+**Токен/Сессия (критический):**
+- **startTokenRefresh не вызывался после перезапуска приложения** — initFromPrefs() восстанавливал JWT сессию, но не запускал периодический refresh. Токен протухал молча.
+- **waitForConnectionAndReLogin не запускал refresh** — после успешного обновления токена при старте, периодический refresh не начинался.
+- **Chat stream retry: мёртвая петля** — при ошибке JWT, код очищал токены и пытался использовать пароль (v1), но v2 не поддерживает пароль → AUTH_FAILED. Теперь: сначала пытается refresh, потом — AUTH_FAILED.
+- **performTokenRefresh: fallback при истечении refresh_token** — если refresh_token тоже истёк, автоматический re-login по сохранённому паролю.
+- **onResume: валидация токена** — ChatListActivity и NewChatActivity проверяют свежесть токена при возвращении в foreground.
+
+**Новые токены хранятся и обновляются корректно, рефреш запускается при каждом входе и восстановлении сессии.**
+
+### Рефакторинг
+
+**NewChatActivity → ChatViewModel:**
+- Бизнес-логика перенесена в ChatViewModel: sendMessage, uploadAudio, retryMessage, fetchChatMetadata, loadPinnedMessages, syncChatListIfNeeded, ensureUserIdSet
+- NewChatActivity: 759 → ~450 строк
+- ViewModel обогащён StateFlow: chatMetadata, pinnedMessageIds, isAudioUploading
+
+### Исправления тестов
+- GrpcChatListClientTest: getChats() тесты обновлены для GrpcChatClient (после split в v1.2.0.5)
+
 ## [1.2.0.8] - 2026-06-18
 
 ### Исправления

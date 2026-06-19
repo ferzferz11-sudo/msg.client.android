@@ -24,6 +24,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -41,6 +42,7 @@ import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import lavender.client.android.ui.adapter.ParticipantAdapter
+import lavender.client.android.ui.profile.ProfileViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -66,15 +68,11 @@ class ProfileActivity : AppCompatActivity() {
         val context = newBase.createConfigurationContext(config)
         super.attachBaseContext(context)
     }
+
     private val grpcClient = GrpcClient
-    private var username: String = ""
-    private var avatarUrl: String = ""
-    private var fullAvatarUrl: String = ""
+    private lateinit var viewModel: ProfileViewModel
     private var isGroup: Boolean = false
     private var roomId: String = ""
-    private var creator: String = ""
-    private var currentParticipants = mutableListOf<String>()
-    private var allowMembersToAdd: Boolean = false
     private var selectedAvatarUri: Uri? = null
     private var currentProfileAvatar: CircleImageView? = null
     private var participantsAdapter: ParticipantAdapter? = null
@@ -98,52 +96,41 @@ class ProfileActivity : AppCompatActivity() {
         ThemeUi.bind(this, currentMe)
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
 
-        username = intent.getStringExtra("username") ?: ""
-        avatarUrl = intent.getStringExtra("avatar_url") ?: ""
-        fullAvatarUrl = intent.getStringExtra("full_avatar_url") ?: ""
+        viewModel = ViewModelProvider(this)[ProfileViewModel::class.java]
+
+        val username = intent.getStringExtra("username") ?: ""
         isGroup = intent.getBooleanExtra("is_group", false)
         roomId = intent.getStringExtra("room_id") ?: ""
-        creator = intent.getStringExtra("creator") ?: ""
-        val participantsJson = intent.getStringExtra("participants") ?: "[]"
-
-        try {
-            val jsonArray = JSONArray(participantsJson)
-            currentParticipants.clear()
-            for (i in 0 until jsonArray.length()) {
-                currentParticipants.add(jsonArray.getString(i))
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("ProfileActivity", "Error parsing participants", e)
-        }
 
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = if (isGroup) getString(R.string.group_info) else getString(R.string.profile)
+        toolbar.setNavigationOnClickListener { finish() }
 
-        toolbar.setNavigationOnClickListener {
-            finish()
+        if (isGroup) {
+            viewModel.loadGroupData(roomId)
+            setupGroupObservers()
+        } else {
+            viewModel.loadUserProfile(username)
+            setupProfileObservers()
         }
-
-        loadProfileData()
+        viewModel.observeOnlineUsers()
 
         lifecycleScope.launch {
-            grpcClient.users.collect {
-                runOnUiThread { loadProfileData() }
-            }
+            grpcClient.users.collect { runOnUiThread { refreshCurrentView() } }
         }
     }
 
     override fun onResume() {
         super.onResume()
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
-        refreshParticipantsFromServer(null)
+        if (isGroup && roomId.isNotEmpty()) viewModel.loadGroupData(roomId)
     }
 
     override fun onPause() {
@@ -151,247 +138,199 @@ class ProfileActivity : AppCompatActivity() {
         lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
     }
 
-    private fun refreshParticipantsFromServer(onComplete: (() -> Unit)? = null) {
-        if (!isGroup || roomId.isEmpty()) {
-            onComplete?.invoke()
-            return
-        }
-
-        val currentMe = grpcClient.getCurrentUsername() ?: return
-        grpcClient.getChats(currentMe) { chats ->
-            val chat = chats.find { it.id == roomId }
-            if (chat != null) {
-                try {
-                    val jsonArray = JSONArray(chat.participants)
-                    val newList = mutableListOf<String>()
-                    for (i in 0 until jsonArray.length()) {
-                        newList.add(jsonArray.getString(i))
-                    }
-                    runOnUiThread {
-                        creator = chat.creator
-                        username = chat.name
-                        avatarUrl = chat.avatarUrl
-                        fullAvatarUrl = chat.fullAvatarUrl
-                        allowMembersToAdd = chat.allowMembersToAdd
-                        currentParticipants.clear()
-                        currentParticipants.addAll(newList)
-                        
-                        // Update bottom sheet adapter if visible
-                        participantsAdapter?.updateData(
-                            currentParticipants,
-                            grpcClient.users.value.toSet(),
-                            grpcClient.getAvatarCache()
-                        )
-                        
-                        loadProfileData()
-                        onComplete?.invoke()
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("ProfileActivity", "Error refreshing participants", e)
-                    runOnUiThread { onComplete?.invoke() }
-                }
-            } else {
+    private fun setupProfileObservers() {
+        lifecycleScope.launch {
+            viewModel.profileData.collect { data ->
                 runOnUiThread {
-                    if (isGroup && !isFinishing) {
-                        finish()
-                    }
-                    onComplete?.invoke()
+                    if (isFinishing || isDestroyed || data.username.isEmpty()) return@runOnUiThread
+                    updateProfileUI(data)
+                }
+            }
+        }
+    }
+
+    private fun setupGroupObservers() {
+        lifecycleScope.launch {
+            viewModel.groupData.collect { data ->
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    updateGroupUI(data)
                 }
             }
         }
     }
 
     @SuppressLint("SetTextI18n")
-    private fun loadProfileData() {
-        if (isFinishing || isDestroyed) return
-
+    private fun updateProfileUI(data: ProfileViewModel.ProfileData) {
         val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar) ?: return
         val profileName = findViewById<TextView>(R.id.profileName) ?: return
         val profileBio = findViewById<TextView>(R.id.profileBio) ?: return
         val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
         val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
-        val changeAvatarButton = findViewById<View>(R.id.changeAvatarButton)
         val groupSettingsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.groupSettingsCard)
-        val switchAllowAdd = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchAllowAdd)
 
         currentProfileAvatar = profileAvatar
-        profileName.text = username
-
+        profileName.text = data.username
         val currentTheme = ThemeStore.currentTheme()
         val textPrimaryColor = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
         val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
-        
         profileName.setTextColor(textPrimaryColor)
         profileBio.setTextColor(textPrimaryColor)
         profileAvatar.borderColor = primaryColor
         profileAvatar.borderWidth = (2 * resources.displayMetrics.density).toInt()
 
-        if (isGroup) {
-            profileStatus.isVisible = false
-            bioCard?.isVisible = false
-            groupSettingsCard?.isVisible = true
+        profileStatus.isVisible = false
+        bioCard?.isVisible = true
+        groupSettingsCard?.isVisible = false
 
-            val currentMe = grpcClient.getCurrentUsername() ?: ""
-            val isMeAdmin = currentMe == creator && creator.isNotEmpty()
-
-            if (groupSettingsCard != null && switchAllowAdd != null) {
-                groupSettingsCard.isVisible = isMeAdmin
-                setupAllowAddSwitch(switchAllowAdd, roomId, isMeAdmin)
-                
-                groupSettingsCard.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
-                groupSettingsCard.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
-            }
-
-            if (isMeAdmin) {
-                profileName.setOnClickListener {
-                    val editName = EditText(this).apply {
-                        setText(username)
-                        setSelection(username.length)
-                    }
-                    AlertDialog.Builder(this)
-                        .setTitle(R.string.edit_message)
-                        .setView(editName)
-                        .setPositiveButton(R.string.change) { _, _ ->
-                            val newName = editName.text.toString().trim()
-                            if (newName.isNotEmpty() && newName != username) {
-                                val progressOverlay = findViewById<View>(R.id.progressOverlay)
-                                progressOverlay.isVisible = true
-                                grpcClient.updateChatName(roomId, newName) { success, msg ->
-                                    runOnUiThread {
-                                        progressOverlay.isVisible = false
-                                        if (success) {
-                                            username = newName
-                                            profileName.text = newName
-                                        } else {
-                                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .setNegativeButton(R.string.cancel, null)
-                        .show()
-                }
-
-                changeAvatarButton?.isVisible = true
-                changeAvatarButton?.setOnClickListener {
-                    val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    pickImageLauncher.launch(intent)
-                }
-            } else {
-                profileName.setOnClickListener(null)
-                changeAvatarButton?.isVisible = false
-            }
-
-            val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
-            val participantsCountText = findViewById<TextView>(R.id.participantsCountText)
-            val deleteGroupButton = findViewById<MaterialButton>(R.id.deleteGroupButton)
-
-            participantsCard?.isVisible = true
-            participantsCountText?.text = currentParticipants.size.toString()
-            
-            participantsCard?.setOnClickListener {
-                showParticipantsBottomSheet()
-            }
-
-            deleteGroupButton?.apply {
-                isVisible = isMeAdmin
-                if (isMeAdmin) {
-                    setOnClickListener {
-                        AlertDialog.Builder(this@ProfileActivity)
-                            .setTitle(R.string.delete_group)
-                            .setMessage(R.string.delete_group_confirm)
-                            .setPositiveButton(R.string.delete) { _, _ ->
-                                val intent = Intent(this@ProfileActivity, ChatListActivity::class.java).apply {
-                                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                    putExtra("START_DELETION_ID", roomId)
-                                }
-                                startActivity(intent)
-                                finish()
-                            }
-                            .setNegativeButton(R.string.cancel, null).show()
-                    }
-                }
-            }
-
-            ThemeStore.currentTheme().let { theme ->
-                participantsCard?.setCardBackgroundColor(ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
-                participantsCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
-                findViewById<TextView>(R.id.participantsTitle)?.setTextColor(theme.textPrimaryColor.toColorInt())
-                findViewById<android.widget.ImageView>(R.id.participantsArrow)?.imageTintList = ColorStateList.valueOf(theme.onSurfaceColor.toColorInt())
-            }
+        profileBio.text = data.bio.ifEmpty { getString(R.string.no_bio) }
+        if (data.isOnline || data.username == grpcClient.getCurrentUsername()) {
+            profileStatus.text = getString(R.string.connected)
+            profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
         } else {
-            // Fetch userId first, then get profile
-            grpcClient.fetchUserId(username) { userId, success ->
-                if (!success || userId.isNullOrEmpty()) {
-                    runOnUiThread {
-                        profileBio.text = getString(R.string.no_bio)
-                        profileStatus.text = getString(R.string.offline)
-                    }
-                    return@fetchUserId
-                }
-                grpcClient.getUserProfile(userId) { profile ->
-                    runOnUiThread {
-                        if (!isFinishing && profile != null) {
-                            profileBio.text = profile.bio.ifEmpty { getString(R.string.no_bio) }
-                            val isOnline = username == grpcClient.getCurrentUsername() || grpcClient.users.value.contains(username)
-                            if (isOnline) {
-                                profileStatus.text = getString(R.string.connected)
-                                profileStatus.setTextColor(getColor(android.R.color.holo_green_dark))
-                            } else {
-                                // Use lastSeenAt from profile response
-                                val lastSeenText = if (profile.lastSeenAt != null) {
-                                    ProtoUtils.formatLastSeen(profile.lastSeenAt, this)
-                                } else {
-                                    profile.status.ifEmpty { getString(R.string.offline) }
-                                }
-                                profileStatus.text = lastSeenText
-                                val typedValue = android.util.TypedValue()
-                                theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
-                                profileStatus.setTextColor(typedValue.data)
-                            }
-                        }
-                        if (profile != null && profile.avatarUrl.isNotEmpty()) {
-                            avatarUrl = profile.avatarUrl
-                            fullAvatarUrl = profile.fullAvatarUrl.ifEmpty { avatarUrl }
-                            // Force update cache with fresh data from profile
-                            grpcClient.updateAvatarCache(username, avatarUrl, fullAvatarUrl)
-
-                            Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
-                            grpcClient.getUserAvatar(username, userId) { _ -> }
-                            
-                            // Re-bind avatar click listener because avatarUrl might have been empty initially
-                            setupAvatarClickListener(profileAvatar)
-                        }
-                    }
-                }
-            }
+            profileStatus.text = if (data.lastSeenAt != null) ProtoUtils.formatLastSeen(data.lastSeenAt, this) else data.status.ifEmpty { getString(R.string.offline) }
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+            profileStatus.setTextColor(typedValue.data)
         }
+        profileStatus.isVisible = true
 
-        if (avatarUrl.isNotEmpty()) {
-            Glide.with(this).load(avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+        if (data.avatarUrl.isNotEmpty()) {
+            Glide.with(this).load(data.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
             profileAvatar.imageTintList = null
-            setupAvatarClickListener(profileAvatar)
+            setupAvatarClickListener(profileAvatar, data.fullAvatarUrl.ifEmpty { data.avatarUrl })
         } else {
             ThemeUtils.applyDefaultAvatar(profileAvatar, currentTheme)
             profileAvatar.setOnClickListener(null)
         }
 
-        if (!isGroup) {
-            ThemeStore.currentTheme().let { theme ->
-                bioCard?.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(theme.surfaceColor.toColorInt()))
-                bioCard?.strokeColor = ThemeUtils.adjustAlpha(theme.onSurfaceColor.toColorInt(), 0.2f)
+        bioCard?.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
+        bioCard?.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
+        applyThemeToView(findViewById(android.R.id.content), currentTheme)
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun updateGroupUI(data: ProfileViewModel.GroupData) {
+        val profileAvatar = findViewById<CircleImageView>(R.id.profileAvatar) ?: return
+        val profileName = findViewById<TextView>(R.id.profileName) ?: return
+        val profileStatus = findViewById<TextView>(R.id.profileStatus) ?: return
+        val bioCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.bioCard)
+        val groupSettingsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.groupSettingsCard)
+        val switchAllowAdd = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchAllowAdd)
+        val participantsCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.participantsCard)
+        val participantsCountText = findViewById<TextView>(R.id.participantsCountText)
+        val deleteGroupButton = findViewById<MaterialButton>(R.id.deleteGroupButton)
+        val changeAvatarButton = findViewById<View>(R.id.changeAvatarButton)
+
+        currentProfileAvatar = profileAvatar
+        val currentTheme = ThemeStore.currentTheme()
+        val textPrimaryColor = ThemeUtils.parseSafeColor(currentTheme.textPrimaryColor, android.graphics.Color.BLACK)
+        val primaryColor = ThemeUtils.parseSafeColor(currentTheme.primaryColor, android.graphics.Color.BLUE)
+
+        profileName.text = data.name
+        profileName.setTextColor(textPrimaryColor)
+        profileAvatar.borderColor = primaryColor
+        profileAvatar.borderWidth = (2 * resources.displayMetrics.density).toInt()
+
+        profileStatus.isVisible = false
+        bioCard?.isVisible = false
+        groupSettingsCard?.isVisible = true
+
+        val currentMe = grpcClient.getCurrentUsername() ?: ""
+        val isMeAdmin = currentMe == data.creator && data.creator.isNotEmpty()
+
+        if (groupSettingsCard != null && switchAllowAdd != null) {
+            groupSettingsCard.isVisible = isMeAdmin
+            switchAllowAdd.isEnabled = isMeAdmin
+            switchAllowAdd.setOnCheckedChangeListener(null)
+            switchAllowAdd.isChecked = data.allowMembersToAdd
+            if (isMeAdmin) {
+                switchAllowAdd.setOnCheckedChangeListener { _, isChecked ->
+                    val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                    progressOverlay?.isVisible = true
+                    viewModel.updateChatSettings(roomId, isChecked) { success, msg ->
+                        runOnUiThread {
+                            progressOverlay?.isVisible = false
+                            if (success) Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                            else { switchAllowAdd.isChecked = !isChecked; Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                        }
+                    }
+                }
+            }
+            groupSettingsCard.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
+            groupSettingsCard.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
+        }
+
+        if (isMeAdmin) {
+            profileName.setOnClickListener {
+                val editName = EditText(this).apply { setText(data.name); setSelection(data.name.length) }
+                AlertDialog.Builder(this).setTitle(R.string.edit_message).setView(editName)
+                    .setPositiveButton(R.string.change) { _, _ ->
+                        val newName = editName.text.toString().trim()
+                        if (newName.isNotEmpty() && newName != data.name) {
+                            val progressOverlay = findViewById<View>(R.id.progressOverlay)
+                            progressOverlay.isVisible = true
+                            viewModel.updateChatName(roomId, newName) { success, msg ->
+                                runOnUiThread { progressOverlay.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                            }
+                        }
+                    }.setNegativeButton(R.string.cancel, null).show()
+            }
+            changeAvatarButton?.isVisible = true
+            changeAvatarButton?.setOnClickListener { pickImageLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)) }
+        } else {
+            profileName.setOnClickListener(null)
+            changeAvatarButton?.isVisible = false
+        }
+
+        participantsCard?.isVisible = true
+        participantsCountText?.text = data.participants.size.toString()
+        participantsCard?.setOnClickListener { showParticipantsBottomSheet(data) }
+
+        deleteGroupButton?.apply {
+            isVisible = isMeAdmin
+            if (isMeAdmin) {
+                setOnClickListener {
+                    AlertDialog.Builder(this@ProfileActivity).setTitle(R.string.delete_group).setMessage(R.string.delete_group_confirm)
+                        .setPositiveButton(R.string.delete) { _, _ ->
+                            val intent = Intent(this@ProfileActivity, ChatListActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP; putExtra("START_DELETION_ID", roomId)
+                            }; startActivity(intent); finish()
+                        }.setNegativeButton(R.string.cancel, null).show()
+                }
             }
         }
 
-        // Apply global theme to all views
-        applyThemeToView(findViewById(android.R.id.content), ThemeStore.currentTheme())
+        participantsCard?.setCardBackgroundColor(ColorStateList.valueOf(currentTheme.surfaceColor.toColorInt()))
+        participantsCard?.strokeColor = ThemeUtils.adjustAlpha(currentTheme.onSurfaceColor.toColorInt(), 0.2f)
+        findViewById<TextView>(R.id.participantsTitle)?.setTextColor(currentTheme.textPrimaryColor.toColorInt())
+        findViewById<android.widget.ImageView>(R.id.participantsArrow)?.imageTintList = ColorStateList.valueOf(currentTheme.onSurfaceColor.toColorInt())
+
+        if (data.avatarUrl.isNotEmpty()) {
+            Glide.with(this).load(data.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(profileAvatar)
+            profileAvatar.imageTintList = null
+            setupAvatarClickListener(profileAvatar, data.fullAvatarUrl.ifEmpty { data.avatarUrl })
+        } else {
+            ThemeUtils.applyDefaultAvatar(profileAvatar, currentTheme)
+            profileAvatar.setOnClickListener(null)
+        }
+
+        applyThemeToView(findViewById(android.R.id.content), currentTheme)
     }
 
-    private fun showParticipantsBottomSheet() {
+    private fun setupAvatarClickListener(profileAvatar: CircleImageView, fullImageUrl: String) {
+        profileAvatar.setOnClickListener {
+            if (fullImageUrl.isNotEmpty()) {
+                val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", fullImageUrl) }
+                startActivity(intent)
+            }
+        }
+    }
+
+    private fun showParticipantsBottomSheet(data: ProfileViewModel.GroupData) {
         val currentTheme = ThemeStore.currentTheme()
         val currentMe = grpcClient.getCurrentUsername() ?: ""
-        val isMeAdmin = currentMe == creator && creator.isNotEmpty()
+        val isMeAdmin = currentMe == data.creator && data.creator.isNotEmpty()
 
         val sheet = SearchableListBottomSheet(this, currentTheme)
             .setTitle(getString(R.string.participants))
@@ -400,52 +339,29 @@ class ProfileActivity : AppCompatActivity() {
 
         if (participantsAdapter == null) {
             participantsAdapter = ParticipantAdapter(
-                theme = currentTheme,
-                isAdmin = isMeAdmin,
-                creator = creator,
-                onRemoveClick = { user ->
-                    showRemoveParticipantDialog(user)
-                },
-                onAvatarClick = { user, url ->
-                    val fullImageUrl = grpcClient.getFullAvatarUrl(user) ?: url
-                    if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
-                },
-                onLongClick = { user ->
-                    if (isMeAdmin && user != creator) showRemoveParticipantDialog(user)
-                }
+                theme = currentTheme, isAdmin = isMeAdmin, creator = data.creator,
+                onRemoveClick = { user -> showRemoveParticipantDialog(user) },
+                onAvatarClick = { user, url -> showFullScreenImage(grpcClient.getFullAvatarUrl(user) ?: url) },
+                onLongClick = { user -> if (isMeAdmin && user != data.creator) showRemoveParticipantDialog(user) }
             )
         }
-
         sheet.setAdapter(participantsAdapter!!)
-        participantsAdapter?.updateData(
-            currentParticipants,
-            grpcClient.users.value.toSet(),
-            grpcClient.getAvatarCache()
-        )
+        participantsAdapter?.updateData(data.participants, grpcClient.users.value.toSet(), grpcClient.getAvatarCache())
 
         sheet.onSearchTextChanged { query ->
             val q = query.lowercase()
-            val filtered = currentParticipants.filter { it.lowercase().contains(q) }
-            participantsAdapter?.updateData(
-                filtered,
-                grpcClient.users.value.toSet(),
-                grpcClient.getAvatarCache()
-            )
+            participantsAdapter?.updateData(data.participants.filter { it.lowercase().contains(q) }, grpcClient.users.value.toSet(), grpcClient.getAvatarCache())
         }
 
-        val canAdd = isMeAdmin || allowMembersToAdd
+        val canAdd = isMeAdmin || data.allowMembersToAdd
         sheet.setActionButtonEnabled(canAdd)
         sheet.actionButton?.isVisible = canAdd
 
         sheet.onActionClick {
-            grpcClient.getContacts(currentMe) { allContacts ->
-                val availableContacts = allContacts.filter { it !in currentParticipants }
+            viewModel.getAvailableContacts { available ->
                 runOnUiThread {
-                    if (availableContacts.isEmpty()) {
-                        Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
-                    } else {
-                        showAddParticipantDialog(availableContacts)
-                    }
+                    if (available.isEmpty()) Toast.makeText(this, R.string.no_users_available, Toast.LENGTH_SHORT).show()
+                    else showAddParticipantDialog(available)
                 }
             }
         }
@@ -453,265 +369,102 @@ class ProfileActivity : AppCompatActivity() {
         participantsBottomSheet = sheet
         sheet.setOnDismissListener {
             participantsBottomSheet = null
-            // Reset adapter to full list when dismissed so it's ready for next time
-            participantsAdapter?.updateData(
-                currentParticipants,
-                grpcClient.users.value.toSet(),
-                grpcClient.getAvatarCache()
-            )
+            participantsAdapter?.updateData(data.participants, grpcClient.users.value.toSet(), grpcClient.getAvatarCache())
         }
         sheet.show()
     }
 
     private fun showRemoveParticipantDialog(user: String) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.remove)
-            .setMessage(getString(R.string.remove_participant_confirm, user))
+        AlertDialog.Builder(this).setTitle(R.string.remove).setMessage(getString(R.string.remove_participant_confirm, user))
             .setPositiveButton(R.string.remove) { _, _ ->
                 val progressOverlay = findViewById<View>(R.id.progressOverlay)
                 progressOverlay?.isVisible = true
-                grpcClient.removeParticipant(roomId, user) { success, msg ->
-                    if (success) {
-                        refreshParticipantsFromServer {
-                            runOnUiThread { progressOverlay?.isVisible = false }
-                        }
-                    } else {
-                        runOnUiThread {
-                            progressOverlay?.isVisible = false
-                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                viewModel.removeParticipant(roomId, user) { success, msg ->
+                    runOnUiThread { progressOverlay?.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
                 }
-            }
-            .setNegativeButton(R.string.cancel, null).show()
-    }
-
-    private fun setupAllowAddSwitch(switch: com.google.android.material.switchmaterial.SwitchMaterial, roomId: String, isMeAdmin: Boolean) {
-        switch.isEnabled = isMeAdmin
-        switch.setOnCheckedChangeListener(null)
-        switch.isChecked = allowMembersToAdd
-        
-        if (isMeAdmin) {
-            switch.setOnCheckedChangeListener { _, isChecked ->
-                val progressOverlay = findViewById<View>(R.id.progressOverlay)
-                progressOverlay?.isVisible = true
-                grpcClient.updateChatSettings(roomId, isChecked) { success, msg ->
-                    runOnUiThread {
-                        progressOverlay?.isVisible = false
-                        if (success) {
-                            allowMembersToAdd = isChecked
-                            Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                            loadProfileData() 
-                        } else {
-                            switch.setOnCheckedChangeListener(null)
-                            switch.isChecked = !isChecked
-                            setupAllowAddSwitch(switch, roomId, isMeAdmin)
-                            Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun setupAvatarClickListener(profileAvatar: CircleImageView) {
-        profileAvatar.setOnClickListener {
-            val fullImageUrl = if (!isGroup) {
-                grpcClient.getFullAvatarUrl(username) ?: fullAvatarUrl.ifEmpty { avatarUrl }
-            } else {
-                fullAvatarUrl.ifEmpty { avatarUrl }
-            }
-            if (fullImageUrl.isNotEmpty()) showFullScreenImage(fullImageUrl)
-        }
+            }.setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun showAddParticipantDialog(contacts: List<String>) {
-        val sheet = SearchableListBottomSheet(this)
-            .setTitle(getString(R.string.add_participants))
-            .setActionButtonText(getString(R.string.add))
-            .setExtraInputVisible(false)
-
-        val selectableAdapter = SelectableUserAdapter(
-            lifecycleScope,
-            avatarCache = grpcClient.getAvatarCache(),
-            onSelectionChanged = { count ->
-                sheet.setActionButtonEnabled(count > 0)
-                sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add))
-            }
-        )
+        val sheet = SearchableListBottomSheet(this).setTitle(getString(R.string.add_participants)).setActionButtonText(getString(R.string.add)).setExtraInputVisible(false)
+        val selectableAdapter = SelectableUserAdapter(lifecycleScope, avatarCache = grpcClient.getAvatarCache(),
+            onSelectionChanged = { count -> sheet.setActionButtonEnabled(count > 0); sheet.setActionButtonText(if (count > 0) "${getString(R.string.add)} ($count)" else getString(R.string.add)) })
         sheet.setAdapter(selectableAdapter)
         selectableAdapter.setUsers(contacts)
-
-        sheet.onSearchTextChanged { query ->
-            val q = query.lowercase()
-            selectableAdapter.setUsers(contacts.filter { it.lowercase().contains(q) })
-        }
-
+        sheet.onSearchTextChanged { query -> selectableAdapter.setUsers(contacts.filter { it.lowercase().contains(query.lowercase()) }) }
         sheet.onActionClick {
             val selected = selectableAdapter.getSelectedUsers()
             if (selected.isEmpty()) return@onActionClick
             val progressOverlay = findViewById<View>(R.id.progressOverlay)
-            sheet.dismiss()
-            progressOverlay.isVisible = true
-            grpcClient.addParticipants(roomId, selected) { success, msg ->
-                if (success) refreshParticipantsFromServer { runOnUiThread { progressOverlay.isVisible = false } }
-                else runOnUiThread { progressOverlay.isVisible = false; Toast.makeText(this@ProfileActivity, msg, Toast.LENGTH_SHORT).show() }
+            sheet.dismiss(); progressOverlay.isVisible = true
+            viewModel.addParticipants(roomId, selected) { success, msg ->
+                runOnUiThread { progressOverlay.isVisible = false; if (!success) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
             }
         }
         sheet.show()
     }
 
     private fun showFullScreenImage(imageUrl: String) {
-        val intent = Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", imageUrl) }
-        startActivity(intent)
+        if (imageUrl.isNotEmpty()) startActivity(Intent(this, FullScreenImageActivity::class.java).apply { putExtra("image_url", imageUrl) })
     }
 
     private fun uploadGroupAvatar(uri: Uri) {
         val progressOverlay = findViewById<View>(R.id.progressOverlay)
         progressOverlay?.isVisible = true
-        lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    val mimeType = contentResolver.getType(uri); val isGif = mimeType == "image/gif"
-                    val thumbBytes: ByteArray; val fullBytes: ByteArray; val mediaType: String
-                    if (isGif) {
-                        val inputStream = contentResolver.openInputStream(uri); thumbBytes = inputStream?.readBytes() ?: byteArrayOf(); inputStream?.close(); fullBytes = thumbBytes; mediaType = "image/gif"
-                    } else {
-                        val thumbResizedBytes = resizeImageForGroup(uri); val fullResizedBytes = resizeImageFull(uri)
-                        if (thumbResizedBytes == null || fullResizedBytes == null) {
-                            runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, getString(R.string.failed_to_resize_image), Toast.LENGTH_SHORT).show() }; return@withContext
-                        }
-                        thumbBytes = thumbResizedBytes; fullBytes = fullResizedBytes; mediaType = "image/jpeg"
-                    }
-                    if (thumbBytes.isEmpty()) {
-                        runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, getString(R.string.failed_to_read_image), Toast.LENGTH_SHORT).show() }; return@withContext
-                    }
-                    val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull())).addFormDataPart("avatar_full", if (isGif) "avatar_full.gif" else "avatar_full.jpg", fullBytes.toRequestBody(mediaType.toMediaTypeOrNull())).build()
-                    val request = Request.Builder().url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(this@ProfileActivity)}/upload-avatar").post(requestBody).build()
-                    val client = OkHttpClient(); val response = client.newCall(request).execute()
-                    if (response.isSuccessful) {
-                        val responseBody = response.body.string(); val (thumbUrl, fullUrl) = extractUrlsFromResponse(responseBody)
-                        if (thumbUrl.isNotEmpty()) {
-                            val currentMe = grpcClient.getCurrentUsername() ?: ""
-                            grpcClient.updateChatAvatar(roomId, thumbUrl, currentMe, fullUrl) { success, message ->
-                                runOnUiThread {
-                                    progressOverlay?.isVisible = false
-                                    if (success) {
-                                        avatarUrl = thumbUrl
-                                        fullAvatarUrl = fullUrl
-                                        // Update local cache to ensure it stays updated across the app
-                                        grpcClient.updateAvatarCache(roomId, thumbUrl, fullUrl)
-
-                                        // Force refresh avatar without cache
-                                        currentProfileAvatar?.let {
-                                            Glide.with(this@ProfileActivity)
-                                                .load(thumbUrl)
-                                                .placeholder(R.drawable.ic_default_avatar)
-                                                .skipMemoryCache(true)
-                                                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
-                                                .into(it)
-                                        }
-
-                                        loadProfileData()
-                                        Toast.makeText(this@ProfileActivity, R.string.theme_saved, Toast.LENGTH_SHORT).show()
-                                    } else Toast.makeText(this@ProfileActivity, message, Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        } else runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_SHORT).show() }
-                    } else runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Upload failed: ${response.code}", Toast.LENGTH_SHORT).show() }
-                }
-            } catch (e: Exception) { runOnUiThread { progressOverlay?.isVisible = false; Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show() } }
+        viewModel.uploadGroupAvatar(this, roomId, uri) { result ->
+            runOnUiThread {
+                progressOverlay?.isVisible = false
+                if (result.thumbUrl.isNotEmpty()) Toast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show()
+                else if (result.error.isNotEmpty()) Toast.makeText(this, result.error, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    private fun resizeImageForGroup(uri: Uri): ByteArray? {
-        val maxWidth = 512; val maxHeight = 512; val inputStream = contentResolver.openInputStream(uri) ?: return null
-        val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }; android.graphics.BitmapFactory.decodeStream(inputStream, null, options); inputStream.close()
-        val imageStream = contentResolver.openInputStream(uri) ?: return null; val bitmap = android.graphics.BitmapFactory.decodeStream(imageStream); imageStream.close(); if (bitmap == null) return null
-        val width = bitmap.width; val height = bitmap.height; val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
-        val scaledBitmap = if (scale < 1) bitmap.scale((width * scale).toInt(), (height * scale).toInt()) else bitmap
-        val outputStream = java.io.ByteArrayOutputStream(); scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outputStream); val bytes = outputStream.toByteArray(); scaledBitmap.recycle(); bitmap.recycle(); return bytes
-    }
-
-    private fun resizeImageFull(uri: Uri): ByteArray? = resizeImageWithMax(uri, 1920, 1920)
-
-    private fun resizeImageWithMax(uri: Uri, maxWidth: Int, maxHeight: Int): ByteArray? {
-        val inputStream = contentResolver.openInputStream(uri) ?: return null
-        val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }; android.graphics.BitmapFactory.decodeStream(inputStream, null, options); inputStream.close()
-        val imageStream = contentResolver.openInputStream(uri) ?: return null; val bitmap = android.graphics.BitmapFactory.decodeStream(imageStream); imageStream.close(); if (bitmap == null) return null
-        val width = bitmap.width; val height = bitmap.height; val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
-        val scaledBitmap = if (scale < 1) bitmap.scale((width * scale).toInt(), (height * scale).toInt()) else bitmap
-        val outputStream = java.io.ByteArrayOutputStream(); scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, outputStream); val bytes = outputStream.toByteArray(); scaledBitmap.recycle(); bitmap.recycle(); return bytes
-    }
-
-    private fun extractUrlsFromResponse(response: String): Pair<String, String> {
-        val urlPattern = """"url"\s*:\s*"([^"]+)"""".toRegex(); val fullUrlPattern = """"full_url"\s*:\s*"([^"]+)"""".toRegex()
-        return Pair(urlPattern.find(response)?.groupValues?.get(1) ?: "", fullUrlPattern.find(response)?.groupValues?.get(1) ?: "")
-    }
-
-    private fun getColorFromAttr(attr: Int): Int {
-        val typedValue = android.util.TypedValue(); theme.resolveAttribute(attr, typedValue, true); return typedValue.data
+    private fun refreshCurrentView() {
+        if (isGroup) {
+            val data = viewModel.groupData.value
+            if (data.participants.isNotEmpty()) {
+                participantsAdapter?.updateData(data.participants, grpcClient.users.value.toSet(), grpcClient.getAvatarCache())
+            }
+        }
     }
 
     private fun applyThemeToView(view: View, theme: lavender.client.android.theme.Theme) {
         val textPrimary = ThemeUtils.parseSafeColor(theme.textPrimaryColor, android.graphics.Color.BLACK)
         val onSurface = ThemeUtils.parseSafeColor(theme.onSurfaceColor, android.graphics.Color.GRAY)
         val primary = ThemeUtils.parseSafeColor(theme.primaryColor, android.graphics.Color.BLUE)
-        
+
         when (view) {
             is MaterialButton -> {
-                view.isAllCaps = false
-                view.transformationMethod = null
+                view.isAllCaps = false; view.transformationMethod = null
                 view.cornerRadius = (28 * resources.displayMetrics.density).toInt()
                 view.minimumHeight = (56 * resources.displayMetrics.density).toInt()
-
                 val isCancelType = view.id == R.id.deleteGroupButton
-                val isActionType = view.id == R.id.changeAvatarButton
-
                 if (isCancelType) {
                     view.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-                    view.strokeColor = ColorStateList.valueOf(primary)
-                    view.strokeWidth = (1 * resources.displayMetrics.density).toInt()
-                    view.setTextColor(primary)
-                    view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primary, 0.1f))
+                    view.strokeColor = ColorStateList.valueOf(primary); view.strokeWidth = (1 * resources.displayMetrics.density).toInt()
+                    view.setTextColor(primary); view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primary, 0.1f))
                 } else {
-                    val alpha = if (isActionType) 0.7f else 1.0f
-                    view.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primary, alpha))
+                    view.backgroundTintList = ColorStateList.valueOf(ThemeUtils.adjustAlpha(primary, 0.7f))
                     val onP = ThemeUtils.parseSafeColor(theme.onPrimaryColor, android.graphics.Color.WHITE)
-                    view.setTextColor(onP)
-                    view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onP, 0.2f))
-                    view.strokeWidth = 0
+                    view.setTextColor(onP); view.rippleColor = ColorStateList.valueOf(ThemeUtils.adjustAlpha(onP, 0.2f)); view.strokeWidth = 0
                 }
             }
             is com.google.android.material.switchmaterial.SwitchMaterial -> {
                 view.setTextColor(textPrimary)
-                val thumbStates = ColorStateList(
-                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                    intArrayOf(primary, android.graphics.Color.LTGRAY)
-                )
-                val trackStates = ColorStateList(
-                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                    intArrayOf(ThemeUtils.adjustAlpha(primary, 0.5f), ThemeUtils.adjustAlpha(android.graphics.Color.GRAY, 0.3f))
-                )
-                view.thumbTintList = thumbStates
-                view.trackTintList = trackStates
+                val thumbStates = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(primary, android.graphics.Color.LTGRAY))
+                val trackStates = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(ThemeUtils.adjustAlpha(primary, 0.5f), ThemeUtils.adjustAlpha(android.graphics.Color.GRAY, 0.3f)))
+                view.thumbTintList = thumbStates; view.trackTintList = trackStates
             }
-            is CircleImageView -> {
-                view.borderColor = primary
-                view.borderWidth = (2 * resources.displayMetrics.density).toInt()
-            }
+            is CircleImageView -> { view.borderColor = primary; view.borderWidth = (2 * resources.displayMetrics.density).toInt() }
             is android.widget.CheckBox -> view.buttonTintList = ColorStateList.valueOf(primary)
             is TextView -> {
-                if (view.id == R.id.participantsTitle ||
-                    view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) {
-                    view.setTextColor(primary)
-                } else {
-                    view.setTextColor(textPrimary)
-                }
+                if (view.id == R.id.participantsTitle || view.id == R.id.profileName || view.id == R.id.bioTitle || view.id == R.id.settingsTitle) view.setTextColor(primary)
+                else view.setTextColor(textPrimary)
             }
-            is com.google.android.material.card.MaterialCardView -> { 
+            is com.google.android.material.card.MaterialCardView -> {
                 view.setCardBackgroundColor(ColorStateList.valueOf(ThemeUtils.parseSafeColor(theme.surfaceColor, android.graphics.Color.WHITE)))
-                view.strokeColor = ThemeUtils.adjustAlpha(onSurface, 0.2f) 
+                view.strokeColor = ThemeUtils.adjustAlpha(onSurface, 0.2f)
             }
             is android.view.ViewGroup -> { for (i in 0 until view.childCount) applyThemeToView(view.getChildAt(i), theme) }
         }

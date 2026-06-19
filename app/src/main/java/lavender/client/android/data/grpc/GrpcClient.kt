@@ -34,6 +34,7 @@ object GrpcClient {
     val error: StateFlow<String?> = realGrpcClient.error
     val systemNotification: StateFlow<String?> = realGrpcClient.systemNotification
     val isSuperAdmin: StateFlow<Boolean> = realGrpcClient.isSuperAdmin
+    val adminUserId: kotlinx.coroutines.flow.StateFlow<String?> = realGrpcClient.adminUserId
     val serverVersion: StateFlow<String> = realGrpcClient.serverVersion
     val authStatus: StateFlow<String?> = realGrpcClient.authStatus
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers

@@ -23,7 +23,8 @@ class GrpcChatListClientTest {
     private lateinit var chatDeletedEvent: MutableStateFlow<String?>
     private lateinit var allUsers: MutableStateFlow<List<UserInfoProto>>
     private lateinit var serverTime: MutableStateFlow<com.google.protobuf.Timestamp?>
-    private lateinit var client: GrpcChatListClient
+    private lateinit var chatClient: GrpcChatClient
+    private lateinit var chatListClient: GrpcChatListClient
     private val scope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
@@ -32,7 +33,13 @@ class GrpcChatListClientTest {
         chatDeletedEvent = MutableStateFlow(null)
         allUsers = MutableStateFlow(emptyList())
         serverTime = MutableStateFlow(null)
-        client = GrpcChatListClient(
+        chatClient = GrpcChatClient(
+            getChannel = { channel },
+            getUserId = { "user-uuid-123" },
+            getUsername = { "testuser" },
+            scope = scope
+        )
+        chatListClient = GrpcChatListClient(
             getChannel = { channel },
             getUserId = { "user-uuid-123" },
             getUsername = { "testuser" },
@@ -58,7 +65,7 @@ class GrpcChatListClientTest {
         }
 
         var result: List<ChatInfo>? = null
-        client.getChats(username = "testuser", callback = { result = it })
+        chatClient.getChats(username = "testuser", callback = { result = it })
 
         assertNotNull("Result should not be null", result)
         assertEquals("Should have 1 chat", 1, result!!.size)
@@ -76,15 +83,15 @@ class GrpcChatListClientTest {
         }
 
         var result: List<ChatInfo>? = null
-        client.getChats(username = "testuser", callback = { result = it })
+        chatClient.getChats(username = "testuser", callback = { result = it })
         assertNull("Result should be null for empty response", result)
     }
 
     @Test
     fun getChats_nullChannel_returnsEmptyList() = runTest {
-        val nullChannelClient = GrpcChatListClient(
+        val nullChannelClient = GrpcChatClient(
             getChannel = { null }, getUserId = { "user-uuid" }, getUsername = { "testuser" },
-            chatDeletedEvent = chatDeletedEvent, allUsers = allUsers, serverTime = serverTime, scope = scope
+            scope = scope
         )
         var result: List<ChatInfo>? = null
         nullChannelClient.getChats(username = "testuser", callback = { result = it })
@@ -103,7 +110,7 @@ class GrpcChatListClientTest {
         }
 
         var result: List<ChatInfo>? = null
-        client.getChats(username = "testuser", callback = { result = it })
+        chatClient.getChats(username = "testuser", callback = { result = it })
         assertNotNull("Result should not be null", result)
         assertTrue("Result should be empty list on error", result!!.isEmpty())
     }
@@ -131,7 +138,7 @@ class GrpcChatListClientTest {
         }
 
         var success = false
-        client.deleteChat("chat-1", "testuser") { s, _ -> success = s }
+        chatListClient.deleteChat("chat-1", "testuser") { s, _ -> success = s }
         assertTrue("Delete should succeed", success)
     }
 
@@ -146,7 +153,7 @@ class GrpcChatListClientTest {
         }
 
         var chatId: String? = null
-        client.createDirectChat("user1", "user2") { chatId = it }
+        chatListClient.createDirectChat("user1", "user2") { chatId = it }
         assertEquals("Chat ID", "new-chat-id", chatId)
     }
 
@@ -161,7 +168,7 @@ class GrpcChatListClientTest {
         }
 
         var chatId: String? = null
-        client.createGroupChat("Test Group", listOf("user1", "user2"), "user1") { chatId = it }
+        chatListClient.createGroupChat("Test Group", listOf("user1", "user2"), "user1") { chatId = it }
         assertEquals("Group Chat ID", "group-chat-id", chatId)
     }
 }
