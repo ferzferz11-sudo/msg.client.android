@@ -1,5 +1,30 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.14] - 2026-06-19
+
+### Исправления
+
+**Chat subtitle last seen:**
+- В direct-чатах вместо "офлайн" показывается время последнего входа ("был(а) в сети X мин/ч/дн назад")
+- `allUsers` добавлен в combine flow в NewChatActivity — subtitle обновляется при загрузке данных
+
+**Deleted chat persistence fix:**
+- `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
+- `chatDeletedEvent` подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени
+
+**Chat list sync:**
+- `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени когда сообщения приходят в другие комнаты
+- Добавлен periodic polling каждые 30с для обновления чат-листа
+- `ChatDao` кэширование: чаты загружаются из кэша при старте (мгновенное отображение), синхронизируются с сервером в фоне
+- `ChatEntity` расширен: `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10)
+- `SplashActivity` больше не стирает Room кэш при каждом запуске — кэш очищается только при logout
+- `markAsRead` вызывается при тапе на чат с непрочитанными сообщениями
+
+### UI
+
+**Action mode toolbar:**
+- Все 4 иконки action mode (pin/mute/archive/delete) `showAsAction="always"` — не уезжают в overflow меню
+
 ## [1.2.0.13] - 2026-06-19
 
 ### Исправления
@@ -16,31 +41,6 @@
 - `connect()` восстанавливает `isSuperAdmin` из SharedPreferences при старте
 - `fetchAdminStatus()` вызывается при READY (не в `connect()` — канал ещё не готов)
 - `logout()` очищает `is_super_admin` и `admin_user_id` из SharedPreferences
-
-**Chat subtitle last seen:**
-- `ChatToolbarDelegate.updateSubtitle()` принимает `otherUserLastSeenAt: Timestamp?` — в direct-чатах вместо "офлайн" показывается время последнего входа ("был(а) в сети X мин/ч/дн назад")
-- `NewChatActivity` combine flow расширен: добавлен `grpcClient.allUsers` как 4-й параметр
-- `NewChatActivity.onResume()` загружает `allUsers` если пуст и соединение активно
-
-**Deleted chat persistence fix:**
-- `deleteChat()` теперь удаляет чат из Room DB — удалённые чаты больше не появляются после перезапуска
-- `chatDeletedEvent` подписан в `ChatListViewModel` — чаты удаляются из списка в реальном времени + из Room DB
-
-### Оптимизация
-
-**Chat list sync:**
-- `newMessageEvent` подписан в `ChatListViewModel` — чат-лист обновляется в реальном времени когда сообщения приходят в другие комнаты
-- Тип `newMessageEvent` изменён с `Pair<String,String>` на `Message` — полные данные о сообщении
-- Добавлен periodic polling каждые 30с для обновления чат-листа (как в v1)
-- `ChatDao` кэширование: чаты загружаются из кэша при старте (мгновенное отображение), синхронизируются с сервером в фоне
-- `ChatEntity` расширен: `isPinned`, `isArchived`, `pinnedAt` (миграция 9→10)
-- `SplashActivity` больше не стирает Room кэш при каждом запуске — кэш очищается только при logout
-- `markAsRead` вызывается при тапе на чат с непрочитанными сообщениями
-
-### UI
-
-**Action mode toolbar:**
-- Все 4 иконки action mode (pin/mute/archive/delete) `showAsAction="always"` — не уезжают в overflow меню
 
 ## [1.2.0.12] - 2026-06-18
 
