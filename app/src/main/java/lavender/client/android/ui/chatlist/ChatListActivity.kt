@@ -291,12 +291,27 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = false
         // Register update prefs listener
         updateCoordinator?.let { coord ->
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(coord.prefsListener)
             coord.updateIndicatorVisibility()
         }
+
+        // Channel health check on resume from background
+        val currentStatus = GrpcClient.connectionStatus.value
+        if (currentStatus != ConnectionStatus.READY) {
+            val serverAddr = CredentialStore.getServerAddress(this) ?: ""
+            if (serverAddr.isNotEmpty()) {
+                val parts = serverAddr.split(":")
+                val host = parts[0]
+                val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                Log.d(TAG, "onResume: status=$currentStatus, forcing reconnect to $host:$port")
+                GrpcClient.connect(host, useTls = false, port = port, context = this, forceReconnect = true)
+            }
+        }
+
         // Validate token freshness on resume
         if (lavender.client.android.data.auth.AuthManager.isJwtAuthenticated(this)
             && lavender.client.android.data.auth.AuthManager.needsRefresh(this)) {
@@ -317,6 +332,7 @@ class ChatListActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        lavender.client.android.data.grpc.RealGrpcClient.isAppInBackground = true
         updateCoordinator?.let { coord ->
             getSharedPreferences("UpdatePrefs", MODE_PRIVATE)
                 .unregisterOnSharedPreferenceChangeListener(coord.prefsListener)

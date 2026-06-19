@@ -1,5 +1,37 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.16] - 2026-06-19
+
+### Исправления
+
+**Reconnection при восстановлении из памяти:**
+- `ChatListActivity` теперь устанавливает `isAppInBackground` в `onPause()`/`onResume()` — `shouldForceReconnect()` корректно работает
+- Channel health check в `onResume()` — принудительный reconnect при не-READY статусе (DISCONNECTED, CONNECTING, RECONNECTING, FAILED)
+
+**Unread badge:**
+- `ChatListViewModel` проверяет `message.user != currentUsername` — unread count не растёт от собственных сообщений
+
+**Scroll position в чате:**
+- `NewChatActivity` — `shouldScrollToBottom = true` при первом входе в чат (загрузка истории)
+- Auto-scroll при новом сообщении от собеседника (если пользователь внизу чата — последние 3 сообщения видны)
+
+**Online users parse:**
+- `RealGrpcClient` — защита от `ONLINE_USERS_UPDATE:null` — серверные null-значения больше не крашат парсинг JSON
+
+**Offline mode:**
+- `GrpcMessageClient.loadHistory()` — при отсутствии канала (офлайн) загружает сообщения из кэша и вызывает `onCompletion()`
+- `ChatListViewModel` — загружает кэшированные чаты при старте даже без подключения
+
+**Chat list flickering fix:**
+- Periodic sync (30с) и connection READY sync теперь работают в silent-режиме — без preloader/spinner
+- Список обновляется только при реальных изменениях (diff по id, lastMessageTime, unreadCount, pinned, archived, lastMessageText)
+- Pull-to-refresh (свайп вниз) по-прежнему показывает spinner
+
+### Тесты
+- 35 unit-тестов: UserSession, AiModels (AiSource, AiChatSession, AiChatMessage, AiChatSettings, AiStreamState), ProfileViewModel (ProfileData, GroupData, contact filtering)
+
+---
+
 ## [1.2.0.14] - 2026-06-19
 
 ### Исправления

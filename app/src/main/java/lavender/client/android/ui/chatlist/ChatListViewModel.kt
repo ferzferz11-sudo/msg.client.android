@@ -60,11 +60,27 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     private var syncJob: Job? = null
 
     init {
+        // Load cached chats on startup (offline-first)
+        viewModelScope.launch(Dispatchers.IO) {
+            if (allChats.isEmpty()) {
+                try {
+                    val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
+                    val cached = db.chatDao().getAllChats().map { it.toDomain() }
+                    if (cached.isNotEmpty()) {
+                        allChats = cached
+                        buildSections(cached)
+                        Log.d(TAG, "Loaded ${cached.size} chats from cache on startup")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load chats from cache on startup", e)
+                }
+            }
+        }
         viewModelScope.launch {
             GrpcClient.connectionStatus.collect { status ->
                 _connectionStatus.value = status
                 if (status == ConnectionStatus.READY) {
-                    loadChats()
+                    loadChats(silent = true)
                 }
             }
         }
@@ -97,6 +113,8 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 val chatIdx = allChats.indexOfFirst { it.id == message.roomId }
                 if (chatIdx >= 0) {
                     val chat = allChats[chatIdx]
+                    val currentUsername = SessionManager.session.value.username
+                    val isFromOther = message.user != currentUsername
                     val preview = if (chat.isSecret) ""
                     else if (message.imageUrl.isNotEmpty()) "[image]"
                     else if (message.voiceUrl.isNotEmpty()) "[voice]"
@@ -107,11 +125,11 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             lastMessageTime = message.timestamp,
                             lastMessageUsername = message.user,
                             lastMessageHasImage = message.imageUrl.isNotEmpty(),
-                            unreadCount = if (!message.isRead) chat.unreadCount + 1 else chat.unreadCount
+                            unreadCount = if (isFromOther && !message.isRead) chat.unreadCount + 1 else chat.unreadCount
                         )
                     }
                     buildSections(allChats)
-                    Log.d(TAG, "New message in ${message.roomId} — updated chat list")
+                    Log.d(TAG, "New message in ${message.roomId} from ${message.user} — unread=${isFromOther && !message.isRead}")
                 }
             }
         }
@@ -149,7 +167,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
             while (true) {
                 delay(30_000)
                 if (GrpcClient.connectionStatus.value == ConnectionStatus.READY && !_isLoading.value) {
-                    loadChats()
+                    loadChats(silent = true)
                 }
             }
         }
@@ -165,9 +183,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         stopPeriodicSync()
     }
 
-    fun loadChats() {
+    fun loadChats(silent: Boolean = false) {
         if (_isLoading.value) return
-        _isLoading.value = true
+        if (!silent) _isLoading.value = true
 
         viewModelScope.launch {
             try {
@@ -198,8 +216,19 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 }
 
                 if (fetchedChats != null) {
-                    allChats = fetchedChats
-                    buildSections(fetchedChats)
+                    val hasChanges = allChats.size != fetchedChats.size ||
+                        allChats.map { it.id }.toSet() != fetchedChats.map { it.id }.toSet() ||
+                        fetchedChats.any { server ->
+                            val local = allChats.find { it.id == server.id }
+                            local == null || local.lastMessageTime != server.lastMessageTime ||
+                                local.unreadCount != server.unreadCount || local.isPinned != server.isPinned ||
+                                local.isArchived != server.isArchived || local.lastMessageText != server.lastMessageText
+                        }
+                    if (hasChanges || allChats.isEmpty()) {
+                        allChats = fetchedChats
+                        buildSections(fetchedChats)
+                        Log.d(TAG, "Loaded ${fetchedChats.size} chats from server (changes=$hasChanges)")
+                    }
                     // Sync to local DB
                     try {
                         val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())

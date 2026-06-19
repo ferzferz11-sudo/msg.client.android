@@ -15,6 +15,39 @@
 
 ---
 
+## Что сделано (v1.2.0.15 → v1.2.0.16, текущая сессия)
+
+### Reconnection fix
+- **ChatListActivity.isAppInBackground:** Теперь устанавливает `true` в `onPause()` и `false` в `onResume()` (раньше не устанавливалось)
+- **Channel health check:** `onResume()` проверяет `connectionStatus` — если не READY, принудительно вызывает `forceReconnect()`
+- **Корневая причина:** `shouldForceReconnect()` всегда возвращал `false` для ChatListActivity
+
+### Unread badge fix
+- **ChatListViewModel:** `newMessageEvent` handler теперь проверяет `message.user != currentUsername` — unread count не растёт от собственных сообщений
+
+### Scroll position fix
+- **NewChatActivity:** `shouldScrollToBottom = true` при первом входе в чат (загрузка истории)
+- **Auto-scroll:** При новом сообщении от собеседника — auto-scroll если пользователь внизу чата (последние 3 сообщения видны)
+
+### Online users parse fix
+- **RealGrpcClient:** `ONLINE_USERS_UPDATE:null` теперь не крашит — проверка на `null` перед парсингом JSON
+
+### Unit-тесты (35 тестов)
+- `SessionManagerTest` — UserSession data class (8 тестов)
+- `AiModelsTest` — AiSource, AiChatSession, AiChatMessage, AiChatSettings, AiStreamState (16 тестов)
+- `ProfileViewModelTest` — ProfileData, GroupData, AvatarUploadResult, contact filtering (11 тестов)
+
+### Offline mode
+- **GrpcMessageClient.loadHistory():** При отсутствии канала (офлайн) загружает сообщения из Room DB кэша и вызывает `onCompletion()` (раньше `return` без вызова callback — `isLoading` застревал в `true`)
+- **ChatListViewModel:** Загружает кэшированные чаты при старте даже без подключения (offline-first)
+
+### Chat list flickering fix
+- **ChatListViewModel.loadChats(silent):** Параметр `silent = true` — periodic sync и connection READY sync не показывают preloader
+- **Diff-проверка:** Список обновляется только при реальных изменениях (id, lastMessageTime, unreadCount, pinned, archived, lastMessageText)
+- **Pull-to-refresh:** По-прежнему показывает spinner (non-silent)
+
+---
+
 ## Что сделано (v1.2.0.14 → v1.2.0.15)
 
 ### Secret chat fixes
@@ -87,20 +120,19 @@ E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages() 
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.16)
+## Бэклог — Следующая сессия (v1.2.0.17)
 
 ### Приоритет 1: Тесты
-| Задача | Оценка |
+| Задача | Статус |
 |--------|--------|
-| Unit-тесты для ChatViewModel | 2h |
-| Unit-тесты для ProfileViewModel | 2h |
-| Unit-тесты для SessionManager | 2h |
-| Unit-тесты для data/ai/ | 2h |
+| Unit-тесты для SessionManager (UserSession data class) | ✅ Done (v1.2.0.16) |
+| Unit-тесты для ProfileViewModel (ProfileData, GroupData, contact filtering) | ✅ Done (v1.2.0.16) |
+| Unit-тесты для data/ai/ (AiModels, AiDomainExtensions) | ✅ Done (v1.2.0.16) |
+| Unit-тесты для ChatViewModel | ⏳ Осталось |
 
 ### Приоритет 2: UX
 | Задача | Оценка |
 |--------|--------|
-| Offline mode — показать cached messages без подключения | 3h |
 | Push notification deep link — переход в чат из уведомления | 2h |
 
 ### Приоритет 3: Отладка

@@ -503,10 +503,12 @@ object RealGrpcClient {
                 if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
                     try {
                         val usersJson = value.text.removePrefix("ONLINE_USERS_UPDATE:")
-                        val jsonArray = org.json.JSONArray(usersJson)
-                        val userList = mutableListOf<String>()
-                        for (i in 0 until jsonArray.length()) userList.add(jsonArray.getString(i))
-                        _users.value = userList
+                        if (usersJson.isNotEmpty() && usersJson != "null") {
+                            val jsonArray = org.json.JSONArray(usersJson)
+                            val userList = mutableListOf<String>()
+                            for (i in 0 until jsonArray.length()) userList.add(jsonArray.getString(i))
+                            _users.value = userList
+                        }
                     } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
                     return
                 }

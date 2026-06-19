@@ -296,8 +296,9 @@ class NewChatActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.messages.collect { roomMessages ->
                     val hasNewMessages = roomMessages.size > lastMessageCount
+                    val isNewFromOther = hasNewMessages && roomMessages.lastOrNull()?.user != username
                     adapter.submitList(roomMessages) {
-                        if (shouldScrollToBottom) {
+                        if (shouldScrollToBottom || (isNewFromOther && isNearBottom())) {
                             shouldScrollToBottom = false
                             messagesRecyclerView.post { messagesRecyclerView.scrollToPosition(roomMessages.size - 1) }
                         }
@@ -336,7 +337,10 @@ class NewChatActivity : AppCompatActivity() {
                     inputDelegate.audioButton.isEnabled = !isConnecting
                     if (isConnected) {
                         viewModel.syncChatListIfNeeded(this@NewChatActivity)
-                        if (adapter.currentList.isEmpty()) viewModel.loadHistory()
+                        if (adapter.currentList.isEmpty()) {
+                            shouldScrollToBottom = true
+                            viewModel.loadHistory()
+                        }
                         viewModel.loadPinnedMessages(this@NewChatActivity)
                     }
                 }
@@ -425,6 +429,13 @@ class NewChatActivity : AppCompatActivity() {
     private fun retryMessage(message: Message) {
         Toast.makeText(this, getString(R.string.checking_server), Toast.LENGTH_SHORT).show()
         viewModel.retryMessage(message, this)
+    }
+
+    private fun isNearBottom(): Boolean {
+        val lm = messagesRecyclerView.layoutManager as? LinearLayoutManager ?: return true
+        val lastVisible = lm.findLastCompletelyVisibleItemPosition()
+        val total = lm.itemCount
+        return lastVisible >= total - 3
     }
 
     private fun loadDraft() {

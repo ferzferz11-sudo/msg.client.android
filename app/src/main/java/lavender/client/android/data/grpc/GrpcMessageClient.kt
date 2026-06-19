@@ -117,7 +117,7 @@ class GrpcMessageClient(
     fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
         val context = appContext()
 
-        // First, load from cache
+        // First, always load from cache
         scope.launch(Dispatchers.IO) {
             val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
             if (cached.isNotEmpty() && messages.value.isEmpty()) {
@@ -127,7 +127,12 @@ class GrpcMessageClient(
             }
         }
 
-        val currentChannel = getChannel() ?: return
+        val currentChannel = getChannel()
+        if (currentChannel == null) {
+            Log.d(TAG, "loadHistory: no channel (offline), using cache only for $roomId")
+            scope.launch { onCompletion() }
+            return
+        }
         val methodDescriptor = MethodDescriptor.newBuilder<GetHistoryRequestProto, GetHistoryResponseProto>()
             .setType(MethodDescriptor.MethodType.UNARY)
             .setFullMethodName("messenger.ChatService/GetHistory")
