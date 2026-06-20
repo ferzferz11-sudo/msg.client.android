@@ -1,12 +1,62 @@
 # Code Audit — Unused Imports, Functions & Outdated Code
 
-**Date:** 2026-06-20 | **Version:** v1.3.0.7
+**Date:** 2026-06-20 | **Version:** v1.3.0.8
 
 ---
 
 ## Результат аудита v1.3.0.7
 
 Все найденные проблемы были исправлены в v1.3.0.7.
+
+---
+
+## Результат аудита v1.3.0.8
+
+### 1. Unused imports (18 файлов)
+
+Удалены unused import'ы из: `CallManager`, `CallActivity`, `ChatListActivity`, `ChatListFABs`, `ChatListToolbar`, `ChatListActionMode`, `ConferenceLobbyActivity`, `ShareReceiverActivity`, `SecurityActivity`, `RemoteAgentService`, `RemoteAgentSettingsActivity`, `BearerTokenInterceptor`, `GrpcDraftClient`, `GrpcFavoritesClient`, `GrpcAuthClient`, `GrpcServerDiscoveryClient`, `AiV2ChatActivity`
+
+### 2. Unused TAG/const (6 файлов)
+
+`GrpcDraftClient`, `GrpcFavoritesClient`, `GrpcAuthClient`, `GrpcServerDiscoveryClient`, `BearerTokenInterceptor`, `AiV2ChatActivity`
+
+### 3. Unused variables & parameters
+
+- `SplashLoadingActivity.prefs` — unused variable
+- `SuperAdminActivity.editOldPw` — unused variable
+- `RemoteAgentService.thisTunnelAddress` — unused variable
+- `ProfileViewModel.result` — unused variable
+- `ChatViewModel.retryMessage(context)` — unused param
+- `ChatViewModel.fetchChatMetadata(isSecret)` — unused param
+
+### 4. Redundant qualifiers & code
+
+- `ChatListToolbar` — 20+ `android.content.Intent(...)` → `Intent(...)`
+- `BearerTokenInterceptor` —冗余 `io.grpc.` квалификация
+- `RemoteAgentService`, `UpdateCoordinator` —冗余 `SDK_INT` checks (всегда >= 29)
+- `ChatMessageAdapter.TypingHolder` —冗余 `inner` модификатор
+
+### 5. SharedPreferences KTX
+
+`RealGrpcClient.fetchAdminStatus`, `RealGrpcClient.startChatStream`, `ChatListToolbar.toggleLanguage`
+
+### 6. Layout fixes
+
+- `activity_super_admin.xml` — удалён unused `tools` namespace
+- `item_chat.xml` — добавлен `contentDescription` на `ivAdminIndicator`
+
+---
+
+## Статистика изменений v1.3.0.8
+
+| Category | Count |
+|----------|-------|
+| Файлов изменено | 32 |
+| Unused imports удалено | 18 |
+| Unused TAG удалено | 6 |
+| Unused variables исправлено | 6 |
+| Redundant code исправлено | 10 |
+| Layout fixes | 2 |
 
 ---
 
