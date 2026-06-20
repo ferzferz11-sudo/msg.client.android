@@ -20,6 +20,7 @@
 | `doc/PROMPT_NEXT_SESSION.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
+| `doc/CODE_AUDIT.md` | Unused code & import audit | Code cleanup |
 | `CHANGELOG.md` | Version history | Reference |
 
 ---

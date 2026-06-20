@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 
   widget_chat.xml — универсальный chat widget layout.
-  Используется в NewChatActivity (групповой чат) и HermesChatActivity (агенты как участники).
+  Используется в NewChatActivity (групповой чат и AI v2 чаты).
   
   Структура:
     - Toolbar: аватар, название, статус/участники, действия

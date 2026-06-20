@@ -1,15 +1,10 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)
-**Version:** 1.1.1.16
-**Language:** Kotlin
+**Version:** 1.3.0.5
+**Language:** Kotlin 2.3.21
 
-Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, and AI chat integration (OWL + Hermes).
-
-## Repository
-
-This is the **Android client** repository.
-Server lives in a separate repo: `ferzferz11-sudo/msg`
+Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, AI v2 chat integration, Marketplace, and Remote Agent.
 
 ## Requirements
 
@@ -29,138 +24,88 @@ Server lives in a separate repo: `ferzferz11-sudo/msg`
 ## Project Structure
 
 ```
-msg.client.android/                  # Android client repo root
-├── app/
-│   ├── build.gradle.kts             # App module build config
-│   ├── google-services.json         # Firebase config — NOT committed
-│   ├── release.keystore             # Signing keystore — NOT committed
-│   ├── proguard-rules.pro
-│   └── src/
-│       ├── main/
-│       │   ├── java/lavender/client/android/
-│       │   │   ├── SplashActivity.kt           # Splash screen
-│       │   │   ├── ChatListActivity.kt         # Chat list with search
-│       │   │   ├── NewChatActivity.kt           # New chat creation
-│       │   │   ├── ContactsActivity.kt          # Contacts management
-│       │   │   ├── EditProfileActivity.kt      # Profile editing
-│       │   │   ├── ProfileActivity.kt          # View profile
-│       │   │   ├── SuperAdminActivity.kt       # Admin tools
-│       │   │   ├── NotificationActivity.kt     # Notifications
-│       │   │   ├── NotificationLogActivity.kt  # Notification history
-│       │   │   ├── ChangelogActivity.kt        # App changelog viewer
-│       │   │   ├── FavoritesActivity.kt        # Favorite chats
-│       │   │   ├── ServersActivity.kt          # Server selection
-│       │   │   ├── SecurityActivity.kt         # Security settings
-│       │   │   ├── ThemesActivity.kt           # Theme management
-│       │   │   ├── ThemePaletteActivity.kt     # Theme editor
-│       │   │   ├── BackgroundsFragment.kt      # Chat backgrounds
-│       │   │   ├── PaletteFragment.kt          # Color palette
-│       │   │   ├── CallActivity.kt             # Voice/video calls
-│       │   │   ├── ConferenceLobbyActivity.kt  # Conference lobby
-│       │   │   ├── MapPickerActivity.kt        # Location sharing
-│       │   │   ├── FullScreenImageActivity.kt  # Image viewer
-│       │   │   ├── VideoPlayerActivity.kt      # Video player
-│       │   │   ├── ShareReceiverActivity.kt    # Share intent handler
-│       │   │   ├── FCMLogsActivity.kt          # FCM debug logs
-│       │   │   ├── data/
-│       │   │   │   ├── grpc/
-│       │   │   │   │   ├── GrpcClient.kt          # Facade
-│       │   │   │   │   ├── RealGrpcClient.kt      # gRPC implementation (singleton)
-│       │   │   │   │   ├── OwlGrpc.kt             # OWL AI gRPC
-│       │   │   │   │   ├── HermesGrpc.kt          # Hermes gRPC
-│       │   │   │   │   ├── SecretChatGrpc.kt      # Secret chat gRPC
-│       │   │   │   │   └── ServerConnectivityTest.kt
-│       │   │   │   ├── session/
-│       │   │   │   │   ├── CredentialStore.kt     # EncryptedSharedPreferences
-│       │   │   │   │   ├── SessionManager.kt      # StateFlow<UserSession>
-│       │   │   │   │   └── UserSession.kt
-│       │   │   │   ├── crypto/
-│       │   │   │   │   └── E2EEManager.kt         # ECDH + AES-256-GCM
-│       │   │   │   ├── db/                       # Room database
-│       │   │   │   │   ├── AppDatabase.kt
-│       │   │   │   │   ├── Daos.kt
-│       │   │   │   │   └── Entities.kt
-│       │   │   │   ├── fcm/
-│       │   │   │   │   ├── LavenderMessagingService.kt
-│       │   │   │   │   └── NotificationHistory.kt
-│       │   │   │   ├── models/                  # DTOs, proto models
-│       │   │   │   ├── changelog/               # Changelog parsing/rendering
-│       │   │   │   ├── updates/                 # APK update manager
-│       │   │   │   └── proto/                   # Protobuf manual parsing
-│       │   │   ├── ui/
-│       │   │   │   ├── chat/
-│       │   │   │   │   ├── ChatViewModel.kt
-│       │   │   │   │   ├── ChatViewModelFactory.kt
-│       │   │   │   │   └── widget/              # Unified chat widget
-│       │   │   │   │       ├── ChatMessageAdapter.kt
-│       │   │   │   │       ├── ChatWidget.kt
-│       │   │   │   │       └── MentionAdapter.kt
-│       │   │   │   ├── owl/                     # OWL AI chat
-│       │   │   │   │   ├── OwlChatActivity.kt
-│       │   │   │   │   ├── OwlChatViewModel.kt
-│       │   │   │   │   └── OwlSettingsActivity.kt
-│       │   │   │   ├── hermes/                  # Hermes AI chat
-│       │   │   │   │   ├── HermesChatActivity.kt
-│       │   │   │   │   ├── HermesChatViewModel.kt
-│       │   │   │   │   ├── HermesChatAdapter.kt
-│       │   │   │   │   ├── HermesCommandAdapter.kt
-│       │   │   │   │   ├── AgentListActivity.kt
-│       │   │   │   │   ├── AgentListViewModel.kt
-│       │   │   │   │   ├── AgentListAdapter.kt
-│       │   │   │   │   ├── AgentSettingsActivity.kt
-│       │   │   │   │   └── AgentSettingsBottomSheet.kt
-│       │   │   │   ├── notification/
-│       │   │   │   ├── viewmodel/
-│       │   │   │   │   └── ChatListViewModel.kt
-│       │   │   │   ├── adapter/                 # RecyclerView adapters
-│       │   │   │   ├── audio/                   # Audio player/recorder views
-│       │   │   │   ├── calls/                   # Call ViewModel
-│       │   │   │   └── widget/                  # Bottom sheets, FAB
-│       │   │   │       ├── AIBottomSheet.kt
-│       │   │   │       ├── CommandBottomSheet.kt
-│       │   │   │       └── LavenderFab.kt
-│       │   │   ├── theme/                       # Theme system
-│       │   │   │   ├── Theme.kt
-│       │   │   │   ├── ThemeStore.kt
-│       │   │   │   ├── ThemeUtils.kt
-│       │   │   │   ├── BuiltInThemes.kt
-│       │   │   │   ├── data/                   # Theme data layer
-│       │   │   │   └── ui/                     # ThemeApplier, ThemeUi
-│       │   │   └── LogViewerActivity.kt
-│       │   ├── proto/
-│       │   │   └── messenger.proto           # Protobuf schema (manual parsing)
-│       │   └── res/
-│       │       ├── layout/                   # Activity & item layouts
-│       │       ├── drawable/                 # Message backgrounds, icons
-│       │       ├── values/                   # colors, strings, themes (EN)
-│       │       ├── values-ru/               # Russian strings
-│       │       ├── values-night/            # Dark theme colors
-│       │       └── xml/                      # Security config, file paths
-│       ├── androidTest/                     # Instrumented tests
-│       └── test/                            # Unit tests
-├── build.gradle.kts            # Project build config
-├── settings.gradle.kts
-├── version.txt                 # Version: "MAJOR.MINOR.PATCH.BUILD"
-├── CHANGELOG.md
-├── README.md
-├── deploy_android.sh           # Build + rsync to server
-├── doc/                        # Documentation (INDEX.md, TASKS.md)
-├── scripts/                    # Build/deploy scripts
-├── releases/                   # Release artifacts
-└── gradle/
-    ├── libs.versions.toml      # Version catalog
-    └── wrapper/
+app/src/main/java/lavender/client/android/
+├── SplashActivity.kt, SplashLoadingActivity.kt   # Splash screens
+├── ChatListActivity (ui/chatlist/)                # Chat list (10 modules)
+├── NewChatActivity                                # Chat (6 delegates)
+├── ProfileActivity, EditProfileActivity           # Profiles
+├── ContactsActivity                               # Contacts
+├── ThemesActivity, ThemePaletteActivity           # Theme system
+├── SuperAdminActivity                             # Admin tools
+├── NotificationActivity, NotificationLogActivity  # Notifications
+├── SecurityActivity, ServersActivity              # Settings
+├── ChangelogActivity                              # Version history
+├── CallActivity, ConferenceLobbyActivity          # Voice/video calls
+├── FullScreenImageActivity, VideoPlayerActivity   # Media
+├── ShareReceiverActivity                          # Share intents
+├── LogViewerActivity                              # Debug logs
+│
+├── data/
+│   ├── grpc/                                      # gRPC clients
+│   │   ├── GrpcClient.kt                          # Facade
+│   │   ├── RealGrpcClient.kt                      # Orchestrator
+│   │   ├── GrpcAuthClient.kt                       # JWT auth
+│   │   ├── GrpcChatClient.kt                       # Chat CRUD
+│   │   ├── GrpcChatListV2Client.kt                 # Pin/archive/search
+│   │   ├── GrpcChatAuxClient.kt                    # Users/FCM/mute
+│   │   ├── GrpcAIv2Client.kt                       # AI v2 (streaming + CRUD + marketplace)
+│   │   ├── GrpcProfileClient.kt                    # Contacts/themes
+│   │   ├── ProfileClient.kt                        # Profile v2 (JWT)
+│   │   ├── GrpcMarshallers.kt                      # Custom proto marshallers
+│   │   ├── GrpcAIv2Marshallers.kt                  # AI v2 marshallers
+│   │   ├── SecretChatGrpc.kt                       # E2EE chats
+│   │   ├── NotificationsGrpc.kt                    # Notifications
+│   │   ├── RemoteAgentGrpc.kt                      # Remote Agent
+│   │   └── BearerTokenInterceptor.kt               # JWT interceptor
+│   ├── ai/                                         # AI v2 domain
+│   │   ├── AiV2ChatUseCase.kt                      # Chat + tool calling loop
+│   │   ├── AiV2ChatManager.kt                      # Shared flows
+│   │   ├── AiV2Models.kt                           # Domain models
+│   │   ├── AiV2DomainExtensions.kt                 # Proto → Domain
+│   │   └── RateLimitCache.kt                       # Client rate limit
+│   ├── auth/AuthManager.kt                         # Token storage
+│   ├── session/SessionManager.kt                   # Session lifecycle
+│   ├── db/                                         # Room database
+│   ├── fcm/                                        # Firebase messaging
+│   ├── calls/                                      # WebRTC calls
+│   ├── cache/                                      # Cache utilities
+│   └── models/                                     # DTOs, proto models
+│
+├── ui/
+│   ├── ai/                                         # AI v2 screens
+│   │   ├── AiV2ChatActivity.kt                     # Unified AI chat
+│   │   ├── AiV2AgentListActivity.kt                # 5 tabs (Presets/My/Public/Marketplace/Usage)
+│   │   ├── AiV2AgentCreateEditActivity.kt          # Agent create/edit
+│   │   ├── AgentDetailActivity.kt                  # Agent details + reviews
+│   │   ├── MarketplaceViewModel.kt                 # Marketplace catalog
+│   │   ├── AgentDetailViewModel.kt                 # Agent stats/reviews
+│   │   ├── UsageStatsViewModel.kt                  # Usage statistics
+│   │   └── adapters + bottom sheets
+│   ├── chat/                                       # Chat widgets
+│   ├── chatlist/                                   # Chat list modules
+│   ├── remote/                                     # Remote Agent
+│   │   ├── RemoteAgentActivity.kt                  # Agent chat
+│   │   ├── RemoteAgentSettingsActivity.kt          # Settings
+│   │   ├── RemoteAgentService.kt                   # Foreground service
+│   │   └── HermesGatewayManager.kt                 # SSH tunnel
+│   ├── profile/                                    # Profile ViewModel
+│   ├── adapter/                                    # RecyclerView adapters
+│   └── widget/                                     # FAB, bottom sheets
+│
+├── network/HttpClient.kt                           # Singleton OkHttpClient
+├── theme/                                          # Theme system
+└── LogViewerActivity.kt
 ```
 
 ## Tech Stack
 
 | Component          | Technology                                    |
 |--------------------|-----------------------------------------------|
-| Language           | Kotlin                                        |
+| Language           | Kotlin 2.3.21                                 |
 | Architecture       | MVVM                                          |
 | Async              | Kotlin Coroutines + StateFlow                 |
 | Network            | gRPC (bidirectional streaming)                |
-| Serialization      | Protobuf (protobuf-lite, manual)              |
+| Serialization      | Protobuf (protobuf-lite, manual marshallers)  |
 | Database           | Room (SQLite)                                 |
 | Security           | EncryptedSharedPreferences, ECDH, AES-256-GCM |
 | Push               | Firebase Cloud Messaging                      |
@@ -168,34 +113,40 @@ msg.client.android/                  # Android client repo root
 | Min SDK            | 29 (Android 10)                               |
 | Compile/Target SDK | 37/35                                         |
 
-## Versioning
-
-Format: `MAJOR.MINOR.PATCH.BUILD` (e.g., `1.1.1.16`)
-Stored in `version.txt`.
-`versionCode = major*1000000 + minor*10000 + patch*100 + build`
-
 ## Key Features
 
 - Real-time messaging via gRPC bidirectional streaming
 - E2EE secret chats (ECDH key exchange)
-- AI chat: OWL (OpenRouter models, free model list) + Hermes Orchestrator (multi-agent, RAG, tool calling)
+- AI v2 chat: streaming + tool calling + 7 provider types (openrouter, local, mimo, webhook, websocket, subprocess, mcp)
+- AI Marketplace: rate, review, install, share agents + search/pagination/sort/filter
+- Rate limit: client-side cache with countdown timer
+- Graceful shutdown: SERVER_SHUTTINGDOWN signal + health check + backoff
+- Remote Agent: SSH tunnel + shell/git/build/deploy/file/docker/AI tasks
 - Custom theme system (light/dark + user-created themes)
 - Push notifications with chat navigation
 - Voice messages with waveform
 - File/image attachments
 - Message reactions & replies
 - Voice/video calls (WebRTC)
-- Server discovery via gRPC ListServers (multi-server support)
 - Background APK updates via WorkManager
 - Localization (RU/English, RU default)
-- Changelog viewer with bundled + GitHub fallback
+
+## Versioning
+
+Format: `MAJOR.MINOR.PATCH.BUILD` (e.g., `1.3.0.5`)
+Stored in `version.txt`.
+`versionCode = major*1000000 + minor*10000 + patch*100 + build`
 
 ## Signing
 
 - Keystore: `release.keystore` (password: `lavender123`, alias: `lavender`)
 - **NOT committed** — stays on dev machine only
 
-## Keys & Credentials
+## Documentation
 
-- `.env`, `release.keystore`, `google-services.json` — NOT in git
-- APK download: `https://lavender-messenger.com/download`
+- `doc/INDEX.md` — project overview
+- `doc/PATTERNS.md` — code patterns and rules
+- `doc/PROMPT_NEXT_SESSION.md` — current plan and backlog
+- `doc/AI_V2_TESTING.md` — AI v2 test scenarios
+- `doc/REMOTE_AGENT.md` — Remote Agent reference
+- `doc/CODE_AUDIT.md` — unused code and import audit

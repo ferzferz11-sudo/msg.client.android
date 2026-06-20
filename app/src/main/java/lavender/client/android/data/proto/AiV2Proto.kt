@@ -1,7 +1,7 @@
 package lavender.client.android.data.proto
 
 // ======= AI Services v2 — ChatWithAIV2 =======
-// Server proto: messenger.AIService/ChatWithAIV2
+// Server proto: messenger.ChatService/ChatWithAIV2
 
 data class ChatWithAIV2RequestProto(
     val sessionId: String = "",
@@ -37,7 +37,7 @@ data class ToolCallV2Proto(
 )
 
 // ======= AI Services v2 — Agent CRUD =======
-// Server proto: messenger.AIService/CreateAIAgent, UpdateAIAgent, etc.
+// Server proto: messenger.ChatService/CreateAIAgent, UpdateAIAgent, etc.
 
 data class AgentInfoV2Proto(
     val id: String = "",
@@ -152,7 +152,7 @@ data class CloneAIAgentResponseProto(
 )
 
 // ======= AI Services v2 — Tools =======
-// Server proto: messenger.AIService/ListAITools
+// Server proto: messenger.ChatService/ListAITools
 
 data class ListAIToolsRequestProto(
     val dummy: Boolean = false

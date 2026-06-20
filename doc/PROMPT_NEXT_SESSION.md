@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.4 (релиз) | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.5 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -69,40 +69,29 @@ Chat List: Unread highlight (background + bold name + badge)
 
 ---
 
-## Итог сессии v1.3.0.4
+## Итог сессии v1.3.0.5
 
-### Исправлено
+### Выполнено
 
-**1. Unread чаты — клиент:**
-- `readReceiptEvent` handler обнулял `unreadCount` при `READ_ALL` от другого участника — исправлено
-- `syncChats()` сохранял в БД сырые данные вместо `mergedChats` — unread терялись при перезапуске
-- Добавлено детальное логирование: GrpcChatClient, ChatListViewModel, ChatAdapter
-
-**2. Unread чаты — сервер (корневая причина):**
-- `is_read` флаг глобальный на сообщение — один `MarkRead` убивал unread для всех в группе
-- **Фикс:** `GetUserChatsV2`, `SearchChats` теперь считают unread по `user_chat_metadata.last_read_at` вместо `messages.is_read`
-- Данные: сброшены `is_read` для 62 сообщений, все `last_read_at` обновлены
-
-**3. AI v2 — Presets, Toolbar, Marketplace:**
-- Пресеты не загружались — `TabLayout` listener не срабатывал для начального таба
-- Toolbar пустой — `setDisplayShowTitleEnabled(false)` отключал отображение
-- Marketplace только скелетоны — marshaller отправлял 0 байт при дефолтных параметрах
-
-**4. ProfileService v2 миграция:**
-- `EditProfileActivity` — loadProfile, updateBio, updateAvatar, deleteProfile → v2
-- `ProfileViewModel` — v2 для текущего пользователя, ChatService для других
-- `ProfileClient` — +`deleteProfile(password)`, убран `grpcPort==50052` check
-
-### Серверные изменения (файл: `db_chatlist_v2.go`, `db_chats.go`)
-- `GetUserChatsV2` CTE: `is_read = FALSE` → `m.created_at > ulr.last_read`
-- `SearchChats` CTE: аналогичный фикс
-- `GetUserChats`, `GetUserChatsByUserID` — аналогичные фиксы (не используются в current client)
+- **Singleton HttpClient** — создан `network/HttpClient.kt`, заменены 12 вызовов `OkHttpClient()` в 8 файлах
+- **Логирование** — очищено 39 шумных логов из горячих путей, добавлен тайминг загрузки чатов
+- **SplashActivity** — fix `assignParent to null`, `postDelayed` → `lifecycleScope.launch`
+- **Комментарии** — исправлены устаревшие ссылки `messenger.AIService/*` → `messenger.ChatService/*` в 4 файлах
+- **Layout** — исправлен комментарий `HermesChatActivity` → `NewChatActivity` в `widget_chat.xml`
+- **Код-аудит** — создан `doc/CODE_AUDIT.md` с полным анализом неиспользуемых функций, мёртвого кода и устаревших ссылок
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.5)
+## Бэклог — Следующая сессия (v1.3.0.6)
 
-### Приоритет 1: End-to-end тестирование AI v2
+### Приоритет 1: Очистка кода
+| Задача | Статус |
+|--------|--------|
+| Удалить 3 неиспользуемых функции из `AiV2ChatManager` (clearTokens, resetStreamState, emitTyping) | 🔲 |
+| Удалить 7 дублирующих методов из `GrpcChatListClient` (deleteChatWithUserId, updateChatAvatar, updateChatSettings, updateChatName, addParticipant, addParticipants, removeParticipant) — мёртвый код, дублирует `GrpcChatClient` | 🔲 |
+| Обновить README.md (сейчас показывает v1.1.1.16, ссылки на owl/hermes) | 🔲 |
+
+### Приоритет 2: End-to-end тестирование AI v2
 | Задача | Статус |
 |--------|--------|
 | Тест ChatWithAIV2 на реальном сервере (стриминг + tool calling) | 🔲 Нужен live-тест |
@@ -111,14 +100,14 @@ Chat List: Unread highlight (background + bold name + badge)
 | Тест Rate Limit (10 req/min, countdown, auto-restore) | 🔲 Нужен live-тест |
 | Тест Graceful Shutdown (SERVER_SHUTTINGDOWN + backoff) | 🔲 Нужен live-тест |
 
-### Приоритет 2: UX улучшения
+### Приоритет 3: UX улучшения
 | Задача | Статус |
 |--------|--------|
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
 | Better error messages для AI v2 (показывать server error из response) | 🔲 |
 
-### Приоритет 3: Новые фичи
+### Приоритет 4: Новые фичи
 | Задача | Статус |
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |
@@ -176,4 +165,5 @@ Chat List: Unread highlight (background + bold name + badge)
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
+- Аудит кода: `doc/CODE_AUDIT.md`
 - Changelog: `CHANGELOG.md`

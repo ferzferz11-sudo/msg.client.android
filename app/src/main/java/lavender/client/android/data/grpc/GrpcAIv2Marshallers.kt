@@ -6,7 +6,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 // ======= AI Services v2 Marshallers =======
-// Server proto: messenger.AIService/*
+// Server proto: messenger.ChatService/*
 // Field order from AI_V2_CLIENT_INTEGRATION.md
 
 // ======= ChatWithAIV2 =======
