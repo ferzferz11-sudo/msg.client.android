@@ -1,5 +1,56 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.0] - 2026-06-20
+
+### Добавлено
+
+**AI Marketplace API (7 методов):**
+- `RateAIAgent` — оценка агента (1-5 + отзыв)
+- `GetAIAgentReviews` — отзывы на агента
+- `ListMarketplaceAgents` — каталог публичных агентов с поиском
+- `GetAIAgentStats` — статистика агента (установки, рейтинг, отзывы)
+- `ShareAIAgent` — генерация share_code для шеринга
+- `InstallAIAgent` — установка агента по share_code
+- `GetAIUsageStats` — статистика использования (токены, запросы)
+
+**Graceful Shutdown + Reconnection:**
+- Обработка `SERVER_SHUTTINGDOWN` сигнала в Chat стриме
+- Health check (`GET /health`) перед реконнектом
+- Индикатор "Server restarting…" / "Сервер перезапускается…" в toolbar
+- Exponential backoff при недоступности сервера
+
+**UI:**
+- AI BottomSheet: dragHandle + заголовок "AI Services (in development)"
+- LavenderFab в списке агентов (корректные отступы от навбара)
+- Крупный аватар в toolbar (48dp)
+- Табы с контрастным контрастированием на тёмных темах
+- Форма создания/редактирования агента: surface фон, темизация полей ввода
+
+### Исправлено
+
+- Убран прелоадер на кнопке Login/Register (SplashLoadingActivity handles loading)
+- Ошибка авторизации: "V2 auth failed" → локализованное "Wrong username or password"
+- Presets таб: загрузка с `includePublic = true` для получения серверных пресетов
+- Табы в списке агентов: `surfaceColor` фон + `textPrimary` для контраста
+- Форма агента: TextInputLayout stroke/hint цвета, Switch текст, Save кнопка темизированы
+
+### Удалено
+
+**AI v1 (полная очистка):**
+- `OwlGrpc.kt` — OWL AI функции (_marshallers, chatWithOwl, createOwlChat, settings, freeModels_)
+- `HermesGrpc.kt` — Hermes AI функции (_chatWithOrchestrator, agent CRUD, sessions, settings_)
+- Уведомления вынесены в `NotificationsGrpc.kt`
+- Remote Agent вынесен в `RemoteAgentGrpc.kt`
+- ~20 v1 proto классов из `MessengerProto.kt`
+- v1 AI строки из `strings.xml` (EN + RU)
+- Сломанный `OwlActivity` из `AndroidManifest.xml`
+- `AIChatInfo` data class, `getAIChats()`/`renameAIChat()` методы
+- Стейл комментарии, неиспользуемые цвета, старые IDs
+
+**Итого:** удалено ~4000 LOC v1 AI кода, добавлено ~800 LOC Marketplace + Reconnection
+
+---
+
 ## [1.2.0.20] - 2026-06-20
 
 ### Добавлено

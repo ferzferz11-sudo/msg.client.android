@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.20 (релиз) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.0 (релиз) | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -15,38 +15,50 @@
 
 ---
 
-## Что сделано (v1.2.0.19 → v1.2.0.20)
+## Что сделано (v1.2.0.20 → v1.3.0.0)
 
-### AI Services v2 — единый API для всех AI чатов
+### AI Marketplace API
 
-**gRPC транспорт:**
-- `GrpcAIv2Client.kt` — chatWithAIV2 streaming + Agent CRUD + Tools
-- `GrpcAIv2Marshallers.kt` — все marshallers для v2 proto
-- `AiV2Proto.kt` — все v2 proto data classes
+**gRPC методы (7 шт):**
+- `RateAIAgent` — оценка агента (1-5 + отзыв)
+- `GetAIAgentReviews` — отзывы на агента
+- `ListMarketplaceAgents` — каталог публичных агентов с поиском
+- `GetAIAgentStats` — статистика агента (установки, рейтинг)
+- `ShareAIAgent` — генерация share_code
+- `InstallAIAgent` — установка по share_code
+- `GetAIUsageStats` — статистика использования (токены, запросы)
 
-**Domain layer:**
-- `AiV2Models.kt` — AiV2Agent, AiV2ToolCall, AiV2StreamState, AiV2Tool, AiV2ChatMessage
-- `AiV2DomainExtensions.kt` — proto → domain mapping
-- `AiV2ChatUseCase.kt` — chat с tool calling loop (max 10 итераций)
-- `AiV2ChatManager.kt` — unified SharedFlow/StateFlow
+**Файлы:**
+- `AiV2Proto.kt` — 15 новых proto классов
+- `GrpcAIv2Marshallers.kt` — 14 новых marshallers
+- `GrpcAIv2Client.kt` — 7 новых методов
+- `GrpcClient.kt` — 7 facade методов
 
-**UI:**
-- `AiV2ChatActivity.kt` + ViewModel — единый AI чат для всех типов
-- `AiV2AgentListActivity.kt` + ViewModel + Adapter — список агентов (tabs: Presets/My/Public)
-- `AiV2AgentCreateEditActivity.kt` + ViewModel — создание/редактирование агентов
+### Graceful Shutdown + Reconnection
 
-**Tests:**
-- 60 unit-тестов: AiV2ModelsTest (20), AiV2DomainExtensionsTest (13), AiV2MarshallersTest (27)
+- `SERVER_SHUTTINGDOWN` сигнал в Chat стриме → `_serverShuttingDown` StateFlow
+- Health check (`GET /health`) перед каждым реконнектом
+- Экспоненциальный backoff при недоступности сервера
+- "Server restarting…" индикатор в toolbar
+- `NotificationsGrpc.kt` — уведомления вынесены из OwlGrpc.kt
+- `RemoteAgentGrpc.kt` — Remote Agent вынесен из HermesGrpc.kt
 
-**Cleanup v1:**
-- Удалено: OwlChatUseCase, HermesChatUseCase, AiChatManager, AiModels, AiDomainExtensions, HermesRepository, HermesModel, AiChatGrpc
-- Удалено: OwlChatActivity, OwlChatViewModel, OwlSettingsActivity, HermesChatActivity, HermesChatViewModel, HermesChatAdapter, HermesCommandAdapter, AgentListActivity, AgentListViewModel, AgentListAdapter, AgentSettingsActivity, AgentSettingsBottomSheet
-- Удалено: 8 layout XML файлов, 3 directories
+### v1 AI Cleanup
 
-**Оставлено:**
-- `OwlGrpc.kt` — утилиты уведомлений (subscribeNotifications, getNotificationHistory, markNotificationsRead, getUnreadCount)
-- `HermesGrpc.kt` — Remote Agent (listRemoteAgents, deployAgentTask, generateAgentToken, etc.)
-- Remote Agent UI (RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService)
+- Удалены `OwlGrpc.kt`, `HermesGrpc.kt` (~4000 LOC)
+- ~20 v1 proto классов удалены из `MessengerProto.kt`
+- Удалены v1 AI строки, стейл комментарии, неиспользуемые цвета/IDs
+- Сломанный `OwlActivity` удалён из `AndroidManifest.xml`
+
+### UI Fixes
+
+- AI BottomSheet: dragHandle + заголовок "AI Services (in development)"
+- LavenderFab в списке агентов (отступы от навбара)
+- Аватар в toolbar: 42dp → 48dp
+- Табы: контрастное контрастирование на тёмных темах
+- Форма агента: surface фон, темизация полей ввода, Save кнопка
+- Login: убран прелоадер на кнопке, локализованная ошибка
+- Presets таб: `includePublic = true` для серверных пресетов
 
 ---
 
@@ -54,11 +66,11 @@
 
 | Решение | Обоснование |
 |---------|-------------|
-| Единый ChatWithAIV2 | Заменяет ChatWithOWL, ChatWithOrchestrator, ChatWithAI |
-| Server executes tools | Клиент только отправляет tool_calls результат обратно |
-| Single AiV2ChatActivity | Один экран для всех типов AI чатов (simple/agent/pipeline) |
-| Remote Agent интегрирован в v2 | Remote Agent — тип провайдера в v2 agent system |
-| Чистый старт | Без миграции OWL/Hermes чатов |
+| NotificationsGrpc + RemoteAgentGrpc | Разделение OwlGrpc/HermesGrpc на domain-специфичные файлы |
+| LavenderFab для agent list | Автоматические отступы от system bars |
+| includePublic=true для Presets | Серверные пресеты доступны только через includePublic |
+| surfaceColor для форм | Контрастный фон на тёмных темах |
+| textPrimary для табов | Лучшая видимость чем colorOnSurface на тёмных темах |
 
 ---
 
@@ -67,7 +79,7 @@
 ```
 GrpcClient (facade)
   └── RealGrpcClient — orchestrator
-        ├── GrpcConnectionManager — connect/reconnect/disconnect
+        ├── GrpcConnectionManager — connect/reconnect/health check
         ├── GrpcAuthClient — JWT auth (v2 only)
         ├── GrpcTypingClient — typing stream
         ├── GrpcCallClient — calls
@@ -78,9 +90,10 @@ GrpcClient (facade)
         ├── GrpcProfileClient — profile, avatar, contacts, themes
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools)
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
         ├── SecretChatGrpc, ProfileClient
-        └── OwlGrpc (notifications), HermesGrpc (remote agents)
+        ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
+        └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
@@ -91,33 +104,51 @@ AiV2AgentCreateEditActivity → agent create/edit
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
+AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage
+Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.21)
+## Бэклог — Следующая сессия (v1.3.0.1)
 
-### Приоритет 1: AI v2 — интеграция с сервером
-- Тестирование ChatWithAIV2 на реальном сервере
-- Тестирование Agent CRUD (CreateAIAgent, ListAIAgents, etc.)
-- Тестирование Tool Calling loop
-- Настройка встроенных пресет-агентов на сервере
+### Приоритет 1: Marketplace UI
+| Задача | Статус |
+|--------|--------|
+| Marketplace экран (каталог публичных агентов) | 🔲 |
+| Экран отзывов на агента | 🔲 |
+| Шеринг агента (generate share_code) | 🔲 |
+| Установка по share_code | 🔲 |
+| Статистика использования (токены, запросы) | 🔲 |
+| Оценка агента (1-5 звёзд + отзыв) | 🔲 |
 
-### Приоритет 2: Тесты
+### Приоритет 2: AI v2 — интеграция с сервером
+| Задача | Статус |
+|--------|--------|
+| Тестирование ChatWithAIV2 на реальном сервере | 🔲 |
+| Тестирование Agent CRUD | 🔲 |
+| Тестирование Tool Calling loop | 🔲 |
+| Тестирование Marketplace API | 🔲 |
+| Тестирование Graceful Shutdown | 🔲 |
+
+### Приоритет 3: Тесты
 | Задача | Статус |
 |--------|--------|
 | Unit-тесты AI v2 (models, marshallers, extensions) | ✅ Done (60 tests) |
+| Unit-тесты Marketplace marshallers | 🔲 |
 | Unit-тесты для ChatViewModel | ✅ Done (v1.2.0.19) |
 | Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
 | Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
 | Интеграционные тесты AI v2 с сервером | 🔲 |
 
-### Приоритет 3: UX
+### Приоритет 4: UX
 | Задача | Статус |
 |--------|--------|
 | Offline mode | ✅ Done (v1.2.0.16) |
 | Push notification deep link | ✅ Done (v1.2.0.16) |
 | Sheet navigation | ✅ Done (v1.2.0.19) |
+| Graceful Shutdown UI | ✅ Done (v1.3.0.0) |
+| Agent form dark theme | ✅ Done (v1.3.0.0) |
 
 ---
 

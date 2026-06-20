@@ -1,6 +1,23 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.20 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-20
+**Version:** v1.3.0.0 | **Branch:** feat/1.3.0.x | **Updated:** 2026-06-20
+
+---
+
+## Completed — v1.3.0.0
+
+### Session 2026-06-20 (Marketplace + Graceful Shutdown + Cleanup)
+- ✅ **Marketplace API:** 7 methods (Rate, Reviews, Marketplace, Stats, Share, Install, Usage)
+- ✅ **Graceful Shutdown:** SERVER_SHUTTINGDOWN signal, health check, exponential backoff
+- ✅ **v1 AI Cleanup:** Removed OwlGrpc, HermesGrpc, ~20 proto classes, v1 strings (~4000 LOC)
+- ✅ **NotificationsGrpc + RemoteAgentGrpc:** Extracted from OwlGrpc/HermesGrpc
+- ✅ **AI BottomSheet:** dragHandle + title "AI Services (in development)"
+- ✅ **LavenderFab:** Agent list FAB with proper system bar insets
+- ✅ **Avatar 48dp:** Enlarged toolbar avatar
+- ✅ **Tab contrast:** Improved visibility on dark themes
+- ✅ **Agent form theming:** Surface background, TextInputLayout colors, Save button
+- ✅ **Login fixes:** Removed button preloader, localized error message
+- ✅ **Presets fix:** includePublic=true for server presets
 
 ---
 
