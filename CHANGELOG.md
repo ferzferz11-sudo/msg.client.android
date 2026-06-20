@@ -1,5 +1,64 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.10] - 2026-06-21
+
+### Добавлено
+
+**Reve Image Integration — клиентская часть:**
+- `AiV2ChatMessage` — добавлено поле `imageUrl` для отображения сгенерированных изображений
+- `ChatMessageItem` — добавлено поле `imageUrl` для unified chat adapter
+- `ChatMessageAdapter` — ImageView в agent bubble для отображения изображений через Glide (scaleType=centerCrop, placeholder)
+- `item_chat_message.xml` — добавлен `agentMessageImage` ImageView (240dp, adjustViewBounds)
+- `AiV2Proto.kt` — `ChatWithAIV2ResponseProto` получил field 10: `imageUrl` (string)
+- `GrpcAIv2Marshallers` — парсинг field 10 (imageUrl) в ChatWithAIV2ResponseMarshaller
+- `GrpcAIv2Client` — callback `onResponse` обновлён: добавлен параметр `imageUrl`
+- `AiV2ChatUseCase` — пробрасывает `imageUrl` из proto в доменную модель
+- `AiV2DomainExtensions` — маппит `imageUrl` из `ChatWithAIV2ResponseProto` в `AiV2ChatMessage`
+
+**Документация:**
+- Серверный промпт для Reve интеграции: `doc/REVE_INTEGRATION.md` (в репозитории сервера)
+- Reve API reference: endpoints, auth, request/response formats, postprocessing options
+
+### Тесты
+
+- `AiV2MarshallersTest` — новый тест `chatWithAIV2ResponseMarshaller_imageUrl` для field 10
+- Все существующие тесты проходят (71 tests, 2 pre-existing failures не связаны с изменениями)
+
+---
+
+## [1.3.0.9] - 2026-06-20
+
+### Добавлено
+
+**Биометрическая аутентификация:**
+- При включённой настройке биометрии в Security — после сплеш-экрана показывается BiometricPrompt перед входом в чат-лист
+- Проверка `biometric_enabled_$username` в SharedPreferences
+- Успешная аутентификация → ChatListActivity, ошибка/отмена → закрытие приложения
+
+**Cursor-based пагинация чатов:**
+- `GetChatsRequest` — добавлены `limit`, `filter`, `cursor` поля
+- `GetChatsResponse` — добавлены `next_cursor`, `has_more` поля
+- `ChatListPage` data class — `(chats, nextCursor, hasMore)`
+- `loadMoreChats()` в ChatListViewModel — подгрузка следующей страницы
+- `OnScrollListener` в ChatListActivity — infinite scroll при прокрутке к концу
+
+### Улучшено
+
+**AI Agent List — упрощение табов:**
+- 5 табов → 3 таба: Presets (быстрый старт), My Agents (кастомные), Discover (маркетплейс)
+- Таб Presets загружает пресет-агенты для мгновенного доступа к чату
+
+**Поделиться — добавлена ссылка:**
+- Текст "Поделиться" теперь включает ссылку `http://13.140.25.249`
+
+### Исправлено
+
+**Аудит серверного соответствия:**
+- `searchChats` — исправлен timestamp: было `seconds`, стало `seconds * 1000 + nanos / 1000000` (millisecond precision)
+- `getAllChats` — исправлен `isMuted`: было захардкожено `false`, стало `proto.isMuted`
+
+---
+
 ## [1.3.0.8] - 2026-06-20
 
 ### Оптимизация

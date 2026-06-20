@@ -104,8 +104,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun loadGroupData(roomId: String) {
         viewModelScope.launch {
             val username = GrpcClient.getCurrentUsername() ?: return@launch
-            GrpcClient.getChats(username) { chats ->
-                val chat = chats.find { it.id == roomId }
+            GrpcClient.getChats(username) { page ->
+                val chat = page.chats.find { it.id == roomId }
                 if (chat != null) {
                     val participants = try {
                         val arr = JSONArray(chat.participants)

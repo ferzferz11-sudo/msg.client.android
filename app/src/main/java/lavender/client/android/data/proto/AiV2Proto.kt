@@ -15,6 +15,7 @@ data class ChatWithAIV2ResponseProto(
     val token: String = "",
     val finished: Boolean = false,
     val error: String = "",
+    val imageUrl: String = "",
     val agentId: String = "",
     val agentName: String = "",
     val toolCalls: List<ToolCallRequestV2Proto> = emptyList(),

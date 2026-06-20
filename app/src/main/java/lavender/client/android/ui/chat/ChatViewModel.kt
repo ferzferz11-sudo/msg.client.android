@@ -109,8 +109,8 @@ class ChatViewModel : ViewModel() {
     fun fetchChatMetadata(username: String, roomId: String, isDirect: Boolean, participantsJson: String, chatName: String, onResult: (ChatMetadata) -> Unit) {
         if (roomId.startsWith("favorites_")) return
         if (!isDirect || participantsJson == "[]" || chatName == "Chat") {
-            grpcClient.getChats(username) { chats ->
-                val chat = chats.find { it.id == roomId }
+            grpcClient.getChats(username) { page ->
+                val chat = page.chats.find { it.id == roomId }
                 if (chat != null) {
                     val meta = ChatMetadata(
                         chatName = chat.getDisplayName(username), isDirect = chat.type == "direct",
@@ -139,7 +139,7 @@ class ChatViewModel : ViewModel() {
         val u = grpcClient.getCurrentUsername() ?: return
         grpcClient.getChatListVersion(u) { server ->
             if (server > local) {
-                grpcClient.getChats(u) { prefs.edit { putLong("chat_list_version", server) } }
+                grpcClient.getChats(u) { _ -> prefs.edit { putLong("chat_list_version", server) } }
             }
         }
     }

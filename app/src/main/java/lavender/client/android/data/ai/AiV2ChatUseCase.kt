@@ -97,13 +97,14 @@ object AiV2ChatUseCase {
             images = images,
             toolCalls = toolCalls,
             scope = scope,
-            onResponse = { token: String, finished: Boolean, error: String?, respAgentId: String, respAgentName: String, respToolCalls: List<ToolCallRequestV2Proto>, hasRagContext: Boolean, modelUsed: String, tokenCount: Int ->
+            onResponse = { token: String, finished: Boolean, error: String?, imageUrl: String, respAgentId: String, respAgentName: String, respToolCalls: List<ToolCallRequestV2Proto>, hasRagContext: Boolean, modelUsed: String, tokenCount: Int ->
                 // Emit to manager
                 AiV2ChatManager.emitResponse(
                     AiV2ChatMessage(
                         sessionId = sessionId,
                         role = "assistant",
                         content = token,
+                        imageUrl = imageUrl,
                         agentId = respAgentId,
                         agentName = respAgentName,
                         isStreaming = finished.not(),
@@ -119,6 +120,7 @@ object AiV2ChatUseCase {
                         token = token,
                         finished = finished,
                         error = error ?: "",
+                        imageUrl = imageUrl,
                         agentId = respAgentId,
                         agentName = respAgentName,
                         toolCalls = respToolCalls,

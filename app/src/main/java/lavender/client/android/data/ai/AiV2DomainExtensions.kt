@@ -66,6 +66,7 @@ fun ChatWithAIV2ResponseProto.toChatMessage(sessionId: String): AiV2ChatMessage 
     sessionId = sessionId,
     role = "assistant",
     content = token,
+    imageUrl = imageUrl,
     agentId = agentId,
     agentName = agentName,
     timestamp = System.currentTimeMillis(),

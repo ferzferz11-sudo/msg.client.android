@@ -121,6 +121,7 @@ class AiV2ChatActivity : AppCompatActivity() {
                             ChatMessageItem(
                                 id = msg.id,
                                 content = msg.content,
+                                imageUrl = msg.imageUrl,
                                 senderId = msg.agentId,
                                 senderName = msg.agentName.ifEmpty { "AI" },
                                 timestamp = msg.timestamp,

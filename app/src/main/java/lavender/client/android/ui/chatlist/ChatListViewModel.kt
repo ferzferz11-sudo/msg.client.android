@@ -55,6 +55,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     private var allChats: List<ChatInfo> = emptyList()
     private var syncJob: Job? = null
+    private var nextCursor: String = ""
+    private var hasMore: Boolean = true
+    private var isLoadingMore: Boolean = false
 
     init {
         // Load cached chats on startup (offline-first)
@@ -171,6 +174,8 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         if (_isLoading.value) return
         if (!silent) _isLoading.value = true
         val startTime = System.currentTimeMillis()
+        nextCursor = ""
+        hasMore = true
 
         viewModelScope.launch {
             try {
@@ -192,18 +197,21 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
 
-                // Then: fetch from server
-                val fetchedChats = kotlinx.coroutines.withTimeoutOrNull(10000L) {
-                    kotlinx.coroutines.suspendCancellableCoroutine<List<ChatInfo>> { cont ->
-                        GrpcClient.getChats(username, skipCache = true) { chats ->
-                            if (cont.isActive) cont.resumeWith(Result.success(chats))
+                // Fetch first page from server
+                val fetchedPage = kotlinx.coroutines.withTimeoutOrNull(10000L) {
+                    kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
+                        GrpcClient.getChats(username, skipCache = true) { page ->
+                            if (cont.isActive) cont.resumeWith(Result.success(page))
                         }
                     }
                 }
 
-                if (fetchedChats != null) {
+                if (fetchedPage != null) {
+                    val fetchedChats = fetchedPage.chats
+                    nextCursor = fetchedPage.nextCursor
+                    hasMore = fetchedPage.hasMore
                     val serverUnread = fetchedChats.filter { it.unreadCount > 0 }
-                    Log.d(TAG, "Server returned ${fetchedChats.size} chats (${serverUnread.size} unread)")
+                    Log.d(TAG, "Server returned ${fetchedChats.size} chats (${serverUnread.size} unread, hasMore=$hasMore)")
 
                     val hasChanges = allChats.size != fetchedChats.size ||
                         allChats.map { it.id }.toSet() != fetchedChats.map { it.id }.toSet() ||
@@ -245,6 +253,42 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 Log.e(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadMoreChats() {
+        if (isLoadingMore || !hasMore || nextCursor.isEmpty()) return
+        isLoadingMore = true
+
+        viewModelScope.launch {
+            try {
+                val username = SessionManager.session.value.username
+                val fetchedPage = kotlinx.coroutines.withTimeoutOrNull(10000L) {
+                    kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.grpc.ChatListPage> { cont ->
+                        GrpcClient.getChats(username, skipCache = true, limit = 100, cursor = nextCursor) { page ->
+                            if (cont.isActive) cont.resumeWith(Result.success(page))
+                        }
+                    }
+                }
+
+                if (fetchedPage != null && fetchedPage.chats.isNotEmpty()) {
+                    val existingIds = allChats.map { it.id }.toSet()
+                    val newChats = fetchedPage.chats.filter { it.id !in existingIds }
+                    if (newChats.isNotEmpty()) {
+                        allChats = allChats + newChats
+                        buildSections(allChats)
+                        Log.d(TAG, "Loaded ${newChats.size} more chats (total=${allChats.size})")
+                    }
+                    nextCursor = fetchedPage.nextCursor
+                    hasMore = fetchedPage.hasMore
+                } else {
+                    hasMore = false
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load more chats", e)
+            } finally {
+                isLoadingMore = false
             }
         }
     }

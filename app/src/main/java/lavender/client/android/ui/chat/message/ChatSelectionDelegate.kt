@@ -152,9 +152,9 @@ class ChatSelectionDelegate(
     private fun forwardSelectedMessages() {
         val sm = adapter?.getSelectedMessages() ?: return
         if (sm.isEmpty()) { hideSelectionToolbar(); return }
-        grpcClient.getChats(username) { chats ->
+        grpcClient.getChats(username) { page ->
             activity.runOnUiThread {
-                val oc = chats.toMutableList()
+                val oc = page.chats.toMutableList()
                 if (!roomId.startsWith("favorites_")) {
                     oc.add(0, lavender.client.android.data.models.ChatInfo(
                         id = "favorites_$username", name = activity.getString(R.string.favorites), type = "favorites"

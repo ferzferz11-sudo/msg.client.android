@@ -196,6 +196,7 @@ class ChatMessageAdapter(
         private val emoji: TextView = itemView.findViewById(R.id.agentEmoji)
         private val name: TextView = itemView.findViewById(R.id.agentName)
         private val messageText: TextView = itemView.findViewById(R.id.agentMessageText)
+        private val messageImage: ImageView = itemView.findViewById(R.id.agentMessageImage)
         private val messageTime: TextView = itemView.findViewById(R.id.agentMessageTime)
         private val replyContainer: LinearLayout = itemView.findViewById(R.id.agentReplyContainer)
         private val replyUser: TextView = itemView.findViewById(R.id.agentReplyUser)
@@ -209,6 +210,25 @@ class ChatMessageAdapter(
 
             messageText.text = item.content
             messageTime.text = timeFormat.format(Date(item.timestamp))
+
+            if (item.content.isNotEmpty()) {
+                messageText.isVisible = true
+            } else {
+                messageText.isVisible = false
+            }
+
+            if (item.imageUrl.isNotEmpty()) {
+                messageImage.isVisible = true
+                val context = itemView.context
+                com.bumptech.glide.Glide.with(context)
+                    .load(item.imageUrl)
+                    .placeholder(R.drawable.ic_image_placeholder)
+                    .error(R.drawable.ic_image_placeholder)
+                    .centerCrop()
+                    .into(messageImage)
+            } else {
+                messageImage.isVisible = false
+            }
 
             // Sender name
             if (showNames && item.senderName.isNotEmpty()) {
@@ -263,6 +283,7 @@ class ChatMessageAdapter(
 data class ChatMessageItem(
     val id: String = UUID.randomUUID().toString(),
     val content: String = "",
+    val imageUrl: String = "",
     val senderId: String = "",
     val senderName: String = "",
     val senderEmoji: String = "",       // For agents: emoji icon

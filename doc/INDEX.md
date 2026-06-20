@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.8 | **Updated:** 2026-06-20
+**Version:** v1.3.0.9 | **Updated:** 2026-06-20
 
 ---
 
@@ -20,7 +20,6 @@
 | `doc/PROMPT_NEXT_SESSION.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
-| `doc/CODE_AUDIT.md` | Unused code & import audit | Code cleanup |
 | `CHANGELOG.md` | Version history | Reference |
 
 ---
@@ -43,14 +42,14 @@
 | gRPC modules | 26 |
 | Unit tests | 14 files |
 | Layout XML | 109 |
-| String entries | 826 (EN + RU) |
+| String entries | 829 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.8) |
+| Branch | feat/1.3.0.x (v1.3.0.9) |
 
 ---
 
-## Architecture Overview (v1.3.0.8)
+## Architecture Overview (v1.3.0.9)
 
 ```
 GrpcClient (facade)
@@ -59,10 +58,10 @@ GrpcClient (facade)
         ├── GrpcAuthClient — JWT auth (v2 only)
         ├── GrpcTypingClient — typing stream
         ├── GrpcCallClient — calls
-        ├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
+        ├── GrpcChatClient (~250) — getChats (cursor pagination), create/delete, participants, settings
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
-        ├── GrpcProfileClient — contacts, themes (ChatService)
+        ├── GrpcProfileClient — contacts, themes, devices, passwords (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
@@ -76,13 +75,15 @@ network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeou
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
 AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
-AiV2AgentListActivity → agent list (tabs: Presets/My/Public/Marketplace/Usage)
+AiV2AgentListActivity → 3 tabs (Presets/My Agents/Discover)
 AiV2AgentCreateEditActivity → agent create/edit
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
+Biometric: BiometricPrompt after splash screen when enabled
+Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Logging: clean logs, no hot-path noise, performance timing in loadChats
 ```

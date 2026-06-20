@@ -75,6 +75,7 @@ data class AiV2ChatMessage(
     val sessionId: String = "",
     val role: String = "",
     val content: String = "",
+    val imageUrl: String = "",
     val agentId: String = "",
     val agentName: String = "",
     val timestamp: Long = System.currentTimeMillis(),

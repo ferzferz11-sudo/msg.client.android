@@ -88,7 +88,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         setupFab()
         observeState()
 
-        viewModel.loadAgents(0)
+        viewModel.loadPresets()
 
         ThemeUi.bind(this, SessionManager.session.value.username)
 
@@ -124,12 +124,15 @@ class AiV2AgentListActivity : AppCompatActivity() {
                 tab?.position?.let { position ->
                     currentTab = position
                     when (position) {
-                        0, 1, 2 -> {
-                            switchToAgents()
-                            viewModel.loadAgents(position)
+                        0 -> {
+                            switchToPresets()
                         }
-                        3 -> switchToMarketplace()
-                        4 -> switchToUsage()
+                        1 -> {
+                            switchToMyAgents()
+                        }
+                        2 -> {
+                            switchToDiscover()
+                        }
                     }
                 }
             }
@@ -138,25 +141,26 @@ class AiV2AgentListActivity : AppCompatActivity() {
         })
     }
 
-    private fun switchToMarketplace() {
+    private fun switchToPresets() {
+        recyclerView.adapter = agentAdapter
+        searchLayout.visibility = View.GONE
+        sortFilterBar.visibility = View.GONE
+        viewModel.loadPresets()
+    }
+
+    private fun switchToMyAgents() {
+        recyclerView.adapter = agentAdapter
+        searchLayout.visibility = View.GONE
+        sortFilterBar.visibility = View.GONE
+        viewModel.loadMyAgents()
+    }
+
+    private fun switchToDiscover() {
         recyclerView.adapter = marketplaceAdapter
         searchLayout.visibility = View.VISIBLE
         sortFilterBar.visibility = View.VISIBLE
         searchInput.text?.clear()
         marketplaceViewModel.loadAgents()
-    }
-
-    private fun switchToUsage() {
-        recyclerView.adapter = usageStatsAdapter
-        searchLayout.visibility = View.GONE
-        sortFilterBar.visibility = View.GONE
-        usageStatsViewModel.loadStats()
-    }
-
-    private fun switchToAgents() {
-        recyclerView.adapter = agentAdapter
-        searchLayout.visibility = View.GONE
-        sortFilterBar.visibility = View.GONE
     }
 
     private fun setupRecyclerView() {
@@ -173,7 +177,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                if (currentTab == 3) {
+                if (currentTab == 2) {
                     val layoutManager = rv.layoutManager as LinearLayoutManager
                     val lastVisible = layoutManager.findLastVisibleItemPosition()
                     val totalItems = layoutManager.itemCount
@@ -232,9 +236,9 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun setupSwipeRefresh() {
         swipeRefresh.setOnRefreshListener {
             when (currentTab) {
-                3 -> marketplaceViewModel.loadAgents(searchInput.text?.toString() ?: "")
-                4 -> usageStatsViewModel.loadStats()
-                else -> viewModel.loadAgents(currentTab)
+                2 -> marketplaceViewModel.loadAgents(searchInput.text?.toString() ?: "")
+                0 -> viewModel.loadPresets()
+                1 -> viewModel.loadMyAgents()
             }
         }
     }
@@ -242,7 +246,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun setupFab() {
         findViewById<View>(R.id.fab).setOnClickListener {
             when (currentTab) {
-                3 -> InstallAgentBottomSheet.show(this) { shareCode ->
+                2 -> InstallAgentBottomSheet.show(this) { shareCode ->
                     marketplaceViewModel.loadAgents()
                 }
                 else -> {
@@ -258,7 +262,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.agents.collect { agents ->
-                        if (currentTab in 0..2) {
+                        if (currentTab in 0..1) {
                             agentAdapter.submitList(agents)
                         }
                     }
@@ -266,7 +270,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
 
                 launch {
                     marketplaceViewModel.agents.collect { agents ->
-                        if (currentTab == 3) {
+                        if (currentTab == 2) {
                             marketplaceAdapter.submitList(agents)
                             if (agents.isEmpty() && !marketplaceViewModel.isLoading.value) {
                                 recyclerView.visibility = View.GONE
@@ -280,36 +284,8 @@ class AiV2AgentListActivity : AppCompatActivity() {
                 }
 
                 launch {
-                    usageStatsViewModel.stats.collect { stats ->
-                        if (currentTab == 4) {
-                            usageStatsAdapter.submitList(stats)
-                        }
-                    }
-                }
-
-                launch {
-                    usageStatsViewModel.totalTokens.collect { tokens ->
-                        if (currentTab == 4) {
-                            val avgTokens = if (usageStatsViewModel.totalRequests.value > 0) {
-                                tokens / usageStatsViewModel.totalRequests.value
-                            } else 0
-                            findViewById<TextView>(R.id.totalTokensValue)?.text = formatNumber(tokens)
-                            findViewById<TextView>(R.id.avgTokensValue)?.text = formatNumber(avgTokens)
-                        }
-                    }
-                }
-
-                launch {
-                    usageStatsViewModel.totalRequests.collect { requests ->
-                        if (currentTab == 4) {
-                            findViewById<TextView>(R.id.totalRequestsValue)?.text = requests.toString()
-                        }
-                    }
-                }
-
-                launch {
                     viewModel.isLoading.collect { loading ->
-                        if (currentTab in 0..2) {
+                        if (currentTab in 0..1) {
                             progressBar.visibility = if (loading) View.VISIBLE else View.GONE
                         }
                     }
@@ -317,22 +293,13 @@ class AiV2AgentListActivity : AppCompatActivity() {
 
                 launch {
                     marketplaceViewModel.isLoading.collect { loading ->
-                        if (currentTab == 3) {
+                        if (currentTab == 2) {
                             if (loading && marketplaceViewModel.agents.value.isEmpty()) {
                                 marketplaceAdapter.showSkeleton()
                                 recyclerView.visibility = View.VISIBLE
                                 emptyView.visibility = View.GONE
                             }
                             progressBar.visibility = if (loading && marketplaceViewModel.agents.value.isNotEmpty()) View.VISIBLE else View.GONE
-                            swipeRefresh.isRefreshing = loading
-                        }
-                    }
-                }
-
-                launch {
-                    usageStatsViewModel.isLoading.collect { loading ->
-                        if (currentTab == 4) {
-                            progressBar.visibility = if (loading) View.VISIBLE else View.GONE
                             swipeRefresh.isRefreshing = loading
                         }
                     }
@@ -352,15 +319,6 @@ class AiV2AgentListActivity : AppCompatActivity() {
                         error?.let {
                             Toast.makeText(this@AiV2AgentListActivity, it, Toast.LENGTH_SHORT).show()
                             marketplaceViewModel.clearError()
-                        }
-                    }
-                }
-
-                launch {
-                    usageStatsViewModel.error.collect { error ->
-                        error?.let {
-                            Toast.makeText(this@AiV2AgentListActivity, it, Toast.LENGTH_SHORT).show()
-                            usageStatsViewModel.clearError()
                         }
                     }
                 }

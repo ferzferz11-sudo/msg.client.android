@@ -405,6 +405,18 @@ class ChatListActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(context)
             adapter = chatAdapter
             setHasFixedSize(false)
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                    if (dy > 0) {
+                        val layoutManager = rv.layoutManager as LinearLayoutManager
+                        val lastVisible = layoutManager.findLastVisibleItemPosition()
+                        val totalItems = layoutManager.itemCount
+                        if (lastVisible >= totalItems - 5) {
+                            viewModel.loadMoreChats()
+                        }
+                    }
+                }
+            })
         }
 
         // Observe sections

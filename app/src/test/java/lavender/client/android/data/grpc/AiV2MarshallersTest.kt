@@ -135,6 +135,16 @@ class AiV2MarshallersTest {
     }
 
     @Test
+    fun chatWithAIV2ResponseMarshaller_imageUrl() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeString(10, "https://api.reve.com/v1/image/abc123.png")
+        cos.flush()
+        val parsed = ChatWithAIV2ResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals("https://api.reve.com/v1/image/abc123.png", parsed.imageUrl)
+    }
+
+    @Test
     fun chatWithAIV2ResponseMarshaller_unknownFieldsSkipped() {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)

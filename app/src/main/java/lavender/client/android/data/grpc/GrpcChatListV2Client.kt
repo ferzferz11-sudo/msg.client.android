@@ -50,9 +50,9 @@ class GrpcChatListV2Client(
             ChatInfo(
                 id = proto.id, name = proto.name, type = proto.type,
                 participants = proto.participants,
-                createdAt = proto.createdAt?.seconds ?: 0L,
+                createdAt = proto.createdAt?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                 unreadCount = proto.unreadCount,
-                lastMessageTime = proto.lastMessageTime?.seconds ?: 0L,
+                lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                 creator = proto.creator, lastMessageText = proto.lastMessageText,
                 avatarUrl = proto.avatarUrl, fullAvatarUrl = proto.fullAvatarUrl,
                 lastMessageUsername = proto.lastMessageUsername,

@@ -646,6 +646,9 @@
 
     <string name="ai_v2_chat_title">ИИ Чат</string>
     <string name="ai_v2_agents">ИИ Агенты</string>
+    <string name="presets">Пресеты</string>
+    <string name="my_agents">Мои агенты</string>
+    <string name="discover">Обзор</string>
     <string name="ai_v2_create_agent">Создать агента</string>
     <string name="ai_v2_edit_agent">Редактировать агента</string>
     <string name="ai_v2_delete_agent">Удалить агента</string>
@@ -874,7 +877,7 @@
 
     <!-- File/Feedback -->
     <string name="filename_prefix">Лава</string>
-    <string name="share_app_description">Лава: платформа защищенных бизнес-коммуникаций</string>
+    <string name="share_app_description">Лава: платформа защищенных бизнес-коммуникаций\nhttp://13.140.25.249</string>
     <string name="feedback_subject">Лава Обратная связь</string>
 
 </resources>

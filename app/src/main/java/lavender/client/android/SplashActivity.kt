@@ -8,6 +8,9 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
@@ -212,8 +215,55 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun navigateToChatList(host: String) {
+        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
+        val username = SessionManager.session.value.username
+        val biometricEnabled = prefs.getBoolean("biometric_enabled_$username", false)
+
+        if (biometricEnabled) {
+            val biometricManager = BiometricManager.from(this)
+            val canAuthenticate = biometricManager.canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+
+            if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+                showBiometricPrompt()
+                return
+            }
+        }
+
         startActivity(Intent(this, ChatListActivity::class.java))
         finish()
+    }
+
+    private fun showBiometricPrompt() {
+        val executor = ContextCompat.getMainExecutor(this)
+
+        val biometricPrompt = BiometricPrompt(this, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    startActivity(Intent(this@SplashActivity, ChatListActivity::class.java))
+                    finish()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    finish()
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                }
+            })
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(getString(R.string.biometric_login_title))
+            .setSubtitle(getString(R.string.biometric_login_subtitle))
+            .setDescription(getString(R.string.biometric_login_description))
+            .setNegativeButtonText(getString(R.string.biometric_login_negative_button))
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
     }
 
     /** Clear all local cache silently on successful login. */

@@ -132,8 +132,8 @@ object GrpcClient {
     // ======= Chat Operations =======
 
     fun getChats(
-        username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit
-    ) = realGrpcClient.getChats(username, skipCache, callback)
+        username: String, skipCache: Boolean = false, limit: Int = 100, cursor: String = "", callback: (ChatListPage) -> Unit
+    ) = realGrpcClient.getChats(username, skipCache, limit, cursor, callback)
 
     fun getChatListVersion(username: String, callback: (Long) -> Unit) =
         realGrpcClient.getChatListVersion(username, callback)

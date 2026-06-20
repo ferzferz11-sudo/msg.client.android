@@ -240,7 +240,19 @@
                 android:textSize="15sp"
                 android:autoLink="web|email"
                 android:linksClickable="true"
+                android:visibility="gone"
                 tools:text="Ответ от агента-разработчика..." />
+
+            <ImageView
+                android:id="@+id/agentMessageImage"
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                android:layout_marginTop="4dp"
+                tools:visibility="visible"
+                tools:src="@drawable/ic_image_placeholder" />
 
             <TextView
                 android:id="@+id/agentMessageTime"

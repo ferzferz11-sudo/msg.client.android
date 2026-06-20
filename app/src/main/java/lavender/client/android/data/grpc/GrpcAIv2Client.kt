@@ -42,7 +42,7 @@ class GrpcAIv2Client(
         images: List<ByteArray> = emptyList(),
         toolCalls: List<ToolCallV2Proto> = emptyList(),
         scope: CoroutineScope,
-        onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String, toolCalls: List<ToolCallRequestV2Proto>, hasRagContext: Boolean, modelUsed: String, tokenCount: Int) -> Unit
+        onResponse: (token: String, finished: Boolean, error: String?, imageUrl: String, agentId: String, agentName: String, toolCalls: List<ToolCallRequestV2Proto>, hasRagContext: Boolean, modelUsed: String, tokenCount: Int) -> Unit
     ) {
         scope.launch(Dispatchers.IO) {
             var retryDelay = INITIAL_RETRY_DELAY_MS
@@ -84,7 +84,7 @@ class GrpcAIv2Client(
                         override fun onMessage(msg: ChatWithAIV2ResponseProto) {
                             timeoutJob?.cancel()
                             _aiResponses.tryEmit(msg)
-                            onResponse(msg.token, msg.finished, msg.error.takeIf { it.isNotEmpty() },
+                            onResponse(msg.token, msg.finished, msg.error.takeIf { it.isNotEmpty() }, msg.imageUrl,
                                 msg.agentId, msg.agentName, msg.toolCalls, msg.hasRagContext, msg.modelUsed, msg.tokenCount)
                             retryDelay = INITIAL_RETRY_DELAY_MS
                             attempt = 0
@@ -98,7 +98,7 @@ class GrpcAIv2Client(
                                         error = "Response timeout (${STREAM_TIMEOUT_MS / 1000}s). Please try again."
                                     )
                                     _aiResponses.tryEmit(errorResp)
-                                    onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                                    onResponse("", true, errorResp.error, "", "", "", emptyList(), false, "", 0)
                                     streamDone.complete(true)
                                 }
                             }
@@ -114,7 +114,7 @@ class GrpcAIv2Client(
                                     error = status.description ?: "Connection error: ${status.code}"
                                 )
                                 _aiResponses.tryEmit(errorResp)
-                                onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                                onResponse("", true, errorResp.error, "", "", "", emptyList(), false, "", 0)
                             }
                             streamDone.complete(hadError)
                         }
@@ -132,7 +132,7 @@ class GrpcAIv2Client(
                             error = "Response timeout (${STREAM_TIMEOUT_MS / 1000}s). Please try again."
                         )
                         _aiResponses.tryEmit(errorResp)
-                        onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                        onResponse("", true, errorResp.error, "", "", "", emptyList(), false, "", 0)
                         streamDone.complete(true)
                     }
 
@@ -159,7 +159,7 @@ class GrpcAIv2Client(
                         error = e.message ?: "Unknown error"
                     )
                     _aiResponses.tryEmit(errorResp)
-                    onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                    onResponse("", true, errorResp.error, "", "", "", emptyList(), false, "", 0)
 
                     attempt++
                     if (attempt < MAX_RETRIES) {
@@ -176,7 +176,7 @@ class GrpcAIv2Client(
                     error = "Connection lost after $MAX_RETRIES attempts"
                 )
                 _aiResponses.tryEmit(errorResp)
-                onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                onResponse("", true, errorResp.error, "", "", "", emptyList(), false, "", 0)
             }
         }
     }

@@ -24,19 +24,29 @@ class AiV2AgentListViewModel(application: Application) : AndroidViewModel(applic
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private var currentTab = 0 // 0=presets, 1=my, 2=public
+    private var currentTab = 0 // 0=presets, 1=my
 
-    fun loadAgents(tab: Int = 0) {
-        currentTab = tab
+    fun loadPresets() {
+        currentTab = 0
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val agents = when (tab) {
-                    0 -> AiV2ChatUseCase.listAgents(includePublic = true).filter { it.isPreset }
-                    1 -> AiV2ChatUseCase.listAgents(includePublic = false).filter { !it.isPreset }
-                    2 -> AiV2ChatUseCase.listAgents(includePublic = true).filter { it.isPublic && !it.isPreset }
-                    else -> emptyList()
-                }
+                val agents = AiV2ChatUseCase.listAgents(includePublic = true).filter { it.isPreset }
+                _agents.value = agents
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to load agents"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadMyAgents() {
+        currentTab = 1
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val agents = AiV2ChatUseCase.listAgents(includePublic = false).filter { !it.isPreset }
                 _agents.value = agents
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load agents"
@@ -50,7 +60,7 @@ class AiV2AgentListViewModel(application: Application) : AndroidViewModel(applic
         viewModelScope.launch {
             try {
                 AiV2ChatUseCase.deleteAgent(agentId)
-                loadAgents(currentTab)
+                if (currentTab == 0) loadPresets() else loadMyAgents()
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to delete agent"
             }

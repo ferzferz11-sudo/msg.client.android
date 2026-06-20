@@ -364,6 +364,9 @@
     <string name="lava_ai_name">Lava AI</string>
     <string name="ai_v2_chat_title">AI Chat</string>
     <string name="ai_v2_agents">AI Agents</string>
+    <string name="presets">Presets</string>
+    <string name="my_agents">My Agents</string>
+    <string name="discover">Discover</string>
     <string name="ai_v2_create_agent">Create Agent</string>
     <string name="ai_v2_edit_agent">Edit Agent</string>
     <string name="ai_v2_delete_agent">Delete Agent</string>
@@ -877,7 +880,7 @@
 
     <!-- File/Feedback -->
     <string name="filename_prefix">Lava</string>
-    <string name="share_app_description">Lava: secure business communications platform</string>
+    <string name="share_app_description">Lava: secure business communications platform\nhttp://13.140.25.249</string>
     <string name="feedback_subject">Lava Feedback</string>
 
 </resources>

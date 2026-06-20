@@ -753,7 +753,7 @@ object RealGrpcClient {
     fun markRead(rid: String, u: String, onComp: (() -> Unit)?) { messageClient.markRead(rid, u, _connectionStatus.value, onComp) }
 
     // ====== Chat List (delegated) ======
-    fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) { chatClient.getChats(username, skipCache, callback) }
+    fun getChats(username: String, skipCache: Boolean = false, limit: Int = 100, cursor: String = "", callback: (ChatListPage) -> Unit) { chatClient.getChats(username, skipCache, limit, cursor, callback) }
     fun getAllChats(callback: (List<ChatInfo>) -> Unit) { chatClient.getAllChats(callback) }
     fun getChatListVersion(u: String, cb: (Long) -> Unit) { chatClient.getChatListVersion(u, cb) }
     fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatAuxClient.registerToken(user, token, pushEnabled) }

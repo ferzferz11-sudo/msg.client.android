@@ -7,6 +7,12 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 
+data class ChatListPage(
+    val chats: List<ChatInfo>,
+    val nextCursor: String,
+    val hasMore: Boolean
+)
+
 class GrpcChatClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?,
@@ -17,11 +23,11 @@ class GrpcChatClient(
         private const val TAG = "GrpcChatClient"
     }
 
-    fun getChats(username: String, @Suppress("UNUSED_PARAMETER") skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
+    fun getChats(username: String, @Suppress("UNUSED_PARAMETER") skipCache: Boolean = false, limit: Int = 100, cursor: String = "", callback: (ChatListPage) -> Unit) {
         val currentChannel = getChannel()
         if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
             Log.w(TAG, "getChats: channel not available")
-            callback(emptyList())
+            callback(ChatListPage(emptyList(), "", false))
             return
         }
         val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<GetChatsRequestProto, GetChatsResponseProto>()
@@ -48,16 +54,16 @@ class GrpcChatClient(
                 }
                 val unreadChats = chats.filter { it.unreadCount > 0 }
                 Log.d(TAG, "getChats: ${chats.size} chats, ${unreadChats.size} unread: ${unreadChats.joinToString { "${it.name}=${it.unreadCount}" }}")
-                callback(chats)
+                callback(ChatListPage(chats, message.nextCursor, message.hasMore))
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (!status.isOk) {
                     Log.w(TAG, "getChats: onClose error: ${status.code} - ${status.description}")
-                    callback(emptyList())
+                    callback(ChatListPage(emptyList(), "", false))
                 }
             }
         }, io.grpc.Metadata())
-        call.sendMessage(GetChatsRequestProto(username = username, userId = getUserId() ?: ""))
+        call.sendMessage(GetChatsRequestProto(username = username, userId = getUserId() ?: "", limit = limit, cursor = cursor))
         call.halfClose()
         call.request(1)
     }
@@ -83,7 +89,7 @@ class GrpcChatClient(
                         lastMessageTime = proto.lastMessageTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,
                         creator = proto.creator, lastMessageText = proto.lastMessageText,
                         avatarUrl = proto.avatarUrl, fullAvatarUrl = proto.fullAvatarUrl,
-                        lastMessageUsername = proto.lastMessageUsername, isMuted = false,
+                        lastMessageUsername = proto.lastMessageUsername, isMuted = proto.isMuted,
                         lastMessageHasImage = proto.lastMessageHasImage,
                         allowMembersToAdd = proto.allowMembersToAdd,
                         conferenceStartTime = proto.conferenceStartTime?.let { it.seconds * 1000 + it.nanos / 1000000 } ?: 0L,

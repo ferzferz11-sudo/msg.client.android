@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.8 | **Updated:** 2026-06-20
+**Version:** v1.3.0.9 | **Updated:** 2026-06-20
 
 ---
 
@@ -62,22 +62,18 @@ AiV2ChatManager — shared flows for UI observation
 
 UI:
     ├── AiV2ChatActivity + AiV2ChatViewModel — unified AI chat screen + rate limit
-    ├── AiV2AgentListActivity + AiV2AgentListViewModel — agent list (5 tabs)
-    │   ├── Tab 0: Presets
-    │   ├── Tab 1: My Agents
-    │   ├── Tab 2: Public
-    │   ├── Tab 3: Marketplace (search, sort, filter, pagination, pull-to-refresh)
-    │   └── Tab 4: Usage (stats)
+    ├── AiV2AgentListActivity + AiV2AgentListViewModel — agent list (3 tabs)
+    │   ├── Tab 0: Presets (quick access to preset agents)
+    │   ├── Tab 1: My Agents (user's custom agents)
+    │   └── Tab 2: Discover (marketplace with search, sort, filter, pagination)
     ├── AiV2AgentCreateEditActivity + AiV2AgentCreateEditViewModel — agent create/edit
     ├── MarketplaceViewModel — marketplace catalog with pagination + sort/filter
     ├── AgentDetailViewModel — agent details (stats, reviews, rate/share/install)
-    ├── UsageStatsViewModel — usage statistics
     ├── MarketplaceAgentAdapter — marketplace agent cards + skeleton loading
     ├── AgentDetailActivity — agent detail screen
     ├── ReviewAdapter — review list
     ├── RateAgentBottomSheet — rate agent (1-5 stars + review)
-    ├── InstallAgentBottomSheet — install agent by share code
-    └── UsageStatsAdapter — per-agent usage stats
+    └── InstallAgentBottomSheet — install agent by share code
 ```
 - Server executes all built-in tools (search_messages, web_search, etc.)
 - Client only sends tool_calls result back to server
@@ -102,7 +98,7 @@ On UNAVAILABLE error:
 
 ### Marketplace Pattern (v1.3.0.2)
 ```
-AiV2AgentListActivity (Tab 3: Marketplace)
+AiV2AgentListActivity (Tab 2: Discover)
   ├── SearchBar (TextInputLayout + debounce 2+ chars)
   ├── SortFilterBar (Spinner + ChipGroup)
   │   ├── Sort: Rating / Installs / Name
@@ -144,6 +140,35 @@ AiV2ChatActivity
   └── showRateLimitUI(waitMs) → disable input + countdown + auto-restore
 ```
 
+### Cursor Pagination Pattern (v1.3.0.9)
+```
+ChatListViewModel
+  ├── loadChats() → reset cursor, fetch first page
+  ├── loadMoreChats() → fetch next page by cursor, append to list
+  ├── nextCursor: String → cursor from last response
+  ├── hasMore: Boolean → false when no more pages
+  └── isLoadingMore: Boolean → prevents concurrent loads
+
+GrpcChatClient.getChats(username, skipCache, limit, cursor) → ChatListPage
+  ├── ChatListPage(chats, nextCursor, hasMore)
+  └── Server: GetChatsRequest { user_id, limit, cursor } → GetChatsResponse { chats, next_cursor, has_more }
+
+ChatListActivity
+  └── OnScrollListener → if lastVisible >= total - 5 → viewModel.loadMoreChats()
+```
+
+### Biometric Pattern (v1.3.0.9)
+```
+SplashActivity
+  ├── Check biometric_enabled_$username in SharedPreferences
+  ├── If enabled + device supports → showBiometricPrompt()
+  ├── On success → navigate to ChatListActivity
+  └── On error/cancel → finish() (exit app)
+
+SecurityActivity
+  └── switchBiometric → toggle biometric_enabled_$username
+```
+
 ### ChatListActivity Modular Pattern
 ```
 ChatListActivity — onCreate, setupUI, lifecycle, proxy methods
@@ -154,7 +179,7 @@ ChatListActivity — onCreate, setupUI, lifecycle, proxy methods
 ├── ChatListFABs — FABs + action sheets + AI bottom sheet
 ├── ChatListNavigation — navigateToChat
 ├── ChatListAuth — auth dialogs
-├── ChatListViewModel — ViewModel with StateFlow
+├── ChatListViewModel — ViewModel with StateFlow + cursor pagination
 ├── ChatListSections — sections
 └── UpdateCoordinator — updates
 ```

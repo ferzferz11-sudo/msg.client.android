@@ -264,11 +264,14 @@ data class GetChatsRequestProto(
     val userId: String = "",
     val limit: Int = 0,
     val offset: Int = 0,
-    val filter: String = ""
+    val filter: String = "",
+    val cursor: String = ""
 )
 
 data class GetChatsResponseProto(
-    val chats: List<ChatInfoProto> = emptyList()
+    val chats: List<ChatInfoProto> = emptyList(),
+    val nextCursor: String = "",
+    val hasMore: Boolean = false
 )
 
 // Create Direct Chat Request/Response

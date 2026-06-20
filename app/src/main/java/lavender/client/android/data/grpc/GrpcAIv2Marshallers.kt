@@ -40,7 +40,7 @@ class ChatWithAIV2ResponseMarshaller : MethodDescriptor.Marshaller<ChatWithAIV2R
     override fun stream(v: ChatWithAIV2ResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): ChatWithAIV2ResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-        var token = ""; var finished = false; var error = ""; var agentId = ""; var agentName = ""
+        var token = ""; var finished = false; var error = ""; var imageUrl = ""; var agentId = ""; var agentName = ""
         var hasRagContext = false; var modelUsed = ""; var tokenCount = 0
         val toolCalls = mutableListOf<ToolCallRequestV2Proto>()
         while (!cis.isAtEnd) {
@@ -75,10 +75,11 @@ class ChatWithAIV2ResponseMarshaller : MethodDescriptor.Marshaller<ChatWithAIV2R
                 7 -> hasRagContext = cis.readBool()
                 8 -> modelUsed = cis.readString()
                 9 -> tokenCount = cis.readInt32()
+                10 -> imageUrl = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return ChatWithAIV2ResponseProto(token, finished, error, agentId, agentName, toolCalls, hasRagContext, modelUsed, tokenCount)
+        return ChatWithAIV2ResponseProto(token, finished, error, imageUrl, agentId, agentName, toolCalls, hasRagContext, modelUsed, tokenCount)
     }
 }
 

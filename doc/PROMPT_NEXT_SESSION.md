@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.8 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.9 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -24,10 +24,10 @@ GrpcClient (facade)
         ├── GrpcAuthClient — JWT auth (v2 only)
         ├── GrpcTypingClient — typing stream
         ├── GrpcCallClient — calls
-        ├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
+        ├── GrpcChatClient (~250) — getChats (cursor pagination), create/delete, participants, settings
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
-        ├── GrpcProfileClient — contacts, themes (ChatService)
+        ├── GrpcProfileClient — contacts, themes, devices, passwords (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
@@ -39,56 +39,39 @@ GrpcClient (facade)
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
 AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
-AiV2AgentListActivity → 5 tabs (Presets/My/Public/Marketplace/Usage)
+AiV2AgentListActivity → 3 tabs (Presets/My Agents/Discover)
 AiV2AgentCreateEditActivity → agent create/edit
-AgentDetailActivity → agent detail (stats, reviews, rate/share/install)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
-Rate Limit: RateLimitCache + countdown + disable input
+Biometric: BiometricPrompt after splash screen when enabled
+Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
-Chat List: Unread highlight (background + bold name + badge)
 ```
 
 ---
 
-## Ключевые решения
-
-| Решение | Обоснование |
-|---------|-------------|
-| 5 табов в AgentListActivity | Marketplace и Usage — отдельные табы для удобства навигации |
-| SearchBar в табе Marketplace | API поддерживает query параметр для фильтрации |
-| SwipeRefreshLayout | Стандартный Android паттерн для pull-to-refresh |
-| Infinite scroll через OnScrollListener | Автоматическая пагинация при приближении к концу списка |
-| Deep link lavender://marketplace/install | Удобная установка агентов по ссылке |
-| RateLimitCache клиентский | Серверный rate limit, клиентский кэш только для UX |
-|marshallers: ручная сериализация | Нет protobuf-java reflection, кастомные marshallers для каждого типа |
-
----
-
-## Итог сессии v1.3.0.8
+## Итог сессии v1.3.0.9
 
 ### Выполнено
 
-- **Lint warnings** — исправлено 60+警告 из 32 файлов: удалены unused imports, unused TAG, unused variables, redundant qualifiers, redundant SDK_INT checks
-- **SharedPreferences KTX** — `prefs.edit().put...apply()` → `prefs.edit { put... }` в 3 файлах (RealGrpcClient, ChatListToolbar)
-- **PATTERNS.md** — исправлен синтаксис SplashActivity pattern
-- **Layout** — добавлен `contentDescription` на `ivAdminIndicator`, удалён unused `tools` namespace из `activity_super_admin.xml`
-- **ChatViewModel** — убраны unused params `context` из `retryMessage`, `isSecret` из `fetchChatMetadata`
-- **ProfileViewModel** — исправлен redundant safe call, убран unused variable `result`
-- **Version** — bumped `1.3.0.7` → `1.3.0.8`
+- **Биометрия** — BiometricPrompt после сплеш-экрана при включённой настройке в Security
+- **Cursor pagination** — `GetChatsV2` с cursor-based пагинацией (`next_cursor`, `has_more`), `ChatListPage`, `loadMoreChats()`, infinite scroll в ChatListActivity
+- **AI Agent List** — 5 табов → 3 (Presets/My Agents/Discover), Presets для быстрого доступа
+- **Share** — добавлена ссылка `http://13.140.25.249` в текст "Поделиться"
+- **Аудит сервера** — исправлены `searchChats` timestamp (seconds → milliseconds) и `getAllChats` isMuted (hardcoded false → proto.isMuted)
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.9)
+## Бэклог — Следующая сессия (v1.3.0.10)
 
 ### Приоритет 1: Серверные исправления
 | Задача | Статус |
 |--------|--------|
-| Обновлять `user_chat_metadata.last_seen_at` при каждом сообщении через chat stream | 🔲 Серверный баг — клиенты видят старое "online X назад" |
-| Обновлять `user_chat_metadata.last_client_version` при подключении с новой версией | 🔲 Серверный баг — клиенты видят старую версию |
+| Обновлять `user_chat_metadata.last_seen_at` при каждом сообщении через chat stream | 🔲 Серверный баг |
+| Обновлять `user_chat_metadata.last_client_version` при подключении с новой версией | 🔲 Серверный баг |
 
 ### Приоритет 2: End-to-end тестирование AI v2
 | Задача | Статус |
@@ -165,5 +148,4 @@ Chat List: Unread highlight (background + bold name + badge)
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
-- Аудит кода: `doc/CODE_AUDIT.md`
 - Changelog: `CHANGELOG.md`
