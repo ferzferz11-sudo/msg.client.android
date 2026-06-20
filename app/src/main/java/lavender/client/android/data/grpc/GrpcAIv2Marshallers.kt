@@ -360,7 +360,7 @@ class GetAIAgentReviewsRequestMarshaller : MethodDescriptor.Marshaller<GetAIAgen
     override fun stream(v: GetAIAgentReviewsRequestProto): java.io.InputStream {
         val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
-        if (v.limit != 20) cos.writeInt32(2, v.limit)
+        cos.writeInt32(2, v.limit)
         cos.flush(); return ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): GetAIAgentReviewsRequestProto = GetAIAgentReviewsRequestProto()
@@ -410,8 +410,8 @@ class ListMarketplaceAgentsRequestMarshaller : MethodDescriptor.Marshaller<ListM
     override fun stream(v: ListMarketplaceAgentsRequestProto): java.io.InputStream {
         val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (v.query.isNotEmpty()) cos.writeString(1, v.query)
-        if (v.limit != 20) cos.writeInt32(2, v.limit)
-        if (v.offset != 0) cos.writeInt32(3, v.offset)
+        cos.writeInt32(2, v.limit)
+        cos.writeInt32(3, v.offset)
         cos.flush(); return ByteArrayInputStream(baos.toByteArray())
     }
     override fun parse(s: java.io.InputStream): ListMarketplaceAgentsRequestProto = ListMarketplaceAgentsRequestProto()

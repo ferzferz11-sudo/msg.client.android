@@ -332,8 +332,8 @@ object GrpcClient {
     // ======= ProfileService V2 (suspend) =======
 
     suspend fun fetchServerInfo(
-        context: Context, serverAddress: String, port: Int = 8083, grpcPort: Int = 50051
-    ) = ProfileClient.fetchServerInfo(context, serverAddress, port, grpcPort)
+        context: Context, serverAddress: String, port: Int = 8083
+    ) = ProfileClient.fetchServerInfo(context, serverAddress, port)
 
     suspend fun getProfileV2(context: Context): GetProfileResponseProto? =
         ProfileClient.getProfile(context)
@@ -346,6 +346,10 @@ object GrpcClient {
     suspend fun updateAvatarV2(
         context: Context, avatarUrl: String, fullAvatarUrl: String = ""
     ): Boolean = ProfileClient.updateAvatar(context, avatarUrl, fullAvatarUrl)
+
+    suspend fun deleteProfileV2(
+        context: Context, password: String
+    ): Boolean = ProfileClient.deleteProfile(context, password)
 
     suspend fun getUserSettingsV2(context: Context): GetUserSettingsResponseProto? =
         ProfileClient.getUserSettings(context)

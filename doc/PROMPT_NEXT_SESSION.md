@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.3 (релиз) | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.4 (релиз) | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -28,7 +28,8 @@ GrpcClient (facade)
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcChatListClient (~255) — chat list version, create/delete
-        ├── GrpcProfileClient — profile, avatar, contacts, themes
+        ├── GrpcProfileClient — contacts, themes (ChatService)
+        ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
@@ -68,29 +69,38 @@ Chat List: Unread highlight (background + bold name + badge)
 
 ---
 
-## Итог сессии v1.3.0.3
+## Итог сессии v1.3.0.4
 
-### Исправлено (критические баги)
+### Исправлено
 
-**1. AI v2 gRPC service name:**
-- Все 15 RPC вызовов использовали `messenger.AIService/*` — сервер зарегистрировал их в `ChatService`
-- Пресеты, маркетплейс и все AI v2 API не работали
+**1. Unread чаты — клиент:**
+- `readReceiptEvent` handler обнулял `unreadCount` при `READ_ALL` от другого участника — исправлено
+- `syncChats()` сохранял в БД сырые данные вместо `mergedChats` — unread терялись при перезапуске
+- Добавлено детальное логирование: GrpcChatClient, ChatListViewModel, ChatAdapter
 
-**2. AI v2 Marshallers (7 багов):**
-- `RateAIAgentResponseMarshaller` — wire type mismatch (string→float, float→int32)
-- `GetAIUsageStatsResponseMarshaller` — UsageStatInfo fields 2-5 все неправильные
-- `parseAgentInfoV2` — пропускал fields 15-21 (install_count, avg_rating, review_count, tags, original_agent_id, version, share_code)
-- `GetAIAgentStatsResponseMarshaller` —缺少 field 4 (total_tokens_used)
-- `ShareAIAgentResponseMarshaller` —缺少 field 3 (error)
-- `ListAIAgentsRequestMarshaller` — `includePublic` не сериализовался
+**2. Unread чаты — сервер (корневая причина):**
+- `is_read` флаг глобальный на сообщение — один `MarkRead` убивал unread для всех в группе
+- **Фикс:** `GetUserChatsV2`, `SearchChats` теперь считают unread по `user_chat_metadata.last_read_at` вместо `messages.is_read`
+- Данные: сброшены `is_read` для 62 сообщений, все `last_read_at` обновлены
 
-**3. Unread индикация:**
-- Серверный `GetUserChatsV2` не считал `unreadCount` — SQL не содержал CTE `unread_counts`
-- Клиентский race condition: `loadChats()` перезаписывал `unreadCount` из `newMessageEvent`
+**3. AI v2 — Presets, Toolbar, Marketplace:**
+- Пресеты не загружались — `TabLayout` listener не срабатывал для начального таба
+- Toolbar пустой — `setDisplayShowTitleEnabled(false)` отключал отображение
+- Marketplace только скелетоны — marshaller отправлял 0 байт при дефолтных параметрах
+
+**4. ProfileService v2 миграция:**
+- `EditProfileActivity` — loadProfile, updateBio, updateAvatar, deleteProfile → v2
+- `ProfileViewModel` — v2 для текущего пользователя, ChatService для других
+- `ProfileClient` — +`deleteProfile(password)`, убран `grpcPort==50052` check
+
+### Серверные изменения (файл: `db_chatlist_v2.go`, `db_chats.go`)
+- `GetUserChatsV2` CTE: `is_read = FALSE` → `m.created_at > ulr.last_read`
+- `SearchChats` CTE: аналогичный фикс
+- `GetUserChats`, `GetUserChatsByUserID` — аналогичные фиксы (не используются в current client)
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.4)
+## Бэклог — Следующая сессия (v1.3.0.5)
 
 ### Приоритет 1: End-to-end тестирование AI v2
 | Задача | Статус |
@@ -134,6 +144,8 @@ Chat List: Unread highlight (background + bold name + badge)
 14. **НЕ bump'ать версию — bump делает только пользователь**
 15. **Marshallers field order:** server proto определяет field numbers. `chat_id` всегда field 1, `user_id` field 2
 16. **AI v2 RPC:** все методы в `messenger.ChatService/*` (НЕ `AIService`)
+17. **Unread count:** считается по `user_chat_metadata.last_read_at`, НЕ по `messages.is_read`
+18. **ProfileService v2:** profile/avatar/delete/settings — через `messenger.ProfileService/*` (JWT context)
 
 ---
 

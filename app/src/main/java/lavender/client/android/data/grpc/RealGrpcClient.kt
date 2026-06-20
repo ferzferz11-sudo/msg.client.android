@@ -115,7 +115,7 @@ object RealGrpcClient {
         scope = scope,
         connectionStatus = _connectionStatus,
         onFetchServerInfo = { host: String, httpPort: Int, ctx: Context ->
-            scope.launch { ProfileClient.fetchServerInfo(ctx, host, httpPort, currentServerPort) }
+            scope.launch { ProfileClient.fetchServerInfo(ctx, host, httpPort) }
         },
         onAutoResumeChat = {
             lastChatRequest?.let {

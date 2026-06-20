@@ -35,17 +35,8 @@ object ProfileClient {
      * Determine service versions from /info endpoint.
      * Dev server: assume v2. Prod server: try HTTP /info.
      */
-    suspend fun fetchServerInfo(context: Context, serverAddress: String, httpPort: Int = 8083, grpcPort: Int = 50051) {
+    suspend fun fetchServerInfo(context: Context, serverAddress: String, httpPort: Int = 8083) {
         withContext(Dispatchers.IO) {
-            if (grpcPort == 50052) {
-                serviceProfileVersion = "2.0"
-                serviceChatVersion = "2.0"
-                serviceAuthVersion = "2.0"
-                serviceAIVersion = "1.0"
-                Log.d(TAG, "Dev server (port $grpcPort) — v2 assumed")
-                return@withContext
-            }
-
             try {
                 val url = "http://$serverAddress:$httpPort/info"
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
@@ -128,6 +119,25 @@ object ProfileClient {
             response?.success ?: false
         } catch (e: Exception) {
             Log.w(TAG, "updateAvatar failed: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun deleteProfile(
+        context: Context,
+        password: String
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = DeleteProfileV2RequestProto(password = password)
+            val response = unaryCall(
+                fullMethod = "messenger.ProfileService/DeleteProfile",
+                requestMarshaller = DeleteProfileV2RequestMarshaller(),
+                responseMarshaller = DeleteProfileV2ResponseMarshaller(),
+                request = request
+            )
+            response?.success ?: false
+        } catch (e: Exception) {
+            Log.w(TAG, "deleteProfile failed: ${e.message}")
             false
         }
     }

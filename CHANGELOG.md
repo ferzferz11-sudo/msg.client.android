@@ -1,5 +1,29 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.4] - 2026-06-20
+
+### Исправлено
+
+**Unread чаты — индикация:**
+- `readReceiptEvent` handler обнулял `unreadCount` текущего пользователя при получении `READ_ALL` от другого участника — исправлено: чужие read-сигналы больше не влияют на мой unread badge
+- `syncChats()` сохранял в БД сырые серверные данные вместо `mergedChats` — локально увеличенные unread-счётики терялись при холодном перезапуске
+
+**AI v2 — Presets, Toolbar, Marketplace:**
+- Пресеты не загружались — `TabLayout` listener не срабатывал для начального таба; добавлен явный `viewModel.loadAgents(0)` при старте
+- Toolbar в `AiV2AgentListActivity` не показывал заголовок — `setDisplayShowTitleEnabled(false)` отключал отображение; заменён на `toolbar.title`
+- Marketplace показывал только скелетоны — `ListMarketplaceAgentsRequestMarshaller` отправлял 0 байт при дефолтных параметрах (`limit=20`, `offset=0`); теперь `limit` и `offset` пишутся всегда
+- `GetAIAgentReviewsRequestMarshaller` — аналогичный баг с `limit`
+
+### Миграция
+
+**ProfileService v2:**
+- `EditProfileActivity` — loadProfile, updateBio, updateAvatar, deleteProfile переключены на `ProfileService` v2 (JWT context, без `user_id` в запросе)
+- `ProfileViewModel.loadUserProfile` — v2 для текущего пользователя, ChatService для просмотра профилей других пользователей
+- `ProfileClient` — добавлен `deleteProfile(password)`, убрана проверка `grpcPort == 50052` в `fetchServerInfo`
+- `updateUsername` и `updatePassword` остаются в ChatService (нет v2 замены)
+
+---
+
 ## [1.3.0.3] - 2026-06-20
 
 ### Исправлено

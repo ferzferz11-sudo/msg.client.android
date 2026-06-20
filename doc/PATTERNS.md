@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.3 | **Updated:** 2026-06-20
+**Version:** v1.3.0.4 | **Updated:** 2026-06-20
 
 ---
 

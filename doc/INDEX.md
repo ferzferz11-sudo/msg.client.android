@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.3 | **Updated:** 2026-06-20
+**Version:** v1.3.0.4 | **Updated:** 2026-06-20
 
 ---
 
@@ -45,11 +45,11 @@
 | String entries | 800 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.3) |
+| Branch | feat/1.3.0.x (v1.3.0.4) |
 
 ---
 
-## Architecture Overview (v1.3.0.2)
+## Architecture Overview (v1.3.0.4)
 
 ```
 GrpcClient (facade)
@@ -62,7 +62,8 @@ GrpcClient (facade)
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcChatListClient (~255) — chat list version, create/delete
-        ├── GrpcProfileClient — profile, avatar, contacts, themes
+        ├── GrpcProfileClient — contacts, themes (ChatService)
+        ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
@@ -135,4 +136,4 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | String entries | 826 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.3) |
+| Branch | feat/1.3.0.x (v1.3.0.4) |

@@ -119,21 +119,16 @@ class EditProfileActivity : AppCompatActivity() {
         currentAvatarImageView = avatarImageView
         currentAvatarProgressBar = avatarProgressBar
 
-        // Load current profile (bio)
+        // Load current profile (bio) — v2: user_id from JWT
         Log.d("EditProfile", "Loading profile for user: $username")
-        grpcClient.fetchUserId(username) { userId, success ->
-            if (!success || userId.isNullOrEmpty()) {
-                Log.e("EditProfile", "Failed to fetch userId for user: $username")
-                return@fetchUserId
-            }
-            grpcClient.getUserProfile(userId) { profile ->
-                Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
-                runOnUiThread {
-                    if (profile != null) {
-                        initialBio = profile.bio
-                        editTextBio.setText(profile.bio)
-                        btnChangeBio.isVisible = false
-                    }
+        lifecycleScope.launch {
+            val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(this@EditProfileActivity)
+            Log.d("EditProfile", "Profile received: bio='${profile?.bio}', status='${profile?.status}', avatarUrl='${profile?.avatarUrl}'")
+            runOnUiThread {
+                if (profile != null) {
+                    initialBio = profile.bio
+                    editTextBio.setText(profile.bio)
+                    btnChangeBio.isVisible = false
                 }
             }
         }
@@ -170,18 +165,29 @@ class EditProfileActivity : AppCompatActivity() {
 
 
         btnDeleteProfile.setOnClickListener {
+            val passwordInput = EditText(this).apply {
+                hint = getString(R.string.enter_password)
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
             AlertDialog.Builder(this)
                 .setTitle(R.string.delete_profile)
                 .setMessage(R.string.delete_profile_confirm)
+                .setView(passwordInput)
                 .setPositiveButton(R.string.delete_profile) { _, _ ->
-                    grpcClient.deleteProfile(username) { success, message ->
+                    val pwd = passwordInput.text.toString().trim()
+                    if (pwd.isEmpty()) {
+                        Toast.makeText(this, getString(R.string.enter_both_passwords), Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+                    lifecycleScope.launch {
+                        val success = lavender.client.android.data.grpc.ProfileClient.deleteProfile(this@EditProfileActivity, pwd)
                         runOnUiThread {
                             if (success) {
-                                Toast.makeText(this, getString(R.string.profile_deleted), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@EditProfileActivity, getString(R.string.profile_deleted), Toast.LENGTH_SHORT).show()
                                 grpcClient.disconnect()
                                 finish()
                             } else {
-                                Toast.makeText(this, getString(R.string.failed_to_delete_profile) + ": " + message, Toast.LENGTH_LONG).show()
+                                Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_delete_profile), Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -212,27 +218,20 @@ class EditProfileActivity : AppCompatActivity() {
         btnChangeBio.setOnClickListener {
             val newBio = editTextBio.text.toString().trim()
             Log.d("EditProfile", "Updating bio: '$newBio' for user: $username")
-            Log.d("EditProfile", "Calling updateProfile with username=$username, bio='$newBio', status=''")
-            grpcClient.updateProfile(username, newBio, "") { success, message ->
-                Log.d("EditProfile", "Update bio result: success=$success, message=$message")
+            lifecycleScope.launch {
+                val success = lavender.client.android.data.grpc.ProfileClient.updateProfile(
+                    context = this@EditProfileActivity,
+                    bio = newBio,
+                    status = ""
+                )
+                Log.d("EditProfile", "Update bio result: success=$success")
                 runOnUiThread {
                     if (success) {
-                        Toast.makeText(this, getString(R.string.bio_saved), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@EditProfileActivity, getString(R.string.bio_saved), Toast.LENGTH_SHORT).show()
                         initialBio = newBio
                         btnChangeBio.isVisible = false
-                        // Reload profile to verify
-                        grpcClient.fetchUserId(username) { userId, success ->
-// ... (rest of the block)
-                            if (!success || userId.isNullOrEmpty()) {
-                                Log.e("EditProfile", "Failed to fetch userId for user: $username")
-                                return@fetchUserId
-                            }
-                            grpcClient.getUserProfile(userId) { profile ->
-                                Log.d("EditProfile", "Profile after update: bio='${profile?.bio}'")
-                            }
-                        }
                     } else {
-                        Toast.makeText(this, getString(R.string.error_colon, message), Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@EditProfileActivity, getString(R.string.error_colon, "Failed"), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -325,18 +324,19 @@ class EditProfileActivity : AppCompatActivity() {
                         val (url, fullUrl) = extractUrlsFromResponse(responseBody)
 
                         if (url.isNotEmpty()) {
-                            // Update avatar via gRPC - передаем оба URL
-                            grpcClient.updateAvatar(username, url, fullUrl) { success, message ->
+                            // Update avatar via ProfileService v2
+                            lifecycleScope.launch {
+                                val success = lavender.client.android.data.grpc.ProfileClient.updateAvatar(
+                                    context = this@EditProfileActivity,
+                                    avatarUrl = url,
+                                    fullAvatarUrl = fullUrl
+                                )
                                 runOnUiThread {
                                     currentAvatarProgressBar?.isVisible = false
                                     if (success) {
                                         Toast.makeText(this@EditProfileActivity, getString(R.string.avatar_updated), Toast.LENGTH_SHORT).show()
-                                        // Update current full avatar URL
                                         currentFullAvatarUrl = fullUrl.ifEmpty { url }
-                                        // Explicitly update cache to ensure other parts of app see it
                                         grpcClient.updateAvatarCache(username, url, currentFullAvatarUrl)
-
-                                        // Update avatarImageView (используем миниатюру)
                                         currentAvatarImageView?.let {
                                             Glide.with(this@EditProfileActivity)
                                                 .load(url)
@@ -344,10 +344,9 @@ class EditProfileActivity : AppCompatActivity() {
                                                 .error(R.drawable.ic_default_avatar_white)
                                                 .into(it)
                                         }
-                                        // Set result to notify NewChatActivity to refresh
                                         setResult(RESULT_OK)
                                     } else {
-                                        Toast.makeText(this@EditProfileActivity, message, Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this@EditProfileActivity, getString(R.string.failed_to_parse_response), Toast.LENGTH_LONG).show()
                                     }
                                 }
                             }

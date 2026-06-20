@@ -90,23 +90,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 _error.value = errorMsg
             }
         }
-        // Listen for read receipts — clear unread count in chat list
-        viewModelScope.launch {
-            GrpcClient.readReceiptEvent.collect { (roomId, reader) ->
-                val currentUsername = SessionManager.session.value.username
-                // Only clear unread if another user read our messages (not ourselves)
-                if (reader != currentUsername) {
-                    val idx = allChats.indexOfFirst { it.id == roomId }
-                    if (idx >= 0) {
-                        allChats = allChats.toMutableList().also {
-                            it[idx] = it[idx].copy(unreadCount = 0)
-                        }
-                        buildSections(allChats)
-                        Log.d(TAG, "Read receipt from $reader for room $roomId — cleared unread")
-                    }
-                }
-            }
-        }
+        // Listen for read receipts from OTHER users — DO NOT clear current user's unread count.
+        // Unread count = messages I haven't read. Other users' READ_ALL signals don't affect my unread.
+        // My own markAsRead() already clears unread locally + server sync handles persistence.
         // Listen for new messages in other rooms — update chat list in real-time
         viewModelScope.launch {
             GrpcClient.newMessageEvent.collect { message ->
@@ -115,21 +101,25 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     val chat = allChats[chatIdx]
                     val currentUsername = SessionManager.session.value.username
                     val isFromOther = message.user != currentUsername
+                    val shouldIncrement = isFromOther && !message.isRead
                     val preview = if (chat.isSecret) ""
                     else if (message.imageUrl.isNotEmpty()) "[image]"
                     else if (message.voiceUrl.isNotEmpty()) "[voice]"
                     else message.text.take(100)
+                    val newUnread = if (shouldIncrement) chat.unreadCount + 1 else chat.unreadCount
                     allChats = allChats.toMutableList().also {
                         it[chatIdx] = chat.copy(
                             lastMessageText = preview,
                             lastMessageTime = message.timestamp,
                             lastMessageUsername = message.user,
                             lastMessageHasImage = message.imageUrl.isNotEmpty(),
-                            unreadCount = if (isFromOther && !message.isRead) chat.unreadCount + 1 else chat.unreadCount
+                            unreadCount = newUnread
                         )
                     }
                     buildSections(allChats)
-                    Log.d(TAG, "New message in ${message.roomId} from ${message.user} — unread=${isFromOther && !message.isRead}")
+                    Log.d(TAG, "NEW_MSG: room=${message.roomId} from=${message.user} isRead=${message.isRead} isFromOther=$isFromOther shouldIncrement=$shouldIncrement unread=${chat.unreadCount}→$newUnread chat=${chat.name}")
+                } else {
+                    Log.d(TAG, "NEW_MSG: room=${message.roomId} from=${message.user} — chat NOT in list (ignored)")
                 }
             }
         }
@@ -199,7 +189,8 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         if (cached.isNotEmpty()) {
                             allChats = cached
                             buildSections(cached)
-                            Log.d(TAG, "Loaded ${cached.size} chats from cache")
+                            val unreadChats = cached.filter { it.unreadCount > 0 }
+                            Log.d(TAG, "Loaded ${cached.size} chats from cache (${unreadChats.size} with unread: ${unreadChats.joinToString { "${it.name}=${it.unreadCount}" }})")
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to load chats from cache", e)
@@ -216,6 +207,9 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 }
 
                 if (fetchedChats != null) {
+                    val serverUnread = fetchedChats.filter { it.unreadCount > 0 }
+                    Log.d(TAG, "Server returned ${fetchedChats.size} chats (${serverUnread.size} with unread: ${serverUnread.joinToString { "${it.name}=${it.unreadCount}" }})")
+
                     val hasChanges = allChats.size != fetchedChats.size ||
                         allChats.map { it.id }.toSet() != fetchedChats.map { it.id }.toSet() ||
                         fetchedChats.any { server ->
@@ -228,6 +222,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         val mergedChats = fetchedChats.map { serverChat ->
                             val localChat = allChats.find { it.id == serverChat.id }
                             if (localChat != null && localChat.unreadCount > serverChat.unreadCount) {
+                                Log.d(TAG, "MERGE: ${serverChat.name} local.unread=${localChat.unreadCount} > server.unread=${serverChat.unreadCount} → keeping local")
                                 serverChat.copy(unreadCount = localChat.unreadCount)
                             } else {
                                 serverChat
@@ -235,12 +230,15 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         }
                         allChats = mergedChats
                         buildSections(mergedChats)
-                        Log.d(TAG, "Loaded ${mergedChats.size} chats from server (changes=$hasChanges)")
+                        val mergedUnread = mergedChats.filter { it.unreadCount > 0 }
+                        Log.d(TAG, "Merged ${mergedChats.size} chats (${mergedUnread.size} with unread: ${mergedUnread.joinToString { "${it.name}=${it.unreadCount}" }})")
+                    } else {
+                        Log.d(TAG, "No changes detected — keeping ${allChats.size} existing chats")
                     }
-                    // Sync to local DB
+                    // Sync to local DB — use allChats (merged) to preserve locally-incremented unread counts
                     try {
                         val db = lavender.client.android.data.db.AppDatabase.getDatabase(getApplication())
-                        db.chatDao().syncChats(fetchedChats.map { it.toEntity() })
+                        db.chatDao().syncChats(allChats.map { it.toEntity() })
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to sync chats to cache", e)
                     }
@@ -397,15 +395,17 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
      * Mark chat as read: clear unread count locally + send MarkAsRead to server.
      */
     fun markAsRead(chatId: String) {
+        val chat = allChats.find { it.id == chatId }
+        Log.d(TAG, "markAsRead: chatId=$chatId name=${chat?.name} currentUnread=${chat?.unreadCount}")
         viewModelScope.launch {
             try {
                 val username = SessionManager.session.value.username
                 GrpcClient.markRead(chatId, username) {
-                    // Server acknowledged — clear unread locally
                     allChats = allChats.map {
                         if (it.id == chatId) it.copy(unreadCount = 0) else it
                     }
                     buildSections(allChats)
+                    Log.d(TAG, "markAsRead: chatId=$chatId — cleared to 0")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to mark as read: $chatId", e)

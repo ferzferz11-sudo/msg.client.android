@@ -1519,6 +1519,24 @@ class UpdateUserSettingsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller
     }
 }
 
+class DeleteProfileV2RequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteProfileV2RequestProto> {
+    override fun stream(v: DeleteProfileV2RequestProto): java.io.InputStream {
+        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.password.isNotEmpty()) cos.writeString(1, v.password)
+        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): DeleteProfileV2RequestProto = DeleteProfileV2RequestProto()
+}
+
+class DeleteProfileV2ResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteProfileV2ResponseProto> {
+    override fun stream(v: DeleteProfileV2ResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): DeleteProfileV2ResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var success = false; var message = ""
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> success = cis.readBool(); 2 -> message = cis.readString(); else -> cis.skipField(tag) } }
+        return DeleteProfileV2ResponseProto(success, message)
+    }
+}
+
 // ======= ChatList V2 Boolean Response Marshallers =======
 
 class PinChatResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<PinChatResponseProto> {

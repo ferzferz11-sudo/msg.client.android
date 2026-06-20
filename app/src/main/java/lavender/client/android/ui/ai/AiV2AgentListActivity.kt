@@ -89,6 +89,8 @@ class AiV2AgentListActivity : AppCompatActivity() {
         setupFab()
         observeState()
 
+        viewModel.loadAgents(0)
+
         ThemeUi.bind(this, SessionManager.session.value.username)
 
         handleDeepLink(intent)
@@ -113,7 +115,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun setupToolbar() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
+        toolbar.title = getString(R.string.ai_v2_agents)
         toolbar.setNavigationOnClickListener { finish() }
     }
 

@@ -34,7 +34,6 @@ class GrpcChatClient(
         val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
         call.start(object : io.grpc.ClientCall.Listener<GetChatsResponseProto>() {
             override fun onMessage(message: GetChatsResponseProto) {
-                Log.d(TAG, "getChats: received ${message.chats.size} chats")
                 val chats = message.chats.map { proto ->
                     ChatInfo(
                         proto.id, proto.name, proto.type, proto.participants,
@@ -48,6 +47,8 @@ class GrpcChatClient(
                         proto.activeAgentId, proto.agentMode, proto.isPinned, proto.isArchived, proto.pinnedAt
                     )
                 }
+                val unreadChats = chats.filter { it.unreadCount > 0 }
+                Log.d(TAG, "getChats: ${chats.size} chats, ${unreadChats.size} unread: ${unreadChats.joinToString { "${it.name}=${it.unreadCount}" }}")
                 callback(chats)
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {

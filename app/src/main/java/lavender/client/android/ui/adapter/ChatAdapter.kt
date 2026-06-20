@@ -257,6 +257,7 @@ class ChatAdapter(
 
         fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String) {
             val hasUnread = chat.unreadCount > 0
+            if (hasUnread) android.util.Log.d("ChatAdapter", "BIND UNREAD: ${chat.name} unreadCount=${chat.unreadCount}")
             tvChatName.text = chat.getDisplayName(currentUsername)
             tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
             tvChatName.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)

@@ -1,7 +1,9 @@
 package lavender.client.android.ui.profile
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.core.graphics.scale
@@ -20,7 +22,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     data class ProfileData(
         val username: String = "",
@@ -57,24 +59,44 @@ class ProfileViewModel : ViewModel() {
 
     fun loadUserProfile(username: String) {
         viewModelScope.launch {
-            GrpcClient.fetchUserId(username) { userId, success ->
-                if (!success || userId.isNullOrEmpty()) {
-                    _profileData.value = _profileData.value.copy(username = username, bio = "", status = "")
-                    return@fetchUserId
+            val currentUsername = GrpcClient.getCurrentUsername()
+            if (username == currentUsername) {
+                // v2: current user — user_id from JWT
+                val profile = lavender.client.android.data.grpc.ProfileClient.getProfile(getApplication())
+                val isOnline = true
+                _profileData.value = ProfileData(
+                    username = profile?.username ?: username,
+                    avatarUrl = profile?.avatarUrl ?: "",
+                    fullAvatarUrl = profile?.fullAvatarUrl?.ifEmpty { profile?.avatarUrl } ?: "",
+                    bio = profile?.bio ?: "",
+                    status = profile?.status ?: "",
+                    isOnline = isOnline,
+                    lastSeenAt = null
+                )
+                if (profile != null && profile.avatarUrl.isNotEmpty()) {
+                    GrpcClient.updateAvatarCache(username, profile.avatarUrl, profile.fullAvatarUrl.ifEmpty { profile.avatarUrl })
                 }
-                GrpcClient.getUserProfile(userId) { profile ->
-                    val isOnline = username == GrpcClient.getCurrentUsername() || GrpcClient.users.value.contains(username)
-                    _profileData.value = ProfileData(
-                        username = username,
-                        avatarUrl = profile?.avatarUrl ?: "",
-                        fullAvatarUrl = profile?.fullAvatarUrl?.ifEmpty { profile.avatarUrl } ?: "",
-                        bio = profile?.bio ?: "",
-                        status = profile?.status ?: "",
-                        isOnline = isOnline,
-                        lastSeenAt = profile?.lastSeenAt
-                    )
-                    if (profile != null && profile.avatarUrl.isNotEmpty()) {
-                        GrpcClient.updateAvatarCache(username, profile.avatarUrl, profile.fullAvatarUrl.ifEmpty { profile.avatarUrl })
+            } else {
+                // Other users — ChatService (no v2 replacement for viewing other profiles)
+                GrpcClient.fetchUserId(username) { userId, success ->
+                    if (!success || userId.isNullOrEmpty()) {
+                        _profileData.value = _profileData.value.copy(username = username, bio = "", status = "")
+                        return@fetchUserId
+                    }
+                    GrpcClient.getUserProfile(userId) { profile ->
+                        val isOnline = username == currentUsername || GrpcClient.users.value.contains(username)
+                        _profileData.value = ProfileData(
+                            username = username,
+                            avatarUrl = profile?.avatarUrl ?: "",
+                            fullAvatarUrl = profile?.fullAvatarUrl?.ifEmpty { profile.avatarUrl } ?: "",
+                            bio = profile?.bio ?: "",
+                            status = profile?.status ?: "",
+                            isOnline = isOnline,
+                            lastSeenAt = profile?.lastSeenAt
+                        )
+                        if (profile != null && profile.avatarUrl.isNotEmpty()) {
+                            GrpcClient.updateAvatarCache(username, profile.avatarUrl, profile.fullAvatarUrl.ifEmpty { profile.avatarUrl })
+                        }
                     }
                 }
             }
