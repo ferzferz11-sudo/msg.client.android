@@ -23,7 +23,8 @@ RealGrpcClient (orchestrator) delegates to:
 ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
 ├── GrpcChatAuxClient (~130) — users, FCM, mute
 ├── GrpcChatListClient (~255) — chat list version, create/delete
-├── GrpcProfileClient — profile, avatar, contacts, themes
+├── GrpcProfileClient — contacts, themes (ChatService)
+├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
 ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
 ├── GrpcServerDiscoveryClient — server discovery
 ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
