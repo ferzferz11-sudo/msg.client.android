@@ -1,6 +1,6 @@
 # Lava Messenger — Android Changelog
 
-## [1.3.0.10] - 2026-06-21
+## [1.3.0.11] - 2026-06-21
 
 ### Добавлено
 
@@ -14,15 +14,28 @@
 - `GrpcAIv2Client` — callback `onResponse` обновлён: добавлен параметр `imageUrl`
 - `AiV2ChatUseCase` — пробрасывает `imageUrl` из proto в доменную модель
 - `AiV2DomainExtensions` — маппит `imageUrl` из `ChatWithAIV2ResponseProto` в `AiV2ChatMessage`
+- `AiProviderType` — добавлен `REVE("reve-2.0")` провайдер для Reve Image агента
 
-**Документация:**
-- Серверный промпт для Reve интеграции: `doc/REVE_INTEGRATION.md` (в репозитории сервера)
-- Reve API reference: endpoints, auth, request/response formats, postprocessing options
+**AI Chat Settings (Per-Session):**
+- `GetAIChatSettings` — получение настроек сессии (API ключ, модель, rate limit)
+- `UpdateAIChatSettings` — обновление API ключа и модели для сессии
+- Proto: `GetAIChatSettingsRequestProto`, `AIChatSettingsProto`, `UpdateAIChatSettingsRequestProto`, `UpdateAIChatSettingsResponseProto`
+- Marshallers: `GetAIChatSettingsRequestMarshaller`, `AIChatSettingsResponseMarshaller`, `UpdateAIChatSettingsRequestMarshaller`, `UpdateAIChatSettingsResponseMarshaller`
+- `GrpcAIv2Client.getChatSettings()` / `updateChatSettings()` методы
+- `GrpcClient` facade: `getAIChatSettings()` / `updateAIChatSettings()`
+- `AiV2ChatUseCase.getChatSettings()` / `updateChatSettings()` методы
+- Domain: `AiChatSettings` data class + `AIChatSettingsProto.toDomain()` extension
+
+**Preset Agents (10 presets):**
+- Добавлены 2 новых пресет-агента: `vision` (Image analysis, 🎨) и `reve` (AI image generation, 🎨)
+- Всего 10 пресетов: mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve
+- `AiV2AgentListAdapter` — emoji для reveal агентов: 🎨 (reve), 👁 (vision)
+- `AiV2ChatActivity` — toolbar показывает правильный emoji для каждого агента
 
 ### Тесты
 
-- `AiV2MarshallersTest` — новый тест `chatWithAIV2ResponseMarshaller_imageUrl` для field 10
-- Все существующие тесты проходят (71 tests, 2 pre-existing failures не связаны с изменениями)
+- `AiV2MarshallersTest` — 8 новых тестов для AI Chat Settings marshallers
+- `AiV2MarshallersTest` — тест `chatWithAIV2ResponseMarshaller_imageUrl` для field 10
 
 ---
 
@@ -109,12 +122,6 @@
 - Удалён `progressOverlay` (полупрозрачный прелоадер с ProgressBar) — используется только `SwipeRefreshLayout`
 - Удалён `CircleImageView` из `item_chat.xml` — ChatViewHolder больше не создаёт аватар программно
 - Сортировка пользователей вынесена в `Dispatchers.Default` — main thread не блокируется
-
-**Документация:**
-- `README.md` — полностью переписан (v1.1.1.16 → v1.3.0.7, owl/hermes → AI v2, добавлены Remote Agent, HttpClient)
-- `PROMPT_NEXT_SESSION.md` — обновлена версия и бэклог
-- `AI_V2_TESTING.md` — исправлен `messenger.AIService/*` → `messenger.ChatService/*`
-- `INDEX.md` — исправлена архитектура (убран `GrpcChatListClient`), обновлены статистики
 
 **Комментарии:**
 - Исправлены устаревшие ссылки `messenger.AIService/*` → `messenger.ChatService/*` в `GrpcAIv2Marshallers.kt` и `AiV2Proto.kt` (4 штуки)

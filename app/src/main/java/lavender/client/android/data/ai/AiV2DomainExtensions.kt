@@ -105,3 +105,15 @@ fun UsageStatEntryProto.toDomain(): UsageStat = UsageStat(
     requestCount = requestCount,
     periodStart = periodStart
 )
+
+// ======= AI Chat Settings Proto -> Domain =======
+
+fun AIChatSettingsProto.toDomain(): AiChatSettings = AiChatSettings(
+    sessionId = sessionId,
+    userApiKey = userApiKey,
+    model = model,
+    isUsingCustomKey = isUsingCustomKey,
+    remaining = remaining,
+    limit = limit,
+    windowSeconds = windowSeconds
+)

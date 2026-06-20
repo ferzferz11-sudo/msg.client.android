@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.9 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.11 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-21
 
 ---
 
@@ -31,7 +31,7 @@ GrpcClient (facade)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat Settings)
         ├── SecretChatGrpc, ProfileClient
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
         └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
@@ -44,28 +44,49 @@ AiV2AgentCreateEditActivity → agent create/edit
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
-AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
+AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
+AI Chat Settings: per-session API key + model override
 Biometric: BiometricPrompt after splash screen when enabled
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
+Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
 ```
 
 ---
 
-## Итог сессии v1.3.0.9
+## Итог сессии v1.3.0.11
 
 ### Выполнено
 
-- **Биометрия** — BiometricPrompt после сплеш-экрана при включённой настройке в Security
-- **Cursor pagination** — `GetChatsV2` с cursor-based пагинацией (`next_cursor`, `has_more`), `ChatListPage`, `loadMoreChats()`, infinite scroll в ChatListActivity
-- **AI Agent List** — 5 табов → 3 (Presets/My Agents/Discover), Presets для быстрого доступа
-- **Share** — добавлена ссылка `http://13.140.25.249` в текст "Поделиться"
-- **Аудит сервера** — исправлены `searchChats` timestamp (seconds → milliseconds) и `getAllChats` isMuted (hardcoded false → proto.isMuted)
+- **Reve Image Integration (клиент):**
+  - `ChatWithAIV2ResponseProto` field 10: `imageUrl` — парсинг в marshaller
+  - `AiV2ChatMessage.imageUrl` — доменная модель
+  - `ChatMessageAdapter` — Glide image loading в agent bubble (240dp, centerCrop, placeholder)
+  - `AiProviderType.REVE("reve-2.0")` — провайдер для Reve агента
+  - `AiV2AgentListAdapter` — 🎨 emoji для reveal агента, 👁 для vision
+  - `AiV2ChatActivity` — toolbar emoji по agent ID, senderEmoji в сообщениях
+
+- **AI Chat Settings (Per-Session):**
+  - `GetAIChatSettings` / `UpdateAIChatSettings` — новые RPC для per-session настроек
+  - Proto: `GetAIChatSettingsRequestProto`, `AIChatSettingsProto`, `UpdateAIChatSettingsRequestProto`, `UpdateAIChatSettingsResponseProto`
+  - Marshallers: 4 новых класса
+  - `GrpcAIv2Client.getChatSettings()` / `updateChatSettings()`
+  - `GrpcClient` facade: `getAIChatSettings()` / `updateAIChatSettings()`
+  - `AiV2ChatUseCase` + domain: `AiChatSettings` data class + `.toDomain()` extension
+
+- **Preset Agents (10 presets):**
+  - Добавлены `vision` (Image analysis, google/gemma-4-26b-a4b-it:free) и `reve` (Reve Image, reve-2.0)
+  - Всего 10 пресетов: mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve
+
+### Тесты
+
+- 8 новых тестов для AI Chat Settings marshallers — все проходят
+- BUILD SUCCESSFUL
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.10)
+## Бэклог — Следующая сессия (v1.3.0.12)
 
 ### Приоритет 1: Серверные исправления
 | Задача | Статус |
@@ -81,6 +102,8 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | Тест Marketplace API (каталог, rate, reviews, install, share) | 🔲 Нужен live-тест |
 | Тест Rate Limit (10 req/min, countdown, auto-restore) | 🔲 Нужен live-тест |
 | Тест Graceful Shutdown (SERVER_SHUTTINGDOWN + backoff) | 🔲 Нужен live-тест |
+| Тест Reve Image (generate image через `reve` агент, image_url в response) | 🔲 Нужен live-тест |
+| Тест AI Chat Settings (get/update API key и model per-session) | 🔲 Нужен live-тест |
 
 ### Приоритет 3: UX улучшения
 | Задача | Статус |
@@ -88,11 +111,12 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
 | Better error messages для AI v2 (показывать server error из response) | 🔲 |
-| Fix 22 падающих unit-тестов (pre-existing: GrpcConnectionManager, GrpcMessageClient, GrpcUnaryCallHelper, AiV2Marshallers) | 🔲 |
+| Fix 22 падающих unit-тестов (pre-existing: GrpcConnectionManager, GrpcMessageClient, GrpcUnaryCallHelper) | 🔲 |
 
 ### Приоритет 4: Новые фичи
 | Задача | Статус |
 |--------|--------|
+| UI для AI Chat Settings (API key input, model selector в AiV2ChatActivity) | 🔲 |
 | Уведомления о новых отзывах на агентов | 🔲 |
 | Избранное в Marketplace (сохранять понравившихся агентов) | 🔲 |
 

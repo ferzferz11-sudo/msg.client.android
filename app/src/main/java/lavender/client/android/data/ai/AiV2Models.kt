@@ -9,7 +9,8 @@ enum class AiProviderType(val value: String) {
     WEBHOOK("webhook"),
     WEBSOCKET("websocket"),
     SUBPROCESS("subprocess"),
-    MCP("mcp");
+    MCP("mcp"),
+    REVE("reve-2.0");
 
     companion object {
         fun fromString(value: String): AiProviderType {
@@ -129,4 +130,16 @@ data class UsageStat(
     val totalTokens: Int = 0,
     val requestCount: Int = 0,
     val periodStart: String = ""
+)
+
+// ======= AI Chat Settings =======
+
+data class AiChatSettings(
+    val sessionId: String = "",
+    val userApiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false,
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
 )

@@ -635,4 +635,12 @@ object GrpcClient {
 
     suspend fun getAIUsageStats() =
         realGrpcClient.aiV2Client.getUsageStats()
+
+    // ======= AI Chat Settings =======
+
+    suspend fun getAIChatSettings(sessionId: String) =
+        realGrpcClient.aiV2Client.getChatSettings(sessionId)
+
+    suspend fun updateAIChatSettings(sessionId: String, apiKey: String = "", model: String = "") =
+        realGrpcClient.aiV2Client.updateChatSettings(sessionId, apiKey, model)
 }

@@ -756,4 +756,87 @@ class AiV2MarshallersTest {
         val parsed = ListMarketplaceAgentsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
         assertEquals(10, parsed.total)
     }
+
+    // ======= AI Chat Settings =======
+
+    @Test
+    fun getAIChatSettingsRequestMarshaller_serializes() {
+        val req = GetAIChatSettingsRequestProto(sessionId = "sess-abc")
+        val bytes = GetAIChatSettingsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun getAIChatSettingsRequestMarshaller_empty() {
+        val req = GetAIChatSettingsRequestProto()
+        val bytes = GetAIChatSettingsRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
+    fun aiChatSettingsResponseMarshaller_empty() {
+        val parsed = AIChatSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertEquals("", parsed.sessionId)
+        assertEquals("", parsed.userApiKey)
+        assertEquals("", parsed.model)
+        assertFalse(parsed.isUsingCustomKey)
+        assertEquals(0, parsed.remaining)
+        assertEquals(0, parsed.limit)
+        assertEquals(0, parsed.windowSeconds)
+    }
+
+    @Test
+    fun aiChatSettingsResponseMarshaller_allFields() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeString(1, "sess-123")
+        cos.writeString(2, "sk-or-v1-xxx")
+        cos.writeString(3, "anthropic/claude-sonnet-4")
+        cos.writeBool(4, true)
+        cos.writeInt32(5, 8)
+        cos.writeInt32(6, 10)
+        cos.writeInt32(7, 60)
+        cos.flush()
+        val parsed = AIChatSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals("sess-123", parsed.sessionId)
+        assertEquals("sk-or-v1-xxx", parsed.userApiKey)
+        assertEquals("anthropic/claude-sonnet-4", parsed.model)
+        assertTrue(parsed.isUsingCustomKey)
+        assertEquals(8, parsed.remaining)
+        assertEquals(10, parsed.limit)
+        assertEquals(60, parsed.windowSeconds)
+    }
+
+    @Test
+    fun updateAIChatSettingsRequestMarshaller_serializes() {
+        val req = UpdateAIChatSettingsRequestProto(sessionId = "s1", apiKey = "sk-or-v1-xxx", model = "gpt-4o")
+        val bytes = UpdateAIChatSettingsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun updateAIChatSettingsRequestMarshaller_empty() {
+        val req = UpdateAIChatSettingsRequestProto()
+        val bytes = UpdateAIChatSettingsRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
+    fun updateAIChatSettingsResponseMarshaller_empty() {
+        val parsed = UpdateAIChatSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.message)
+    }
+
+    @Test
+    fun updateAIChatSettingsResponseMarshaller_success() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeBool(1, true)
+        cos.writeString(2, "Settings updated")
+        cos.flush()
+        val parsed = UpdateAIChatSettingsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertTrue(parsed.success)
+        assertEquals("Settings updated", parsed.message)
+    }
 }

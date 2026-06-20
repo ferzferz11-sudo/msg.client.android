@@ -246,6 +246,34 @@ data class InstallAIAgentResponseProto(
     val error: String = ""
 )
 
+// ======= AI Chat Settings =======
+// Server proto: messenger.ChatService/GetAIChatSettings, UpdateAIChatSettings
+
+data class GetAIChatSettingsRequestProto(
+    val sessionId: String = ""
+)
+
+data class AIChatSettingsProto(
+    val sessionId: String = "",
+    val userApiKey: String = "",
+    val model: String = "",
+    val isUsingCustomKey: Boolean = false,
+    val remaining: Int = 0,
+    val limit: Int = 0,
+    val windowSeconds: Int = 0
+)
+
+data class UpdateAIChatSettingsRequestProto(
+    val sessionId: String = "",
+    val apiKey: String = "",
+    val model: String = ""
+)
+
+data class UpdateAIChatSettingsResponseProto(
+    val success: Boolean = false,
+    val message: String = ""
+)
+
 data class GetAIUsageStatsRequestProto(
     val dummy: Boolean = false
 )

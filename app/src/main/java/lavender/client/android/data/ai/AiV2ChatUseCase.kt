@@ -222,6 +222,26 @@ object AiV2ChatUseCase {
         }
     }
 
+    // ======= AI Chat Settings =======
+
+    suspend fun getChatSettings(sessionId: String): AIChatSettingsProto {
+        return try {
+            RealGrpcClient.aiV2Client.getChatSettings(sessionId)
+        } catch (e: Exception) {
+            Log.e(TAG, "getChatSettings error", e)
+            AIChatSettingsProto()
+        }
+    }
+
+    suspend fun updateChatSettings(sessionId: String, apiKey: String = "", model: String = ""): UpdateAIChatSettingsResponseProto {
+        return try {
+            RealGrpcClient.aiV2Client.updateChatSettings(sessionId, apiKey, model)
+        } catch (e: Exception) {
+            Log.e(TAG, "updateChatSettings error", e)
+            UpdateAIChatSettingsResponseProto(message = e.message ?: "Unknown error")
+        }
+    }
+
     // ======= Marketplace =======
 
     suspend fun listMarketplaceAgents(query: String = "", limit: Int = 20, offset: Int = 0): Result<Pair<List<MarketplaceAgent>, Int>> {

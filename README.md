@@ -1,10 +1,10 @@
 # Lavender Messenger — Android Client
 
 **Author:** Pavel Davydov (ferz)
-**Version:** 1.3.0.5
+**Version:** 1.3.0.10
 **Language:** Kotlin 2.3.21
 
-Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, AI v2 chat integration, Marketplace, and Remote Agent.
+Native Android client for Lavender Messenger with gRPC bidirectional streaming, E2EE, Material Design 3, AI v2 chat integration, Marketplace, Reve Image Generation, and Remote Agent.
 
 ## Requirements
 
@@ -119,6 +119,7 @@ app/src/main/java/lavender/client/android/
 - E2EE secret chats (ECDH key exchange)
 - AI v2 chat: streaming + tool calling + 7 provider types (openrouter, local, mimo, webhook, websocket, subprocess, mcp)
 - AI Marketplace: rate, review, install, share agents + search/pagination/sort/filter
+- **Reve Image Generation:** generate/edit/remix images via Reve 2.0 API (image_url in chat responses)
 - Rate limit: client-side cache with countdown timer
 - Graceful shutdown: SERVER_SHUTTINGDOWN signal + health check + backoff
 - Remote Agent: SSH tunnel + shell/git/build/deploy/file/docker/AI tasks

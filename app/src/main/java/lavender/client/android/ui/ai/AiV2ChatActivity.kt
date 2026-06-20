@@ -91,8 +91,24 @@ class AiV2ChatActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         chatWidget.setToolbarTitle(agentName.ifEmpty { getString(R.string.ai_v2_chat_title) })
-        chatWidget.setToolbarAgentIcon("🤖", true)
+        chatWidget.setToolbarAgentIcon(getAgentEmoji(agentId), true)
         chatWidget.setToolbarAvatar(false)
+    }
+
+    private fun getAgentEmoji(agentId: String): String {
+        return when (agentId) {
+            "reve" -> "\uD83C\uDFA8"
+            "vision" -> "\uD83D\uDC41"
+            "mimo" -> "\uD83E\uDD16"
+            "assistant" -> "\uD83E\uDDE0"
+            "developer" -> "\uD83D\uDCBB"
+            "devops" -> "\u2699\uFE0F"
+            "architect" -> "\uD83C\uDFD7\uFE0F"
+            "writer" -> "\u270D\uFE0F"
+            "analyst" -> "\uD83D\uDCCA"
+            "translator" -> "\uD83C\uDF10"
+            else -> "\uD83E\uDD16"
+        }
     }
 
     private fun setupRecyclerView() {
@@ -124,6 +140,7 @@ class AiV2ChatActivity : AppCompatActivity() {
                                 imageUrl = msg.imageUrl,
                                 senderId = msg.agentId,
                                 senderName = msg.agentName.ifEmpty { "AI" },
+                                senderEmoji = getAgentEmoji(msg.agentId),
                                 timestamp = msg.timestamp,
                                 isCurrentUser = msg.role == "user",
                                 isTyping = msg.isStreaming && msg.content.isEmpty()

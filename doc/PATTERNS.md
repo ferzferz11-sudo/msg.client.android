@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.9 | **Updated:** 2026-06-20
+**Version:** v1.3.0.11 | **Updated:** 2026-06-21
 
 ---
 
@@ -77,10 +77,11 @@ UI:
 ```
 - Server executes all built-in tools (search_messages, web_search, etc.)
 - Client only sends tool_calls result back to server
-- Agent provider_type: openrouter, local, mimo, webhook, websocket, subprocess, mcp
-- 8 preset agents: mimo, assistant, developer, devops, architect, writer, analyst, translator
+- Agent provider_type: openrouter, local, mimo, webhook, websocket, subprocess, mcp, reve-2.0
+- 10 preset agents: mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve
 - Marketplace: search with debounce, infinite scroll, pull-to-refresh, deep link install
 - Rate limit: RateLimitCache + countdown + disable input on limit
+- Reve Image: image generation via `reve` agent, `image_url` in ChatWithAIV2Response field 10
 
 ### Graceful Shutdown Pattern (v1.3.0.0)
 ```
@@ -138,6 +139,22 @@ AiV2ChatActivity
   ├── sendMessage() → recordRequest() → chat()
   ├── On error "rate limit" → undoLastRecord() → showRateLimitUI()
   └── showRateLimitUI(waitMs) → disable input + countdown + auto-restore
+```
+
+### AI Chat Settings Pattern (v1.3.0.11)
+```
+GetAIChatSettings(session_id) → AIChatSettingsProto
+  ├── sessionId, userApiKey, model, isUsingCustomKey
+  └── remaining, limit, windowSeconds (rate limit info)
+
+UpdateAIChatSettings(session_id, api_key, model) → success/message
+  ├── api_key: "" = remove user key, use server key
+  ├── model: "" = remove override, use agent default
+  └── Per-session API key and model override
+
+AiV2ChatUseCase
+  ├── getChatSettings(sessionId) → AIChatSettingsProto
+  └── updateChatSettings(sessionId, apiKey, model) → UpdateAIChatSettingsResponseProto
 ```
 
 ### Cursor Pagination Pattern (v1.3.0.9)
@@ -345,3 +362,4 @@ lifecycleScope.launch {
 16. AI v2 RPC: all methods under `messenger.ChatService/*` (NOT `AIService`)
 17. Unread count: based on `user_chat_metadata.last_read_at`, NOT `messages.is_read`
 18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)
+19. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes

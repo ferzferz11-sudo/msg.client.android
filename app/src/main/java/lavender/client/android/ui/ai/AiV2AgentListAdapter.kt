@@ -76,14 +76,17 @@ class AiV2AgentListAdapter(
         }
 
         private fun getAgentEmoji(agent: AiV2Agent): String {
-            return when (agent.providerType.value) {
-                "mimo" -> "🤖"
-                "openrouter" -> "🧠"
-                "webhook" -> "🔗"
-                "websocket" -> "📡"
-                "subprocess" -> "⚙️"
-                "mcp" -> "🔌"
-                "local" -> "💻"
+            return when {
+                agent.id == "reve" -> "🎨"
+                agent.id == "vision" -> "👁"
+                agent.providerType.value == "mimo" -> "🤖"
+                agent.providerType.value == "openrouter" -> "🧠"
+                agent.providerType.value == "webhook" -> "🔗"
+                agent.providerType.value == "websocket" -> "📡"
+                agent.providerType.value == "subprocess" -> "⚙️"
+                agent.providerType.value == "mcp" -> "🔌"
+                agent.providerType.value == "local" -> "💻"
+                agent.providerType.value == "reve-2.0" -> "🎨"
                 else -> "🤖"
             }
         }

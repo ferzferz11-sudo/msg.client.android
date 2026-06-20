@@ -578,6 +578,69 @@ class GrpcAIv2Client(
         return@withContext withTimeoutOrNull(10000) { result.await() } ?: GetAIUsageStatsResponseProto()
     }
 
+    // ======= AI Chat Settings =======
+
+    suspend fun getChatSettings(sessionId: String): AIChatSettingsProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext AIChatSettingsProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIChatSettingsRequestProto, AIChatSettingsProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetAIChatSettings")
+            .setRequestMarshaller(GetAIChatSettingsRequestMarshaller())
+            .setResponseMarshaller(AIChatSettingsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<AIChatSettingsProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<AIChatSettingsProto>() {
+            override fun onMessage(message: AIChatSettingsProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(AIChatSettingsProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(GetAIChatSettingsRequestProto(sessionId))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: AIChatSettingsProto()
+    }
+
+    suspend fun updateChatSettings(sessionId: String, apiKey: String = "", model: String = ""): UpdateAIChatSettingsResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext UpdateAIChatSettingsResponseProto(message = "Connection lost")
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<UpdateAIChatSettingsRequestProto, UpdateAIChatSettingsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/UpdateAIChatSettings")
+            .setRequestMarshaller(UpdateAIChatSettingsRequestMarshaller())
+            .setResponseMarshaller(UpdateAIChatSettingsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<UpdateAIChatSettingsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<UpdateAIChatSettingsResponseProto>() {
+            override fun onMessage(message: UpdateAIChatSettingsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(UpdateAIChatSettingsResponseProto(message = "Connection error: ${status.code}"))
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(UpdateAIChatSettingsRequestProto(sessionId, apiKey, model))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() }
+            ?: UpdateAIChatSettingsResponseProto(message = "Timeout")
+    }
+
     // ======= Tools =======
 
     suspend fun listTools(): List<ToolInfoV2Proto> = withContext(Dispatchers.IO) {

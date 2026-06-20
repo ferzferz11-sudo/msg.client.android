@@ -325,6 +325,68 @@ class ListAIToolsResponseMarshaller : MethodDescriptor.Marshaller<ListAIToolsRes
     }
 }
 
+// ======= AI Chat Settings =======
+
+class GetAIChatSettingsRequestMarshaller : MethodDescriptor.Marshaller<GetAIChatSettingsRequestProto> {
+    override fun stream(v: GetAIChatSettingsRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.sessionId.isNotEmpty()) cos.writeString(1, v.sessionId)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAIChatSettingsRequestProto = GetAIChatSettingsRequestProto()
+}
+
+class AIChatSettingsResponseMarshaller : MethodDescriptor.Marshaller<AIChatSettingsProto> {
+    override fun stream(v: AIChatSettingsProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): AIChatSettingsProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var sessionId = ""; var userApiKey = ""; var model = ""; var isUsingCustomKey = false
+        var remaining = 0; var limit = 0; var windowSeconds = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> sessionId = cis.readString()
+                2 -> userApiKey = cis.readString()
+                3 -> model = cis.readString()
+                4 -> isUsingCustomKey = cis.readBool()
+                5 -> remaining = cis.readInt32()
+                6 -> limit = cis.readInt32()
+                7 -> windowSeconds = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return AIChatSettingsProto(sessionId, userApiKey, model, isUsingCustomKey, remaining, limit, windowSeconds)
+    }
+}
+
+class UpdateAIChatSettingsRequestMarshaller : MethodDescriptor.Marshaller<UpdateAIChatSettingsRequestProto> {
+    override fun stream(v: UpdateAIChatSettingsRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.sessionId.isNotEmpty()) cos.writeString(1, v.sessionId)
+        if (v.apiKey.isNotEmpty()) cos.writeString(2, v.apiKey)
+        if (v.model.isNotEmpty()) cos.writeString(3, v.model)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): UpdateAIChatSettingsRequestProto = UpdateAIChatSettingsRequestProto()
+}
+
+class UpdateAIChatSettingsResponseMarshaller : MethodDescriptor.Marshaller<UpdateAIChatSettingsResponseProto> {
+    override fun stream(v: UpdateAIChatSettingsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): UpdateAIChatSettingsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var message = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> message = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return UpdateAIChatSettingsResponseProto(success, message)
+    }
+}
+
 // ======= Marketplace =======
 
 class RateAIAgentRequestMarshaller : MethodDescriptor.Marshaller<RateAIAgentRequestProto> {
