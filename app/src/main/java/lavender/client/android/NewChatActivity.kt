@@ -208,6 +208,7 @@ class NewChatActivity : AppCompatActivity() {
                 inputDelegate.messageInput.requestFocus()
             } else { replyPreview.isVisible = false }
         }
+        cancelReply.setOnClickListener { inputDelegate.hideReplyPreview() }
         inputDelegate.setupListeners()
 
         selectionDelegate.configure(roomId, username)

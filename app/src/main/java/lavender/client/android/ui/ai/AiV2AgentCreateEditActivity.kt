@@ -28,6 +28,7 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
     private lateinit var providerConfigInput: TextInputEditText
     private lateinit var toolsEnabledSwitch: SwitchMaterial
     private lateinit var ragEnabledSwitch: SwitchMaterial
+    private lateinit var publicSwitch: SwitchMaterial
     private lateinit var saveButton: MaterialButton
 
     private var editAgentId: String = ""
@@ -63,6 +64,7 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
         providerConfigInput = findViewById(R.id.providerConfigInput)
         toolsEnabledSwitch = findViewById(R.id.toolsEnabledSwitch)
         ragEnabledSwitch = findViewById(R.id.ragEnabledSwitch)
+        publicSwitch = findViewById(R.id.publicSwitch)
         saveButton = findViewById(R.id.saveButton)
     }
 
@@ -99,6 +101,7 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
             val providerConfig = providerConfigInput.text.toString().trim()
             val toolsEnabled = toolsEnabledSwitch.isChecked
             val ragEnabled = ragEnabledSwitch.isChecked
+            val isPublic = publicSwitch.isChecked
 
             if (editAgentId.isEmpty()) {
                 viewModel.createAgent(
@@ -109,7 +112,8 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
                     systemPrompt = systemPrompt,
                     providerConfig = providerConfig,
                     toolsEnabled = toolsEnabled,
-                    ragEnabled = ragEnabled
+                    ragEnabled = ragEnabled,
+                    isPublic = isPublic
                 )
             } else {
                 viewModel.updateAgent(
@@ -120,7 +124,8 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
                     systemPrompt = systemPrompt,
                     providerConfig = providerConfig,
                     toolsEnabled = toolsEnabled,
-                    ragEnabled = ragEnabled
+                    ragEnabled = ragEnabled,
+                    isPublic = isPublic
                 )
             }
         }
@@ -140,6 +145,7 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
                 systemPromptInput.setText(it.systemPrompt)
                 toolsEnabledSwitch.isChecked = it.toolsEnabled
                 ragEnabledSwitch.isChecked = it.ragEnabled
+                publicSwitch.isChecked = it.isPublic
             }
         }
 

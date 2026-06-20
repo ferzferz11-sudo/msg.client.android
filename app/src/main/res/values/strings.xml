@@ -374,6 +374,7 @@
     <string name="ai_v2_system_prompt">System Prompt</string>
     <string name="ai_v2_tools_enabled">Tools Enabled</string>
     <string name="ai_v2_rag_enabled">RAG Enabled</string>
+    <string name="ai_v2_public">Public (visible in Marketplace)</string>
     <string name="ai_v2_tools">Tools</string>
 
     <!-- Marketplace -->

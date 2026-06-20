@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.1 | **Updated:** 2026-06-20
+**Version:** v1.3.0.2 | **Updated:** 2026-06-20
 
 ---
 
@@ -37,7 +37,7 @@ RealGrpcClient (orchestrator) delegates to:
 - **CRITICAL:** StateFlow declared BEFORE modules (Kotlin object top-to-bottom init)
 - GrpcClient: extension functions don't work via star import — all methods inline
 
-### AI v2 Pattern (v1.3.0.1)
+### AI v2 Pattern (v1.3.0.2)
 ```
 GrpcAIv2Client — gRPC transport (chatWithAIV2 streaming + agent CRUD + tools + marketplace)
     ├── ChatWithAIV2 streaming with tool calling loop
@@ -66,13 +66,13 @@ UI:
     │   ├── Tab 0: Presets
     │   ├── Tab 1: My Agents
     │   ├── Tab 2: Public
-    │   ├── Tab 3: Marketplace (search, pagination, pull-to-refresh)
+    │   ├── Tab 3: Marketplace (search, sort, filter, pagination, pull-to-refresh)
     │   └── Tab 4: Usage (stats)
     ├── AiV2AgentCreateEditActivity + AiV2AgentCreateEditViewModel — agent create/edit
-    ├── MarketplaceViewModel — marketplace catalog with pagination
+    ├── MarketplaceViewModel — marketplace catalog with pagination + sort/filter
     ├── AgentDetailViewModel — agent details (stats, reviews, rate/share/install)
     ├── UsageStatsViewModel — usage statistics
-    ├── MarketplaceAgentAdapter — marketplace agent cards
+    ├── MarketplaceAgentAdapter — marketplace agent cards + skeleton loading
     ├── AgentDetailActivity — agent detail screen
     ├── ReviewAdapter — review list
     ├── RateAgentBottomSheet — rate agent (1-5 stars + review)
@@ -100,30 +100,32 @@ On UNAVAILABLE error:
   → _serverShuttingDown = false on READY
 ```
 
-### Marketplace Pattern (v1.3.0.1)
+### Marketplace Pattern (v1.3.0.2)
 ```
 AiV2AgentListActivity (Tab 3: Marketplace)
   ├── SearchBar (TextInputLayout + debounce 2+ chars)
+  ├── SortFilterBar (Spinner + ChipGroup)
+  │   ├── Sort: Rating / Installs / Name
+  │   └── Filter: Tools / OpenRouter / MiMo / Local
   ├── SwipeRefreshLayout (pull-to-refresh)
   ├── RecyclerView (MarketplaceAgentAdapter)
+  │   ├── TYPE_ITEM: agent cards
+  │   ├── TYPE_SKELETON: loading placeholders (6 cards)
   │   └── OnScrollListener → loadMore() (infinite scroll)
   └── EmptyView ("No public agents available yet")
 
 MarketplaceViewModel
   ├── loadAgents(query) → reset offset, fetch first page
   ├── loadMore() → append next page
-  └── StateFlow: agents, isLoading, isLoadingMore, error
+  ├── setSortOption(option) → client-side sort
+  ├── setFilterProvider(provider) → client-side filter
+  ├── setFilterToolsEnabled(enabled) → client-side filter
+  └── StateFlow: agents, isLoading, isLoadingMore, error, sortOption, filterProvider, filterToolsEnabled
 
-AgentDetailActivity
-  ├── Stats (install count, avg rating, review count)
-  ├── Reviews (ReviewAdapter)
-  ├── Rate button → RateAgentBottomSheet (1-5 stars + text)
-  ├── Share button → Intent.ACTION_SEND with share_code
-  └── Install button → InstallAgentBottomSheet (share_code input)
-
-Deep link: lavender://marketplace/install?code=xxx
-  → AndroidManifest intent-filter
-  → AiV2AgentListActivity.handleDeepLink()
+MarketplaceAgentAdapter
+  ├── submitList(agents) → show real data
+  ├── showSkeleton() → show 6 skeleton cards
+  └── Multi-viewType: TYPE_ITEM / TYPE_SKELETON
 ```
 
 ### Rate Limit Pattern (v1.3.0.1)

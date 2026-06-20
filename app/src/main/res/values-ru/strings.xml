@@ -656,6 +656,7 @@
     <string name="ai_v2_system_prompt">Системный промпт</string>
     <string name="ai_v2_tools_enabled">Инструменты включены</string>
     <string name="ai_v2_rag_enabled">RAG включён</string>
+    <string name="ai_v2_public">Публичный (виден в Marketplace)</string>
     <string name="ai_v2_tools">Инструменты</string>
 
     <!-- Marketplace -->

@@ -44,7 +44,8 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
         systemPrompt: String,
         providerConfig: String,
         toolsEnabled: Boolean,
-        ragEnabled: Boolean
+        ragEnabled: Boolean,
+        isPublic: Boolean = false
     ) {
         viewModelScope.launch {
             try {
@@ -56,7 +57,8 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
                     systemPrompt = systemPrompt,
                     model = model,
                     toolsEnabled = toolsEnabled,
-                    ragEnabled = ragEnabled
+                    ragEnabled = ragEnabled,
+                    isPublic = isPublic
                 )
                 val result = AiV2ChatUseCase.createAgent(request)
                 result.fold(
@@ -77,7 +79,8 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
         systemPrompt: String,
         providerConfig: String,
         toolsEnabled: Boolean,
-        ragEnabled: Boolean
+        ragEnabled: Boolean,
+        isPublic: Boolean = false
     ) {
         viewModelScope.launch {
             try {
@@ -89,7 +92,8 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
                     systemPrompt = systemPrompt,
                     model = model,
                     toolsEnabled = toolsEnabled,
-                    ragEnabled = ragEnabled
+                    ragEnabled = ragEnabled,
+                    isPublic = isPublic
                 )
                 val result = AiV2ChatUseCase.updateAgent(request)
                 result.fold(

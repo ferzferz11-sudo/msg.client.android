@@ -392,4 +392,339 @@ class AiV2MarshallersTest {
         assertEquals("web_fetch", parsed.tools[1].name)
         assertEquals("search_messages", parsed.tools[2].name)
     }
+
+    // ======= Marketplace =======
+
+    @Test
+    fun rateAIAgentRequestMarshaller_serializes() {
+        val req = RateAIAgentRequestProto(agentId = "agent-1", rating = 5, review = "Great!")
+        val bytes = RateAIAgentRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun rateAIAgentRequestMarshaller_empty() {
+        val req = RateAIAgentRequestProto()
+        val bytes = RateAIAgentRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
+    fun rateAIAgentResponseMarshaller_empty() {
+        val parsed = RateAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals(0f, parsed.avgRating, 0.001f)
+        assertEquals(0, parsed.reviewCount)
+    }
+
+    @Test
+    fun rateAIAgentResponseMarshaller_allFields() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeBool(1, true)
+        cos.writeFloat(2, 4.5f)
+        cos.writeInt32(3, 12)
+        cos.flush()
+        val parsed = RateAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertTrue(parsed.success)
+        assertEquals(4.5f, parsed.avgRating, 0.001f)
+        assertEquals(12, parsed.reviewCount)
+    }
+
+    @Test
+    fun getAIAgentReviewsRequestMarshaller_serializes() {
+        val req = GetAIAgentReviewsRequestProto(agentId = "agent-1", limit = 10)
+        val bytes = GetAIAgentReviewsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun getAIAgentReviewsRequestMarshaller_defaults() {
+        val req = GetAIAgentReviewsRequestProto()
+        val bytes = GetAIAgentReviewsRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
+    fun getAIAgentReviewsResponseMarshaller_empty() {
+        val parsed = GetAIAgentReviewsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertTrue(parsed.reviews.isEmpty())
+        assertEquals(0f, parsed.avgRating, 0.001f)
+        assertEquals(0, parsed.reviewCount)
+    }
+
+    @Test
+    fun getAIAgentReviewsResponseMarshaller_withReviews() {
+        fun writeReview(userId: String, rating: Int, review: String, createdAt: String): ByteArray {
+            val baos = java.io.ByteArrayOutputStream()
+            val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+            cos.writeString(1, userId)
+            cos.writeInt32(2, rating)
+            cos.writeString(3, review)
+            cos.writeString(4, createdAt)
+            cos.flush()
+            return baos.toByteArray()
+        }
+
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        val review1 = writeReview("u1", 5, "Awesome!", "2026-01-01")
+        val review2 = writeReview("u2", 4, "Good", "2026-01-02")
+        cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(review1.size)
+        cos.writeRawBytes(review1)
+        cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(review2.size)
+        cos.writeRawBytes(review2)
+        cos.writeFloat(2, 4.5f)
+        cos.writeInt32(3, 2)
+        cos.flush()
+
+        val parsed = GetAIAgentReviewsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(2, parsed.reviews.size)
+        assertEquals("u1", parsed.reviews[0].userId)
+        assertEquals(5, parsed.reviews[0].rating)
+        assertEquals("Awesome!", parsed.reviews[0].review)
+        assertEquals("2026-01-01", parsed.reviews[0].createdAt)
+        assertEquals("u2", parsed.reviews[1].userId)
+        assertEquals(4, parsed.reviews[1].rating)
+        assertEquals(4.5f, parsed.avgRating, 0.001f)
+        assertEquals(2, parsed.reviewCount)
+    }
+
+    @Test
+    fun listMarketplaceAgentsRequestMarshaller_serializes() {
+        val req = ListMarketplaceAgentsRequestProto(query = "test", limit = 10, offset = 5)
+        val bytes = ListMarketplaceAgentsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun listMarketplaceAgentsRequestMarshaller_empty() {
+        val req = ListMarketplaceAgentsRequestProto()
+        val bytes = ListMarketplaceAgentsRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
+    fun listMarketplaceAgentsResponseMarshaller_empty() {
+        val parsed = ListMarketplaceAgentsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertTrue(parsed.agents.isEmpty())
+        assertEquals(0, parsed.total)
+    }
+
+    @Test
+    fun listMarketplaceAgentsResponseMarshaller_withAgents() {
+        fun writeAgent(id: String, name: String): ByteArray {
+            val baos = java.io.ByteArrayOutputStream()
+            val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+            cos.writeString(1, id)
+            cos.writeString(2, name)
+            cos.writeString(3, "desc")
+            cos.writeString(4, "openrouter")
+            cos.writeString(5, "claude-sonnet-4")
+            cos.flush()
+            return baos.toByteArray()
+        }
+
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        val agent1 = writeAgent("a1", "Agent 1")
+        val agent2 = writeAgent("a2", "Agent 2")
+        cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(agent1.size)
+        cos.writeRawBytes(agent1)
+        cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(agent2.size)
+        cos.writeRawBytes(agent2)
+        cos.writeInt32(2, 50)
+        cos.flush()
+
+        val parsed = ListMarketplaceAgentsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(2, parsed.agents.size)
+        assertEquals("a1", parsed.agents[0].id)
+        assertEquals("Agent 1", parsed.agents[0].name)
+        assertEquals("a2", parsed.agents[1].id)
+        assertEquals(50, parsed.total)
+    }
+
+    @Test
+    fun getAIAgentStatsRequestMarshaller_serializes() {
+        val req = GetAIAgentStatsRequestProto(agentId = "agent-1")
+        val bytes = GetAIAgentStatsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun getAIAgentStatsResponseMarshaller_empty() {
+        val parsed = GetAIAgentStatsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertEquals(0, parsed.installCount)
+        assertEquals(0f, parsed.avgRating, 0.001f)
+        assertEquals(0, parsed.reviewCount)
+    }
+
+    @Test
+    fun getAIAgentStatsResponseMarshaller_allFields() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeInt32(1, 100)
+        cos.writeFloat(2, 4.2f)
+        cos.writeInt32(3, 25)
+        cos.flush()
+        val parsed = GetAIAgentStatsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(100, parsed.installCount)
+        assertEquals(4.2f, parsed.avgRating, 0.001f)
+        assertEquals(25, parsed.reviewCount)
+    }
+
+    @Test
+    fun shareAIAgentRequestMarshaller_serializes() {
+        val req = ShareAIAgentRequestProto(agentId = "agent-1")
+        val bytes = ShareAIAgentRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun shareAIAgentResponseMarshaller_empty() {
+        val parsed = ShareAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.shareCode)
+    }
+
+    @Test
+    fun shareAIAgentResponseMarshaller_allFields() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeBool(1, true)
+        cos.writeString(2, "abc123")
+        cos.flush()
+        val parsed = ShareAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertTrue(parsed.success)
+        assertEquals("abc123", parsed.shareCode)
+    }
+
+    @Test
+    fun installAIAgentRequestMarshaller_serializes() {
+        val req = InstallAIAgentRequestProto(shareCode = "abc123", newName = "My Agent")
+        val bytes = InstallAIAgentRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun installAIAgentRequestMarshaller_empty() {
+        val req = InstallAIAgentRequestProto()
+        val bytes = InstallAIAgentRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
+    fun installAIAgentResponseMarshaller_empty() {
+        val parsed = InstallAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.success)
+        assertEquals("", parsed.agentId)
+        assertEquals("", parsed.error)
+    }
+
+    @Test
+    fun installAIAgentResponseMarshaller_allFields() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeBool(1, true)
+        cos.writeString(2, "new-agent-id")
+        cos.flush()
+        val parsed = InstallAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertTrue(parsed.success)
+        assertEquals("new-agent-id", parsed.agentId)
+    }
+
+    @Test
+    fun installAIAgentResponseMarshaller_error() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeBool(1, false)
+        cos.writeString(3, "Invalid share code")
+        cos.flush()
+        val parsed = InstallAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertFalse(parsed.success)
+        assertEquals("Invalid share code", parsed.error)
+    }
+
+    @Test
+    fun getAIUsageStatsRequestMarshaller_empty() {
+        val parsed = GetAIUsageStatsRequestMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertFalse(parsed.dummy)
+    }
+
+    @Test
+    fun getAIUsageStatsResponseMarshaller_empty() {
+        val parsed = GetAIUsageStatsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
+        assertTrue(parsed.stats.isEmpty())
+        assertEquals(0L, parsed.totalTokens)
+        assertEquals(0, parsed.totalRequests)
+    }
+
+    @Test
+    fun getAIUsageStatsResponseMarshaller_withStats() {
+        fun writeStatEntry(agentId: String, agentName: String, tokens: Long, requests: Int, period: String): ByteArray {
+            val baos = java.io.ByteArrayOutputStream()
+            val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+            cos.writeString(1, agentId)
+            cos.writeString(2, agentName)
+            cos.writeInt64(3, tokens)
+            cos.writeInt32(4, requests)
+            cos.writeString(5, period)
+            cos.flush()
+            return baos.toByteArray()
+        }
+
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        val stat1 = writeStatEntry("a1", "Agent 1", 1500L, 30, "2026-01")
+        val stat2 = writeStatEntry("a2", "Agent 2", 2500L, 50, "2026-01")
+        cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(stat1.size)
+        cos.writeRawBytes(stat1)
+        cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
+        cos.writeUInt32NoTag(stat2.size)
+        cos.writeRawBytes(stat2)
+        cos.writeInt64(2, 4000L)
+        cos.writeInt32(3, 80)
+        cos.flush()
+
+        val parsed = GetAIUsageStatsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(2, parsed.stats.size)
+        assertEquals("a1", parsed.stats[0].agentId)
+        assertEquals("Agent 1", parsed.stats[0].agentName)
+        assertEquals(1500L, parsed.stats[0].totalTokens)
+        assertEquals(30, parsed.stats[0].requestCount)
+        assertEquals("2026-01", parsed.stats[0].periodStart)
+        assertEquals("a2", parsed.stats[1].agentId)
+        assertEquals(2500L, parsed.stats[1].totalTokens)
+        assertEquals(4000L, parsed.totalTokens)
+        assertEquals(80, parsed.totalRequests)
+    }
+
+    @Test
+    fun rateAIAgentResponseMarshaller_unknownFieldsSkipped() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeBool(1, true)
+        cos.writeFloat(2, 3.0f)
+        cos.writeString(99, "unknown")
+        cos.flush()
+        val parsed = RateAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertTrue(parsed.success)
+        assertEquals(3.0f, parsed.avgRating, 0.001f)
+    }
+
+    @Test
+    fun listMarketplaceAgentsResponseMarshaller_unknownFieldsSkipped() {
+        val baos = java.io.ByteArrayOutputStream()
+        val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        cos.writeInt32(2, 10)
+        cos.writeString(99, "unknown")
+        cos.flush()
+        val parsed = ListMarketplaceAgentsResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
+        assertEquals(10, parsed.total)
+    }
 }

@@ -5,7 +5,10 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.ProgressBar
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -17,6 +20,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -42,6 +47,9 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private lateinit var searchLayout: TextInputLayout
     private lateinit var searchInput: TextInputEditText
     private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var sortFilterBar: View
+    private lateinit var sortSpinner: Spinner
+    private lateinit var filterChipGroup: ChipGroup
     private var currentTab = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +68,9 @@ class AiV2AgentListActivity : AppCompatActivity() {
         searchLayout = findViewById(R.id.searchLayout)
         searchInput = findViewById(R.id.searchInput)
         swipeRefresh = findViewById(R.id.swipeRefresh)
+        sortFilterBar = findViewById(R.id.sortFilterBar)
+        sortSpinner = findViewById(R.id.sortSpinner)
+        filterChipGroup = findViewById(R.id.filterChipGroup)
 
         emptyView = TextView(this).apply {
             text = getString(R.string.marketplace_empty)
@@ -73,6 +84,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         setupTabs()
         setupRecyclerView()
         setupSearch()
+        setupSortFilter()
         setupSwipeRefresh()
         setupFab()
         observeState()
@@ -80,7 +92,6 @@ class AiV2AgentListActivity : AppCompatActivity() {
         ThemeUi.bind(this, SessionManager.session.value.username)
 
         handleDeepLink(intent)
-        viewModel.loadAgents(0)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -129,6 +140,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun switchToMarketplace() {
         recyclerView.adapter = marketplaceAdapter
         searchLayout.visibility = View.VISIBLE
+        sortFilterBar.visibility = View.VISIBLE
         searchInput.text?.clear()
         marketplaceViewModel.loadAgents()
     }
@@ -136,12 +148,14 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun switchToUsage() {
         recyclerView.adapter = usageStatsAdapter
         searchLayout.visibility = View.GONE
+        sortFilterBar.visibility = View.GONE
         usageStatsViewModel.loadStats()
     }
 
     private fun switchToAgents() {
         recyclerView.adapter = agentAdapter
         searchLayout.visibility = View.GONE
+        sortFilterBar.visibility = View.GONE
     }
 
     private fun setupRecyclerView() {
@@ -181,6 +195,37 @@ class AiV2AgentListActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun setupSortFilter() {
+        val sortOptions = SortOption.entries.map { it.label }
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, sortOptions)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        sortSpinner.adapter = spinnerAdapter
+
+        sortSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                marketplaceViewModel.setSortOption(SortOption.entries[position])
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        filterChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            var providerFilter: String? = null
+            var toolsFilter: Boolean? = null
+
+            for (chipId in checkedIds) {
+                when (chipId) {
+                    R.id.chipFilterTools -> toolsFilter = true
+                    R.id.chipFilterOpenRouter -> providerFilter = "openrouter"
+                    R.id.chipFilterMimo -> providerFilter = "mimo"
+                    R.id.chipFilterLocal -> providerFilter = "local"
+                }
+            }
+
+            marketplaceViewModel.setFilterProvider(providerFilter)
+            marketplaceViewModel.setFilterToolsEnabled(toolsFilter)
+        }
     }
 
     private fun setupSwipeRefresh() {
@@ -272,7 +317,12 @@ class AiV2AgentListActivity : AppCompatActivity() {
                 launch {
                     marketplaceViewModel.isLoading.collect { loading ->
                         if (currentTab == 3) {
-                            progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                            if (loading && marketplaceViewModel.agents.value.isEmpty()) {
+                                marketplaceAdapter.showSkeleton()
+                                recyclerView.visibility = View.VISIBLE
+                                emptyView.visibility = View.GONE
+                            }
+                            progressBar.visibility = if (loading && marketplaceViewModel.agents.value.isNotEmpty()) View.VISIBLE else View.GONE
                             swipeRefresh.isRefreshing = loading
                         }
                     }

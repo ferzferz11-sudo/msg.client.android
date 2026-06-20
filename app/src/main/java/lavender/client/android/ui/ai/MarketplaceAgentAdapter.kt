@@ -13,19 +13,57 @@ import lavender.client.android.data.ai.MarketplaceAgent
 
 class MarketplaceAgentAdapter(
     private val onItemClick: (MarketplaceAgent) -> Unit
-) : ListAdapter<MarketplaceAgent, MarketplaceAgentAdapter.ViewHolder>(AgentDiffCallback()) {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_marketplace_agent_card, parent, false)
-        return ViewHolder(view)
+    private val items = mutableListOf<Any>()
+    private var showSkeleton = false
+
+    companion object {
+        private const val TYPE_ITEM = 0
+        private const val TYPE_SKELETON = 1
+        private const val SKELETON_COUNT = 6
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position))
+    fun submitList(agents: List<MarketplaceAgent>) {
+        showSkeleton = false
+        items.clear()
+        items.addAll(agents)
+        notifyDataSetChanged()
     }
 
-    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    fun showSkeleton() {
+        showSkeleton = true
+        items.clear()
+        repeat(SKELETON_COUNT) { items.add(Unit) }
+        notifyDataSetChanged()
+    }
+
+    override fun getItemCount(): Int = items.size
+
+    override fun getItemViewType(position: Int): Int {
+        return if (showSkeleton) TYPE_SKELETON else TYPE_ITEM
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == TYPE_SKELETON) {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_marketplace_skeleton, parent, false)
+            SkeletonViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_marketplace_agent_card, parent, false)
+            AgentViewHolder(view)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is AgentViewHolder && !showSkeleton && position < items.size) {
+            @Suppress("UNCHECKED_CAST")
+            holder.bind(items[position] as MarketplaceAgent)
+        }
+    }
+
+    inner class AgentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val agentIcon: TextView = itemView.findViewById(R.id.agentIcon)
         private val agentName: TextView = itemView.findViewById(R.id.agentName)
         private val agentDescription: TextView = itemView.findViewById(R.id.agentDescription)
@@ -60,13 +98,5 @@ class MarketplaceAgentAdapter(
         }
     }
 
-    class AgentDiffCallback : DiffUtil.ItemCallback<MarketplaceAgent>() {
-        override fun areItemsTheSame(oldItem: MarketplaceAgent, newItem: MarketplaceAgent): Boolean {
-            return oldItem.id == newItem.id
-        }
-
-        override fun areContentsTheSame(oldItem: MarketplaceAgent, newItem: MarketplaceAgent): Boolean {
-            return oldItem == newItem
-        }
-    }
+    class SkeletonViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 }

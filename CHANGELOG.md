@@ -1,5 +1,67 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.2] - 2026-06-20
+
+### Добавлено
+
+**Marketplace — Сортировка и фильтры:**
+- Сортировка агентов: Rating / Installs / Name (Spinner)
+- Фильтры по типу провайдера: Tools / OpenRouter / MiMo / Local (ChipGroup)
+- Клиентская сортировка и фильтрация после загрузки с сервера
+
+**Loading Skeletons:**
+- `item_marketplace_skeleton.xml` — скелетон-карточка с placeholder элементами
+- 6 скелетонов показываются при первой загрузке Marketplace
+
+**Agent Create — Public Toggle:**
+- Чекбокс "Public (visible in Marketplace)" при создании/редактировании агента
+- Публичные агенты появляются в табе Marketplace
+
+**Chat List — Unread Highlight:**
+- Непрочитанные чаты выделяются подсвеченным фоном (primary color alpha=30)
+- Имя чата с непрочитанными сообщениями — жирный шрифт + primary цвет
+
+### Исправлено
+
+**Cancel Reply Button:**
+- Крестик теперь закрывает цитату в `NewChatActivity` (добавлен `cancelReply.setOnClickListener`)
+
+### Тесты (25 новых)
+
+- `AiV2MarshallersTest` — 25 unit-тестов для Marketplace мараллеров:
+  - RateAIAgent (request/response)
+  - GetAIAgentReviews (request/response)
+  - ListMarketplaceAgents (request/response)
+  - GetAIAgentStats (request/response)
+  - ShareAIAgent (request/response)
+  - InstallAIAgent (request/response)
+  - GetAIUsageStats (request/response)
+
+### Файлы
+
+**Kotlin (4 изменённых):**
+- `ui/ai/MarketplaceViewModel.kt` — SortOption enum, setSortOption(), setFilterProvider(), setFilterToolsEnabled()
+- `ui/ai/MarketplaceAgentAdapter.kt` — мульти-viewType (TYPE_ITEM / TYPE_SKELETON), showSkeleton()
+- `ui/ai/AiV2AgentListActivity.kt` — setupSortFilter(), sortFilterBar
+- `ui/ai/AiV2AgentCreateEditViewModel.kt` — isPublic в createAgent/updateAgent
+- `ui/ai/AiV2AgentCreateEditActivity.kt` — publicSwitch
+- `ui/adapter/ChatAdapter.kt` — unread highlight (background + bold name)
+- `NewChatActivity.kt` — cancelReply.setOnClickListener
+
+**Layout (4 новых):**
+- `item_marketplace_skeleton.xml` — скелетон-карточка
+- `activity_ai_v2_agent_create_edit.xml` — добавлен publicSwitch
+
+**Drawable (3 новых):**
+- `bg_skeleton_circle.xml` — круглый placeholder
+- `bg_skeleton_rect.xml` — прямоугольный placeholder
+- `bg_sort_spinner.xml` — фон для Spinner
+
+**Strings (2 новых):**
+- `ai_v2_public` — EN: "Public (visible in Marketplace)", RU: "Публичный (виден в Marketplace)"
+
+---
+
 ## [1.3.0.1] - 2026-06-20
 
 ### Добавлено

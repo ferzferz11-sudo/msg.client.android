@@ -1,13 +1,13 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.1 | **Updated:** 2026-06-20
+**Version:** v1.3.0.2 | **Updated:** 2026-06-20
 
 ---
 
 ## Session Start Order
 
 1. **PATTERNS.md** — code patterns, rules, architecture conventions
-2. **PLAN.md** — current plan and backlog
+2. **PROMPT_NEXT_SESSION.md** — current plan and backlog
 3. This file (INDEX) — project overview
 
 ---
@@ -17,7 +17,7 @@
 | File | Purpose | When to read |
 |------|---------|-------------|
 | `doc/PATTERNS.md` | Code patterns, rules, conventions | Before writing code |
-| `doc/PLAN.md` | Current plan + backlog | At session start |
+| `doc/PROMPT_NEXT_SESSION.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
 | `CHANGELOG.md` | Version history | Reference |
@@ -49,7 +49,7 @@
 
 ---
 
-## Architecture Overview (v1.3.0.0)
+## Architecture Overview (v1.3.0.2)
 
 ```
 GrpcClient (facade)
@@ -72,14 +72,14 @@ GrpcClient (facade)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
-AiV2ChatActivity → unified AI chat (simple/agent/pipeline)
-AiV2AgentListActivity → agent list (tabs: Presets/My/Public)
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
+AiV2AgentListActivity → agent list (tabs: Presets/My/Public/Marketplace/Usage)
 AiV2AgentCreateEditActivity → agent create/edit
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
-AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage
+AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 ```
 
@@ -130,9 +130,9 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | Kotlin files | ~160 |
 | Activities | 25 |
 | gRPC modules | 27 |
-| Unit tests | 14 files |
-| Layout XML | 107 |
+| Unit tests | 15 files |
+| Layout XML | 109 |
 | String entries | 826 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.1) |
+| Branch | feat/1.3.0.x (v1.3.0.2) |

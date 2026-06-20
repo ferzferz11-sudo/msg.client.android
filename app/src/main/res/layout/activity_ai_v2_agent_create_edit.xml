@@ -140,6 +140,13 @@
                 android:text="@string/ai_v2_rag_enabled"
                 android:layout_marginTop="8dp" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/publicSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ai_v2_public"
+                android:layout_marginTop="8dp" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveButton"
                 android:layout_width="match_parent"

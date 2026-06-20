@@ -63,6 +63,7 @@ class ChatAdapter(
     private var cachedTextSecondary: Int = 0
     private var cachedSurfaceColor: Int = 0
     private var cachedSelectedColor: Int = 0
+    private var cachedUnreadColor: Int = 0
     private var colorsInitialized = false
 
     private fun initColors(view: View) {
@@ -74,6 +75,8 @@ class ChatAdapter(
         cachedSurfaceColor = ThemeUtils.parseSafeColor(theme.incomingBubbleColor, Color.DKGRAY)
         // Selection highlight: primary color with alpha
         cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+        // Unread highlight: primary color with subtle alpha
+        cachedUnreadColor = Color.argb(30, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
         colorsInitialized = true
     }
 
@@ -199,7 +202,7 @@ class ChatAdapter(
         when (val item = flatItems.getOrNull(position)) {
             is FlatItem.SectionHeader -> (holder as SectionHeaderViewHolder).bind(item)
             is FlatItem.ChatItem -> (holder as ChatViewHolder).bind(
-                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername
+                item.chat, cachedTextPrimary, cachedTextSecondary, cachedSurfaceColor, cachedSelectedColor, cachedUnreadColor, cachedPrimaryColor, selectionMode, selectedIds.contains(item.chat.id), currentUsername
             )
             null -> {}
         }
@@ -252,16 +255,20 @@ class ChatAdapter(
         private val cardView: com.google.android.material.card.MaterialCardView =
             itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String) {
+        fun bind(chat: ChatInfo, textPrimary: Int, textSecondary: Int, surfaceColor: Int, selectedColor: Int, unreadColor: Int, primaryColor: Int, selectionMode: Boolean, isSelected: Boolean, currentUsername: String) {
+            val hasUnread = chat.unreadCount > 0
             tvChatName.text = chat.getDisplayName(currentUsername)
-            tvChatName.setTextColor(textPrimary)
+            tvChatName.setTextColor(if (hasUnread) primaryColor else textPrimary)
+            tvChatName.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
 
             if (chat.isSecret) {
                 tvChatType.text = itemView.context.getString(R.string.e2ee_verified)
-                tvChatType.setTextColor(textSecondary)
+                tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
+                tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
             } else if (chat.lastMessageText.isNotEmpty()) {
                 tvChatType.text = chat.lastMessageText
-                tvChatType.setTextColor(textSecondary)
+                tvChatType.setTextColor(if (hasUnread) textPrimary else textSecondary)
+                tvChatType.setTypeface(null, if (hasUnread) android.graphics.Typeface.NORMAL else android.graphics.Typeface.NORMAL)
             } else {
                 tvChatType.text = itemView.context.getString(R.string.no_messages)
                 tvChatType.setTextColor(textSecondary)
@@ -285,8 +292,13 @@ class ChatAdapter(
             cbChatSelect.isVisible = selectionMode
             cbChatSelect.isChecked = isSelected
 
-            // Background: highlight if selected
-            cardView.setCardBackgroundColor(if (isSelected) selectedColor else surfaceColor)
+            // Background: highlight if selected, unread tint if has unread messages
+            val bgColor = when {
+                isSelected -> selectedColor
+                chat.unreadCount > 0 -> unreadColor
+                else -> surfaceColor
+            }
+            cardView.setCardBackgroundColor(bgColor)
 
             // Click listeners
             if (selectionMode) {
