@@ -225,9 +225,17 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                                 local.isArchived != server.isArchived || local.lastMessageText != server.lastMessageText
                         }
                     if (hasChanges || allChats.isEmpty()) {
-                        allChats = fetchedChats
-                        buildSections(fetchedChats)
-                        Log.d(TAG, "Loaded ${fetchedChats.size} chats from server (changes=$hasChanges)")
+                        val mergedChats = fetchedChats.map { serverChat ->
+                            val localChat = allChats.find { it.id == serverChat.id }
+                            if (localChat != null && localChat.unreadCount > serverChat.unreadCount) {
+                                serverChat.copy(unreadCount = localChat.unreadCount)
+                            } else {
+                                serverChat
+                            }
+                        }
+                        allChats = mergedChats
+                        buildSections(mergedChats)
+                        Log.d(TAG, "Loaded ${mergedChats.size} chats from server (changes=$hasChanges)")
                     }
                     // Sync to local DB
                     try {

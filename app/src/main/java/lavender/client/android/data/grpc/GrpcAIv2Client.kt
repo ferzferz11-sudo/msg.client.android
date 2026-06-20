@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
  * GrpcAIv2Client — AI Services v2 gRPC client.
  * Replaces OwlGrpc + HermesGrpc + AiChatGrpc.
  *
- * Server proto: messenger.AIService (ChatWithAIV2, Agent CRUD, ListAITools)
+ * Server proto: messenger.ChatService (ChatWithAIV2, Agent CRUD, ListAITools)
  */
 class GrpcAIv2Client(
     private val getChannel: () -> io.grpc.ManagedChannel?,
@@ -62,7 +62,7 @@ class GrpcAIv2Client(
                 try {
                     val methodDesc = io.grpc.MethodDescriptor.newBuilder<ChatWithAIV2RequestProto, ChatWithAIV2ResponseProto>()
                         .setType(io.grpc.MethodDescriptor.MethodType.SERVER_STREAMING)
-                        .setFullMethodName("messenger.AIService/ChatWithAIV2")
+                        .setFullMethodName("messenger.ChatService/ChatWithAIV2")
                         .setRequestMarshaller(ChatWithAIV2RequestMarshaller())
                         .setResponseMarshaller(ChatWithAIV2ResponseMarshaller())
                         .build()
@@ -192,7 +192,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<CreateAIAgentRequestProto, CreateAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/CreateAIAgent")
+            .setFullMethodName("messenger.ChatService/CreateAIAgent")
             .setRequestMarshaller(CreateAIAgentRequestMarshaller())
             .setResponseMarshaller(CreateAIAgentResponseMarshaller())
             .build()
@@ -223,7 +223,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<UpdateAIAgentRequestProto, UpdateAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/UpdateAIAgent")
+            .setFullMethodName("messenger.ChatService/UpdateAIAgent")
             .setRequestMarshaller(UpdateAIAgentRequestMarshaller())
             .setResponseMarshaller(UpdateAIAgentResponseMarshaller())
             .build()
@@ -254,7 +254,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<DeleteAIAgentRequestProto, DeleteAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/DeleteAIAgent")
+            .setFullMethodName("messenger.ChatService/DeleteAIAgent")
             .setRequestMarshaller(DeleteAIAgentRequestMarshaller())
             .setResponseMarshaller(DeleteAIAgentResponseMarshaller())
             .build()
@@ -283,7 +283,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIAgentRequestProto, GetAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/GetAIAgent")
+            .setFullMethodName("messenger.ChatService/GetAIAgent")
             .setRequestMarshaller(GetAIAgentRequestMarshaller())
             .setResponseMarshaller(GetAIAgentResponseMarshaller())
             .build()
@@ -312,7 +312,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListAIAgentsRequestProto, ListAIAgentsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/ListAIAgents")
+            .setFullMethodName("messenger.ChatService/ListAIAgents")
             .setRequestMarshaller(ListAIAgentsRequestMarshaller())
             .setResponseMarshaller(ListAIAgentsResponseMarshaller())
             .build()
@@ -343,7 +343,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<CloneAIAgentRequestProto, CloneAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/CloneAIAgent")
+            .setFullMethodName("messenger.ChatService/CloneAIAgent")
             .setRequestMarshaller(CloneAIAgentRequestMarshaller())
             .setResponseMarshaller(CloneAIAgentResponseMarshaller())
             .build()
@@ -376,7 +376,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<RateAIAgentRequestProto, RateAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/RateAIAgent")
+            .setFullMethodName("messenger.ChatService/RateAIAgent")
             .setRequestMarshaller(RateAIAgentRequestMarshaller())
             .setResponseMarshaller(RateAIAgentResponseMarshaller())
             .build()
@@ -406,7 +406,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIAgentReviewsRequestProto, GetAIAgentReviewsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/GetAIAgentReviews")
+            .setFullMethodName("messenger.ChatService/GetAIAgentReviews")
             .setRequestMarshaller(GetAIAgentReviewsRequestMarshaller())
             .setResponseMarshaller(GetAIAgentReviewsResponseMarshaller())
             .build()
@@ -436,7 +436,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListMarketplaceAgentsRequestProto, ListMarketplaceAgentsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/ListMarketplaceAgents")
+            .setFullMethodName("messenger.ChatService/ListMarketplaceAgents")
             .setRequestMarshaller(ListMarketplaceAgentsRequestMarshaller())
             .setResponseMarshaller(ListMarketplaceAgentsResponseMarshaller())
             .build()
@@ -466,7 +466,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIAgentStatsRequestProto, GetAIAgentStatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/GetAIAgentStats")
+            .setFullMethodName("messenger.ChatService/GetAIAgentStats")
             .setRequestMarshaller(GetAIAgentStatsRequestMarshaller())
             .setResponseMarshaller(GetAIAgentStatsResponseMarshaller())
             .build()
@@ -496,7 +496,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<ShareAIAgentRequestProto, ShareAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/ShareAIAgent")
+            .setFullMethodName("messenger.ChatService/ShareAIAgent")
             .setRequestMarshaller(ShareAIAgentRequestMarshaller())
             .setResponseMarshaller(ShareAIAgentResponseMarshaller())
             .build()
@@ -526,7 +526,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<InstallAIAgentRequestProto, InstallAIAgentResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/InstallAIAgent")
+            .setFullMethodName("messenger.ChatService/InstallAIAgent")
             .setRequestMarshaller(InstallAIAgentRequestMarshaller())
             .setResponseMarshaller(InstallAIAgentResponseMarshaller())
             .build()
@@ -557,7 +557,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIUsageStatsRequestProto, GetAIUsageStatsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/GetAIUsageStats")
+            .setFullMethodName("messenger.ChatService/GetAIUsageStats")
             .setRequestMarshaller(GetAIUsageStatsRequestMarshaller())
             .setResponseMarshaller(GetAIUsageStatsResponseMarshaller())
             .build()
@@ -587,7 +587,7 @@ class GrpcAIv2Client(
 
         val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListAIToolsRequestProto, ListAIToolsResponseProto>()
             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.AIService/ListAITools")
+            .setFullMethodName("messenger.ChatService/ListAITools")
             .setRequestMarshaller(ListAIToolsRequestMarshaller())
             .setResponseMarshaller(ListAIToolsResponseMarshaller())
             .build()

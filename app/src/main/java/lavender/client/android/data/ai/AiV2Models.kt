@@ -125,7 +125,7 @@ data class AgentReview(
 data class UsageStat(
     val agentId: String = "",
     val agentName: String = "",
-    val totalTokens: Long = 0,
+    val totalTokens: Int = 0,
     val requestCount: Int = 0,
     val periodStart: String = ""
 )

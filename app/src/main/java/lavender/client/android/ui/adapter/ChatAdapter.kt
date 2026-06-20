@@ -76,7 +76,7 @@ class ChatAdapter(
         // Selection highlight: primary color with alpha
         cachedSelectedColor = Color.argb(48, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
         // Unread highlight: primary color with subtle alpha
-        cachedUnreadColor = Color.argb(30, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
+        cachedUnreadColor = Color.argb(40, Color.red(cachedPrimaryColor), Color.green(cachedPrimaryColor), Color.blue(cachedPrimaryColor))
         colorsInitialized = true
     }
 

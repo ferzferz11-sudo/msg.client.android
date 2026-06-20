@@ -1,5 +1,48 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.3] - 2026-06-20
+
+### Исправлено
+
+**AI v2 — gRPC service name fix (критический):**
+- Все 15 AI v2 RPC вызовов использовали `messenger.AIService/*` — сервер не видел запросов
+- Исправлено на `messenger.ChatService/*` (все методы зарегистрированы в ChatService)
+- Причина: пресеты, маркетплейс и все AI v2 API не работали
+
+**AI v2 — Marshallers fix (7 багов):**
+- `RateAIAgentResponseMarshaller` — field mapping был неправильным (wire type mismatch: string→float, float→int32)
+- `GetAIUsageStatsResponseMarshaller` — UsageStatInfo inner fields 2-5 все неправильные (сдвиг + неверные типы)
+- `parseAgentInfoV2` — пропускал fields 15-21 (install_count, avg_rating, review_count, tags, original_agent_id, version, share_code)
+- `GetAIAgentStatsResponseMarshaller` —缺少 field 4 (total_tokens_used)
+- `ShareAIAgentResponseMarshaller` —缺少 field 3 (error string)
+- `ListAIAgentsRequestMarshaller` — `includePublic` field не сериализовался (пустые байты)
+- Все marshallers выровнены с серверным proto: field numbers, types, nested messages
+
+**AI v2 — Proto data classes обновлены:**
+- `AgentInfoV2Proto` — добавлены 7 полей (installCount, avgRating, reviewCount, tags, originalAgentId, version, shareCode)
+- `RateAIAgentResponseProto` — добавлено поле `error`
+- `GetAIAgentStatsResponseProto` — добавлено поле `totalTokensUsed`
+- `ShareAIAgentResponseProto` — добавлено поле `error`
+- `UsageStatEntryProto` — `totalTokens: Long → Int` (сервер int32)
+- `GetAIUsageStatsResponseProto` — `totalTokens: Long → Int`
+
+**Chat list — Unread индикация (критический):**
+- Серверный `GetUserChatsV2` **не считал unreadCount** — SQL запрос не содержал подзапрос `unread_counts`
+- Исправлено: добавлен CTE `unread_counts` в `GetUserChatsV2` и `SearchChats`
+- Клиентский `ChatListViewModel.loadChats()` — race condition fix: при merge серверных данных сохраняется `max(local.unreadCount, server.unreadCount)`
+- `ChatAdapter` — `unreadColor` alpha 30→40 для лучшей видимости
+
+**AI v2 — Domain models:**
+- `UsageStat.totalTokens: Long → Int` (все связанные файлы обновлены)
+
+### Тесты
+
+- 2 новых теста для `ListAIAgentsRequestMarshaller` serialization
+- Обновлены тесты `RateAIAgentResponse`, `GetAIUsageStatsResponse` под новые field mappings
+- Все AI v2 тесты проходят (105 tests)
+
+---
+
 ## [1.3.0.2] - 2026-06-20
 
 ### Добавлено

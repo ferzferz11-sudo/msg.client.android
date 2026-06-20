@@ -53,7 +53,14 @@ data class AgentInfoV2Proto(
     val maxTokens: Int = 0,
     val temperature: Float = 0.7f,
     val createdBy: String = "",
-    val capabilities: AgentCapabilitiesV2Proto = AgentCapabilitiesV2Proto()
+    val capabilities: AgentCapabilitiesV2Proto = AgentCapabilitiesV2Proto(),
+    val installCount: Int = 0,
+    val avgRating: Float = 0f,
+    val reviewCount: Int = 0,
+    val tags: List<String> = emptyList(),
+    val originalAgentId: String = "",
+    val version: Int = 0,
+    val shareCode: String = ""
 )
 
 data class AgentCapabilitiesV2Proto(
@@ -172,6 +179,7 @@ data class RateAIAgentRequestProto(
 
 data class RateAIAgentResponseProto(
     val success: Boolean = false,
+    val error: String = "",
     val avgRating: Float = 0f,
     val reviewCount: Int = 0
 )
@@ -212,7 +220,8 @@ data class GetAIAgentStatsRequestProto(
 data class GetAIAgentStatsResponseProto(
     val installCount: Int = 0,
     val avgRating: Float = 0f,
-    val reviewCount: Int = 0
+    val reviewCount: Int = 0,
+    val totalTokensUsed: Int = 0
 )
 
 data class ShareAIAgentRequestProto(
@@ -221,7 +230,8 @@ data class ShareAIAgentRequestProto(
 
 data class ShareAIAgentResponseProto(
     val success: Boolean = false,
-    val shareCode: String = ""
+    val shareCode: String = "",
+    val error: String = ""
 )
 
 data class InstallAIAgentRequestProto(
@@ -241,14 +251,14 @@ data class GetAIUsageStatsRequestProto(
 
 data class UsageStatEntryProto(
     val agentId: String = "",
-    val agentName: String = "",
-    val totalTokens: Long = 0,
+    val totalTokens: Int = 0,
     val requestCount: Int = 0,
-    val periodStart: String = ""
+    val periodStart: String = "",
+    val agentName: String = ""
 )
 
 data class GetAIUsageStatsResponseProto(
     val stats: List<UsageStatEntryProto> = emptyList(),
-    val totalTokens: Long = 0,
+    val totalTokens: Int = 0,
     val totalRequests: Int = 0
 )

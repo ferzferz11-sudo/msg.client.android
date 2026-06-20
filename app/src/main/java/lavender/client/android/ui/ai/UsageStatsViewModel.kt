@@ -15,8 +15,8 @@ class UsageStatsViewModel(application: Application) : AndroidViewModel(applicati
     private val _stats = MutableStateFlow<List<UsageStat>>(emptyList())
     val stats: StateFlow<List<UsageStat>> = _stats.asStateFlow()
 
-    private val _totalTokens = MutableStateFlow(0L)
-    val totalTokens: StateFlow<Long> = _totalTokens.asStateFlow()
+    private val _totalTokens = MutableStateFlow(0)
+    val totalTokens: StateFlow<Int> = _totalTokens.asStateFlow()
 
     private val _totalRequests = MutableStateFlow(0)
     val totalRequests: StateFlow<Int> = _totalRequests.asStateFlow()

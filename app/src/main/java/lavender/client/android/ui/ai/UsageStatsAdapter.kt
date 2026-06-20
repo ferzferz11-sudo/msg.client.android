@@ -35,7 +35,7 @@ class UsageStatsAdapter : ListAdapter<UsageStat, UsageStatsAdapter.ViewHolder>(D
             period.text = formatDate(stat.periodStart)
         }
 
-        private fun formatNumber(n: Long): String {
+        private fun formatNumber(n: Int): String {
             return when {
                 n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000.0)
                 n >= 1_000 -> String.format("%.1fK", n / 1_000.0)

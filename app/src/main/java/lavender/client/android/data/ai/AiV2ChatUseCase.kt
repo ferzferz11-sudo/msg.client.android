@@ -300,7 +300,7 @@ object AiV2ChatUseCase {
         }
     }
 
-    suspend fun getUsageStats(): Result<Pair<List<UsageStat>, Pair<Long, Int>>> {
+    suspend fun getUsageStats(): Result<Pair<List<UsageStat>, Pair<Int, Int>>> {
         return try {
             val response = RealGrpcClient.aiV2Client.getUsageStats()
             val stats = response.stats.map { it.toDomain() }

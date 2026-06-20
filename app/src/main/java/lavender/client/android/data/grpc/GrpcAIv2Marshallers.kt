@@ -221,7 +221,11 @@ class GetAIAgentResponseMarshaller : MethodDescriptor.Marshaller<GetAIAgentRespo
 }
 
 class ListAIAgentsRequestMarshaller : MethodDescriptor.Marshaller<ListAIAgentsRequestProto> {
-    override fun stream(v: ListAIAgentsRequestProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun stream(v: ListAIAgentsRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.includePublic) cos.writeBool(1, true)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
     override fun parse(s: java.io.InputStream): ListAIAgentsRequestProto = ListAIAgentsRequestProto()
 }
 
@@ -337,17 +341,18 @@ class RateAIAgentResponseMarshaller : MethodDescriptor.Marshaller<RateAIAgentRes
     override fun stream(v: RateAIAgentResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): RateAIAgentResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-        var success = false; var avgRating = 0f; var reviewCount = 0
+        var success = false; var error = ""; var avgRating = 0f; var reviewCount = 0
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> success = cis.readBool()
-                2 -> avgRating = cis.readFloat()
-                3 -> reviewCount = cis.readInt32()
+                2 -> error = cis.readString()
+                3 -> avgRating = cis.readFloat()
+                4 -> reviewCount = cis.readInt32()
                 else -> cis.skipField(tag)
             }
         }
-        return RateAIAgentResponseProto(success, avgRating, reviewCount)
+        return RateAIAgentResponseProto(success, error, avgRating, reviewCount)
     }
 }
 
@@ -450,17 +455,18 @@ class GetAIAgentStatsResponseMarshaller : MethodDescriptor.Marshaller<GetAIAgent
     override fun stream(v: GetAIAgentStatsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetAIAgentStatsResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-        var installCount = 0; var avgRating = 0f; var reviewCount = 0
+        var installCount = 0; var avgRating = 0f; var reviewCount = 0; var totalTokensUsed = 0
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> installCount = cis.readInt32()
                 2 -> avgRating = cis.readFloat()
                 3 -> reviewCount = cis.readInt32()
+                4 -> totalTokensUsed = cis.readInt32()
                 else -> cis.skipField(tag)
             }
         }
-        return GetAIAgentStatsResponseProto(installCount, avgRating, reviewCount)
+        return GetAIAgentStatsResponseProto(installCount, avgRating, reviewCount, totalTokensUsed)
     }
 }
 
@@ -477,16 +483,17 @@ class ShareAIAgentResponseMarshaller : MethodDescriptor.Marshaller<ShareAIAgentR
     override fun stream(v: ShareAIAgentResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): ShareAIAgentResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
-        var success = false; var shareCode = ""
+        var success = false; var shareCode = ""; var error = ""
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
                 1 -> success = cis.readBool()
                 2 -> shareCode = cis.readString()
+                3 -> error = cis.readString()
                 else -> cis.skipField(tag)
             }
         }
-        return ShareAIAgentResponseProto(success, shareCode)
+        return ShareAIAgentResponseProto(success, shareCode, error)
     }
 }
 
@@ -528,7 +535,7 @@ class GetAIUsageStatsResponseMarshaller : MethodDescriptor.Marshaller<GetAIUsage
     override fun parse(s: java.io.InputStream): GetAIUsageStatsResponseProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(s)
         val stats = mutableListOf<UsageStatEntryProto>()
-        var totalTokens = 0L; var totalRequests = 0
+        var totalTokens = 0; var totalRequests = 0
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
@@ -538,24 +545,24 @@ class GetAIUsageStatsResponseMarshaller : MethodDescriptor.Marshaller<GetAIUsage
                     if (msgBytes.isNotEmpty()) {
                         try {
                             val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
-                            var agentId = ""; var agentName = ""; var totalT = 0L; var reqCount = 0; var periodStart = ""
+                            var agentId = ""; var totalT = 0; var reqCount = 0; var periodStart = ""; var agentName = ""
                             while (!inner.isAtEnd) {
                                 val innerTag = inner.readTag()
                                 if (innerTag == 0) break
                                 when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
                                     1 -> agentId = inner.readString()
-                                    2 -> agentName = inner.readString()
-                                    3 -> totalT = inner.readInt64()
-                                    4 -> reqCount = inner.readInt32()
-                                    5 -> periodStart = inner.readString()
+                                    2 -> totalT = inner.readInt32()
+                                    3 -> reqCount = inner.readInt32()
+                                    4 -> periodStart = inner.readString()
+                                    5 -> agentName = inner.readString()
                                     else -> inner.skipField(innerTag)
                                 }
                             }
-                            stats.add(UsageStatEntryProto(agentId, agentName, totalT, reqCount, periodStart))
+                            stats.add(UsageStatEntryProto(agentId, totalT, reqCount, periodStart, agentName))
                         } catch (_: Exception) {}
                     }
                 }
-                2 -> totalTokens = cis.readInt64()
+                2 -> totalTokens = cis.readInt32()
                 3 -> totalRequests = cis.readInt32()
                 else -> cis.skipField(tag)
             }
@@ -574,6 +581,9 @@ private fun parseAgentInfoV2(bytes: ByteArray): AgentInfoV2Proto? {
         var isPreset = false; var isPublic = false; var maxTokens = 0; var temperature = 0.7f
         var createdBy = ""
         var capsImages = false; var capsTools = false; var capsStreaming = false; var capsMaxTokens = 0
+        var installCount = 0; var avgRating = 0f; var reviewCount = 0
+        val tags = mutableListOf<String>()
+        var originalAgentId = ""; var version = 0; var shareCode = ""
         while (!inner.isAtEnd) {
             val innerTag = inner.readTag()
             if (innerTag == 0) break
@@ -609,12 +619,20 @@ private fun parseAgentInfoV2(bytes: ByteArray): AgentInfoV2Proto? {
                         }
                     }
                 }
+                15 -> installCount = inner.readInt32()
+                16 -> avgRating = inner.readFloat()
+                17 -> reviewCount = inner.readInt32()
+                18 -> tags.add(inner.readString())
+                19 -> originalAgentId = inner.readString()
+                20 -> version = inner.readInt32()
+                21 -> shareCode = inner.readString()
                 else -> inner.skipField(innerTag)
             }
         }
         AgentInfoV2Proto(id, name, desc, providerType, model, sysPrompt, toolsEnabled, ragEnabled,
             isPreset, isPublic, maxTokens, temperature, createdBy,
-            AgentCapabilitiesV2Proto(capsImages, capsTools, capsStreaming, capsMaxTokens))
+            AgentCapabilitiesV2Proto(capsImages, capsTools, capsStreaming, capsMaxTokens),
+            installCount, avgRating, reviewCount, tags, originalAgentId, version, shareCode)
     } catch (_: Exception) {
         null
     }

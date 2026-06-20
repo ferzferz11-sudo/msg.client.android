@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.2 | **Updated:** 2026-06-20
+**Version:** v1.3.0.3 | **Updated:** 2026-06-20
 
 ---
 
@@ -40,12 +40,12 @@
 | Kotlin files | ~150 |
 | Activities | 24 |
 | gRPC modules | 27 |
-| Unit tests | 12 files |
+| Unit tests | 15 files |
 | Layout XML | 100 |
 | String entries | 800 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.0) |
+| Branch | feat/1.3.0.x (v1.3.0.3) |
 
 ---
 
@@ -135,4 +135,4 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | String entries | 826 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.2) |
+| Branch | feat/1.3.0.x (v1.3.0.3) |

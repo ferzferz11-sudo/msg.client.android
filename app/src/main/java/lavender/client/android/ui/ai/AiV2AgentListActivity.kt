@@ -291,7 +291,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
                         if (currentTab == 4) {
                             val avgTokens = if (usageStatsViewModel.totalRequests.value > 0) {
                                 tokens / usageStatsViewModel.totalRequests.value
-                            } else 0L
+                            } else 0
                             findViewById<TextView>(R.id.totalTokensValue)?.text = formatNumber(tokens)
                             findViewById<TextView>(R.id.avgTokensValue)?.text = formatNumber(avgTokens)
                         }
@@ -367,7 +367,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         }
     }
 
-    private fun formatNumber(n: Long): String {
+    private fun formatNumber(n: Int): String {
         return when {
             n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000.0)
             n >= 1_000 -> String.format("%.1fK", n / 1_000.0)

@@ -74,14 +74,14 @@ class MarketplaceMappersTest {
         val proto = UsageStatEntryProto(
             agentId = "agent-123",
             agentName = "Developer",
-            totalTokens = 1000000L,
+            totalTokens = 1000000,
             requestCount = 500,
             periodStart = "2026-06-01"
         )
         val stat = proto.toDomain()
         assertEquals("agent-123", stat.agentId)
         assertEquals("Developer", stat.agentName)
-        assertEquals(1000000L, stat.totalTokens)
+        assertEquals(1000000, stat.totalTokens)
         assertEquals(500, stat.requestCount)
         assertEquals("2026-06-01", stat.periodStart)
     }
@@ -92,7 +92,7 @@ class MarketplaceMappersTest {
         val stat = proto.toDomain()
         assertEquals("", stat.agentId)
         assertEquals("", stat.agentName)
-        assertEquals(0L, stat.totalTokens)
+        assertEquals(0, stat.totalTokens)
         assertEquals(0, stat.requestCount)
         assertEquals("", stat.periodStart)
     }

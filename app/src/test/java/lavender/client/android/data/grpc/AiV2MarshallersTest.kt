@@ -229,6 +229,20 @@ class AiV2MarshallersTest {
     }
 
     @Test
+    fun listAIAgentsRequestMarshaller_serializes_includePublic() {
+        val req = ListAIAgentsRequestProto(includePublic = true)
+        val bytes = ListAIAgentsRequestMarshaller().stream(req).readBytes()
+        assertTrue(bytes.isNotEmpty())
+    }
+
+    @Test
+    fun listAIAgentsRequestMarshaller_empty_when_false() {
+        val req = ListAIAgentsRequestProto(includePublic = false)
+        val bytes = ListAIAgentsRequestMarshaller().stream(req).readBytes()
+        assertEquals(0, bytes.size)
+    }
+
+    @Test
     fun listAIAgentsResponseMarshaller_empty() {
         val parsed = ListAIAgentsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertTrue(parsed.agents.isEmpty())
@@ -413,6 +427,7 @@ class AiV2MarshallersTest {
     fun rateAIAgentResponseMarshaller_empty() {
         val parsed = RateAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertFalse(parsed.success)
+        assertEquals("", parsed.error)
         assertEquals(0f, parsed.avgRating, 0.001f)
         assertEquals(0, parsed.reviewCount)
     }
@@ -422,11 +437,13 @@ class AiV2MarshallersTest {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         cos.writeBool(1, true)
-        cos.writeFloat(2, 4.5f)
-        cos.writeInt32(3, 12)
+        cos.writeString(2, "already rated")
+        cos.writeFloat(3, 4.5f)
+        cos.writeInt32(4, 12)
         cos.flush()
         val parsed = RateAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
         assertTrue(parsed.success)
+        assertEquals("already rated", parsed.error)
         assertEquals(4.5f, parsed.avgRating, 0.001f)
         assertEquals(12, parsed.reviewCount)
     }
@@ -659,35 +676,35 @@ class AiV2MarshallersTest {
     fun getAIUsageStatsResponseMarshaller_empty() {
         val parsed = GetAIUsageStatsResponseMarshaller().parse(java.io.ByteArrayInputStream(byteArrayOf()))
         assertTrue(parsed.stats.isEmpty())
-        assertEquals(0L, parsed.totalTokens)
+        assertEquals(0, parsed.totalTokens)
         assertEquals(0, parsed.totalRequests)
     }
 
     @Test
     fun getAIUsageStatsResponseMarshaller_withStats() {
-        fun writeStatEntry(agentId: String, agentName: String, tokens: Long, requests: Int, period: String): ByteArray {
+        fun writeStatEntry(agentId: String, totalTokens: Int, requests: Int, period: String, agentName: String): ByteArray {
             val baos = java.io.ByteArrayOutputStream()
             val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
             cos.writeString(1, agentId)
-            cos.writeString(2, agentName)
-            cos.writeInt64(3, tokens)
-            cos.writeInt32(4, requests)
-            cos.writeString(5, period)
+            cos.writeInt32(2, totalTokens)
+            cos.writeInt32(3, requests)
+            cos.writeString(4, period)
+            cos.writeString(5, agentName)
             cos.flush()
             return baos.toByteArray()
         }
 
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        val stat1 = writeStatEntry("a1", "Agent 1", 1500L, 30, "2026-01")
-        val stat2 = writeStatEntry("a2", "Agent 2", 2500L, 50, "2026-01")
+        val stat1 = writeStatEntry("a1", 1500, 30, "2026-01", "Agent 1")
+        val stat2 = writeStatEntry("a2", 2500, 50, "2026-01", "Agent 2")
         cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
         cos.writeUInt32NoTag(stat1.size)
         cos.writeRawBytes(stat1)
         cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED)
         cos.writeUInt32NoTag(stat2.size)
         cos.writeRawBytes(stat2)
-        cos.writeInt64(2, 4000L)
+        cos.writeInt32(2, 4000)
         cos.writeInt32(3, 80)
         cos.flush()
 
@@ -695,12 +712,12 @@ class AiV2MarshallersTest {
         assertEquals(2, parsed.stats.size)
         assertEquals("a1", parsed.stats[0].agentId)
         assertEquals("Agent 1", parsed.stats[0].agentName)
-        assertEquals(1500L, parsed.stats[0].totalTokens)
+        assertEquals(1500, parsed.stats[0].totalTokens)
         assertEquals(30, parsed.stats[0].requestCount)
         assertEquals("2026-01", parsed.stats[0].periodStart)
         assertEquals("a2", parsed.stats[1].agentId)
-        assertEquals(2500L, parsed.stats[1].totalTokens)
-        assertEquals(4000L, parsed.totalTokens)
+        assertEquals(2500, parsed.stats[1].totalTokens)
+        assertEquals(4000, parsed.totalTokens)
         assertEquals(80, parsed.totalRequests)
     }
 
@@ -709,11 +726,13 @@ class AiV2MarshallersTest {
         val baos = java.io.ByteArrayOutputStream()
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         cos.writeBool(1, true)
-        cos.writeFloat(2, 3.0f)
+        cos.writeString(2, "error msg")
+        cos.writeFloat(3, 3.0f)
         cos.writeString(99, "unknown")
         cos.flush()
         val parsed = RateAIAgentResponseMarshaller().parse(java.io.ByteArrayInputStream(baos.toByteArray()))
         assertTrue(parsed.success)
+        assertEquals("error msg", parsed.error)
         assertEquals(3.0f, parsed.avgRating, 0.001f)
     }
 
