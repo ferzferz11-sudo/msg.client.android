@@ -49,7 +49,7 @@ AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 Rate Limit: RateLimitCache + countdown + disable input
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
-Chat List: Unread highlight (background + bold name)
+Chat List: Unread highlight (background + bold name + badge)
 ```
 
 ---
@@ -64,26 +64,49 @@ Chat List: Unread highlight (background + bold name)
 | Infinite scroll через OnScrollListener | Автоматическая пагинация при приближении к концу списка |
 | Deep link lavender://marketplace/install | Удобная установка агентов по ссылке |
 | RateLimitCache клиентский | Серверный rate limit, клиентский кэш только для UX |
+|marshallers: ручная сериализация | Нет protobuf-java reflection, кастомные marshallers для каждого типа |
+
+---
+
+## Итог сессии v1.3.0.3
+
+### Исправлено (критические баги)
+
+**1. AI v2 gRPC service name:**
+- Все 15 RPC вызовов использовали `messenger.AIService/*` — сервер зарегистрировал их в `ChatService`
+- Пресеты, маркетплейс и все AI v2 API не работали
+
+**2. AI v2 Marshallers (7 багов):**
+- `RateAIAgentResponseMarshaller` — wire type mismatch (string→float, float→int32)
+- `GetAIUsageStatsResponseMarshaller` — UsageStatInfo fields 2-5 все неправильные
+- `parseAgentInfoV2` — пропускал fields 15-21 (install_count, avg_rating, review_count, tags, original_agent_id, version, share_code)
+- `GetAIAgentStatsResponseMarshaller` —缺少 field 4 (total_tokens_used)
+- `ShareAIAgentResponseMarshaller` —缺少 field 3 (error)
+- `ListAIAgentsRequestMarshaller` — `includePublic` не сериализовался
+
+**3. Unread индикация:**
+- Серверный `GetUserChatsV2` не считал `unreadCount` — SQL не содержал CTE `unread_counts`
+- Клиентский race condition: `loadChats()` перезаписывал `unreadCount` из `newMessageEvent`
 
 ---
 
 ## Бэклог — Следующая сессия (v1.3.0.4)
 
-### Приоритет 1: Тестирование AI v2 с сервером
+### Приоритет 1: End-to-end тестирование AI v2
 | Задача | Статус |
 |--------|--------|
-| Тестирование ChatWithAIV2 на реальном сервере | ✅ gRPC service name исправлен |
-| Тестирование Agent CRUD | ✅ marshallers исправлены |
-| Тестирование Tool Calling loop | ✅ marshallers исправлены |
-| Тестирование Marketplace API (каталог, отзывы, оценки) | ✅ marshallers исправлены |
-| Тестирование Graceful Shutdown | ✅ работает |
-| Тестирование Rate Limit | ✅ работает |
+| Тест ChatWithAIV2 на реальном сервере (стриминг + tool calling) | 🔲 Нужен live-тест |
+| Тест Agent CRUD (create/update/delete/clone) | 🔲 Нужен live-тест |
+| Тест Marketplace API (каталог, rate, reviews, install, share) | 🔲 Нужен live-тест |
+| Тест Rate Limit (10 req/min, countdown, auto-restore) | 🔲 Нужен live-тест |
+| Тест Graceful Shutdown (SERVER_SHUTTINGDOWN + backoff) | 🔲 Нужен live-тест |
 
 ### Приоритет 2: UX улучшения
 | Задача | Статус |
 |--------|--------|
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
+| Better error messages для AI v2 (показывать server error из response) | 🔲 |
 
 ### Приоритет 3: Новые фичи
 | Задача | Статус |
@@ -105,11 +128,12 @@ Chat List: Unread highlight (background + bold name)
 8. v2 server only — никаких v1 fallbacks
 9. Chat toolbar: фиксированная высота `@dimen/custom_toolbar_height`, elevation 0dp
 10. Все chat activities: `setDecorFitsSystemWindows(window, false)` в onCreate
-11. Marshallers: всегда включать v2 proto поля
+11. Marshallers: всегда включать v2 proto поля, сверять field numbers с серверным proto
 12. JWT freshness: `ensureFreshToken()` перед Chat stream
 13. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
 14. **НЕ bump'ать версию — bump делает только пользователь**
 15. **Marshallers field order:** server proto определяет field numbers. `chat_id` всегда field 1, `user_id` field 2
+16. **AI v2 RPC:** все методы в `messenger.ChatService/*` (НЕ `AIService`)
 
 ---
 
@@ -138,6 +162,6 @@ Chat List: Unread highlight (background + bold name)
 
 ## Полезные ссылки
 
-- Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/PLAN.md`
+- Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
 - Changelog: `CHANGELOG.md`

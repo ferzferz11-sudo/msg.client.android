@@ -232,3 +232,4 @@ Token refresh: proactive every 60s + sync before chat stream
 13. Run `./gradlew assembleDebug` before committing
 14. Do NOT bump version — only user bumps version
 15. Marshallers field order: server proto defines field numbers
+16. AI v2 RPC: all methods under `messenger.ChatService/*` (NOT `AIService`)
