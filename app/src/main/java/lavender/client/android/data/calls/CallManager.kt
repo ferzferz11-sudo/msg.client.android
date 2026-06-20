@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 import org.json.JSONObject
-import lavender.client.android.data.grpc.*
 
 object CallManager {
     private const val TAG = "CallManager"

@@ -16,14 +16,10 @@ import lavender.client.android.data.proto.*
  */
 class GrpcAuthClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
-    private val connectionStatus: StateFlow<ConnectionStatus>,
+    @Suppress("UNUSED_PARAMETER") private val connectionStatus: StateFlow<ConnectionStatus>,
     private val authStatus: MutableStateFlow<String?>,
     private val setAuthFailure: (Boolean) -> Unit
 ) {
-    companion object {
-        private const val TAG = "GrpcAuthClient"
-    }
-
     /**
      * SignInV2 — authenticates via AuthService v2 with JWT tokens.
      */

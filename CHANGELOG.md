@@ -1,5 +1,41 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.8] - 2026-06-20
+
+### Оптимизация
+
+**Очистка кода (Lint warnings):**
+- Удалены неиспользуемые import'ы из 18 файлов: `CallManager`, `CallActivity`, `ChatListActivity`, `ChatListFABs`, `ChatListToolbar`, `ChatListActionMode`, `ConferenceLobbyActivity`, `ShareReceiverActivity`, `SecurityActivity`, `RemoteAgentService`, `RemoteAgentSettingsActivity`, `BearerTokenInterceptor`, `GrpcDraftClient`, `GrpcFavoritesClient`, `GrpcAuthClient`, `GrpcServerDiscoveryClient`, `AiV2ChatActivity`
+- Удалены неиспользуемые `TAG` из `GrpcDraftClient`, `GrpcFavoritesClient`, `GrpcAuthClient`, `GrpcServerDiscoveryClient`, `BearerTokenInterceptor`, `AiV2ChatActivity`
+- Удалены неиспользуемые `connectionStatus` и `authStatus` из `GrpcAuthClient` — `@Suppress` на constructor params
+- Удалён неиспользуемый `serverTime` из `RealGrpcClient`, неиспользуемый `AES_KEY_SIZE` из `E2EEManager`
+- Удалена неиспользуемая переменная `prefs` из `SplashLoadingActivity`
+- Удалена неиспользуемая переменная `editOldPw` из `SuperAdminActivity`
+- Удалена неиспользуемая переменная `thisTunnelAddress` из `RemoteAgentService`
+- Удалена неиспользуемая переменная `result` из `ProfileViewModel.uploadGroupAvatar`
+- Удалён неиспользуемый `inner` модификатор из `ChatMessageAdapter.TypingHolder`
+- Удалён неиспользуемый namespace `tools` из `activity_super_admin.xml`
+- Удалены лишние `SDK_INT` проверки (всегда >= 29): `RemoteAgentService`, `UpdateCoordinator`
+
+**SharedPreferences KTX:**
+- `RealGrpcClient.fetchAdminStatus` — `prefs.edit().putBoolean().apply()` → `prefs.edit { putBoolean() }`
+- `RealGrpcClient.startChatStream` — аналогично для `is_super_admin` и `admin_user_id`
+- `ChatListToolbar.toggleLanguage` — аналогично
+
+**Redundant qualifiers:**
+- `ChatListToolbar` — 20+ вызовов `android.content.Intent(...)` → `Intent(...)` (import уже был)
+- `BearerTokenInterceptor` — убрана冗余ная `io.grpc.` квалификация
+
+### Исправлено
+
+- `PATTERNS.md` — исправлен синтаксис в SplashActivity pattern (псевдокод `...` → `activity`)
+- `item_chat.xml` — добавлен `contentDescription` на `ivAdminIndicator` ImageView
+- `ChatViewModel.retryMessage` — убран неиспользуемый параметр `context`
+- `ChatViewModel.fetchChatMetadata` — убран неиспользуемый параметр `isSecret`
+- `ProfileViewModel` — исправлен redundant safe call `profile?.avatarUrl` → `profile.avatarUrl`
+
+---
+
 ## [1.3.0.7] - 2026-06-20
 
 ### Оптимизация

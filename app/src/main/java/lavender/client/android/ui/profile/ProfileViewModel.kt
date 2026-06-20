@@ -65,7 +65,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 _profileData.value = ProfileData(
                     username = profile?.username ?: username,
                     avatarUrl = profile?.avatarUrl ?: "",
-                    fullAvatarUrl = profile?.fullAvatarUrl?.ifEmpty { profile?.avatarUrl } ?: "",
+                    fullAvatarUrl = profile?.fullAvatarUrl?.ifEmpty { profile.avatarUrl } ?: "",
                     bio = profile?.bio ?: "",
                     status = profile?.status ?: "",
                     isOnline = isOnline,
@@ -159,7 +159,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     fun uploadGroupAvatar(context: Context, roomId: String, uri: Uri, onComplete: (AvatarUploadResult) -> Unit) {
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 try {
                     val mimeType = context.contentResolver.getType(uri)
                     val isGif = mimeType == "image/gif"
@@ -176,11 +176,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     } else {
                         val thumb = resizeImage(context, uri, 512, 512)
                         val full = resizeImage(context, uri, 1920, 1920)
-                        if (thumb == null || full == null) return@withContext AvatarUploadResult(error = "Failed to resize image")
+                        if (thumb == null || full == null) { onComplete(AvatarUploadResult(error = "Failed to resize image")); return@withContext }
                         thumbBytes = thumb; fullBytes = full; mediaType = "image/jpeg"
                     }
 
-                    if (thumbBytes.isEmpty()) return@withContext AvatarUploadResult(error = "Failed to read image")
+                    if (thumbBytes.isEmpty()) { onComplete(AvatarUploadResult(error = "Failed to read image")); return@withContext }
 
                     val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
                         .addFormDataPart("avatar", if (isGif) "avatar.gif" else "avatar.jpg", thumbBytes.toRequestBody(mediaType.toMediaTypeOrNull()))

@@ -1,11 +1,13 @@
 package lavender.client.android.ui.chatlist
 
+import android.content.Context
 import android.content.Intent
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
@@ -25,14 +27,13 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.cache.CacheUtils
 import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.data.grpc.*
 
 /**
  * Toolbar setup and settings sheet logic for ChatListActivity.
  * Extracted to reduce ChatListActivity from 1470 to ~800 lines.
  */
 
-internal fun setupToolbarActions(activity: ChatListActivity, username: String) {
+internal fun setupToolbarActions(activity: ChatListActivity, @Suppress("UNUSED_PARAMETER") username: String) {
     activity.ivToolbarUserAvatar?.setOnClickListener {
         showSettingsSheet(activity)
     }
@@ -70,7 +71,7 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         activity.editProfileLauncher.launch(
-            android.content.Intent(activity, EditProfileActivity::class.java).apply {
+            Intent(activity, EditProfileActivity::class.java).apply {
                 putExtra("USERNAME", username)
             }
         )
@@ -78,7 +79,7 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
 
     sheet.findViewById<View>(R.id.actionContacts)?.setOnClickListener {
         sheet.dismiss()
-        activity.startActivity(android.content.Intent(activity, ContactsActivity::class.java).apply {
+        activity.startActivity(Intent(activity, ContactsActivity::class.java).apply {
             putExtra("USERNAME", username)
         })
     }
@@ -97,7 +98,7 @@ internal fun showSettingsSheet(activity: ChatListActivity, onBack: (() -> Unit)?
 
     sheet.findViewById<View>(R.id.actionThemes)?.setOnClickListener {
         sheet.dismiss()
-        activity.startActivity(android.content.Intent(activity, ThemesActivity::class.java).apply {
+        activity.startActivity(Intent(activity, ThemesActivity::class.java).apply {
             putExtra("username", username)
         })
     }
@@ -141,7 +142,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         activity.settingsActivityLauncher.launch(
-            android.content.Intent(activity, lavender.client.android.SecurityActivity::class.java).apply {
+            Intent(activity, lavender.client.android.SecurityActivity::class.java).apply {
                 putExtra("username", username)
             }
         )
@@ -151,7 +152,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         activity.settingsActivityLauncher.launch(
-            android.content.Intent(activity, lavender.client.android.NotificationActivity::class.java)
+            Intent(activity, lavender.client.android.NotificationActivity::class.java)
         )
     }
 
@@ -177,7 +178,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         activity.settingsActivityLauncher.launch(
-            android.content.Intent(activity, lavender.client.android.SuperAdminActivity::class.java)
+            Intent(activity, lavender.client.android.SuperAdminActivity::class.java)
         )
     }
 
@@ -185,7 +186,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         activity.isNavigatingDeeper = true
         sheet.dismiss()
         activity.settingsActivityLauncher.launch(
-            android.content.Intent(activity, ServersActivity::class.java)
+            Intent(activity, ServersActivity::class.java)
         )
     }
 
@@ -198,7 +199,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity, onBack: (()
         sheet.dismiss()
         GrpcClient.disconnect()
         SessionManager.logout(activity)
-        val intent = android.content.Intent(activity, ChatListActivity::class.java).apply {
+        val intent = Intent(activity, ChatListActivity::class.java).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         activity.startActivity(intent)
@@ -254,7 +255,7 @@ internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) 
     sheet.findViewById<View>(R.id.btnWhatsNew)?.setOnClickListener {
         activity.isNavigatingDeeper = true
         sheet.dismiss()
-        activity.startActivity(android.content.Intent(activity, ChangelogActivity::class.java))
+        activity.startActivity(Intent(activity, ChangelogActivity::class.java))
     }
     sheet.findViewById<View>(R.id.btnFeedback)?.setOnClickListener {
         activity.isNavigatingDeeper = true
@@ -263,7 +264,7 @@ internal fun showAboutDialog(activity: ChatListActivity, onBack: (() -> Unit)?) 
     }
     sheet.findViewById<View>(R.id.btnShare)?.setOnClickListener {
         val shareText = activity.getString(R.string.share_app_description) + "\nhttp://13.140.25.249"
-        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        val intent = Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(android.content.Intent.EXTRA_TEXT, shareText)
         }
@@ -335,10 +336,10 @@ internal fun shareApp(activity: ChatListActivity) {
 }
 
 internal fun toggleLanguage(activity: ChatListActivity) {
-    val prefs = activity.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+    val prefs = activity.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
     val currentLang = prefs.getString("language", "ru") ?: "ru"
     val newLang = if (currentLang == "ru") "en" else "ru"
-    prefs.edit().putString("language", newLang).apply()
+    prefs.edit { putString("language", newLang) }
 
     // Sync to server
     activity.lifecycleScope.launch {

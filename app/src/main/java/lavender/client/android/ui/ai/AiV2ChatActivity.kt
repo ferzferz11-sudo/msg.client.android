@@ -210,6 +210,5 @@ class AiV2ChatActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val TAG = "AiV2ChatActivity"
     }
 }

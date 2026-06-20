@@ -19,25 +19,21 @@ class ChatViewModel : ViewModel() {
 
     var currentRoomId = "general"
 
-    val connectionState: StateFlow<Boolean> = grpcClient.connectionState
     val error: StateFlow<String?> = grpcClient.error
     val messages: StateFlow<List<Message>> = grpcClient.messages
     val users: StateFlow<List<String>> = grpcClient.users
-    val allUsers: StateFlow<List<UserInfoProto>> = grpcClient.allUsers
-    val systemNotification: StateFlow<String?> = grpcClient.systemNotification
-    val typingUsers: StateFlow<Map<String, Set<String>>> = grpcClient.typingUsers
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _chatMetadata = MutableStateFlow<ChatMetadata?>(null)
-    val chatMetadata: StateFlow<ChatMetadata?> = _chatMetadata.asStateFlow()
 
     private val _pinnedMessageIds = MutableStateFlow<Set<String>>(emptySet())
     val pinnedMessageIds: StateFlow<Set<String>> = _pinnedMessageIds.asStateFlow()
 
     private val _isAudioUploading = MutableStateFlow(false)
     val isAudioUploading: StateFlow<Boolean> = _isAudioUploading.asStateFlow()
+
+    private val _chatMetadata = MutableStateFlow<ChatMetadata?>(null)
+    val chatMetadata: StateFlow<ChatMetadata?> = _chatMetadata.asStateFlow()
 
     data class ChatMetadata(
         val chatName: String, val isDirect: Boolean, val chatType: String,
@@ -97,7 +93,7 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun retryMessage(message: Message, context: Context) {
+    fun retryMessage(message: Message) {
         viewModelScope.launch {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 grpcClient.loadHistory(currentRoomId) {
@@ -110,7 +106,7 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun fetchChatMetadata(username: String, roomId: String, isDirect: Boolean, participantsJson: String, chatName: String, isSecret: Boolean, onResult: (ChatMetadata) -> Unit) {
+    fun fetchChatMetadata(username: String, roomId: String, isDirect: Boolean, participantsJson: String, chatName: String, onResult: (ChatMetadata) -> Unit) {
         if (roomId.startsWith("favorites_")) return
         if (!isDirect || participantsJson == "[]" || chatName == "Chat") {
             grpcClient.getChats(username) { chats ->

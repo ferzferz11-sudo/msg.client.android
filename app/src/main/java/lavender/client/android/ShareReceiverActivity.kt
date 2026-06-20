@@ -41,7 +41,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.net.URL
 import java.util.regex.Pattern
-import lavender.client.android.data.grpc.*
 
 class ShareReceiverActivity : AppCompatActivity() {
 

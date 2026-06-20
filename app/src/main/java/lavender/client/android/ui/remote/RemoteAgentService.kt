@@ -15,7 +15,6 @@ import kotlinx.coroutines.*
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.AppLog
-import lavender.client.android.data.grpc.*
 
 /**
  * RemoteAgentService — foreground service для фонового подключения Remote Agent.
@@ -236,7 +235,7 @@ class RemoteAgentService : Service() {
         agentId: String,
         taskType: String,
         command: String,
-        userId: String,
+        @Suppress("UNUSED_PARAMETER") userId: String,
         callback: (success: Boolean, output: String, error: String) -> Unit
     ) {
         val tunnelActive = gatewayManager.isTunnelActive()
@@ -244,7 +243,6 @@ class RemoteAgentService : Service() {
 
         serviceScope.launch {
             try {
-                val thisTunnelAddress = gatewayManager.getLocalAddress()
                 val response = GrpcClient.deployAgentTask(
                     agentId = agentId,
                     taskType = taskType,
@@ -275,18 +273,16 @@ class RemoteAgentService : Service() {
     // ===== Notification =====
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Remote Agent",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.notif_background_connection)
-                setShowBadge(false)
-            }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Remote Agent",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(R.string.notif_background_connection)
+            setShowBadge(false)
         }
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
     }
 
     private fun buildNotification(statusText: String, isConnected: Boolean): Notification {
@@ -335,11 +331,7 @@ class RemoteAgentService : Service() {
     private fun stopForegroundService() {
         try {
             closeTunnel()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                stopForeground(true)
-            }
+            stopForeground(STOP_FOREGROUND_REMOVE)
             isStartedAsForeground = false
             stopSelf()
             Log.d(TAG, "Service stopped")

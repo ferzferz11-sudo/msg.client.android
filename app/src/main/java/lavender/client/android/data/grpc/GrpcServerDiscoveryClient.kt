@@ -18,7 +18,6 @@ class GrpcServerDiscoveryClient(
     private val getSavedServerAddress: () -> String?
 ) {
     companion object {
-        private const val TAG = "GrpcServerDiscoveryClient"
         private const val BOOTSTRAP_HOST = "13.140.25.249"
         private const val BOOTSTRAP_PORT = 50051
     }
@@ -63,13 +62,13 @@ class GrpcServerDiscoveryClient(
                 override fun onClose(status: Status, trailers: Metadata) {
                     try { tempChannel.shutdownNow() } catch (_: Exception) {}
                     if (!status.isOk || responseHolder.isEmpty()) { cb(emptyList()); return }
-                    try { cb(parseServerList(responseHolder[0])) } catch (e: Exception) { cb(emptyList()) }
+                    try { cb(parseServerList(responseHolder[0])) } catch (_: Exception) { cb(emptyList()) }
                 }
             }, Metadata())
             call.sendMessage(com.google.protobuf.ByteString.EMPTY)
             call.halfClose()
             call.request(1)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try { tempChannel.shutdownNow() } catch (_: Exception) {}
             cb(emptyList())
         }

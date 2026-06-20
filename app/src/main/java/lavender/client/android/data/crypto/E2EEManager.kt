@@ -35,7 +35,6 @@ object E2EEManager {
     private const val KEY_FINGERPRINT = "fingerprint_"
 
     private const val EC_CURVE = "secp256r1"
-    private const val AES_KEY_SIZE = 32
     private const val GCM_IV_SIZE = 12
     private const val GCM_TAG_SIZE = 128
 

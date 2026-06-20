@@ -222,10 +222,8 @@ class UpdateCoordinator(
         )
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(UpdateUtils.CHANNEL_ID, "Updates", NotificationManager.IMPORTANCE_DEFAULT)
-            notificationManager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(UpdateUtils.CHANNEL_ID, "Updates", NotificationManager.IMPORTANCE_DEFAULT)
+        notificationManager.createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(context, UpdateUtils.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_update_available)

@@ -19,6 +19,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 import kotlinx.coroutines.suspendCancellableCoroutine
+import androidx.core.content.edit
 
 enum class ConnectionStatus {
     DISCONNECTED,
@@ -53,8 +54,7 @@ object RealGrpcClient {
     private val _allUsers = MutableStateFlow<List<UserInfoProto>>(emptyList())
     val allUsers: StateFlow<List<UserInfoProto>> = _allUsers
 
-    private val _serverTime = MutableStateFlow<com.google.protobuf.Timestamp?>(null)
-    val serverTime: StateFlow<com.google.protobuf.Timestamp?> = _serverTime
+    val _serverTime = MutableStateFlow<com.google.protobuf.Timestamp?>(null)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -271,8 +271,6 @@ object RealGrpcClient {
         connectionManager.connect(serverAddress, useTls, port, context, forceReconnect)
     }
 
-    fun reconnect() = connectionManager.reconnect()
-
     fun disconnect() {
         connectionManager.disconnect()
         requestObserver = null
@@ -295,11 +293,12 @@ object RealGrpcClient {
                 val profile = ProfileClient.getProfile(ctx)
                 if (profile != null) {
                     _isSuperAdmin.value = profile.isSuperAdmin
-                    val prefs = ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-                    prefs.edit().putBoolean("is_super_admin", profile.isSuperAdmin).apply()
-                    if (profile.isSuperAdmin && profile.userId.isNotEmpty()) {
-                        if (_adminUserId.value == null) _adminUserId.value = profile.userId
-                        prefs.edit().putString("admin_user_id", profile.userId).apply()
+                    ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE).edit {
+                        putBoolean("is_super_admin", profile.isSuperAdmin)
+                        if (profile.isSuperAdmin && profile.userId.isNotEmpty()) {
+                            if (_adminUserId.value == null) _adminUserId.value = profile.userId
+                            putString("admin_user_id", profile.userId)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -436,12 +435,12 @@ object RealGrpcClient {
                     if (!_isSuperAdmin.value) {
                         _isSuperAdmin.value = true
                         appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-                            ?.edit()?.putBoolean("is_super_admin", true)?.apply()
+                            ?.edit { putBoolean("is_super_admin", true) }
                     }
                     if (value.userId.isNotEmpty() && _adminUserId.value == null) {
                         _adminUserId.value = value.userId
                         appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-                            ?.edit()?.putString("admin_user_id", value.userId)?.apply()
+                            ?.edit { putString("admin_user_id", value.userId) }
                     }
                 }
 
@@ -603,10 +602,10 @@ object RealGrpcClient {
                             scope.launch {
                                 val ctx = appContext
                                 if (ctx != null) {
-                                    val refreshToken = lavender.client.android.data.auth.AuthManager.getRefreshToken(ctx)
-                                    if (!refreshToken.isNullOrEmpty()) {
-                                        val refreshResult = kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.proto.RefreshTokenResponseProto?> { cont ->
-                                            GrpcClient.refreshToken(refreshToken) { response, error ->
+                    val refreshToken = lavender.client.android.data.auth.AuthManager.getRefreshToken(ctx)
+                                        if (!refreshToken.isNullOrEmpty()) {
+                                            val refreshResult = kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.proto.RefreshTokenResponseProto?> { cont ->
+                                                GrpcClient.refreshToken(refreshToken) { response, _ ->
                                                 if (cont.isActive) {
                                                     if (response != null && response.accessToken.isNotEmpty()) cont.resumeWith(Result.success(response))
                                                     else cont.resumeWith(Result.success(null))
@@ -895,9 +894,9 @@ object RealGrpcClient {
             if (admin != null && _adminUserId.value == null) {
                 _adminUserId.value = admin.userId
                 appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
-                    ?.edit()?.putString("admin_user_id", admin.userId)?.apply()
+                    ?.edit { putString("admin_user_id", admin.userId) }
             }
         }
     }
-    fun updateMessage(m: Message) {} // Local update mostly
+    fun updateMessage(@Suppress("UNUSED_PARAMETER") m: Message) {} // Local update mostly
 }

@@ -17,7 +17,7 @@ class GrpcChatClient(
         private const val TAG = "GrpcChatClient"
     }
 
-    fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
+    fun getChats(username: String, @Suppress("UNUSED_PARAMETER") skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) {
         val currentChannel = getChannel()
         if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
             Log.w(TAG, "getChats: channel not available")

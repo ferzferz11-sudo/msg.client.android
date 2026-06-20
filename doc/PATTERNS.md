@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.7 | **Updated:** 2026-06-20
+**Version:** v1.3.0.8 | **Updated:** 2026-06-20
 
 ---
 
@@ -285,7 +285,7 @@ DON'T:
 lifecycleScope.launch {
     delay(400)
     if (!isFinishing && !isDestroyed) {
-        navigateToTarget(...)
+        navigateToTarget(activity)
     }
 }
 ```

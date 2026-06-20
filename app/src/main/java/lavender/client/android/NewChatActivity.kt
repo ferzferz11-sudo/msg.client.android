@@ -129,7 +129,7 @@ class NewChatActivity : AppCompatActivity() {
         setupObservers()
         setupKeyboardHandling()
 
-        viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName, isSecret) { meta ->
+        viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
             runOnUiThread {
                 chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
                 participantsJson = meta.participantsJson; creator = meta.creator
@@ -428,7 +428,7 @@ class NewChatActivity : AppCompatActivity() {
 
     private fun retryMessage(message: Message) {
         Toast.makeText(this, getString(R.string.checking_server), Toast.LENGTH_SHORT).show()
-        viewModel.retryMessage(message, this)
+        viewModel.retryMessage(message)
     }
 
     private fun isNearBottom(): Boolean {
@@ -480,7 +480,7 @@ class NewChatActivity : AppCompatActivity() {
                 grpcClient.connect(p[0], false, p.getOrNull(1)?.toIntOrNull() ?: 50051, this, true)
             }
         }
-        viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName, isSecret) { meta ->
+        viewModel.fetchChatMetadata(username, roomId, isDirect, participantsJson, chatName) { meta ->
             runOnUiThread {
                 chatName = meta.chatName; isDirect = meta.isDirect; chatType = meta.chatType
                 participantsJson = meta.participantsJson; creator = meta.creator

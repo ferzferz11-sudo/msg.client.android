@@ -17,9 +17,6 @@ class GrpcFavoritesClient(
     private val getUsername: () -> String?,
     private val scope: kotlinx.coroutines.CoroutineScope
 ) {
-    companion object {
-        private const val TAG = "GrpcFavoritesClient"
-    }
 
     fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = getChannel() ?: return

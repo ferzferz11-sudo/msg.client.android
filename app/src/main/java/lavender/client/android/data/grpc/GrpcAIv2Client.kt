@@ -15,7 +15,7 @@ import lavender.client.android.data.proto.*
  */
 class GrpcAIv2Client(
     private val getChannel: () -> io.grpc.ManagedChannel?,
-    private val getUserId: () -> String?,
+    @Suppress("UNUSED_PARAMETER") private val getUserId: () -> String?,
     private val scope: CoroutineScope
 ) {
     companion object {

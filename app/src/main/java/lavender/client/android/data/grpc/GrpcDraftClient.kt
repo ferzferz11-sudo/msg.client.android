@@ -11,9 +11,6 @@ class GrpcDraftClient(
     private val getChannel: () -> io.grpc.ManagedChannel?,
     private val getUserId: () -> String?
 ) {
-    companion object {
-        private const val TAG = "GrpcDraftClient"
-    }
 
     fun saveDraft(
         roomId: String, text: String,

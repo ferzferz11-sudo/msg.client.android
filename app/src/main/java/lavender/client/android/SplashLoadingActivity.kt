@@ -22,7 +22,6 @@ class SplashLoadingActivity : AppCompatActivity() {
 
         currentInstance = this
 
-        val prefs = getSharedPreferences("lavender_prefs", MODE_PRIVATE)
         SessionManager.initFromPrefs(this)
         lavender.client.android.theme.ThemeStore.init(this)
 

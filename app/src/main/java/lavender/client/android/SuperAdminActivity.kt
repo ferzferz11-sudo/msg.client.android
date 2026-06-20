@@ -435,7 +435,6 @@ class SuperAdminActivity : AppCompatActivity() {
         sheet.setTitle(getString(R.string.change_password))
         
         val editNewPw = sheet.findViewById<EditText>(R.id.editTextNewPassword)
-        val editOldPw = sheet.findViewById<EditText>(R.id.editTextOldPassword)
         
         sheet.findViewById<View>(R.id.editTextOldPassword)?.parent?.parent?.let {
             if (it is View) it.visibility = View.GONE

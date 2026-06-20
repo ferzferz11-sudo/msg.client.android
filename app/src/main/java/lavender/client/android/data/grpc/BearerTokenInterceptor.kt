@@ -19,7 +19,6 @@ class BearerTokenInterceptor(
 ) : ClientInterceptor {
 
     companion object {
-        private const val TAG = "BearerTokenInterceptor"
         private val AUTHORIZATION_KEY: Metadata.Key<String> =
             Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER)
     }

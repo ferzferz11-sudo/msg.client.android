@@ -15,7 +15,6 @@ import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
-import lavender.client.android.data.grpc.*
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.db.toDomain
 
@@ -115,7 +114,6 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         )
                     }
                     buildSections(allChats)
-                } else {
                 }
             }
         }
@@ -176,7 +174,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             try {
-                val username = lavender.client.android.data.session.SessionManager.session.value.username
+                val username = SessionManager.session.value.username
 
                 // First: load from cache for instant display
                 if (allChats.isEmpty()) {
@@ -355,7 +353,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun deleteChat(chatId: String, onResult: (() -> Unit)? = null) {
         viewModelScope.launch {
             try {
-                val username = lavender.client.android.data.session.SessionManager.session.value.username
+                val username = SessionManager.session.value.username
                 GrpcClient.deleteChat(chatId, username) { success, _ ->
                     if (success) {
                         allChats = allChats.filter { it.id != chatId }

@@ -20,7 +20,6 @@ import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import lavender.client.android.data.grpc.*
 
 /**
  * ChatListFABs — FAB buttons and action sheets for ChatListActivity.

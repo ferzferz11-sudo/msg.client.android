@@ -88,6 +88,7 @@
             android:id="@+id/ivAdminIndicator"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:contentDescription="@string/muted_label"
             android:visibility="gone" />
 
         <TextView

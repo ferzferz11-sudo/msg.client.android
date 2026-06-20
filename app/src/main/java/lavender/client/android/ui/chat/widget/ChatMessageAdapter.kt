@@ -120,7 +120,7 @@ class ChatMessageAdapter(
         }
     }
 
-    inner class TypingHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class TypingHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val typingContainer: LinearLayout = itemView.findViewById(R.id.typingContainer)
         private val typingText: TextView = itemView.findViewById(R.id.typingText)
         private var dotAnimator: ValueAnimator? = null
