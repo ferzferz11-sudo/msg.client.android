@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.AppLog
-import lavender.client.android.data.models.RemoteAgentInfo
+import lavender.client.android.data.proto.RemoteAgentInfo
 import lavender.client.android.R
 import lavender.client.android.data.grpc.*
 

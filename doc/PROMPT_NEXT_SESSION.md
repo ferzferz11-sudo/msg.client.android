@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.2.0.19 (релиз) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-19
+**Версия:** v1.2.0.20 (релиз) | **Ветка:** feat/1.2.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -15,57 +15,50 @@
 
 ---
 
-## Что сделано (v1.2.0.18 → v1.2.0.19)
+## Что сделано (v1.2.0.19 → v1.2.0.20)
 
-### Навигация шторок (BottomSheet navigation)
-- **SheetNavigator:** Стек шторок с push/pop/clear — навигация между нижними панелями
-- **Back button:** Кнопка "←" в заголовке шторки (автоматически появляется при наличии стека)
-- **showWithNavigation():** Метод показа шторки с навигацией
-- **Все шторки в ChatListFABs** теперь используют навигацию (ActionBottomSheet → SearchableListBottomSheet)
+### AI Services v2 — единый API для всех AI чатов
 
-### Unit-тесты ChatViewModel
-- 17 тестов для `ChatViewModel.ChatMetadata` (defaults, values, copy, equals, hashCode, toString)
-- Тесты для всех типов чатов: direct, group, conference, favorites, general, secret
+**gRPC транспорт:**
+- `GrpcAIv2Client.kt` — chatWithAIV2 streaming + Agent CRUD + Tools
+- `GrpcAIv2Marshallers.kt` — все marshallers для v2 proto
+- `AiV2Proto.kt` — все v2 proto data classes
 
-### Удалено
-- `AiModelsTest.kt` — AI v1 deprecated, готовится AI v2
-- `ChatListActivity_v1_REFERENCE.kt` — устаревший файл
+**Domain layer:**
+- `AiV2Models.kt` — AiV2Agent, AiV2ToolCall, AiV2StreamState, AiV2Tool, AiV2ChatMessage
+- `AiV2DomainExtensions.kt` — proto → domain mapping
+- `AiV2ChatUseCase.kt` — chat с tool calling loop (max 10 итераций)
+- `AiV2ChatManager.kt` — unified SharedFlow/StateFlow
 
----
+**UI:**
+- `AiV2ChatActivity.kt` + ViewModel — единый AI чат для всех типов
+- `AiV2AgentListActivity.kt` + ViewModel + Adapter — список агентов (tabs: Presets/My/Public)
+- `AiV2AgentCreateEditActivity.kt` + ViewModel — создание/редактирование агентов
 
-## Что сделано (v1.2.0.17 → v1.2.0.18)
+**Tests:**
+- 60 unit-тестов: AiV2ModelsTest (20), AiV2DomainExtensionsTest (13), AiV2MarshallersTest (27)
 
-### Secret chat marshallers — field order fix
-- `CreateSecretChatRequest` — убран лишний `userId`, field order: 1=target_username, 2=target_user_id, 3=public_key, 4=client_version
-- `ExchangeSecretKeyRequest` — field order: 1=chat_id, 2=public_key
-- `GetSecretChatKeyRequest` — field order: 1=chat_id
+**Cleanup v1:**
+- Удалено: OwlChatUseCase, HermesChatUseCase, AiChatManager, AiModels, AiDomainExtensions, HermesRepository, HermesModel, AiChatGrpc
+- Удалено: OwlChatActivity, OwlChatViewModel, OwlSettingsActivity, HermesChatActivity, HermesChatViewModel, HermesChatAdapter, HermesCommandAdapter, AgentListActivity, AgentListViewModel, AgentListAdapter, AgentSettingsActivity, AgentSettingsBottomSheet
+- Удалено: 8 layout XML файлов, 3 directories
 
-### Secret chat display name
-- `getDisplayName()` — проверка `isSecret` вынесена на верхний уровень
-- Секретные чаты показывают `🔒 имя_собеседника`
-
-### E2EE key exchange
-- Лимит 10 попыток обмена ключами (каждые 3 сек)
-- Логирование: номер попытки, финальный warning
-
-### Selection mode
-- Убраны action_pin и action_archive (пока не готово)
-- MaterialCheckBox с адаптацией к теме
+**Оставлено:**
+- `OwlGrpc.kt` — утилиты уведомлений (subscribeNotifications, getNotificationHistory, markNotificationsRead, getUnreadCount)
+- `HermesGrpc.kt` — Remote Agent (listRemoteAgents, deployAgentTask, generateAgentToken, etc.)
+- Remote Agent UI (RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService)
 
 ---
 
-## Критические фиксы (v1.2.0.5 → v1.2.0.17)
+## Ключевые решения
 
-- **Токен/сессия:** `startTokenRefresh()` при каждом входе/восстановлении. Chat stream retry: refresh → retry.
-- **Admin menu:** `isSuperAdmin` race condition исправлен. `adminUserId` сохраняется в SharedPreferences.
-- **Admin discovery:** UserInfoProto добавлены userId + isSuperAdmin. loadUsers() сканирует allUsers.
-- **Chat subtitle last seen:** В direct-чатах показывается `ProtoUtils.formatLastSeen()`.
-- **Deleted chat fix:** deleteChat() удаляет чат из Room DB. chatDeletedEvent подписан в ChatListViewModel.
-- **Pull-to-refresh fix:** refreshChats() сбрасывает `_isLoading`.
-- **Chat list sync:** newMessageEvent + 30с periodic polling + ChatDao caching.
-- **Action mode toolbar:** toolbar-native selection mode.
-- **E2EE:** decryptE2EEMessages(), onKeyExchangeComplete cache clear + reload.
-- **Chat list privacy:** isSecret masking в buildSections + ChatAdapter.
+| Решение | Обоснование |
+|---------|-------------|
+| Единый ChatWithAIV2 | Заменяет ChatWithOWL, ChatWithOrchestrator, ChatWithAI |
+| Server executes tools | Клиент только отправляет tool_calls результат обратно |
+| Single AiV2ChatActivity | Один экран для всех типов AI чатов (simple/agent/pipeline) |
+| Remote Agent интегрирован в v2 | Remote Agent — тип провайдера в v2 agent system |
+| Чистый старт | Без миграции OWL/Hermes чатов |
 
 ---
 
@@ -80,41 +73,44 @@ GrpcClient (facade)
         ├── GrpcCallClient — calls
         ├── GrpcChatClient (~250) — getChats, create/delete, participants
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
-        ├── GrpcChatAuxClient (~130) — users, AI, FCM, mute
+        ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcChatListClient (~255) — chat list version, create/delete
         ├── GrpcProfileClient — profile, avatar, contacts, themes
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── HermesGrpc, OwlGrpc — AI
-        └── AiChatGrpc, SecretChatGrpc, ProfileClient
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools)
+        ├── SecretChatGrpc, ProfileClient
+        └── OwlGrpc (notifications), HermesGrpc (remote agents)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
-ProfileActivity → ProfileViewModel
-MessageAdapter → 12 focused bind methods
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline)
+AiV2AgentListActivity → agent list (tabs: Presets/My/Public)
+AiV2AgentCreateEditActivity → agent create/edit
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
-Admin tracking: adminUserId StateFlow + SharedPreferences persistence
-Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache
-Selection mode: toolbar-native (enterSelectionMode/exitSelectionMode)
-Sheet navigation: SheetNavigator (push/pop/back button)
-E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages()
+AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.2.0.20)
+## Бэклог — Следующая сессия (v1.2.0.21)
 
-### Приоритет 1: AI v2
-- Адаптация клиента под AI v2 API
+### Приоритет 1: AI v2 — интеграция с сервером
+- Тестирование ChatWithAIV2 на реальном сервере
+- Тестирование Agent CRUD (CreateAIAgent, ListAIAgents, etc.)
+- Тестирование Tool Calling loop
+- Настройка встроенных пресет-агентов на сервере
 
 ### Приоритет 2: Тесты
 | Задача | Статус |
 |--------|--------|
+| Unit-тесты AI v2 (models, marshallers, extensions) | ✅ Done (60 tests) |
 | Unit-тесты для ChatViewModel | ✅ Done (v1.2.0.19) |
 | Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
 | Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
+| Интеграционные тесты AI v2 с сервером | 🔲 |
 
 ### Приоритет 3: UX
 | Задача | Статус |
@@ -161,5 +157,6 @@ E2EE: E2EEManager (ECDH + AES-256-GCM), ChatE2EEDelegate, decryptE2EEMessages()
 ## Полезные ссылки
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/PLAN.md`
-- Документация сервера: `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md`
+- Документация AI v2: `doc/AI_V2_CLIENT_PLAN.md`, `doc/AI_V2_TESTING.md`
+- Документация сервера: `/Users/paveld/LavenderMessenger-server/doc/AI_V2_CLIENT_INTEGRATION.md`
 - Changelog: `CHANGELOG.md`

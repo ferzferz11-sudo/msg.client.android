@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.2.0.15 | **Updated:** 2026-06-19
+**Version:** v1.2.0.20 | **Updated:** 2026-06-20
 
 ---
 
@@ -28,6 +28,30 @@ RealGrpcClient (orchestrator) delegates to:
 ├── GrpcFavoritesClient — favorites
 ├── GrpcMessageClient — messages, history, reactions, mark read
 ├── GrpcServerDiscoveryClient — server discovery
+├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools)
+└── GrpcMarshallers (~1500) — all marshaller classes
+```
+GrpcClient (facade) — StateFlow declarations + inline domain delegates
+    ├── StateFlow/SharedFlow declarations (15)
+    ├── Mutable state properties (4)
+    ├── Core lifecycle: connect, disconnect, startChat, loadHistory
+    └── Domain methods: signInV2, getChats, sendMessage, etc. (inline delegates)
+
+RealGrpcClient (orchestrator) delegates to:
+├── GrpcConnectionManager — connect/reconnect/disconnect
+├── GrpcAuthClient — JWT auth (v2 only)
+├── GrpcTypingClient — typing stream
+├── GrpcCallClient — calls
+├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
+├── GrpcChatListV2Client (~120) — pin/unpin, search, archive, pinned messages
+├── GrpcChatAuxClient (~130) — users, AI chats, FCM, mute
+├── GrpcChatListClient (~255) — chat list version, create/delete
+├── GrpcProfileClient — profile, avatar, contacts, themes
+├── GrpcDraftClient — drafts
+├── GrpcFavoritesClient — favorites
+├── GrpcMessageClient — messages, history, reactions, mark read
+├── GrpcServerDiscoveryClient — server discovery
+├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools)
 └── GrpcMarshallers (~1500) — all marshaller classes
 ```
 - Each module: separate class with clear responsibility
@@ -35,6 +59,34 @@ RealGrpcClient (orchestrator) delegates to:
 - RealGrpcClient: StateFlow declarations → module init → chat stream → proxy methods
 - **CRITICAL:** StateFlow declared BEFORE modules (Kotlin object top-to-bottom init)
 - GrpcClient: extension functions don't work via star import — all methods inline
+
+### AI v2 Pattern (v1.2.0.20)
+```
+GrpcAIv2Client — gRPC transport (chatWithAIV2 streaming + agent CRUD + tools)
+    └── ChatWithAIV2 streaming with tool calling loop
+
+AiV2ChatUseCase — orchestrates chat with tool calling loop
+    ├── chat(userId, sessionId, message, agentId, images, scope)
+    │   └── executeStream() → if tool_calls → send back → repeat (max 10 iterations)
+    ├── Agent CRUD: createAgent, updateAgent, deleteAgent, getAgent, listAgents, cloneAgent
+    └── Tools: listTools
+
+AiV2ChatManager — shared flows for UI observation
+    ├── aiResponses: SharedFlow<AiV2ChatMessage>
+    ├── aiTyping: SharedFlow<Boolean>
+    ├── agents: StateFlow<List<AiV2Agent>>
+    ├── tools: StateFlow<List<AiV2Tool>>
+    └── streamState: StateFlow<AiV2StreamState>
+
+UI:
+    ├── AiV2ChatActivity + AiV2ChatViewModel — unified AI chat screen
+    ├── AiV2AgentListActivity + AiV2AgentListViewModel — agent list (tabs: Presets/My/Public)
+    └── AiV2AgentCreateEditActivity + AiV2AgentCreateEditViewModel — agent create/edit
+```
+- Server executes all built-in tools (search_messages, web_search, etc.)
+- Client only sends tool_calls result back to server
+- Agent provider_type: openrouter, local, mimo, webhook, websocket, subprocess, mcp
+- 8 preset agents: mimo, assistant, developer, devops, architect, writer, analyst, translator
 
 ### ChatListActivity Modular Pattern
 ```

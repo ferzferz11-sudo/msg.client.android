@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.2.0.15 | **Updated:** 2026-06-19
+**Version:** v1.2.0.20 | **Updated:** 2026-06-20
 
 ---
 
@@ -37,20 +37,20 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~163 |
-| Total LOC | ~40,000 |
-| Activities | 28 |
-| gRPC modules | 24 |
-| Unit tests | 9 files |
-| Layout XML | 108 |
-| String entries | 767 (EN + RU) |
+| Kotlin files | ~155 |
+| Total LOC | ~38,000 |
+| Activities | 26 |
+| gRPC modules | 25 |
+| Unit tests | 12 files |
+| Layout XML | 102 |
+| String entries | 780 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
 | Branch | feat/1.2.0.x (v2 server) |
 
 ---
 
-## Architecture Overview (v1.2.0.5)
+## Architecture Overview (v1.2.0.20)
 
 ```
 GrpcClient (facade)
@@ -61,19 +61,24 @@ GrpcClient (facade)
         ├── GrpcCallClient — calls
         ├── GrpcChatClient (~250) — getChats, create/delete, participants
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
-        ├── GrpcChatAuxClient (~130) — users, AI, FCM, mute
+        ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcChatListClient (~255) — chat list version
         ├── GrpcProfileClient — profile, avatar, contacts, themes
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── HermesGrpc, OwlGrpc — AI
-        └── AiChatGrpc, SecretChatGrpc, ProfileClient
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools)
+        ├── SecretChatGrpc, ProfileClient
+        └── OwlGrpc (notifications), HermesGrpc (remote agents)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates (toolbar, input, selection, search, E2EE, menu)
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline)
+AiV2AgentListActivity → agent list (tabs: Presets/My/Public)
+AiV2AgentCreateEditActivity → agent create/edit
 
 Auth: JWT only (v2), no password fallback
 Session: SessionManager (token refresh, auto-login recovery, FCM)
+AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
 ```
 
 ---

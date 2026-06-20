@@ -1040,6 +1040,18 @@ data class RemoteAgentInfoProto(
     val lastHeartbeat: String = ""
 )
 
+data class RemoteAgentInfo(
+    val id: String = "",
+    val name: String = "",
+    val host: String = "",
+    val ipAddress: String = "",
+    val os: String = "",
+    val status: String = "",
+    val capabilities: List<String> = emptyList(),
+    val activeTasks: Int = 0,
+    val lastHeartbeat: String = ""
+)
+
 data class ListRemoteAgentsResponseProto(
     val agents: List<RemoteAgentInfoProto> = emptyList()
 )

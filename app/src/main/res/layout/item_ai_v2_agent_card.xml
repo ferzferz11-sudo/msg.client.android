@@ -42,12 +42,12 @@
                 tools:text="Developer" />
 
             <TextView
-                android:id="@+id/agentRole"
+                android:id="@+id/agentProvider"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
                 android:textColor="?attr/colorPrimary"
-                tools:text="Разработчик" />
+                tools:text="openrouter" />
 
             <TextView
                 android:id="@+id/agentDescription"
@@ -58,7 +58,7 @@
                 android:maxLines="2"
                 android:ellipsize="end"
                 android:layout_marginTop="4dp"
-                tools:text="Специалист по разработке ПО" />
+                tools:text="Custom assistant for coding tasks" />
 
             <TextView
                 android:id="@+id/agentModel"
@@ -67,7 +67,38 @@
                 android:textSize="12sp"
                 android:textColor="?attr/colorSecondary"
                 android:layout_marginTop="4dp"
-                tools:text="Model: google/gemini-pro" />
+                tools:text="Model: anthropic/claude-sonnet-4" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/toolsIndicator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:textColor="?attr/colorTertiary"
+                    android:visibility="gone"
+                    android:drawablePadding="4dp"
+                    tools:text="🔧 Tools"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/ragIndicator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:textColor="?attr/colorTertiary"
+                    android:visibility="gone"
+                    android:layout_marginStart="8dp"
+                    android:drawablePadding="4dp"
+                    tools:text="📚 RAG"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -78,7 +109,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/exit_to_app_24"
             app:tint="?attr/colorError"
-            android:contentDescription="Удалить"
+            android:contentDescription="@string/ai_v2_delete_agent"
             android:visibility="gone"
             tools:visibility="visible" />
 

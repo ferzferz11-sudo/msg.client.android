@@ -1,5 +1,61 @@
 # Lava Messenger — Android Changelog
 
+## [1.2.0.20] - 2026-06-20
+
+### Добавлено
+
+**AI Services v2 — единый API для всех AI чатов:**
+- `ChatWithAIV2` — один RPC для simple/agent/pipeline чатов (заменяет ChatWithOWL, ChatWithOrchestrator, ChatWithAI)
+- Tool calling loop — агент может вызывать инструменты (web_search, search_messages, search_users, web_fetch, get_chat_info)
+- 7 типов провайдеров: openrouter, local, mimo, webhook, websocket, subprocess, mcp
+- Мультимодальность — отправка изображений в AI чат
+- Агенты с настройками: provider_config JSON, system_prompt, tools, RAG
+
+**Agent CRUD:**
+- `CreateAIAgent`, `UpdateAIAgent`, `DeleteAIAgent`, `GetAIAgent`, `ListAIAgents`, `CloneAIAgent`
+- 8 встроенных пресет-агентов (mimo, assistant, developer, devops, architect, writer, analyst, translator)
+- Публичные агенты — доступ другим пользователям
+- Клонирование агентов
+
+**Tools:**
+- `ListAITools` — список доступных инструментов с JSON Schema параметров
+
+**UI:**
+- `AiV2ChatActivity` — единый экран AI чата для всех типов
+- `AiV2AgentListActivity` — список агентов с табами (Presets / My Agents / Public)
+- `AiV2AgentCreateEditActivity` — создание и редактирование агентов
+- Индикаторы tools/RAG на карточках агентов
+
+**Tests:**
+- 60 unit-тестов: AiV2ModelsTest (20), AiV2DomainExtensionsTest (13), AiV2MarshallersTest (27)
+
+### Удалено
+
+**AI v1:**
+- OwlGrpc.kt (OWL AI streaming, settings) — заменён на GrpcAIv2Client
+- HermesGrpc.kt (Hermes orchestrator, agent CRUD, sessions) — заменён на GrpcAIv2Client
+- AiChatGrpc.kt (unified v1 wrapper) — удалён
+- OwlChatUseCase.kt, HermesChatUseCase.kt — заменены на AiV2ChatUseCase
+- AiChatManager.kt, AiModels.kt, AiDomainExtensions.kt — заменены на AiV2ChatManager, AiV2Models, AiV2DomainExtensions
+- HermesRepository.kt, HermesModel.kt — удалены
+
+**UI v1:**
+- OwlChatActivity, OwlChatViewModel, OwlSettingsActivity
+- HermesChatActivity, HermesChatViewModel, HermesChatAdapter, HermesCommandAdapter
+- AgentListActivity, AgentListViewModel, AgentListAdapter
+- AgentSettingsActivity, AgentSettingsBottomSheet
+- 8 layout XML файлов
+
+**Итого:** удалено ~4000 LOC v1 AI кода, добавлено ~2300 LOC v2 кода
+
+### Оставлено
+
+- OwlGrpc.kt — утилиты уведомлений (subscribeNotifications, getNotificationHistory, markNotificationsRead, getUnreadCount)
+- HermesGrpc.kt — Remote Agent (listRemoteAgents, deployAgentTask, generateAgentToken, etc.)
+- Remote Agent UI (RemoteAgentActivity, RemoteAgentSettingsActivity, RemoteAgentService)
+
+---
+
 ## [1.2.0.19] - 2026-06-19
 
 ### Добавлено

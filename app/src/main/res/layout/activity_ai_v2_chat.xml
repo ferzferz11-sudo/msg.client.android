@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  activity_owl_chat.xml — чат с OWL AI ассистентом.
-  Использует ChatWidget как основной компонент.
-  ChatWidget содержит свой собственный toolbar.
+  activity_ai_v2_chat.xml — unified AI v2 chat screen.
+  Uses ChatWidget as the main component.
+  Supports simple, agent, and pipeline chat types.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.owl.OwlChatActivity">
+    tools:context=".ui.ai.AiV2ChatActivity">
 
     <lavender.client.android.ui.chat.widget.ChatWidget
         android:id="@+id/chatWidget"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Loading indicator -->
+    <!-- Loading indicator (shown on top of chat when loading) -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="48dp"

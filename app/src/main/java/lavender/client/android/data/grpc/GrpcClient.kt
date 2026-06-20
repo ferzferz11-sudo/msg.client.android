@@ -588,34 +588,6 @@ object GrpcClient {
     ): List<OrchestratorHistoryMessageProto> =
         lavender.client.android.data.grpc.getOrchestratorHistory(sessionId, limit)
 
-    // ======= AI Chat (unified for OWL + Hermes) =======
-
-    fun chatWithAI(
-        userId: String, sessionId: String, message: String, agentId: String = "",
-        scope: CoroutineScope, onResponse: (token: String, finished: Boolean, error: String) -> Unit
-    ) = lavender.client.android.data.grpc.chatWithAI(userId, sessionId, message, agentId, scope, onResponse)
-
-    val aiChatResponses: SharedFlow<AIChatResponseProto>
-        get() = lavender.client.android.data.grpc.aiChatResponses
-
-    val aiChatTyping: SharedFlow<Boolean>
-        get() = lavender.client.android.data.grpc.aiChatTyping
-
-    suspend fun getAIChatHistory(
-        sessionId: String, userId: String, limit: Int = 50
-    ): List<AIChatMessageProto> =
-        lavender.client.android.data.grpc.getAIChatHistory(sessionId, userId, limit)
-
-    suspend fun getAIChatSettings(
-        sessionId: String, userId: String
-    ): AIChatSettingsProto =
-        lavender.client.android.data.grpc.getAIChatSettings(sessionId, userId)
-
-    suspend fun updateAIChatSettings(
-        sessionId: String, userId: String, apiKey: String = "", model: String = ""
-    ): UpdateAIChatSettingsResponseProto =
-        lavender.client.android.data.grpc.updateAIChatSettings(sessionId, userId, apiKey, model)
-
     // ======= Remote Agent =======
 
     suspend fun listRemoteAgents(filterStatus: String = ""): List<RemoteAgentInfoProto> =
@@ -709,4 +681,9 @@ object GrpcClient {
         sessionId: String, userId: String, apiKey: String, model: String
     ): UpdateHermesSettingsResponseProto =
         lavender.client.android.data.grpc.updateHermesSettings(sessionId, userId, apiKey, model)
+
+    // ======= AI Services v2 =======
+
+    val aiV2Client: GrpcAIv2Client
+        get() = realGrpcClient.aiV2Client
 }

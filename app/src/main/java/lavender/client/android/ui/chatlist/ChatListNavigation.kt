@@ -26,18 +26,19 @@ internal fun navigateToChat(activity: ChatListActivity, chat: ChatInfo, username
             activity.startActivity(intent)
         }
         "hermes" -> {
-            val intent = Intent(activity, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
-                putExtra("CHAT_ID", chat.id)
-                putExtra("CHAT_NAME", displayName)
-                putExtra("ACTIVE_AGENT_ID", chat.activeAgentId)
-                putExtra("AGENT_MODE", chat.agentMode)
+            // v2: Use unified AI v2 chat
+            val intent = Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java).apply {
+                putExtra("SESSION_ID", chat.id)
+                putExtra("AGENT_ID", chat.activeAgentId)
+                putExtra("AGENT_NAME", displayName)
             }
             activity.startActivity(intent)
         }
         "owl" -> {
-            val intent = Intent(activity, lavender.client.android.ui.owl.OwlChatActivity::class.java).apply {
-                putExtra("CHAT_ID", chat.id)
-                putExtra("CHAT_NAME", displayName)
+            // v2: Use unified AI v2 chat
+            val intent = Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java).apply {
+                putExtra("SESSION_ID", chat.id)
+                putExtra("AGENT_NAME", displayName)
             }
             activity.startActivity(intent)
         }

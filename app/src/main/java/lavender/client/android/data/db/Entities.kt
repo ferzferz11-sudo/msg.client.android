@@ -6,7 +6,6 @@ import androidx.room.ColumnInfo
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Reaction
-import lavender.client.android.data.models.HermesMessage
 
 @Entity(tableName = "messages")
 data class MessageEntity(
@@ -148,42 +147,3 @@ fun ChatEntity.toDomain(): ChatInfo = ChatInfo(
     isSecret, peerPublicKey, e2eeReady, activeAgentId, agentMode,
     isPinned, isArchived, pinnedAt
 )
-
-// ======= Hermes Message mapping =======
-
-fun HermesMessage.toMessageEntity(roomId: String): MessageEntity {
-    val rolePrefix = if (role == "user") "user" else "agent"
-    return MessageEntity(
-        id = id.ifEmpty { java.util.UUID.randomUUID().toString() },
-        user = rolePrefix,
-        text = content,
-        timestamp = timestamp,
-        roomId = roomId,
-        repliedToMessageId = "",
-        repliedToUser = "",
-        repliedToText = "",
-        read = true,
-        avatarUrl = "",
-        imageUrl = "",
-        edited = false,
-        superAdmin = false,
-        voiceUrl = "",
-        duration = 0,
-        userId = agentId,
-        isSent = !isStreaming,
-        reactionsJson = "[]"
-    )
-}
-
-fun MessageEntity.toHermesMessage(): HermesMessage {
-    val role = if (user == "user") "user" else "assistant"
-    return HermesMessage(
-        id = id,
-        role = role,
-        content = text,
-        agentId = userId,
-        agentName = "",
-        timestamp = timestamp,
-        isStreaming = !isSent
-    )
-}

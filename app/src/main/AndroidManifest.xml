@@ -104,13 +104,10 @@
 
         <activity android:name=".ChangelogActivity" android:exported="false" />
 
-        <activity android:name=".ui.hermes.HermesChatActivity" android:exported="false"
+        <activity android:name=".ui.ai.AiV2ChatActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".ui.hermes.AgentListActivity" android:exported="false" />
-        <activity android:name=".ui.owl.OwlChatActivity" android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".ui.owl.OwlSettingsActivity" android:exported="false" />
-        <activity android:name=".ui.hermes.AgentSettingsActivity" android:exported="false" />
+        <activity android:name=".ui.ai.AiV2AgentListActivity" android:exported="false" />
+        <activity android:name=".ui.ai.AiV2AgentCreateEditActivity" android:exported="false" />
         <activity android:name=".ui.remote.RemoteAgentActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.remote.RemoteAgentSettingsActivity" android:exported="false" />

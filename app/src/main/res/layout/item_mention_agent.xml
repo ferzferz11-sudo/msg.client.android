@@ -1,31 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  item_mention_agent.xml — элемент списка агентов для меншена в HermesChat.
-  Показывается при вводе @ в поле сообщения.
--->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:padding="10dp"
-    android:background="?attr/selectableItemBackground"
-    android:clickable="true"
-    android:focusable="true">
+    android:padding="12dp"
+    android:gravity="center_vertical">
 
-    <!-- Agent emoji icon -->
     <TextView
         android:id="@+id/mentionAgentEmoji"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:gravity="center"
-        android:textSize="20sp"
-        android:background="@drawable/bg_hermes_circle"
+        android:textSize="22sp"
         android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_hermes_circle"
         tools:text="🤖" />
 
-    <!-- Agent name and description -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -49,17 +40,19 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:maxLines="1"
             android:ellipsize="end"
-            tools:text="Software development expert" />
+            android:layout_marginTop="2dp"
+            android:visibility="gone"
+            tools:text="Code helper" />
+
     </LinearLayout>
 
-    <!-- Mention tag hint -->
     <TextView
         android:id="@+id/mentionAgentTag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
         android:textColor="?attr/colorPrimary"
-        android:alpha="0.7"
-        tools:text="@dev" />
+        android:layout_marginStart="8dp"
+        tools:text="@developer" />
 
 </LinearLayout>

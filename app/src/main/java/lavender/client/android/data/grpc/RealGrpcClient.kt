@@ -234,6 +234,13 @@ object RealGrpcClient {
         }
     )
 
+    // ====== Module: AI v2 Client ======
+    val aiV2Client = GrpcAIv2Client(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        scope = scope
+    )
+
     // ====== State (kept in orchestrator) ======
     private var appContext: Context? = null
     private var currentUsername: String? = null

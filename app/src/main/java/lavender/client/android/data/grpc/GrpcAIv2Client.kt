@@ -1,0 +1,399 @@
+package lavender.client.android.data.grpc
+
+import android.util.Log
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import lavender.client.android.data.models.ErrorHandler
+import lavender.client.android.data.proto.*
+import java.util.concurrent.TimeUnit
+
+/**
+ * GrpcAIv2Client — AI Services v2 gRPC client.
+ * Replaces OwlGrpc + HermesGrpc + AiChatGrpc.
+ *
+ * Server proto: messenger.AIService (ChatWithAIV2, Agent CRUD, ListAITools)
+ */
+class GrpcAIv2Client(
+    private val getChannel: () -> io.grpc.ManagedChannel?,
+    private val getUserId: () -> String?,
+    private val scope: CoroutineScope
+) {
+    companion object {
+        private const val TAG = "GrpcAIv2Client"
+        private const val STREAM_TIMEOUT_MS = 120_000L
+        private const val MAX_RETRIES = 10
+        private const val INITIAL_RETRY_DELAY_MS = 3000L
+        private const val MAX_RETRY_DELAY_MS = 30000L
+    }
+
+    // Streaming state
+    private val _aiResponses = MutableSharedFlow<ChatWithAIV2ResponseProto>(extraBufferCapacity = 64)
+    val aiResponses: SharedFlow<ChatWithAIV2ResponseProto> = _aiResponses
+
+    private val _aiTyping = MutableSharedFlow<Boolean>(extraBufferCapacity = 8)
+    val aiTyping: SharedFlow<Boolean> = _aiTyping
+
+    // ======= ChatWithAIV2 — Main streaming method =======
+
+    fun chatWithAIV2(
+        sessionId: String,
+        message: String,
+        agentId: String = "",
+        images: List<ByteArray> = emptyList(),
+        toolCalls: List<ToolCallV2Proto> = emptyList(),
+        scope: CoroutineScope,
+        onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String, toolCalls: List<ToolCallRequestV2Proto>, hasRagContext: Boolean, modelUsed: String, tokenCount: Int) -> Unit
+    ) {
+        scope.launch(Dispatchers.IO) {
+            var retryDelay = INITIAL_RETRY_DELAY_MS
+            var attempt = 0
+
+            while (attempt < MAX_RETRIES && isActive) {
+                val channel = getChannel()
+                if (channel == null || channel.isShutdown || channel.isTerminated) {
+                    Log.w(TAG, "chatWithAIV2: channel dead, waiting ${retryDelay}ms...")
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
+                    attempt++
+                    continue
+                }
+
+                try {
+                    val methodDesc = io.grpc.MethodDescriptor.newBuilder<ChatWithAIV2RequestProto, ChatWithAIV2ResponseProto>()
+                        .setType(io.grpc.MethodDescriptor.MethodType.SERVER_STREAMING)
+                        .setFullMethodName("messenger.AIService/ChatWithAIV2")
+                        .setRequestMarshaller(ChatWithAIV2RequestMarshaller())
+                        .setResponseMarshaller(ChatWithAIV2ResponseMarshaller())
+                        .build()
+
+                    val request = ChatWithAIV2RequestProto(
+                        sessionId = sessionId,
+                        message = message,
+                        images = images,
+                        agentId = agentId,
+                        toolCalls = toolCalls
+                    )
+
+                    _aiTyping.emit(true)
+                    val streamDone = CompletableDeferred<Boolean>()
+                    var hadError = false
+                    var timeoutJob: Job? = null
+
+                    val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+                    call.start(object : io.grpc.ClientCall.Listener<ChatWithAIV2ResponseProto>() {
+                        override fun onMessage(msg: ChatWithAIV2ResponseProto) {
+                            timeoutJob?.cancel()
+                            _aiResponses.tryEmit(msg)
+                            onResponse(msg.token, msg.finished, msg.error.takeIf { it.isNotEmpty() },
+                                msg.agentId, msg.agentName, msg.toolCalls, msg.hasRagContext, msg.modelUsed, msg.tokenCount)
+                            retryDelay = INITIAL_RETRY_DELAY_MS
+                            attempt = 0
+                            timeoutJob = launch {
+                                delay(STREAM_TIMEOUT_MS)
+                                if (!msg.finished) {
+                                    Log.w(TAG, "chatWithAIV2: stream timeout after ${STREAM_TIMEOUT_MS}ms")
+                                    hadError = true
+                                    val errorResp = ChatWithAIV2ResponseProto(
+                                        token = "", finished = true,
+                                        error = "Response timeout (${STREAM_TIMEOUT_MS / 1000}s). Please try again."
+                                    )
+                                    _aiResponses.tryEmit(errorResp)
+                                    onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                                    streamDone.complete(true)
+                                }
+                            }
+                        }
+                        override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                            timeoutJob?.cancel()
+                            _aiTyping.tryEmit(false)
+                            if (!status.isOk) {
+                                Log.w(TAG, "chatWithAIV2 closed: ${status.code} ${status.description}")
+                                hadError = true
+                                val errorResp = ChatWithAIV2ResponseProto(
+                                    token = "", finished = true,
+                                    error = status.description ?: "Connection error: ${status.code}"
+                                )
+                                _aiResponses.tryEmit(errorResp)
+                                onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                            }
+                            streamDone.complete(hadError)
+                        }
+                    }, io.grpc.Metadata())
+                    call.sendMessage(request)
+                    call.halfClose()
+                    call.request(Int.MAX_VALUE)
+
+                    timeoutJob = launch {
+                        delay(STREAM_TIMEOUT_MS)
+                        Log.w(TAG, "chatWithAIV2: initial stream timeout after ${STREAM_TIMEOUT_MS}ms")
+                        hadError = true
+                        val errorResp = ChatWithAIV2ResponseProto(
+                            token = "", finished = true,
+                            error = "Response timeout (${STREAM_TIMEOUT_MS / 1000}s). Please try again."
+                        )
+                        _aiResponses.tryEmit(errorResp)
+                        onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+                        streamDone.complete(true)
+                    }
+
+                    val streamHadError = streamDone.await()
+                    timeoutJob.cancel()
+                    _aiTyping.tryEmit(false)
+
+                    if (!streamHadError) return@launch
+
+                    attempt++
+                    if (attempt < MAX_RETRIES) {
+                        Log.d(TAG, "Retrying chatWithAIV2 in ${retryDelay}ms (attempt $attempt/$MAX_RETRIES)")
+                        delay(retryDelay)
+                        retryDelay = (retryDelay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
+                    }
+
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    ErrorHandler.handle("GrpcAIv2Client.chatWithAIV2", e)
+                    _aiTyping.tryEmit(false)
+                    val errorResp = ChatWithAIV2ResponseProto(
+                        token = "", finished = true,
+                        error = e.message ?: "Unknown error"
+                    )
+                    _aiResponses.tryEmit(errorResp)
+                    onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+
+                    attempt++
+                    if (attempt < MAX_RETRIES) {
+                        delay(retryDelay)
+                        retryDelay = (retryDelay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
+                    }
+                }
+            }
+
+            if (attempt >= MAX_RETRIES) {
+                ErrorHandler.warn("GrpcAIv2Client.chatWithAIV2", "Max retries exceeded ($MAX_RETRIES)")
+                val errorResp = ChatWithAIV2ResponseProto(
+                    token = "", finished = true,
+                    error = "Connection lost after $MAX_RETRIES attempts"
+                )
+                _aiResponses.tryEmit(errorResp)
+                onResponse("", true, errorResp.error, "", "", emptyList(), false, "", 0)
+            }
+        }
+    }
+
+    // ======= Agent CRUD =======
+
+    suspend fun createAgent(request: CreateAIAgentRequestProto): CreateAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext CreateAIAgentResponseProto(error = "Connection lost")
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<CreateAIAgentRequestProto, CreateAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/CreateAIAgent")
+            .setRequestMarshaller(CreateAIAgentRequestMarshaller())
+            .setResponseMarshaller(CreateAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<CreateAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<CreateAIAgentResponseProto>() {
+            override fun onMessage(message: CreateAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(CreateAIAgentResponseProto(error = "Connection error: ${status.code}"))
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() }
+            ?: CreateAIAgentResponseProto(error = "Timeout")
+    }
+
+    suspend fun updateAgent(request: UpdateAIAgentRequestProto): UpdateAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext UpdateAIAgentResponseProto(error = "Connection lost")
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<UpdateAIAgentRequestProto, UpdateAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/UpdateAIAgent")
+            .setRequestMarshaller(UpdateAIAgentRequestMarshaller())
+            .setResponseMarshaller(UpdateAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<UpdateAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<UpdateAIAgentResponseProto>() {
+            override fun onMessage(message: UpdateAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(UpdateAIAgentResponseProto(error = "Connection error: ${status.code}"))
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(request)
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() }
+            ?: UpdateAIAgentResponseProto(error = "Timeout")
+    }
+
+    suspend fun deleteAgent(agentId: String): DeleteAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext DeleteAIAgentResponseProto(error = "Connection lost")
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<DeleteAIAgentRequestProto, DeleteAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/DeleteAIAgent")
+            .setRequestMarshaller(DeleteAIAgentRequestMarshaller())
+            .setResponseMarshaller(DeleteAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<DeleteAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<DeleteAIAgentResponseProto>() {
+            override fun onMessage(message: DeleteAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(DeleteAIAgentResponseProto(error = "Connection error: ${status.code}"))
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(DeleteAIAgentRequestProto(agentId))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() }
+            ?: DeleteAIAgentResponseProto(error = "Timeout")
+    }
+
+    suspend fun getAgent(agentId: String): AgentInfoV2Proto? = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) return@withContext null
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIAgentRequestProto, GetAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/GetAIAgent")
+            .setRequestMarshaller(GetAIAgentRequestMarshaller())
+            .setResponseMarshaller(GetAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<GetAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<GetAIAgentResponseProto>() {
+            override fun onMessage(message: GetAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(GetAIAgentResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(GetAIAgentRequestProto(agentId))
+        call.halfClose()
+        call.request(1)
+
+        val response = withTimeoutOrNull(10000) { result.await() } ?: GetAIAgentResponseProto()
+        return@withContext response.agent.takeIf { it.id.isNotEmpty() }
+    }
+
+    suspend fun listAgents(includePublic: Boolean = false): List<AgentInfoV2Proto> = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) return@withContext emptyList()
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListAIAgentsRequestProto, ListAIAgentsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/ListAIAgents")
+            .setRequestMarshaller(ListAIAgentsRequestMarshaller())
+            .setResponseMarshaller(ListAIAgentsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<ListAIAgentsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<ListAIAgentsResponseProto>() {
+            override fun onMessage(message: ListAIAgentsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(ListAIAgentsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(ListAIAgentsRequestProto(includePublic))
+        call.halfClose()
+        call.request(1)
+
+        val response = withTimeoutOrNull(10000) { result.await() } ?: ListAIAgentsResponseProto()
+        return@withContext response.agents
+    }
+
+    suspend fun cloneAgent(agentId: String, newName: String): CloneAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext CloneAIAgentResponseProto(error = "Connection lost")
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<CloneAIAgentRequestProto, CloneAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/CloneAIAgent")
+            .setRequestMarshaller(CloneAIAgentRequestMarshaller())
+            .setResponseMarshaller(CloneAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<CloneAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<CloneAIAgentResponseProto>() {
+            override fun onMessage(message: CloneAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(CloneAIAgentResponseProto(error = "Connection error: ${status.code}"))
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(CloneAIAgentRequestProto(agentId, newName))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() }
+            ?: CloneAIAgentResponseProto(error = "Timeout")
+    }
+
+    // ======= Tools =======
+
+    suspend fun listTools(): List<ToolInfoV2Proto> = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) return@withContext emptyList()
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListAIToolsRequestProto, ListAIToolsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/ListAITools")
+            .setRequestMarshaller(ListAIToolsRequestMarshaller())
+            .setResponseMarshaller(ListAIToolsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<ListAIToolsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<ListAIToolsResponseProto>() {
+            override fun onMessage(message: ListAIToolsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(ListAIToolsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(ListAIToolsRequestProto())
+        call.halfClose()
+        call.request(1)
+
+        val response = withTimeoutOrNull(10000) { result.await() } ?: ListAIToolsResponseProto()
+        return@withContext response.tools
+    }
+}

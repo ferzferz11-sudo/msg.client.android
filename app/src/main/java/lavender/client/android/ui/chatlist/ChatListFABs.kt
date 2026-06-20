@@ -473,32 +473,31 @@ internal fun showAIBottomSheet(activity: ChatListActivity) {
 }
 
 internal fun openHermesChat(activity: ChatListActivity, chatId: String, chatName: String) {
-    val intent = Intent(activity, lavender.client.android.ui.hermes.HermesChatActivity::class.java).apply {
-        putExtra("CHAT_ID", chatId)
-        putExtra("CHAT_NAME", chatName)
+    // v2: Use unified AI v2 chat
+    val intent = Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java).apply {
+        putExtra("SESSION_ID", chatId)
+        putExtra("AGENT_NAME", chatName)
     }
     activity.startActivity(intent)
 }
 
 internal fun openOwlChat(activity: ChatListActivity, chatId: String, chatName: String) {
-    val intent = Intent(activity, lavender.client.android.ui.owl.OwlChatActivity::class.java).apply {
-        putExtra("CHAT_ID", chatId)
-        putExtra("CHAT_NAME", chatName)
+    // v2: Use unified AI v2 chat
+    val intent = Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java).apply {
+        putExtra("SESSION_ID", chatId)
+        putExtra("AGENT_NAME", chatName)
     }
     activity.startActivity(intent)
 }
 
 internal fun openHermesSettings(activity: ChatListActivity, chatId: String) {
-    val intent = Intent(activity, lavender.client.android.ui.owl.OwlSettingsActivity::class.java).apply {
-        putExtra("sessionId", chatId)
-        putExtra("isHermes", true)
-    }
+    // v2: Open agent list instead of settings
+    val intent = Intent(activity, lavender.client.android.ui.ai.AiV2AgentListActivity::class.java)
     activity.startActivity(intent)
 }
 
 internal fun openOwlSettings(activity: ChatListActivity, chatId: String) {
-    val intent = Intent(activity, lavender.client.android.ui.owl.OwlSettingsActivity::class.java).apply {
-        putExtra("CHAT_ID", chatId)
-    }
+    // v2: Open agent list instead of settings
+    val intent = Intent(activity, lavender.client.android.ui.ai.AiV2AgentListActivity::class.java)
     activity.startActivity(intent)
 }

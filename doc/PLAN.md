@@ -1,6 +1,21 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.2.0.19 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-19
+**Version:** v1.2.0.20 | **Branch:** feat/1.2.0.x | **Updated:** 2026-06-20
+
+---
+
+## Completed — v1.2.0.20
+
+### Session 2026-06-20 (AI v2 Migration)
+- ✅ **GrpcAIv2Client:** ChatWithAIV2 streaming + Agent CRUD + Tools
+- ✅ **AiV2ChatUseCase:** Tool calling loop (max 10 iterations, server executes tools)
+- ✅ **AiV2ChatManager:** Unified SharedFlow/StateFlow for AI v2
+- ✅ **AiV2ChatActivity:** Unified AI chat screen for all types (simple/agent/pipeline)
+- ✅ **AiV2AgentListActivity:** Agent list with tabs (Presets/My/Public)
+- ✅ **AiV2AgentCreateEditActivity:** Agent create/edit with provider selection
+- ✅ **60 unit tests:** AiV2ModelsTest (20), AiV2DomainExtensionsTest (13), AiV2MarshallersTest (27)
+- ✅ **Cleanup v1:** Removed 20 files, 8 layouts, 3 dirs (~4000 LOC deleted)
+- ✅ **Navigation:** ChatListActivity → AiV2ChatActivity for hermes/owl types
 
 ---
 
@@ -106,24 +121,33 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.16)
+## Backlog — Следующая сессия (v1.2.0.20)
 
-### Приоритет 1: Отладка
-- [x] Навигация шторок в реальном приложении — ✅ SheetNavigator + back button
+### Приоритет 1: AI v2 Migration
+Детальный план: `doc/AI_V2_CLIENT_PLAN.md`
+
+| Фаза | Что | Статус |
+|------|-----|--------|
+| 1 | Proto модели + Marshallers + GrpcAIv2Client | ✅ Done |
+| 2 | Domain + UseCase + Tool calling loop + ChatManager | ✅ Done |
+| 3 | UI (AiV2ChatActivity, AgentList, AgentCreateEdit) + strings | ✅ Done |
+| 4 | AndroidManifest + GrpcClient facade + Navigation | ✅ Done |
+| 5 | Unit-тесты marshallers + UseCase (60 tests) | ✅ Done |
+| 6 | Cleanup v1 (20 files, 8 layouts, 3 dirs deleted) | ✅ Done |
 
 ### Приоритет 2: Тесты
-| Задача | Оценка |
+| Задача | Статус |
 |--------|--------|
 | Unit-тесты для ChatViewModel | ✅ Done (17 tests) |
 | Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
 | Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
-| ~~Unit-тесты для data/ai/~~ | ~~Удалено — AI v1 deprecated~~ |
 
 ### Приоритет 3: UX
-| Задача | Оценка |
+| Задача | Статус |
 |--------|--------|
-| Offline mode — показать cached messages без подключения | ✅ Done (v1.2.0.16) |
-| Push notification deep link — переход в чат из уведомления | ✅ Done (LavenderMessagingService + SplashActivity) |
+| Offline mode | ✅ Done (v1.2.0.16) |
+| Push notification deep link | ✅ Done (v1.2.0.16) |
+| Sheet navigation | ✅ Done (v1.2.0.19) |
 
 ---
 
