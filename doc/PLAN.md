@@ -1,6 +1,6 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.1.3.38 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-18
+**Version:** v1.1.3.39 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-20
 
 ---
 
@@ -27,13 +27,13 @@
 
 ## Backlog — Следующая сессия
 
-### Приоритет 1: Dead Code Cleanup
-- Удалить `ui/viewmodel/ChatListViewModel.kt` (21 LOC legacy stub)
-- Переименовать `NotificationActivity` (root) → `NotificationSettingsActivity`
+### ✅ Приоритет 1: Dead Code Cleanup (выполнено)
+- ✅ Удален `ui/viewmodel/ChatListViewModel.kt` (21 LOC legacy stub)
+- ✅ Переименован `NotificationActivity` (root) → `NotificationSettingsActivity`
 
-### Приоритет 2: ContactsActivity пуст на v1 сервере
-- `getContacts()`依赖 `currentUserId`, который не установлен на v1
-- Нужно: fallback на username если userId пуст, либо загрузка через allUsers
+### ✅ Приоритет 2: ContactsActivity пуст на v1 сервере (выполнено)
+- ✅ Сервер: добавлен fallback на `req.Username` в `GetContacts`, `AddContact`, `RemoveContact`
+- ✅ Dev сервер обновлён до v1.3.0.17
 
 ### Приоритет 3: Архитектура
 | Задача | Что | LOC Эффект | Оценка |
