@@ -18,7 +18,6 @@ import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 enum class ConnectionStatus {
@@ -151,17 +150,6 @@ object RealGrpcClient {
         requestObserverRef = { requestObserver },
         scope = scope,
         onCallStreamError = { }
-    )
-
-    // ====== Module: Chat List Client ======
-    private val chatListClient = GrpcChatListClient(
-        getChannel = { getChannel() },
-        getUserId = { currentUserId },
-        getUsername = { currentUsername },
-        chatDeletedEvent = _chatDeletedEvent,
-        allUsers = _allUsers,
-        serverTime = _serverTime,
-        scope = scope
     )
 
     // ====== Module: Chat Client (core chat ops) ======

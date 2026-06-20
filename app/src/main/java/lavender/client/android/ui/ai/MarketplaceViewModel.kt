@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.ai.AiV2ChatUseCase
-import lavender.client.android.data.ai.AiProviderType
 import lavender.client.android.data.ai.MarketplaceAgent
 
 enum class SortOption(val label: String) {

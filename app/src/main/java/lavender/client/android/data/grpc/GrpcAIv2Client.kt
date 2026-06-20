@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
-import java.util.concurrent.TimeUnit
 
 /**
  * GrpcAIv2Client — AI Services v2 gRPC client.

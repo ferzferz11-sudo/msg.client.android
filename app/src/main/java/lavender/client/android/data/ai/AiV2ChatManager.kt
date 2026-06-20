@@ -20,9 +20,6 @@ object AiV2ChatManager {
     private val _aiResponses = MutableSharedFlow<AiV2ChatMessage>(extraBufferCapacity = 64)
     val aiResponses: SharedFlow<AiV2ChatMessage> = _aiResponses.asSharedFlow()
 
-    private val _aiTyping = MutableSharedFlow<Boolean>(extraBufferCapacity = 8)
-    val aiTyping: SharedFlow<Boolean> = _aiTyping.asSharedFlow()
-
     // ====== Agents ======
 
     private val _agents = MutableStateFlow<List<AiV2Agent>>(emptyList())
@@ -57,24 +54,11 @@ object AiV2ChatManager {
         )
     }
 
-    fun emitTyping(typing: Boolean) {
-        _aiTyping.tryEmit(typing)
-        _streamState.value = _streamState.value.copy(isTyping = typing)
-    }
-
     fun setAgents(agents: List<AiV2Agent>) {
         _agents.value = agents
     }
 
     fun setTools(tools: List<AiV2Tool>) {
         _tools.value = tools
-    }
-
-    fun resetStreamState() {
-        _streamState.value = AiV2StreamState()
-    }
-
-    fun clearTokens() {
-        _streamState.value = _streamState.value.copy(tokens = emptyList())
     }
 }

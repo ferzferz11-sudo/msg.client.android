@@ -3,8 +3,6 @@ package lavender.client.android.data.grpc
 import android.util.Log
 import io.grpc.MethodDescriptor
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import lavender.client.android.data.proto.*

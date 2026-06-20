@@ -295,13 +295,26 @@ private fun openFeedbackChat(activity: ChatListActivity) {
     doOpenFeedbackChat(activity, adminId)
 }
 
-private fun doOpenFeedbackChat(activity: ChatListActivity, adminId: String) {
+private fun doOpenFeedbackChat(activity: ChatListActivity, adminUserId: String) {
     val username = lavender.client.android.data.session.SessionManager.session.value.username
-    GrpcClient.createDirectChat(username, adminId) { chatId ->
+    if (adminUserId == lavender.client.android.data.session.SessionManager.session.value.userId) {
+        activity.runOnUiThread {
+            android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
+        }
+        return
+    }
+    val adminUsername = GrpcClient.allUsers.value.firstOrNull { it.userId == adminUserId }?.username
+    if (adminUsername.isNullOrEmpty()) {
+        activity.runOnUiThread {
+            android.widget.Toast.makeText(activity, R.string.admin_not_found, android.widget.Toast.LENGTH_SHORT).show()
+        }
+        return
+    }
+    GrpcClient.createDirectChat(username, adminUsername) { chatId ->
         if (chatId != null) {
             val chatInfo = lavender.client.android.data.models.ChatInfo(
-                id = chatId, name = adminId, type = "direct",
-                participants = "[\"$username\",\"$adminId\"]"
+                id = chatId, name = adminUsername, type = "direct",
+                participants = "[\"$username\",\"$adminUsername\"]"
             )
             activity.runOnUiThread { activity.navigateToChat(chatInfo, username) }
         } else {

@@ -8,33 +8,23 @@ import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.scale
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import de.hdodenhof.circleimageview.CircleImageView
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.ProtoUtils
 import lavender.client.android.theme.ThemeStore
@@ -43,17 +33,11 @@ import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.adapter.SelectableUserAdapter
 import lavender.client.android.ui.adapter.ParticipantAdapter
 import lavender.client.android.ui.profile.ProfileViewModel
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import java.util.Locale
 import androidx.core.graphics.toColorInt
 import androidx.appcompat.app.AlertDialog
 
 import lavender.client.android.ui.widget.SearchableListBottomSheet
-import lavender.client.android.ui.widget.WidgetManager
 
 class ProfileActivity : AppCompatActivity() {
 

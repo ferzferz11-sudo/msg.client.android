@@ -14,7 +14,6 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
@@ -24,14 +23,15 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.LogViewerActivity
 import lavender.client.android.ui.adapter.SuperAdminAdapter
@@ -44,7 +44,6 @@ class SuperAdminActivity : AppCompatActivity() {
     private lateinit var username: String
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: SuperAdminAdapter
-    private lateinit var progressOverlay: View
     private lateinit var searchLayout: View
     private lateinit var searchEditText: EditText
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
@@ -89,7 +88,6 @@ class SuperAdminActivity : AppCompatActivity() {
         }
 
         recyclerView = findViewById(R.id.recyclerView)
-        progressOverlay = findViewById(R.id.progressOverlay)
         searchLayout = findViewById(R.id.searchLayout)
         searchEditText = findViewById(R.id.searchEditText)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
@@ -256,7 +254,6 @@ class SuperAdminActivity : AppCompatActivity() {
 
     private fun loadData() {
         swipeRefreshLayout.isRefreshing = true
-        progressOverlay.isVisible = true
 
         val loadTimeout = lifecycleScope.launch {
             delay(15000)
@@ -264,7 +261,6 @@ class SuperAdminActivity : AppCompatActivity() {
                 Log.w("SuperAdminActivity", "Load data timeout, stopping refresh")
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
-                    progressOverlay.isVisible = false
                 }
             }
         }
@@ -278,7 +274,6 @@ class SuperAdminActivity : AppCompatActivity() {
                 loadTimeout.cancel()
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
-                    progressOverlay.isVisible = false
                     updateUI(allUsers, allChats)
                 }
             }
@@ -305,13 +300,21 @@ class SuperAdminActivity : AppCompatActivity() {
         }
         invalidateOptionsMenu()
 
-        if (currentMode == Mode.USERS) {
-            emptyStateText.isVisible = users.isEmpty()
-            val sortedUsers = users.sortedByDescending { it.lastSeenAt?.seconds ?: 0 }
-            adapter.setItems(sortedUsers)
-        } else {
-            emptyStateText.isVisible = chats.isEmpty()
-            adapter.setItems(chats)
+        lifecycleScope.launch(Dispatchers.Default) {
+            val sorted = if (currentMode == Mode.USERS) {
+                users.sortedByDescending { it.lastSeenAt?.seconds ?: 0 }
+            } else {
+                chats
+            }
+            withContext(Dispatchers.Main) {
+                if (currentMode == Mode.USERS) {
+                    emptyStateText.isVisible = users.isEmpty()
+                    adapter.setItems(sorted)
+                } else {
+                    emptyStateText.isVisible = chats.isEmpty()
+                    adapter.setItems(sorted)
+                }
+            }
         }
     }
 
@@ -381,7 +384,6 @@ class SuperAdminActivity : AppCompatActivity() {
         sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
             val usernames = selectedUsernames.toList()
             clearSelection()
-            progressOverlay.isVisible = true
             
             var deletedCount = 0
             usernames.forEach { targetUser ->
@@ -411,7 +413,6 @@ class SuperAdminActivity : AppCompatActivity() {
         sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
             val chatIds = selectedChatIds.toList()
             clearSelection()
-            progressOverlay.isVisible = true
             
             var deletedCount = 0
             chatIds.forEach { targetId ->
@@ -448,10 +449,8 @@ class SuperAdminActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             
-            progressOverlay.isVisible = true
             grpcClient.adminUpdatePassword(targetUser, newPw, username) { success, message ->
                 runOnUiThread {
-                    progressOverlay.isVisible = false
                     if (success) {
                         Toast.makeText(this, R.string.password_updated, Toast.LENGTH_SHORT).show()
                         clearSelection()

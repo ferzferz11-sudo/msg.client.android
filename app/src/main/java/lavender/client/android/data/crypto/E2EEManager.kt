@@ -11,7 +11,6 @@ import java.security.spec.ECGenParameterSpec
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement
-import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 

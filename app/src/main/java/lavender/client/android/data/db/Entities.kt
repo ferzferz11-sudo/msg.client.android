@@ -2,7 +2,6 @@ package lavender.client.android.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.ColumnInfo
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Reaction

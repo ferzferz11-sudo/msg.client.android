@@ -1,6 +1,5 @@
 package lavender.client.android.ui.chat.message
 
-import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
@@ -18,7 +17,6 @@ import lavender.client.android.ConferenceLobbyActivity
 import lavender.client.android.ProfileActivity
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import org.json.JSONArray

@@ -13,7 +13,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import lavender.client.android.databinding.ActivityCallBinding
 import lavender.client.android.data.calls.*

@@ -1,6 +1,5 @@
 package lavender.client.android.data.grpc
 
-import android.util.Log
 import io.grpc.CallOptions
 import io.grpc.Channel
 import io.grpc.ClientCall

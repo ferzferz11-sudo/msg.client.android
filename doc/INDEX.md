@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.5 | **Updated:** 2026-06-20
+**Version:** v1.3.0.7 | **Updated:** 2026-06-20
 
 ---
 
@@ -38,19 +38,19 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~160 |
+| Kotlin files | ~150 |
 | Activities | 25 |
-| gRPC modules | 27 |
-| Unit tests | 15 files |
+| gRPC modules | 26 |
+| Unit tests | 14 files |
 | Layout XML | 109 |
 | String entries | 826 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.5) |
+| Branch | feat/1.3.0.x (v1.3.0.7) |
 
 ---
 
-## Architecture Overview (v1.3.0.5)
+## Architecture Overview (v1.3.0.7)
 
 ```
 GrpcClient (facade)
@@ -59,10 +59,9 @@ GrpcClient (facade)
         ├── GrpcAuthClient — JWT auth (v2 only)
         ├── GrpcTypingClient — typing stream
         ├── GrpcCallClient — calls
-        ├── GrpcChatClient (~250) — getChats, create/delete, participants
+        ├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
-        ├── GrpcChatListClient (~255) — chat list version, create/delete
         ├── GrpcProfileClient — contacts, themes (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
@@ -125,19 +124,3 @@ Logging: clean logs, no hot-path noise, performance timing in loadChats
 |--------|---------|
 | `master` | Production |
 | `feat/1.3.0.x` | v1.3.0.x development (current) |
-
----
-
-## Quick Stats
-
-| Metric | Value |
-|--------|-------|
-| Kotlin files | ~160 |
-| Activities | 25 |
-| gRPC modules | 27 |
-| Unit tests | 15 files |
-| Layout XML | 109 |
-| String entries | 826 (EN + RU) |
-| Min SDK | 29 (Android 10) |
-| Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.5) |

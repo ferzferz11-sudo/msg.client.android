@@ -1,6 +1,5 @@
 package lavender.client.android.data.grpc
 
-import android.util.Log
 import lavender.client.android.data.proto.*
 
 /**

@@ -3,8 +3,6 @@ package lavender.client.android.ui.ai
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
@@ -17,7 +15,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.ai.RateLimitCache

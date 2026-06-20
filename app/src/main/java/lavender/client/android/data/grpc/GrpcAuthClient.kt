@@ -1,11 +1,9 @@
 package lavender.client.android.data.grpc
 
-import android.util.Log
 import io.grpc.MethodDescriptor
 import io.grpc.ClientCall
 import io.grpc.Metadata
 import io.grpc.Status
-import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.data.proto.*

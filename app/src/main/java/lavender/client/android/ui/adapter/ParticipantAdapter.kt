@@ -1,6 +1,5 @@
 package lavender.client.android.ui.adapter
 
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View

@@ -1,7 +1,6 @@
 package lavender.client.android.theme
 
 import android.app.Activity
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.Log
 import android.widget.ImageView

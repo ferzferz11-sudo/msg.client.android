@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.5 | **Updated:** 2026-06-20
+**Version:** v1.3.0.7 | **Updated:** 2026-06-20
 
 ---
 
@@ -19,10 +19,9 @@ RealGrpcClient (orchestrator) delegates to:
 ├── GrpcAuthClient — JWT auth (v2 only)
 ├── GrpcTypingClient — typing stream
 ├── GrpcCallClient — calls
-├── GrpcChatClient (~250) — getChats, create/delete, participants
-├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
-├── GrpcChatAuxClient (~130) — users, FCM, mute
-├── GrpcChatListClient (~255) — chat list version, create/delete
+        ├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
+        ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
+        ├── GrpcChatAuxClient (~130) — users, FCM, mute
 ├── GrpcProfileClient — contacts, themes (ChatService)
 ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
 ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient

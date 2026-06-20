@@ -6,7 +6,6 @@ import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
 

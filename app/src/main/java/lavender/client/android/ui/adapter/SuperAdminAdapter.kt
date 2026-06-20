@@ -1,13 +1,10 @@
 package lavender.client.android.ui.adapter
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
@@ -179,7 +176,6 @@ class SuperAdminAdapter(
         private val card = view as MaterialCardView
         private val nameText = view.findViewById<TextView>(R.id.tvChatName)
         private val typeText = view.findViewById<TextView>(R.id.tvChatType)
-        private val participantAvatars = view.findViewById<LinearLayout>(R.id.participantAvatars)
 
         fun bind(chat: ChatInfo) {
             val isSelected = selectedIds.contains(chat.id)
@@ -197,22 +193,6 @@ class SuperAdminAdapter(
             
             typeText.text = description
             typeText.setTextColor(if (isSelected) onPrimary else textSecondary)
-
-            participantAvatars.removeAllViews()
-            val size = (52 * itemView.resources.displayMetrics.density).toInt()
-            if (chat.avatarUrl.isNotEmpty()) {
-                val iv = CircleImageView(itemView.context).apply {
-                    layoutParams = LinearLayout.LayoutParams(size, size)
-                }
-                Glide.with(itemView.context).load(chat.avatarUrl).placeholder(R.drawable.ic_default_avatar).into(iv)
-                participantAvatars.addView(iv)
-            } else {
-                val iv = CircleImageView(itemView.context).apply {
-                    layoutParams = LinearLayout.LayoutParams(size, size)
-                }
-                ThemeUtils.applyDefaultAvatar(iv, ThemeStore.currentTheme())
-                participantAvatars.addView(iv)
-            }
             
             itemView.setOnClickListener { onChatClick(chat) }
             itemView.setOnLongClickListener {

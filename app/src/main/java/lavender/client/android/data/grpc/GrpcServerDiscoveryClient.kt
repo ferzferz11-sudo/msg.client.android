@@ -1,13 +1,10 @@
 package lavender.client.android.data.grpc
 
-import android.util.Log
 import io.grpc.CallOptions
 import io.grpc.ClientCall
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
 import io.grpc.Status
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 import lavender.client.android.data.proto.ServerInfoProto
 
 /**

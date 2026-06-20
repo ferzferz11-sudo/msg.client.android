@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.5 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.7 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -24,10 +24,9 @@ GrpcClient (facade)
         ├── GrpcAuthClient — JWT auth (v2 only)
         ├── GrpcTypingClient — typing stream
         ├── GrpcCallClient — calls
-        ├── GrpcChatClient (~250) — getChats, create/delete, participants
+        ├── GrpcChatClient (~250) — getChats, create/delete, participants, settings
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
-        ├── GrpcChatListClient (~255) — chat list version, create/delete
         ├── GrpcProfileClient — contacts, themes (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
@@ -69,7 +68,7 @@ Chat List: Unread highlight (background + bold name + badge)
 
 ---
 
-## Итог сессии v1.3.0.5
+## Итог сессии v1.3.0.7
 
 ### Выполнено
 
@@ -78,20 +77,19 @@ Chat List: Unread highlight (background + bold name + badge)
 - **SplashActivity** — fix `assignParent to null`, `postDelayed` → `lifecycleScope.launch`
 - **Комментарии** — исправлены устаревшие ссылки `messenger.AIService/*` → `messenger.ChatService/*` в 4 файлах
 - **Layout** — исправлен комментарий `HermesChatActivity` → `NewChatActivity` в `widget_chat.xml`
-- **Код-аудит** — создан `doc/CODE_AUDIT.md` с полным анализом неиспользуемых функций, мёртвого кода и устаревших ссылок
+- **Код-аудит** — создан `doc/CODE_AUDIT.md` с полным анализом
+- **Удалён мёртвый код** — `GrpcChatListClient.kt` (272 строки, дублировал `GrpcChatClient`)
+- **Удалены неиспользуемые функции** — `AiV2ChatManager`: `clearTokens`, `resetStreamState`, `emitTyping`, `_aiTyping`
+- **README.md** — полностью переписан (v1.1.1.16 → v1.3.0.7, owl/hermes → AI v2)
+- **Неиспользуемые импорты** — удалены 120 импортов из 56 файлов
+- **SuperAdminActivity** — удалён прелоадер (`progressOverlay`), убран `CircleImageView` из `item_chat.xml`, сортировка вынесена в `Dispatchers.Default`
+- **Feedback баг** — `doOpenFeedbackChat` передавал UUID вместо username в `createDirectChat`, создавался чат с самим собой. UUID резолвится в username через `allUsers`
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.6)
+## Бэклог — Следующая сессия (v1.3.0.8)
 
-### Приоритет 1: Очистка кода
-| Задача | Статус |
-|--------|--------|
-| Удалить 3 неиспользуемых функции из `AiV2ChatManager` (clearTokens, resetStreamState, emitTyping) | 🔲 |
-| Удалить 7 дублирующих методов из `GrpcChatListClient` (deleteChatWithUserId, updateChatAvatar, updateChatSettings, updateChatName, addParticipant, addParticipants, removeParticipant) — мёртвый код, дублирует `GrpcChatClient` | 🔲 |
-| Обновить README.md (сейчас показывает v1.1.1.16, ссылки на owl/hermes) | 🔲 |
-
-### Приоритет 2: End-to-end тестирование AI v2
+### Приоритет 1: End-to-end тестирование AI v2
 | Задача | Статус |
 |--------|--------|
 | Тест ChatWithAIV2 на реальном сервере (стриминг + tool calling) | 🔲 Нужен live-тест |
@@ -100,14 +98,15 @@ Chat List: Unread highlight (background + bold name + badge)
 | Тест Rate Limit (10 req/min, countdown, auto-restore) | 🔲 Нужен live-тест |
 | Тест Graceful Shutdown (SERVER_SHUTTINGDOWN + backoff) | 🔲 Нужен live-тест |
 
-### Приоритет 3: UX улучшения
+### Приоритет 2: UX улучшения
 | Задача | Статус |
 |--------|--------|
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
 | Better error messages для AI v2 (показывать server error из response) | 🔲 |
+| Fix 22 падающих unit-тестов (pre-existing: GrpcConnectionManager, GrpcMessageClient, GrpcUnaryCallHelper, AiV2Marshallers) | 🔲 |
 
-### Приоритет 4: Новые фичи
+### Приоритет 3: Новые фичи
 | Задача | Статус |
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |

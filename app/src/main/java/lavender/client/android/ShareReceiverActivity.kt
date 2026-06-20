@@ -38,7 +38,6 @@ import okhttp3.MultipartBody
 import okhttp3.Request
 import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URL
 import java.util.regex.Pattern

@@ -10,7 +10,6 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -25,7 +24,6 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
-import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.data.grpc.*
 
 class RemoteAgentSettingsActivity : AppCompatActivity(),

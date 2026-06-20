@@ -1,14 +1,12 @@
 package lavender.client.android.data.calls
 
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import lavender.client.android.CallActivity
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 import org.json.JSONObject

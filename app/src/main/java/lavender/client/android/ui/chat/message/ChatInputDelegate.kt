@@ -1,17 +1,12 @@
 package lavender.client.android.ui.chat.message
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
@@ -30,7 +25,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import lavender.client.android.MapPickerActivity
 import lavender.client.android.R
-import lavender.client.android.audio.AudioUploader
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
 import lavender.client.android.ui.adapter.MentionAdapter

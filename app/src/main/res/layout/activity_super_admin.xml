@@ -114,37 +114,4 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <FrameLayout
-        android:id="@+id/progressOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#80000000"
-        android:visibility="gone"
-        android:clickable="true"
-        android:focusable="true">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="24dp"
-            android:background="@drawable/rounded_background"
-            android:backgroundTint="?attr/colorSurfaceContainer">
-
-            <ProgressBar
-                android:layout_width="48dp"
-                android:layout_height="48dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/loading"
-                android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </FrameLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

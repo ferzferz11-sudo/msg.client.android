@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -13,7 +12,6 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.biometric.BiometricManager
 import androidx.lifecycle.lifecycleScope
@@ -32,7 +30,6 @@ import lavender.client.android.theme.ui.ThemeUi
 import java.util.Locale
 
 import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.ui.widget.WidgetManager
 import lavender.client.android.data.grpc.*
 
 class SecurityActivity : AppCompatActivity() {

@@ -8,7 +8,6 @@ import kotlinx.coroutines.SupervisorJob
 import lavender.client.android.R
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.CallMessageProto
 import org.json.JSONObject
 import org.webrtc.IceCandidate

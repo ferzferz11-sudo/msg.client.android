@@ -9,9 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.db.AppDatabase
-import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.proto.UserInfoProto
 import lavender.client.android.data.session.SessionManager

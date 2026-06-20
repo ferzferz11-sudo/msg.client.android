@@ -10,18 +10,15 @@ import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.graphics.scale
-import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -47,7 +44,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 
 import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.ui.widget.WidgetManager
 
 class EditProfileActivity : AppCompatActivity() {
 

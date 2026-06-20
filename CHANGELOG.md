@@ -1,5 +1,38 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.7] - 2026-06-20
+
+### Оптимизация
+
+**Очистка кода:**
+- Удалён мёртвый класс `GrpcChatListClient.kt` (272 строки) — дублировал методы `GrpcChatClient`, никогда не вызывался через `RealGrpcClient`
+- Удалён `GrpcChatListClientTest.kt` — тест удалённого класса
+- Удалены 4 неиспользуемых функции из `AiV2ChatManager`: `clearTokens()`, `resetStreamState()`, `emitTyping()`, `aiTyping` SharedFlow
+- Удалены 120 неиспользуемых import'ов из 56 файлов
+
+**SuperAdminActivity:**
+- Удалён `progressOverlay` (полупрозрачный прелоадер с ProgressBar) — используется только `SwipeRefreshLayout`
+- Удалён `CircleImageView` из `item_chat.xml` — ChatViewHolder больше не создаёт аватар программно
+- Сортировка пользователей вынесена в `Dispatchers.Default` — main thread не блокируется
+
+**Документация:**
+- `README.md` — полностью переписан (v1.1.1.16 → v1.3.0.7, owl/hermes → AI v2, добавлены Remote Agent, HttpClient)
+- `PROMPT_NEXT_SESSION.md` — обновлена версия и бэклог
+- `AI_V2_TESTING.md` — исправлен `messenger.AIService/*` → `messenger.ChatService/*`
+- `INDEX.md` — исправлена архитектура (убран `GrpcChatListClient`), обновлены статистики
+
+**Комментарии:**
+- Исправлены устаревшие ссылки `messenger.AIService/*` → `messenger.ChatService/*` в `GrpcAIv2Marshallers.kt` и `AiV2Proto.kt` (4 штуки)
+- Исправлен комментарий `HermesChatActivity` → `NewChatActivity` в `widget_chat.xml`
+
+### Исправлено
+
+**Feedback (Отзыв админу):**
+- Баг: `doOpenFeedbackChat` передавал `adminUserId` (UUID) в `createDirectChat`, который ожидает username — создавался чат с самим собой
+- Исправлено: UUID резолвится в username через `allUsers`, добавлена проверка на self-chat
+
+---
+
 ## [1.3.0.5] - 2026-06-20
 
 ### Оптимизация

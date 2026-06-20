@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import lavender.client.android.data.calls.CallManager
-import lavender.client.android.data.proto.CallMessageProto
 
 class CallViewModel : ViewModel() {
 

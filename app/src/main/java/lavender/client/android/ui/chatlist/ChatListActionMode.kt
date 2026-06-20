@@ -9,8 +9,6 @@ import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.grpc.*
-import lavender.client.android.theme.ThemeStore
-import lavender.client.android.theme.ThemeUtils
 
 /**
  * Selection mode for ChatListActivity — toolbar-native (no Android ActionMode bar).

@@ -13,11 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
-import lavender.client.android.data.grpc.ProfileClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.grpc.*
-import lavender.client.android.R
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.db.toDomain
 

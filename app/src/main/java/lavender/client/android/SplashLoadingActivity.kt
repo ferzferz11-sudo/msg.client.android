@@ -1,17 +1,12 @@
 package lavender.client.android
 
-import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.animation.doOnEnd
-import androidx.core.content.edit
 import lavender.client.android.data.session.SessionManager
 
 /**
