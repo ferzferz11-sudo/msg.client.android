@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
+    android:background="?attr/colorSurface"
     tools:context=".ui.ai.AiV2AgentCreateEditActivity">
 
     <LinearLayout
@@ -24,11 +25,12 @@
             app:title="@string/ai_v2_create_agent"
             app:titleTextColor="?attr/colorOnPrimary" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="?attr/colorSurface"
+        android:padding="16dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"

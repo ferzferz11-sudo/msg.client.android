@@ -261,7 +261,7 @@ object ThemeApplier {
             }
         }
 
-        // AI v2 Agent form — TextInputLayout hints and Switches
+        // AI v2 Agent form — TextInputLayout hints, strokes, and Switches
         listOf(R.id.agentNameInput, R.id.agentDescriptionInput, R.id.providerTypeInput,
             R.id.modelInput, R.id.systemPromptInput, R.id.providerConfigInput).forEach { id ->
             (activity.findViewById<View>(id)?.parent as? com.google.android.material.textfield.TextInputLayout)?.apply {
