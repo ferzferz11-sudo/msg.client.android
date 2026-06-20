@@ -128,7 +128,7 @@ internal fun showAdditionalSettingsSheet(activity: ChatListActivity) {
 
     sheet.findViewById<View>(R.id.actionNotifications)?.setOnClickListener {
         sheet.dismiss()
-        activity.startActivity(Intent(activity, lavender.client.android.NotificationActivity::class.java))
+        activity.startActivity(Intent(activity, lavender.client.android.NotificationSettingsActivity::class.java))
     }
 
     sheet.findViewById<View>(R.id.actionClearCache)?.setOnClickListener {

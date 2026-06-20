@@ -18,7 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class NotificationActivity : AppCompatActivity() {
+class NotificationSettingsActivity : AppCompatActivity() {
 
     private val grpcClient = GrpcClient
     private lateinit var previewTitle: TextView
