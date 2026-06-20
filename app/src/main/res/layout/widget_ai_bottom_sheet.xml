@@ -6,6 +6,15 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
+
     <TextView
         android:id="@+id/titleText"
         android:layout_width="match_parent"

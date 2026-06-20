@@ -438,6 +438,7 @@
     <string name="image_placeholder">Фото</string>
     <string name="favorites_description">Личное хранилище</string>
     <string name="no_messages">Нет сообщений</string>
+    <string name="ai_sheet_title">AI Сервисы (в разработке)</string>
     <string name="ai_notifications">Уведомления</string>
     <string name="ai_agents_section">🖥 Агенты</string>
     <string name="ai_create_new_chat">Создать новый чат</string>

@@ -52,6 +52,8 @@ class AIBottomSheet(
         val txtColor = ThemeUtils.parseSafeColor(theme.textPrimaryColor, Color.WHITE)
         val primColor = ThemeUtils.parseSafeColor(theme.primaryColor, Color.BLUE)
 
+        titleView?.text = context.getString(R.string.ai_sheet_title)
+
         // === Section 0: Notifications with badge ===
         val notifItem = LayoutInflater.from(context)
             .inflate(R.layout.widget_action_item, contentContainer, false)
