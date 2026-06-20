@@ -1,6 +1,8 @@
 package lavender.client.android.ui.ai
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -18,23 +20,22 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.data.ai.RateLimitCache
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
 
-/**
- * AiV2ChatActivity — unified AI chat screen for v2.
- * Supports simple, agent, and pipeline chat types.
- * Agent type determined by agent_id.
- */
 class AiV2ChatActivity : AppCompatActivity() {
 
     private lateinit var viewModel: AiV2ChatViewModel
     private lateinit var adapter: ChatMessageAdapter
     private lateinit var chatWidget: ChatWidget
     private lateinit var progressBar: ProgressBar
+    private val rateLimitCache = RateLimitCache()
+    private val handler = Handler(Looper.getMainLooper())
+    private var rateLimitRunnable: Runnable? = null
 
     private var userId: String = ""
     private var sessionId: String = ""
@@ -63,7 +64,6 @@ class AiV2ChatActivity : AppCompatActivity() {
         observeState()
         ThemeUi.bind(this, SessionManager.session.value.username)
 
-        // Handle window insets
         val rootView = findViewById<View>(android.R.id.content)
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -76,10 +76,8 @@ class AiV2ChatActivity : AppCompatActivity() {
         }
 
         if (sessionId.isEmpty()) {
-            // New session — will be created on first message
             chatWidget.setToolbarTitle(agentName.ifEmpty { getString(R.string.ai_v2_chat_title) })
         } else {
-            // Existing session
             chatWidget.setToolbarTitle(agentName.ifEmpty { getString(R.string.ai_v2_chat_title) })
             viewModel.loadHistory(sessionId)
         }
@@ -115,12 +113,6 @@ class AiV2ChatActivity : AppCompatActivity() {
                 sendMessage(message)
             }
         }
-
-        chatWidget.messageInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {}
-        })
     }
 
     private fun observeState() {
@@ -155,7 +147,11 @@ class AiV2ChatActivity : AppCompatActivity() {
                 launch {
                     viewModel.error.collect { error ->
                         error?.let {
-                            Toast.makeText(this@AiV2ChatActivity, it, Toast.LENGTH_SHORT).show()
+                            if (it.contains("rate limit", ignoreCase = true)) {
+                                handleRateLimit()
+                            } else {
+                                Toast.makeText(this@AiV2ChatActivity, it, Toast.LENGTH_SHORT).show()
+                            }
                             viewModel.clearError()
                         }
                     }
@@ -165,6 +161,14 @@ class AiV2ChatActivity : AppCompatActivity() {
     }
 
     private fun sendMessage(message: String) {
+        if (!canSendRequest()) {
+            val waitMs = rateLimitCache.getTimeUntilReset(agentId)
+            showRateLimitUI(waitMs)
+            return
+        }
+
+        rateLimitCache.recordRequest(agentId)
+
         val userMessage = lavender.client.android.data.ai.AiV2ChatMessage(
             sessionId = sessionId,
             role = "user",
@@ -179,6 +183,33 @@ class AiV2ChatActivity : AppCompatActivity() {
             message = message,
             agentId = agentId
         )
+    }
+
+    private fun canSendRequest(): Boolean {
+        return rateLimitCache.getRemaining(agentId) > 0
+    }
+
+    private fun handleRateLimit() {
+        rateLimitCache.undoLastRecord(agentId)
+        val waitMs = rateLimitCache.getTimeUntilReset(agentId)
+        showRateLimitUI(waitMs)
+    }
+
+    private fun showRateLimitUI(waitMs: Long) {
+        val seconds = (waitMs / 1000).coerceAtLeast(1)
+        Toast.makeText(this, "Rate limit exceeded. Wait ${seconds}s", Toast.LENGTH_SHORT).show()
+
+        chatWidget.messageInput.isEnabled = false
+        rateLimitRunnable?.let { handler.removeCallbacks(it) }
+        rateLimitRunnable = Runnable {
+            chatWidget.messageInput.isEnabled = true
+        }
+        handler.postDelayed(rateLimitRunnable!!, waitMs)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        rateLimitRunnable?.let { handler.removeCallbacks(it) }
     }
 
     companion object {

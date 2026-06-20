@@ -1,5 +1,82 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.1] - 2026-06-20
+
+### Добавлено
+
+**AI Marketplace UI:**
+- `MarketplaceAgentAdapter` — карточки агентов с рейтингом (RatingBar), количеством установок, провайдером
+- `AgentDetailActivity` — экран деталей агента: статистика, отзывы, кнопки Rate/Share/Install
+- `ReviewAdapter` — список отзывов (user, rating, text, date)
+- `RateAgentBottomSheet` — оценка агента 1-5 звёзд + текстовый отзыв
+- `InstallAgentBottomSheet` — установка агента по share_code
+- `MarketplaceViewModel` — каталог с пагинацией (loadAgents/loadMore)
+- `AgentDetailViewModel` — статистика, отзывы, rate/share/install
+- Empty state: "No public agents available yet" / "Публичных агентов пока нет"
+- **Поиск агентов** — TextInputLayout с дебаунсом (2+ символов)
+- **Pull-to-refresh** — SwipeRefreshLayout для обновления каталога
+- **Infinite scroll** — автоматическая загрузка следующей страницы при прокрутке
+- **Deep link** — `lavender://marketplace/install?code=xxx` для установки агентов
+
+**AI Usage Stats UI:**
+- `UsageStatsAdapter` — per-agent статистика (токены, запросы, период)
+- 3 summary карточки: Total Tokens, Total Requests, Avg/Request
+- Empty state: "No data yet" / "Пока нет данных"
+- K/M форматирование чисел (1.5K, 2.3M)
+
+**Rate Limit UI:**
+- `RateLimitCache` — клиентский кэш лимитов запросов (sliding window, 10 req/min)
+- При превышении лимита: блокировка input поля + countdown таймер
+- Автоматическое восстановление после сброса окна
+
+**Табы AiV2AgentListActivity:**
+- Таб 3: "Marketplace" — каталог публичных агентов с поиском
+- Таб 4: "Usage" — статистика использования AI
+
+### Файлы
+
+**Kotlin (10 новых):**
+- `data/ai/MarketplaceModels.kt` — MarketplaceAgent, AgentStats, AgentReview, UsageStat
+- `data/ai/RateLimitCache.kt` — клиентский кэш лимитов
+- `ui/ai/MarketplaceViewModel.kt` — каталог с пагинацией
+- `ui/ai/AgentDetailViewModel.kt` — детали агента
+- `ui/ai/UsageStatsViewModel.kt` — статистика
+- `ui/ai/MarketplaceAgentAdapter.kt` — карточки агентов
+- `ui/ai/AgentDetailActivity.kt` — экран деталей
+- `ui/ai/ReviewAdapter.kt` — список отзывов
+- `ui/ai/RateAgentBottomSheet.kt` — диалог оценки
+- `ui/ai/InstallAgentBottomSheet.kt` — диалог установки
+- `ui/ai/UsageStatsAdapter.kt` — per-agent статистика
+
+**Layouts (5 новых):**
+- `item_marketplace_agent_card.xml` — карточка агента в каталоге
+- `activity_agent_detail.xml` — экран деталей агента
+- `item_review.xml` — карточка отзыва
+- `bottom_sheet_rate_agent.xml` — шторка оценки
+- `bottom_sheet_install_agent.xml` — шторка установки
+- `fragment_usage_stats.xml` — фрагмент статистики
+- `item_usage_stat.xml` — карточка per-agent статистики
+
+**Modified:**
+- `activity_ai_v2_agent_list.xml` — добавлены SearchBar, SwipeRefreshLayout, 5-й таб "Usage"
+- `AndroidManifest.xml` — deep link intent filter для `lavender://marketplace/install`
+
+**Domain:**
+- `AiV2Models.kt` — добавлены MarketplaceAgent, AgentStats, AgentReview, UsageStat
+- `AiV2DomainExtensions.kt` — добавлены toMarketplaceAgent(), AgentReviewProto.toDomain(), UsageStatEntryProto.toDomain()
+- `AiV2ChatUseCase.kt` — добавлены 7 Marketplace методов
+
+**Strings (26 новых EN + RU):**
+- marketplace, marketplace_rate, marketplace_share, marketplace_install, marketplace_rate_agent, marketplace_install_agent, marketplace_enter_share_code, marketplace_write_review, marketplace_submit, marketplace_installs, marketplace_reviews, marketplace_agent_installed, marketplace_thanks_rating, marketplace_select_rating, marketplace_share_agent, marketplace_install_text, marketplace_empty, marketplace_usage, marketplace_tokens, marketplace_requests, marketplace_avg_request, marketplace_no_data, marketplace_no_data_desc, marketplace_search_hint, rate_limit_exceeded
+
+**Tests (15 новых):**
+- `MarketplaceModelsTest` (8) — data class defaults, values
+- `MarketplaceMappersTest` (7) — Proto → Domain mapping, provider types
+
+**Итого:** ~1700 LOC добавлено, 15 unit tests (все проходят)
+
+---
+
 ## [1.3.0.0] - 2026-06-20
 
 ### Добавлено

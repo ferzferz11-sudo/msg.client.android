@@ -375,6 +375,34 @@
     <string name="ai_v2_tools_enabled">Tools Enabled</string>
     <string name="ai_v2_rag_enabled">RAG Enabled</string>
     <string name="ai_v2_tools">Tools</string>
+
+    <!-- Marketplace -->
+    <string name="marketplace">Marketplace</string>
+    <string name="marketplace_rate">Rate</string>
+    <string name="marketplace_share">Share</string>
+    <string name="marketplace_install">Install</string>
+    <string name="marketplace_rate_agent">Rate Agent</string>
+    <string name="marketplace_install_agent">Install Agent</string>
+    <string name="marketplace_enter_share_code">Enter share code</string>
+    <string name="marketplace_write_review">Write a review (optional)</string>
+    <string name="marketplace_submit">Submit</string>
+    <string name="marketplace_installs">%d installs</string>
+    <string name="marketplace_reviews">%d reviews</string>
+    <string name="marketplace_agent_installed">Agent installed!</string>
+    <string name="marketplace_thanks_rating">Thanks for rating!</string>
+    <string name="marketplace_select_rating">Please select a rating</string>
+    <string name="marketplace_share_agent">Share agent</string>
+    <string name="marketplace_install_text">Install agent in Lavender Messenger: %s</string>
+    <string name="marketplace_empty">No public agents available yet</string>
+    <string name="marketplace_usage">Usage</string>
+    <string name="marketplace_tokens">Tokens</string>
+    <string name="marketplace_requests">Requests</string>
+    <string name="marketplace_avg_request">Avg/Request</string>
+    <string name="marketplace_no_data">No data yet</string>
+    <string name="marketplace_no_data_desc">Usage stats will appear after using AI chats</string>
+    <string name="marketplace_search_hint">Search agents...</string>
+    <string name="rate_limit_exceeded">Rate limit exceeded. Wait %ds</string>
+
     <string name="favorites">Favorites</string>
     <string name="no_favorites_yet">No favorites yet</string>
     <string name="added_to_favorites">Added to Favorites</string>

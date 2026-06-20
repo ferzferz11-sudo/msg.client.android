@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.0 (релиз) | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
+**Версия:** v1.3.0.1 (релиз) | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-20
 
 ---
 
@@ -15,62 +15,61 @@
 
 ---
 
-## Что сделано (v1.2.0.20 → v1.3.0.0)
+## Что сделано (v1.3.0.0 → v1.3.0.1)
 
-### AI Marketplace API
+### AI Marketplace UI
 
-**gRPC методы (7 шт):**
-- `RateAIAgent` — оценка агента (1-5 + отзыв)
-- `GetAIAgentReviews` — отзывы на агента
-- `ListMarketplaceAgents` — каталог публичных агентов с поиском
-- `GetAIAgentStats` — статистика агента (установки, рейтинг)
-- `ShareAIAgent` — генерация share_code
-- `InstallAIAgent` — установка по share_code
-- `GetAIUsageStats` — статистика использования (токены, запросы)
+**Domain Layer:**
+- `MarketplaceModels.kt` — 4 модели: MarketplaceAgent, AgentStats, AgentReview, UsageStat
+- `AiV2DomainExtensions.kt` — 3 маппера: toMarketplaceAgent(), AgentReviewProto.toDomain(), UsageStatEntryProto.toDomain()
+- `AiV2ChatUseCase.kt` — 7 Marketplace методов (listMarketplace, stats, reviews, rate, share, install, usage)
+- `RateLimitCache.kt` — клиентский кэш лимитов запросов (sliding window, 10 req/min)
 
-**Файлы:**
-- `AiV2Proto.kt` — 15 новых proto классов
-- `GrpcAIv2Marshallers.kt` — 14 новых marshallers
-- `GrpcAIv2Client.kt` — 7 новых методов
-- `GrpcClient.kt` — 7 facade методов
+**ViewModel Layer:**
+- `MarketplaceViewModel.kt` — каталог с пагинацией (loadAgents/loadMore/search)
+- `AgentDetailViewModel.kt` — статистика, отзывы, rate/share/install
+- `UsageStatsViewModel.kt` — статистика использования
 
-### Graceful Shutdown + Reconnection
+**UI Layer:**
+- `MarketplaceAgentAdapter.kt` — карточки агентов с рейтингом (RatingBar), install count, провайдер
+- `AgentDetailActivity.kt` — экран деталей агента: статистика, отзывы, кнопки Rate/Share/Install
+- `ReviewAdapter.kt` — список отзывов (user, rating, text, date)
+- `RateAgentBottomSheet.kt` — оценка агента 1-5 звёзд + текстовый отзыв
+- `InstallAgentBottomSheet.kt` — установка агента по share_code
+- `UsageStatsAdapter.kt` — per-agent статистика (токены, запросы, период)
 
-- `SERVER_SHUTTINGDOWN` сигнал в Chat стриме → `_serverShuttingDown` StateFlow
-- Health check (`GET /health`) перед каждым реконнектом
-- Экспоненциальный backoff при недоступности сервера
-- "Server restarting…" индикатор в toolbar
-- `NotificationsGrpc.kt` — уведомления вынесены из OwlGrpc.kt
-- `RemoteAgentGrpc.kt` — Remote Agent вынесен из HermesGrpc.kt
+**Табы AiV2AgentListActivity:**
+| # | Таб | Описание |
+|---|-----|----------|
+| 0 | Presets | Пресет-агенты |
+| 1 | My Agents | Пользовательские |
+| 2 | Public | Публичные |
+| 3 | **Marketplace** | Каталог с поиском, pull-to-refresh, infinite scroll |
+| 4 | **Usage** | Статистика (токены/запросы) |
 
-### v1 AI Cleanup
+**Фичи:**
+- Поиск агентов — TextInputLayout с дебаунсом (2+ символов)
+- Pull-to-refresh — SwipeRefreshLayout для обновления каталога
+- Infinite scroll — автоматическая загрузка следующей страницы
+- Deep link — `lavender://marketplace/install?code=xxx`
+- Empty state — "No public agents available yet" / "Публичных агентов пока нет"
+- Rate limit UI — блокировка input + countdown при превышении лимита
 
-- Удалены `OwlGrpc.kt`, `HermesGrpc.kt` (~4000 LOC)
-- ~20 v1 proto классов удалены из `MessengerProto.kt`
-- Удалены v1 AI строки, стейл комментарии, неиспользуемые цвета/IDs
-- Сломанный `OwlActivity` удалён из `AndroidManifest.xml`
+**Layouts (7 новых):**
+- `item_marketplace_agent_card.xml`
+- `activity_agent_detail.xml`
+- `item_review.xml`
+- `bottom_sheet_rate_agent.xml`
+- `bottom_sheet_install_agent.xml`
+- `fragment_usage_stats.xml`
+- `item_usage_stat.xml`
 
-### UI Fixes
+**Strings (26 EN + 26 RU):**
+- marketplace, marketplace_rate, marketplace_share, marketplace_install, marketplace_rate_agent, marketplace_install_agent, marketplace_enter_share_code, marketplace_write_review, marketplace_submit, marketplace_installs, marketplace_reviews, marketplace_agent_installed, marketplace_thanks_rating, marketplace_select_rating, marketplace_share_agent, marketplace_install_text, marketplace_empty, marketplace_usage, marketplace_tokens, marketplace_requests, marketplace_avg_request, marketplace_no_data, marketplace_no_data_desc, marketplace_search_hint, rate_limit_exceeded
 
-- AI BottomSheet: dragHandle + заголовок "AI Services (in development)"
-- LavenderFab в списке агентов (отступы от навбара)
-- Аватар в toolbar: 42dp → 48dp
-- Табы: контрастное контрастирование на тёмных темах
-- Форма агента: surface фон, темизация полей ввода, Save кнопка
-- Login: убран прелоадер на кнопке, локализованная ошибка
-- Presets таб: `includePublic = true` для серверных пресетов
-
----
-
-## Ключевые решения
-
-| Решение | Обоснование |
-|---------|-------------|
-| NotificationsGrpc + RemoteAgentGrpc | Разделение OwlGrpc/HermesGrpc на domain-специфичные файлы |
-| LavenderFab для agent list | Автоматические отступы от system bars |
-| includePublic=true для Presets | Серверные пресеты доступны только через includePublic |
-| surfaceColor для форм | Контрастный фон на тёмных темах |
-| textPrimary для табов | Лучшая видимость чем colorOnSurface на тёмных темах |
+**Tests (15 новых):**
+- `MarketplaceModelsTest` (8) — data class defaults, values
+- `MarketplaceMappersTest` (7) — Proto → Domain mapping, provider types
 
 ---
 
@@ -97,51 +96,58 @@ GrpcClient (facade)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
-AiV2ChatActivity → unified AI chat (simple/agent/pipeline)
-AiV2AgentListActivity → agent list (tabs: Presets/My/Public)
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
+AiV2AgentListActivity → 5 tabs (Presets/My/Public/Marketplace/Usage)
 AiV2AgentCreateEditActivity → agent create/edit
+AgentDetailActivity → agent detail (stats, reviews, rate/share/install)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
-AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage
+AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination
+Rate Limit: RateLimitCache + countdown + disable input
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 ```
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.1)
+## Ключевые решения
 
-### Приоритет 1: Marketplace UI
-| Задача | Статус |
-|--------|--------|
-| Marketplace экран (каталог публичных агентов) | 🔲 |
-| Экран отзывов на агента | 🔲 |
-| Шеринг агента (generate share_code) | 🔲 |
-| Установка по share_code | 🔲 |
-| Статистика использования (токены, запросы) | 🔲 |
-| Оценка агента (1-5 звёзд + отзыв) | 🔲 |
+| Решение | Обоснование |
+|---------|-------------|
+| 5 табов в AgentListActivity | Marketplace и Usage — отдельные табы для удобства навигации |
+| SearchBar в табе Marketplace | API поддерживает query параметр для фильтрации |
+| SwipeRefreshLayout | Стандартный Android паттерн для pull-to-refresh |
+| Infinite scroll через OnScrollListener | Автоматическая пагинация при приближении к концу списка |
+| Deep link lavender://marketplace/install | Удобная установка агентов по ссылке |
+| RateLimitCache клиентский | Серверный rate limit, клиентский кэш только для UX |
 
-### Приоритет 2: AI v2 — интеграция с сервером
+---
+
+## Бэклог — Следующая сессия (v1.3.0.2)
+
+### Приоритет 1: Тестирование AI v2 с сервером
 | Задача | Статус |
 |--------|--------|
 | Тестирование ChatWithAIV2 на реальном сервере | 🔲 |
 | Тестирование Agent CRUD | 🔲 |
 | Тестирование Tool Calling loop | 🔲 |
-| Тестирование Marketplace API | 🔲 |
+| Тестирование Marketplace API (каталог, отзывы, оценки) | 🔲 |
 | Тестирование Graceful Shutdown | 🔲 |
+| Тестирование Rate Limit | 🔲 |
 
-### Приоритет 3: Тесты
+### Приоритет 2: Тесты
 | Задача | Статус |
 |--------|--------|
 | Unit-тесты AI v2 (models, marshallers, extensions) | ✅ Done (60 tests) |
+| Unit-тесты Marketplace (models, mappers) | ✅ Done (15 tests) |
 | Unit-тесты Marketplace marshallers | 🔲 |
 | Unit-тесты для ChatViewModel | ✅ Done (v1.2.0.19) |
 | Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
 | Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
 | Интеграционные тесты AI v2 с сервером | 🔲 |
 
-### Приоритет 4: UX
+### Приоритет 3: UX улучшения
 | Задача | Статус |
 |--------|--------|
 | Offline mode | ✅ Done (v1.2.0.16) |
@@ -149,6 +155,19 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | Sheet navigation | ✅ Done (v1.2.0.19) |
 | Graceful Shutdown UI | ✅ Done (v1.3.0.0) |
 | Agent form dark theme | ✅ Done (v1.3.0.0) |
+| Marketplace empty state | ✅ Done (v1.3.0.1) |
+| Rate limit UI | ✅ Done (v1.3.0.1) |
+| Loading skeletons для Marketplace | 🔲 |
+| Кэширование Marketplace в Room DB | 🔲 |
+
+### Приоритет 4: Новые фичи
+| Задача | Статус |
+|--------|--------|
+| Уведомления о новых отзывах на агентов | 🔲 |
+| Сортировка агентов в Marketplace (rating, installs, newest) | 🔲 |
+| Фильтры в Marketplace (provider type, tools enabled) | 🔲 |
+| Избранное в Marketplace (сохранять понравившихся агентов) | 🔲 |
+| Автообновление статистики Usage | 🔲 |
 
 ---
 
@@ -185,9 +204,18 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 
 ---
 
+## Серверная документация
+
+| Файл | Назначение |
+|------|------------|
+| `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` | Полный гайд интеграции клиента |
+| `/Users/paveld/LavenderMessenger-server/doc/ANDROID_AI_BILLING_INTEGRATION.md` | UsageStats UI (реализовано) |
+| `/Users/paveld/LavenderMessenger-server/doc/ANDROID_RATE_LIMIT_PROMPT.md` | Rate limit UI (реализовано) |
+
+---
+
 ## Полезные ссылки
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`, `doc/PLAN.md`
-- Документация AI v2: `doc/AI_V2_CLIENT_PLAN.md`, `doc/AI_V2_TESTING.md`
-- Документация сервера: `/Users/paveld/LavenderMessenger-server/doc/AI_V2_CLIENT_INTEGRATION.md`
+- Документация AI v2: `doc/AI_V2_TESTING.md`
 - Changelog: `CHANGELOG.md`

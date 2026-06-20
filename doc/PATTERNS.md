@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.0 | **Updated:** 2026-06-20
+**Version:** v1.3.0.1 | **Updated:** 2026-06-20
 
 ---
 
@@ -37,7 +37,7 @@ RealGrpcClient (orchestrator) delegates to:
 - **CRITICAL:** StateFlow declared BEFORE modules (Kotlin object top-to-bottom init)
 - GrpcClient: extension functions don't work via star import — all methods inline
 
-### AI v2 Pattern (v1.3.0.0)
+### AI v2 Pattern (v1.3.0.1)
 ```
 GrpcAIv2Client — gRPC transport (chatWithAIV2 streaming + agent CRUD + tools + marketplace)
     ├── ChatWithAIV2 streaming with tool calling loop
@@ -46,10 +46,12 @@ GrpcAIv2Client — gRPC transport (chatWithAIV2 streaming + agent CRUD + tools +
     └── Marketplace: rateAgent, getAgentReviews, listMarketplaceAgents, getAgentStats,
                      shareAgent, installAgent, getUsageStats
 
-AiV2ChatUseCase — orchestrates chat with tool calling loop
+AiV2ChatUseCase — orchestrates chat with tool calling loop + marketplace methods
     ├── chat(userId, sessionId, message, agentId, images, scope)
     │   └── executeStream() → if tool_calls → send back → repeat (max 10 iterations)
-    └── Agent CRUD + Tools
+    ├── Agent CRUD + Tools
+    └── Marketplace: listMarketplaceAgents, getAgentStats, getAgentReviews,
+                     rateAgent, shareAgent, installAgent, getUsageStats
 
 AiV2ChatManager — shared flows for UI observation
     ├── aiResponses: SharedFlow<AiV2ChatMessage>
@@ -59,14 +61,30 @@ AiV2ChatManager — shared flows for UI observation
     └── streamState: StateFlow<AiV2StreamState>
 
 UI:
-    ├── AiV2ChatActivity + AiV2ChatViewModel — unified AI chat screen
-    ├── AiV2AgentListActivity + AiV2AgentListViewModel — agent list (tabs: Presets/My/Public)
-    └── AiV2AgentCreateEditActivity + AiV2AgentCreateEditViewModel — agent create/edit
+    ├── AiV2ChatActivity + AiV2ChatViewModel — unified AI chat screen + rate limit
+    ├── AiV2AgentListActivity + AiV2AgentListViewModel — agent list (5 tabs)
+    │   ├── Tab 0: Presets
+    │   ├── Tab 1: My Agents
+    │   ├── Tab 2: Public
+    │   ├── Tab 3: Marketplace (search, pagination, pull-to-refresh)
+    │   └── Tab 4: Usage (stats)
+    ├── AiV2AgentCreateEditActivity + AiV2AgentCreateEditViewModel — agent create/edit
+    ├── MarketplaceViewModel — marketplace catalog with pagination
+    ├── AgentDetailViewModel — agent details (stats, reviews, rate/share/install)
+    ├── UsageStatsViewModel — usage statistics
+    ├── MarketplaceAgentAdapter — marketplace agent cards
+    ├── AgentDetailActivity — agent detail screen
+    ├── ReviewAdapter — review list
+    ├── RateAgentBottomSheet — rate agent (1-5 stars + review)
+    ├── InstallAgentBottomSheet — install agent by share code
+    └── UsageStatsAdapter — per-agent usage stats
 ```
 - Server executes all built-in tools (search_messages, web_search, etc.)
 - Client only sends tool_calls result back to server
 - Agent provider_type: openrouter, local, mimo, webhook, websocket, subprocess, mcp
 - 8 preset agents: mimo, assistant, developer, devops, architect, writer, analyst, translator
+- Marketplace: search with debounce, infinite scroll, pull-to-refresh, deep link install
+- Rate limit: RateLimitCache + countdown + disable input on limit
 
 ### Graceful Shutdown Pattern (v1.3.0.0)
 ```
@@ -80,6 +98,48 @@ On UNAVAILABLE error:
   → If 503 (shutting_down) → exponential backoff (max 30s)
   → If 200 → reconnect
   → _serverShuttingDown = false on READY
+```
+
+### Marketplace Pattern (v1.3.0.1)
+```
+AiV2AgentListActivity (Tab 3: Marketplace)
+  ├── SearchBar (TextInputLayout + debounce 2+ chars)
+  ├── SwipeRefreshLayout (pull-to-refresh)
+  ├── RecyclerView (MarketplaceAgentAdapter)
+  │   └── OnScrollListener → loadMore() (infinite scroll)
+  └── EmptyView ("No public agents available yet")
+
+MarketplaceViewModel
+  ├── loadAgents(query) → reset offset, fetch first page
+  ├── loadMore() → append next page
+  └── StateFlow: agents, isLoading, isLoadingMore, error
+
+AgentDetailActivity
+  ├── Stats (install count, avg rating, review count)
+  ├── Reviews (ReviewAdapter)
+  ├── Rate button → RateAgentBottomSheet (1-5 stars + text)
+  ├── Share button → Intent.ACTION_SEND with share_code
+  └── Install button → InstallAgentBottomSheet (share_code input)
+
+Deep link: lavender://marketplace/install?code=xxx
+  → AndroidManifest intent-filter
+  → AiV2AgentListActivity.handleDeepLink()
+```
+
+### Rate Limit Pattern (v1.3.0.1)
+```
+RateLimitCache (client-side)
+  ├── Sliding window: 10 requests per 60 seconds per agent_id
+  ├── getRemaining(agentId) → check cache
+  ├── recordRequest(agentId) → add timestamp
+  ├── getTimeUntilReset(agentId) → milliseconds until oldest expires
+  └── undoLastRecord(agentId) → rollback on server error
+
+AiV2ChatActivity
+  ├── canSendRequest() → rateLimitCache.getRemaining() > 0
+  ├── sendMessage() → recordRequest() → chat()
+  ├── On error "rate limit" → undoLastRecord() → showRateLimitUI()
+  └── showRateLimitUI(waitMs) → disable input + countdown + auto-restore
 ```
 
 ### ChatListActivity Modular Pattern

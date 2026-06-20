@@ -1,6 +1,6 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.3.0.0 | **Branch:** feat/1.3.0.x | **Updated:** 2026-06-20
+**Version:** v1.3.0.1 | **Branch:** feat/1.3.0.x | **Updated:** 2026-06-20
 
 ---
 
@@ -18,6 +18,31 @@
 - ✅ **Agent form theming:** Surface background, TextInputLayout colors, Save button
 - ✅ **Login fixes:** Removed button preloader, localized error message
 - ✅ **Presets fix:** includePublic=true for server presets
+
+### Session 2026-06-20 (Marketplace UI)
+- ✅ **Domain models:** MarketplaceAgent, AgentStats, AgentReview, UsageStat
+- ✅ **Domain extensions:** toMarketplaceAgent(), AgentReviewProto.toDomain(), UsageStatEntryProto.toDomain()
+- ✅ **UseCase methods:** 7 Marketplace methods in AiV2ChatUseCase (listMarketplace, stats, reviews, rate, share, install, usage)
+- ✅ **ViewModels:** MarketplaceViewModel, AgentDetailViewModel, UsageStatsViewModel
+- ✅ **MarketplaceAgentAdapter:** RecyclerView adapter with rating bar, install count
+- ✅ **AgentDetailActivity:** Full agent detail screen with stats, reviews, action buttons
+- ✅ **ReviewAdapter:** Review list adapter
+- ✅ **RateAgentBottomSheet:** Rating 1-5 + text review
+- ✅ **InstallAgentBottomSheet:** Share code input
+- ✅ **4th tab "Marketplace":** Added to AiV2AgentListActivity with search
+- ✅ **5th tab "Usage":** Added to AiV2AgentListActivity
+- ✅ **UsageStats UI:** 3 summary cards (tokens, requests, avg) + per-agent list
+- ✅ **UsageStatsAdapter:** Per-agent usage stats with K/M formatting
+- ✅ **Search:** TextInputLayout with debounce for Marketplace search
+- ✅ **Pull-to-refresh:** SwipeRefreshLayout for Marketplace and Usage tabs
+- ✅ **Infinite scroll:** Automatic pagination when scrolling to bottom
+- ✅ **Deep link:** `lavender://marketplace/install?code=xxx` for agent installation
+- ✅ **Layouts:** 10 XML layouts (marketplace card, agent detail, review, rate/install/usage sheets)
+- ✅ **Strings:** 26 marketplace strings (EN + RU)
+- ✅ **AndroidManifest:** AgentDetailActivity registered, deep link intent filter
+- ✅ **Unit tests:** 15 tests (MarketplaceModelsTest 8, MarketplaceMappersTest 7) — all pass
+- ✅ **Empty state:** Marketplace shows "No public agents available yet" when empty
+- ✅ **Rate limit UI:** RateLimitCache + countdown + disable input on limit
 
 ---
 
@@ -138,33 +163,50 @@
 
 ---
 
-## Backlog — Следующая сессия (v1.2.0.20)
+## Backlog — Следующая сессия (v1.3.0.2)
 
-### Приоритет 1: AI v2 Migration
-Детальный план: `doc/AI_V2_CLIENT_PLAN.md`
-
-| Фаза | Что | Статус |
-|------|-----|--------|
-| 1 | Proto модели + Marshallers + GrpcAIv2Client | ✅ Done |
-| 2 | Domain + UseCase + Tool calling loop + ChatManager | ✅ Done |
-| 3 | UI (AiV2ChatActivity, AgentList, AgentCreateEdit) + strings | ✅ Done |
-| 4 | AndroidManifest + GrpcClient facade + Navigation | ✅ Done |
-| 5 | Unit-тесты marshallers + UseCase (60 tests) | ✅ Done |
-| 6 | Cleanup v1 (20 files, 8 layouts, 3 dirs deleted) | ✅ Done |
+### Приоритет 1: Тестирование AI v2 с сервером
+| Задача | Статус |
+|--------|--------|
+| Тестирование ChatWithAIV2 на реальном сервере | 🔲 |
+| Тестирование Agent CRUD | 🔲 |
+| Тестирование Tool Calling loop | 🔲 |
+| Тестирование Marketplace API (каталог, отзывы, оценки) | 🔲 |
+| Тестирование Graceful Shutdown | 🔲 |
+| Тестирование Rate Limit | 🔲 |
 
 ### Приоритет 2: Тесты
 | Задача | Статус |
 |--------|--------|
-| Unit-тесты для ChatViewModel | ✅ Done (17 tests) |
+| Unit-тесты AI v2 (models, marshallers, extensions) | ✅ Done (60 tests) |
+| Unit-тесты Marketplace (models, mappers) | ✅ Done (15 tests) |
+| Unit-тесты Marketplace marshallers | 🔲 |
+| Unit-тесты для ChatViewModel | ✅ Done (v1.2.0.19) |
 | Unit-тесты для ProfileViewModel | ✅ Done (v1.2.0.16) |
 | Unit-тесты для SessionManager | ✅ Done (v1.2.0.16) |
+| Интеграционные тесты AI v2 с сервером | 🔲 |
 
-### Приоритет 3: UX
+### Приоритет 3: UX улучшения
 | Задача | Статус |
 |--------|--------|
 | Offline mode | ✅ Done (v1.2.0.16) |
 | Push notification deep link | ✅ Done (v1.2.0.16) |
 | Sheet navigation | ✅ Done (v1.2.0.19) |
+| Graceful Shutdown UI | ✅ Done (v1.3.0.0) |
+| Agent form dark theme | ✅ Done (v1.3.0.0) |
+| Marketplace empty state | ✅ Done (v1.3.0.1) |
+| Rate limit UI | ✅ Done (v1.3.0.1) |
+| Loading skeletons для Marketplace | 🔲 |
+| Кэширование Marketplace в Room DB | 🔲 |
+
+### Приоритет 4: Новые фичи
+| Задача | Статус |
+|--------|--------|
+| Уведомления о новых отзывах на агентов | 🔲 |
+| Сортировка агентов в Marketplace (rating, installs, newest) | 🔲 |
+| Фильтры в Marketplace (provider type, tools enabled) | 🔲 |
+| Избранное в Marketplace (сохранять понравившихся агентов) | 🔲 |
+| Автообновление статистики Usage | 🔲 |
 
 ---
 
@@ -182,40 +224,49 @@
 | Token refresh on session restore | startTokenRefresh() вызывается в initFromPrefs() и waitForConnectionAndReLogin() |
 | JWT failure → refresh first | Chat stream retry: refresh token → retry (не password fallback) |
 | Admin ID dynamic tracking | adminUserId из chat stream isSuperAdmin + GetAllUsers response (не хардкод username) |
+| 5 табов в AgentListActivity | Marketplace и Usage — отдельные табы для удобства навигации |
+| SearchBar в табе Marketplace | API поддерживает query параметр для фильтрации |
+| SwipeRefreshLayout | Стандартный Android паттерн для pull-to-refresh |
+| Infinite scroll через OnScrollListener | Автоматическая пагинация при приближении к концу списка |
+| Deep link lavender://marketplace/install | Удобная установка агентов по ссылке |
+| RateLimitCache клиентский | Серверный rate limit, клиентский кэш только для UX |
 
 ---
 
-## Архитектура (v1.2.0.13)
+## Архитектура (v1.3.0.1)
 
 ```
 GrpcClient (facade)
   └── RealGrpcClient — orchestrator
-        ├── GrpcConnectionManager — connect/reconnect/disconnect
+        ├── GrpcConnectionManager — connect/reconnect/health check
         ├── GrpcAuthClient — JWT auth (v2 only)
         ├── GrpcTypingClient — typing stream
         ├── GrpcCallClient — calls
         ├── GrpcChatClient (~250) — getChats, create/delete, participants
         ├── GrpcChatListV2Client (~120) — pin/unpin, search, archive
-        ├── GrpcChatAuxClient (~130) — users, AI, FCM, mute
+        ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcChatListClient (~255) — chat list version, create/delete
         ├── GrpcProfileClient — profile, avatar, contacts, themes
-        ├── GrpcDraftClient — drafts
-        ├── GrpcFavoritesClient — favorites
-        ├── GrpcMessageClient — messages, history, reactions
+        ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── HermesGrpc, OwlGrpc — AI
-        └── AiChatGrpc, SecretChatGrpc, ProfileClient
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
+        ├── SecretChatGrpc, ProfileClient
+        ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
+        └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity → 6 delegates + ChatViewModel (toolbar, input, selection, search, E2EE, menu)
-ProfileActivity → ProfileViewModel (profile/group data, avatar upload, participants)
-MessageAdapter → 12 focused bind methods (text, image, audio, file, location, call, system)
+NewChatActivity → 6 delegates + ChatViewModel
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
+AiV2AgentListActivity → 5 tabs (Presets/My/Public/Marketplace/Usage)
+AiV2AgentCreateEditActivity → agent create/edit
+AgentDetailActivity → agent detail (stats, reviews, rate/share/install)
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
-Session: SessionManager (token refresh EVERY entry point, device sync, FCM, auto-login recovery)
-Token lifecycle: initFromPrefs → startTokenRefresh | ensureFreshToken on chat stream | refresh-on-failure in onError
-Admin tracking: adminUserId StateFlow + SharedPreferences persistence + GetAllUsers admin scan
-Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cache (Room)
+Session: SessionManager (token refresh EVERY entry point)
+AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
+AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination
+Rate Limit: RateLimitCache + countdown + disable input
+Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 ```
 
 ---
@@ -237,3 +288,5 @@ Chat list sync: newMessageEvent (real-time) + 30s periodic polling + ChatDao cac
 | 12 | v1.2.0.12 | About dialog UX (share/feedback/admin tracking), v1.2.0.12 release | ✅ |
 | 13 | v1.2.0.13 | Admin discovery for non-admin users (UserInfoProto, loadUsers, feedback retry) | ✅ |
 | 14 | v1.2.0.14 | Chat subtitle last seen, chat list sync, DB caching, deleted chat fix, action mode toolbar | ✅ |
+| 15 | v1.3.0.0 | AI v2 migration, Marketplace API, Graceful Shutdown, v1 AI cleanup | ✅ |
+| 16 | v1.3.0.1 | Marketplace UI (5 tabs, search, pagination, deep link), UsageStats, Rate limit | ✅ |

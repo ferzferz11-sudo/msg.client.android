@@ -92,3 +92,40 @@ data class AiV2ChatSession(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+// ======= AI Marketplace — Domain Models =======
+
+data class MarketplaceAgent(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val providerType: AiProviderType = AiProviderType.OPENROUTER,
+    val model: String = "",
+    val toolsEnabled: Boolean = false,
+    val ragEnabled: Boolean = false,
+    val isPreset: Boolean = false,
+    val isPublic: Boolean = false,
+    val avgRating: Float = 0f,
+    val installCount: Int = 0
+)
+
+data class AgentStats(
+    val installCount: Int = 0,
+    val avgRating: Float = 0f,
+    val reviewCount: Int = 0
+)
+
+data class AgentReview(
+    val userId: String = "",
+    val rating: Int = 0,
+    val review: String = "",
+    val createdAt: String = ""
+)
+
+data class UsageStat(
+    val agentId: String = "",
+    val agentName: String = "",
+    val totalTokens: Long = 0,
+    val requestCount: Int = 0,
+    val periodStart: String = ""
+)

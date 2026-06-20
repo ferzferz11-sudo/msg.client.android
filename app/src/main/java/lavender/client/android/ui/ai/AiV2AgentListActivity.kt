@@ -2,8 +2,11 @@ package lavender.client.android.ui.ai
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -13,24 +16,33 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.ai.AiV2Agent
+import lavender.client.android.data.ai.MarketplaceAgent
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 
-/**
- * AiV2AgentListActivity — list of AI v2 agents.
- * Tabs: Presets, My Agents, Public.
- */
 class AiV2AgentListActivity : AppCompatActivity() {
 
     private lateinit var viewModel: AiV2AgentListViewModel
-    private lateinit var adapter: AiV2AgentListAdapter
+    private lateinit var marketplaceViewModel: MarketplaceViewModel
+    private lateinit var usageStatsViewModel: UsageStatsViewModel
+    private lateinit var agentAdapter: AiV2AgentListAdapter
+    private lateinit var marketplaceAdapter: MarketplaceAgentAdapter
+    private lateinit var usageStatsAdapter: UsageStatsAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
+    private lateinit var emptyView: TextView
     private lateinit var tabLayout: TabLayout
+    private lateinit var searchLayout: TextInputLayout
+    private lateinit var searchInput: TextInputEditText
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private var currentTab = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -39,20 +51,52 @@ class AiV2AgentListActivity : AppCompatActivity() {
 
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(AiV2AgentListViewModel::class.java)
+        marketplaceViewModel = ViewModelProvider(this, factory).get(MarketplaceViewModel::class.java)
+        usageStatsViewModel = ViewModelProvider(this, factory).get(UsageStatsViewModel::class.java)
 
         recyclerView = findViewById(R.id.agentsRecyclerView)
         progressBar = findViewById(R.id.progressBar)
         tabLayout = findViewById(R.id.tabLayout)
+        searchLayout = findViewById(R.id.searchLayout)
+        searchInput = findViewById(R.id.searchInput)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
+
+        emptyView = TextView(this).apply {
+            text = getString(R.string.marketplace_empty)
+            textSize = 16f
+            gravity = android.view.Gravity.CENTER
+            setPadding(32, 32, 32, 32)
+            visibility = View.GONE
+        }
 
         setupToolbar()
         setupTabs()
         setupRecyclerView()
+        setupSearch()
+        setupSwipeRefresh()
         setupFab()
         observeState()
 
         ThemeUi.bind(this, SessionManager.session.value.username)
 
+        handleDeepLink(intent)
         viewModel.loadAgents(0)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: Intent) {
+        intent?.data?.let { uri ->
+            if (uri.host == "marketplace" && uri.pathSegments.firstOrNull() == "install") {
+                val code = uri.getQueryParameter("code") ?: return
+                InstallAgentBottomSheet.show(this) { shareCode ->
+                    marketplaceViewModel.loadAgents()
+                }
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -65,26 +109,101 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun setupTabs() {
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                tab?.position?.let { viewModel.loadAgents(it) }
+                tab?.position?.let { position ->
+                    currentTab = position
+                    when (position) {
+                        0, 1, 2 -> {
+                            switchToAgents()
+                            viewModel.loadAgents(position)
+                        }
+                        3 -> switchToMarketplace()
+                        4 -> switchToUsage()
+                    }
+                }
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
     }
 
+    private fun switchToMarketplace() {
+        recyclerView.adapter = marketplaceAdapter
+        searchLayout.visibility = View.VISIBLE
+        searchInput.text?.clear()
+        marketplaceViewModel.loadAgents()
+    }
+
+    private fun switchToUsage() {
+        recyclerView.adapter = usageStatsAdapter
+        searchLayout.visibility = View.GONE
+        usageStatsViewModel.loadStats()
+    }
+
+    private fun switchToAgents() {
+        recyclerView.adapter = agentAdapter
+        searchLayout.visibility = View.GONE
+    }
+
     private fun setupRecyclerView() {
-        adapter = AiV2AgentListAdapter(
+        agentAdapter = AiV2AgentListAdapter(
             onItemClick = { agent -> openAgentChat(agent) },
             onDeleteClick = { agent -> confirmDelete(agent) }
         )
+        marketplaceAdapter = MarketplaceAgentAdapter { agent ->
+            openMarketplaceAgentDetail(agent)
+        }
+        usageStatsAdapter = UsageStatsAdapter()
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+        recyclerView.adapter = agentAdapter
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                if (currentTab == 3) {
+                    val layoutManager = rv.layoutManager as LinearLayoutManager
+                    val lastVisible = layoutManager.findLastVisibleItemPosition()
+                    val totalItems = layoutManager.itemCount
+                    if (lastVisible >= totalItems - 5 && !marketplaceViewModel.isLoadingMore.value) {
+                        marketplaceViewModel.loadMore()
+                    }
+                }
+            }
+        })
+    }
+
+    private fun setupSearch() {
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString() ?: ""
+                if (query.length >= 2 || query.isEmpty()) {
+                    marketplaceViewModel.loadAgents(query)
+                }
+            }
+        })
+    }
+
+    private fun setupSwipeRefresh() {
+        swipeRefresh.setOnRefreshListener {
+            when (currentTab) {
+                3 -> marketplaceViewModel.loadAgents(searchInput.text?.toString() ?: "")
+                4 -> usageStatsViewModel.loadStats()
+                else -> viewModel.loadAgents(currentTab)
+            }
+        }
     }
 
     private fun setupFab() {
         findViewById<View>(R.id.fab).setOnClickListener {
-            val intent = Intent(this, AiV2AgentCreateEditActivity::class.java)
-            startActivity(intent)
+            when (currentTab) {
+                3 -> InstallAgentBottomSheet.show(this) { shareCode ->
+                    marketplaceViewModel.loadAgents()
+                }
+                else -> {
+                    val intent = Intent(this, AiV2AgentCreateEditActivity::class.java)
+                    startActivity(intent)
+                }
+            }
         }
     }
 
@@ -93,13 +212,78 @@ class AiV2AgentListActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.agents.collect { agents ->
-                        adapter.submitList(agents)
+                        if (currentTab in 0..2) {
+                            agentAdapter.submitList(agents)
+                        }
+                    }
+                }
+
+                launch {
+                    marketplaceViewModel.agents.collect { agents ->
+                        if (currentTab == 3) {
+                            marketplaceAdapter.submitList(agents)
+                            if (agents.isEmpty() && !marketplaceViewModel.isLoading.value) {
+                                recyclerView.visibility = View.GONE
+                                emptyView.visibility = View.VISIBLE
+                            } else {
+                                recyclerView.visibility = View.VISIBLE
+                                emptyView.visibility = View.GONE
+                            }
+                        }
+                    }
+                }
+
+                launch {
+                    usageStatsViewModel.stats.collect { stats ->
+                        if (currentTab == 4) {
+                            usageStatsAdapter.submitList(stats)
+                        }
+                    }
+                }
+
+                launch {
+                    usageStatsViewModel.totalTokens.collect { tokens ->
+                        if (currentTab == 4) {
+                            val avgTokens = if (usageStatsViewModel.totalRequests.value > 0) {
+                                tokens / usageStatsViewModel.totalRequests.value
+                            } else 0L
+                            findViewById<TextView>(R.id.totalTokensValue)?.text = formatNumber(tokens)
+                            findViewById<TextView>(R.id.avgTokensValue)?.text = formatNumber(avgTokens)
+                        }
+                    }
+                }
+
+                launch {
+                    usageStatsViewModel.totalRequests.collect { requests ->
+                        if (currentTab == 4) {
+                            findViewById<TextView>(R.id.totalRequestsValue)?.text = requests.toString()
+                        }
                     }
                 }
 
                 launch {
                     viewModel.isLoading.collect { loading ->
-                        progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                        if (currentTab in 0..2) {
+                            progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                        }
+                    }
+                }
+
+                launch {
+                    marketplaceViewModel.isLoading.collect { loading ->
+                        if (currentTab == 3) {
+                            progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                            swipeRefresh.isRefreshing = loading
+                        }
+                    }
+                }
+
+                launch {
+                    usageStatsViewModel.isLoading.collect { loading ->
+                        if (currentTab == 4) {
+                            progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+                            swipeRefresh.isRefreshing = loading
+                        }
                     }
                 }
 
@@ -111,7 +295,33 @@ class AiV2AgentListActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+                launch {
+                    marketplaceViewModel.error.collect { error ->
+                        error?.let {
+                            Toast.makeText(this@AiV2AgentListActivity, it, Toast.LENGTH_SHORT).show()
+                            marketplaceViewModel.clearError()
+                        }
+                    }
+                }
+
+                launch {
+                    usageStatsViewModel.error.collect { error ->
+                        error?.let {
+                            Toast.makeText(this@AiV2AgentListActivity, it, Toast.LENGTH_SHORT).show()
+                            usageStatsViewModel.clearError()
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    private fun formatNumber(n: Long): String {
+        return when {
+            n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000.0)
+            n >= 1_000 -> String.format("%.1fK", n / 1_000.0)
+            else -> n.toString()
         }
     }
 
@@ -119,6 +329,17 @@ class AiV2AgentListActivity : AppCompatActivity() {
         val intent = Intent(this, AiV2ChatActivity::class.java).apply {
             putExtra("AGENT_ID", agent.id)
             putExtra("AGENT_NAME", agent.name)
+        }
+        startActivity(intent)
+    }
+
+    private fun openMarketplaceAgentDetail(agent: MarketplaceAgent) {
+        val intent = Intent(this, AgentDetailActivity::class.java).apply {
+            putExtra("AGENT_ID", agent.id)
+            putExtra("AGENT_NAME", agent.name)
+            putExtra("AGENT_DESCRIPTION", agent.description)
+            putExtra("AGENT_MODEL", agent.model)
+            putExtra("AGENT_PROVIDER", agent.providerType.value)
         }
         startActivity(intent)
     }

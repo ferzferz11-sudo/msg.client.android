@@ -75,3 +75,32 @@ fun ChatWithAIV2ResponseProto.toChatMessage(sessionId: String): AiV2ChatMessage 
     modelUsed = modelUsed,
     tokenCount = tokenCount
 )
+
+// ======= Marketplace Proto -> Domain =======
+
+fun AgentInfoV2Proto.toMarketplaceAgent(): MarketplaceAgent = MarketplaceAgent(
+    id = id,
+    name = name,
+    description = description,
+    providerType = AiProviderType.fromString(providerType),
+    model = model,
+    toolsEnabled = toolsEnabled,
+    ragEnabled = ragEnabled,
+    isPreset = isPreset,
+    isPublic = isPublic
+)
+
+fun AgentReviewProto.toDomain(): AgentReview = AgentReview(
+    userId = userId,
+    rating = rating,
+    review = review,
+    createdAt = createdAt
+)
+
+fun UsageStatEntryProto.toDomain(): UsageStat = UsageStat(
+    agentId = agentId,
+    agentName = agentName,
+    totalTokens = totalTokens,
+    requestCount = requestCount,
+    periodStart = periodStart
+)

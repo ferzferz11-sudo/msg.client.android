@@ -219,4 +219,95 @@ object AiV2ChatUseCase {
             emptyList()
         }
     }
+
+    // ======= Marketplace =======
+
+    suspend fun listMarketplaceAgents(query: String = "", limit: Int = 20, offset: Int = 0): Result<Pair<List<MarketplaceAgent>, Int>> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.listMarketplaceAgents(query, limit, offset)
+            val agents = response.agents.map { it.toMarketplaceAgent() }
+            Result.success(agents to response.total)
+        } catch (e: Exception) {
+            Log.e(TAG, "listMarketplaceAgents error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAgentStats(agentId: String): Result<AgentStats> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.getAgentStats(agentId)
+            Result.success(AgentStats(
+                installCount = response.installCount,
+                avgRating = response.avgRating,
+                reviewCount = response.reviewCount
+            ))
+        } catch (e: Exception) {
+            Log.e(TAG, "getAgentStats error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAgentReviews(agentId: String, limit: Int = 20): Result<Pair<List<AgentReview>, Pair<Float, Int>>> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.getAgentReviews(agentId, limit)
+            val reviews = response.reviews.map { it.toDomain() }
+            Result.success(reviews to (response.avgRating to response.reviewCount))
+        } catch (e: Exception) {
+            Log.e(TAG, "getAgentReviews error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun rateAgent(agentId: String, rating: Int, review: String = ""): Result<Pair<Boolean, Pair<Float, Int>>> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.rateAgent(agentId, rating, review)
+            if (response.success) {
+                Result.success(response.success to (response.avgRating to response.reviewCount))
+            } else {
+                Result.failure(Exception("Failed to rate agent"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "rateAgent error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun shareAgent(agentId: String): Result<String> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.shareAgent(agentId)
+            if (response.success) {
+                Result.success(response.shareCode)
+            } else {
+                Result.failure(Exception("Failed to generate share code"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "shareAgent error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun installAgent(shareCode: String, newName: String = ""): Result<String> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.installAgent(shareCode, newName)
+            if (response.success) {
+                Result.success(response.agentId)
+            } else {
+                Result.failure(Exception(response.error.ifEmpty { "Failed to install agent" }))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "installAgent error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getUsageStats(): Result<Pair<List<UsageStat>, Pair<Long, Int>>> {
+        return try {
+            val response = RealGrpcClient.aiV2Client.getUsageStats()
+            val stats = response.stats.map { it.toDomain() }
+            Result.success(stats to (response.totalTokens to response.totalRequests))
+        } catch (e: Exception) {
+            Log.e(TAG, "getUsageStats error", e)
+            Result.failure(e)
+        }
+    }
 }

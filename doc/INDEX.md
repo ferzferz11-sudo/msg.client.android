@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.0 | **Updated:** 2026-06-20
+**Version:** v1.3.0.1 | **Updated:** 2026-06-20
 
 ---
 
@@ -120,3 +120,19 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 |--------|---------|
 | `master` | Production |
 | `feat/1.3.0.x` | v1.3.0.x development (current) |
+
+---
+
+## Quick Stats
+
+| Metric | Value |
+|--------|-------|
+| Kotlin files | ~160 |
+| Activities | 25 |
+| gRPC modules | 27 |
+| Unit tests | 14 files |
+| Layout XML | 107 |
+| String entries | 826 (EN + RU) |
+| Min SDK | 29 (Android 10) |
+| Kotlin | 2.3.21 |
+| Branch | feat/1.3.0.x (v1.3.0.1) |

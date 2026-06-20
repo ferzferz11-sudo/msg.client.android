@@ -657,6 +657,34 @@
     <string name="ai_v2_tools_enabled">Инструменты включены</string>
     <string name="ai_v2_rag_enabled">RAG включён</string>
     <string name="ai_v2_tools">Инструменты</string>
+
+    <!-- Marketplace -->
+    <string name="marketplace">Маркетплейс</string>
+    <string name="marketplace_rate">Оценить</string>
+    <string name="marketplace_share">Поделиться</string>
+    <string name="marketplace_install">Установить</string>
+    <string name="marketplace_rate_agent">Оценить агента</string>
+    <string name="marketplace_install_agent">Установить агента</string>
+    <string name="marketplace_enter_share_code">Введите код</string>
+    <string name="marketplace_write_review">Напишите отзыв (необязательно)</string>
+    <string name="marketplace_submit">Отправить</string>
+    <string name="marketplace_installs">%d установок</string>
+    <string name="marketplace_reviews">%d отзывов</string>
+    <string name="marketplace_agent_installed">Агент установлен!</string>
+    <string name="marketplace_thanks_rating">Спасибо за оценку!</string>
+    <string name="marketplace_select_rating">Пожалуйста, выберите оценку</string>
+    <string name="marketplace_share_agent">Поделиться агентом</string>
+    <string name="marketplace_install_text">Установи агента в Lavender Messenger: %s</string>
+    <string name="marketplace_empty">Публичных агентов пока нет</string>
+    <string name="marketplace_usage">Статистика</string>
+    <string name="marketplace_tokens">Токенов</string>
+    <string name="marketplace_requests">Запросов</string>
+    <string name="marketplace_avg_request">Ср. на запрос</string>
+    <string name="marketplace_no_data">Пока нет данных</string>
+    <string name="marketplace_no_data_desc">Статистика появится после использования AI чатов</string>
+    <string name="marketplace_search_hint">Поиск агентов...</string>
+    <string name="rate_limit_exceeded">Превышен лимит запросов. Подождите %dс</string>
+
     <string name="changelog_server_full">Ченджлог сервера (GitHub)</string>
     <string name="changelog_client_full">Ченджлог клиента (GitHub)</string>
     <string name="changelog_full_description">Полный ченджлог со всеми техническими деталями</string>
