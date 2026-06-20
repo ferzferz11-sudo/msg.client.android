@@ -119,7 +119,6 @@ object RealGrpcClient {
         },
         onAutoResumeChat = {
             lastChatRequest?.let {
-                Log.d(TAG, "Resuming last chat for ${it.u}")
                 startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
             }
         }
@@ -313,9 +312,7 @@ object RealGrpcClient {
                     if (profile.isSuperAdmin && profile.userId.isNotEmpty()) {
                         if (_adminUserId.value == null) _adminUserId.value = profile.userId
                         prefs.edit().putString("admin_user_id", profile.userId).apply()
-                        Log.d(TAG, "Admin userId from profile: ${profile.userId}")
                     }
-                    Log.d(TAG, "Admin status from profile: ${profile.isSuperAdmin}")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "fetchAdminStatus failed: ${e.message}")
@@ -351,14 +348,11 @@ object RealGrpcClient {
 
         if (!shouldRestart && oldRequest != null && oldRequest.u == username && oldRequest.r == register) {
             if (currentRoomId.isEmpty() && oldRequest.roomId.isNotEmpty()) {
-                Log.d(TAG, "Staying on active room stream (${oldRequest.roomId}) instead of restarting for general list")
                 return
             }
             if (oldRequest.roomId == currentRoomId) {
-                Log.d(TAG, "Chat stream already active for $username in $currentRoomId, skipping restart")
                 return
             }
-            Log.d(TAG, "Switching room signal to existing stream: $currentRoomId")
             val switchMessage = MessageProto.newBuilder()
                 .setUser(username).setRoomId(currentRoomId)
                 .setCreatedAt(ProtoUtils.getCurrentTimestamp())
@@ -422,7 +416,6 @@ object RealGrpcClient {
             if (!accessToken.isNullOrEmpty()) {
                 firstMessageBuilder.setJwtToken(accessToken)
                 lastAuthWasJwt = true
-                Log.d(TAG, "ChatStream v2: using JWT token auth for $username")
             } else {
                 Log.w(TAG, "ChatStream v2: no JWT token available — cannot start chat")
                 _authStatus.value = "AUTH_FAILED"
@@ -453,7 +446,6 @@ object RealGrpcClient {
 
                 if (value.isSuperAdmin || value.text == "SET_SUPER_ADMIN") {
                     if (!_isSuperAdmin.value) {
-                        Log.d(TAG, "Super Admin status activated")
                         _isSuperAdmin.value = true
                         appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
                             ?.edit()?.putBoolean("is_super_admin", true)?.apply()
@@ -462,7 +454,6 @@ object RealGrpcClient {
                         _adminUserId.value = value.userId
                         appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
                             ?.edit()?.putString("admin_user_id", value.userId)?.apply()
-                        Log.d(TAG, "Admin userId tracked: ${value.userId}")
                     }
                 }
 
@@ -648,7 +639,6 @@ object RealGrpcClient {
                                             _authStatus.value = null
                                             delay(1000)
                                             lastChatRequest?.let { req ->
-                                                Log.d(TAG, "Retrying chat stream after token refresh for ${req.u}")
                                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
                                             }
                                             return@launch
@@ -668,11 +658,8 @@ object RealGrpcClient {
                         return
                     }
                     if (description.contains("shutdownNow")) {
-                        Log.d(TAG, "shutdownNow — scheduling stream restart via onAutoResumeChat")
                         requestObserver = null
                         scope.launch {
-                            delay(2000)
-                            Log.d(TAG, "shutdownNow: forcing chat stream restart")
                             lastChatRequest?.let { req ->
                                 requestObserver = null
                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
@@ -682,7 +669,7 @@ object RealGrpcClient {
                     }
                 }
 
-                if (isRetrying) { Log.d(TAG, "Already in retry loop, skipping"); return }
+                if (isRetrying) { return }
 
                 _connectionStatus.value = ConnectionStatus.RECONNECTING
                 requestObserver = null
@@ -701,18 +688,15 @@ object RealGrpcClient {
                             }
                             val serverUp = checkServerHealth()
                             if (!serverUp) {
-                                Log.d(TAG, "Server not ready, waiting before next check...")
                                 _serverShuttingDown.value = true
                                 retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
                                 retryCount++
                                 continue
                             }
                             _serverShuttingDown.value = false
-                            Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1}, delay=${retryDelay}ms)...")
                             lastChatRequest?.let { req ->
                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
                                 if (_connectionStatus.value == ConnectionStatus.READY && requestObserver != null) {
-                                    Log.d(TAG, "Stream reconnection successful")
                                     return@launch
                                 }
                             }
@@ -729,7 +713,6 @@ object RealGrpcClient {
             }
 
             override fun onCompleted() {
-                Log.d(TAG, "Chat stream completed")
                 _connectionStatus.value = ConnectionStatus.DISCONNECTED
             }
         }
@@ -746,11 +729,10 @@ object RealGrpcClient {
             }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
                 if (status.isOk) {
-                    Log.d(TAG, "Chat stream completed normally")
                     responseObserver.onCompleted()
                     return
                 }
-                Log.w(TAG, "Chat stream onClose error: ${status.code} - ${status.description}")
+                Log.w(TAG, "Stream error: ${status.code}")
                 requestObserver = null
                 responseObserver.onError(status.asRuntimeException())
             }
@@ -926,7 +908,6 @@ object RealGrpcClient {
                 _adminUserId.value = admin.userId
                 appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
                     ?.edit()?.putString("admin_user_id", admin.userId)?.apply()
-                Log.d(TAG, "Admin userId from allUsers: ${admin.userId} (${admin.username})")
             }
         }
     }

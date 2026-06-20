@@ -1,19 +1,16 @@
 package lavender.client.android
 
-import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
 import lavender.client.android.ui.chatlist.ChatListActivity
 import android.os.Bundle
-import android.util.Log
-import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.animation.doOnEnd
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import lavender.client.android.data.session.SessionManager
 
@@ -59,9 +56,6 @@ class SplashActivity : AppCompatActivity() {
         val roomIdFromPush = intent.getStringExtra("ROOM_ID") ?: intent.getStringExtra("room_id")
         val callIdFromPush = intent.getStringExtra("CALL_ID") ?: intent.getStringExtra("call_id")
 
-        Log.d("SplashActivity", "roomIdFromPush: $roomIdFromPush, callIdFromPush: $callIdFromPush")
-
-        // Show splash animation, then navigate
         animateAndNavigate(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
     }
 
@@ -152,9 +146,12 @@ class SplashActivity : AppCompatActivity() {
                             .setDuration(300)
                             .withEndAction {
                                 // Wait a bit, then navigate
-                                splashView.postDelayed({
-                                    navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
-                                }, 400)
+                                lifecycleScope.launch {
+                                    delay(400)
+                                    if (!isFinishing && !isDestroyed) {
+                                        navigateToTarget(shouldProceed, roomIdFromPush, callIdFromPush, session, prefs)
+                                    }
+                                }
                             }
                             .start()
                     }
@@ -176,7 +173,6 @@ class SplashActivity : AppCompatActivity() {
         val targetIntent = if (shouldProceed) {
             when {
                 callIdFromPush != null -> {
-                    Log.d("SplashActivity", "Directing to CallActivity")
                     Intent(this, CallActivity::class.java).apply {
                         putExtra("CALL_ID", callIdFromPush)
                         putExtra("RECEIVER_ID", intent.getStringExtra("SENDER_ID") ?: intent.getStringExtra("sender_id"))
@@ -187,13 +183,11 @@ class SplashActivity : AppCompatActivity() {
                 roomIdFromPush != null -> {
                     val isConference = intent.getStringExtra("IS_CONFERENCE")?.toBoolean() ?: false
                     if (isConference) {
-                        Log.d("SplashActivity", "Directing to ConferenceLobbyActivity")
                         Intent(this, ConferenceLobbyActivity::class.java).apply {
                             putExtra("ROOM_ID", roomIdFromPush)
                             putExtra("from_notification", true)
                         }
                     } else {
-                        Log.d("SplashActivity", "NewChatActivity")
                         Intent(this, NewChatActivity::class.java).apply {
                             putExtra("USERNAME", session.username)
                             putExtra("SERVER_ADDRESS", serverAddress)
@@ -208,7 +202,6 @@ class SplashActivity : AppCompatActivity() {
                 }
             }
         } else {
-            Log.d("SplashActivity", "Not logged in, directing to ChatListActivity")
             Intent(this, ChatListActivity::class.java)
         }
 
@@ -219,8 +212,6 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun navigateToChatList(host: String) {
-        // Always use ChatListActivity — works on both v1 and v2 servers
-        Log.d("SplashActivity", "Directing to ChatListActivity (server: $host)")
         startActivity(Intent(this, ChatListActivity::class.java))
         finish()
     }

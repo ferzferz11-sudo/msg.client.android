@@ -33,8 +33,8 @@ import lavender.client.android.theme.data.ThemeMappers
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 import lavender.client.android.data.grpc.*
@@ -361,7 +361,7 @@ class ThemePaletteActivity : AppCompatActivity(),
                 .post(requestBody)
                 .build()
                 
-            val response = OkHttpClient().newCall(request).execute()
+            val response = HttpClient.client.newCall(request).execute()
             val responseBody = response.body.string()
             
             if (response.isSuccessful && !responseBody.contains("404")) {

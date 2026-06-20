@@ -5,13 +5,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import lavender.client.android.data.session.CredentialStore
 import org.json.JSONObject
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 data class AudioUploadResult(
     val success: Boolean,
@@ -21,11 +20,6 @@ data class AudioUploadResult(
 )
 
 class AudioUploader(private val context: Context) {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
     
     private val serverAddress: String get() = lavender.client.android.data.session.CredentialStore.getServerHost(context)
     private val serverPort: String get() = "8082"
@@ -61,7 +55,7 @@ class AudioUploader(private val context: Context) {
                     .post(requestBody)
                     .build()
                 
-                val response = client.newCall(request).execute()
+                val response = HttpClient.client.newCall(request).execute()
                 val responseBody = response.body?.string() ?: ""
                 
                 if (response.isSuccessful && responseBody.isNotEmpty()) {

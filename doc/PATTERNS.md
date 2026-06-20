@@ -190,6 +190,42 @@ SessionManager: ensureFreshToken() sync refresh before chat stream
 Token refresh: proactive every 60s + sync before chat stream
 ```
 
+### ProfileService v2 Pattern
+```
+ProfileClient (object) — JWT-only, no user_id in request
+├── getProfile() → GetProfileResponseProto (userId, username, email, avatar, bio, status, locale, isSuperAdmin)
+├── updateProfile(username, bio, status, locale) → Boolean
+├── updateAvatar(avatarUrl, fullAvatarUrl) → Boolean
+├── deleteProfile(password) → Boolean
+├── getUserSettings() → GetUserSettingsResponseProto (locale, themeId, pushEnabled)
+└── updateUserSettings(locale, themeId, pushEnabled) → Boolean
+
+GrpcProfileClient (class) — ChatService methods (no v2 replacement)
+├── updateUsername, updatePassword, adminUpdatePassword
+├── requestPasswordReset, resetPassword
+├── addContact, removeContact, getContacts
+├── getThemes, saveTheme, setCurrentTheme, deleteTheme
+├── getUserAvatar (for other users)
+└── getDevices, deleteDevice, deleteOtherDevices, getFCMLogs
+```
+- `user_id` из JWT context — не передавать в запросе
+- `DeleteProfile` требует `password`, НЕ `username`
+
+### Unread Count Pattern (v1.3.0.4)
+```
+Сервер: GetUserChatsV2 CTE
+  user_last_read: SELECT room_id, last_read_at FROM user_chat_metadata WHERE user_id=$1
+  unread_counts: COUNT(messages WHERE created_at > last_read_at AND username != current_user)
+
+Клиент: ChatListViewModel
+  newMessageEvent: unreadCount++ if isFromOther && !isRead
+  markAsRead: unreadCount = 0 (local) + MarkRead RPC (server)
+  loadChats: merge(server, local) — max(local.unread, server.unread)
+  syncChats: allChats (merged) → Room DB (preserve local unread)
+```
+- `is_read` флаг глобальный — НЕ использовать для подсчёта unread
+- `last_read_at` per-user — правильный способ подсчёта
+
 ### Toolbar Pattern
 ```xml
 <MaterialToolbar
@@ -234,3 +270,5 @@ Token refresh: proactive every 60s + sync before chat stream
 14. Do NOT bump version — only user bumps version
 15. Marshallers field order: server proto defines field numbers
 16. AI v2 RPC: all methods under `messenger.ChatService/*` (NOT `AIService`)
+17. Unread count: based on `user_chat_metadata.last_read_at`, NOT `messages.is_read`
+18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)

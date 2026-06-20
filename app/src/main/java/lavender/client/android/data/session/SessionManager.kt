@@ -101,7 +101,6 @@ object SessionManager {
             while (isActive) {
                 try {
                     if (AuthManager.isJwtAuthenticated(context) && AuthManager.needsRefresh(context)) {
-                        Log.d("SessionManager", "Proactive token refresh triggered")
                         performTokenRefresh(context)
                     }
                 } catch (e: CancellationException) {
@@ -126,7 +125,7 @@ object SessionManager {
     fun ensureFreshToken(context: Context) {
         if (!AuthManager.isTokenExpiredOrExpiring(context)) return
         val refreshToken = AuthManager.getRefreshToken(context) ?: return
-        Log.d("SessionManager", "Token expired/expiring, refreshing synchronously before chat stream...")
+        Log.d("SessionManager", "Token expired, refreshing synchronously...")
 
         val latch = java.util.concurrent.CountDownLatch(1)
         var refreshed = false
@@ -152,7 +151,6 @@ object SessionManager {
                     refreshToken = response.refreshToken
                 )
                 refreshed = true
-                Log.d("SessionManager", "Sync token refresh succeeded")
             } else {
                 Log.w("SessionManager", "Sync token refresh failed: $error")
             }
@@ -165,7 +163,6 @@ object SessionManager {
 
     private suspend fun performTokenRefresh(context: Context) {
         val refreshToken = AuthManager.getRefreshToken(context) ?: return
-        Log.d("SessionManager", "Refreshing JWT token...")
 
         val result = suspendCancellableCoroutine<RefreshTokenResponseProto?> { cont ->
             GrpcClient.refreshToken(refreshToken) { response, error ->
@@ -200,8 +197,6 @@ object SessionManager {
                 accessToken = result.accessToken,
                 refreshToken = result.refreshToken
             )
-
-            Log.d("SessionManager", "Token refreshed successfully")
         } else if (AuthManager.isRefreshTokenExpired(context)) {
             Log.w("SessionManager", "Refresh token expired — attempting re-login with saved password")
             val username = AuthManager.getUsername(context)
@@ -359,7 +354,6 @@ object SessionManager {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val token = if (receiveEnabled) task.result else "DISABLED"
-                Log.d("SessionManager", "Syncing FCM token for $username: $token")
                 GrpcClient.registerToken(username, token, sendEnabled)
             } else {
                 Log.e("SessionManager", "Failed to get FCM token", task.exception)

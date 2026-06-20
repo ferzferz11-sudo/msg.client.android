@@ -45,7 +45,6 @@ import lavender.client.android.ui.adapter.ParticipantAdapter
 import lavender.client.android.ui.profile.ProfileViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray

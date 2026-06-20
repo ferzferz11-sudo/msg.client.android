@@ -7,8 +7,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import lavender.client.android.BuildConfig
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -104,12 +104,11 @@ class UpdateManager(private val context: Context) {
             val file = File(context.getExternalFilesDir(null), "lavender_update.apk")
 
             try {
-                val client = OkHttpClient()
                 val request = Request.Builder()
                     .url(UpdateUtils.getUpdateUrl(context))
                     .build()
 
-                val response = client.newCall(request).execute()
+                val response = HttpClient.client.newCall(request).execute()
                 if (!response.isSuccessful) {
                     Log.e(TAG, "Download failed: HTTP ${response.code}")
                     finishDownload(false)

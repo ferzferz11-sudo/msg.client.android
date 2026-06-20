@@ -117,9 +117,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         )
                     }
                     buildSections(allChats)
-                    Log.d(TAG, "NEW_MSG: room=${message.roomId} from=${message.user} isRead=${message.isRead} isFromOther=$isFromOther shouldIncrement=$shouldIncrement unread=${chat.unreadCount}→$newUnread chat=${chat.name}")
                 } else {
-                    Log.d(TAG, "NEW_MSG: room=${message.roomId} from=${message.user} — chat NOT in list (ignored)")
                 }
             }
         }
@@ -135,7 +133,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             db.chatDao().deleteChat(deletedChatId)
                         } catch (e: Exception) { Log.w(TAG, "Failed to delete chat from cache", e) }
                     }
-                    Log.d(TAG, "Chat deleted: $deletedChatId — removed from list")
+                    Log.d(TAG, "Chat deleted: $deletedChatId")
                 }
             }
         }
@@ -176,6 +174,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
     fun loadChats(silent: Boolean = false) {
         if (_isLoading.value) return
         if (!silent) _isLoading.value = true
+        val startTime = System.currentTimeMillis()
 
         viewModelScope.launch {
             try {
@@ -189,8 +188,8 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         if (cached.isNotEmpty()) {
                             allChats = cached
                             buildSections(cached)
-                            val unreadChats = cached.filter { it.unreadCount > 0 }
-                            Log.d(TAG, "Loaded ${cached.size} chats from cache (${unreadChats.size} with unread: ${unreadChats.joinToString { "${it.name}=${it.unreadCount}" }})")
+                    val unreadChats = cached.filter { it.unreadCount > 0 }
+                    Log.d(TAG, "Loaded ${cached.size} chats from cache (${unreadChats.size} unread)")
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to load chats from cache", e)
@@ -208,7 +207,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
                 if (fetchedChats != null) {
                     val serverUnread = fetchedChats.filter { it.unreadCount > 0 }
-                    Log.d(TAG, "Server returned ${fetchedChats.size} chats (${serverUnread.size} with unread: ${serverUnread.joinToString { "${it.name}=${it.unreadCount}" }})")
+                    Log.d(TAG, "Server returned ${fetchedChats.size} chats (${serverUnread.size} unread)")
 
                     val hasChanges = allChats.size != fetchedChats.size ||
                         allChats.map { it.id }.toSet() != fetchedChats.map { it.id }.toSet() ||
@@ -222,7 +221,6 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         val mergedChats = fetchedChats.map { serverChat ->
                             val localChat = allChats.find { it.id == serverChat.id }
                             if (localChat != null && localChat.unreadCount > serverChat.unreadCount) {
-                                Log.d(TAG, "MERGE: ${serverChat.name} local.unread=${localChat.unreadCount} > server.unread=${serverChat.unreadCount} → keeping local")
                                 serverChat.copy(unreadCount = localChat.unreadCount)
                             } else {
                                 serverChat
@@ -230,10 +228,10 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                         }
                         allChats = mergedChats
                         buildSections(mergedChats)
-                        val mergedUnread = mergedChats.filter { it.unreadCount > 0 }
-                        Log.d(TAG, "Merged ${mergedChats.size} chats (${mergedUnread.size} with unread: ${mergedUnread.joinToString { "${it.name}=${it.unreadCount}" }})")
+                val mergedUnread = mergedChats.filter { it.unreadCount > 0 }
+                Log.d(TAG, "Synced ${mergedChats.size} chats (${mergedUnread.size} unread)")
                     } else {
-                        Log.d(TAG, "No changes detected — keeping ${allChats.size} existing chats")
+                        Log.d(TAG, "No changes — keeping ${allChats.size} chats")
                     }
                     // Sync to local DB — use allChats (merged) to preserve locally-incremented unread counts
                     try {
@@ -242,7 +240,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to sync chats to cache", e)
                     }
-                    Log.d(TAG, "Loaded ${fetchedChats.size} chats from server")
+                    Log.d(TAG, "Loaded ${fetchedChats.size} chats from server (${System.currentTimeMillis() - startTime}ms)")
                 } else {
                     // Timeout — keep existing chats, don't clear the list
                     Log.w(TAG, "loadChats timeout — keeping ${allChats.size} existing chats")

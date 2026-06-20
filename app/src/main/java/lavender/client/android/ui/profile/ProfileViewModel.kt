@@ -17,8 +17,8 @@ import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 
@@ -191,7 +191,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
                     val url = "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(context)}/upload-avatar"
                     val request = Request.Builder().url(url).post(requestBody).build()
-                    val response = OkHttpClient().newCall(request).execute()
+                    val response = HttpClient.client.newCall(request).execute()
 
                     if (response.isSuccessful) {
                         val body = response.body.string()

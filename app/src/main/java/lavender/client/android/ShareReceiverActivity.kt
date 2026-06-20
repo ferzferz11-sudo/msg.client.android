@@ -35,8 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -138,13 +138,12 @@ class ShareReceiverActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val preview = withContext(Dispatchers.IO) {
                 try {
-                    val client = OkHttpClient()
                     val request = Request.Builder()
                         .url(url)
                         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                         .build()
                     
-                    val response = client.newCall(request).execute()
+                    val response = HttpClient.client.newCall(request).execute()
                     val html = response.body.string()
                     
                     // Extract Open Graph metadata
@@ -502,7 +501,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build())
                 .build()
 
-            val response = OkHttpClient().newCall(request).execute()
+            val response = HttpClient.client.newCall(request).execute()
             val responseBody = response.body.string()
             
             if (response.isSuccessful && !responseBody.contains("404")) {
@@ -547,9 +546,8 @@ class ShareReceiverActivity : AppCompatActivity() {
 
     private suspend fun downloadAndUploadImage(imageUrl: String): String? = withContext(Dispatchers.IO) {
         try {
-            val client = OkHttpClient()
             val request = Request.Builder().url(imageUrl).build()
-            val response = client.newCall(request).execute()
+            val response = HttpClient.client.newCall(request).execute()
             
             if (!response.isSuccessful) return@withContext null
             
@@ -567,7 +565,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build())
                 .build()
             
-            val uploadResponse = client.newCall(uploadRequest).execute()
+            val uploadResponse = HttpClient.client.newCall(uploadRequest).execute()
             val responseBody = uploadResponse.body.string()
             
             if (uploadResponse.isSuccessful && !responseBody.contains("404")) {

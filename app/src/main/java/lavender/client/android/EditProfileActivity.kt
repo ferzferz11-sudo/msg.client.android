@@ -41,8 +41,8 @@ import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Locale
 
@@ -316,8 +316,7 @@ class EditProfileActivity : AppCompatActivity() {
                         .post(requestBody)
                         .build()
 
-                    val client = OkHttpClient()
-                    val response = client.newCall(request).execute()
+                    val response = HttpClient.client.newCall(request).execute()
 
                     if (response.isSuccessful) {
                         val responseBody = response.body.string()

@@ -43,8 +43,8 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.data.ThemeMappers
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
+import lavender.client.android.network.HttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -423,7 +423,7 @@ class ChatInputDelegate(
                 val req = Request.Builder()
                     .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image")
                     .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
-                OkHttpClient().newCall(req).enqueue(object : okhttp3.Callback {
+                HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
                         activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Upload failed") }
                     }
@@ -482,7 +482,7 @@ class ChatInputDelegate(
                 val req = Request.Builder()
                     .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/${if (isImage) "upload-image" else "upload-file"}")
                     .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
-                OkHttpClient().newCall(req).enqueue(object : okhttp3.Callback {
+                HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
                         activity.runOnUiThread { uploadProgressBar.isVisible = false; showToast("Upload failed") }
                     }
