@@ -222,12 +222,15 @@ object ThemeApplier {
         
         // Find and theme common input fields
         val commonInputs = listOf(
-            R.id.messageInput, R.id.searchInput, R.id.editMessageInput, 
+            R.id.messageInput, R.id.searchInput, R.id.editMessageInput,
             R.id.editTextBio, R.id.editTextUsername, R.id.editTextPassword,
             R.id.editNewUsername, R.id.editTextOldPassword, R.id.editTextNewPassword,
             // Remote Agent settings fields
             R.id.etSshHost, R.id.etSshPort, R.id.etSshUser, R.id.etSshPassword,
-            R.id.etServerHost, R.id.etServerPort, R.id.etLocalPort
+            R.id.etServerHost, R.id.etServerPort, R.id.etLocalPort,
+            // AI v2 Agent form fields
+            R.id.agentNameInput, R.id.agentDescriptionInput, R.id.providerTypeInput,
+            R.id.modelInput, R.id.systemPromptInput, R.id.providerConfigInput
         )
         commonInputs.forEach { id ->
             activity.findViewById<android.widget.EditText>(id)?.apply {
@@ -250,11 +253,25 @@ object ThemeApplier {
         }
 
         // Standard Primary Buttons
-        listOf(R.id.btnChangeBio).forEach { id ->
+        listOf(R.id.btnChangeBio, R.id.saveButton).forEach { id ->
             (activity.findViewById<View>(id) as? com.google.android.material.button.MaterialButton)?.apply {
                 backgroundTintList = ColorStateList.valueOf(customPrimary)
                 setTextColor(customOnPrimary)
                 iconTint = ColorStateList.valueOf(customOnPrimary)
+            }
+        }
+
+        // AI v2 Agent form — TextInputLayout hints and Switches
+        listOf(R.id.agentNameInput, R.id.agentDescriptionInput, R.id.providerTypeInput,
+            R.id.modelInput, R.id.systemPromptInput, R.id.providerConfigInput).forEach { id ->
+            (activity.findViewById<View>(id)?.parent as? com.google.android.material.textfield.TextInputLayout)?.apply {
+                setHintTextColor(ColorStateList.valueOf(hintTextColor))
+                setBoxStrokeColorStateList(ColorStateList.valueOf(customPrimary))
+            }
+        }
+        listOf(R.id.toolsEnabledSwitch, R.id.ragEnabledSwitch).forEach { id ->
+            (activity.findViewById<View>(id) as? com.google.android.material.switchmaterial.SwitchMaterial)?.apply {
+                setTextColor(inputTextColor)
             }
         }
 
