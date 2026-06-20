@@ -32,7 +32,7 @@ class AiV2AgentListViewModel(application: Application) : AndroidViewModel(applic
             _isLoading.value = true
             try {
                 val agents = when (tab) {
-                    0 -> AiV2ChatUseCase.listAgents(includePublic = false).filter { it.isPreset }
+                    0 -> AiV2ChatUseCase.listAgents(includePublic = true).filter { it.isPreset }
                     1 -> AiV2ChatUseCase.listAgents(includePublic = false).filter { !it.isPreset }
                     2 -> AiV2ChatUseCase.listAgents(includePublic = true).filter { it.isPublic && !it.isPreset }
                     else -> emptyList()

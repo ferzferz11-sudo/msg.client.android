@@ -155,9 +155,9 @@ object ThemeApplier {
         }
         // Tint TabLayout
         activity.findViewById<TabLayout>(R.id.tabLayout)?.apply {
-            setBackgroundColor(Color.TRANSPARENT)
-            setTabTextColors(adjustAlpha(customOnPrimary, 0.75f), customOnPrimary)
-            setSelectedTabIndicatorColor(customOnPrimary)
+            setBackgroundColor(surfaceColor)
+            setTabTextColors(adjustAlpha(textPrimary, 0.6f), textPrimary)
+            setSelectedTabIndicatorColor(customPrimary)
         }
 
         // Chat background image
