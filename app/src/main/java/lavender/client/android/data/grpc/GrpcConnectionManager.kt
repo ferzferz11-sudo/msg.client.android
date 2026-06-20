@@ -115,6 +115,7 @@ class GrpcConnectionManager(
             connectionStatus.value = ConnectionStatus.READY
             resetReconnectBackoff()
             Log.d(TAG, "Channel built — READY (optimistic): $serverAddress")
+            RealGrpcClient.clearServerShuttingDown()
 
             if (context != null) {
                 val httpPort = if (port == 50052) 8083 else 8082

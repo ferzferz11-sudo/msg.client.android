@@ -12,7 +12,7 @@ import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 
 /**
- * Bottom sheet for bot commands in AI chats (OWL + Hermes).
+ * Bottom sheet for bot commands in Remote Agent chats.
  * Shows command name + description, tap sends command to input.
  * Styled like AIBottomSheet / ActionBottomSheet.
  *

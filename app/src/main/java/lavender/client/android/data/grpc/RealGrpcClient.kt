@@ -16,7 +16,6 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.db.*
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 import java.util.concurrent.TimeUnit
@@ -75,6 +74,9 @@ object RealGrpcClient {
 
     private val _authStatus = MutableStateFlow<String?>(null)
     val authStatus: StateFlow<String?> = _authStatus
+
+    private val _serverShuttingDown = MutableStateFlow(false)
+    val serverShuttingDown: StateFlow<Boolean> = _serverShuttingDown
 
     private val _typingUsers = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
     val typingUsers: StateFlow<Map<String, Set<String>>> = _typingUsers
@@ -295,6 +297,10 @@ object RealGrpcClient {
     fun shouldForceReconnect(): Boolean =
         isAppInBackground && (System.currentTimeMillis() - backgroundStartTime) > 5 * 60 * 1000
 
+    fun clearServerShuttingDown() {
+        _serverShuttingDown.value = false
+    }
+
     private fun fetchAdminStatus() {
         val ctx = appContext ?: return
         scope.launch {
@@ -314,6 +320,24 @@ object RealGrpcClient {
             } catch (e: Exception) {
                 Log.w(TAG, "fetchAdminStatus failed: ${e.message}")
             }
+        }
+    }
+
+    private suspend fun checkServerHealth(): Boolean {
+        val address = connectionManager.currentServerAddress ?: return false
+        val port = connectionManager.currentServerPort
+        val httpPort = if (port == 50052) 8083 else 8082
+        return try {
+            val url = java.net.URL("http://$address:$httpPort/health")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            conn.requestMethod = "GET"
+            val code = conn.responseCode
+            conn.disconnect()
+            code == 200
+        } catch (_: Exception) {
+            false
         }
     }
 
@@ -519,6 +543,12 @@ object RealGrpcClient {
                     } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
                     return
                 }
+                if (value.text == "SERVER_SHUTTINGDOWN") {
+                    Log.w(TAG, "Server is shutting down — showing reconnecting state")
+                    _serverShuttingDown.value = true
+                    _connectionStatus.value = ConnectionStatus.RECONNECTING
+                    return
+                }
 
                 val message = ProtoUtils.createMessageFromProto(value)
                 if (deletedMessageHashes.contains(getMessageHash(message))) return
@@ -669,6 +699,15 @@ object RealGrpcClient {
                                 Log.d(TAG, "App in background for too long, stopping stream retry loop")
                                 break
                             }
+                            val serverUp = checkServerHealth()
+                            if (!serverUp) {
+                                Log.d(TAG, "Server not ready, waiting before next check...")
+                                _serverShuttingDown.value = true
+                                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                                retryCount++
+                                continue
+                            }
+                            _serverShuttingDown.value = false
                             Log.d(TAG, "Attempting stream reconnect (attempt ${retryCount + 1}, delay=${retryDelay}ms)...")
                             lastChatRequest?.let { req ->
                                 startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
@@ -751,8 +790,6 @@ object RealGrpcClient {
     fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatAuxClient.registerToken(user, token, pushEnabled) }
     fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatAuxClient.fetchUserId(username, callback) }
     fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatAuxClient.loadAllUsers(cb) }
-    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) { chatAuxClient.getAIChats(userId, callback) }
-    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) { chatAuxClient.renameAIChat(chatId, userId, newName, callback) }
     fun getMutedChats(callback: (List<String>) -> Unit) { chatAuxClient.getMutedChats(callback) }
     fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatAuxClient.setMutedChat(roomId, muted, callback) }
     fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatClient.deleteChat(cid, requesterUsername, cb) }

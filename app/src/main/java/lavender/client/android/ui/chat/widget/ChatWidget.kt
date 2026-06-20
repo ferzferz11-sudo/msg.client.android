@@ -26,7 +26,6 @@ import lavender.client.android.databinding.WidgetChatBinding
  *
  * Используется в:
  * - NewChatActivity (групповой чат)
- * - HermesChatActivity (агенты как участники группового чата)
  *
  * Предоставляет:
  * - Toolbar с аватаром/иконкой, названием, статусом

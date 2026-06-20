@@ -35,7 +35,7 @@ object ThemeApplier {
 
         // NOTE: Do NOT call enableEdgeToEdge() here — it sets
         // setDecorFitsSystemWindows(false) which makes adjustResize
-        // stop working, causing keyboard/nav bar overlap in OwlActivity,
+        // stop working, causing keyboard/nav bar overlap in
         // NewChatActivity and any activity with adjustResize in manifest.
         // Instead, we only set status/nav bar icon appearance here.
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {

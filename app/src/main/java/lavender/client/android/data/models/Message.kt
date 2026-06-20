@@ -88,12 +88,3 @@ data class ChatInfo(
         }
     }
 }
-
-data class AIChatInfo(
-    val id: String = "",
-    val name: String = "",
-    val type: String = "", // "owl" or "hermes"
-    val createdAt: String = "",
-    val isUsingCustomKey: Boolean = false,
-    val model: String = ""
-)

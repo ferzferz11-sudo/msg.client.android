@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.grpc.ConnectionStatus
-import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
@@ -92,7 +91,6 @@ class ChatListActivity : AppCompatActivity() {
 
     // AI Bottom Sheet
     internal var aiBottomSheet: AIBottomSheet? = null
-    internal val aiChats = mutableListOf<AIChatInfo>()
 
     // Update
     internal var updateCoordinator: UpdateCoordinator? = null
@@ -280,7 +278,7 @@ class ChatListActivity : AppCompatActivity() {
                     ConnectionStatus.CONNECTING -> getString(R.string.connecting)
                     ConnectionStatus.READY -> getString(R.string.connection_online)
                     ConnectionStatus.DISCONNECTED -> getString(R.string.connection_offline)
-                    ConnectionStatus.RECONNECTING -> getString(R.string.connecting)
+                    ConnectionStatus.RECONNECTING -> if (GrpcClient.serverShuttingDown.value) getString(R.string.server_restarting) else getString(R.string.connecting)
                     ConnectionStatus.FAILED -> getString(R.string.connection_offline)
                 }
                 tvToolbarSubtitle?.text = statusText

@@ -23,7 +23,7 @@ import java.util.*
 /**
  * Unified chat message adapter.
  * Supports: user messages, agent/participant messages, typing indicators, date separators.
- * Used by both NewChatActivity (group chat) and HermesChatActivity (agents as participants).
+ * Used by NewChatActivity (group chat).
  *
  * v1.1.1.14: Added fade-in + slide animations for new messages, animated typing dots.
  */

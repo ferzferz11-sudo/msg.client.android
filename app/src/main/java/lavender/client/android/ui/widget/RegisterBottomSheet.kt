@@ -1,9 +1,7 @@
 package lavender.client.android.ui.widget
 
 import android.content.Context
-import android.view.View
 import android.widget.EditText
-import android.widget.ProgressBar
 import com.google.android.material.button.MaterialButton
 import lavender.client.android.R
 import lavender.client.android.theme.Theme
@@ -31,7 +29,6 @@ class RegisterBottomSheet(
     private var editTextEmail: EditText? = null
     private var btnRegister: MaterialButton? = null
     private var btnCancel: MaterialButton? = null
-    private var registerProgressBar: ProgressBar? = null
 
     init {
         initViews()
@@ -44,7 +41,6 @@ class RegisterBottomSheet(
         editTextEmail = findViewById(R.id.editTextEmail)
         btnRegister = findViewById(R.id.btnRegister)
         btnCancel = findViewById(R.id.btnCancel)
-        registerProgressBar = findViewById(R.id.registerProgressBar)
 
         if (prefillUsername.isNotEmpty()) editTextUsername?.setText(prefillUsername)
         if (prefillPassword.isNotEmpty()) {
@@ -65,22 +61,17 @@ class RegisterBottomSheet(
                 return@setOnClickListener
             }
 
-            btnRegister?.text = ""
             btnRegister?.isEnabled = false
-            registerProgressBar?.visibility = View.VISIBLE
             onRegister(u, p, e)
         }
     }
 
     fun setLoading(loading: Boolean) {
         if (loading) {
-            btnRegister?.text = ""
             btnRegister?.isEnabled = false
-            registerProgressBar?.visibility = View.VISIBLE
         } else {
             btnRegister?.text = context.getString(R.string.register)
             btnRegister?.isEnabled = true
-            registerProgressBar?.visibility = View.GONE
         }
     }
 

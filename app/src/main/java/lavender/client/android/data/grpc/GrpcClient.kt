@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import lavender.client.android.data.models.Message
 import lavender.client.android.data.models.ChatInfo
-import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.proto.*
 
 /**
@@ -39,6 +38,7 @@ object GrpcClient {
     val authStatus: StateFlow<String?> = realGrpcClient.authStatus
     val typingUsers: StateFlow<Map<String, Set<String>>> = realGrpcClient.typingUsers
     val chatDeletedEvent: StateFlow<String?> = realGrpcClient.chatDeletedEvent
+    val serverShuttingDown: StateFlow<Boolean> = realGrpcClient.serverShuttingDown
     val callSignals: SharedFlow<CallMessageProto> = realGrpcClient.callSignals
     val newMessageEvent: SharedFlow<Message> = realGrpcClient.newMessageEvent
     val readReceiptEvent: SharedFlow<Pair<String, String>> = realGrpcClient.readReceiptEvent
@@ -140,13 +140,6 @@ object GrpcClient {
 
     fun getAllChats(callback: (List<ChatInfo>) -> Unit) =
         realGrpcClient.getAllChats(callback)
-
-    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) =
-        realGrpcClient.getAIChats(userId, callback)
-
-    fun renameAIChat(
-        chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit
-    ) = realGrpcClient.renameAIChat(chatId, userId, newName, callback)
 
     fun createDirectChat(user1: String, user2: String, callback: (String?) -> Unit) =
         realGrpcClient.createDirectChat(user1, user2, callback)
@@ -510,28 +503,7 @@ object GrpcClient {
         sendMessage(msg)
     }
 
-    // ======= Hermes Multi-Agent Orchestrator =======
-
-    fun chatWithOrchestrator(
-        userId: String, sessionId: String, message: String,
-        agentId: String = "", mode: String = "",
-        scope: CoroutineScope,
-        onResponse: (token: String, finished: Boolean, error: String?, agentId: String, agentName: String) -> Unit
-    ) = lavender.client.android.data.grpc.chatWithOrchestrator(
-        userId, sessionId, message, agentId, mode, scope, onResponse
-    )
-
-    val hermesResponses: SharedFlow<OrchestratorResponseProto>
-        get() = lavender.client.android.data.grpc.hermesResponses
-
-    val hermesTyping: SharedFlow<Boolean>
-        get() = lavender.client.android.data.grpc.hermesTyping
-
-    val owlResponses: SharedFlow<OwlResponseProto>
-        get() = lavender.client.android.data.grpc.owlResponses
-
-    val owlTyping: SharedFlow<Boolean>
-        get() = lavender.client.android.data.grpc.owlTyping
+    // ======= Notifications =======
 
     val serverNotifications: SharedFlow<ServerNotificationProto>
         get() = lavender.client.android.data.grpc.serverNotifications
@@ -549,44 +521,6 @@ object GrpcClient {
 
     suspend fun getUnreadCount(userId: String): Int =
         lavender.client.android.data.grpc.getUnreadCount(userId)
-
-    // ======= Hermes Unary Methods =======
-
-    suspend fun listAgents(userId: String = ""): List<AgentInfoProto> =
-        lavender.client.android.data.grpc.listAgents(userId)
-
-    suspend fun listAgentPresets(): List<AgentPresetInfoProto> =
-        lavender.client.android.data.grpc.listAgentPresets()
-
-    suspend fun createAgent(
-        userId: String, presetId: String, customName: String = "",
-        customPrompt: String = "", model: String = "", maxTokens: Int = 0
-    ): CreateAgentResponseProto =
-        lavender.client.android.data.grpc.createAgent(userId, presetId, customName, customPrompt, model, maxTokens)
-
-    suspend fun updateAgent(
-        agentId: String, userId: String, name: String = "",
-        systemPrompt: String = "", model: String = "", maxTokens: Int = 0
-    ): Boolean = lavender.client.android.data.grpc.updateAgent(agentId, userId, name, systemPrompt, model, maxTokens)
-
-    suspend fun deleteAgent(agentId: String, userId: String): Boolean =
-        lavender.client.android.data.grpc.deleteAgent(agentId, userId)
-
-    suspend fun listUserAgents(userId: String): List<AgentInfoProto> =
-        lavender.client.android.data.grpc.listUserAgents(userId)
-
-    suspend fun createHermesSession(
-        userId: String, agentId: String = "", mode: String = ""
-    ): CreateHermesSessionResponseProto =
-        lavender.client.android.data.grpc.createHermesSession(userId, agentId, mode)
-
-    suspend fun deleteHermesSession(sessionId: String, userId: String): Boolean =
-        lavender.client.android.data.grpc.deleteHermesSession(sessionId, userId)
-
-    suspend fun getOrchestratorHistory(
-        sessionId: String, limit: Int = 50
-    ): List<OrchestratorHistoryMessageProto> =
-        lavender.client.android.data.grpc.getOrchestratorHistory(sessionId, limit)
 
     // ======= Remote Agent =======
 
@@ -669,18 +603,6 @@ object GrpcClient {
         agentId: String, adminUserId: String = ""
     ): GetAgentProcessStatusResponseProto =
         lavender.client.android.data.grpc.getAgentProcessStatus(agentId, adminUserId)
-
-    // ====== Hermes Settings ======
-
-    suspend fun getHermesSettings(
-        sessionId: String, userId: String
-    ): GetHermesSettingsResponseProto =
-        lavender.client.android.data.grpc.getHermesSettings(sessionId, userId)
-
-    suspend fun updateHermesSettings(
-        sessionId: String, userId: String, apiKey: String, model: String
-    ): UpdateHermesSettingsResponseProto =
-        lavender.client.android.data.grpc.updateHermesSettings(sessionId, userId, apiKey, model)
 
     // ======= AI Services v2 =======
 

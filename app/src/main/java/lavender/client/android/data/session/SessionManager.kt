@@ -496,9 +496,8 @@ object SessionManager {
 
                     onComplete("SUCCESS")
                 } else {
-                    val errorMsg = "V2 auth failed"
-                    Log.w("SessionManager", errorMsg)
-                    onComplete(errorMsg)
+                    Log.w("SessionManager", "AUTH_FAILED")
+                    onComplete("AUTH_FAILED")
                 }
             } catch (e: Exception) {
                 Log.e("SessionManager", "V2 login error: ${e.message}", e)

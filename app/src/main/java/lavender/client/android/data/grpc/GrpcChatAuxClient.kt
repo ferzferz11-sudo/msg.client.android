@@ -1,7 +1,6 @@
 package lavender.client.android.data.grpc
 
 import android.util.Log
-import lavender.client.android.data.models.AIChatInfo
 import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.proto.*
 
@@ -58,56 +57,6 @@ class GrpcChatAuxClient(
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
         call.sendMessage(GetUserIdRequestProto(username))
-        call.halfClose()
-        call.request(1)
-    }
-
-    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val call = currentChannel.newCall(
-            io.grpc.MethodDescriptor.newBuilder<GetAIChatsRequestProto, GetAIChatsResponseProto>()
-                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/GetAIChats")
-                .setRequestMarshaller(GetAIChatsRequestMarshaller())
-                .setResponseMarshaller(GetAIChatsResponseMarshaller())
-                .build(),
-            io.grpc.CallOptions.DEFAULT
-        )
-        call.start(object : io.grpc.ClientCall.Listener<GetAIChatsResponseProto>() {
-            override fun onMessage(message: GetAIChatsResponseProto) {
-                callback(message.chats.map { proto ->
-                    AIChatInfo(
-                        id = proto.id, name = proto.name, type = proto.type, createdAt = proto.createdAt
-                    )
-                })
-            }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) ErrorHandler.handle("GrpcChatAuxClient.getAIChats", "Status: ${status.code} — ${status.description}")
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(GetAIChatsRequestProto().apply { this.userId = userId })
-        call.halfClose()
-        call.request(1)
-    }
-
-    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) {
-        val currentChannel = getChannel() ?: return
-        val call = currentChannel.newCall(
-            io.grpc.MethodDescriptor.newBuilder<RenameAIChatRequestProto, RenameAIChatResponseProto>()
-                .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/RenameAIChat")
-                .setRequestMarshaller(RenameAIChatRequestMarshaller())
-                .setResponseMarshaller(RenameAIChatResponseMarshaller())
-                .build(),
-            io.grpc.CallOptions.DEFAULT
-        )
-        call.start(object : io.grpc.ClientCall.Listener<RenameAIChatResponseProto>() {
-            override fun onMessage(message: RenameAIChatResponseProto) { callback(message.success, message.error) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
-                if (!status.isOk) callback(false, status.description ?: "Unknown error")
-            }
-        }, io.grpc.Metadata())
-        call.sendMessage(RenameAIChatRequestProto().apply { this.chatId = chatId; this.userId = userId; this.newName = newName })
         call.halfClose()
         call.request(1)
     }
