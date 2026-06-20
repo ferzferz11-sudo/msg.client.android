@@ -161,3 +161,94 @@ data class ToolInfoV2Proto(
     val parametersSchema: String = "",
     val requiredRole: String = ""
 )
+
+// ======= AI Marketplace =======
+
+data class RateAIAgentRequestProto(
+    val agentId: String = "",
+    val rating: Int = 0,
+    val review: String = ""
+)
+
+data class RateAIAgentResponseProto(
+    val success: Boolean = false,
+    val avgRating: Float = 0f,
+    val reviewCount: Int = 0
+)
+
+data class GetAIAgentReviewsRequestProto(
+    val agentId: String = "",
+    val limit: Int = 20
+)
+
+data class AgentReviewProto(
+    val userId: String = "",
+    val rating: Int = 0,
+    val review: String = "",
+    val createdAt: String = ""
+)
+
+data class GetAIAgentReviewsResponseProto(
+    val reviews: List<AgentReviewProto> = emptyList(),
+    val avgRating: Float = 0f,
+    val reviewCount: Int = 0
+)
+
+data class ListMarketplaceAgentsRequestProto(
+    val query: String = "",
+    val limit: Int = 20,
+    val offset: Int = 0
+)
+
+data class ListMarketplaceAgentsResponseProto(
+    val agents: List<AgentInfoV2Proto> = emptyList(),
+    val total: Int = 0
+)
+
+data class GetAIAgentStatsRequestProto(
+    val agentId: String = ""
+)
+
+data class GetAIAgentStatsResponseProto(
+    val installCount: Int = 0,
+    val avgRating: Float = 0f,
+    val reviewCount: Int = 0
+)
+
+data class ShareAIAgentRequestProto(
+    val agentId: String = ""
+)
+
+data class ShareAIAgentResponseProto(
+    val success: Boolean = false,
+    val shareCode: String = ""
+)
+
+data class InstallAIAgentRequestProto(
+    val shareCode: String = "",
+    val newName: String = ""
+)
+
+data class InstallAIAgentResponseProto(
+    val success: Boolean = false,
+    val agentId: String = "",
+    val error: String = ""
+)
+
+data class GetAIUsageStatsRequestProto(
+    val dummy: Boolean = false
+)
+
+data class UsageStatEntryProto(
+    val agentId: String = "",
+    val agentName: String = "",
+    val totalTokens: Long = 0,
+    val requestCount: Int = 0,
+    val periodStart: String = ""
+)
+
+data class GetAIUsageStatsResponseProto(
+    val stats: List<UsageStatEntryProto> = emptyList(),
+    val totalTokens: Long = 0,
+    val totalRequests: Int = 0
+)

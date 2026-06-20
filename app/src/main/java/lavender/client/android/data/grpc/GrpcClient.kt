@@ -608,4 +608,27 @@ object GrpcClient {
 
     val aiV2Client: GrpcAIv2Client
         get() = realGrpcClient.aiV2Client
+
+    // ======= AI v2 Marketplace =======
+
+    suspend fun rateAIAgent(agentId: String, rating: Int, review: String) =
+        realGrpcClient.aiV2Client.rateAgent(agentId, rating, review)
+
+    suspend fun getAIAgentReviews(agentId: String, limit: Int = 20) =
+        realGrpcClient.aiV2Client.getAgentReviews(agentId, limit)
+
+    suspend fun listMarketplaceAgents(query: String = "", limit: Int = 20, offset: Int = 0) =
+        realGrpcClient.aiV2Client.listMarketplaceAgents(query, limit, offset)
+
+    suspend fun getAIAgentStats(agentId: String) =
+        realGrpcClient.aiV2Client.getAgentStats(agentId)
+
+    suspend fun shareAIAgent(agentId: String) =
+        realGrpcClient.aiV2Client.shareAgent(agentId)
+
+    suspend fun installAIAgent(shareCode: String, newName: String = "") =
+        realGrpcClient.aiV2Client.installAgent(shareCode, newName)
+
+    suspend fun getAIUsageStats() =
+        realGrpcClient.aiV2Client.getUsageStats()
 }

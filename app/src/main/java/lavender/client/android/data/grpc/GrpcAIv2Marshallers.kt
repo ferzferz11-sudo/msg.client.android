@@ -320,6 +320,250 @@ class ListAIToolsResponseMarshaller : MethodDescriptor.Marshaller<ListAIToolsRes
     }
 }
 
+// ======= Marketplace =======
+
+class RateAIAgentRequestMarshaller : MethodDescriptor.Marshaller<RateAIAgentRequestProto> {
+    override fun stream(v: RateAIAgentRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+        if (v.rating != 0) cos.writeInt32(2, v.rating)
+        if (v.review.isNotEmpty()) cos.writeString(3, v.review)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): RateAIAgentRequestProto = RateAIAgentRequestProto()
+}
+
+class RateAIAgentResponseMarshaller : MethodDescriptor.Marshaller<RateAIAgentResponseProto> {
+    override fun stream(v: RateAIAgentResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): RateAIAgentResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var avgRating = 0f; var reviewCount = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> avgRating = cis.readFloat()
+                3 -> reviewCount = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return RateAIAgentResponseProto(success, avgRating, reviewCount)
+    }
+}
+
+class GetAIAgentReviewsRequestMarshaller : MethodDescriptor.Marshaller<GetAIAgentReviewsRequestProto> {
+    override fun stream(v: GetAIAgentReviewsRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+        if (v.limit != 20) cos.writeInt32(2, v.limit)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAIAgentReviewsRequestProto = GetAIAgentReviewsRequestProto()
+}
+
+class GetAIAgentReviewsResponseMarshaller : MethodDescriptor.Marshaller<GetAIAgentReviewsResponseProto> {
+    override fun stream(v: GetAIAgentReviewsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIAgentReviewsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val reviews = mutableListOf<AgentReviewProto>()
+        var avgRating = 0f; var reviewCount = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val len = cis.readRawVarint32()
+                    val msgBytes = cis.readRawBytes(len)
+                    if (msgBytes.isNotEmpty()) {
+                        try {
+                            val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                            var userId = ""; var rating = 0; var review = ""; var createdAt = ""
+                            while (!inner.isAtEnd) {
+                                val innerTag = inner.readTag()
+                                if (innerTag == 0) break
+                                when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                    1 -> userId = inner.readString()
+                                    2 -> rating = inner.readInt32()
+                                    3 -> review = inner.readString()
+                                    4 -> createdAt = inner.readString()
+                                    else -> inner.skipField(innerTag)
+                                }
+                            }
+                            reviews.add(AgentReviewProto(userId, rating, review, createdAt))
+                        } catch (_: Exception) {}
+                    }
+                }
+                2 -> avgRating = cis.readFloat()
+                3 -> reviewCount = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetAIAgentReviewsResponseProto(reviews, avgRating, reviewCount)
+    }
+}
+
+class ListMarketplaceAgentsRequestMarshaller : MethodDescriptor.Marshaller<ListMarketplaceAgentsRequestProto> {
+    override fun stream(v: ListMarketplaceAgentsRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.query.isNotEmpty()) cos.writeString(1, v.query)
+        if (v.limit != 20) cos.writeInt32(2, v.limit)
+        if (v.offset != 0) cos.writeInt32(3, v.offset)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): ListMarketplaceAgentsRequestProto = ListMarketplaceAgentsRequestProto()
+}
+
+class ListMarketplaceAgentsResponseMarshaller : MethodDescriptor.Marshaller<ListMarketplaceAgentsResponseProto> {
+    override fun stream(v: ListMarketplaceAgentsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ListMarketplaceAgentsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val agents = mutableListOf<AgentInfoV2Proto>()
+        var total = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val len = cis.readRawVarint32()
+                    val msgBytes = cis.readRawBytes(len)
+                    if (msgBytes.isNotEmpty()) {
+                        val agent = parseAgentInfoV2(msgBytes)
+                        if (agent != null) agents.add(agent)
+                    }
+                }
+                2 -> total = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return ListMarketplaceAgentsResponseProto(agents, total)
+    }
+}
+
+class GetAIAgentStatsRequestMarshaller : MethodDescriptor.Marshaller<GetAIAgentStatsRequestProto> {
+    override fun stream(v: GetAIAgentStatsRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAIAgentStatsRequestProto = GetAIAgentStatsRequestProto()
+}
+
+class GetAIAgentStatsResponseMarshaller : MethodDescriptor.Marshaller<GetAIAgentStatsResponseProto> {
+    override fun stream(v: GetAIAgentStatsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIAgentStatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var installCount = 0; var avgRating = 0f; var reviewCount = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> installCount = cis.readInt32()
+                2 -> avgRating = cis.readFloat()
+                3 -> reviewCount = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetAIAgentStatsResponseProto(installCount, avgRating, reviewCount)
+    }
+}
+
+class ShareAIAgentRequestMarshaller : MethodDescriptor.Marshaller<ShareAIAgentRequestProto> {
+    override fun stream(v: ShareAIAgentRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.agentId.isNotEmpty()) cos.writeString(1, v.agentId)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): ShareAIAgentRequestProto = ShareAIAgentRequestProto()
+}
+
+class ShareAIAgentResponseMarshaller : MethodDescriptor.Marshaller<ShareAIAgentResponseProto> {
+    override fun stream(v: ShareAIAgentResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ShareAIAgentResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var shareCode = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> shareCode = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return ShareAIAgentResponseProto(success, shareCode)
+    }
+}
+
+class InstallAIAgentRequestMarshaller : MethodDescriptor.Marshaller<InstallAIAgentRequestProto> {
+    override fun stream(v: InstallAIAgentRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.shareCode.isNotEmpty()) cos.writeString(1, v.shareCode)
+        if (v.newName.isNotEmpty()) cos.writeString(2, v.newName)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): InstallAIAgentRequestProto = InstallAIAgentRequestProto()
+}
+
+class InstallAIAgentResponseMarshaller : MethodDescriptor.Marshaller<InstallAIAgentResponseProto> {
+    override fun stream(v: InstallAIAgentResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): InstallAIAgentResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        var success = false; var agentId = ""; var error = ""
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> success = cis.readBool()
+                2 -> agentId = cis.readString()
+                3 -> error = cis.readString()
+                else -> cis.skipField(tag)
+            }
+        }
+        return InstallAIAgentResponseProto(success, agentId, error)
+    }
+}
+
+class GetAIUsageStatsRequestMarshaller : MethodDescriptor.Marshaller<GetAIUsageStatsRequestProto> {
+    override fun stream(v: GetAIUsageStatsRequestProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIUsageStatsRequestProto = GetAIUsageStatsRequestProto()
+}
+
+class GetAIUsageStatsResponseMarshaller : MethodDescriptor.Marshaller<GetAIUsageStatsResponseProto> {
+    override fun stream(v: GetAIUsageStatsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIUsageStatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val stats = mutableListOf<UsageStatEntryProto>()
+        var totalTokens = 0L; var totalRequests = 0
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val len = cis.readRawVarint32()
+                    val msgBytes = cis.readRawBytes(len)
+                    if (msgBytes.isNotEmpty()) {
+                        try {
+                            val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                            var agentId = ""; var agentName = ""; var totalT = 0L; var reqCount = 0; var periodStart = ""
+                            while (!inner.isAtEnd) {
+                                val innerTag = inner.readTag()
+                                if (innerTag == 0) break
+                                when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                    1 -> agentId = inner.readString()
+                                    2 -> agentName = inner.readString()
+                                    3 -> totalT = inner.readInt64()
+                                    4 -> reqCount = inner.readInt32()
+                                    5 -> periodStart = inner.readString()
+                                    else -> inner.skipField(innerTag)
+                                }
+                            }
+                            stats.add(UsageStatEntryProto(agentId, agentName, totalT, reqCount, periodStart))
+                        } catch (_: Exception) {}
+                    }
+                }
+                2 -> totalTokens = cis.readInt64()
+                3 -> totalRequests = cis.readInt32()
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetAIUsageStatsResponseProto(stats, totalTokens, totalRequests)
+    }
+}
+
 // ======= Helpers =======
 
 private fun parseAgentInfoV2(bytes: ByteArray): AgentInfoV2Proto? {

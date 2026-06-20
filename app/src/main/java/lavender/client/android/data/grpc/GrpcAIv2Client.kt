@@ -366,6 +366,219 @@ class GrpcAIv2Client(
             ?: CloneAIAgentResponseProto(error = "Timeout")
     }
 
+    // ======= Marketplace =======
+
+    suspend fun rateAgent(agentId: String, rating: Int, review: String): RateAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext RateAIAgentResponseProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<RateAIAgentRequestProto, RateAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/RateAIAgent")
+            .setRequestMarshaller(RateAIAgentRequestMarshaller())
+            .setResponseMarshaller(RateAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<RateAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<RateAIAgentResponseProto>() {
+            override fun onMessage(message: RateAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(RateAIAgentResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(RateAIAgentRequestProto(agentId, rating, review))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: RateAIAgentResponseProto()
+    }
+
+    suspend fun getAgentReviews(agentId: String, limit: Int = 20): GetAIAgentReviewsResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext GetAIAgentReviewsResponseProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIAgentReviewsRequestProto, GetAIAgentReviewsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/GetAIAgentReviews")
+            .setRequestMarshaller(GetAIAgentReviewsRequestMarshaller())
+            .setResponseMarshaller(GetAIAgentReviewsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<GetAIAgentReviewsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<GetAIAgentReviewsResponseProto>() {
+            override fun onMessage(message: GetAIAgentReviewsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(GetAIAgentReviewsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(GetAIAgentReviewsRequestProto(agentId, limit))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: GetAIAgentReviewsResponseProto()
+    }
+
+    suspend fun listMarketplaceAgents(query: String = "", limit: Int = 20, offset: Int = 0): ListMarketplaceAgentsResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext ListMarketplaceAgentsResponseProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListMarketplaceAgentsRequestProto, ListMarketplaceAgentsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/ListMarketplaceAgents")
+            .setRequestMarshaller(ListMarketplaceAgentsRequestMarshaller())
+            .setResponseMarshaller(ListMarketplaceAgentsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<ListMarketplaceAgentsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<ListMarketplaceAgentsResponseProto>() {
+            override fun onMessage(message: ListMarketplaceAgentsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(ListMarketplaceAgentsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(ListMarketplaceAgentsRequestProto(query, limit, offset))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: ListMarketplaceAgentsResponseProto()
+    }
+
+    suspend fun getAgentStats(agentId: String): GetAIAgentStatsResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext GetAIAgentStatsResponseProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIAgentStatsRequestProto, GetAIAgentStatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/GetAIAgentStats")
+            .setRequestMarshaller(GetAIAgentStatsRequestMarshaller())
+            .setResponseMarshaller(GetAIAgentStatsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<GetAIAgentStatsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<GetAIAgentStatsResponseProto>() {
+            override fun onMessage(message: GetAIAgentStatsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(GetAIAgentStatsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(GetAIAgentStatsRequestProto(agentId))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: GetAIAgentStatsResponseProto()
+    }
+
+    suspend fun shareAgent(agentId: String): ShareAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext ShareAIAgentResponseProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<ShareAIAgentRequestProto, ShareAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/ShareAIAgent")
+            .setRequestMarshaller(ShareAIAgentRequestMarshaller())
+            .setResponseMarshaller(ShareAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<ShareAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<ShareAIAgentResponseProto>() {
+            override fun onMessage(message: ShareAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(ShareAIAgentResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(ShareAIAgentRequestProto(agentId))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: ShareAIAgentResponseProto()
+    }
+
+    suspend fun installAgent(shareCode: String, newName: String = ""): InstallAIAgentResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext InstallAIAgentResponseProto(error = "Connection lost")
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<InstallAIAgentRequestProto, InstallAIAgentResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/InstallAIAgent")
+            .setRequestMarshaller(InstallAIAgentRequestMarshaller())
+            .setResponseMarshaller(InstallAIAgentResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<InstallAIAgentResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<InstallAIAgentResponseProto>() {
+            override fun onMessage(message: InstallAIAgentResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(InstallAIAgentResponseProto(error = "Connection error: ${status.code}"))
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(InstallAIAgentRequestProto(shareCode, newName))
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() }
+            ?: InstallAIAgentResponseProto(error = "Timeout")
+    }
+
+    suspend fun getUsageStats(): GetAIUsageStatsResponseProto = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) {
+            return@withContext GetAIUsageStatsResponseProto()
+        }
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIUsageStatsRequestProto, GetAIUsageStatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.AIService/GetAIUsageStats")
+            .setRequestMarshaller(GetAIUsageStatsRequestMarshaller())
+            .setResponseMarshaller(GetAIUsageStatsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<GetAIUsageStatsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<GetAIUsageStatsResponseProto>() {
+            override fun onMessage(message: GetAIUsageStatsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(GetAIUsageStatsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(GetAIUsageStatsRequestProto())
+        call.halfClose()
+        call.request(1)
+
+        return@withContext withTimeoutOrNull(10000) { result.await() } ?: GetAIUsageStatsResponseProto()
+    }
+
     // ======= Tools =======
 
     suspend fun listTools(): List<ToolInfoV2Proto> = withContext(Dispatchers.IO) {
