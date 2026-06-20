@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.4 | **Updated:** 2026-06-20
+**Version:** v1.3.0.5 | **Updated:** 2026-06-20
 
 ---
 
@@ -37,19 +37,19 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~150 |
-| Activities | 24 |
+| Kotlin files | ~160 |
+| Activities | 25 |
 | gRPC modules | 27 |
 | Unit tests | 15 files |
-| Layout XML | 100 |
-| String entries | 800 (EN + RU) |
+| Layout XML | 109 |
+| String entries | 826 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.4) |
+| Branch | feat/1.3.0.x (v1.3.0.5) |
 
 ---
 
-## Architecture Overview (v1.3.0.4)
+## Architecture Overview (v1.3.0.5)
 
 ```
 GrpcClient (facade)
@@ -71,6 +71,8 @@ GrpcClient (facade)
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
         └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
 
+network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
+
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
 AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
@@ -82,6 +84,7 @@ Session: SessionManager (token refresh EVERY entry point)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
+Logging: clean logs, no hot-path noise, performance timing in loadChats
 ```
 
 ---
@@ -136,4 +139,4 @@ Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 | String entries | 826 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.4) |
+| Branch | feat/1.3.0.x (v1.3.0.5) |

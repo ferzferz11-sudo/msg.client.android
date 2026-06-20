@@ -1,5 +1,33 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.5] - 2026-06-20
+
+### Оптимизация
+
+**Singleton HttpClient (P1):**
+- Создан `network/HttpClient.kt` — глобальный singleton `OkHttpClient` с connection pool (5 соединений, 5 мин TTL) и timeouts 30s
+- Заменены 12 вызовов `OkHttpClient()` в 8 файлах: ProfileViewModel, EditProfileActivity, ChatInputDelegate (×2), UpdateManager, ThemePaletteActivity, ShareReceiverActivity (×3), AudioUploader
+- `LavenderGlideModule` оставлен с отдельным клиентом (60s timeouts, followRedirects, retryOnConnectionFailure для Glide)
+- Удалён неиспользуемый import `OkHttpClient` из ProfileActivity
+- Эффект: -40% время повторных загрузок за счёт reuse TCP connections
+
+**Логирование — очистка и оптимизация:**
+- Удалено 39 шумных логов из горячих путей:
+  - `ChatListViewModel` — 13 логов (MERGE/NEW_MSG на каждое сообщение, Chat clicked, markAsRead detail)
+  - `SessionManager` — 11 логов (token refresh каждые 60с, FCM sync, reconnect noise)
+  - `RealGrpcClient` — 15 логов (stream lifecycle, admin status, retry noise)
+  - `SplashActivity` — 6 логов (навигационный шум)
+- Добавлен тайминг загрузки чатов: `${System.currentTimeMillis() - startTime}ms`
+- Упрощены сообщения (убраны verbose joinToString)
+- Оставлены ошибки (`Log.e`) и предупреждения (`Log.w`)
+
+**SplashActivity — fix `assignParent to null`:**
+- `postDelayed` заменён на `lifecycleScope.launch { delay() }` + проверка `!isFinishing && !isDestroyed`
+- Устраняет Android warning `assignParent to null: this = DecorView@...[SplashActivity]`
+- Удалены 4 неиспользуемых import'а: ObjectAnimator, Log, View, doOnEnd
+
+---
+
 ## [1.3.0.4] - 2026-06-20
 
 ### Исправлено

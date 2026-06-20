@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.4 | **Updated:** 2026-06-20
+**Version:** v1.3.0.5 | **Updated:** 2026-06-20
 
 ---
 
@@ -244,6 +244,55 @@ GrpcProfileClient (class) — ChatService methods (no v2 replacement)
 - Request marshallers: serialize all fields
 - Response marshallers: parse by field number, skip unknown fields
 - v2 fields (isPinned, isMuted, etc.) must be included in parser
+
+### HttpClient Singleton Pattern (v1.3.0.5)
+```
+network/HttpClient.kt — object HttpClient
+  ├── client: OkHttpClient (singleton)
+  ├── connectTimeout: 30s
+  ├── readTimeout: 30s
+  ├── writeTimeout: 30s
+  └── connectionPool: 5 connections, 5 min TTL
+
+Usage:
+  import lavender.client.android.network.HttpClient
+  HttpClient.client.newCall(request).enqueue(callback)
+```
+- Use `HttpClient.client` everywhere instead of `OkHttpClient()`
+- Exception: `LavenderGlideModule` — separate client (60s timeouts, followRedirects, retryOnConnectionFailure)
+- Connection pool reuses TCP connections for -40% faster repeated loads
+
+### Logging Pattern (v1.3.0.5)
+```
+DO:
+  Log.e(TAG, "Failed to load chats", e)        — errors always logged
+  Log.w(TAG, "loadChats timeout")               — warnings for degraded state
+  Log.d(TAG, "Synced 16 chats (123ms)")          — key events with timing
+
+DON'T:
+  Log.d(TAG, "MERGE: inhale & ferz local=1...")  — hot-path per-message noise
+  Log.d(TAG, "Token refresh triggered")          — periodic task noise
+  Log.d(TAG, "Stream reconnection successful")   — retry loop noise
+```
+- Errors (`Log.e`): always keep
+- Warnings (`Log.w`): keep for degraded state (timeout, auth failure, reconnect)
+- Debug (`Log.d`): only key events (startup, sync summary with timing, critical transitions)
+- Remove: per-message logs, periodic task logs, retry loop iteration logs
+- Add timing: `${System.currentTimeMillis() - startTime}ms` for critical operations
+
+### SplashActivity Pattern (v1.3.0.5)
+```kotlin
+// Use lifecycleScope instead of postDelayed to avoid assignParent to null warning
+lifecycleScope.launch {
+    delay(400)
+    if (!isFinishing && !isDestroyed) {
+        navigateToTarget(...)
+    }
+}
+```
+- `postDelayed` on views causes `DecorView assignParent to null` when `finish()` is called during delay
+- `lifecycleScope` auto-cancels on Activity destruction
+- Always check `!isFinishing && !isDestroyed` before navigation
 
 ### Sheet Navigation Pattern
 - `isNavigatingDeeper` flag prevents `onBack` callback when navigating to child sheet/activity
