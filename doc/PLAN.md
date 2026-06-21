@@ -1,6 +1,19 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.1.3.41 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+**Version:** v1.1.3.42 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+
+---
+
+## Completed — v1.1.3.42 (MessageAdapter Split + UserSession Tests)
+
+### MessageAdapter Split
+- ✅ MessageAdapter: 870 → 150 LOC (-83%) — adapter logic only
+- ✅ MessageViewHolder (new, 733 LOC) — extracted ViewHolder with bind() and all content-type binders
+- ✅ MessageColors.kt (new, 31 LOC) — data class + theme color helpers
+- ✅ Clean separation: adapter manages selection/state, ViewHolder manages rendering
+
+### Unit Tests (199 total, was 181)
+- ✅ UserSessionTest (18 tests) — isLoggedIn, isJwtAuth, copy, equality, hashCode, toString
 
 ---
 
@@ -63,22 +76,18 @@
 
 ## Backlog — Следующая сессия
 
-### Приоритет 1: Архитектура
-| Задача | Что | LOC Эффект | Оценка |
-|--------|-----|-----------|--------|
-| Разделить MessageAdapter | ViewHolder по типам | 870→~300 | 2h |
-
-### Приоритет 2: Тесты
-| Задача | Оценка |
-|--------|--------|
-| Unit-тесты для SessionManager | 2h |
-
-### Приоритет 3: Безопасность
+### Приоритет 1: Безопасность
 | Задача | Оценка |
 |--------|--------|
 | Keystore пароль → env vars | 0.5h |
 | ServerConfig.kt — единый IP | 1h |
 | EncryptedSharedPreferences | 2h |
+
+### Приоритет 2: Тесты
+| Задача | Оценка |
+|--------|--------|
+| Unit-тесты для CredentialStore | 2h |
+| Unit-тесты для AuthManager | 2h |
 
 ---
 
@@ -93,6 +102,7 @@
 | Optimistic READY | gRPC канал подключается лениво |
 | Keepalive 30s/10s | Для мобильных сетей |
 | ViewModel + StateFlow | Activity наблюдает за StateFlow из ViewModel, не вызывает GrpcClient напрямую |
+| ViewHolder extraction | MessageViewHolder выделен из MessageAdapter для разделения ответственности |
 
 ---
 
@@ -111,6 +121,11 @@ GrpcClient (facade, 711 LOC)
 ChatListActivity (382) → 10 modules
 NewChatActivity (758) → 6 delegates + ChatViewModel
 ProfileActivity (531) → ProfileViewModel (407) + UI delegates
+
+MessageAdapter (150) → MessageViewHolder (733) + MessageColors (31)
+  — adapter: selection state, diff callback
+  — ViewHolder: rendering, content types, click handlers
+  — Colors: theme color extraction
 ```
 
 ---
@@ -125,3 +140,4 @@ ProfileActivity (531) → ProfileViewModel (407) + UI delegates
 | 5 | v1.1.3.36 | AI domain layer (OwlChatUseCase, HermesChatUseCase) | ✅ |
 | 6 | v1.1.3.38 | v2 Client Release — UI improvements, language sync, contacts | ✅ |
 | 7 | v1.1.3.40 | ProfileViewModel integration, unit tests for AI models | ✅ |
+| 8 | v1.1.3.42 | MessageAdapter split (870→150 LOC), UserSession tests | ✅ |
