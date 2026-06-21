@@ -275,7 +275,10 @@ class ChatListActivity : AppCompatActivity() {
                 val statusText = when (status) {
                     ConnectionStatus.CONNECTING -> getString(R.string.connecting)
                     ConnectionStatus.READY -> getString(R.string.connection_online)
-                    ConnectionStatus.DISCONNECTED -> getString(R.string.connection_offline)
+                    ConnectionStatus.DISCONNECTED -> {
+                        if (CredentialStore.getServerAddress(this@ChatListActivity).isNotEmpty()) getString(R.string.connecting)
+                        else getString(R.string.connection_offline)
+                    }
                     ConnectionStatus.RECONNECTING -> if (GrpcClient.serverShuttingDown.value) getString(R.string.server_restarting) else getString(R.string.connecting)
                     ConnectionStatus.FAILED -> getString(R.string.connection_offline)
                 }
