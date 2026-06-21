@@ -1,6 +1,24 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.1.3.39 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+**Version:** v1.1.3.40 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+
+---
+
+## Completed — v1.1.3.40 (ProfileViewModel Integration)
+
+### ProfileActivity Refactoring
+- ✅ ProfileActivity: 719 → 531 LOC (-26%) — business logic moved to ProfileViewModel
+- ✅ ProfileActivity now uses StateFlow observers for all profile state
+- ✅ Removed duplicate uploadGroupAvatar/resizeImage*/extractUrlsFromResponse from Activity
+- ✅ Kept UI-only code in Activity: bottom sheets, dialogs, theme application, image picking
+- ✅ ProfileViewModel (407 LOC) owns: profile loading, group settings, participant management, avatar upload
+
+### Unit Tests
+- ✅ ProfileViewModelTest (18 tests) — state initialization, participant parsing, admin checks, URL extraction
+- ✅ AiModelsTest (22 tests) — AiChatSession, AiChatMessage, AiChatSettings, AiStreamState, AiSource enum
+
+### Server
+- ✅ ServerVersion synced to v1.3.0.19 (matches running binary)
 
 ---
 
@@ -27,30 +45,20 @@
 
 ## Backlog — Следующая сессия
 
-### ✅ Приоритет 1: Dead Code Cleanup (выполнено)
-- ✅ Удален `ui/viewmodel/ChatListViewModel.kt` (21 LOC legacy stub)
-- ✅ Переименован `NotificationActivity` (root) → `NotificationSettingsActivity`
-
-### ✅ Приоритет 2: ContactsActivity пуст на v1 сервере (выполнено)
-- ✅ Сервер: добавлен fallback на `req.Username` в `GetContacts`, `AddContact`, `RemoveContact`
-- ✅ Dev сервер обновлён до v1.3.0.17
-
-### Приоритет 3: Архитектура
+### Приоритет 1: Архитектура
 | Задача | Что | LOC Эффект | Оценка |
 |--------|-----|-----------|--------|
-| ViewModel для NewChatActivity | Бизнес-логика → ViewModel | 755→~400 | 2h |
-| ViewModel для ProfileActivity | Бизнес-логика → ViewModel | 719→~300 | 2h |
 | Разделить GrpcChatListClient | 3 класса | 642→3×200 | 1h |
 | Разделить MessageAdapter | ViewHolder по типам | 870→~300 | 2h |
 
-### Приоритет 4: Тесты
+### Приоритет 2: Тесты
 | Задача | Оценка |
 |--------|--------|
-| Unit-тесты для ViewModels | 3h |
+| Unit-тесты для ChatViewModel | 2h |
 | Unit-тесты для SessionManager | 2h |
-| Unit-тесты для data/ai/ | 2h |
+| Unit-тесты для AiChatManager | 1h |
 
-### Приоритет 5: Безопасность
+### Приоритет 3: Безопасность
 | Задача | Оценка |
 |--------|--------|
 | Keystore пароль → env vars | 0.5h |
@@ -69,6 +77,7 @@
 | Chat delegates | 6 делегатов вместо монолитного NewChatActivity |
 | Optimistic READY | gRPC канал подключается лениво |
 | Keepalive 30s/10s | Для мобильных сетей |
+| ViewModel + StateFlow | Activity наблюдает за StateFlow из ViewModel, не вызывает GrpcClient напрямую |
 
 ---
 
@@ -85,8 +94,8 @@ GrpcClient (facade, 711 LOC)
         └── AiChatGrpc, SecretChatGrpc, ProfileClient
 
 ChatListActivity (382) → 10 modules
-NewChatActivity (755) → 6 delegates
-ProfileActivity (719) — monolithic
+NewChatActivity (758) → 6 delegates + ChatViewModel
+ProfileActivity (531) → ProfileViewModel (407) + UI delegates
 ```
 
 ---
@@ -100,3 +109,4 @@ ProfileActivity (719) — monolithic
 | 4 | v1.1.3.35 | GrpcClient facade optimization (780→~400 LOC) | ✅ |
 | 5 | v1.1.3.36 | AI domain layer (OwlChatUseCase, HermesChatUseCase) | ✅ |
 | 6 | v1.1.3.38 | v2 Client Release — UI improvements, language sync, contacts | ✅ |
+| 7 | v1.1.3.40 | ProfileViewModel integration, unit tests for AI models | ✅ |

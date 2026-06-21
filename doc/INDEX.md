@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.1.3.38 | **Updated:** 2026-06-18
+**Version:** v1.1.3.40 | **Updated:** 2026-06-21
 
 ---
 
@@ -37,10 +37,10 @@
 | Metric | Value |
 |--------|-------|
 | Kotlin files | 163 |
-| Total LOC | ~40,449 |
+| Total LOC | ~40,200 |
 | Activities | 30 |
 | gRPC modules | 21 |
-| Unit tests | 9 files, ~5.5% coverage |
+| Unit tests | 11 files, ~7% coverage |
 | Layout XML | 109 |
 | String entries | 767 (EN + RU) |
 | Min SDK | 29 (Android 10) |
@@ -61,8 +61,8 @@ GrpcClient (facade, 711 LOC)
         └── AiChatGrpc, SecretChatGrpc, ProfileClient
 
 ChatListActivity (382) → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity (755) → 6 delegates (toolbar, input, selection, search, E2EE, menu)
-ProfileActivity (719) — monolithic, not refactored
+NewChatActivity (758) → 6 delegates + ChatViewModel
+ProfileActivity (531) → ProfileViewModel (407) + UI delegates
 ```
 
 ---
