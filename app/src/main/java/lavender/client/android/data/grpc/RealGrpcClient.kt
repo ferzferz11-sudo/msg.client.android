@@ -151,12 +151,23 @@ object RealGrpcClient {
     // ====== Module: Chat List Client ======
     private val chatListClient = GrpcChatListClient(
         getChannel = { getChannel() },
+        getUserId = { currentUserId }
+    )
+
+    // ====== Module: Chat Management Client ======
+    private val chatManagementClient = GrpcChatManagementClient(
+        getChannel = { getChannel() },
         getUserId = { currentUserId },
         getUsername = { currentUsername },
-        chatDeletedEvent = _chatDeletedEvent,
-        allUsers = _allUsers,
-        serverTime = _serverTime,
         scope = scope
+    )
+
+    // ====== Module: Chat Aux Client ======
+    private val chatAuxClient = GrpcChatAuxClient(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        allUsers = _allUsers,
+        serverTime = _serverTime
     )
 
     // ====== Module: Profile Client ======
@@ -634,23 +645,27 @@ object RealGrpcClient {
     fun getChats(username: String, skipCache: Boolean = false, callback: (List<ChatInfo>) -> Unit) { chatListClient.getChats(username, skipCache, callback) }
     fun getAllChats(callback: (List<ChatInfo>) -> Unit) { chatListClient.getAllChats(callback) }
     fun getChatListVersion(u: String, cb: (Long) -> Unit) { chatListClient.getChatListVersion(u, cb) }
-    fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatListClient.registerToken(user, token, pushEnabled) }
-    fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatListClient.fetchUserId(username, callback) }
-    fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatListClient.loadAllUsers(cb) }
-    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) { chatListClient.getAIChats(userId, callback) }
-    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) { chatListClient.renameAIChat(chatId, userId, newName, callback) }
-    fun getMutedChats(callback: (List<String>) -> Unit) { chatListClient.getMutedChats(callback) }
-    fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatListClient.setMutedChat(roomId, muted, callback) }
-    fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatListClient.deleteChat(cid, requesterUsername, cb) }
-    fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) { chatListClient.deleteChatWithUserId(cid, userId, username, cb) }
-    fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) { chatListClient.createDirectChat(u1, u2, cb) }
-    fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) { chatListClient.createGroupChat(n, ps, c, type, cb) }
-    fun updateChatAvatar(cid: String, a: String, u: String, fa: String, cb: (Boolean, String) -> Unit) { chatListClient.updateChatAvatar(cid, a, u, fa, cb) }
-    fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) { chatListClient.updateChatSettings(chatId, allowAdd, callback) }
-    fun updateChatName(cid: String, n: String, cb: (Boolean, String) -> Unit) { chatListClient.updateChatName(cid, n, cb) }
-    fun addParticipants(cid: String, us: List<String>, cb: (Boolean, String) -> Unit) { chatListClient.addParticipants(cid, us, cb) }
-    fun addParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatListClient.addParticipant(cid, u, cb) }
-    fun removeParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatListClient.removeParticipant(cid, u, cb) }
+
+    // ====== Chat Management (delegated) ======
+    fun deleteChat(cid: String, requesterUsername: String, cb: (Boolean, String) -> Unit) { chatManagementClient.deleteChat(cid, requesterUsername, cb) }
+    fun deleteChatWithUserId(cid: String, userId: String, username: String, cb: (Boolean, String) -> Unit) { chatManagementClient.deleteChatWithUserId(cid, userId, username, cb) }
+    fun createDirectChat(u1: String, u2: String, cb: (String?) -> Unit) { chatManagementClient.createDirectChat(u1, u2, cb) }
+    fun createGroupChat(n: String, ps: List<String>, c: String, type: String = "group", cb: (String?) -> Unit) { chatManagementClient.createGroupChat(n, ps, c, type, cb) }
+    fun updateChatAvatar(cid: String, a: String, u: String, fa: String, cb: (Boolean, String) -> Unit) { chatManagementClient.updateChatAvatar(cid, a, u, fa, cb) }
+    fun updateChatSettings(chatId: String, allowAdd: Boolean, callback: (Boolean, String) -> Unit) { chatManagementClient.updateChatSettings(chatId, allowAdd, callback) }
+    fun updateChatName(cid: String, n: String, cb: (Boolean, String) -> Unit) { chatManagementClient.updateChatName(cid, n, cb) }
+    fun addParticipants(cid: String, us: List<String>, cb: (Boolean, String) -> Unit) { chatManagementClient.addParticipants(cid, us, cb) }
+    fun addParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatManagementClient.addParticipant(cid, u, cb) }
+    fun removeParticipant(cid: String, u: String, cb: (Boolean, String) -> Unit) { chatManagementClient.removeParticipant(cid, u, cb) }
+
+    // ====== Chat Aux (delegated) ======
+    fun registerToken(user: String, token: String, pushEnabled: Boolean) { chatAuxClient.registerToken(user, token, pushEnabled) }
+    fun fetchUserId(username: String, callback: (String?, Boolean) -> Unit) { chatAuxClient.fetchUserId(username, callback) }
+    fun loadAllUsers(cb: (List<UserInfoProto>) -> Unit) { chatAuxClient.loadAllUsers(cb) }
+    fun getAIChats(userId: String, callback: (List<AIChatInfo>) -> Unit) { chatAuxClient.getAIChats(userId, callback) }
+    fun renameAIChat(chatId: String, userId: String, newName: String, callback: (Boolean, String) -> Unit) { chatAuxClient.renameAIChat(chatId, userId, newName, callback) }
+    fun getMutedChats(callback: (List<String>) -> Unit) { chatAuxClient.getMutedChats(callback) }
+    fun setMutedChat(roomId: String, muted: Boolean, callback: (Boolean) -> Unit) { chatAuxClient.setMutedChat(roomId, muted, callback) }
 
     // ====== Profile (delegated) ======
     fun getDevices(uid: String, cb: (List<DeviceInfoProto>) -> Unit) { profileClient.getDevices(uid, cb) }

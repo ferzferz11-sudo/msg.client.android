@@ -20,26 +20,14 @@ import lavender.client.android.data.proto.*
 class GrpcChatListClientTest {
 
     private lateinit var channel: ManagedChannel
-    private lateinit var chatDeletedEvent: MutableStateFlow<String?>
-    private lateinit var allUsers: MutableStateFlow<List<UserInfoProto>>
-    private lateinit var serverTime: MutableStateFlow<com.google.protobuf.Timestamp?>
     private lateinit var client: GrpcChatListClient
-    private val scope = CoroutineScope(Dispatchers.Unconfined)
 
     @Before
     fun setup() {
         channel = mockk(relaxed = true)
-        chatDeletedEvent = MutableStateFlow(null)
-        allUsers = MutableStateFlow(emptyList())
-        serverTime = MutableStateFlow(null)
         client = GrpcChatListClient(
             getChannel = { channel },
-            getUserId = { "user-uuid-123" },
-            getUsername = { "testuser" },
-            chatDeletedEvent = chatDeletedEvent,
-            allUsers = allUsers,
-            serverTime = serverTime,
-            scope = scope
+            getUserId = { "user-uuid-123" }
         )
     }
 
@@ -66,7 +54,7 @@ class GrpcChatListClientTest {
     }
 
     @Test
-    fun getChats_emptyServerResponse_returnsEmptyList() = runTest {
+    fun getChats_emptyServerResponse_returnsNull() = runTest {
         val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
         every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
@@ -83,8 +71,7 @@ class GrpcChatListClientTest {
     @Test
     fun getChats_nullChannel_returnsEmptyList() = runTest {
         val nullChannelClient = GrpcChatListClient(
-            getChannel = { null }, getUserId = { "user-uuid" }, getUsername = { "testuser" },
-            chatDeletedEvent = chatDeletedEvent, allUsers = allUsers, serverTime = serverTime, scope = scope
+            getChannel = { null }, getUserId = { "user-uuid" }
         )
         var result: List<ChatInfo>? = null
         nullChannelClient.getChats(username = "testuser", callback = { result = it })
@@ -109,6 +96,38 @@ class GrpcChatListClientTest {
     }
 
     @Test
+    fun getAllChats_success_returnsChatList() = runTest {
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            val chatProto = GetAllChatsResponseProto.ChatInfoProto(id = "chat-1", name = "All Chat")
+            listener.onMessage(GetAllChatsResponseProto(chats = listOf(chatProto)))
+            listener.onClose(Status.OK, Metadata())
+        }
+
+        var result: List<ChatInfo>? = null
+        client.getAllChats { result = it }
+        assertNotNull("Result should not be null", result)
+    }
+
+    @Test
+    fun getChatListVersion_sendsRequest() = runTest {
+        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
+        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
+        every { mockCall.start(any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            firstArg<ClientCall.Listener<Any>>()
+                .onMessage(GetChatListVersionResponseProto(version = 42))
+        }
+
+        var version: Long? = null
+        client.getChatListVersion("testuser") { version = it }
+        assertEquals("Version", 42L, version)
+    }
+
+    @Test
     fun pinChat_v2Supported_callsPin() = runTest {
         val isV2 = ProfileClient.isChatV2Supported()
         assertFalse("Should return false when service version not set", isV2)
@@ -118,50 +137,5 @@ class GrpcChatListClientTest {
     fun searchChats_v1Fallback_returnsEmptyList() = runTest {
         val isV2 = ProfileClient.isChatV2Supported()
         assertFalse("Should be v1 fallback in test env", isV2)
-    }
-
-    @Test
-    fun deleteChat_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(DeleteChatResponseProto(success = true))
-        }
-
-        var success = false
-        client.deleteChat("chat-1", "testuser") { s, _ -> success = s }
-        assertTrue("Delete should succeed", success)
-    }
-
-    @Test
-    fun createDirectChat_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(CreateDirectChatResponseProto(chatId = "new-chat-id", success = true))
-        }
-
-        var chatId: String? = null
-        client.createDirectChat("user1", "user2") { chatId = it }
-        assertEquals("Chat ID", "new-chat-id", chatId)
-    }
-
-    @Test
-    fun createGroupChat_sendsRequest() = runTest {
-        val mockCall = mockk<ClientCall<Any, Any>>(relaxed = true)
-        every { channel.newCall<Any, Any>(any(), any()) } returns mockCall
-        every { mockCall.start(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(CreateGroupChatResponseProto(chatId = "group-chat-id", success = true))
-        }
-
-        var chatId: String? = null
-        client.createGroupChat("Test Group", listOf("user1", "user2"), "user1") { chatId = it }
-        assertEquals("Group Chat ID", "group-chat-id", chatId)
     }
 }
