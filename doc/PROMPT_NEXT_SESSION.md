@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.13 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-21
+**Версия:** v1.3.0.14 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-21
 
 ---
 
@@ -56,41 +56,27 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 
 ---
 
-## Итог сессии v1.3.0.13
+## Итог сессии v1.3.0.14
 
 ### Выполнено
 
-**Version Catalog (Gradle):**
-- Все зависимости вынесены в `gradle/libs.versions.toml` (jsch, json, protobuf plugin)
-- Обновлены 5 зависимостей: webrtc 144.7559.09, security-crypto 1.1.0, mockk 1.14.11, turbine 1.2.1, coroutines-test 1.11.0
+**Update System — fix индикатора обновлений:**
+- Индикатор в toolbar теперь показывает "Установить обновление" когда APK скачан (вместо "Доступно обновление")
+- Валидация существования APK файла при каждом показе — сброс `update_downloaded` если файл удалён
 
-**RealGrpcClient — очистка линтер-предупреждений:**
-- Подозрительная индентация в JWT refresh блоке
-- `currentServerPort` → `private`
-- `checkServerHealth()` обёрнут в `withContext(Dispatchers.IO)` — blocking call на Main thread устранён
-- Удалены неиспользуемые: `getAuthMetadata()`, `saveFavoriteMessage()`, параметр `context` из `fetchServersList()`
-- Убраны冗余ные `io.grpc.*` квалификатора
-
-**Исправлено 23 падающих unit-теста (332/332):**
-- AiV2ModelsTest: enum count 7→8 (REVE)
-- AiV2MarshallersTest: default proto serialization
-- GrpcAuthClientTest: signOut/revokeDevice callback
-- GrpcClientFacadeTest: isSupported() assertions
-- GrpcConnectionManagerTest: mocked CallManager, Dispatchers.setMain
-- GrpcMessageClientTest: handleDeleteMessageSignal assertion
-- GrpcUnaryCallHelperTest: onClose in mocks
-
-**Bug fix:**
-- Пересылка сообщений (forward) — `WidgetManager.getOrCreate` кешировал ListBottomSheet с уничтоженным context. Теперь создаётся новый инстанс
-
-**Build warnings (0 warnings в compileReleaseKotlin):**
-- `@file:Suppress("DEPRECATION")` в CredentialStore
-- `@Suppress("DEPRECATION")` на FirebaseMessaging.token
-- `@Suppress("OVERRIDE_DEPRECATION")` на LavenderMessagingService.onNewToken
+**Deprecation cleanup (8 suppressions removed, 0 release warnings):**
+- Удалены stale `@Suppress("DEPRECATION")` для `FirebaseMessaging.getInstance()` (BOM 34.15.0 — не deprecated)
+- `FirebaseMessaging.getInstance().token` → `getToken()` (deprecated but no alternative)
+- `super.onNewToken(token)` удалён (no-op), добавлен `@Suppress("OVERRIDE_DEPRECATION")` на override
+- `CredentialStore.kt` — `@file:Suppress("DEPRECATION")` с комментарием (EncryptedSharedPreferences/MasterKey deprecated без замены)
+- `stopForeground(STOP_FOREGROUND_REMOVE)` → `ServiceCompat.stopForeground()` (API-safe)
+- `SOFT_INPUT_ADJUST_RESIZE` → `WindowCompat.setDecorFitsSystemWindows(window, false)`
+- `behavior.peekHeight` → `behavior.state = STATE_EXPANDED`
+- Kotlin version обновлён: 2.3.21 → 2.4.0
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.14+)
+## Бэклог — Следующая сессия (v1.3.0.15+)
 
 ### Приоритет 1: Серверные исправления
 | Задача | Статус |
@@ -132,7 +118,7 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 3. userId (UUID) — всегда как ключ, НЕ username
 4. Все новые строки ОДНОВРЕМЕННО в `values/strings.xml` + `values-ru/strings.xml`
 5. getString() НЕ в полях Activity — только в методах
-6. Kotlin 2.3.21: `cont.resume(value, onCancellation = {})`
+6. Kotlin 2.4.0: `cont.resume(value, onCancellation = {})`
 7. Все ошибки через `ErrorHandler.handle()` — НЕ `Log.e`
 8. v2 server only — никаких v1 fallbacks
 9. Chat toolbar: фиксированная высота `@dimen/custom_toolbar_height`, elevation 0dp

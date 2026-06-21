@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.13 | **Updated:** 2026-06-21
+**Version:** v1.3.0.14 | **Updated:** 2026-06-21
 
 ---
 
@@ -379,7 +379,7 @@ lifecycleScope.launch {
 3. userId (UUID) — always as key, NOT username
 4. i18n: all new strings simultaneously in values/strings.xml + values-ru/strings.xml
 5. Do NOT initialize getString() in Activity class fields
-6. Kotlin 2.3.21: cont.resume(value, onCancellation = {})
+6. Kotlin 2.4.0: cont.resume(value, onCancellation = {})
 7. All errors via `ErrorHandler.handle()` — NOT direct `Log.e`
 8. v2 server only — no v1 legacy fallbacks
 9. Chat toolbars: fixed `@dimen/custom_toolbar_height`, elevation 0dp

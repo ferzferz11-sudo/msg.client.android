@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.13 | **Updated:** 2026-06-21
+**Version:** v1.3.0.14 | **Updated:** 2026-06-21
 
 ---
 
@@ -38,19 +38,19 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~150 |
-| Activities | 25 |
-| gRPC modules | 26 |
+| Kotlin files | ~174 |
+| Activities | 29 |
+| gRPC files | 22 |
 | Unit tests | 332 (all passing) |
-| Layout XML | 109 |
-| String entries | 829 (EN + RU) |
+| Layout XML | 111 |
+| String entries | 772 (EN) + 772 (RU) |
 | Min SDK | 29 (Android 10) |
-| Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.13) |
+| Kotlin | 2.4.0 |
+| Branch | feat/1.3.0.x (v1.3.0.14) |
 
 ---
 
-## Architecture Overview (v1.3.0.13)
+## Architecture Overview (v1.3.0.14)
 
 ```
 GrpcClient (facade)

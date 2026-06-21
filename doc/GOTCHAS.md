@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.0.13 | **Updated:** 2026-06-21
+**Version:** v1.3.0.14 | **Updated:** 2026-06-21
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
