@@ -1,6 +1,24 @@
 # Lavender Messenger — Plan
 
-**Version:** v1.1.3.40 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+**Version:** v1.1.3.41 | **Branch:** feat/1.1.3.x | **Updated:** 2026-06-21
+
+---
+
+## Completed — v1.1.3.41 (GrpcClient Split + Unit Tests)
+
+### GrpcChatListClient Split
+- ✅ GrpcChatListClient: 642 → 244 LOC (-62%) — chat list operations only
+- ✅ GrpcChatManagementClient (new, 260 LOC) — create/delete/update chats, participants
+- ✅ GrpcChatAuxClient (new, 187 LOC) — users, AI chats, FCM tokens, mute
+- ✅ RealGrpcClient updated to use all 3 clients with proper delegation
+- ✅ Removed unused constructor params (chatDeletedEvent, allUsers, serverTime, scope) from GrpcChatListClient
+
+### Unit Tests (181 total, was ~120)
+- ✅ GrpcChatManagementClientTest (11 tests) — delete, create, update, participants
+- ✅ GrpcChatAuxClientTest (8 tests) — users, AI chats, FCM, mute
+- ✅ ChatViewModelTest (11 tests) — Message model, state, list operations
+- ✅ AiChatManagerTest (13 tests) — initial state, session/message/settings models
+- ✅ Updated GrpcChatListClientTest (8 tests) — new constructor, removed moved methods
 
 ---
 
@@ -48,15 +66,12 @@
 ### Приоритет 1: Архитектура
 | Задача | Что | LOC Эффект | Оценка |
 |--------|-----|-----------|--------|
-| Разделить GrpcChatListClient | 3 класса | 642→3×200 | 1h |
 | Разделить MessageAdapter | ViewHolder по типам | 870→~300 | 2h |
 
 ### Приоритет 2: Тесты
 | Задача | Оценка |
 |--------|--------|
-| Unit-тесты для ChatViewModel | 2h |
 | Unit-тесты для SessionManager | 2h |
-| Unit-тесты для AiChatManager | 1h |
 
 ### Приоритет 3: Безопасность
 | Задача | Оценка |
