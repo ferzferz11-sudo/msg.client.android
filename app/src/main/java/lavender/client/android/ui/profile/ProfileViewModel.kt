@@ -77,6 +77,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private var profileUserId: String = ""
 
     // ===== Initialize from intent data =====
+
     fun initFromIntent(
         username: String,
         avatarUrl: String,
@@ -122,7 +123,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private fun loadGroupProfile() {
         val currentMe = grpcClient.getCurrentUsername() ?: ""
         _isMeAdmin.value = currentMe == creator && creator.isNotEmpty()
-        // Group-specific data is already loaded from intent + refreshParticipants
     }
 
     private fun loadUserProfile() {
@@ -132,7 +132,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 val userId = withContext(Dispatchers.IO) {
-                    // Use fetchUserId via callback wrapped in suspend
                     var result: String? = null
                     var success = false
                     grpcClient.fetchUserId(uname) { id, ok ->
@@ -157,10 +156,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (profile != null) {
-                    // Update profile fields via main thread
                     withContext(Dispatchers.Main) {
-                        // These would need actual profile response parsing
-                        // For now, keep existing behavior
+                        // Profile data would be parsed here
+                        // The actual parsing depends on the profile response type
                     }
                 }
             } catch (e: Exception) {
@@ -229,9 +227,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteGroup(callback: () -> Unit) {
-        val intent = android.content.Intent().apply {
-            // Navigation handled by Activity
-        }
         callback()
     }
 
@@ -392,8 +387,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun extractUrlsFromResponse(response: String): Pair<String, String> {
-        val urlPattern = """"url"\s*:\s*"([^"]+)"""".toRegex()
-        val fullUrlPattern = """"full_url"\s*:\s*"([^"]+)"""".toRegex()
+        val urlPattern = """\"url"\s*:\s*"([^"]+)"\s*""".toRegex()
+        val fullUrlPattern = """\"full_url"\s*:\s*"([^"]+)"\s*""".toRegex()
         return Pair(
             urlPattern.find(response)?.groupValues?.get(1) ?: "",
             fullUrlPattern.find(response)?.groupValues?.get(1) ?: ""
