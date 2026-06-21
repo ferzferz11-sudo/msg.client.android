@@ -259,6 +259,26 @@ object GrpcClient {
 
     fun clearMessages() = realGrpcClient.clearMessages()
 
+    // ======= Messages V2 Operations =======
+
+    fun startChatV2(roomId: String, onMessageReceived: (Message) -> Unit) =
+        realGrpcClient.startChatV2(roomId, onMessageReceived)
+
+    fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = 100, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) =
+        realGrpcClient.loadHistoryV2(roomId, cursor, limit, onCompletion)
+
+    fun sendMessageV2(message: Message, onResult: ((lavender.client.android.data.proto.MessageV2Proto?) -> Unit)? = null) =
+        realGrpcClient.sendMessageV2(message, onResult)
+
+    fun editMessageV2(messageId: String, text: String, callback: (Boolean, String) -> Unit = { _, _ -> }) =
+        realGrpcClient.editMessageV2(messageId, text, callback)
+
+    fun deleteMessageV2(messageIds: List<String>, callback: (Boolean) -> Unit = {}) =
+        realGrpcClient.deleteMessageV2(messageIds, callback)
+
+    fun setReactionV2(messageId: String, username: String, emoji: String) =
+        realGrpcClient.setReactionV2(messageId, username, emoji)
+
     // ======= Profile Operations =======
 
     fun updateUsername(

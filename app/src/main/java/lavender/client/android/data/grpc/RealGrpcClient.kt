@@ -216,6 +216,21 @@ object RealGrpcClient {
         }
     )
 
+    // ====== Module: Message V2 Client ======
+    val messageV2Client = GrpcMessageV2Client(
+        getChannel = { getChannel() },
+        getUserId = { currentUserId },
+        getUsername = { currentUsername },
+        messages = _messages,
+        allUsers = { _allUsers.value },
+        deletedMessageHashes = deletedMessageHashes,
+        scope = scope,
+        appContext = { appContext },
+        onReadReceipt = { roomId, reader ->
+            scope.launch { _readReceiptEvent.emit(Pair(roomId, reader)) }
+        }
+    )
+
     // ====== Module: Server Discovery Client ======
     private val serverDiscoveryClient = GrpcServerDiscoveryClient(
         getSavedServerAddress = {
@@ -235,6 +250,7 @@ object RealGrpcClient {
     private var currentUsername: String? = null
     private var currentUserId: String? = null
     private var requestObserver: StreamObserver<MessageProto>? = null
+    private var chatV2RequestObserver: StreamObserver<ChatV2MessageProto>? = null
     private var lastAuthWasJwt: Boolean = false
     private var isRetrying = false
     private var lastChatRequest: LastChatRequest? = null
@@ -257,7 +273,7 @@ object RealGrpcClient {
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         appContext = context?.applicationContext
         if (context != null) {
-            val prefs = context.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+            val prefs = context.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
             if (_adminUserId.value == null) {
                 val savedId = prefs.getString("admin_user_id", null)
                 if (!savedId.isNullOrEmpty()) _adminUserId.value = savedId
@@ -274,6 +290,7 @@ object RealGrpcClient {
     fun disconnect() {
         connectionManager.disconnect()
         requestObserver = null
+        chatV2RequestObserver = null
         typingClient.clearTypingObserver()
         callClient.clearCallObserver()
         lastChatRequest = null
@@ -293,7 +310,7 @@ object RealGrpcClient {
                 val profile = ProfileClient.getProfile(ctx)
                 if (profile != null) {
                     _isSuperAdmin.value = profile.isSuperAdmin
-                    ctx.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE).edit {
+                    ctx.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE).edit {
                         putBoolean("is_super_admin", profile.isSuperAdmin)
                         if (profile.isSuperAdmin && profile.userId.isNotEmpty()) {
                             if (_adminUserId.value == null) _adminUserId.value = profile.userId
@@ -602,16 +619,17 @@ object RealGrpcClient {
                             scope.launch {
                                 val ctx = appContext
                                 if (ctx != null) {
-                    val refreshToken = lavender.client.android.data.auth.AuthManager.getRefreshToken(ctx)
+                    val refreshToken = AuthManager.getRefreshToken(ctx)
                                         if (!refreshToken.isNullOrEmpty()) {
-                                            val refreshResult = kotlinx.coroutines.suspendCancellableCoroutine<lavender.client.android.data.proto.RefreshTokenResponseProto?> { cont ->
-                                                GrpcClient.refreshToken(refreshToken) { response, _ ->
-                                                if (cont.isActive) {
-                                                    if (response != null && response.accessToken.isNotEmpty()) cont.resumeWith(Result.success(response))
-                                                    else cont.resumeWith(Result.success(null))
+                                            val refreshResult =
+                                                suspendCancellableCoroutine<lavender.client.android.data.proto.RefreshTokenResponseProto?> { cont ->
+                                                    GrpcClient.refreshToken(refreshToken) { response, _ ->
+                                                    if (cont.isActive) {
+                                                        if (response != null && response.accessToken.isNotEmpty()) cont.resumeWith(Result.success(response))
+                                                        else cont.resumeWith(Result.success(null))
+                                                    }
                                                 }
                                             }
-                                        }
                                         if (refreshResult != null) {
                                             val userId = lavender.client.android.data.auth.AuthManager.getUserId(ctx)
                                             val username = lavender.client.android.data.auth.AuthManager.getUsername(ctx)
@@ -737,6 +755,128 @@ object RealGrpcClient {
     private fun startTypingStream() { typingClient.startTypingStream() }
     fun sendTypingSignal(username: String, isTyping: Boolean) {
         typingClient.sendTypingSignal(username, isTyping, currentRoomId, currentUserId ?: "")
+    }
+
+    // ====== ChatV2 Stream ======
+
+    fun startChatV2(roomId: String, onMessageReceived: (Message) -> Unit) {
+        val currentChannel = getChannel() ?: return
+        if (chatV2RequestObserver != null) {
+            // Already connected, just switch room
+            val switchMsg = ChatV2MessageProto(roomId = roomId)
+            try { chatV2RequestObserver?.onNext(switchMsg) } catch (_: Exception) {}
+            return
+        }
+
+        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ChatV2MessageProto, ChatV2MessageProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+            .setFullMethodName("messenger.ChatService/ChatV2")
+            .setRequestMarshaller(ChatV2MessageMarshaller())
+            .setResponseMarshaller(ChatV2MessageMarshaller())
+            .build()
+
+        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val observer = call.startChatV2Stream(onMessageReceived)
+        chatV2RequestObserver = observer
+
+        // First message: auth
+        val ctx = appContext
+        if (ctx != null) {
+            val accessToken = lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)
+            if (!accessToken.isNullOrEmpty()) {
+                val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId)
+                observer.onNext(firstMsg)
+            } else {
+                Log.w(TAG, "ChatV2: no JWT token available")
+                return
+            }
+        }
+    }
+
+    private fun io.grpc.ClientCall<ChatV2MessageProto, ChatV2MessageProto>.startChatV2Stream(onMessageReceived: (Message) -> Unit): StreamObserver<ChatV2MessageProto> {
+        val responseObserver = object : StreamObserver<ChatV2MessageProto> {
+            override fun onNext(value: ChatV2MessageProto) {
+                // Handle typing
+                if (value.typing != null) {
+                    // Could update typingUsers here if needed
+                    return
+                }
+                // Handle system messages
+                if (value.system != null) {
+                    when (value.system.type) {
+                        "DELETE_MESSAGE" -> {
+                            val deletedId = value.system.message
+                            messageClient.handleDeleteMessageSignal(deletedId)
+                            if (deletedId.isNotEmpty()) {
+                                _messages.update { current -> current.filterNot { it.id == deletedId } }
+                            }
+                        }
+                        "READ_ALL" -> {
+                            val reader = value.system.message
+                            val targetRoomId = value.roomId.ifEmpty { currentRoomId }
+                            messageClient.handleReadAllSignal(reader, targetRoomId, currentRoomId)
+                        }
+                        "SERVER_SHUTTINGDOWN" -> {
+                            _serverShuttingDown.value = true
+                            _connectionStatus.value = ConnectionStatus.RECONNECTING
+                        }
+                    }
+                    return
+                }
+                // Handle message
+                if (value.message != null) {
+                    val msg = messageV2Client.messageV2ToDomain(value.message)
+                    onMessageReceived(msg)
+                }
+            }
+
+            override fun onError(t: Throwable) {
+                ErrorHandler.handle("RealGrpcClient.chatV2Stream", t)
+                chatV2RequestObserver = null
+            }
+
+            override fun onCompleted() {
+                chatV2RequestObserver = null
+            }
+        }
+
+        this.start(object : io.grpc.ClientCall.Listener<ChatV2MessageProto>() {
+            override fun onMessage(message: ChatV2MessageProto) { responseObserver.onNext(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!status.isOk) {
+                    chatV2RequestObserver = null
+                }
+            }
+        }, io.grpc.Metadata())
+        this.request(Int.MAX_VALUE)
+
+        return object : StreamObserver<ChatV2MessageProto> {
+            override fun onNext(value: ChatV2MessageProto) = this@startChatV2Stream.sendMessage(value)
+            override fun onError(t: Throwable) = this@startChatV2Stream.cancel("Error in request stream", t)
+            override fun onCompleted() = this@startChatV2Stream.halfClose()
+        }
+    }
+
+    // ====== ChatV2 delegated methods ======
+
+    fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = 100, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
+        messageV2Client.loadHistoryV2(roomId, cursor, limit, onCompletion)
+    }
+
+    fun sendMessageV2(message: Message, onResult: ((MessageV2Proto?) -> Unit)? = null) {
+        messageV2Client.sendMessageV2(message, onResult)
+    }
+
+    fun editMessageV2(id: String, text: String, cb: (Boolean, String) -> Unit) {
+        messageV2Client.editMessageV2(id, text, cb)
+    }
+
+    fun deleteMessageV2(messageIds: List<String>, cb: (Boolean) -> Unit = {}) {
+        messageV2Client.deleteMessageV2(messageIds, cb)
+    }
+
+    fun setReactionV2(messageId: String, username: String, emoji: String) {
+        messageV2Client.setReactionV2(messageId, username, emoji)
     }
 
     // ====== Calls (delegated) ======

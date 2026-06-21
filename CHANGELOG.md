@@ -1,5 +1,25 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.12] - 2026-06-21
+
+### Добавлено
+
+**Messages V2 — полная интеграция с серверным протоколом:**
+- `MessagesV2Proto.kt` — 14 proto-классов: `MessageV2Proto`, `MessageMediaProto`, `MessageReplyProto`, `ChatV2MessageProto`, `ChatV2TypingProto`, `ChatV2SystemProto`, `GetHistoryV2Request/ResponseProto`, `SendMessageV2Request/ResponseProto`, `EditMessageV2Request/ResponseProto`, `DeleteMessageV2Request/ResponseProto`, `SetReactionV2Request/ResponseProto`
+- `MessagesV2Marshallers.kt` — 16 marshallers для ChatV2 bidirectional stream + 5 unary RPCs
+- `GrpcMessageV2Client.kt` — v2 клиент: `loadHistoryV2()` (cursor pagination), `sendMessageV2()`, `editMessageV2()`, `deleteMessageV2()`, `setReactionV2()`, конвертация доменных моделей (sender_id → username, JSON reactions, oneof content)
+- `RealGrpcClient.startChatV2()` — ChatV2 bidirectional stream (`messenger.ChatService/ChatV2`), авторизация через `jwt_token`, приём `MessageV2` напрямую
+- `ProtoUtils.createMessageV2Proto()` / `createMessageFromV2Proto()` — конвертация domain ↔ proto
+- `GrpcClient` facade: `startChatV2`, `loadHistoryV2`, `sendMessageV2`, `editMessageV2`, `deleteMessageV2`, `setReactionV2`
+- ChatV2 stream: обработка system signals (DELETE_MESSAGE, READ_ALL, SERVER_SHUTTINGDOWN)
+
+### Тесты
+
+- `MessagesV2MarshallersTest` — 60 тестов: proto defaults, values, equals, marshallers round-trip (ChatV2Message, MessageV2, GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2), edge cases (skip unknown fields, empty bytes)
+- `MessagesV2DomainTest` — 44 теста: domain conversion (text/image/voice/reply/reactions/e2ee), round-trip (domain → proto → domain), GrpcMessageV2Client conversion (messageV2ToDomain, domainToSendRequest), cursor pagination, unknown sender, invalid reactions JSON
+
+---
+
 ## [1.3.0.11] - 2026-06-21
 
 ### Добавлено

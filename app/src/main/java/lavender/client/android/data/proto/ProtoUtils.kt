@@ -97,6 +97,111 @@ object ProtoUtils {
             .build()
     }
 
+    // ======= Messages V2 =======
+    fun createMessageV2Proto(message: Message): MessageV2Proto {
+        val timestamp = Timestamp.newBuilder()
+            .setSeconds(message.timestamp / 1000)
+            .setNanos(((message.timestamp % 1000) * 1000000).toInt())
+            .build()
+
+        val media = when {
+            message.voiceUrl.isNotEmpty() -> MessageMediaProto(type = "voice", url = message.voiceUrl, duration = message.duration)
+            message.imageUrl.isNotEmpty() -> MessageMediaProto(
+                type = "image",
+                url = message.imageUrl,
+                urls = message.imageUrls.ifEmpty { listOf(message.imageUrl).filter { it.isNotEmpty() } }
+            )
+            else -> null
+        }
+
+        val reply = if (message.repliedToMessageId.isNotEmpty()) {
+            MessageReplyProto(messageId = message.repliedToMessageId, preview = message.repliedToText)
+        } else null
+
+        val reactionsBytes = org.json.JSONObject().let { obj ->
+            message.reactions.forEach { obj.put(it.user, it.emoji) }
+            obj.toString().toByteArray()
+        }
+
+        return MessageV2Proto(
+            id = message.id,
+            roomId = message.roomId,
+            senderId = message.userId,
+            text = message.text,
+            media = media,
+            reply = reply,
+            edited = message.edited,
+            isRead = message.isRead,
+            createdAt = timestamp,
+            reactions = reactionsBytes,
+            isE2EE = message.isE2EE,
+            e2eePayload = message.e2eePayload
+        )
+    }
+
+    fun createMessageFromV2Proto(proto: MessageV2Proto, resolveUsername: (String) -> String): Message {
+        val timestamp = proto.createdAt?.let {
+            it.seconds * 1000 + (it.nanos / 1000000)
+        } ?: System.currentTimeMillis()
+
+        val username = resolveUsername(proto.senderId)
+
+        var imageUrl = ""; var imageUrls = emptyList<String>()
+        var voiceUrl = ""; var duration = 0
+        var repliedToMessageId = ""; var repliedToText = ""
+
+        when {
+            proto.media != null -> {
+                when (proto.media.type) {
+                    "image" -> {
+                        imageUrl = proto.media.url
+                        imageUrls = proto.media.urls.ifEmpty { listOf(proto.media.url).filter { it.isNotEmpty() } }
+                    }
+                    "voice" -> {
+                        voiceUrl = proto.media.url
+                        duration = proto.media.duration
+                    }
+                }
+            }
+            proto.reply != null -> {
+                repliedToMessageId = proto.reply.messageId
+                repliedToText = proto.reply.preview
+            }
+        }
+
+        val reactions = if (proto.reactions.isNotEmpty()) {
+            try {
+                val obj = org.json.JSONObject(String(proto.reactions))
+                val result = mutableListOf<Reaction>()
+                for (key in obj.keys()) {
+                    val emoji = obj.getString(key)
+                    if (emoji.isNotEmpty()) result.add(Reaction(user = key, emoji = emoji))
+                }
+                result
+            } catch (_: Exception) { emptyList() }
+        } else emptyList()
+
+        return Message(
+            id = proto.id,
+            user = username,
+            text = proto.text,
+            timestamp = timestamp,
+            reactions = reactions,
+            repliedToMessageId = repliedToMessageId,
+            repliedToText = repliedToText,
+            roomId = proto.roomId,
+            isRead = proto.isRead,
+            imageUrl = imageUrl,
+            imageUrls = imageUrls,
+            edited = proto.edited,
+            voiceUrl = voiceUrl,
+            duration = duration,
+            userId = proto.senderId,
+            isE2EE = proto.isE2EE,
+            e2eePayload = proto.e2eePayload
+        )
+    }
+
     fun parseTimestampFromProto(stream: java.io.InputStream): Timestamp {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
         var seconds = 0L

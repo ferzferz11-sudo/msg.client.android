@@ -157,6 +157,36 @@ AiV2ChatUseCase
   └── updateChatSettings(sessionId, apiKey, model) → UpdateAIChatSettingsResponseProto
 ```
 
+### Messages V2 Pattern (v1.3.0.12)
+```
+ChatV2 bidirectional stream (messenger.ChatService/ChatV2)
+  ├── Request/Response: ChatV2Message (oneof payload: message/typing/system)
+  ├── Auth: first message with jwt_token + room_id
+  ├── MessageV2: sender_id (UUID), oneof content (text/media/reply), JSON reactions
+  └── System: type + message (DELETE_MESSAGE, READ_ALL, SERVER_SHUTTINGDOWN)
+
+Unary RPCs:
+  ├── GetHistoryV2(room_id, limit, cursor) → messages, next_cursor, has_more
+  ├── SendMessageV2(room_id, text/media, reply_to_id, e2ee) → message, success
+  ├── EditMessageV2(message_id, text) → success, message
+  ├── DeleteMessageV2(message_ids, requester_user_id) → success
+  └── SetReactionV2(message_id, emoji) → success, reactions (JSON bytes)
+
+Domain mapping:
+  MessageV2Proto → Message (sender_id → username via allUsers lookup)
+  reactions: JSON bytes {"uuid":"emoji",...} → List<Reaction>
+  media: {type: "image"|"voice", url, urls, duration}
+  reply: {message_id, preview}
+
+Files:
+  ├── MessagesV2Proto.kt — proto data classes (MessageV2Proto, ChatV2MessageProto, etc.)
+  ├── MessagesV2Marshallers.kt — wire format marshallers
+  ├── GrpcMessageV2Client.kt — unary RPCs + domain conversion
+  ├── ProtoUtils.kt — createMessageV2Proto(), createMessageFromV2Proto()
+  ├── RealGrpcClient.kt — startChatV2(), loadHistoryV2(), sendMessageV2(), etc.
+  └── GrpcClient.kt — facade methods for v2 operations
+```
+
 ### Cursor Pagination Pattern (v1.3.0.9)
 ```
 ChatListViewModel
