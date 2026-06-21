@@ -38,7 +38,7 @@ class GrpcFavoritesClient(
         call.request(1)
     }
 
-    fun removeFavorite(userId: String, messageId: String, callback: (Boolean) -> Unit) {
+    fun removeFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) {
         val currentChannel = getChannel() ?: return
         val call = currentChannel.newCall(
             io.grpc.MethodDescriptor.newBuilder<RemoveFavoriteRequestProto, RemoveFavoriteResponseProto>()
@@ -50,7 +50,7 @@ class GrpcFavoritesClient(
             io.grpc.CallOptions.DEFAULT
         )
         call.start(object : io.grpc.ClientCall.Listener<RemoveFavoriteResponseProto>() {
-            override fun onMessage(message: RemoveFavoriteResponseProto) { callback(message.success) }
+            override fun onMessage(message: RemoveFavoriteResponseProto) { callback(message.success, if (message.success) "Removed" else "Failed") }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {}
         }, io.grpc.Metadata())
         call.sendMessage(RemoveFavoriteRequestProto(userId, messageId))

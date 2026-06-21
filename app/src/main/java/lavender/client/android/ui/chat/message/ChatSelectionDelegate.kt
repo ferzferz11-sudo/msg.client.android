@@ -8,19 +8,16 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
 import androidx.core.graphics.toColorInt
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.Message
-import lavender.client.android.ui.adapter.MessageAdapter
-import lavender.client.android.ui.widget.ListBottomSheet
-import lavender.client.android.ui.widget.StandardBottomSheet
-import lavender.client.android.ui.widget.WidgetManager
 import lavender.client.android.theme.ThemeStore
-import lavender.client.android.data.grpc.*
+import lavender.client.android.ui.adapter.MessageAdapter
+import lavender.client.android.ui.widget.StandardBottomSheet
 
 /**
  * Selection mode: toolbar with copy/reply/pin/delete/forward actions.
@@ -165,7 +162,7 @@ class ChatSelectionDelegate(
                     Toast.makeText(activity, activity.getString(R.string.no_other_chats), Toast.LENGTH_SHORT).show()
                     return@runOnUiThread
                 }
-                val sheet = WidgetManager.getOrCreate("forward_sheet") { ListBottomSheet(activity) }
+                val sheet = lavender.client.android.ui.widget.ListBottomSheet(activity)
                     .setTitle(activity.getString(R.string.forward_to))
                 val forwardAdapter = lavender.client.android.ui.adapter.ForwardChatAdapter(
                     chats = f, currentUsername = username, avatarCache = grpcClient.getAvatarCache(),

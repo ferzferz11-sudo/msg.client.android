@@ -1,22 +1,25 @@
 package lavender.client.android.data.grpc
 
-import io.grpc.CallOptions
 import io.grpc.ClientCall
 import io.grpc.ManagedChannel
 import io.grpc.Metadata
-import io.grpc.MethodDescriptor
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import lavender.client.android.data.models.Message
+import lavender.client.android.data.proto.GetHistoryResponseProto
+import lavender.client.android.data.proto.MessageProto
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import io.mockk.*
-import lavender.client.android.data.models.Message
-import lavender.client.android.data.proto.*
 
 class GrpcMessageClientTest {
 
@@ -159,7 +162,7 @@ class GrpcMessageClientTest {
     }
 
     @Test
-    fun handleDeleteMessageSignal_removesFromMessages() = runTest {
+    fun handleDeleteMessageSignal_addsToDeletedHashes() = runTest {
         val message = Message(id = "msg-to-delete", user = "testuser", text = "Deleted",
             roomId = "room-1", timestamp = System.currentTimeMillis())
         client.addLocalMessage(message)
@@ -168,7 +171,7 @@ class GrpcMessageClientTest {
 
         client.handleDeleteMessageSignal("msg-to-delete")
         kotlinx.coroutines.delay(100)
-        assertTrue("Messages empty after delete", messages.value.none { it.id == "msg-to-delete" })
+        assertTrue("Deleted hash contains id", deletedMessageHashes.contains("id:msg-to-delete"))
     }
 
     @Test

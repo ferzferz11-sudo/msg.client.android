@@ -3,5 +3,5 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.ksp) apply false
-    id("com.google.protobuf") version "0.10.0" apply false
+    alias(libs.plugins.protobuf) apply false
 }

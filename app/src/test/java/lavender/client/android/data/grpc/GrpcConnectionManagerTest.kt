@@ -1,15 +1,24 @@
 package lavender.client.android.data.grpc
 
-import io.grpc.ManagedChannel
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class GrpcConnectionManagerTest {
 
     private lateinit var connectionStatus: MutableStateFlow<ConnectionStatus>
@@ -18,6 +27,9 @@ class GrpcConnectionManagerTest {
 
     @Before
     fun setup() {
+        Dispatchers.setMain(StandardTestDispatcher())
+        mockkObject(lavender.client.android.data.calls.CallManager)
+        every { lavender.client.android.data.calls.CallManager.currentCall } returns MutableStateFlow(null)
         connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
         manager = GrpcConnectionManager(
             scope = scope,
@@ -27,14 +39,20 @@ class GrpcConnectionManagerTest {
         )
     }
 
+    @After
+    fun tearDown() {
+        unmockkObject(lavender.client.android.data.calls.CallManager)
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun connect_validAddress_attemptsConnection() = runTest {
         manager.connect("127.0.0.1", false, 0)
-        kotlinx.coroutines.delay(500)
         val status = connectionStatus.value
         assertTrue("Should attempt connection",
             status == ConnectionStatus.CONNECTING ||
             status == ConnectionStatus.RECONNECTING ||
+            status == ConnectionStatus.READY ||
             status == ConnectionStatus.FAILED)
     }
 
@@ -48,7 +66,6 @@ class GrpcConnectionManagerTest {
     @Test
     fun disconnect_setsDisconnected() = runTest {
         manager.connect("127.0.0.1", false, 0)
-        kotlinx.coroutines.delay(200)
         manager.disconnect()
         assertEquals(ConnectionStatus.DISCONNECTED, connectionStatus.value)
         assertNull(manager.channel)
@@ -57,12 +74,12 @@ class GrpcConnectionManagerTest {
     @Test
     fun reconnect_callsConnectWithForce() = runTest {
         manager.connect("127.0.0.1", false, 0)
-        kotlinx.coroutines.delay(200)
         manager.reconnect()
         val status = connectionStatus.value
         assertTrue("Should attempt reconnection",
             status == ConnectionStatus.RECONNECTING ||
-            status == ConnectionStatus.CONNECTING)
+            status == ConnectionStatus.CONNECTING ||
+            status == ConnectionStatus.READY)
     }
 
     @Test

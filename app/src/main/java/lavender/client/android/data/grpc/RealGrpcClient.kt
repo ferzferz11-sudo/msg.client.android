@@ -4,6 +4,12 @@ import android.content.Context
 import android.util.Log
 import io.grpc.ManagedChannel
 import io.grpc.stub.StreamObserver
+import io.grpc.CallOptions
+import io.grpc.ClientCall
+import io.grpc.Metadata
+import io.grpc.MethodDescriptor
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -266,9 +272,8 @@ object RealGrpcClient {
     var currentServerAddress: String? = null
         get() = connectionManager.currentServerAddress
         private set
-    var currentServerPort: Int = 50051
+    private val currentServerPort: Int
         get() = connectionManager.currentServerPort
-        private set
 
     fun connect(serverAddress: String, useTls: Boolean = false, port: Int = 50051, context: Context? = null, forceReconnect: Boolean = false) {
         appContext = context?.applicationContext
@@ -328,17 +333,19 @@ object RealGrpcClient {
         val address = connectionManager.currentServerAddress ?: return false
         val port = connectionManager.currentServerPort
         val httpPort = if (port == 50052) 8083 else 8082
-        return try {
-            val url = java.net.URL("http://$address:$httpPort/health")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.connectTimeout = 3000
-            conn.readTimeout = 3000
-            conn.requestMethod = "GET"
-            val code = conn.responseCode
-            conn.disconnect()
-            code == 200
-        } catch (_: Exception) {
-            false
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = java.net.URL("http://$address:$httpPort/health")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 3000
+                conn.readTimeout = 3000
+                conn.requestMethod = "GET"
+                val code = conn.responseCode
+                conn.disconnect()
+                code == 200
+            } catch (_: Exception) {
+                false
+            }
         }
     }
 
@@ -392,14 +399,14 @@ object RealGrpcClient {
         try { requestObserver?.onCompleted() } catch (_: Exception) {}
         requestObserver = null
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<MessageProto, MessageProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+        val methodDescriptor = MethodDescriptor.newBuilder<MessageProto, MessageProto>()
+            .setType(MethodDescriptor.MethodType.BIDI_STREAMING)
             .setFullMethodName("messenger.ChatService/Chat")
             .setRequestMarshaller(MessageProtoMarshaller())
             .setResponseMarshaller(MessageProtoMarshaller())
             .build()
 
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val call = currentChannel.newCall(methodDescriptor, CallOptions.DEFAULT)
         requestObserver = call.startChatStream(onMessageReceived)
 
         val firstMessageBuilder = MessageProto.newBuilder()
@@ -440,7 +447,7 @@ object RealGrpcClient {
         startTypingStream()
     }
 
-    private fun io.grpc.ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
+    private fun ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
         val responseObserver = object : StreamObserver<MessageProto> {
             override fun onNext(value: MessageProto) {
                 if (_connectionStatus.value != ConnectionStatus.READY) {
@@ -451,12 +458,12 @@ object RealGrpcClient {
                 if (value.isSuperAdmin || value.text == "SET_SUPER_ADMIN") {
                     if (!_isSuperAdmin.value) {
                         _isSuperAdmin.value = true
-                        appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                        appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
                             ?.edit { putBoolean("is_super_admin", true) }
                     }
                     if (value.userId.isNotEmpty() && _adminUserId.value == null) {
                         _adminUserId.value = value.userId
-                        appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                        appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
                             ?.edit { putString("admin_user_id", value.userId) }
                     }
                 }
@@ -597,11 +604,11 @@ object RealGrpcClient {
 
             override fun onError(t: Throwable) {
                 ErrorHandler.handle("RealGrpcClient.chatStream", t)
-                if (t is io.grpc.StatusRuntimeException) {
+                if (t is StatusRuntimeException) {
                     val description = t.status.description ?: ""
                     if (description.contains("user not found", ignoreCase = true) ||
                         description.contains("auth failed", ignoreCase = true) ||
-                        t.status.code == io.grpc.Status.Code.UNAUTHENTICATED) {
+                        t.status.code == Status.Code.UNAUTHENTICATED) {
                         Log.w(TAG, "Authentication error, not retrying: $description")
                         _authStatus.value = if (description.contains("user not found")) "USER_NOT_FOUND" else "AUTH_FAILED"
                         _connectionStatus.value = ConnectionStatus.FAILED
@@ -619,11 +626,11 @@ object RealGrpcClient {
                             scope.launch {
                                 val ctx = appContext
                                 if (ctx != null) {
-                    val refreshToken = AuthManager.getRefreshToken(ctx)
-                                        if (!refreshToken.isNullOrEmpty()) {
-                                            val refreshResult =
-                                                suspendCancellableCoroutine<lavender.client.android.data.proto.RefreshTokenResponseProto?> { cont ->
-                                                    GrpcClient.refreshToken(refreshToken) { response, _ ->
+                                    val refreshToken = AuthManager.getRefreshToken(ctx)
+                                    if (!refreshToken.isNullOrEmpty()) {
+                                        val refreshResult =
+                                            suspendCancellableCoroutine<RefreshTokenResponseProto?> { cont ->
+                                                GrpcClient.refreshToken(refreshToken) { response, _ ->
                                                     if (cont.isActive) {
                                                         if (response != null && response.accessToken.isNotEmpty()) cont.resumeWith(Result.success(response))
                                                         else cont.resumeWith(Result.success(null))
@@ -631,10 +638,10 @@ object RealGrpcClient {
                                                 }
                                             }
                                         if (refreshResult != null) {
-                                            val userId = lavender.client.android.data.auth.AuthManager.getUserId(ctx)
-                                            val username = lavender.client.android.data.auth.AuthManager.getUsername(ctx)
-                                            val deviceId = lavender.client.android.data.auth.AuthManager.getDeviceId(ctx)
-                                            lavender.client.android.data.auth.AuthManager.storeTokens(
+                                            val userId = AuthManager.getUserId(ctx)
+                                            val username = AuthManager.getUsername(ctx)
+                                            val deviceId = AuthManager.getDeviceId(ctx)
+                                            AuthManager.storeTokens(
                                                 context = ctx, accessToken = refreshResult.accessToken,
                                                 refreshToken = refreshResult.refreshToken,
                                                 accessExpiresAt = refreshResult.accessExpiresAt,
@@ -722,8 +729,8 @@ object RealGrpcClient {
             }
         }
 
-        this.start(object : io.grpc.ClientCall.Listener<MessageProto>() {
-            override fun onHeaders(headers: io.grpc.Metadata?) {
+        this.start(object : ClientCall.Listener<MessageProto>() {
+            override fun onHeaders(headers: Metadata?) {
                 super.onHeaders(headers)
                 _connectionStatus.value = ConnectionStatus.READY
                 fetchAdminStatus()
@@ -732,7 +739,7 @@ object RealGrpcClient {
                 if (_connectionStatus.value != ConnectionStatus.READY) _connectionStatus.value = ConnectionStatus.READY
                 responseObserver.onNext(message)
             }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            override fun onClose(status: Status, trailers: Metadata) {
                 if (status.isOk) {
                     responseObserver.onCompleted()
                     return
@@ -741,7 +748,7 @@ object RealGrpcClient {
                 requestObserver = null
                 responseObserver.onError(status.asRuntimeException())
             }
-        }, io.grpc.Metadata())
+        }, Metadata())
         this.request(Int.MAX_VALUE)
 
         return object : StreamObserver<MessageProto> {
@@ -768,14 +775,14 @@ object RealGrpcClient {
             return
         }
 
-        val methodDescriptor = io.grpc.MethodDescriptor.newBuilder<ChatV2MessageProto, ChatV2MessageProto>()
-            .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+        val methodDescriptor = MethodDescriptor.newBuilder<ChatV2MessageProto, ChatV2MessageProto>()
+            .setType(MethodDescriptor.MethodType.BIDI_STREAMING)
             .setFullMethodName("messenger.ChatService/ChatV2")
             .setRequestMarshaller(ChatV2MessageMarshaller())
             .setResponseMarshaller(ChatV2MessageMarshaller())
             .build()
 
-        val call = currentChannel.newCall(methodDescriptor, io.grpc.CallOptions.DEFAULT)
+        val call = currentChannel.newCall(methodDescriptor, CallOptions.DEFAULT)
         val observer = call.startChatV2Stream(onMessageReceived)
         chatV2RequestObserver = observer
 
@@ -793,7 +800,7 @@ object RealGrpcClient {
         }
     }
 
-    private fun io.grpc.ClientCall<ChatV2MessageProto, ChatV2MessageProto>.startChatV2Stream(onMessageReceived: (Message) -> Unit): StreamObserver<ChatV2MessageProto> {
+    private fun ClientCall<ChatV2MessageProto, ChatV2MessageProto>.startChatV2Stream(onMessageReceived: (Message) -> Unit): StreamObserver<ChatV2MessageProto> {
         val responseObserver = object : StreamObserver<ChatV2MessageProto> {
             override fun onNext(value: ChatV2MessageProto) {
                 // Handle typing
@@ -840,14 +847,14 @@ object RealGrpcClient {
             }
         }
 
-        this.start(object : io.grpc.ClientCall.Listener<ChatV2MessageProto>() {
+        this.start(object : ClientCall.Listener<ChatV2MessageProto>() {
             override fun onMessage(message: ChatV2MessageProto) { responseObserver.onNext(message) }
-            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+            override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
                     chatV2RequestObserver = null
                 }
             }
-        }, io.grpc.Metadata())
+        }, Metadata())
         this.request(Int.MAX_VALUE)
 
         return object : StreamObserver<ChatV2MessageProto> {
@@ -942,9 +949,8 @@ object RealGrpcClient {
 
     // ====== Favorites (delegated) ======
     fun addFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) { favoritesClient.addFavorite(userId, messageId, callback) }
-    fun removeFavorite(userId: String, messageId: String, callback: (Boolean) -> Unit) { favoritesClient.removeFavorite(userId, messageId, callback) }
+    fun removeFavorite(userId: String, messageId: String, callback: (Boolean, String) -> Unit) { favoritesClient.removeFavorite(userId, messageId, callback) }
     fun getFavorites(userId: String, callback: (List<Message>) -> Unit) { favoritesClient.getFavorites(userId, callback) }
-    fun saveFavoriteMessage(message: Message, callback: (Boolean, String) -> Unit) { favoritesClient.saveFavoriteMessage(message, callback) }
 
     // ====== Auth V2 (delegated) ======
     fun signInV2(username: String, password: String, deviceId: String, deviceName: String, deviceType: String = "android", clientVersion: String = "", callback: (AuthResponseV2Proto?, String?) -> Unit) = authClient.signInV2(username, password, deviceId, deviceName, deviceType, clientVersion, callback)
@@ -954,7 +960,7 @@ object RealGrpcClient {
     fun revokeDevice(deviceId: String, callback: (Boolean, String) -> Unit) = authClient.revokeDevice(deviceId, callback)
 
     // ====== Server Discovery (delegated) ======
-    fun fetchServersList(context: android.content.Context, cb: (List<ServerInfoProto>) -> Unit) {
+    fun fetchServersList(cb: (List<ServerInfoProto>) -> Unit) {
         serverDiscoveryClient.fetchServersList(cb)
     }
 
@@ -1017,23 +1023,12 @@ object RealGrpcClient {
         d
     }
 
-    private fun getAuthMetadata(context: Context? = appContext): io.grpc.Metadata {
-        val metadata = io.grpc.Metadata()
-        if (context != null) {
-            val bearerToken = AuthManager.getBearerToken(context)
-            if (bearerToken != null) {
-                metadata.put(io.grpc.Metadata.Key.of("authorization", io.grpc.Metadata.ASCII_STRING_MARSHALLER), bearerToken)
-            }
-        }
-        return metadata
-    }
-
     fun loadUsers() {
         loadAllUsers { users ->
             val admin = users.firstOrNull { it.isSuperAdmin && it.userId.isNotEmpty() }
             if (admin != null && _adminUserId.value == null) {
                 _adminUserId.value = admin.userId
-                appContext?.getSharedPreferences("lavender_prefs", android.content.Context.MODE_PRIVATE)
+                appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
                     ?.edit { putString("admin_user_id", admin.userId) }
             }
         }

@@ -1,19 +1,34 @@
 package lavender.client.android.data.session
 
 import android.content.Context
-import android.util.Log
+import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.core.content.edit
 import com.google.firebase.messaging.FirebaseMessaging
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import lavender.client.android.data.auth.AuthManager
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.AuthResponseV2Proto
 import lavender.client.android.data.proto.RefreshTokenResponseProto
-import lavender.client.android.data.auth.AuthManager
-import android.os.Build
-import lavender.client.android.data.grpc.*
 
 object SessionManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -351,6 +366,7 @@ object SessionManager {
         val sendEnabled = prefs.getBoolean("push_send_enabled", true)
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
 
+        @Suppress("DEPRECATION")
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val token = if (receiveEnabled) task.result else "DISABLED"

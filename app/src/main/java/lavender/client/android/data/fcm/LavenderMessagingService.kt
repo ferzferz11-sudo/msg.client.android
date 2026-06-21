@@ -11,7 +11,6 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import lavender.client.android.R
-import lavender.client.android.data.grpc.*
 
 class LavenderMessagingService : FirebaseMessagingService() {
 
@@ -43,7 +42,9 @@ class LavenderMessagingService : FirebaseMessagingService() {
         showNotification(title, body, roomId)
     }
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onNewToken(token: String) {
+        @Suppress("DEPRECATION")
         super.onNewToken(token)
         Log.d("FCM", "Refreshed token: $token")
 

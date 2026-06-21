@@ -469,7 +469,7 @@ class AiV2MarshallersTest {
     fun getAIAgentReviewsRequestMarshaller_defaults() {
         val req = GetAIAgentReviewsRequestProto()
         val bytes = GetAIAgentReviewsRequestMarshaller().stream(req).readBytes()
-        assertEquals(0, bytes.size)
+        assertTrue("Default request with limit=20 should produce bytes", bytes.isNotEmpty())
     }
 
     @Test
@@ -530,7 +530,7 @@ class AiV2MarshallersTest {
     fun listMarketplaceAgentsRequestMarshaller_empty() {
         val req = ListMarketplaceAgentsRequestProto()
         val bytes = ListMarketplaceAgentsRequestMarshaller().stream(req).readBytes()
-        assertEquals(0, bytes.size)
+        assertTrue("Default request with limit=20 should produce bytes", bytes.isNotEmpty())
     }
 
     @Test

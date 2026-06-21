@@ -70,6 +70,10 @@ android {
         buildConfig = true
         resValues = true
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 
@@ -130,13 +134,13 @@ dependencies {
     implementation(libs.androidx.security.crypto)
 
     // JSch for SSH tunnel (Hermes Gateway)
-    implementation("com.jcraft:jsch:0.1.55")
+    implementation(libs.jsch)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation("org.json:json:20230227")
+    testImplementation(libs.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

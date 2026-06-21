@@ -182,6 +182,7 @@ class NotificationActivity : AppCompatActivity() {
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
 
         if (username.isNotEmpty()) {
+            @Suppress("DEPRECATION")
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val token = if (receiveEnabled) task.result else "DISABLED"

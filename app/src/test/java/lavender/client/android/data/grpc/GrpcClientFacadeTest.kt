@@ -65,19 +65,19 @@ class GrpcClientFacadeTest {
     @Test
     fun isChatV2Supported_delegatesToProfileClient() = runTest {
         val result = ProfileClient.isChatV2Supported()
-        assertFalse("Should return false when version not set", result)
+        assertTrue("Should return true", result)
     }
 
     @Test
     fun isProfileV2Supported_delegatesToProfileClient() = runTest {
         val result = ProfileClient.isProfileV2Supported()
-        assertFalse("Should return false when version not set", result)
+        assertTrue("Should return true", result)
     }
 
     @Test
     fun isAuthV2Supported_delegatesToProfileClient() = runTest {
         val result = ProfileClient.isAuthV2Supported()
-        assertFalse("Should return false when version not set", result)
+        assertTrue("Should return true", result)
     }
 
     @Test

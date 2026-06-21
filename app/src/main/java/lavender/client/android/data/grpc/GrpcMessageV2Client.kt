@@ -1,7 +1,6 @@
 package lavender.client.android.data.grpc
 
 import android.content.Context
-import android.util.Log
 import io.grpc.CallOptions
 import io.grpc.ClientCall
 import io.grpc.Metadata
@@ -13,23 +12,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lavender.client.android.data.db.AppDatabase
+import lavender.client.android.data.db.toDomain
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.models.Message
+import lavender.client.android.data.models.ErrorHandler
 import lavender.client.android.data.models.Reaction
-import lavender.client.android.data.proto.DeleteMessageV2RequestProto
-import lavender.client.android.data.proto.DeleteMessageV2ResponseProto
-import lavender.client.android.data.proto.EditMessageV2RequestProto
-import lavender.client.android.data.proto.EditMessageV2ResponseProto
-import lavender.client.android.data.proto.GetHistoryV2RequestProto
-import lavender.client.android.data.proto.GetHistoryV2ResponseProto
-import lavender.client.android.data.proto.MessageMediaProto
-import lavender.client.android.data.proto.MessageReplyProto
-import lavender.client.android.data.proto.MessageV2Proto
-import lavender.client.android.data.proto.SendMessageV2RequestProto
-import lavender.client.android.data.proto.SendMessageV2ResponseProto
-import lavender.client.android.data.proto.SetReactionV2RequestProto
-import lavender.client.android.data.proto.SetReactionV2ResponseProto
-import lavender.client.android.data.proto.UserInfoProto
+import lavender.client.android.data.proto.*
 import org.json.JSONObject
 
 /**
@@ -52,6 +40,41 @@ class GrpcMessageV2Client(
     companion object {
         private const val TAG = "GrpcMsgV2"
         private const val MAX_HISTORY_LIMIT = 100
+
+        private val METHOD_GET_HISTORY_V2 = MethodDescriptor.newBuilder<GetHistoryV2RequestProto, GetHistoryV2ResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetHistoryV2")
+            .setRequestMarshaller(GetHistoryV2RequestMarshaller())
+            .setResponseMarshaller(GetHistoryV2ResponseMarshaller())
+            .build()
+
+        private val METHOD_SEND_MESSAGE_V2 = MethodDescriptor.newBuilder<SendMessageV2RequestProto, SendMessageV2ResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SendMessageV2")
+            .setRequestMarshaller(SendMessageV2RequestMarshaller())
+            .setResponseMarshaller(SendMessageV2ResponseMarshaller())
+            .build()
+
+        private val METHOD_EDIT_MESSAGE_V2 = MethodDescriptor.newBuilder<EditMessageV2RequestProto, EditMessageV2ResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/EditMessageV2")
+            .setRequestMarshaller(EditMessageV2RequestMarshaller())
+            .setResponseMarshaller(EditMessageV2ResponseMarshaller())
+            .build()
+
+        private val METHOD_DELETE_MESSAGE_V2 = MethodDescriptor.newBuilder<DeleteMessageV2RequestProto, DeleteMessageV2ResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/DeleteMessageV2")
+            .setRequestMarshaller(DeleteMessageV2RequestMarshaller())
+            .setResponseMarshaller(DeleteMessageV2ResponseMarshaller())
+            .build()
+
+        private val METHOD_SET_REACTION_V2 = MethodDescriptor.newBuilder<SetReactionV2RequestProto, SetReactionV2ResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SetReactionV2")
+            .setRequestMarshaller(SetReactionV2RequestMarshaller())
+            .setResponseMarshaller(SetReactionV2ResponseMarshaller())
+            .build()
     }
 
     private var database: AppDatabase? = null
@@ -65,14 +88,7 @@ class GrpcMessageV2Client(
 
     private fun resolveUsername(senderId: String): String {
         if (senderId.isEmpty()) return ""
-        val user = allUsers().firstOrNull { it.userId == senderId }
-        return user?.username ?: ""
-    }
-
-    private fun resolveUserId(username: String): String {
-        if (username.isEmpty()) return ""
-        val user = allUsers().firstOrNull { it.username == username }
-        return user?.userId ?: ""
+        return allUsers().firstOrNull { it.userId == senderId }?.username ?: ""
     }
 
     // ====== Parse reactions JSON bytes → List<Reaction> ======
@@ -80,8 +96,7 @@ class GrpcMessageV2Client(
     private fun parseReactions(reactionsBytes: ByteArray): List<Reaction> {
         if (reactionsBytes.isEmpty()) return emptyList()
         return try {
-            val json = String(reactionsBytes)
-            val obj = JSONObject(json)
+            val obj = JSONObject(String(reactionsBytes))
             val result = mutableListOf<Reaction>()
             for (key in obj.keys()) {
                 val emoji = obj.getString(key)
@@ -91,19 +106,9 @@ class GrpcMessageV2Client(
             }
             result
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse reactions JSON: ${e.message}")
+            ErrorHandler.handle("$TAG.parseReactions", e)
             emptyList()
         }
-    }
-
-    // ====== Reactions to JSON bytes ======
-
-    private fun reactionsToJsonBytes(reactions: List<Reaction>): ByteArray {
-        val obj = JSONObject()
-        for (r in reactions) {
-            obj.put(r.user, r.emoji)
-        }
-        return obj.toString().toByteArray()
     }
 
     // ====== Convert MessageV2Proto → domain Message ======
@@ -172,10 +177,6 @@ class GrpcMessageV2Client(
             else -> null
         }
 
-        val reply = if (message.repliedToMessageId.isNotEmpty()) {
-            MessageReplyProto(messageId = message.repliedToMessageId, preview = message.repliedToText)
-        } else null
-
         return SendMessageV2RequestProto(
             roomId = message.roomId,
             text = message.text,
@@ -189,21 +190,21 @@ class GrpcMessageV2Client(
     // ====== Get History V2 (cursor-based pagination) ======
 
     fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = MAX_HISTORY_LIMIT, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
+        // Always load from cache first (offline-first)
+        scope.launch(Dispatchers.IO) {
+            val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
+            if (cached.isNotEmpty() && messages.value.isEmpty()) {
+                messages.update { cached }
+            }
+        }
+
         val currentChannel = getChannel()
         if (currentChannel == null) {
-            Log.d(TAG, "loadHistoryV2: no channel (offline)")
             scope.launch { onCompletion("", false) }
             return
         }
 
-        val methodDescriptor = MethodDescriptor.newBuilder<GetHistoryV2RequestProto, GetHistoryV2ResponseProto>()
-            .setType(MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/GetHistoryV2")
-            .setRequestMarshaller(GetHistoryV2RequestMarshaller())
-            .setResponseMarshaller(GetHistoryV2ResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, CallOptions.DEFAULT)
+        val call = currentChannel.newCall(METHOD_GET_HISTORY_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<GetHistoryV2ResponseProto>() {
             override fun onMessage(message: GetHistoryV2ResponseProto) {
                 val history = message.messages
@@ -233,7 +234,7 @@ class GrpcMessageV2Client(
             }
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
-                    Log.w(TAG, "GetHistoryV2 failed: ${status.description}")
+                    ErrorHandler.handle("$TAG.loadHistoryV2", StatusRuntimeException(status))
                     onCompletion("", false)
                 }
             }
@@ -248,31 +249,24 @@ class GrpcMessageV2Client(
     fun sendMessageV2(message: Message, onResult: ((MessageV2Proto?) -> Unit)? = null) {
         val currentChannel = getChannel()
         if (currentChannel == null) {
-            Log.e(TAG, "Cannot send message v2: no channel")
+            ErrorHandler.handle("$TAG.sendMessageV2", Exception("No channel available"))
             onResult?.invoke(null)
             return
         }
 
-        val methodDescriptor = MethodDescriptor.newBuilder<SendMessageV2RequestProto, SendMessageV2ResponseProto>()
-            .setType(MethodDescriptor.MethodType.UNARY)
-            .setFullMethodName("messenger.ChatService/SendMessageV2")
-            .setRequestMarshaller(SendMessageV2RequestMarshaller())
-            .setResponseMarshaller(SendMessageV2ResponseMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, CallOptions.DEFAULT)
+        val call = currentChannel.newCall(METHOD_SEND_MESSAGE_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<SendMessageV2ResponseProto>() {
             override fun onMessage(response: SendMessageV2ResponseProto) {
                 if (response.success && response.message != null) {
                     onResult?.invoke(response.message)
                 } else {
-                    Log.w(TAG, "SendMessageV2 failed: ${response.error}")
+                    ErrorHandler.handle("$TAG.sendMessageV2", Exception(response.error.ifEmpty { "Server returned success=false" }))
                     onResult?.invoke(null)
                 }
             }
             override fun onClose(status: Status, trailers: Metadata) {
                 if (!status.isOk) {
-                    Log.w(TAG, "SendMessageV2 gRPC error: ${status.description}")
+                    ErrorHandler.handle("$TAG.sendMessageV2", StatusRuntimeException(status))
                     onResult?.invoke(null)
                 }
             }
@@ -286,15 +280,7 @@ class GrpcMessageV2Client(
 
     fun editMessageV2(messageId: String, text: String, cb: (Boolean, String) -> Unit) {
         val currentChannel = getChannel() ?: return
-        val call = currentChannel.newCall(
-            MethodDescriptor.newBuilder<EditMessageV2RequestProto, EditMessageV2ResponseProto>()
-                .setType(MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/EditMessageV2")
-                .setRequestMarshaller(EditMessageV2RequestMarshaller())
-                .setResponseMarshaller(EditMessageV2ResponseMarshaller())
-                .build(),
-            CallOptions.DEFAULT
-        )
+        val call = currentChannel.newCall(METHOD_EDIT_MESSAGE_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<EditMessageV2ResponseProto>() {
             override fun onMessage(msg: EditMessageV2ResponseProto) { cb(msg.success, msg.message) }
             override fun onClose(status: Status, trailers: Metadata) {
@@ -306,19 +292,20 @@ class GrpcMessageV2Client(
         call.request(1)
     }
 
-    // ====== Delete Message V2 ======
+    // ====== Delete Message V2 (with optimistic UI) ======
 
     fun deleteMessageV2(messageIds: List<String>, cb: (Boolean) -> Unit = {}) {
+        // Optimistic UI: remove from local list before server confirms
+        messageIds.forEach { id ->
+            deletedMessageHashes.add("id:$id")
+        }
+        messages.update { current -> current.filterNot { it.id in messageIds } }
+        scope.launch(Dispatchers.IO) {
+            messageIds.forEach { id -> db()?.messageDao()?.deleteMessage(id) }
+        }
+
         val currentChannel = getChannel() ?: return
-        val call = currentChannel.newCall(
-            MethodDescriptor.newBuilder<DeleteMessageV2RequestProto, DeleteMessageV2ResponseProto>()
-                .setType(MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/DeleteMessageV2")
-                .setRequestMarshaller(DeleteMessageV2RequestMarshaller())
-                .setResponseMarshaller(DeleteMessageV2ResponseMarshaller())
-                .build(),
-            CallOptions.DEFAULT
-        )
+        val call = currentChannel.newCall(METHOD_DELETE_MESSAGE_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<DeleteMessageV2ResponseProto>() {
             override fun onMessage(msg: DeleteMessageV2ResponseProto) { cb(msg.success) }
             override fun onClose(status: Status, trailers: Metadata) {
@@ -352,19 +339,10 @@ class GrpcMessageV2Client(
             list
         }
 
-        val call = currentChannel.newCall(
-            MethodDescriptor.newBuilder<SetReactionV2RequestProto, SetReactionV2ResponseProto>()
-                .setType(MethodDescriptor.MethodType.UNARY)
-                .setFullMethodName("messenger.ChatService/SetReactionV2")
-                .setRequestMarshaller(SetReactionV2RequestMarshaller())
-                .setResponseMarshaller(SetReactionV2ResponseMarshaller())
-                .build(),
-            CallOptions.DEFAULT
-        )
+        val call = currentChannel.newCall(METHOD_SET_REACTION_V2, CallOptions.DEFAULT)
         call.start(object : ClientCall.Listener<SetReactionV2ResponseProto>() {
             override fun onMessage(response: SetReactionV2ResponseProto) {
                 if (response.success && response.reactions.isNotEmpty()) {
-                    // Update with server-authoritative reactions
                     val serverReactions = parseReactions(response.reactions)
                     messages.update { current ->
                         val list = current.toMutableList()
@@ -388,4 +366,7 @@ class GrpcMessageV2Client(
     private fun getMessageHash(message: Message): String =
         if (message.id.isNotEmpty()) "id:${message.id}"
         else "${message.user}:${message.text}:${message.timestamp / 1000}"
+
+    private class StatusRuntimeException(status: Status) :
+        Exception("gRPC error: ${status.code} - ${status.description}")
 }

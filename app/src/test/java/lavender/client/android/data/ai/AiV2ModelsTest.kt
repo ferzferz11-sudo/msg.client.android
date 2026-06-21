@@ -75,7 +75,7 @@ class AiV2ModelsTest {
     @Test
     fun aiProviderType_values() {
         val types = AiProviderType.entries
-        assertEquals(7, types.size)
+        assertEquals(8, types.size)
         assertEquals("openrouter", AiProviderType.OPENROUTER.value)
         assertEquals("mimo", AiProviderType.MIMO.value)
         assertEquals("local", AiProviderType.LOCAL.value)

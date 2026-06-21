@@ -429,7 +429,7 @@ object GrpcClient {
     ) = realGrpcClient.addFavorite(userId, messageId, callback)
 
     fun removeFavorite(
-        userId: String, messageId: String, callback: (Boolean) -> Unit
+        userId: String, messageId: String, callback: (Boolean, String) -> Unit
     ) = realGrpcClient.removeFavorite(userId, messageId, callback)
 
     fun getFavorites(
@@ -451,7 +451,7 @@ object GrpcClient {
     // ======= Server Discovery =======
 
     fun getServers(context: Context, cb: (List<ServerInfoProto>) -> Unit) =
-        realGrpcClient.fetchServersList(context, cb)
+        realGrpcClient.fetchServersList(cb)
 
     // ======= Avatar Cache =======
 

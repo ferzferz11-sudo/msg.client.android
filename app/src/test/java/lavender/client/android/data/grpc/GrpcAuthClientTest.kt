@@ -1,18 +1,22 @@
 package lavender.client.android.data.grpc
 
-import io.grpc.CallOptions
 import io.grpc.ClientCall
 import io.grpc.ManagedChannel
 import io.grpc.Metadata
-import io.grpc.MethodDescriptor
 import io.grpc.Status
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import lavender.client.android.data.proto.AuthResponseV2Proto
+import lavender.client.android.data.proto.RefreshTokenResponseProto
+import lavender.client.android.data.proto.SimpleAuthResponseProto
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import io.mockk.*
-import lavender.client.android.data.proto.*
 import java.util.concurrent.atomic.AtomicReference
 
 class GrpcAuthClientTest {
@@ -196,7 +200,7 @@ class GrpcAuthClientTest {
         }
 
         assertTrue("Sign out should succeed", resultRef.get())
-        assertNull("Error should be null", errorRef.get())
+        assertEquals("Signed out", errorRef.get())
     }
 
     @Test
@@ -211,6 +215,6 @@ class GrpcAuthClientTest {
         }
 
         assertTrue("Revoke should succeed", resultRef.get())
-        assertNull("Error should be null", errorRef.get())
+        assertEquals("Device revoked", errorRef.get())
     }
 }

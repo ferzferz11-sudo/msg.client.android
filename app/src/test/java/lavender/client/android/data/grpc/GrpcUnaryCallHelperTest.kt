@@ -1,16 +1,17 @@
 package lavender.client.android.data.grpc
 
-import io.grpc.CallOptions
 import io.grpc.ClientCall
 import io.grpc.ManagedChannel
 import io.grpc.Metadata
-import io.grpc.MethodDescriptor
 import io.grpc.Status
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import lavender.client.android.data.proto.GetChatsRequestProto
+import lavender.client.android.data.proto.GetChatsResponseProto
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
-import io.mockk.*
-import lavender.client.android.data.proto.*
 
 class GrpcUnaryCallHelperTest {
 
@@ -21,8 +22,9 @@ class GrpcUnaryCallHelperTest {
         every { mockChannel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(GetChatsResponseProto())
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            listener.onMessage(GetChatsResponseProto())
+            listener.onClose(Status.OK, Metadata())
         }
 
         val result = unaryCall(
@@ -78,8 +80,9 @@ class GrpcUnaryCallHelperTest {
         every { mockChannel.newCall<Any, Any>(any(), any()) } returns mockCall
         every { mockCall.start(any(), any()) } answers {
             @Suppress("UNCHECKED_CAST")
-            firstArg<ClientCall.Listener<Any>>()
-                .onMessage(GetChatsResponseProto())
+            val listener = firstArg<ClientCall.Listener<Any>>()
+            listener.onMessage(GetChatsResponseProto())
+            listener.onClose(Status.OK, Metadata())
         }
 
         val result = unaryCallWithClass(

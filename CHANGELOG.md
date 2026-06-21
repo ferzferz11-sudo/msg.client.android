@@ -1,5 +1,47 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.13] - 2026-06-21
+
+### Оптимизация
+
+**Version Catalog (Gradle):**
+- Все Gradle зависимости вынесены в `gradle/libs.versions.toml` — `jsch`, `json`, `protobuf` plugin
+- Заменены 3 hardcoded зависимости: `com.jcraft:jsch:0.1.55`, `org.json:json:20230227`, `com.google.protobuf:0.10.0`
+
+**RealGrpcClient — очистка линтер-предупреждений:**
+- Исправлена подозрительная индентация в блоке JWT refresh (токен обновления)
+- `currentServerPort` сделан `private` (не использовался снаружи)
+- `checkServerHealth()` обёрнут в `withContext(Dispatchers.IO)` — устранён blocking call на Main thread
+- Удалены неиспользуемые: `getAuthMetadata()`, `saveFavoriteMessage()`, параметр `context` из `fetchServersList()`
+- Убраны 4冗余ных `io.grpc.*` квалификатора — добавлены import'ы
+
+**Исправления:**
+- `GrpcClient.removeFavorite` — исправлен несовпадающий тип callback: `(Boolean)` → `(Boolean, String)`
+- `GrpcFavoritesClient.removeFavorite` — callback обновлён для согласования
+
+**Тесты (332/332):**
+- Исправлены 23 падающих тестов:
+  - `AiV2ModelsTest` — enum count 7→8 (добавлен REVE)
+  - `AiV2MarshallersTest` — default proto теперь сериализует non-empty bytes
+  - `GrpcAuthClientTest` — `signOut`/`revokeDevice` callback возвращает `String` (не null)
+  - `GrpcClientFacadeTest` — `isSupported()` теперь возвращает `true`
+  - `GrpcConnectionManagerTest` — замокан `CallManager`, добавлен `Dispatchers.setMain`
+  - `GrpcMessageClientTest` — исправлен assertion для `handleDeleteMessageSignal`
+  - `GrpcUnaryCallHelperTest` — добавлен `onClose` в моки для завершения coroutine
+- Добавлен `testOptions.unitTests.isReturnDefaultValues = true`
+
+**Зависимости (обновлены):**
+- `io.github.webrtc-sdk:android` 144.7559.05 → 144.7559.09
+- `androidx.security:security-crypto` 1.1.0-alpha06 → 1.1.0
+- `io.mockk:mockk` 1.13.8 → 1.14.11
+- `app.cash.turbine:turbine` 1.0.0 → 1.2.1
+- `org.jetbrains.kotlinx:kotlinx-coroutines-test` 1.7.3 → 1.11.0
+
+**Исправлено (баг):**
+- Пересылка сообщений (forward) не работала — `WidgetManager.getOrCreate("forward_sheet")` кешировал `ListBottomSheet` с уничтоженным Activity context. Теперь создаётся новый инстанс при каждом вызове
+
+---
+
 ## [1.3.0.12] - 2026-06-21
 
 ### Добавлено

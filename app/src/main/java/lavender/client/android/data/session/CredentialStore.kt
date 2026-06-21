@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package lavender.client.android.data.session
 
 import android.content.Context
