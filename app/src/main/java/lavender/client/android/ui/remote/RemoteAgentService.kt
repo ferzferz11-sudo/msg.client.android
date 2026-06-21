@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.*
 import lavender.client.android.R
 import lavender.client.android.data.grpc.GrpcClient
@@ -327,11 +328,10 @@ class RemoteAgentService : Service() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun stopForegroundService() {
         try {
             closeTunnel()
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             isStartedAsForeground = false
             stopSelf()
             Log.d(TAG, "Service stopped")

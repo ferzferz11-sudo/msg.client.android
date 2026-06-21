@@ -182,8 +182,8 @@ class NotificationActivity : AppCompatActivity() {
         val receiveEnabled = prefs.getBoolean("push_receive_enabled", true)
 
         if (username.isNotEmpty()) {
-            @Suppress("DEPRECATION")
-            com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            @Suppress("DEPRECATION") // No non-deprecated alternative for FCM token retrieval
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken().addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val token = if (receiveEnabled) task.result else "DISABLED"
                     grpcClient.registerToken(username, token, sendEnabled)

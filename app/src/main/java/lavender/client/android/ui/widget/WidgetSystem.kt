@@ -283,12 +283,10 @@ open class StandardBottomSheet(
         applyTheme(ThemeStore.currentTheme())
         updateBackButton()
         dialog?.apply {
-            @Suppress("DEPRECATION")
-            window?.setSoftInputMode(
-                android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-            )
-            @Suppress("DEPRECATION")
-            behavior.peekHeight = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            window?.let { window ->
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+            }
+            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         }
         dialog?.show()
     }

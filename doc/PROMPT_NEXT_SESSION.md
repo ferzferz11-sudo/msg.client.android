@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.12 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-21
+**Версия:** v1.3.0.13 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-21
 
 ---
 
@@ -51,42 +51,46 @@ Biometric: BiometricPrompt after splash screen when enabled
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
+Version Catalog: all dependencies in gradle/libs.versions.toml
 ```
 
 ---
 
-## Итог сессии v1.3.0.11
+## Итог сессии v1.3.0.13
 
 ### Выполнено
 
-- **Reve Image Integration (клиент):**
-  - `ChatWithAIV2ResponseProto` field 10: `imageUrl` — парсинг в marshaller
-  - `AiV2ChatMessage.imageUrl` — доменная модель
-  - `ChatMessageAdapter` — Glide image loading в agent bubble (240dp, centerCrop, placeholder)
-  - `AiProviderType.REVE("reve-2.0")` — провайдер для Reve агента
-  - `AiV2AgentListAdapter` — 🎨 emoji для reveal агента, 👁 для vision
-  - `AiV2ChatActivity` — toolbar emoji по agent ID, senderEmoji в сообщениях
+**Version Catalog (Gradle):**
+- Все зависимости вынесены в `gradle/libs.versions.toml` (jsch, json, protobuf plugin)
+- Обновлены 5 зависимостей: webrtc 144.7559.09, security-crypto 1.1.0, mockk 1.14.11, turbine 1.2.1, coroutines-test 1.11.0
 
-- **AI Chat Settings (Per-Session):**
-  - `GetAIChatSettings` / `UpdateAIChatSettings` — новые RPC для per-session настроек
-  - Proto: `GetAIChatSettingsRequestProto`, `AIChatSettingsProto`, `UpdateAIChatSettingsRequestProto`, `UpdateAIChatSettingsResponseProto`
-  - Marshallers: 4 новых класса
-  - `GrpcAIv2Client.getChatSettings()` / `updateChatSettings()`
-  - `GrpcClient` facade: `getAIChatSettings()` / `updateAIChatSettings()`
-  - `AiV2ChatUseCase` + domain: `AiChatSettings` data class + `.toDomain()` extension
+**RealGrpcClient — очистка линтер-предупреждений:**
+- Подозрительная индентация в JWT refresh блоке
+- `currentServerPort` → `private`
+- `checkServerHealth()` обёрнут в `withContext(Dispatchers.IO)` — blocking call на Main thread устранён
+- Удалены неиспользуемые: `getAuthMetadata()`, `saveFavoriteMessage()`, параметр `context` из `fetchServersList()`
+- Убраны冗余ные `io.grpc.*` квалификатора
 
-- **Preset Agents (10 presets):**
-  - Добавлены `vision` (Image analysis, google/gemma-4-26b-a4b-it:free) и `reve` (Reve Image, reve-2.0)
-  - Всего 10 пресетов: mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve
+**Исправлено 23 падающих unit-теста (332/332):**
+- AiV2ModelsTest: enum count 7→8 (REVE)
+- AiV2MarshallersTest: default proto serialization
+- GrpcAuthClientTest: signOut/revokeDevice callback
+- GrpcClientFacadeTest: isSupported() assertions
+- GrpcConnectionManagerTest: mocked CallManager, Dispatchers.setMain
+- GrpcMessageClientTest: handleDeleteMessageSignal assertion
+- GrpcUnaryCallHelperTest: onClose in mocks
 
-### Тесты
+**Bug fix:**
+- Пересылка сообщений (forward) — `WidgetManager.getOrCreate` кешировал ListBottomSheet с уничтоженным context. Теперь создаётся новый инстанс
 
-- 8 новых тестов для AI Chat Settings marshallers — все проходят
-- BUILD SUCCESSFUL
+**Build warnings (0 warnings в compileReleaseKotlin):**
+- `@file:Suppress("DEPRECATION")` в CredentialStore
+- `@Suppress("DEPRECATION")` на FirebaseMessaging.token
+- `@Suppress("OVERRIDE_DEPRECATION")` на LavenderMessagingService.onNewToken
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.12)
+## Бэклог — Следующая сессия (v1.3.0.14+)
 
 ### Приоритет 1: Серверные исправления
 | Задача | Статус |
@@ -102,7 +106,7 @@ Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
 | Тест Marketplace API (каталог, rate, reviews, install, share) | 🔲 Нужен live-тест |
 | Тест Rate Limit (10 req/min, countdown, auto-restore) | 🔲 Нужен live-тест |
 | Тест Graceful Shutdown (SERVER_SHUTTINGDOWN + backoff) | 🔲 Нужен live-тест |
-| Тест Reve Image (generate image через `reve` агент, image_url в response) | 🔲 Нужен live-тест |
+| Тест Reve Image (generate image через `reve` агент) | 🔲 Нужен live-тест |
 | Тест AI Chat Settings (get/update API key и model per-session) | 🔲 Нужен live-тест |
 
 ### Приоритет 3: UX улучшения
@@ -111,12 +115,11 @@ Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
 | Better error messages для AI v2 (показывать server error из response) | 🔲 |
-| Fix 22 падающих unit-тестов (pre-existing: GrpcConnectionManager, GrpcMessageClient, GrpcUnaryCallHelper) | 🔲 |
+| UI для AI Chat Settings (API key input, model selector в AiV2ChatActivity) | 🔲 |
 
 ### Приоритет 4: Новые фичи
 | Задача | Статус |
 |--------|--------|
-| UI для AI Chat Settings (API key input, model selector в AiV2ChatActivity) | 🔲 |
 | Уведомления о новых отзывах на агентов | 🔲 |
 | Избранное в Marketplace (сохранять понравившихся агентов) | 🔲 |
 
@@ -138,7 +141,7 @@ Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
 12. JWT freshness: `ensureFreshToken()` перед Chat stream
 13. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
 14. **НЕ bump'ать версию — bump делает только пользователь**
-15. **Marshallers field order:** server proto определяет field numbers. `chat_id` всегда field 1, `user_id` field 2
+15. **Marshallers field order:** server proto определяет field numbers
 16. **AI v2 RPC:** все методы в `messenger.ChatService/*` (НЕ `AIService`)
 17. **Unread count:** считается по `user_chat_metadata.last_read_at`, НЕ по `messages.is_read`
 18. **ProfileService v2:** profile/avatar/delete/settings — через `messenger.ProfileService/*` (JWT context)
@@ -155,16 +158,6 @@ Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
 | Сайт | http://13.140.25.249 |
 
 **Деплой сервера:** НЕ делать — другой агент управляет сервером.
-
----
-
-## Серверная документация
-
-| Файл | Назначение |
-|------|------------|
-| `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` | Полный гайд интеграции клиента |
-| `/Users/paveld/LavenderMessenger-server/doc/ANDROID_AI_BILLING_INTEGRATION.md` | UsageStats UI (реализовано) |
-| `/Users/paveld/LavenderMessenger-server/doc/ANDROID_RATE_LIMIT_PROMPT.md` | Rate limit UI (реализовано) |
 
 ---
 

@@ -112,8 +112,21 @@ class UpdateCoordinator(
     fun updateIndicatorVisibility() {
         val prefs = context.getSharedPreferences("UpdatePrefs", Context.MODE_PRIVATE)
         val isAvailable = prefs.getBoolean("update_available", false)
-        val isDownloaded = prefs.getBoolean("update_downloaded", false)
+        var isDownloaded = prefs.getBoolean("update_downloaded", false)
         val isDownloading = prefs.getBoolean("update_downloading", false)
+
+        // Validate APK file still exists — reset if deleted
+        if (isDownloaded) {
+            val apkPath = prefs.getString("apk_path", null)
+            val apkFile = if (apkPath != null) File(apkPath) else null
+            if (apkFile == null || !apkFile.exists()) {
+                isDownloaded = false
+                prefs.edit {
+                    putBoolean("update_downloaded", false)
+                    remove("apk_path")
+                }
+            }
+        }
 
         // Show container if update is ready or downloading
         llUpdateContainer?.isVisible = isAvailable || isDownloading || isDownloaded
@@ -124,6 +137,12 @@ class UpdateCoordinator(
         } else {
             tvUpdateProgress?.isVisible = false
             tvUpdateAvailable?.isVisible = isAvailable || isDownloaded
+            // Update text: "Install update" when downloaded, "Update available" when not
+            tvUpdateAvailable?.text = if (isDownloaded) {
+                context.getString(R.string.install_update)
+            } else {
+                context.getString(R.string.update_available)
+            }
         }
 
         llUpdateContainer?.setOnClickListener {

@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.12 | **Updated:** 2026-06-21
+**Version:** v1.3.0.13 | **Updated:** 2026-06-21
 
 ---
 
@@ -17,6 +17,7 @@
 | File | Purpose | When to read |
 |------|---------|-------------|
 | `doc/PATTERNS.md` | Code patterns, rules, conventions | Before writing code |
+| `doc/GOTCHAS.md` | Discovered knowledge, gotchas, edge cases | Before debugging or fixing bugs |
 | `doc/PROMPT_NEXT_SESSION.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
@@ -40,16 +41,16 @@
 | Kotlin files | ~150 |
 | Activities | 25 |
 | gRPC modules | 26 |
-| Unit tests | 14 files |
+| Unit tests | 332 (all passing) |
 | Layout XML | 109 |
 | String entries | 829 (EN + RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.3.21 |
-| Branch | feat/1.3.0.x (v1.3.0.9) |
+| Branch | feat/1.3.0.x (v1.3.0.13) |
 
 ---
 
-## Architecture Overview (v1.3.0.9)
+## Architecture Overview (v1.3.0.13)
 
 ```
 GrpcClient (facade)

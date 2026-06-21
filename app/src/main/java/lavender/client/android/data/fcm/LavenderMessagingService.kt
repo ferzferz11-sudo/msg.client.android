@@ -44,8 +44,6 @@ class LavenderMessagingService : FirebaseMessagingService() {
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onNewToken(token: String) {
-        @Suppress("DEPRECATION")
-        super.onNewToken(token)
         Log.d("FCM", "Refreshed token: $token")
 
         // Token sync is handled by SessionManager

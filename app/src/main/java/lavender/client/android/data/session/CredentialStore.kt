@@ -1,3 +1,5 @@
+// EncryptedSharedPreferences + MasterKey deprecated by AndroidX in security-crypto:1.1.0
+// but no replacement API exists yet — EncryptedSharedPreferences.create() still requires MasterKey
 @file:Suppress("DEPRECATION")
 
 package lavender.client.android.data.session
@@ -41,15 +43,15 @@ object CredentialStore {
     private const val KEY_EMAIL = "email"
     private const val KEY_JWT_SERVER = "jwt_server_address" // server that issued the JWT tokens
 
-    private var encryptedPrefs: EncryptedSharedPreferences? = null
+    private var encryptedPrefs: SharedPreferences? = null
 
-    private fun getEncryptedPrefs(context: Context): EncryptedSharedPreferences {
+    private fun getEncryptedPrefs(context: Context): SharedPreferences {
         return encryptedPrefs ?: synchronized(this) {
             encryptedPrefs ?: createEncryptedPrefs(context).also { encryptedPrefs = it }
         }
     }
 
-    private fun createEncryptedPrefs(context: Context): EncryptedSharedPreferences {
+    private fun createEncryptedPrefs(context: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
@@ -60,7 +62,7 @@ object CredentialStore {
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        ) as EncryptedSharedPreferences
+        )
     }
 
     /**
