@@ -248,7 +248,13 @@ class SplashActivity : AppCompatActivity() {
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    finish()
+                    if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                        finish()
+                    } else {
+                        startActivity(Intent(this@SplashActivity, ChatListActivity::class.java))
+                        finish()
+                    }
                 }
 
                 override fun onAuthenticationFailed() {

@@ -428,13 +428,12 @@ internal fun showAIBottomSheet(activity: ChatListActivity) {
         onAddCustomAgent = {
             activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiAgentSetupActivity::class.java))
         },
-        onOpenNotifications = {
-            activity.startActivity(Intent(activity, lavender.client.android.ui.notification.NotificationActivity::class.java))
+        onOpenAiAgentList = {
+            activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiV2AgentListActivity::class.java))
         },
         onOpenRemoteAgents = {
             activity.startActivity(Intent(activity, lavender.client.android.ui.remote.RemoteAgentActivity::class.java))
-        },
-        unreadNotifCount = 0
+        }
     )
     activity.aiBottomSheet?.buildAndShow()
 }

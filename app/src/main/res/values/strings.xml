@@ -512,6 +512,7 @@
     <string name="ai_selected_agent">Selected agent</string>
     <string name="ai_selected_agents">Selected agents</string>
     <string name="ai_loading_agents">Loading agents…</string>
+    <string name="ai_no_agents">No agents available</string>
     <string name="save">Save</string>
     <string name="ai_chat_with">Chat with</string>
     <string name="ai_agents">agents</string>

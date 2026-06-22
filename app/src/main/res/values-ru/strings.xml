@@ -453,6 +453,7 @@
     <string name="ai_selected_agent">Выбранный агент</string>
     <string name="ai_selected_agents">Выбранные агенты</string>
     <string name="ai_loading_agents">Загрузка агентов…</string>
+    <string name="ai_no_agents">Нет доступных агентов</string>
     <string name="save">Сохранить</string>
     <string name="ai_chat_with">Чат с</string>
     <string name="ai_agents">агентами</string>

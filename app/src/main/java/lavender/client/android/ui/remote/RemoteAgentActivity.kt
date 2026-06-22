@@ -18,6 +18,9 @@ import kotlinx.coroutines.launch
 import lavender.client.android.R
 import lavender.client.android.data.models.AppLog
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.data.grpc.subscribeNotifications
+import lavender.client.android.data.grpc.getNotificationHistory
+import lavender.client.android.data.grpc.markNotificationsRead
 import lavender.client.android.theme.ThemeStore
 import lavender.client.android.theme.ThemeUtils
 import lavender.client.android.theme.ui.ThemeUi
@@ -93,6 +96,9 @@ class RemoteAgentActivity : AppCompatActivity(),
 
         // Load agents once on create
         viewModel.loadAgents()
+
+        // Subscribe to server notifications and display as system messages
+        subscribeToNotifications()
     }
 
     private fun initViews() {
@@ -347,6 +353,61 @@ class RemoteAgentActivity : AppCompatActivity(),
         runOnUiThread {
             updateStatus(state.isConnected)
             updateStartStopButtons(state.isConnected)
+        }
+    }
+
+    private fun subscribeToNotifications() {
+        // Subscribe to real-time notifications
+        subscribeNotifications(userId, emptyList(), lifecycleScope)
+
+        // Load notification history and display as system messages
+        lifecycleScope.launch {
+            try {
+                val history = getNotificationHistory(userId)
+                val unreadIds = history.filter { !it.isRead }.map { it.id }
+                if (unreadIds.isNotEmpty()) {
+                    launch { markNotificationsRead(userId, unreadIds) }
+                }
+                // Display notifications as system messages in chat
+                val notifMessages = history.map { notif ->
+                    val ts = try {
+                        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+                            .parse(notif.timestamp)?.time ?: System.currentTimeMillis()
+                    } catch (_: Exception) { System.currentTimeMillis() }
+                    RemoteAgentMessage(
+                        id = "notif_${notif.id}",
+                        content = "[${notif.type}] ${notif.title}: ${notif.message}",
+                        isUser = false,
+                        taskType = "notification",
+                        timestamp = ts
+                    )
+                }
+                viewModel.addSystemMessages(notifMessages)
+            } catch (e: Exception) {
+                AppLog.error("RemoteAgentActivity", "Failed to load notifications: ${e.message}")
+            }
+        }
+
+        // Observe real-time notifications
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                lavender.client.android.data.grpc.serverNotifications.collect { notif ->
+                    val ts = try {
+                        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+                            .parse(notif.timestamp)?.time ?: System.currentTimeMillis()
+                    } catch (_: Exception) { System.currentTimeMillis() }
+                    val msg = RemoteAgentMessage(
+                        id = "notif_${notif.id}",
+                        content = "[${notif.type}] ${notif.title}: ${notif.message}",
+                        isUser = false,
+                        taskType = "notification",
+                        timestamp = ts
+                    )
+                    viewModel.addSystemMessages(listOf(msg))
+                    // Mark as read
+                    launch { markNotificationsRead(userId, listOf(notif.id)) }
+                }
+            }
         }
     }
 }

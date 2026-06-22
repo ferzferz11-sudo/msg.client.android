@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.14 | **Updated:** 2026-06-21
+**Version:** v1.3.0.16 | **Updated:** 2026-06-22
 
 ---
 
@@ -85,6 +85,39 @@ UI:
 - Multi-agent chats: client-side routing (send to multiple agents, aggregate responses)
 - Image support: gallery picker + camera via ActivityResultContracts
 - Chat History: GetAIV2ChatHistory + ListAIV2Chats RPCs with marshallers
+
+### AiV2AgentListActivity Pattern (v1.3.0.16)
+```
+AiV2AgentListActivity — unified agent management screen
+    ├── Tab 0: Presets — load via listAgents(includePublic=true), filter isPreset
+    ├── Tab 1: My Agents — user's custom agents
+    ├── Tab 2: Discover — Marketplace (search + sort/filter)
+    ├── Tab 3: Remote Agent — list connected remote agents
+    │   └── Click → RemoteAgentSettingsFragment (inline Gateway + Token UI)
+    ├── AiV2AgentListAdapter — card adapter with emoji, provider, description
+    ├── FAB → AiAgentSetupActivity (create new agent)
+    └── Click on agent → AiAgentSetupActivity (edit) or RemoteAgentSettingsFragment (remote tab, inline)
+```
+- Agent emoji mapping duplicated in AIBottomSheet, AiV2ChatActivity, AiV2AgentListAdapter
+- Presets loaded from server via ListAIAgents(includePublic=true), filtered by isPreset
+- Remote agents listed via GrpcClient.listRemoteAgents()
+- Tab 3 click shows RemoteAgentSettingsFragment inline — Gateway + Token UI embedded in container
+- `showingRemoteSettings` flag tracks fragment state, `onBackPressed` returns to list
+
+### AI Chats in Chat List Pattern (v1.3.0.15)
+```
+ChatListViewModel
+    ├── loadChats() — loads regular chats from server (GetChatsV2)
+    ├── loadAiChats() — loads AI chats from ListAIV2Chats, merges into allChats
+    ├── buildSections() — filters by tab: "ai" → type == "hermes" || type == "owl"
+    └── Navigation: hermes/owl type → AiV2ChatActivity
+
+Server: GetUserChatsV2 excludes ai/owl/hermes types from regular chat query
+Client: merges AI chats separately via ListAIV2Chats RPC
+```
+- AI chats appear as regular ChatInfo with type="hermes"
+- activeAgentId field stores the agent for navigation to AiV2ChatActivity
+- Tab "AI Chats" filters to only hermes/owl type chats
 
 ### Graceful Shutdown Pattern (v1.3.0.0)
 ```

@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.15 | **Updated:** 2026-06-22
+**Version:** v1.3.0.16 | **Updated:** 2026-06-22
 
 ---
 
@@ -38,19 +38,20 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~176 |
-| Activities | 28 |
+| Kotlin files | ~180 |
+| Activities | 29 |
+| Fragments | 1 (RemoteAgentSettingsFragment) |
 | gRPC files | 22 |
 | Unit tests | 332 (all passing) |
-| Layout XML | 113 |
-| String entries | 790 (EN) + 790 (RU) |
+| Layout XML | 115 |
+| String entries | 791 (EN) + 791 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.0.x (v1.3.0.15) |
+| Branch | feat/1.3.0.x (v1.3.0.16) |
 
 ---
 
-## Architecture Overview (v1.3.0.15)
+## Architecture Overview (v1.3.0.16)
 
 ```
 GrpcClient (facade)
@@ -76,8 +77,9 @@ network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeou
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
 AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
-AIBottomSheet → agent selection with checkboxes → create AI chat
+AiV2AgentListActivity → unified agent management (4 tabs: Presets/My Agents/Discover/Remote Agent)
 AiAgentSetupActivity → create/edit all agent types
+AIBottomSheet → agent selection with checkboxes + AI Agents button
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)

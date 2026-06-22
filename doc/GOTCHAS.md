@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.0.14 | **Updated:** 2026-06-21
+**Version:** v1.3.0.16 | **Updated:** 2026-06-22
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -113,3 +113,40 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Do NOT bump version numbers between sessions** — only user bumps version
 - **Do NOT deploy to prod** without explicit instruction
 - **Commit after each significant change**
+
+## Biometric
+
+- **BiometricPrompt `onAuthenticationError` with `finish()`** — closes the app when biometric is enabled but fails (hardware unavailable, no enrolled fingerprints). Fix: only `USER_CANCELED`/`NEGATIVE_BUTTON` → `finish()`, other errors → continue to ChatListActivity
+- **`biometric_enabled_$username`** stored in SharedPreferences, defaults to `false`. Only toggled in SecurityActivity
+- **BiometricService Status 7** on Xiaomi — system checks sensor availability before showing prompt. Not an error
+
+## AI Chats in Chat List
+
+- **Server `GetUserChatsV2` excludes `ai/owl/hermes`** from regular chat query (`WHERE c.type NOT IN ('ai', 'owl', 'hermes')`). Client must load AI chats separately via `ListAIV2Chats` and merge
+- **`loadAiChats()` must NOT be inside `loadChats()`** — can block startup if gRPC channel not ready. Call separately after connection is established
+- **AI chats use type `hermes`** in ChatInfo for navigation to AiV2ChatActivity
+- **`activeAgentId`** field in ChatInfo stores the agent ID for AI chats
+
+## Token Refresh & Background
+
+- **`ensureFreshToken()` MUST be called BEFORE any gRPC call in ViewModel** — not in Activity.onResume async. The old pattern launched `ensureFreshToken` on IO dispatcher while `loadChats()` ran immediately on Main, causing UNAUTHENTICATED errors when app returns from background
+- **Token refresh race condition:** `loadChats()` in ViewModel called before async `ensureFreshToken()` completed. Fix: call `ensureFreshToken` synchronously at the start of `loadChats()` coroutine
+- **`onResume` token refresh is redundant** if ViewModel already calls `ensureFreshToken` — remove duplicate to avoid confusion
+
+## Remote Agent Inline Settings
+
+- **`RemoteAgentSettingsFragment`** replaces `RemoteAgentSettingsActivity` for Tab 3 click — Gateway + Token UI shown inline in `AiV2AgentListActivity`
+- **Fragment implements `RemoteAgentManager.RemoteAgentStateListener`** — `bind(this)` / `unbind(this)` in `onResume` / `onPause`
+- **`onBackPressed` override** needed to return from fragment to agent list — check `showingRemoteSettings` flag
+
+## Server ListAIAgents Empty UUID
+
+- **Server `ListAIAgents` may return `INTERNAL` with `pq: invalid input syntax for type uuid: ""`** if JWT auth interceptor doesn't set `userID` in context properly
+- **Check deployed binary date vs source** — `stat --format='%y' /root/LavenderMessenger/run/lavender-server` should match source build date
+- **Prompt for fix:** `/Users/paveld/LavenderMessenger-server/doc/PROMPT_LISTAIAGENTS_FIX.md`
+
+## AIBottomSheet Loading State
+
+- **`isLoadingAgents` flag** needed to distinguish "still loading" from "loaded empty" — without it, "Загрузка агентов…" shown forever when server returns 0 agents
+- **`buildAndShow()` must set `isLoadingAgents = true`** before first `buildContent()` to show loading state immediately
+- **`loadPresetAgents()` sets `isLoadingAgents = false`** after gRPC completes, then calls `buildContent()` to update UI

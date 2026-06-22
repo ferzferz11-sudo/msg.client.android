@@ -17,6 +17,7 @@ import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.db.toDomain
+import lavender.client.android.data.ai.AiV2ChatUseCase
 
 /**
  * ChatListViewModel — ViewModel для ChatListActivity.
@@ -179,6 +180,11 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             try {
+                // Ensure JWT is fresh before any gRPC call
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    lavender.client.android.data.session.SessionManager.ensureFreshToken(getApplication())
+                }
+
                 val username = SessionManager.session.value.username
 
                 // First: load from cache for instant display
@@ -253,6 +259,40 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                 Log.e(TAG, "Failed to load chats", e)
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Load AI chats from server and merge into the chat list.
+     * Called separately after main chats are loaded to avoid blocking startup.
+     */
+    fun loadAiChats() {
+        viewModelScope.launch {
+            try {
+                val aiChats = AiV2ChatUseCase.listAIChats()
+                val aiChatInfos = aiChats.map { aiChat ->
+                    ChatInfo(
+                        id = aiChat.id,
+                        name = aiChat.agentName,
+                        type = "hermes",
+                        participants = "[]",
+                        createdAt = aiChat.createdAt,
+                        lastMessageTime = aiChat.updatedAt,
+                        activeAgentId = aiChat.agentId,
+                        isPinned = false,
+                        isArchived = false
+                    )
+                }
+                val existingIds = allChats.map { it.id }.toSet()
+                val newAiChats = aiChatInfos.filter { it.id !in existingIds }
+                if (newAiChats.isNotEmpty()) {
+                    allChats = allChats + newAiChats
+                    buildSections(allChats)
+                    Log.d(TAG, "Merged ${newAiChats.size} AI chats (total=${allChats.size})")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load AI chats: ${e.message}")
             }
         }
     }

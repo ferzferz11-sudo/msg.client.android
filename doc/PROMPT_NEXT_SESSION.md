@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.15 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-22
+**Версия:** v1.3.0.16 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-22
 
 ---
 
@@ -36,102 +36,87 @@ GrpcClient (facade)
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
         └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
 
+network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
+
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
 AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
-AIBottomSheet → agent selection with checkboxes → create AI chat
+AiV2AgentListActivity → unified agent management (4 tabs: Presets/My Agents/Discover/Remote Agent)
+  └── Tab 3 Remote Agent → RemoteAgentSettingsFragment (inline Gateway + Token)
 AiAgentSetupActivity → create/edit all agent types
+AIBottomSheet → agent selection with checkboxes + AI Agents button
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
-Session: SessionManager (token refresh EVERY entry point)
+Session: SessionManager (ensureFreshToken BEFORE loadChats)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image support
-AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Chat Settings: per-session API key + model override
-Biometric: BiometricPrompt after splash screen when enabled
+AI Chats in Chat List: AI chats merged into main chat list via ListAIV2Chats
+Biometric: BiometricPrompt after splash screen when enabled (error → continue, not crash)
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
-Reve Image: image generation via Reve API (image_url in ChatWithAIV2Response)
-Version Catalog: all dependencies in gradle/libs.versions.toml
+Notifications in Remote Agent: server notifications shown as system messages in chat
 ```
 
 ---
 
-## Итог сессии v1.3.0.15
+## Итог сессии v1.3.0.16
 
 ### Выполнено
 
-**AI Services — полная переработка:**
-1. **AIBottomSheet redesigned** — новый порядок: пресеты с чекбоксами → создать чат → удалённые агенты → уведомления (внизу)
-2. **AiAgentSetupActivity** — единый экран создания/редактирования агентов всех типов
-3. **AiV2ChatActivity** — мультиагентные чаты + кнопка скрепки (галерея/камера)
-4. **Серверная интеграция** — GetAIV2ChatHistory + ListAIV2Chats RPC с marshaller'ами
-5. **Proto марshallеры** — новые типы AIV2ChatMessage, AIV2ChatInfo, запросы/ответы
+**AIBottomSheet — фикс вечной загрузки:**
+1. Флаг `isLoadingAgents` — разделение "загрузка" и "пусто"
+2. "Загрузка агентов…" пока gRPC выполняется
+3. "Нет доступных агентов" если сервер вернул пустой список
 
-**Серверные доработки (AI_MULTI_AGENT_PROMPT.md):**
-- StreamFn теперь передаёт agent_id/agent_name в каждом токене
-- GetAIV2ChatHistory — загрузка истории сообщений AI чата
-- ListAIV2Chats — список всех AI чатов пользователя
-- Proto перегенерирован
+**JWT token refresh — фикс UNAUTHENTICATED:**
+1. `ensureFreshToken()` в начале `loadChats()` — токен обновляется синхронно перед gRPC
+2. Убрана гонка между async refresh и sync loadChats
+3. Убран дублирующий `ensureFreshToken` из `ChatListActivity.onResume`
 
-**Исправленные баги:**
-- ForwardChatAdapter: view ID mismatch (chatName→tvChatName, chatType→tvChatType)
-- CredentialStore: AEADBadTagException — delete corrupted EncryptedPrefs and recreate
+**Remote Agent — инлайн настройки:**
+1. `RemoteAgentSettingsFragment` — полный перенос Gateway + Token логики
+2. `fragment_remote_agent_settings.xml` — layout с Gateway/Token табами
+3. Клик по remote agent в Tab 3 → инлайн UI вместо отдельной Activity
+4. Back кнопка → возврат к списку агентов
 
-### Изменённые файлы (клиент)
+### Изменённые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `AIBottomSheet.kt` | Полная переработка: чекбоксы агентов, create chat flow |
-| `AiV2ChatActivity.kt` | Multi-agent support + image picker |
-| `AiV2ChatViewModel.kt` | imageUri + loadHistory() |
-| `AiV2ChatUseCase.kt` | imageUri support + getChatHistory() + listAIChats() |
-| `AiAgentSetupActivity.kt` | NEW — unified agent setup |
-| `activity_ai_agent_setup.xml` | NEW — agent setup layout |
-| `item_ai_agent_selectable.xml` | NEW — agent checkbox item |
-| `ChatListFABs.kt` | New callbacks for AIBottomSheet |
-| `RealGrpcClient.kt` | appContext → internal |
-| `AiV2Proto.kt` | New proto types for history/list |
-| `GrpcAIv2Marshallers.kt` | Marshallers for GetAIV2ChatHistory + ListAIV2Chats |
-| `GrpcAIv2Client.kt` | getAIV2ChatHistory() + listAIV2Chats() |
-| `AndroidManifest.xml` | AiAgentSetupActivity added, old activities removed |
-| `strings.xml` (EN + RU) | New strings for AI integration |
+| `AIBottomSheet.kt` | Флаг `isLoadingAgents`, разделение loading/empty |
+| `ChatListViewModel.kt` | `ensureFreshToken()` перед `loadChats()` |
+| `ChatListActivity.kt` | Убран дублирующий `ensureFreshToken` |
+| `AiV2AgentListActivity.kt` | Inline remote agent settings |
+| `RemoteAgentSettingsFragment.kt` | NEW — фрагмент настроек remote agent |
+| `GrpcAIv2Client.kt` | Логирование ListAIAgents |
+| `activity_ai_v2_agent_list.xml` | Добавлен `remoteAgentContainer` |
+| `fragment_remote_agent_settings.xml` | NEW — layout для remote agent настроек |
+| `strings.xml` (EN + RU) | Добавлена строка `ai_no_agents` |
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.16+)
+## Бэклог — Следующая сессия (v1.3.0.17+)
 
-### Приоритет 1: Довести AI v2 до релиза
+### Приоритет 1: Серверная интеграция
 | Задача | Статус |
 |--------|--------|
-| Тест GetAIV2ChatHistory на реальном сервере | ✅ Пройден |
-| Тест ListAIV2Chats на реальном сервере | ✅ Пройден |
-| Тест мультиагентных чатов (клиентская маршрутизация) | ✅ Пройден |
-| Тест отправки изображений в AI чат (галерея + камера) | ✅ Пройден |
-| Тест AiAgentSetupActivity (создание/редактирование агентов) | ✅ Пройден |
-| Тест AIBottomSheet (чекбоксы → создание чата) | ✅ Пройден |
-| Исправить баги по результатам тестирования | ✅ ForwardChatAdapter, CredentialStore |
-| Финальный прогон всех тестов | 🔲 |
+| Серверный фикс ListAIAgents (empty UUID) | ⏳ (промпт написан, ожидаем деплой) |
+| Финальный прогон AI v2 тестов | 🔲 |
+| Better error messages для AI v2 | 🔲 |
 
-### Приоритет 2: Серверные исправления ✅ ЗАВЕРШЕНО
+### Приоритет 2: UX улучшения
 | Задача | Статус |
 |--------|--------|
-| Обновлять `user_chat_metadata.last_seen_at` при каждом сообщении через chat stream | ✅ v1.3.0.21 |
-| Обновлять `user_chat_metadata.last_client_version` при подключении с новой версией | ✅ v1.3.0.21 |
-
-### Приоритет 3: UX улучшения
-| Задача | Статус |
-|--------|--------|
+| UI для AI Chat Settings (API key, model) | 🔲 |
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
-| Better error messages для AI v2 (показывать server error из response) | 🔲 |
-| UI для AI Chat Settings (API key input, model selector в AiV2ChatActivity) | 🔲 |
 
-### Приоритет 4: Новые фичи
+### Приоритет 3: Новые фичи
 | Задача | Статус |
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |
-| Избранное в Marketplace (сохранять понравившихся агентов) | 🔲 |
+| Избранное в Marketplace | 🔲 |
 
 ---
 
@@ -148,13 +133,14 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 9. Chat toolbar: фиксированная высота `@dimen/custom_toolbar_height`, elevation 0dp
 10. Все chat activities: `setDecorFitsSystemWindows(window, false)` в onCreate
 11. Marshallers: всегда включать v2 proto поля, сверять field numbers с серверным proto
-12. JWT freshness: `ensureFreshToken()` перед Chat stream
+12. JWT freshness: `ensureFreshToken()` перед gRPC вызовами (loadChats, Chat stream)
 13. **Перед коммитом всегда запускать `./gradlew assembleDebug`**
 14. **НЕ bump'ать версию — bump делает только пользователь**
 15. **Marshallers field order:** server proto определяет field numbers
 16. **AI v2 RPC:** все методы в `messenger.ChatService/*` (НЕ `AIService`)
 17. **Unread count:** считается по `user_chat_metadata.last_read_at`, НЕ по `messages.is_read`
 18. **ProfileService v2:** profile/avatar/delete/settings — через `messenger.ProfileService/*` (JWT context)
+19. **CHANGELOG:** не включать документационные изменения (README, doc/, комментарии) — только код
 
 ---
 
@@ -176,4 +162,5 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
 - Серверный промпт: `/Users/paveld/LavenderMessenger-server/doc/AI_MULTI_AGENT_PROMPT.md`
+- Серверный промпт (ListAIAgents fix): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_LISTAIAGENTS_FIX.md`
 - Changelog: `CHANGELOG.md`

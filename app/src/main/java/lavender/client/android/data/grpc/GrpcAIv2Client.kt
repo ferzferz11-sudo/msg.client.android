@@ -320,8 +320,12 @@ class GrpcAIv2Client(
         val result = CompletableDeferred<ListAIAgentsResponseProto>()
 
         call.start(object : io.grpc.ClientCall.Listener<ListAIAgentsResponseProto>() {
-            override fun onMessage(message: ListAIAgentsResponseProto) { result.complete(message) }
+            override fun onMessage(message: ListAIAgentsResponseProto) {
+                android.util.Log.d(TAG, "[ListAIAgents] received ${message.agents.size} agents")
+                result.complete(message)
+            }
             override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                android.util.Log.d(TAG, "[ListAIAgents] onClose status=$status")
                 if (!result.isCompleted) result.complete(ListAIAgentsResponseProto())
             }
         }, io.grpc.Metadata())

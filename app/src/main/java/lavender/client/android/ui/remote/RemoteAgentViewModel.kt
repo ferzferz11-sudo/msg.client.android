@@ -81,6 +81,13 @@ class RemoteAgentViewModel(application: Application) : AndroidViewModel(applicat
     private val _messages = MutableStateFlow<List<RemoteAgentMessage>>(emptyList())
     val messages: StateFlow<List<RemoteAgentMessage>> = _messages.asStateFlow()
 
+    fun addSystemMessages(newMessages: List<RemoteAgentMessage>) {
+        val current = _messages.value.toMutableList()
+        val existingIds = current.map { it.id }.toSet()
+        newMessages.filter { it.id !in existingIds }.forEach { current.add(it) }
+        _messages.value = current
+    }
+
     // ===== Typing =====
     private val _isTyping = MutableStateFlow(false)
     val isTyping: StateFlow<Boolean> = _isTyping.asStateFlow()

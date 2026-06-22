@@ -1,5 +1,101 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.16] - 2026-06-22
+
+### Исправлено
+
+**AIBottomSheet — фикс вечной загрузки:**
+- Добавлен флаг `isLoadingAgents` для разделения "загрузка" и "пусто"
+- Показывает "Загрузка агентов…" пока gRPC выполняется
+- Показывает "Нет доступных агентов" если сервер вернул пустой список
+- Добавлена строка `ai_no_agents` (EN + RU)
+
+**JWT token refresh — фикс UNAUTHENTICATED после фонового режима:**
+- `ensureFreshToken()` теперь вызывается в начале `loadChats()` в ChatListViewModel
+- Убрана гонка между async token refresh и sync loadChats в onResume
+- Чаты загружаются без задержки после возвращения из фона
+
+**Remote Agent — инлайн настройки в Agent Management:**
+- Клик по remote agent в Tab 3 показывает Gateway + Token UI инлайн
+- Создан `RemoteAgentSettingsFragment` + `fragment_remote_agent_settings.xml`
+- Нет перехода в отдельную RemoteAgentSettingsActivity
+- Back кнопка возвращает к списку агентов
+
+**GrpcAIv2Client — логирование ListAIAgents:**
+- Добавлено логирование статуса ответа для диагностики
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `ui/widget/AIBottomSheet.kt` | Флаг `isLoadingAgents`, разделение loading/empty |
+| `ui/chatlist/ChatListViewModel.kt` | `ensureFreshToken()` перед `loadChats()` |
+| `ui/chatlist/ChatListActivity.kt` | Убран дублирующий `ensureFreshToken` в onResume |
+| `ui/ai/AiV2AgentListActivity.kt` | Inline remote agent settings вместо отдельной Activity |
+| `ui/remote/RemoteAgentSettingsFragment.kt` | NEW — фрагмент настроек remote agent |
+| `data/grpc/GrpcAIv2Client.kt` | Логирование ListAIAgents |
+| `res/layout/activity_ai_v2_agent_list.xml` | Добавлен `remoteAgentContainer` |
+| `res/layout/fragment_remote_agent_settings.xml` | NEW — layout для remote agent настроек |
+| `res/values/strings.xml` | Добавлена строка `ai_no_agents` |
+| `res/values-ru/strings.xml` | Добавлена строка `ai_no_agents` |
+
+---
+
+## [1.3.0.15] - 2026-06-22
+
+### Добавлено
+
+**AiV2AgentListActivity — единый экран управления агентами:**
+- 4 таба: Presets (загрузка с сервера), My Agents, Discover (Marketplace), Remote Agent
+- `AiV2AgentListAdapter` — адаптер карточек агентов с эмодзи, провайдером, описанием
+- Кнопка удаления для пользовательских агентов (пресеты защищены)
+- FAB → создание нового агента через AiAgentSetupActivity
+- Таб "Remote Agent" — список подключённых удалённых агентов, клик → RemoteAgentSettingsActivity
+
+**AI чаты в основном списке чатов:**
+- `ChatListViewModel.loadAiChats()` — загрузка AI чатов из `ListAIV2Chats` и мерж в общий список
+- AI чаты отображаются как обычные чаты с типом `hermes`
+- Таб "AI Chats" фильтрует только AI чаты
+- Навигация на AI чат из списка → AiV2ChatActivity
+
+**Уведомления в чате удалённого агента:**
+- Серверные уведомления отображаются как системные сообщения в RemoteAgentActivity
+- Подписка на `SubscribeNotifications` + загрузка истории уведомлений
+
+### Изменено
+
+**AIBottomSheet — упрощение:**
+- Убрана секция "Notifications" (уведомления перенесены в RemoteAgentActivity)
+- Добавлена кнопка "AI Agents" → AiV2AgentListActivity
+
+**BiometricPrompt — исправление краша:**
+- При ошибке биометрии (не отмене пользователя) приложение переходит в ChatListActivity вместо закрытия
+- `onAuthenticationError`: `USER_CANCELED`/`NEGATIVE_BUTTON` → `finish()`, остальное → `startActivity(ChatListActivity)`
+
+### Файлы
+
+**Kotlin (3 новых):**
+- `ui/ai/AiV2AgentListActivity.kt` — единый экран управления агентами
+- `ui/ai/AiV2AgentListAdapter.kt` — адаптер для списка агентов
+- `SplashActivity.kt` — исправлен biometric error handler
+
+**Kotlin (4 изменённых):**
+- `ui/widget/AIBottomSheet.kt` — убраны Notifications + unreadNotifCount, добавлен onOpenAiAgentList
+- `ui/chatlist/ChatListFABs.kt` — навигация на AiV2AgentListActivity
+- `ui/chatlist/ChatListViewModel.kt` — loadAiChats() для мержа AI чатов
+- `ui/remote/RemoteAgentActivity.kt` — подписка на уведомления + отображение в чате
+- `ui/remote/RemoteAgentViewModel.kt` — addSystemMessages()
+
+**Layout (1 изменённый):**
+- `activity_ai_v2_agent_list.xml` — добавлен таб "Remote Agent"
+
+**Manifest:**
+- Зарегистрирован `AiV2AgentListActivity`
+
+**Тесты (332/332):** все проходят
+
+---
+
 ## [1.3.0.13] - 2026-06-21
 
 ### Оптимизация

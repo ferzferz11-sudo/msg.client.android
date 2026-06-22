@@ -44,6 +44,11 @@
             android:layout_height="wrap_content"
             android:text="@string/discover" />
 
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/remote_agent_title" />
+
     </com.google.android.material.tabs.TabLayout>
 
     <!-- Search bar for Marketplace -->
@@ -168,6 +173,16 @@
             tools:listitem="@layout/item_ai_v2_agent_card" />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <FrameLayout
+        android:id="@+id/remoteAgentContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ProgressBar
         android:id="@+id/progressBar"

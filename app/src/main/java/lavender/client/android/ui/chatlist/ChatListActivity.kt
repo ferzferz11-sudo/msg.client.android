@@ -311,11 +311,6 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
 
-        // Validate token freshness on resume
-        if (lavender.client.android.data.auth.AuthManager.isJwtAuthenticated(this)
-            && lavender.client.android.data.auth.AuthManager.needsRefresh(this)) {
-            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { SessionManager.ensureFreshToken(this@ChatListActivity) }
-        }
         // Safety net: if chats list is empty but we're connected, reload.
         if (::viewModel.isInitialized && viewModel.getChats().isEmpty()
             && GrpcClient.connectionStatus.value == ConnectionStatus.READY

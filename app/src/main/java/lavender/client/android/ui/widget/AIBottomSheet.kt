@@ -36,20 +36,21 @@ class AIBottomSheet(
     private val onCreateAiChat: (agentId: String, agentName: String) -> Unit = { _, _ -> },
     private val onCreateMultiAgentChat: (agentIds: List<String>, agentNames: List<String>) -> Unit = { _, _ -> },
     private val onAddCustomAgent: () -> Unit = {},
-    private val onOpenNotifications: () -> Unit = {},
+    private val onOpenAiAgentList: () -> Unit = {},
     private val onOpenRemoteAgents: () -> Unit = {},
-    private var unreadNotifCount: Int = 0,
     theme: lavender.client.android.theme.Theme = ThemeStore.currentTheme()
 ) : StandardBottomSheet(context, R.layout.widget_ai_bottom_sheet, theme) {
 
     private val selectedAgents = mutableSetOf<AiV2Agent>()
     private var presetAgents = listOf<AiV2Agent>()
+    private var isLoadingAgents = true
     private val agentCheckBoxes = mutableListOf<Pair<AiV2Agent, CheckBox>>()
     private var agentLoadJob: Job? = null
     private var summaryText: TextView? = null
     private var createChatButtonView: View? = null
 
     fun buildAndShow() {
+        isLoadingAgents = true
         buildContent()
         show()
         loadPresetAgents()
@@ -59,6 +60,7 @@ class AIBottomSheet(
         if (isShowing()) {
             val theme = ThemeStore.currentTheme()
             applyTheme(theme)
+            isLoadingAgents = true
             buildContent()
             show()
             loadPresetAgents()
@@ -70,15 +72,16 @@ class AIBottomSheet(
         val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         agentLoadJob = scope.launch {
             try {
-                presetAgents = AiV2ChatUseCase.listAgents(includePublic = true).filter { it.isPreset }
-                if (isShowing()) {
-                    buildContent()
-                }
+                val agents = AiV2ChatUseCase.listAgents(includePublic = true)
+                presetAgents = agents.filter { it.isPreset }
+                android.util.Log.d("AIBottomSheet", "Loaded ${agents.size} agents, ${presetAgents.size} presets")
             } catch (e: Exception) {
+                android.util.Log.e("AIBottomSheet", "Failed to load agents: ${e.message}", e)
                 presetAgents = emptyList()
-                if (isShowing()) {
-                    buildContent()
-                }
+            }
+            isLoadingAgents = false
+            if (isShowing()) {
+                buildContent()
             }
         }
     }
@@ -130,13 +133,16 @@ class AIBottomSheet(
                 contentContainer?.addView(agentItem)
             }
         } else {
-            val loadingText = TextView(context).apply {
-                text = context.getString(R.string.ai_loading_agents)
+            val statusText = TextView(context).apply {
+                text = context.getString(
+                    if (isLoadingAgents) R.string.ai_loading_agents
+                    else R.string.ai_no_agents
+                )
                 textSize = 14f
                 setPadding(16, 8, 16, 8)
                 setTextColor(txtColor)
             }
-            contentContainer?.addView(loadingText)
+            contentContainer?.addView(statusText)
         }
 
         // "Создать своего агента" button
@@ -204,7 +210,34 @@ class AIBottomSheet(
         createChatButtonView = createChatBtn
         contentContainer?.addView(createChatBtn)
 
-        // === Section 3: Remote Agents ===
+        // === Section 3: AI Agents ===
+        val aiAgentsDivider = LayoutInflater.from(context)
+            .inflate(R.layout.widget_section_divider, contentContainer, false)
+        contentContainer?.addView(aiAgentsDivider)
+
+        val aiAgentsHeader = LayoutInflater.from(context)
+            .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
+        aiAgentsHeader.text = context.getString(R.string.ai_v2_agents)
+        contentContainer?.addView(aiAgentsHeader)
+
+        val aiAgentsOpen = LayoutInflater.from(context)
+            .inflate(R.layout.widget_action_item, contentContainer, false)
+        val aiAgentsIcon = aiAgentsOpen.findViewById<ImageView>(R.id.actionIcon)
+        val aiAgentsText = aiAgentsOpen.findViewById<TextView>(R.id.actionText)
+        val aiAgentsBadge = aiAgentsOpen.findViewById<TextView>(R.id.actionBadge)
+        aiAgentsIcon.setImageResource(R.drawable.ic_agents)
+        aiAgentsIcon.imageTintList = ColorStateList.valueOf(primColor)
+        aiAgentsText.text = context.getString(R.string.ai_manage_agents)
+        aiAgentsText.setTextColor(primColor)
+        aiAgentsBadge.visibility = View.GONE
+        aiAgentsOpen.setOnClickListener {
+            onOpenAiAgentList()
+            dismiss()
+        }
+        aiAgentsOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
+        contentContainer?.addView(aiAgentsOpen)
+
+        // === Section 5: Remote Agents ===
         val remoteDivider = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_divider, contentContainer, false)
         contentContainer?.addView(remoteDivider)
@@ -230,32 +263,6 @@ class AIBottomSheet(
         }
         remoteOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(remoteOpen)
-
-        // === Section 4: Notifications (at the bottom) ===
-        val notifDivider = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_divider, contentContainer, false)
-        contentContainer?.addView(notifDivider)
-
-        val notifItem = LayoutInflater.from(context)
-            .inflate(R.layout.widget_action_item, contentContainer, false)
-        val notifIcon = notifItem.findViewById<ImageView>(R.id.actionIcon)
-        val notifText = notifItem.findViewById<TextView>(R.id.actionText)
-        val notifBadge = notifItem.findViewById<TextView>(R.id.actionBadge)
-        notifIcon.setImageResource(R.drawable.ic_notifications)
-        notifIcon.imageTintList = ColorStateList.valueOf(primColor)
-        notifText.text = context.getString(R.string.ai_notifications)
-        notifText.setTextColor(txtColor)
-        if (unreadNotifCount > 0) {
-            notifBadge.text = if (unreadNotifCount > 99) "99+" else unreadNotifCount.toString()
-            notifBadge.visibility = View.VISIBLE
-        } else {
-            notifBadge.visibility = View.GONE
-        }
-        notifItem.setOnClickListener {
-            onOpenNotifications()
-            dismiss()
-        }
-        contentContainer?.addView(notifItem)
     }
 
     private fun updateCreateChatButton() {
