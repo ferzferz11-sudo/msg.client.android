@@ -36,8 +36,8 @@ class ForwardChatAdapter(
     override fun getItemCount(): Int = chats.size
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val chatName: TextView = view.findViewById(R.id.chatName)
-        private val chatType: TextView = view.findViewById(R.id.chatType)
+        private val chatName: TextView = view.findViewById(R.id.tvChatName)
+        private val chatType: TextView = view.findViewById(R.id.tvChatType)
         private val participantAvatars: LinearLayout = view.findViewById(R.id.participantAvatars)
         private val unreadCount: TextView = view.findViewById(R.id.tvUnreadCount)
 
