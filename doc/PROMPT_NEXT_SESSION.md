@@ -74,6 +74,10 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 - ListAIV2Chats — список всех AI чатов пользователя
 - Proto перегенерирован
 
+**Исправленные баги:**
+- ForwardChatAdapter: view ID mismatch (chatName→tvChatName, chatType→tvChatType)
+- CredentialStore: AEADBadTagException — delete corrupted EncryptedPrefs and recreate
+
 ### Изменённые файлы (клиент)
 
 | Файл | Изменение |
@@ -97,15 +101,17 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 
 ## Бэклог — Следующая сессия (v1.3.0.16+)
 
-### Приоритет 1: Live-тестирование AI v2 интеграции
+### Приоритет 1: Довести AI v2 до релиза
 | Задача | Статус |
 |--------|--------|
-| Тест GetAIV2ChatHistory на реальном сервере | 🔲 Нужен live-тест |
-| Тест ListAIV2Chats на реальном сервере | 🔲 Нужен live-тест |
-| Тест мультиагентных чатов (клиентская маршрутизация) | 🔲 Нужен live-тест |
-| Тест отправки изображений в AI чат (галерея + камера) | 🔲 Нужен live-тест |
-| Тест AiAgentSetupActivity (создание/редактирование агентов) | 🔲 Нужен live-тест |
-| Тест AIBottomSheet (чекбоксы → создание чата) | 🔲 Нужен live-тест |
+| Тест GetAIV2ChatHistory на реальном сервере | ✅ Пройден |
+| Тест ListAIV2Chats на реальном сервере | ✅ Пройден |
+| Тест мультиагентных чатов (клиентская маршрутизация) | ✅ Пройден |
+| Тест отправки изображений в AI чат (галерея + камера) | ✅ Пройден |
+| Тест AiAgentSetupActivity (создание/редактирование агентов) | ✅ Пройден |
+| Тест AIBottomSheet (чекбоксы → создание чата) | ✅ Пройден |
+| Исправить баги по результатам тестирования | ✅ ForwardChatAdapter, CredentialStore |
+| Финальный прогон всех тестов | 🔲 |
 
 ### Приоритет 2: Серверные исправления ✅ ЗАВЕРШЕНО
 | Задача | Статус |
