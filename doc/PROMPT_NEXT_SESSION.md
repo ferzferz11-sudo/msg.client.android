@@ -97,14 +97,15 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 
 ## Бэклог — Следующая сессия (v1.3.0.16+)
 
-### Приоритет 1: Тестирование AI v2 интеграции
+### Приоритет 1: Live-тестирование AI v2 интеграции
 | Задача | Статус |
 |--------|--------|
 | Тест GetAIV2ChatHistory на реальном сервере | 🔲 Нужен live-тест |
 | Тест ListAIV2Chats на реальном сервере | 🔲 Нужен live-тест |
 | Тест мультиагентных чатов (клиентская маршрутизация) | 🔲 Нужен live-тест |
-| Тест отправки изображений в AI чат | 🔲 Нужен live-тест |
+| Тест отправки изображений в AI чат (галерея + камера) | 🔲 Нужен live-тест |
 | Тест AiAgentSetupActivity (создание/редактирование агентов) | 🔲 Нужен live-тест |
+| Тест AIBottomSheet (чекбоксы → создание чата) | 🔲 Нужен live-тест |
 
 ### Приоритет 2: Серверные исправления
 | Задача | Статус |
@@ -119,7 +120,6 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 | Автообновление статистики Usage | 🔲 |
 | Better error messages для AI v2 (показывать server error из response) | 🔲 |
 | UI для AI Chat Settings (API key input, model selector в AiV2ChatActivity) | 🔲 |
-| Удаление старых файлов: AiV2AgentListActivity.kt, AgentDetailActivity.kt | 🔲 |
 
 ### Приоритет 4: Новые фичи
 | Задача | Статус |
