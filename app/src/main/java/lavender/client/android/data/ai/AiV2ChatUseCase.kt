@@ -24,10 +24,27 @@ object AiV2ChatUseCase {
         message: String,
         agentId: String = "",
         images: List<ByteArray> = emptyList(),
+        imageUri: String? = null,
         scope: CoroutineScope
     ) = withContext(Dispatchers.IO) {
         var currentSessionId = sessionId
         var iteration = 0
+
+        // Convert imageUri to ByteArray if provided
+        val imageBytes = if (imageUri != null && images.isEmpty()) {
+            try {
+                val uri = android.net.Uri.parse(imageUri)
+                val context = lavender.client.android.data.grpc.RealGrpcClient.appContext
+                context?.contentResolver?.openInputStream(uri)?.use { stream ->
+                    listOf(stream.readBytes())
+                } ?: emptyList()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load image from URI: $imageUri", e)
+                emptyList()
+            }
+        } else {
+            images
+        }
 
         while (iteration < MAX_TOOL_ITERATIONS) {
             val result = executeStream(
@@ -35,7 +52,7 @@ object AiV2ChatUseCase {
                 sessionId = currentSessionId,
                 message = if (iteration == 0) message else "",
                 agentId = agentId,
-                images = if (iteration == 0) images else emptyList(),
+                images = if (iteration == 0) imageBytes else emptyList(),
                 toolCalls = emptyList(),
                 scope = scope
             )
@@ -330,6 +347,49 @@ object AiV2ChatUseCase {
         } catch (e: Exception) {
             Log.e(TAG, "getUsageStats error", e)
             Result.failure(e)
+        }
+    }
+
+    // ======= History & Chat List =======
+
+    suspend fun getChatHistory(sessionId: String, limit: Int = 50): List<AiV2ChatMessage> {
+        return try {
+            val messages = RealGrpcClient.aiV2Client.getAIV2ChatHistory(sessionId, limit)
+            messages.map { msg ->
+                AiV2ChatMessage(
+                    id = msg.id.toString(),
+                    sessionId = msg.chatId,
+                    role = msg.role,
+                    content = msg.content,
+                    agentId = msg.agentId,
+                    agentName = "",
+                    timestamp = 0,
+                    isStreaming = false,
+                    tokenCount = msg.tokenCount,
+                    modelUsed = msg.modelUsed
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getChatHistory error", e)
+            emptyList()
+        }
+    }
+
+    suspend fun listAIChats(): List<AiV2ChatSession> {
+        return try {
+            val chats = RealGrpcClient.aiV2Client.listAIV2Chats()
+            chats.map { chat ->
+                AiV2ChatSession(
+                    id = chat.id,
+                    agentId = chat.agentId,
+                    agentName = chat.name,
+                    createdAt = 0,
+                    updatedAt = 0
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "listAIChats error", e)
+            emptyList()
         }
     }
 }

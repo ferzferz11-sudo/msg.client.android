@@ -37,21 +37,25 @@ RealGrpcClient (orchestrator) delegates to:
 - **CRITICAL:** StateFlow declared BEFORE modules (Kotlin object top-to-bottom init)
 - GrpcClient: extension functions don't work via star import — all methods inline
 
-### AI v2 Pattern (v1.3.0.2)
+### AI v2 Pattern (v1.3.0.15)
 ```
-GrpcAIv2Client — gRPC transport (chatWithAIV2 streaming + agent CRUD + tools + marketplace)
+GrpcAIv2Client — gRPC transport (chatWithAIV2 streaming + agent CRUD + tools + marketplace + history)
     ├── ChatWithAIV2 streaming with tool calling loop
     ├── Agent CRUD: createAgent, updateAgent, deleteAgent, getAgent, listAgents, cloneAgent
     ├── Tools: listTools
-    └── Marketplace: rateAgent, getAgentReviews, listMarketplaceAgents, getAgentStats,
-                     shareAgent, installAgent, getUsageStats
+    ├── Marketplace: rateAgent, getAgentReviews, listMarketplaceAgents, getAgentStats,
+    │                shareAgent, installAgent, getUsageStats
+    ├── Chat History: getAIV2ChatHistory, listAIV2Chats
+    └── Chat Settings: getChatSettings, updateChatSettings
 
 AiV2ChatUseCase — orchestrates chat with tool calling loop + marketplace methods
-    ├── chat(userId, sessionId, message, agentId, images, scope)
+    ├── chat(userId, sessionId, message, agentId, images, imageUri, scope)
     │   └── executeStream() → if tool_calls → send back → repeat (max 10 iterations)
     ├── Agent CRUD + Tools
-    └── Marketplace: listMarketplaceAgents, getAgentStats, getAgentReviews,
-                     rateAgent, shareAgent, installAgent, getUsageStats
+    ├── Marketplace: listMarketplaceAgents, getAgentStats, getAgentReviews,
+    │                rateAgent, shareAgent, installAgent, getUsageStats
+    ├── Chat History: getChatHistory(sessionId, limit)
+    └── Chat List: listAIChats()
 
 AiV2ChatManager — shared flows for UI observation
     ├── aiResponses: SharedFlow<AiV2ChatMessage>
@@ -61,16 +65,12 @@ AiV2ChatManager — shared flows for UI observation
     └── streamState: StateFlow<AiV2StreamState>
 
 UI:
-    ├── AiV2ChatActivity + AiV2ChatViewModel — unified AI chat screen + rate limit
-    ├── AiV2AgentListActivity + AiV2AgentListViewModel — agent list (3 tabs)
-    │   ├── Tab 0: Presets (quick access to preset agents)
-    │   ├── Tab 1: My Agents (user's custom agents)
-    │   └── Tab 2: Discover (marketplace with search, sort, filter, pagination)
-    ├── AiV2AgentCreateEditActivity + AiV2AgentCreateEditViewModel — agent create/edit
+    ├── AiV2ChatActivity + AiV2ChatViewModel — unified AI chat + rate limit + image support + multi-agent
+    ├── AIBottomSheet — agent selection with checkboxes → create AI chat
+    ├── AiAgentSetupActivity — create/edit all agent types
     ├── MarketplaceViewModel — marketplace catalog with pagination + sort/filter
     ├── AgentDetailViewModel — agent details (stats, reviews, rate/share/install)
     ├── MarketplaceAgentAdapter — marketplace agent cards + skeleton loading
-    ├── AgentDetailActivity — agent detail screen
     ├── ReviewAdapter — review list
     ├── RateAgentBottomSheet — rate agent (1-5 stars + review)
     └── InstallAgentBottomSheet — install agent by share code
@@ -82,6 +82,9 @@ UI:
 - Marketplace: search with debounce, infinite scroll, pull-to-refresh, deep link install
 - Rate limit: RateLimitCache + countdown + disable input on limit
 - Reve Image: image generation via `reve` agent, `image_url` in ChatWithAIV2Response field 10
+- Multi-agent chats: client-side routing (send to multiple agents, aggregate responses)
+- Image support: gallery picker + camera via ActivityResultContracts
+- Chat History: GetAIV2ChatHistory + ListAIV2Chats RPCs with marshallers
 
 ### Graceful Shutdown Pattern (v1.3.0.0)
 ```

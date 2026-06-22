@@ -700,3 +700,106 @@ private fun parseAgentInfoV2(bytes: ByteArray): AgentInfoV2Proto? {
         null
     }
 }
+
+// ======= GetAIV2ChatHistory =======
+// Server proto: messenger.ChatService/GetAIV2ChatHistory
+
+class GetAIV2ChatHistoryRequestMarshaller : MethodDescriptor.Marshaller<GetAIV2ChatHistoryRequestProto> {
+    override fun stream(v: GetAIV2ChatHistoryRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.sessionId.isNotEmpty()) cos.writeString(1, v.sessionId)
+        if (v.limit != 0) cos.writeInt32(2, v.limit)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): GetAIV2ChatHistoryRequestProto = GetAIV2ChatHistoryRequestProto()
+}
+
+class GetAIV2ChatHistoryResponseMarshaller : MethodDescriptor.Marshaller<GetAIV2ChatHistoryResponseProto> {
+    override fun stream(v: GetAIV2ChatHistoryResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): GetAIV2ChatHistoryResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val messages = mutableListOf<AIV2ChatMessageProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val len = cis.readRawVarint32()
+                    val msgBytes = cis.readRawBytes(len)
+                    if (msgBytes.isNotEmpty()) {
+                        try {
+                            val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                            var id = 0L; var chatId = ""; var role = ""; var content = ""
+                            var agentId = ""; var tokenCount = 0; var modelUsed = ""; var createdAt = ""
+                            while (!inner.isAtEnd) {
+                                val innerTag = inner.readTag()
+                                if (innerTag == 0) break
+                                when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                    1 -> id = inner.readInt64()
+                                    2 -> chatId = inner.readString()
+                                    3 -> role = inner.readString()
+                                    4 -> content = inner.readString()
+                                    5 -> agentId = inner.readString()
+                                    6 -> tokenCount = inner.readInt32()
+                                    7 -> modelUsed = inner.readString()
+                                    8 -> createdAt = inner.readString()
+                                    else -> inner.skipField(innerTag)
+                                }
+                            }
+                            messages.add(AIV2ChatMessageProto(id, chatId, role, content, agentId, tokenCount, modelUsed, createdAt))
+                        } catch (_: Exception) {}
+                    }
+                }
+                else -> cis.skipField(tag)
+            }
+        }
+        return GetAIV2ChatHistoryResponseProto(messages)
+    }
+}
+
+// ======= ListAIV2Chats =======
+// Server proto: messenger.ChatService/ListAIV2Chats
+
+class ListAIV2ChatsRequestMarshaller : MethodDescriptor.Marshaller<ListAIV2ChatsRequestProto> {
+    override fun stream(v: ListAIV2ChatsRequestProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ListAIV2ChatsRequestProto = ListAIV2ChatsRequestProto()
+}
+
+class ListAIV2ChatsResponseMarshaller : MethodDescriptor.Marshaller<ListAIV2ChatsResponseProto> {
+    override fun stream(v: ListAIV2ChatsResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): ListAIV2ChatsResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val chats = mutableListOf<AIV2ChatInfoProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val len = cis.readRawVarint32()
+                    val msgBytes = cis.readRawBytes(len)
+                    if (msgBytes.isNotEmpty()) {
+                        try {
+                            val inner = com.google.protobuf.CodedInputStream.newInstance(msgBytes)
+                            var id = ""; var name = ""; var chatType = ""; var agentId = ""
+                            var createdAt = ""; var updatedAt = ""
+                            while (!inner.isAtEnd) {
+                                val innerTag = inner.readTag()
+                                if (innerTag == 0) break
+                                when (com.google.protobuf.WireFormat.getTagFieldNumber(innerTag)) {
+                                    1 -> id = inner.readString()
+                                    2 -> name = inner.readString()
+                                    3 -> chatType = inner.readString()
+                                    4 -> agentId = inner.readString()
+                                    5 -> createdAt = inner.readString()
+                                    6 -> updatedAt = inner.readString()
+                                    else -> inner.skipField(innerTag)
+                                }
+                            }
+                            chats.add(AIV2ChatInfoProto(id, name, chatType, agentId, createdAt, updatedAt))
+                        } catch (_: Exception) {}
+                    }
+                }
+                else -> cis.skipField(tag)
+            }
+        }
+        return ListAIV2ChatsResponseProto(chats)
+    }
+}

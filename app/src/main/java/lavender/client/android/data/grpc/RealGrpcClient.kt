@@ -252,7 +252,7 @@ object RealGrpcClient {
     )
 
     // ====== State (kept in orchestrator) ======
-    private var appContext: Context? = null
+    internal var appContext: Context? = null
     private var currentUsername: String? = null
     private var currentUserId: String? = null
     private var requestObserver: StreamObserver<MessageProto>? = null

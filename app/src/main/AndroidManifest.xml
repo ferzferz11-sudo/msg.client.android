@@ -103,19 +103,8 @@
 
         <activity android:name=".ui.ai.AiV2ChatActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".ui.ai.AiV2AgentListActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="lavender"
-                    android:host="marketplace"
-                    android:pathPrefix="/install" />
-            </intent-filter>
-        </activity>
         <activity android:name=".ui.ai.AiV2AgentCreateEditActivity" android:exported="false" />
-        <activity android:name=".ui.ai.AgentDetailActivity" android:exported="false" />
+        <activity android:name=".ui.ai.AiAgentSetupActivity" android:exported="false" />
         <activity android:name=".ui.remote.RemoteAgentActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.remote.RemoteAgentSettingsActivity" android:exported="false" />

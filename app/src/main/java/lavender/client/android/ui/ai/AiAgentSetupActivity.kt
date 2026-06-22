@@ -15,9 +15,14 @@ import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
 
 /**
- * AiV2AgentCreateEditActivity — create or edit AI v2 agent.
+ * AiAgentSetupActivity — unified screen for creating and editing AI agents.
+ *
+ * Supports:
+ * - Creating new custom agents (all provider types)
+ * - Editing existing agents (from presets or custom)
+ * - Configuring remote agents
  */
-class AiV2AgentCreateEditActivity : AppCompatActivity() {
+class AiAgentSetupActivity : AppCompatActivity() {
 
     private lateinit var viewModel: AiV2AgentCreateEditViewModel
     private lateinit var agentNameInput: TextInputEditText
@@ -36,7 +41,7 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_ai_v2_agent_create_edit)
+        setContentView(R.layout.activity_ai_agent_setup)
 
         editAgentId = intent.getStringExtra("AGENT_ID") ?: ""
 
@@ -74,8 +79,11 @@ class AiV2AgentCreateEditActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
 
+        val titleText = findViewById<android.widget.TextView>(R.id.titleText)
         if (editAgentId.isNotEmpty()) {
-            toolbar.title = getString(R.string.ai_v2_edit_agent)
+            titleText.text = getString(R.string.ai_v2_edit_agent)
+        } else {
+            titleText.text = getString(R.string.ai_v2_create_agent)
         }
     }
 

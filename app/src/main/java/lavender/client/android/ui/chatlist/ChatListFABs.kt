@@ -411,11 +411,22 @@ internal fun showCreateConferenceDialog(activity: ChatListActivity) {
 internal fun showAIBottomSheet(activity: ChatListActivity) {
     activity.aiBottomSheet = AIBottomSheet(
         context = activity,
-        onCreateAiChat = {
-            activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java))
+        onCreateAiChat = { agentId, agentName ->
+            val intent = Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java).apply {
+                putExtra("AGENT_ID", agentId)
+                putExtra("AGENT_NAME", agentName)
+            }
+            activity.startActivity(intent)
         },
-        onManageAgents = {
-            activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiV2AgentListActivity::class.java))
+        onCreateMultiAgentChat = { agentIds, agentNames ->
+            val intent = Intent(activity, lavender.client.android.ui.ai.AiV2ChatActivity::class.java).apply {
+                putStringArrayListExtra("AGENT_IDS", ArrayList(agentIds))
+                putStringArrayListExtra("AGENT_NAMES", ArrayList(agentNames))
+            }
+            activity.startActivity(intent)
+        },
+        onAddCustomAgent = {
+            activity.startActivity(Intent(activity, lavender.client.android.ui.ai.AiAgentSetupActivity::class.java))
         },
         onOpenNotifications = {
             activity.startActivity(Intent(activity, lavender.client.android.ui.notification.NotificationActivity::class.java))

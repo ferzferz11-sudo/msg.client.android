@@ -1,12 +1,16 @@
 package lavender.client.android.ui.ai
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -17,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import lavender.client.android.R
+import lavender.client.android.data.ai.AiV2ChatMessage
 import lavender.client.android.data.ai.RateLimitCache
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
@@ -38,6 +43,23 @@ class AiV2ChatActivity : AppCompatActivity() {
     private var sessionId: String = ""
     private var agentId: String = ""
     private var agentName: String = ""
+    private var agentIds: List<String> = emptyList()
+    private var agentNames: List<String> = emptyList()
+    private var pendingImageUri: Uri? = null
+
+    private val imagePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { handleImageSelected(it) }
+    }
+
+    private val cameraLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success) {
+            pendingImageUri?.let { handleImageSelected(it) }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -49,6 +71,16 @@ class AiV2ChatActivity : AppCompatActivity() {
         agentName = intent.getStringExtra("AGENT_NAME") ?: ""
         userId = SessionManager.session.value.userId
 
+        // Multi-agent support
+        agentIds = intent.getStringArrayListExtra("AGENT_IDS") ?: emptyList()
+        agentNames = intent.getStringArrayListExtra("AGENT_NAMES") ?: emptyList()
+
+        // If single agent passed as extras
+        if (agentIds.isEmpty() && agentId.isNotEmpty()) {
+            agentIds = listOf(agentId)
+            agentNames = listOf(agentName)
+        }
+
         val factory = ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         viewModel = ViewModelProvider(this, factory).get(AiV2ChatViewModel::class.java)
 
@@ -58,6 +90,7 @@ class AiV2ChatActivity : AppCompatActivity() {
         setupToolbar()
         setupRecyclerView()
         setupInput()
+        setupAttachButton()
         observeState()
         ThemeUi.bind(this, SessionManager.session.value.username)
 
@@ -73,9 +106,19 @@ class AiV2ChatActivity : AppCompatActivity() {
         }
 
         if (sessionId.isEmpty()) {
-            chatWidget.setToolbarTitle(agentName.ifEmpty { getString(R.string.ai_v2_chat_title) })
+            val title = when {
+                agentNames.size > 1 -> "${getString(R.string.ai_chat_with)} ${agentNames.joinToString(", ")}"
+                agentNames.isNotEmpty() -> agentNames.first()
+                else -> getString(R.string.ai_v2_chat_title)
+            }
+            chatWidget.setToolbarTitle(title)
         } else {
-            chatWidget.setToolbarTitle(agentName.ifEmpty { getString(R.string.ai_v2_chat_title) })
+            val title = when {
+                agentNames.size > 1 -> "${getString(R.string.ai_chat_with)} ${agentNames.joinToString(", ")}"
+                agentNames.isNotEmpty() -> agentNames.first()
+                else -> agentName.ifEmpty { getString(R.string.ai_v2_chat_title) }
+            }
+            chatWidget.setToolbarTitle(title)
             viewModel.loadHistory(sessionId)
         }
 
@@ -90,8 +133,15 @@ class AiV2ChatActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationOnClickListener { finish() }
 
-        chatWidget.setToolbarTitle(agentName.ifEmpty { getString(R.string.ai_v2_chat_title) })
-        chatWidget.setToolbarAgentIcon(getAgentEmoji(agentId), true)
+        val primaryAgentId = agentIds.firstOrNull() ?: agentId
+        chatWidget.setToolbarTitle(
+            when {
+                agentNames.size > 1 -> "${getString(R.string.ai_chat_with)} ${agentNames.size} ${getString(R.string.ai_agents)}"
+                agentNames.isNotEmpty() -> agentNames.first()
+                else -> getString(R.string.ai_v2_chat_title)
+            }
+        )
+        chatWidget.setToolbarAgentIcon(getAgentEmoji(primaryAgentId), true)
         chatWidget.setToolbarAvatar(false)
     }
 
@@ -126,6 +176,72 @@ class AiV2ChatActivity : AppCompatActivity() {
                 sendMessage(message)
             }
         }
+    }
+
+    private fun setupAttachButton() {
+        chatWidget.setOnAttachClickListener {
+            showImagePickerDialog()
+        }
+    }
+
+    private fun showImagePickerDialog() {
+        val options = arrayOf(
+            getString(R.string.ai_pick_from_gallery),
+            getString(R.string.ai_take_photo)
+        )
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.ai_attach_image))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> imagePickerLauncher.launch("image/*")
+                    1 -> openCamera()
+                }
+            }
+            .show()
+    }
+
+    private fun openCamera() {
+        val imageFile = java.io.File(cacheDir, "ai_chat_image_${System.currentTimeMillis()}.jpg")
+        pendingImageUri = androidx.core.content.FileProvider.getUriForFile(
+            this,
+            "${packageName}.fileprovider",
+            imageFile
+        )
+        cameraLauncher.launch(pendingImageUri!!)
+    }
+
+    private fun handleImageSelected(uri: Uri) {
+        val message = chatWidget.messageInput.text.toString().trim()
+        sendMessageWithImage(message, uri)
+    }
+
+    private fun sendMessageWithImage(message: String, imageUri: Uri) {
+        if (!canSendRequest()) {
+            val waitMs = rateLimitCache.getTimeUntilReset(agentId)
+            showRateLimitUI(waitMs)
+            return
+        }
+
+        rateLimitCache.recordRequest(agentId)
+
+        val userMessage = AiV2ChatMessage(
+            sessionId = sessionId,
+            role = "user",
+            content = message,
+            imageUrl = imageUri.toString(),
+            timestamp = System.currentTimeMillis()
+        )
+        viewModel.addMessage(userMessage)
+
+        viewModel.sendMessage(
+            userId = userId,
+            sessionId = sessionId,
+            message = message,
+            agentId = agentId,
+            imageUri = imageUri.toString()
+        )
+
+        chatWidget.messageInput.setText("")
     }
 
     private fun observeState() {
@@ -184,7 +300,7 @@ class AiV2ChatActivity : AppCompatActivity() {
 
         rateLimitCache.recordRequest(agentId)
 
-        val userMessage = lavender.client.android.data.ai.AiV2ChatMessage(
+        val userMessage = AiV2ChatMessage(
             sessionId = sessionId,
             role = "user",
             content = message,

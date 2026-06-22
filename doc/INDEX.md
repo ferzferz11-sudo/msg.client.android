@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.14 | **Updated:** 2026-06-21
+**Version:** v1.3.0.15 | **Updated:** 2026-06-22
 
 ---
 
@@ -38,19 +38,19 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~174 |
-| Activities | 29 |
+| Kotlin files | ~176 |
+| Activities | 28 |
 | gRPC files | 22 |
 | Unit tests | 332 (all passing) |
-| Layout XML | 111 |
-| String entries | 772 (EN) + 772 (RU) |
+| Layout XML | 113 |
+| String entries | 790 (EN) + 790 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.0.x (v1.3.0.14) |
+| Branch | feat/1.3.0.x (v1.3.0.15) |
 
 ---
 
-## Architecture Overview (v1.3.0.14)
+## Architecture Overview (v1.3.0.15)
 
 ```
 GrpcClient (facade)
@@ -66,7 +66,7 @@ GrpcClient (facade)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace)
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
         └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
@@ -75,13 +75,14 @@ network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeou
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
-AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
-AiV2AgentListActivity → 3 tabs (Presets/My Agents/Discover)
-AiV2AgentCreateEditActivity → agent create/edit
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
+AIBottomSheet → agent selection with checkboxes → create AI chat
+AiAgentSetupActivity → create/edit all agent types
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
-AI v2: ChatWithAIV2 streaming + tool calling loop + 7 provider types
+AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image support
+AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 Biometric: BiometricPrompt after splash screen when enabled
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
@@ -98,7 +99,7 @@ Logging: clean logs, no hot-path noise, performance timing in loadChats
 3. userId (UUID) — always as key, NOT username
 4. i18n: all new strings simultaneously in values/strings.xml + values-ru/strings.xml
 5. Do NOT initialize getString() in Activity class fields
-6. Kotlin 2.3.21: cont.resume(value, onCancellation = {})
+6. Kotlin 2.4.0: cont.resume(value, onCancellation = {})
 7. All errors via `ErrorHandler.handle()` — NOT direct `Log.e`
 8. v2 server only — no v1 legacy fallbacks in client code
 9. Chat toolbars: fixed `@dimen/custom_toolbar_height`, elevation 0dp

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.14 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-21
+**Версия:** v1.3.0.15 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-22
 
 ---
 
@@ -31,21 +31,22 @@ GrpcClient (facade)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
         ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
         ├── GrpcServerDiscoveryClient — server discovery
-        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat Settings)
+        ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
         └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
-AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit
-AiV2AgentListActivity → 3 tabs (Presets/My Agents/Discover)
-AiV2AgentCreateEditActivity → agent create/edit
+AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
+AIBottomSheet → agent selection with checkboxes → create AI chat
+AiAgentSetupActivity → create/edit all agent types
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (token refresh EVERY entry point)
-AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types
+AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image support
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
+AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Chat Settings: per-session API key + model override
 Biometric: BiometricPrompt after splash screen when enabled
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
@@ -56,44 +57,60 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 
 ---
 
-## Итог сессии v1.3.0.14
+## Итог сессии v1.3.0.15
 
 ### Выполнено
 
-**Update System — fix индикатора обновлений:**
-- Индикатор в toolbar теперь показывает "Установить обновление" когда APK скачан (вместо "Доступно обновление")
-- Валидация существования APK файла при каждом показе — сброс `update_downloaded` если файл удалён
+**AI Services — полная переработка:**
+1. **AIBottomSheet redesigned** — новый порядок: пресеты с чекбоксами → создать чат → удалённые агенты → уведомления (внизу)
+2. **AiAgentSetupActivity** — единый экран создания/редактирования агентов всех типов
+3. **AiV2ChatActivity** — мультиагентные чаты + кнопка скрепки (галерея/камера)
+4. **Серверная интеграция** — GetAIV2ChatHistory + ListAIV2Chats RPC с marshaller'ами
+5. **Proto марshallеры** — новые типы AIV2ChatMessage, AIV2ChatInfo, запросы/ответы
 
-**Deprecation cleanup (8 suppressions removed, 0 release warnings):**
-- Удалены stale `@Suppress("DEPRECATION")` для `FirebaseMessaging.getInstance()` (BOM 34.15.0 — не deprecated)
-- `FirebaseMessaging.getInstance().token` → `getToken()` (deprecated but no alternative)
-- `super.onNewToken(token)` удалён (no-op), добавлен `@Suppress("OVERRIDE_DEPRECATION")` на override
-- `CredentialStore.kt` — `@file:Suppress("DEPRECATION")` с комментарием (EncryptedSharedPreferences/MasterKey deprecated без замены)
-- `stopForeground(STOP_FOREGROUND_REMOVE)` → `ServiceCompat.stopForeground()` (API-safe)
-- `SOFT_INPUT_ADJUST_RESIZE` → `WindowCompat.setDecorFitsSystemWindows(window, false)`
-- `behavior.peekHeight` → `behavior.state = STATE_EXPANDED`
-- Kotlin version обновлён: 2.3.21 → 2.4.0
+**Серверные доработки (AI_MULTI_AGENT_PROMPT.md):**
+- StreamFn теперь передаёт agent_id/agent_name в каждом токене
+- GetAIV2ChatHistory — загрузка истории сообщений AI чата
+- ListAIV2Chats — список всех AI чатов пользователя
+- Proto перегенерирован
+
+### Изменённые файлы (клиент)
+
+| Файл | Изменение |
+|------|-----------|
+| `AIBottomSheet.kt` | Полная переработка: чекбоксы агентов, create chat flow |
+| `AiV2ChatActivity.kt` | Multi-agent support + image picker |
+| `AiV2ChatViewModel.kt` | imageUri + loadHistory() |
+| `AiV2ChatUseCase.kt` | imageUri support + getChatHistory() + listAIChats() |
+| `AiAgentSetupActivity.kt` | NEW — unified agent setup |
+| `activity_ai_agent_setup.xml` | NEW — agent setup layout |
+| `item_ai_agent_selectable.xml` | NEW — agent checkbox item |
+| `ChatListFABs.kt` | New callbacks for AIBottomSheet |
+| `RealGrpcClient.kt` | appContext → internal |
+| `AiV2Proto.kt` | New proto types for history/list |
+| `GrpcAIv2Marshallers.kt` | Marshallers for GetAIV2ChatHistory + ListAIV2Chats |
+| `GrpcAIv2Client.kt` | getAIV2ChatHistory() + listAIV2Chats() |
+| `AndroidManifest.xml` | AiAgentSetupActivity added, old activities removed |
+| `strings.xml` (EN + RU) | New strings for AI integration |
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.15+)
+## Бэклог — Следующая сессия (v1.3.0.16+)
 
-### Приоритет 1: Серверные исправления
+### Приоритет 1: Тестирование AI v2 интеграции
+| Задача | Статус |
+|--------|--------|
+| Тест GetAIV2ChatHistory на реальном сервере | 🔲 Нужен live-тест |
+| Тест ListAIV2Chats на реальном сервере | 🔲 Нужен live-тест |
+| Тест мультиагентных чатов (клиентская маршрутизация) | 🔲 Нужен live-тест |
+| Тест отправки изображений в AI чат | 🔲 Нужен live-тест |
+| Тест AiAgentSetupActivity (создание/редактирование агентов) | 🔲 Нужен live-тест |
+
+### Приоритет 2: Серверные исправления
 | Задача | Статус |
 |--------|--------|
 | Обновлять `user_chat_metadata.last_seen_at` при каждом сообщении через chat stream | 🔲 Серверный баг |
 | Обновлять `user_chat_metadata.last_client_version` при подключении с новой версией | 🔲 Серверный баг |
-
-### Приоритет 2: End-to-end тестирование AI v2
-| Задача | Статус |
-|--------|--------|
-| Тест ChatWithAIV2 на реальном сервере (стриминг + tool calling) | 🔲 Нужен live-тест |
-| Тест Agent CRUD (create/update/delete/clone) | 🔲 Нужен live-тест |
-| Тест Marketplace API (каталог, rate, reviews, install, share) | 🔲 Нужен live-тест |
-| Тест Rate Limit (10 req/min, countdown, auto-restore) | 🔲 Нужен live-тест |
-| Тест Graceful Shutdown (SERVER_SHUTTINGDOWN + backoff) | 🔲 Нужен live-тест |
-| Тест Reve Image (generate image через `reve` агент) | 🔲 Нужен live-тест |
-| Тест AI Chat Settings (get/update API key и model per-session) | 🔲 Нужен live-тест |
 
 ### Приоритет 3: UX улучшения
 | Задача | Статус |
@@ -102,6 +119,7 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 | Автообновление статистики Usage | 🔲 |
 | Better error messages для AI v2 (показывать server error из response) | 🔲 |
 | UI для AI Chat Settings (API key input, model selector в AiV2ChatActivity) | 🔲 |
+| Удаление старых файлов: AiV2AgentListActivity.kt, AgentDetailActivity.kt | 🔲 |
 
 ### Приоритет 4: Новые фичи
 | Задача | Статус |
@@ -151,4 +169,5 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
+- Серверный промпт: `/Users/paveld/LavenderMessenger-server/doc/AI_MULTI_AGENT_PROMPT.md`
 - Changelog: `CHANGELOG.md`

@@ -671,4 +671,68 @@ class GrpcAIv2Client(
         val response = withTimeoutOrNull(10000) { result.await() } ?: ListAIToolsResponseProto()
         return@withContext response.tools
     }
+
+    // ======= GetAIV2ChatHistory =======
+    // Server proto: messenger.ChatService/GetAIV2ChatHistory
+
+    suspend fun getAIV2ChatHistory(sessionId: String, limit: Int = 50): List<AIV2ChatMessageProto> = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) return@withContext emptyList()
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<GetAIV2ChatHistoryRequestProto, GetAIV2ChatHistoryResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/GetAIV2ChatHistory")
+            .setRequestMarshaller(GetAIV2ChatHistoryRequestMarshaller())
+            .setResponseMarshaller(GetAIV2ChatHistoryResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<GetAIV2ChatHistoryResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<GetAIV2ChatHistoryResponseProto>() {
+            override fun onMessage(message: GetAIV2ChatHistoryResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(GetAIV2ChatHistoryResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(GetAIV2ChatHistoryRequestProto(sessionId, limit))
+        call.halfClose()
+        call.request(1)
+
+        val response = withTimeoutOrNull(15000) { result.await() } ?: GetAIV2ChatHistoryResponseProto()
+        return@withContext response.messages
+    }
+
+    // ======= ListAIV2Chats =======
+    // Server proto: messenger.ChatService/ListAIV2Chats
+
+    suspend fun listAIV2Chats(): List<AIV2ChatInfoProto> = withContext(Dispatchers.IO) {
+        val channel = getChannel()
+        if (channel == null || channel.isShutdown || channel.isTerminated) return@withContext emptyList()
+
+        val methodDesc = io.grpc.MethodDescriptor.newBuilder<ListAIV2ChatsRequestProto, ListAIV2ChatsResponseProto>()
+            .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/ListAIV2Chats")
+            .setRequestMarshaller(ListAIV2ChatsRequestMarshaller())
+            .setResponseMarshaller(ListAIV2ChatsResponseMarshaller())
+            .build()
+
+        val call = channel.newCall(methodDesc, io.grpc.CallOptions.DEFAULT)
+        val result = CompletableDeferred<ListAIV2ChatsResponseProto>()
+
+        call.start(object : io.grpc.ClientCall.Listener<ListAIV2ChatsResponseProto>() {
+            override fun onMessage(message: ListAIV2ChatsResponseProto) { result.complete(message) }
+            override fun onClose(status: io.grpc.Status, trailers: io.grpc.Metadata) {
+                if (!result.isCompleted) result.complete(ListAIV2ChatsResponseProto())
+            }
+        }, io.grpc.Metadata())
+
+        call.sendMessage(ListAIV2ChatsRequestProto())
+        call.halfClose()
+        call.request(1)
+
+        val response = withTimeoutOrNull(10000) { result.await() } ?: ListAIV2ChatsResponseProto()
+        return@withContext response.chats
+    }
 }

@@ -291,3 +291,43 @@ data class GetAIUsageStatsResponseProto(
     val totalTokens: Int = 0,
     val totalRequests: Int = 0
 )
+
+// ======= AI Chat v2 — History & List =======
+// Server proto: messenger.ChatService/GetAIV2ChatHistory, ListAIV2Chats
+
+data class GetAIV2ChatHistoryRequestProto(
+    val sessionId: String = "",
+    val limit: Int = 50
+)
+
+data class AIV2ChatMessageProto(
+    val id: Long = 0,
+    val chatId: String = "",
+    val role: String = "",
+    val content: String = "",
+    val agentId: String = "",
+    val tokenCount: Int = 0,
+    val modelUsed: String = "",
+    val createdAt: String = ""
+)
+
+data class GetAIV2ChatHistoryResponseProto(
+    val messages: List<AIV2ChatMessageProto> = emptyList()
+)
+
+data class ListAIV2ChatsRequestProto(
+    val dummy: Boolean = false
+)
+
+data class AIV2ChatInfoProto(
+    val id: String = "",
+    val name: String = "",
+    val chatType: String = "",
+    val agentId: String = "",
+    val createdAt: String = "",
+    val updatedAt: String = ""
+)
+
+data class ListAIV2ChatsResponseProto(
+    val chats: List<AIV2ChatInfoProto> = emptyList()
+)

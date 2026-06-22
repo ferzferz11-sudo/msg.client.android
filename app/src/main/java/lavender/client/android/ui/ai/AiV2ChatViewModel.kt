@@ -87,7 +87,8 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
         userId: String,
         sessionId: String,
         message: String,
-        agentId: String = ""
+        agentId: String = "",
+        imageUri: String? = null
     ) {
         if (_sessionId.value.isEmpty() && sessionId.isEmpty()) {
             // New session — will be set from server response
@@ -102,6 +103,7 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
                     sessionId = _sessionId.value,
                     message = message,
                     agentId = agentId,
+                    imageUri = imageUri,
                     scope = viewModelScope
                 )
             } catch (e: Exception) {
@@ -112,7 +114,16 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
 
     fun loadHistory(sessionId: String) {
         _sessionId.value = sessionId
-        // TODO: Implement history loading when server provides GetAIV2History RPC
+        viewModelScope.launch {
+            try {
+                val history = AiV2ChatUseCase.getChatHistory(sessionId)
+                if (history.isNotEmpty()) {
+                    _messages.value = history
+                }
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to load history"
+            }
+        }
     }
 
     fun clearError() {
