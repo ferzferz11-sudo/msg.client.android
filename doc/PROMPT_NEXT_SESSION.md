@@ -107,11 +107,11 @@ Version Catalog: all dependencies in gradle/libs.versions.toml
 | Тест AiAgentSetupActivity (создание/редактирование агентов) | 🔲 Нужен live-тест |
 | Тест AIBottomSheet (чекбоксы → создание чата) | 🔲 Нужен live-тест |
 
-### Приоритет 2: Серверные исправления
+### Приоритет 2: Серверные исправления ✅ ЗАВЕРШЕНО
 | Задача | Статус |
 |--------|--------|
-| Обновлять `user_chat_metadata.last_seen_at` при каждом сообщении через chat stream | 🔲 Серверный баг |
-| Обновлять `user_chat_metadata.last_client_version` при подключении с новой версией | 🔲 Серверный баг |
+| Обновлять `user_chat_metadata.last_seen_at` при каждом сообщении через chat stream | ✅ v1.3.0.21 |
+| Обновлять `user_chat_metadata.last_client_version` при подключении с новой версией | ✅ v1.3.0.21 |
 
 ### Приоритет 3: UX улучшения
 | Задача | Статус |
