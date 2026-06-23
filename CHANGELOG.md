@@ -1,5 +1,40 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.17] - 2026-06-23
+
+### Добавлено
+
+**ChatKeepAliveService — foreground service для поддержания соединения:**
+- Новый `ChatKeepAliveService` (START_STICKY) предотвращает убийство процесса системой
+- Мониторит `connectionStatus` и автоматически переподключает chat stream при обрыве
+- Persistent уведомление с текущим статусом подключения
+- Запускается при входе в приложение, останавливается при logout
+
+**Persist lastChatRequest — восстановление chat stream после kill процесса:**
+- Параметры chat stream (username, roomId, deviceId, deviceName) сохраняются в SharedPreferences
+- При восстановлении соединения автоматически перезапускает chat stream из сохранённых данных
+- Очистка при logout
+
+### Исправлено
+
+**Connection retry loop — убран 5-мин timeout в фоне:**
+- Ранее retry loop прекращал переподключение через 5 минут в фоне
+- Теперь переподключение работает до восстановления соединения
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `data/grpc/RealGrpcClient.kt` | Persist/restore lastChatRequest, убран background timeout |
+| `data/grpc/GrpcClient.kt` | Экспозиция `clearLastChatRequestPrefs()` |
+| `data/grpc/ChatKeepAliveService.kt` | NEW — foreground service для keep-alive |
+| `data/session/SessionManager.kt` | Запуск/остановка ChatKeepAliveService, clearLastChatRequestPrefs при logout |
+| `AndroidManifest.xml` | Регистрация ChatKeepAliveService (dataSync) |
+| `res/values/strings.xml` | Строки для ChatKeepAliveService уведомлений |
+| `res/values-ru/strings.xml` | Строки для ChatKeepAliveService уведомлений |
+
+---
+
 ## [1.3.0.16] - 2026-06-22
 
 ### Исправлено
