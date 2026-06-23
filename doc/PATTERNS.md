@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.16 | **Updated:** 2026-06-22
+**Version:** v1.3.0.18 | **Updated:** 2026-06-23
 
 ---
 
@@ -405,6 +405,25 @@ lifecycleScope.launch {
 - `isNavigatingDeeper` flag prevents `onBack` callback when navigating to child sheet/activity
 - `settingsActivityLauncher`/`editProfileLauncher` — `ActivityResultContracts` for lifecycle-aware launching
 - `setOnDismissListener` on each sheet: if `!isNavigatingDeeper` → call `onBack` to reopen parent
+
+### ChatKeepAliveService Pattern (v1.3.0.18)
+```
+ChatKeepAliveService — foreground service (START_STICKY)
+  ├── Monitors GrpcClient.connectionStatus flow
+  ├── Auto-reconnect on FAILED/DISCONNECTED (5s delay)
+  ├── Persistent notification: "Подключено — получение сообщений"
+  └── Companion: start(context) / stop(context) / isRunning()
+
+Lifecycle:
+  ├── SessionManager.initFromPrefs() → start()
+  ├── SessionManager.loginV2() → start()
+  └── SessionManager.logout() → stop() + clearLastChatRequestPrefs()
+
+RealGrpcClient — persist lastChatRequest to SharedPreferences
+  ├── saveLastChatRequestPrefs() — called in startChat()
+  ├── restoreLastChatRequest() — called in onAutoResumeChat when null
+  └── clearLastChatRequestPrefs() — called in logout()
+```
 
 ---
 

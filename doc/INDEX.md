@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.17 | **Updated:** 2026-06-23
+**Version:** v1.3.0.18 | **Updated:** 2026-06-23
 
 ---
 
@@ -38,20 +38,21 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~180 |
+| Kotlin files | ~175 |
 | Activities | 29 |
 | Fragments | 1 (RemoteAgentSettingsFragment) |
+| Services | 3 (ChatKeepAliveService, RemoteAgentService, LavenderMessagingService) |
 | gRPC files | 22 |
 | Unit tests | 332 (all passing) |
 | Layout XML | 115 |
-| String entries | 791 (EN) + 791 (RU) |
+| String entries | 796 (EN) + 796 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.0.x (v1.3.0.16) |
+| Branch | feat/1.3.0.x (v1.3.0.18) |
 
 ---
 
-## Architecture Overview (v1.3.0.17)
+## Architecture Overview (v1.3.0.18)
 
 ```
 GrpcClient (facade)
@@ -70,7 +71,8 @@ GrpcClient (facade)
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
-        └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
+        ├── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
+        └── ChatKeepAliveService — foreground service, keep-alive connection
 
 network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
 

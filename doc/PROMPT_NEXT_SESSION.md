@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.16 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-22
+**Версия:** v1.3.0.18 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-23
 
 ---
 
@@ -34,7 +34,8 @@ GrpcClient (facade)
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
         ├── NotificationsGrpc — notifications (subscribe, history, read, unread)
-        └── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
+        ├── RemoteAgentGrpc — Remote Agent (list, deploy, tokens, process)
+        └── ChatKeepAliveService — foreground service, keep-alive connection
 
 network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
 
@@ -60,43 +61,65 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
-## Итог сессии v1.3.0.16
+## Итог сессии v1.3.0.18
 
 ### Выполнено
 
-**AIBottomSheet — фикс вечной загрузки:**
-1. Флаг `isLoadingAgents` — разделение "загрузка" и "пусто"
-2. "Загрузка агентов…" пока gRPC выполняется
-3. "Нет доступных агентов" если сервер вернул пустой список
+**ChatKeepAliveService — foreground service для keep-alive:**
+1. `ChatKeepAliveService` (START_STICKY) предотвращает убийство процесса системой
+2. Мониторит `connectionStatus` и auto-reconnect при FAILED/DISCONNECTED
+3. Persistent уведомление "Подключено — получение сообщений"
+4. Запускается при login/initFromPrefs, останавливается при logout
 
-**JWT token refresh — фикс UNAUTHENTICATED:**
-1. `ensureFreshToken()` в начале `loadChats()` — токен обновляется синхронно перед gRPC
-2. Убрана гонка между async refresh и sync loadChats
-3. Убран дублирующий `ensureFreshToken` из `ChatListActivity.onResume`
+**Persist lastChatRequest — восстановление после kill процесса:**
+1. Параметры chat stream (username, roomId, deviceId, deviceName) сохраняются в SharedPreferences
+2. `onAutoResumeChat` восстанавливает chat stream из prefs если `lastChatRequest == null`
+3. Очистка при logout через `clearLastChatRequestPrefs()`
 
-**Remote Agent — инлайн настройки:**
-1. `RemoteAgentSettingsFragment` — полный перенос Gateway + Token логики
-2. `fragment_remote_agent_settings.xml` — layout с Gateway/Token табами
-3. Клик по remote agent в Tab 3 → инлайн UI вместо отдельной Activity
-4. Back кнопка → возврат к списку агентов
+**minSdk понижен с 33 до 29 (Android 10):**
+1. Приложение снова устанавливается на Android 10-12
+2. Убрана ошибка "версия пакета на 31 версию SDK"
+
+**Update Manager — валидация скачанного APK:**
+1. Проверка Content-Type (отклоняет text/html/text/plain)
+2. Проверка ZIP-хедера (PK magic bytes)
+3. Проверка минимального размера (>100KB)
+4. Предотвращает "невозможно установить пакет" при битом скачивании
+
+**Connection retry loop — убран 5-мин timeout:**
+1. Ранее retry loop прекращал переподключение через 5 минут в фоне
+2. Теперь работает до восстановления соединения
+
+**"Был в сети" — исправлено неверное время:**
+1. `allUsers` теперь обновляется при каждом входе в чат
+2. Автообновление `allUsers` каждые 60 секунд пока открыт чат
+
+**AI Bottom Sheet — переработана шторка ИИ:**
+1. Убраны 10 пресетов из нижнего листа (делали шторку нечитабельной)
+2. Новый дизайн: "Начать чат с ИИ" / "Создать своего агента" / "Управление агентами"
+3. Пресеты доступны во вкладке "Пресеты" в `AiV2AgentListActivity`
+
+**Убрано дублирование настроек агентов:**
+1. Убрана отдельная секция "Удалённый агент" из AI Bottom Sheet
+2. Remote Agent доступен как Tab 4 в `AiV2AgentListActivity`
 
 ### Изменённые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `AIBottomSheet.kt` | Флаг `isLoadingAgents`, разделение loading/empty |
-| `ChatListViewModel.kt` | `ensureFreshToken()` перед `loadChats()` |
-| `ChatListActivity.kt` | Убран дублирующий `ensureFreshToken` |
-| `AiV2AgentListActivity.kt` | Inline remote agent settings |
-| `RemoteAgentSettingsFragment.kt` | NEW — фрагмент настроек remote agent |
-| `GrpcAIv2Client.kt` | Логирование ListAIAgents |
-| `activity_ai_v2_agent_list.xml` | Добавлен `remoteAgentContainer` |
-| `fragment_remote_agent_settings.xml` | NEW — layout для remote agent настроек |
-| `strings.xml` (EN + RU) | Добавлена строка `ai_no_agents` |
+| `data/grpc/RealGrpcClient.kt` | Persist/restore lastChatRequest, убран background timeout |
+| `data/grpc/GrpcClient.kt` | Экспозиция `clearLastChatRequestPrefs()` |
+| `data/grpc/ChatKeepAliveService.kt` | NEW — foreground service для keep-alive |
+| `data/session/SessionManager.kt` | Запуск/остановка ChatKeepAliveService |
+| `data/updates/UpdateManager.kt` | Валидация скачанного APK |
+| `app/build.gradle.kts` | minSdk 33 → 29 |
+| `AndroidManifest.xml` | Регистрация ChatKeepAliveService |
+| `res/values/strings.xml` | Строки для ChatKeepAliveService |
+| `res/values-ru/strings.xml` | Строки для ChatKeepAliveService |
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.17+)
+## Бэклог — Следующая сессия (v1.3.0.19+)
 
 ### Приоритет 1: Серверная интеграция
 | Задача | Статус |

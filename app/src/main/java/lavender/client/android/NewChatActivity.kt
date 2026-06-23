@@ -355,6 +355,17 @@ class NewChatActivity : AppCompatActivity() {
                 }
             }
         }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    kotlinx.coroutines.delay(60_000)
+                    if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+                        grpcClient.loadUsers()
+                    }
+                }
+            }
+        }
     }
 
     private fun setupKeyboardHandling() {
@@ -470,7 +481,7 @@ class NewChatActivity : AppCompatActivity() {
             && lavender.client.android.data.auth.AuthManager.needsRefresh(this)) {
             lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { lavender.client.android.data.session.SessionManager.ensureFreshToken(this@NewChatActivity) }
         }
-        if (grpcClient.allUsers.value.isEmpty() && grpcClient.connectionStatus.value == ConnectionStatus.READY) {
+        if (grpcClient.connectionStatus.value == ConnectionStatus.READY) {
             grpcClient.loadUsers()
         }
         if (grpcClient.shouldForceReconnect()) {

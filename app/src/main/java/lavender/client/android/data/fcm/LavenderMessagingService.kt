@@ -119,6 +119,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
             ).apply {
                 description = getString(R.string.lavender_messages_channel_desc)
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 300, 200, 300)
+                enableLights(true)
                 setShowBadge(true)
             }
             notificationManager.createNotificationChannel(channel)
@@ -164,6 +166,8 @@ class LavenderMessagingService : FirebaseMessagingService() {
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true)
+            .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_SOUND)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

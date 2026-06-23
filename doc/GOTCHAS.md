@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.0.16 | **Updated:** 2026-06-22
+**Version:** v1.3.0.18 | **Updated:** 2026-06-23
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -150,3 +150,32 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`isLoadingAgents` flag** needed to distinguish "still loading" from "loaded empty" — without it, "Загрузка агентов…" shown forever when server returns 0 agents
 - **`buildAndShow()` must set `isLoadingAgents = true`** before first `buildContent()` to show loading state immediately
 - **`loadPresetAgents()` sets `isLoadingAgents = false`** after gRPC completes, then calls `buildContent()` to update UI
+
+## ChatKeepAliveService
+
+- **`ChatKeepAliveService` is START_STICKY** — system restarts it after process kill. Monitors `connectionStatus` flow and auto-reconnects on FAILED/DISCONNECTED
+- **Start lifecycle:** started in `SessionManager.initFromPrefs()` and `loginV2()`, stopped in `logout()`
+- **Notification channel:** `chat_keepalive_channel` (IMPORTANCE_LOW), shows connection status
+- **Does NOT use bindService** — only started/stopped via companion `start()`/`stop()` methods
+- **`isRunning` flag** is static companion property — lost on process death (service restarts fresh)
+
+## Persist lastChatRequest
+
+- **`lastChatRequest` is saved to SharedPreferences** (`chat_keepalive`) on every `startChat()` call — survives process death
+- **Restored in `onAutoResumeChat`** callback when `lastChatRequest == null` after reconnect
+- **Password comes from `CredentialStore`**, not from prefs — security: never persist passwords in plain SharedPreferences
+- **Cleared on logout** via `GrpcClient.clearLastChatRequestPrefs()`
+- **After process death, callback is `{}` (empty)** — messages for other rooms still processed (DB + newMessageEvent), but current room messages have no UI callback until user opens chat
+
+## APK Update Validation
+
+- **Downloaded APK is validated** before marking as "downloaded" — prevents "невозможно установить пакет"
+- **Three checks:** Content-Type (reject text/html), ZIP header (PK magic bytes), minimum size (>100KB)
+- **`UpdateManager.isValidApk(file)`** reads first 4 bytes to verify ZIP signature
+- **If validation fails:** file deleted, download marked as failed, user can retry
+
+## minSdk 29 (Android 10)
+
+- **minSdk was raised to 33 in v1.3.0.17**, causing "версия пакета на 31 версию SDK" error on Android 12
+- **Reverted to 29 in v1.3.0.18** — all API usage verified compatible with Android 10+
+- **README.md and doc/INDEX.md** both reference minSdk 29

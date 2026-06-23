@@ -99,51 +99,30 @@ class AIBottomSheet(
 
         titleView?.text = context.getString(R.string.ai_sheet_title)
 
-        // === Section 1: Add Agent (presets with checkboxes) ===
-        val addAgentHeader = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        addAgentHeader.text = context.getString(R.string.ai_add_agent)
-        contentContainer?.addView(addAgentHeader)
+        // === Section 1: Quick actions ===
 
-        if (presetAgents.isNotEmpty()) {
-            for (agent in presetAgents) {
-                val agentItem = LayoutInflater.from(context)
-                    .inflate(R.layout.item_ai_agent_selectable, contentContainer, false)
-                val checkbox = agentItem.findViewById<CheckBox>(R.id.agentCheckbox)
-                val emoji = agentItem.findViewById<TextView>(R.id.agentEmoji)
-                val name = agentItem.findViewById<TextView>(R.id.agentName)
-                val desc = agentItem.findViewById<TextView>(R.id.agentDescription)
-
-                emoji.text = getAgentEmoji(agent.id)
-                name.text = agent.name
-                name.setTextColor(txtColor)
-                desc.text = agent.description
-                desc.setTextColor(txtColor)
-
-                checkbox.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        selectedAgents.add(agent)
-                    } else {
-                        selectedAgents.remove(agent)
-                    }
-                    updateCreateChatButton()
-                }
-
-                agentCheckBoxes.add(agent to checkbox)
-                contentContainer?.addView(agentItem)
+        // "Начать чат с ИИ" button
+        val startChatBtn = LayoutInflater.from(context)
+            .inflate(R.layout.widget_action_item, contentContainer, false)
+        val startChatIcon = startChatBtn.findViewById<ImageView>(R.id.actionIcon)
+        val startChatText = startChatBtn.findViewById<TextView>(R.id.actionText)
+        val startChatBadge = startChatBtn.findViewById<TextView>(R.id.actionBadge)
+        startChatIcon.setImageResource(R.drawable.ic_add)
+        startChatIcon.imageTintList = ColorStateList.valueOf(primColor)
+        startChatText.text = context.getString(R.string.ai_start_chat)
+        startChatText.setTextColor(primColor)
+        startChatBadge.visibility = View.GONE
+        startChatBtn.setOnClickListener {
+            val defaultAgent = presetAgents.firstOrNull()
+            if (defaultAgent != null) {
+                onCreateAiChat(defaultAgent.id, defaultAgent.name)
+            } else {
+                onCreateAiChat("assistant", "Assistant")
             }
-        } else {
-            val statusText = TextView(context).apply {
-                text = context.getString(
-                    if (isLoadingAgents) R.string.ai_loading_agents
-                    else R.string.ai_no_agents
-                )
-                textSize = 14f
-                setPadding(16, 8, 16, 8)
-                setTextColor(txtColor)
-            }
-            contentContainer?.addView(statusText)
+            dismiss()
         }
+        startChatBtn.setBackgroundResource(R.drawable.bg_action_item_hover)
+        contentContainer?.addView(startChatBtn)
 
         // "Создать своего агента" button
         val addCustomAgent = LayoutInflater.from(context)
@@ -163,63 +142,12 @@ class AIBottomSheet(
         addCustomAgent.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(addCustomAgent)
 
-        // === Section 2: Create Chat ===
-        val createChatDivider = LayoutInflater.from(context)
+        // === Divider ===
+        val divider = LayoutInflater.from(context)
             .inflate(R.layout.widget_section_divider, contentContainer, false)
-        contentContainer?.addView(createChatDivider)
+        contentContainer?.addView(divider)
 
-        val createChatHeader = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        createChatHeader.text = context.getString(R.string.ai_create_chat)
-        contentContainer?.addView(createChatHeader)
-
-        // Selected agents summary
-        summaryText = TextView(context).apply {
-            text = context.getString(R.string.ai_select_agents_hint)
-            textSize = 14f
-            setPadding(16, 8, 16, 4)
-            setTextColor(txtColor)
-        }
-        contentContainer?.addView(summaryText)
-
-        // Create chat button
-        val createChatBtn = LayoutInflater.from(context)
-            .inflate(R.layout.widget_action_item, contentContainer, false)
-        val createChatIcon = createChatBtn.findViewById<ImageView>(R.id.actionIcon)
-        val createChatText = createChatBtn.findViewById<TextView>(R.id.actionText)
-        val createChatBadge = createChatBtn.findViewById<TextView>(R.id.actionBadge)
-        createChatIcon.setImageResource(R.drawable.ic_add)
-        createChatIcon.imageTintList = ColorStateList.valueOf(primColor)
-        createChatText.text = context.getString(R.string.ai_start_chat)
-        createChatText.setTextColor(primColor)
-        createChatBadge.visibility = View.GONE
-        createChatBtn.isEnabled = false
-        createChatBtn.alpha = 0.5f
-        createChatBtn.setOnClickListener {
-            if (selectedAgents.size == 1) {
-                val agent = selectedAgents.first()
-                onCreateAiChat(agent.id, agent.name)
-            } else if (selectedAgents.size > 1) {
-                val ids = selectedAgents.map { it.id }
-                val names = selectedAgents.map { it.name }
-                onCreateMultiAgentChat(ids, names)
-            }
-            dismiss()
-        }
-        createChatBtn.setBackgroundResource(R.drawable.bg_action_item_hover)
-        createChatButtonView = createChatBtn
-        contentContainer?.addView(createChatBtn)
-
-        // === Section 3: AI Agents ===
-        val aiAgentsDivider = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_divider, contentContainer, false)
-        contentContainer?.addView(aiAgentsDivider)
-
-        val aiAgentsHeader = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        aiAgentsHeader.text = context.getString(R.string.ai_v2_agents)
-        contentContainer?.addView(aiAgentsHeader)
-
+        // === Section 2: AI Agents (manage) ===
         val aiAgentsOpen = LayoutInflater.from(context)
             .inflate(R.layout.widget_action_item, contentContainer, false)
         val aiAgentsIcon = aiAgentsOpen.findViewById<ImageView>(R.id.actionIcon)
@@ -236,33 +164,6 @@ class AIBottomSheet(
         }
         aiAgentsOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(aiAgentsOpen)
-
-        // === Section 5: Remote Agents ===
-        val remoteDivider = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_divider, contentContainer, false)
-        contentContainer?.addView(remoteDivider)
-
-        val remoteHeader = LayoutInflater.from(context)
-            .inflate(R.layout.widget_section_header, contentContainer, false) as TextView
-        remoteHeader.text = context.getString(R.string.remote_agent_title)
-        contentContainer?.addView(remoteHeader)
-
-        val remoteOpen = LayoutInflater.from(context)
-            .inflate(R.layout.widget_action_item, contentContainer, false)
-        val remoteIcon = remoteOpen.findViewById<ImageView>(R.id.actionIcon)
-        val remoteText = remoteOpen.findViewById<TextView>(R.id.actionText)
-        val remoteBadge = remoteOpen.findViewById<TextView>(R.id.actionBadge)
-        remoteIcon.setImageResource(R.drawable.ic_agents)
-        remoteIcon.imageTintList = ColorStateList.valueOf(primColor)
-        remoteText.text = context.getString(R.string.remote_agent_title)
-        remoteText.setTextColor(primColor)
-        remoteBadge.visibility = View.GONE
-        remoteOpen.setOnClickListener {
-            onOpenRemoteAgents()
-            dismiss()
-        }
-        remoteOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
-        contentContainer?.addView(remoteOpen)
     }
 
     private fun updateCreateChatButton() {
