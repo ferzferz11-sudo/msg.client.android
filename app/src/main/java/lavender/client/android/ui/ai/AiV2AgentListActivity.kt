@@ -118,8 +118,10 @@ class AiV2AgentListActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         adapter = AiV2AgentListAdapter(
-            onItemClick = { agent -> openAgentSetup(agent) },
-            onDeleteClick = { agent -> confirmDelete(agent) }
+            onItemClick = { agent -> onAgentClick(agent) },
+            onDeleteClick = { agent -> confirmDelete(agent) },
+            onItemLongClick = { agent -> onAgentLongClick(agent) },
+            onAddClick = { agent -> clonePresetAgent(agent) }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -245,6 +247,43 @@ class AiV2AgentListActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this@AiV2AgentListActivity, "Failed to load remote agents", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun onAgentClick(agent: AiV2Agent) {
+        if (currentTab == 0 && agent.isPreset) {
+            clonePresetAgent(agent)
+        } else {
+            openAgentSetup(agent)
+        }
+    }
+
+    private fun onAgentLongClick(agent: AiV2Agent) {
+        if (currentTab == 0 && agent.isPreset) {
+            openAgentSetup(agent)
+        }
+    }
+
+    private fun clonePresetAgent(agent: AiV2Agent) {
+        lifecycleScope.launch {
+            val result = AiV2ChatUseCase.cloneAgent(agent.id, agent.name)
+            result.fold(
+                onSuccess = {
+                    Toast.makeText(
+                        this@AiV2AgentListActivity,
+                        getString(R.string.ai_preset_added, agent.name),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    loadAgents()
+                },
+                onFailure = { e ->
+                    Toast.makeText(
+                        this@AiV2AgentListActivity,
+                        e.message ?: "Failed to add agent",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
         }
     }
 

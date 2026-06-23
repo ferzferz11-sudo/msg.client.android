@@ -460,6 +460,8 @@
     <string name="ai_attach_image">Прикрепить изображение</string>
     <string name="ai_pick_from_gallery">Выбрать из галереи</string>
     <string name="ai_take_photo">Сделать фото</string>
+    <string name="ai_my_agents">Мои агенты</string>
+    <string name="ai_preset_added">\"%s\" добавлен в Мои агенты</string>
 
     <string name="agent_connected">Агент подключён</string>
     <string name="agent_disconnected">Агент отключён</string>

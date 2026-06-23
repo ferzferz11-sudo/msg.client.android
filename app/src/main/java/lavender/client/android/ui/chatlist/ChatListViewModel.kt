@@ -97,16 +97,16 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         // Listen for new messages in other rooms — update chat list in real-time
         viewModelScope.launch {
             GrpcClient.newMessageEvent.collect { message ->
+                val currentUsername = SessionManager.session.value.username
+                val isFromOther = message.user != currentUsername
+                val preview = if (message.imageUrl.isNotEmpty()) "[image]"
+                else if (message.voiceUrl.isNotEmpty()) "[voice]"
+                else message.text.take(100)
                 val chatIdx = allChats.indexOfFirst { it.id == message.roomId }
+
                 if (chatIdx >= 0) {
                     val chat = allChats[chatIdx]
-                    val currentUsername = SessionManager.session.value.username
-                    val isFromOther = message.user != currentUsername
                     val shouldIncrement = isFromOther && !message.isRead
-                    val preview = if (chat.isSecret) ""
-                    else if (message.imageUrl.isNotEmpty()) "[image]"
-                    else if (message.voiceUrl.isNotEmpty()) "[voice]"
-                    else message.text.take(100)
                     val newUnread = if (shouldIncrement) chat.unreadCount + 1 else chat.unreadCount
                     allChats = allChats.toMutableList().also {
                         it[chatIdx] = chat.copy(
@@ -117,8 +117,18 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
                             unreadCount = newUnread
                         )
                     }
-                    buildSections(allChats)
+                    // Reorder: move updated chat to top of its section
+                    val updatedChat = allChats[chatIdx]
+                    allChats = allChats.toMutableList().also {
+                        it.removeAt(chatIdx)
+                        it.add(0, updatedChat)
+                    }
+                } else {
+                    // New chat not in list — reload to pick it up
+                    loadChats(silent = true)
+                    return@collect
                 }
+                buildSections(allChats)
             }
         }
         // Listen for deleted chats — remove from list in real-time

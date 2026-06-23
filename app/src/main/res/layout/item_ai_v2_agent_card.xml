@@ -108,7 +108,6 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/exit_to_app_24"
-            app:tint="?attr/colorError"
             android:contentDescription="@string/ai_v2_delete_agent"
             android:visibility="gone"
             tools:visibility="visible" />

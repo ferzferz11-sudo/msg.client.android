@@ -107,8 +107,15 @@ class LavenderMessagingService : FirebaseMessagingService() {
     }
 
     private fun showNotification(title: String, body: String, roomId: String) {
-        val channelId = "lavender_messages"
+        val channelId = "lavender_messages_v2"
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        // Delete old channel (created with wrong importance, can't be changed)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            notificationManager.getNotificationChannel("lavender_messages")?.let {
+                notificationManager.deleteNotificationChannel("lavender_messages")
+            }
+        }
 
         // Создаем канал уведомлений (обязательно для Android 8.0+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {

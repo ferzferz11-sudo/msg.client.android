@@ -43,6 +43,7 @@ class AIBottomSheet(
 
     private val selectedAgents = mutableSetOf<AiV2Agent>()
     private var presetAgents = listOf<AiV2Agent>()
+    private var myAgents = listOf<AiV2Agent>()
     private var isLoadingAgents = true
     private val agentCheckBoxes = mutableListOf<Pair<AiV2Agent, CheckBox>>()
     private var agentLoadJob: Job? = null
@@ -74,10 +75,12 @@ class AIBottomSheet(
             try {
                 val agents = AiV2ChatUseCase.listAgents(includePublic = true)
                 presetAgents = agents.filter { it.isPreset }
-                android.util.Log.d("AIBottomSheet", "Loaded ${agents.size} agents, ${presetAgents.size} presets")
+                myAgents = agents.filter { !it.isPreset }
+                android.util.Log.d("AIBottomSheet", "Loaded ${agents.size} agents, ${presetAgents.size} presets, ${myAgents.size} my agents")
             } catch (e: Exception) {
                 android.util.Log.e("AIBottomSheet", "Failed to load agents: ${e.message}", e)
                 presetAgents = emptyList()
+                myAgents = emptyList()
             }
             isLoadingAgents = false
             if (isShowing()) {
@@ -164,6 +167,95 @@ class AIBottomSheet(
         }
         aiAgentsOpen.setBackgroundResource(R.drawable.bg_action_item_hover)
         contentContainer?.addView(aiAgentsOpen)
+
+        // === Section 3: My Agents (quick chat) ===
+        if (myAgents.isNotEmpty()) {
+            val divider2 = LayoutInflater.from(context)
+                .inflate(R.layout.widget_section_divider, contentContainer, false)
+            contentContainer?.addView(divider2)
+
+            val myAgentsHeader = TextView(context).apply {
+                text = context.getString(R.string.ai_my_agents)
+                textSize = 13f
+                setTextColor(txtColor)
+                alpha = 0.6f
+                setPadding(dp(16), dp(8), dp(16), dp(4))
+            }
+            contentContainer?.addView(myAgentsHeader)
+
+            for (agent in myAgents) {
+                val row = LayoutInflater.from(context)
+                    .inflate(R.layout.widget_action_item, contentContainer, false)
+                val icon = row.findViewById<ImageView>(R.id.actionIcon)
+                val text = row.findViewById<TextView>(R.id.actionText)
+                val badge = row.findViewById<TextView>(R.id.actionBadge)
+                val checkbox = CheckBox(context).apply {
+                    buttonTintList = ColorStateList.valueOf(primColor)
+                    setOnCheckedChangeListener { _, isChecked ->
+                        if (isChecked) selectedAgents.add(agent) else selectedAgents.remove(agent)
+                        updateCreateChatButton()
+                    }
+                }
+                icon.setImageResource(R.drawable.ic_agents)
+                icon.imageTintList = ColorStateList.valueOf(primColor)
+                text.text = "${getAgentEmoji(agent.id)} ${agent.name}"
+                text.setTextColor(txtColor)
+                badge.visibility = View.GONE
+
+                val params = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                checkbox.layoutParams = params
+
+                val container = row.findViewById<android.widget.LinearLayout>(R.id.actionRoot)
+                container?.addView(checkbox)
+
+                row.setBackgroundResource(R.drawable.bg_action_item_hover)
+                contentContainer?.addView(row)
+                agentCheckBoxes.add(agent to checkbox)
+            }
+
+            // Summary text
+            summaryText = TextView(context).apply {
+                text = context.getString(R.string.ai_select_agents_hint)
+                textSize = 13f
+                setTextColor(txtColor)
+                alpha = 0.7f
+                setPadding(dp(16), dp(8), dp(16), dp(0))
+            }
+            contentContainer?.addView(summaryText)
+
+            // "Start chat" button
+            val startSelectedBtn = LayoutInflater.from(context)
+                .inflate(R.layout.widget_action_item, contentContainer, false)
+            val startSelectedIcon = startSelectedBtn.findViewById<ImageView>(R.id.actionIcon)
+            val startSelectedText = startSelectedBtn.findViewById<TextView>(R.id.actionText)
+            val startSelectedBadge = startSelectedBtn.findViewById<TextView>(R.id.actionBadge)
+            startSelectedIcon.setImageResource(R.drawable.ic_add)
+            startSelectedIcon.imageTintList = ColorStateList.valueOf(Color.WHITE)
+            startSelectedText.text = context.getString(R.string.ai_start_chat)
+            startSelectedText.setTextColor(Color.WHITE)
+            startSelectedBadge.visibility = View.GONE
+            startSelectedBtn.setBackgroundColor(primColor)
+            startSelectedBtn.alpha = 0.5f
+            createChatButtonView = startSelectedBtn
+            startSelectedBtn.setOnClickListener {
+                if (selectedAgents.isNotEmpty()) {
+                    if (selectedAgents.size == 1) {
+                        val agent = selectedAgents.first()
+                        onCreateAiChat(agent.id, agent.name)
+                    } else {
+                        onCreateMultiAgentChat(
+                            selectedAgents.map { it.id },
+                            selectedAgents.map { it.name }
+                        )
+                    }
+                    dismiss()
+                }
+            }
+            contentContainer?.addView(startSelectedBtn)
+        }
     }
 
     private fun updateCreateChatButton() {
@@ -180,6 +272,10 @@ class AIBottomSheet(
             btn.isEnabled = selectedAgents.isNotEmpty()
             btn.alpha = if (selectedAgents.isNotEmpty()) 1.0f else 0.5f
         }
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * context.resources.displayMetrics.density).toInt()
     }
 
     private fun getAgentEmoji(agentId: String): String {

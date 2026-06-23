@@ -523,6 +523,8 @@
     <string name="ai_attach_image">Attach Image</string>
     <string name="ai_pick_from_gallery">Pick from Gallery</string>
     <string name="ai_take_photo">Take Photo</string>
+    <string name="ai_my_agents">My Agents</string>
+    <string name="ai_preset_added">Added \"%s\" to My Agents</string>
 
     <string name="agent_connected">Agent connected</string>
     <string name="agent_disconnected">Agent disconnected</string>

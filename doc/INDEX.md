@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.18 | **Updated:** 2026-06-23
+**Version:** v1.3.0.19 | **Updated:** 2026-06-23
 
 ---
 
@@ -48,7 +48,7 @@
 | String entries | 796 (EN) + 796 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.0.x (v1.3.0.18) |
+| Branch | feat/1.3.0.x (v1.3.0.19) |
 
 ---
 

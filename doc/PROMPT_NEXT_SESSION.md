@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.18 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-23
+**Версия:** v1.3.0.19 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-23
 
 ---
 
@@ -61,65 +61,43 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
-## Итог сессии v1.3.0.18
+## Итог сессии v1.3.0.19
 
 ### Выполнено
 
-**ChatKeepAliveService — foreground service для keep-alive:**
-1. `ChatKeepAliveService` (START_STICKY) предотвращает убийство процесса системой
-2. Мониторит `connectionStatus` и auto-reconnect при FAILED/DISCONNECTED
-3. Persistent уведомление "Подключено — получение сообщений"
-4. Запускается при login/initFromPrefs, останавливается при logout
+**Системные уведомления — вибрация и экран:**
+1. Создан новый канал `lavender_messages_v2` с `IMPORTANCE_HIGH` (старый канал нельзя изменить)
+2. Удалён старый канал `lavender_messages` с неправильными настройками
+3. Вибрация `[0, 300, 200, 300]` + включение экрана (`setFullScreenIntent`)
+4. `setDefaults(DEFAULT_VIBRATE or DEFAULT_SOUND)` для fallback
 
-**Persist lastChatRequest — восстановление после kill процесса:**
-1. Параметры chat stream (username, roomId, deviceId, deviceName) сохраняются в SharedPreferences
-2. `onAutoResumeChat` восстанавливает chat stream из prefs если `lastChatRequest == null`
-3. Очистка при logout через `clearLastChatRequestPrefs()`
+**AI Пресеты — добавление в мои агенты:**
+1. Тап по пресету клонирует его в "Мои агенты" через `cloneAgent`
+2. Долгий тап по пресету открывает настройки агента
+3. Шторка ИИ чатов показывает "Мои агенты" с чекбоксами для быстрого начала чата
+4. Мульти-агентный чат через чекбоксы в шторке
 
-**minSdk понижен с 33 до 29 (Android 10):**
-1. Приложение снова устанавливается на Android 10-12
-2. Убрана ошибка "версия пакета на 31 версию SDK"
-
-**Update Manager — валидация скачанного APK:**
-1. Проверка Content-Type (отклоняет text/html/text/plain)
-2. Проверка ZIP-хедера (PK magic bytes)
-3. Проверка минимального размера (>100KB)
-4. Предотвращает "невозможно установить пакет" при битом скачивании
-
-**Connection retry loop — убран 5-мин timeout:**
-1. Ранее retry loop прекращал переподключение через 5 минут в фоне
-2. Теперь работает до восстановления соединения
-
-**"Был в сети" — исправлено неверное время:**
-1. `allUsers` теперь обновляется при каждом входе в чат
-2. Автообновление `allUsers` каждые 60 секунд пока открыт чат
-
-**AI Bottom Sheet — переработана шторка ИИ:**
-1. Убраны 10 пресетов из нижнего листа (делали шторку нечитабельной)
-2. Новый дизайн: "Начать чат с ИИ" / "Создать своего агента" / "Управление агентами"
-3. Пресеты доступны во вкладке "Пресеты" в `AiV2AgentListActivity`
-
-**Убрано дублирование настроек агентов:**
-1. Убрана отдельная секция "Удалённый агент" из AI Bottom Sheet
-2. Remote Agent доступен как Tab 4 в `AiV2AgentListActivity`
+**Список чатов — мгновенное обновление:**
+1. Чат с новым сообщением сразу перемещается наверх списка
+2. Если чата нет в списке — автоматическая `loadChats(silent=true)`
+3. Unread badge обновляется в реальном времени
 
 ### Изменённые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `data/grpc/RealGrpcClient.kt` | Persist/restore lastChatRequest, убран background timeout |
-| `data/grpc/GrpcClient.kt` | Экспозиция `clearLastChatRequestPrefs()` |
-| `data/grpc/ChatKeepAliveService.kt` | NEW — foreground service для keep-alive |
-| `data/session/SessionManager.kt` | Запуск/остановка ChatKeepAliveService |
-| `data/updates/UpdateManager.kt` | Валидация скачанного APK |
-| `app/build.gradle.kts` | minSdk 33 → 29 |
-| `AndroidManifest.xml` | Регистрация ChatKeepAliveService |
-| `res/values/strings.xml` | Строки для ChatKeepAliveService |
-| `res/values-ru/strings.xml` | Строки для ChatKeepAliveService |
+| `data/fcm/LavenderMessagingService.kt` | Новый канал `lavender_messages_v2`, удаление старого, вибрация, setFullScreenIntent |
+| `ui/ai/AiV2AgentListAdapter.kt` | `onItemLongClick` + `onAddClick`, динамический tint для кнопок |
+| `ui/ai/AiV2AgentListActivity.kt` | Tap → clone, long press → settings, `clonePresetAgent()` |
+| `ui/widget/AIBottomSheet.kt` | Секция "Мои агенты" с чекбоксами для quick chat |
+| `ui/chatlist/ChatListViewModel.kt` | Перемещение чата наверх при новом сообщении, auto-reload |
+| `res/values/strings.xml` | `ai_my_agents`, `ai_preset_added` |
+| `res/values-ru/strings.xml` | `ai_my_agents`, `ai_preset_added` |
+| `version.txt` | 1.3.0.18 → 1.3.0.19 |
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.19+)
+## Бэклог — Следующая сессия (v1.3.0.20+)
 
 ### Приоритет 1: Серверная интеграция
 | Задача | Статус |
