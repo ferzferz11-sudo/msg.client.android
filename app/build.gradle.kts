@@ -13,7 +13,7 @@ android {
         val versionFromFile = if (versionFile.exists()) versionFile.readText().trim() else "1.0.0"
 
         applicationId = "lavender.client.android"
-        minSdk = 33
+        minSdk = 29
         targetSdk = 35
         versionName = versionFromFile
 

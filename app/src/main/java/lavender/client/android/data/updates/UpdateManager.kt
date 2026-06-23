@@ -115,6 +115,14 @@ class UpdateManager(private val context: Context) {
                     return@launch
                 }
 
+                val contentType = response.header("Content-Type") ?: ""
+                if (contentType.contains("text/html") || contentType.contains("text/plain")) {
+                    Log.e(TAG, "Download failed: server returned $contentType instead of APK")
+                    response.body?.close()
+                    finishDownload(false)
+                    return@launch
+                }
+
                 val body = response.body ?: run {
                     Log.e(TAG, "Download failed: empty body")
                     finishDownload(false)
@@ -156,7 +164,14 @@ class UpdateManager(private val context: Context) {
                 outputStream.close()
                 inputStream.close()
 
-                Log.d(TAG, "Download complete: ${file.absolutePath}")
+                Log.d(TAG, "Download complete: ${file.absolutePath}, size=${file.length()} bytes")
+
+                if (!isValidApk(file)) {
+                    Log.e(TAG, "Downloaded file is not a valid APK")
+                    file.delete()
+                    finishDownload(false)
+                    return@launch
+                }
 
                 prefs.edit {
                     putBoolean("update_downloaded", true)
@@ -200,5 +215,16 @@ class UpdateManager(private val context: Context) {
             _downloadProgress.value = 0
         }
         downloadJob = null
+    }
+
+    private fun isValidApk(file: File): Boolean {
+        if (!file.exists() || file.length() < 100_000) return false
+        return try {
+            val bytes = ByteArray(4)
+            file.inputStream().use { it.read(bytes) }
+            bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()
+        } catch (_: Exception) {
+            false
+        }
     }
 }
