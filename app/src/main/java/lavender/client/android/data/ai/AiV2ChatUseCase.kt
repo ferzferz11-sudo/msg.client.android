@@ -363,7 +363,7 @@ object AiV2ChatUseCase {
                     content = msg.content,
                     agentId = msg.agentId,
                     agentName = "",
-                    timestamp = 0,
+                    timestamp = parseTimestamp(msg.createdAt),
                     isStreaming = false,
                     tokenCount = msg.tokenCount,
                     modelUsed = msg.modelUsed
@@ -383,13 +383,26 @@ object AiV2ChatUseCase {
                     id = chat.id,
                     agentId = chat.agentId,
                     agentName = chat.name,
-                    createdAt = 0,
-                    updatedAt = 0
+                    createdAt = parseTimestamp(chat.createdAt),
+                    updatedAt = parseTimestamp(chat.updatedAt)
                 )
             }
         } catch (e: Exception) {
             Log.e(TAG, "listAIChats error", e)
             emptyList()
+        }
+    }
+
+    private fun parseTimestamp(s: String): Long {
+        if (s.isEmpty()) return 0
+        return try {
+            java.time.Instant.parse(s).toEpochMilli()
+        } catch (_: Exception) {
+            try {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+                sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                sdf.parse(s)?.time ?: 0
+            } catch (_: Exception) { 0 }
         }
     }
 }

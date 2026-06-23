@@ -131,6 +131,18 @@ class AiV2ChatActivity : AppCompatActivity() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
+        toolbar.inflateMenu(R.menu.ai_chat_menu)
+        toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_settings -> {
+                    val intent = Intent(this, AiChatSettingsActivity::class.java)
+                    intent.putExtra("SESSION_ID", sessionId)
+                    startActivity(intent)
+                    true
+                }
+                else -> false
+            }
+        }
         toolbar.setNavigationOnClickListener { finish() }
 
         val primaryAgentId = agentIds.firstOrNull() ?: agentId

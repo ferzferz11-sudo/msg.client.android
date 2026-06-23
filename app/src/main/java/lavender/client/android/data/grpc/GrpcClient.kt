@@ -82,6 +82,8 @@ object GrpcClient {
 
     fun disconnect() = realGrpcClient.disconnect()
 
+    fun clearLastChatRequestPrefs() = realGrpcClient.clearLastChatRequestPrefs()
+
     fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
         realGrpcClient.startChat(username, password, joinMessage, register, deviceId, deviceName, onMessageReceived)
     }

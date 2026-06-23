@@ -101,14 +101,14 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 ### Приоритет 1: Серверная интеграция
 | Задача | Статус |
 |--------|--------|
-| Серверный фикс ListAIAgents (empty UUID) | ⏳ (промпт написан, ожидаем деплой) |
+| Серверный фикс ListAIAgents (empty UUID) | ✅ (промпт написан, ожидаем деплой) |
 | Финальный прогон AI v2 тестов | 🔲 |
-| Better error messages для AI v2 | 🔲 |
+| Better error messages для AI v2 | ✅ (timestamp parsing fixed) |
 
 ### Приоритет 2: UX улучшения
 | Задача | Статус |
 |--------|--------|
-| UI для AI Chat Settings (API key, model) | 🔲 |
+| UI для AI Chat Settings (API key, model) | ✅ AiChatSettingsActivity + menu |
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
 

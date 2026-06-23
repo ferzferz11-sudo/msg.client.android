@@ -104,6 +104,7 @@
         <activity android:name=".ui.ai.AiV2ChatActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.ai.AiAgentSetupActivity" android:exported="false" />
+        <activity android:name=".ui.ai.AiChatSettingsActivity" android:exported="false" />
         <activity android:name=".ui.ai.AiV2AgentListActivity" android:exported="false" />
         <activity android:name=".ui.remote.RemoteAgentActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
@@ -154,6 +155,11 @@
 
         <service
             android:name=".ui.remote.RemoteAgentService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".data.grpc.ChatKeepAliveService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 

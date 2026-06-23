@@ -370,6 +370,10 @@
     <string name="ai_v2_create_agent">Create Agent</string>
     <string name="ai_v2_edit_agent">Edit Agent</string>
     <string name="ai_v2_delete_agent">Delete Agent</string>
+    <string name="ai_chat_settings">AI Chat Settings</string>
+    <string name="ai_api_key_hint">API Key (optional)</string>
+    <string name="ai_model_hint">Model (optional override)</string>
+    <string name="ai_settings_saved">Settings saved</string>
     <string name="ai_v2_agent_name">Agent Name</string>
     <string name="ai_v2_agent_description">Description</string>
     <string name="ai_v2_provider_type">Provider Type</string>
@@ -605,6 +609,11 @@
     <string name="notif_error">Error: %s</string>
     <string name="notif_background_connection">Remote Agent background connection</string>
     <string name="notif_disconnect">Disconnect</string>
+    <string name="chat_keepalive_channel_name">Chat Connection</string>
+    <string name="chat_keepalive_channel_desc">Maintains connection to receive new messages</string>
+    <string name="chat_keepalive_connected">Connected — receiving messages</string>
+    <string name="chat_keepalive_connecting">Connecting…</string>
+    <string name="chat_keepalive_reconnecting">Reconnecting…</string>
     <string name="error_exit_code">Error (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Direct Chat</string>
     <string name="group_chat_type">Group Chat</string>

@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import lavender.client.android.data.auth.AuthManager
+import lavender.client.android.data.grpc.ChatKeepAliveService
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.proto.AuthResponseV2Proto
@@ -298,6 +299,8 @@ object SessionManager {
                 val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
                 GrpcClient.connect(host, useTls = false, port = port, context = context)
 
+                ChatKeepAliveService.start(context)
+
                 if (AuthManager.isTokenExpiredOrExpiring(context) && password.isNotEmpty()) {
                     waitForConnectionAndReLogin(context, username, password, serverAddress)
                 }
@@ -504,6 +507,8 @@ object SessionManager {
 
                     startTokenRefresh(context)
 
+                    ChatKeepAliveService.start(context)
+
                     onComplete("SUCCESS")
                 } else {
                     Log.w("SessionManager", "AUTH_FAILED")
@@ -522,6 +527,8 @@ object SessionManager {
         _session.value = UserSession(username = currentUsername)
 
         stopTokenRefresh()
+        ChatKeepAliveService.stop(context)
+        GrpcClient.clearLastChatRequestPrefs()
         AuthManager.clearTokens(context)
         CredentialStore.clear(context)
         CredentialStore.setServerAddress(context, lavender.client.android.data.ServerConfig.PROD_SERVER_ADDRESS)

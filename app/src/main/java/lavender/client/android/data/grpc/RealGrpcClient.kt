@@ -123,6 +123,7 @@ object RealGrpcClient {
             scope.launch { ProfileClient.fetchServerInfo(ctx, host, httpPort) }
         },
         onAutoResumeChat = {
+            if (lastChatRequest == null) restoreLastChatRequest()
             lastChatRequest?.let {
                 startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
             }
@@ -265,6 +266,45 @@ object RealGrpcClient {
         val r: Boolean, val did: String, val dn: String, val cb: (Message) -> Unit
     )
 
+    private fun saveLastChatRequestPrefs() {
+        val req = lastChatRequest ?: return
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences("chat_keepalive", Context.MODE_PRIVATE).edit {
+            putString("username", req.u)
+            putString("roomId", req.roomId)
+            putBoolean("register", req.r)
+            putString("deviceId", req.did)
+            putString("deviceName", req.dn)
+            putBoolean("has_request", true)
+        }
+    }
+
+    private fun restoreLastChatRequest(): Boolean {
+        val ctx = appContext ?: return false
+        val prefs = ctx.getSharedPreferences("chat_keepalive", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("has_request", false)) return false
+        val username = prefs.getString("username", "") ?: ""
+        val roomId = prefs.getString("roomId", "") ?: ""
+        val register = prefs.getBoolean("register", false)
+        val deviceId = prefs.getString("deviceId", "") ?: ""
+        val deviceName = prefs.getString("deviceName", "") ?: ""
+        if (username.isEmpty()) return false
+        val password = lavender.client.android.data.session.CredentialStore.getPassword(ctx) ?: ""
+        lastChatRequest = LastChatRequest(
+            u = username, p = password, j = "", roomId = roomId,
+            r = register, did = deviceId, dn = deviceName, cb = {}
+        )
+        Log.d(TAG, "Restored lastChatRequest from prefs: username=$username roomId=$roomId")
+        return true
+    }
+
+    fun clearLastChatRequestPrefs() {
+        appContext?.getSharedPreferences("chat_keepalive", Context.MODE_PRIVATE)?.edit {
+            clear()
+        }
+        lastChatRequest = null
+    }
+
     var currentRoomId = ""
         internal set
 
@@ -354,6 +394,7 @@ object RealGrpcClient {
     fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
         val oldRequest = lastChatRequest
         lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, deviceId, deviceName, onMessageReceived)
+        saveLastChatRequestPrefs()
 
         val shouldRestart = _connectionStatus.value != ConnectionStatus.READY || requestObserver == null
 
@@ -694,10 +735,6 @@ object RealGrpcClient {
                         val maxRetries = 50
                         while (retryCount < maxRetries && requestObserver == null) {
                             delay(retryDelay)
-                            if (isAppInBackground && System.currentTimeMillis() - backgroundStartTime > 300000) {
-                                Log.d(TAG, "App in background for too long, stopping stream retry loop")
-                                break
-                            }
                             val serverUp = checkServerHealth()
                             if (!serverUp) {
                                 _serverShuttingDown.value = true

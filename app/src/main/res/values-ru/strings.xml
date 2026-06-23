@@ -545,6 +545,11 @@
     <string name="notif_error">Ошибка: %s</string>
     <string name="notif_background_connection">Фоновое подключение Remote Agent</string>
     <string name="notif_disconnect">Отключить</string>
+    <string name="chat_keepalive_channel_name">Подключение чата</string>
+    <string name="chat_keepalive_channel_desc">Поддерживает соединение для получения новых сообщений</string>
+    <string name="chat_keepalive_connected">Подключено — получение сообщений</string>
+    <string name="chat_keepalive_connecting">Подключение…</string>
+    <string name="chat_keepalive_reconnecting">Переподключение…</string>
     <string name="error_exit_code">Ошибка (exit=%1$d): %2$s</string>
     <string name="direct_chat_type">Личный чат</string>
     <string name="group_chat_type">Групповой чат</string>
@@ -667,6 +672,10 @@
     <string name="ai_v2_create_agent">Создать агента</string>
     <string name="ai_v2_edit_agent">Редактировать агента</string>
     <string name="ai_v2_delete_agent">Удалить агента</string>
+    <string name="ai_chat_settings">Настройки AI чата</string>
+    <string name="ai_api_key_hint">API ключ (необязательно)</string>
+    <string name="ai_model_hint">Модель (переопределение)</string>
+    <string name="ai_settings_saved">Настройки сохранены</string>
     <string name="ai_v2_agent_name">Имя агента</string>
     <string name="ai_v2_agent_description">Описание</string>
     <string name="ai_v2_provider_type">Тип провайдера</string>

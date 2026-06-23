@@ -254,7 +254,7 @@ class AIBottomSheet(
         val remoteBadge = remoteOpen.findViewById<TextView>(R.id.actionBadge)
         remoteIcon.setImageResource(R.drawable.ic_agents)
         remoteIcon.imageTintList = ColorStateList.valueOf(primColor)
-        remoteText.text = context.getString(R.string.ai_manage_agents)
+        remoteText.text = context.getString(R.string.remote_agent_title)
         remoteText.setTextColor(primColor)
         remoteBadge.visibility = View.GONE
         remoteOpen.setOnClickListener {
