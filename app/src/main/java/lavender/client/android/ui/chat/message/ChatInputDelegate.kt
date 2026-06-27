@@ -458,7 +458,7 @@ class ChatInputDelegate(
             repliedToText = replyingTo?.text ?: "", userId = grpcClient.getUserId() ?: "", isSent = false
         )
         grpcClient.addLocalMessage(msg)
-        grpcClient.sendMessage(msg)
+        grpcClient.sendMessageV2(msg)
         grpcClient.deleteDraft(roomId)
         resetInput()
     }

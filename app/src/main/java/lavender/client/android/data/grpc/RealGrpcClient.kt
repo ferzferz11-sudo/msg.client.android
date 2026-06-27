@@ -125,7 +125,7 @@ object RealGrpcClient {
         onAutoResumeChat = {
             if (lastChatRequest == null) restoreLastChatRequest()
             lastChatRequest?.let {
-                startChat(it.u, it.p, it.j, it.r, it.did, it.dn, it.cb)
+                startChatV2(it.roomId, it.cb)
             }
         }
     )
@@ -205,22 +205,8 @@ object RealGrpcClient {
         getChannel = { getChannel() },
         getUserId = { currentUserId },
         getUsername = { currentUsername },
-        scope = scope
-    )
-
-    // ====== Module: Message Client ======
-    private val messageClient = GrpcMessageClient(
-        getChannel = { getChannel() },
-        getUserId = { currentUserId },
-        getUsername = { currentUsername },
-        messages = _messages,
-        deletedMessageHashes = deletedMessageHashes,
-        pendingReads = pendingReads,
         scope = scope,
-        appContext = { appContext },
-        onReadReceipt = { roomId, reader ->
-            scope.launch { _readReceiptEvent.emit(Pair(roomId, reader)) }
-        }
+        allUsers = { _allUsers.value }
     )
 
     // ====== Module: Message V2 Client ======
@@ -262,19 +248,14 @@ object RealGrpcClient {
     private var isRetrying = false
     private var lastChatRequest: LastChatRequest? = null
     private data class LastChatRequest(
-        val u: String, val p: String, val j: String, val roomId: String,
-        val r: Boolean, val did: String, val dn: String, val cb: (Message) -> Unit
+        val roomId: String, val cb: (Message) -> Unit
     )
 
     private fun saveLastChatRequestPrefs() {
         val req = lastChatRequest ?: return
         val ctx = appContext ?: return
         ctx.getSharedPreferences("chat_keepalive", Context.MODE_PRIVATE).edit {
-            putString("username", req.u)
             putString("roomId", req.roomId)
-            putBoolean("register", req.r)
-            putString("deviceId", req.did)
-            putString("deviceName", req.dn)
             putBoolean("has_request", true)
         }
     }
@@ -283,18 +264,10 @@ object RealGrpcClient {
         val ctx = appContext ?: return false
         val prefs = ctx.getSharedPreferences("chat_keepalive", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("has_request", false)) return false
-        val username = prefs.getString("username", "") ?: ""
         val roomId = prefs.getString("roomId", "") ?: ""
-        val register = prefs.getBoolean("register", false)
-        val deviceId = prefs.getString("deviceId", "") ?: ""
-        val deviceName = prefs.getString("deviceName", "") ?: ""
-        if (username.isEmpty()) return false
-        val password = lavender.client.android.data.session.CredentialStore.getPassword(ctx) ?: ""
-        lastChatRequest = LastChatRequest(
-            u = username, p = password, j = "", roomId = roomId,
-            r = register, did = deviceId, dn = deviceName, cb = {}
-        )
-        Log.d(TAG, "Restored lastChatRequest from prefs: username=$username roomId=$roomId")
+        if (roomId.isEmpty()) return false
+        lastChatRequest = LastChatRequest(roomId = roomId, cb = {})
+        Log.d(TAG, "Restored lastChatRequest from prefs: roomId=$roomId")
         return true
     }
 
@@ -389,413 +362,7 @@ object RealGrpcClient {
         }
     }
 
-    // ====== Chat Stream (core — kept in orchestrator) ======
-
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
-        val oldRequest = lastChatRequest
-        lastChatRequest = LastChatRequest(username, password, joinMessage, currentRoomId, register, deviceId, deviceName, onMessageReceived)
-        saveLastChatRequestPrefs()
-
-        val shouldRestart = _connectionStatus.value != ConnectionStatus.READY || requestObserver == null
-
-        if (!shouldRestart && oldRequest != null && oldRequest.u == username && oldRequest.r == register) {
-            if (currentRoomId.isEmpty() && oldRequest.roomId.isNotEmpty()) {
-                return
-            }
-            if (oldRequest.roomId == currentRoomId) {
-                return
-            }
-            val switchMessage = MessageProto.newBuilder()
-                .setUser(username).setRoomId(currentRoomId)
-                .setCreatedAt(ProtoUtils.getCurrentTimestamp())
-                .setClientVersion(BuildConfig.VERSION_NAME)
-                .setDeviceId(deviceId).setDeviceName(deviceName).build()
-            try {
-                requestObserver?.onNext(switchMessage)
-                return
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to send switch room signal, will restart stream", e)
-                requestObserver = null
-            }
-        }
-
-        if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
-            if (!isRetrying) _connectionStatus.value = ConnectionStatus.CONNECTING
-        }
-
-        val currentChannel = getChannel()
-        if (currentChannel == null || currentChannel.isShutdown || currentChannel.isTerminated) {
-            val addr = currentServerAddress
-            if (!addr.isNullOrEmpty()) {
-                Log.w(TAG, "Channel is not available, attempting reconnect to $addr")
-                connect(addr)
-            } else {
-                Log.e(TAG, "Cannot start chat: getChannel() and server address are null")
-            }
-            return
-        }
-
-        currentUsername = username
-
-        try { requestObserver?.onCompleted() } catch (_: Exception) {}
-        requestObserver = null
-
-        val methodDescriptor = MethodDescriptor.newBuilder<MessageProto, MessageProto>()
-            .setType(MethodDescriptor.MethodType.BIDI_STREAMING)
-            .setFullMethodName("messenger.ChatService/Chat")
-            .setRequestMarshaller(MessageProtoMarshaller())
-            .setResponseMarshaller(MessageProtoMarshaller())
-            .build()
-
-        val call = currentChannel.newCall(methodDescriptor, CallOptions.DEFAULT)
-        requestObserver = call.startChatStream(onMessageReceived)
-
-        val firstMessageBuilder = MessageProto.newBuilder()
-            .setUser(username).setText(joinMessage).setRoomId(currentRoomId)
-            .setCreatedAt(ProtoUtils.getCurrentTimestamp())
-            .setClientVersion(BuildConfig.VERSION_NAME)
-            .setRegister(register).setDeviceId(deviceId).setDeviceName(deviceName)
-
-        if (ProfileClient.isChatV2Supported()) {
-            appContext?.let { SessionManager.ensureFreshToken(it) }
-            val ctx = appContext ?: return
-            if (AuthManager.isTokenExpiredOrExpiring(ctx)) {
-                Log.w(TAG, "ChatStream v2: JWT still expired after refresh attempt — cannot start chat")
-                _authStatus.value = "AUTH_FAILED"
-                return
-            }
-            val accessToken = AuthManager.getAccessToken(ctx)
-            if (!accessToken.isNullOrEmpty()) {
-                firstMessageBuilder.setJwtToken(accessToken)
-                lastAuthWasJwt = true
-            } else {
-                Log.w(TAG, "ChatStream v2: no JWT token available — cannot start chat")
-                _authStatus.value = "AUTH_FAILED"
-                return
-            }
-        } else {
-            Log.e(TAG, "ChatStream: v1 not supported, v2 JWT required")
-            _authStatus.value = "AUTH_FAILED"
-            return
-        }
-
-        _authStatus.value = null
-        requestObserver?.onNext(firstMessageBuilder.build())
-
-        // Resend pending data AFTER sending authentication signal
-        messageClient.resendPendingMessages({ requestObserver })
-        messageClient.resendPendingReads(currentUsername ?: "", _connectionStatus.value)
-        startTypingStream()
-    }
-
-    private fun ClientCall<MessageProto, MessageProto>.startChatStream(onMessageReceived: (Message) -> Unit): StreamObserver<MessageProto> {
-        val responseObserver = object : StreamObserver<MessageProto> {
-            override fun onNext(value: MessageProto) {
-                if (_connectionStatus.value != ConnectionStatus.READY) {
-                    _connectionStatus.value = ConnectionStatus.READY
-                    fetchAdminStatus()
-                }
-
-                if (value.isSuperAdmin || value.text == "SET_SUPER_ADMIN") {
-                    if (!_isSuperAdmin.value) {
-                        _isSuperAdmin.value = true
-                        appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-                            ?.edit { putBoolean("is_super_admin", true) }
-                    }
-                    if (value.userId.isNotEmpty() && _adminUserId.value == null) {
-                        _adminUserId.value = value.userId
-                        appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
-                            ?.edit { putString("admin_user_id", value.userId) }
-                    }
-                }
-
-                // System signals
-                if (value.text == "SET_SUPER_ADMIN") return
-                if (value.text == "AUTH_FAILED" || value.text == "USER_NOT_FOUND" || value.text == "REGISTRATION_SUCCESS") {
-                    _authStatus.value = value.text
-                    if (value.text == "AUTH_FAILED") disconnect()
-                    return
-                }
-                if (callClient.callRequestObserver == null && currentUsername != null) startCallSession()
-                if (value.text.startsWith("SYSTEM_NOTIFICATION:")) {
-                    _systemNotification.value = value.text.removePrefix("SYSTEM_NOTIFICATION:")
-                    return
-                }
-                if (value.text.startsWith("SERVER_INFO:")) {
-                    _serverVersion.value = value.text.removePrefix("SERVER_INFO:")
-                    return
-                }
-                if (value.text.startsWith("FORCE_DISCONNECT:")) {
-                    val targetUser = value.text.removePrefix("FORCE_DISCONNECT:")
-                    if (targetUser == currentUsername) disconnect()
-                    return
-                }
-                if (value.text == "FORCE_LOGOUT") {
-                    _authStatus.value = "FORCE_LOGOUT"
-                    disconnect()
-                    return
-                }
-                if (value.text.startsWith("FORCE_DISCONNECT_DEVICE:")) {
-                    val deviceToDisconnect = value.text.removePrefix("FORCE_DISCONNECT_DEVICE:")
-                    if (deviceToDisconnect == (lastChatRequest?.did ?: "")) {
-                        _authStatus.value = "FORCE_LOGOUT"
-                        disconnect()
-                    }
-                    return
-                }
-                if (value.text.startsWith("FORCE_LOGOUT_EXCEPT:")) {
-                    val deviceToKeep = value.text.removePrefix("FORCE_LOGOUT_EXCEPT:")
-                    if (deviceToKeep != (lastChatRequest?.did ?: "")) {
-                        _authStatus.value = "FORCE_LOGOUT"
-                        disconnect()
-                    }
-                    return
-                }
-                if (value.text.startsWith("DELETE_MESSAGE:")) {
-                    val deletedId = value.text.removePrefix("DELETE_MESSAGE:")
-                    messageClient.handleDeleteMessageSignal(deletedId)
-                    if (value.roomId.isEmpty() || value.roomId == currentRoomId) {
-                        _messages.update { current -> current.filterNot { it.id == deletedId } }
-                    }
-                    return
-                }
-                if (value.text.startsWith("NEW_MESSAGE_V2:") || value.text.startsWith("EDIT_MESSAGE_V2:") || value.text.startsWith("DELETE_MESSAGE_V2:")) {
-                    return
-                }
-                if (value.text.startsWith("READ_ALL:")) {
-                    val reader = value.text.removePrefix("READ_ALL:")
-                    val targetRoomId = if (value.roomId.isNotEmpty()) value.roomId else currentRoomId
-                    messageClient.handleReadAllSignal(reader, targetRoomId, currentRoomId)
-                    return
-                }
-                if (value.text.startsWith("CLEAR_CACHE:")) {
-                    val chatId = value.text.removePrefix("CLEAR_CACHE:")
-                    messageClient.handleClearCacheSignal(chatId, currentRoomId)
-                    return
-                }
-                if (value.text.startsWith("CHAT_DELETED:")) {
-                    _chatDeletedEvent.value = value.text.removePrefix("CHAT_DELETED:")
-                    return
-                }
-                if (value.text.startsWith("ONLINE_USERS_UPDATE:")) {
-                    try {
-                        val usersJson = value.text.removePrefix("ONLINE_USERS_UPDATE:")
-                        if (usersJson.isNotEmpty() && usersJson != "null") {
-                            val jsonArray = org.json.JSONArray(usersJson)
-                            val userList = mutableListOf<String>()
-                            for (i in 0 until jsonArray.length()) userList.add(jsonArray.getString(i))
-                            _users.value = userList
-                        }
-                    } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
-                    return
-                }
-                if (value.text == "SERVER_SHUTTINGDOWN") {
-                    Log.w(TAG, "Server is shutting down — showing reconnecting state")
-                    _serverShuttingDown.value = true
-                    _connectionStatus.value = ConnectionStatus.RECONNECTING
-                    return
-                }
-
-                val message = ProtoUtils.createMessageFromProto(value)
-                if (deletedMessageHashes.contains(getMessageHash(message))) return
-
-                // E2EE: decrypt secret chat messages
-                if (message.isE2EE && message.e2eePayload.isNotEmpty()) {
-                    val decrypted = lavender.client.android.data.crypto.E2EEManager.decryptMessage(
-                        appContext ?: return, message.roomId, message.e2eePayload
-                    )
-                    if (decrypted != null) {
-                        onMessageReceived(message.copy(text = decrypted, isE2EE = false, e2eePayload = ""))
-                    } else {
-                        onMessageReceived(message.copy(text = "🔒 Encrypted message", isE2EE = false, e2eePayload = ""))
-                    }
-                    return
-                }
-
-                val isFavoriteSession = currentRoomId.startsWith("favorites_")
-                if (message.roomId != currentRoomId && !isFavoriteSession) {
-                    scope.launch(Dispatchers.IO) { db()?.messageDao()?.insertMessages(listOf(message.toEntity())) }
-                    scope.launch { _newMessageEvent.emit(message) }
-                    return
-                }
-
-                onMessageReceived(message)
-                var msgToCache = message
-                _messages.update { current ->
-                    val hash = getMessageHash(message)
-                    val dedupHash = getMessageHashForDedup(message)
-                    val list = current.toMutableList()
-                    var index = list.indexOfFirst { getMessageHash(it) == hash }
-                    if (index == -1) index = list.indexOfFirst { getMessageHashForDedup(it) == dedupHash }
-                    if (index != -1) {
-                        val existing = list[index]
-                        val merged = message.copy(isRead = existing.isRead || message.isRead)
-                        if (existing.timestamp != merged.timestamp) {
-                            list.removeAt(index)
-                            val insertIndex = list.indexOfFirst { it.timestamp > merged.timestamp }
-                            if (insertIndex == -1) list.add(merged) else list.add(insertIndex, merged)
-                        } else list[index] = merged
-                        msgToCache = merged
-                        list
-                    } else {
-                        val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
-                        if (insertIndex == -1) list.add(message) else list.add(insertIndex, message)
-                        list
-                    }
-                }
-                scope.launch(Dispatchers.IO) { db()?.messageDao()?.insertMessages(listOf(msgToCache.toEntity())) }
-            }
-
-            override fun onError(t: Throwable) {
-                ErrorHandler.handle("RealGrpcClient.chatStream", t)
-                if (t is StatusRuntimeException) {
-                    val description = t.status.description ?: ""
-                    if (description.contains("user not found", ignoreCase = true) ||
-                        description.contains("auth failed", ignoreCase = true) ||
-                        t.status.code == Status.Code.UNAUTHENTICATED) {
-                        Log.w(TAG, "Authentication error, not retrying: $description")
-                        _authStatus.value = if (description.contains("user not found")) "USER_NOT_FOUND" else "AUTH_FAILED"
-                        _connectionStatus.value = ConnectionStatus.FAILED
-                        requestObserver = null
-                        return
-                    }
-                    if (description.contains("authentication failed", ignoreCase = true) ||
-                        description.contains("JWT validation failed", ignoreCase = true) ||
-                        description.contains("token is malformed", ignoreCase = true) ||
-                        description.contains("token is expired", ignoreCase = true)) {
-                        if (lastAuthWasJwt) {
-                            Log.w(TAG, "JWT auth failed — attempting token refresh: $description")
-                            requestObserver = null
-                            _connectionStatus.value = ConnectionStatus.RECONNECTING
-                            scope.launch {
-                                val ctx = appContext
-                                if (ctx != null) {
-                                    val refreshToken = AuthManager.getRefreshToken(ctx)
-                                    if (!refreshToken.isNullOrEmpty()) {
-                                        val refreshResult =
-                                            suspendCancellableCoroutine<RefreshTokenResponseProto?> { cont ->
-                                                GrpcClient.refreshToken(refreshToken) { response, _ ->
-                                                    if (cont.isActive) {
-                                                        if (response != null && response.accessToken.isNotEmpty()) cont.resumeWith(Result.success(response))
-                                                        else cont.resumeWith(Result.success(null))
-                                                    }
-                                                }
-                                            }
-                                        if (refreshResult != null) {
-                                            val userId = AuthManager.getUserId(ctx)
-                                            val username = AuthManager.getUsername(ctx)
-                                            val deviceId = AuthManager.getDeviceId(ctx)
-                                            AuthManager.storeTokens(
-                                                context = ctx, accessToken = refreshResult.accessToken,
-                                                refreshToken = refreshResult.refreshToken,
-                                                accessExpiresAt = refreshResult.accessExpiresAt,
-                                                refreshExpiresAt = refreshResult.refreshExpiresAt,
-                                                userId = userId, username = username, deviceId = deviceId
-                                            )
-                                            _authStatus.value = null
-                                            delay(1000)
-                                            lastChatRequest?.let { req ->
-                                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                                            }
-                                            return@launch
-                                        }
-                                    }
-                                }
-                                Log.w(TAG, "Token refresh failed — AUTH_FAILED")
-                                _authStatus.value = "AUTH_FAILED"
-                                _connectionStatus.value = ConnectionStatus.FAILED
-                            }
-                            return
-                        }
-                        Log.w(TAG, "Auth failure — not retrying: $description")
-                        _authStatus.value = "AUTH_FAILED"
-                        _connectionStatus.value = ConnectionStatus.FAILED
-                        requestObserver = null
-                        return
-                    }
-                    if (description.contains("shutdownNow")) {
-                        requestObserver = null
-                        scope.launch {
-                            lastChatRequest?.let { req ->
-                                requestObserver = null
-                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                            }
-                        }
-                        return
-                    }
-                }
-
-                if (isRetrying) { return }
-
-                _connectionStatus.value = ConnectionStatus.RECONNECTING
-                requestObserver = null
-                isRetrying = true
-                scope.launch {
-                    try {
-                        var retryDelay = 3000L
-                        val maxRetryDelay = 30000L
-                        var retryCount = 0
-                        val maxRetries = 50
-                        while (retryCount < maxRetries && requestObserver == null) {
-                            delay(retryDelay)
-                            val serverUp = checkServerHealth()
-                            if (!serverUp) {
-                                _serverShuttingDown.value = true
-                                retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
-                                retryCount++
-                                continue
-                            }
-                            _serverShuttingDown.value = false
-                            lastChatRequest?.let { req ->
-                                startChat(req.u, req.p, req.j, req.r, req.did, req.dn, req.cb)
-                                if (_connectionStatus.value == ConnectionStatus.READY && requestObserver != null) {
-                                    return@launch
-                                }
-                            }
-                            retryCount++
-                            retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
-                        }
-                        if (retryCount >= maxRetries) {
-                            Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
-                            _connectionStatus.value = ConnectionStatus.FAILED
-                        }
-                    } finally { isRetrying = false }
-                }
-            }
-
-            override fun onCompleted() {
-                _connectionStatus.value = ConnectionStatus.DISCONNECTED
-            }
-        }
-
-        this.start(object : ClientCall.Listener<MessageProto>() {
-            override fun onHeaders(headers: Metadata?) {
-                super.onHeaders(headers)
-                _connectionStatus.value = ConnectionStatus.READY
-                fetchAdminStatus()
-            }
-            override fun onMessage(message: MessageProto) {
-                if (_connectionStatus.value != ConnectionStatus.READY) _connectionStatus.value = ConnectionStatus.READY
-                responseObserver.onNext(message)
-            }
-            override fun onClose(status: Status, trailers: Metadata) {
-                if (status.isOk) {
-                    responseObserver.onCompleted()
-                    return
-                }
-                Log.w(TAG, "Stream error: ${status.code}")
-                requestObserver = null
-                responseObserver.onError(status.asRuntimeException())
-            }
-        }, Metadata())
-        this.request(Int.MAX_VALUE)
-
-        return object : StreamObserver<MessageProto> {
-            override fun onNext(value: MessageProto) = this@startChatStream.sendMessage(value)
-            override fun onError(t: Throwable) = this@startChatStream.cancel("Error in request stream", t)
-            override fun onCompleted() = this@startChatStream.halfClose()
-        }
-    }
+    // ====== Chat Stream V2 ======
 
     // ====== Typing (delegated) ======
     private fun startTypingStream() { typingClient.startTypingStream() }
@@ -806,12 +373,19 @@ object RealGrpcClient {
     // ====== ChatV2 Stream ======
 
     fun startChatV2(roomId: String, onMessageReceived: (Message) -> Unit) {
+        lastChatRequest = LastChatRequest(roomId = roomId, cb = onMessageReceived)
+        saveLastChatRequestPrefs()
+        currentRoomId = roomId
+
         val currentChannel = getChannel() ?: return
         if (chatV2RequestObserver != null) {
-            // Already connected, just switch room
             val switchMsg = ChatV2MessageProto(roomId = roomId)
             try { chatV2RequestObserver?.onNext(switchMsg) } catch (_: Exception) {}
             return
+        }
+
+        if (_connectionStatus.value == ConnectionStatus.FAILED || _connectionStatus.value == ConnectionStatus.DISCONNECTED) {
+            if (!isRetrying) _connectionStatus.value = ConnectionStatus.CONNECTING
         }
 
         val methodDescriptor = MethodDescriptor.newBuilder<ChatV2MessageProto, ChatV2MessageProto>()
@@ -825,16 +399,18 @@ object RealGrpcClient {
         val observer = call.startChatV2Stream(onMessageReceived)
         chatV2RequestObserver = observer
 
-        // First message: auth
         val ctx = appContext
         if (ctx != null) {
-            val accessToken = lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)
-            if (!accessToken.isNullOrEmpty()) {
-                val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId)
-                observer.onNext(firstMsg)
-            } else {
-                Log.w(TAG, "ChatV2: no JWT token available")
-                return
+            lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)?.let { accessToken ->
+                if (accessToken.isNotEmpty()) {
+                    val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId)
+                    observer.onNext(firstMsg)
+                    _authStatus.value = null
+                    startTypingStream()
+                } else {
+                    Log.w(TAG, "ChatV2: no JWT token available")
+                    _authStatus.value = "AUTH_FAILED"
+                }
             }
         }
     }
@@ -842,29 +418,102 @@ object RealGrpcClient {
     private fun ClientCall<ChatV2MessageProto, ChatV2MessageProto>.startChatV2Stream(onMessageReceived: (Message) -> Unit): StreamObserver<ChatV2MessageProto> {
         val responseObserver = object : StreamObserver<ChatV2MessageProto> {
             override fun onNext(value: ChatV2MessageProto) {
+                if (_connectionStatus.value != ConnectionStatus.READY) {
+                    _connectionStatus.value = ConnectionStatus.READY
+                    fetchAdminStatus()
+                    if (callClient.callRequestObserver == null && currentUsername != null) startCallSession()
+                }
                 // Handle typing
                 if (value.typing != null) {
-                    // Could update typingUsers here if needed
                     return
                 }
                 // Handle system messages
                 if (value.system != null) {
-                    when (value.system.type) {
+                    val sysType = value.system.type
+                    val sysMessage = value.system.message
+
+                    when (sysType) {
                         "DELETE_MESSAGE" -> {
-                            val deletedId = value.system.message
-                            messageClient.handleDeleteMessageSignal(deletedId)
-                            if (deletedId.isNotEmpty()) {
-                                _messages.update { current -> current.filterNot { it.id == deletedId } }
+                            deletedMessageHashes.add("id:$sysMessage")
+                            scope.launch(Dispatchers.IO) { db()?.messageDao()?.deleteMessage(sysMessage) }
+                            if (sysMessage.isNotEmpty()) {
+                                _messages.update { current -> current.filterNot { it.id == sysMessage } }
                             }
                         }
                         "READ_ALL" -> {
-                            val reader = value.system.message
                             val targetRoomId = value.roomId.ifEmpty { currentRoomId }
-                            messageClient.handleReadAllSignal(reader, targetRoomId, currentRoomId)
+                            if (targetRoomId == currentRoomId) {
+                                _messages.update { current ->
+                                    if (current.all { it.isRead }) current
+                                    else current.map { it.copy(isRead = true) }
+                                }
+                            }
+                            if (targetRoomId.isNotEmpty()) {
+                                scope.launch(Dispatchers.IO) { db()?.messageDao()?.markRoomAsRead(targetRoomId) }
+                                scope.launch { _readReceiptEvent.emit(Pair(targetRoomId, sysMessage)) }
+                            }
                         }
                         "SERVER_SHUTTINGDOWN" -> {
                             _serverShuttingDown.value = true
                             _connectionStatus.value = ConnectionStatus.RECONNECTING
+                        }
+                        "SET_SUPER_ADMIN" -> {
+                            if (!_isSuperAdmin.value) {
+                                _isSuperAdmin.value = true
+                                appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+                                    ?.edit { putBoolean("is_super_admin", true) }
+                            }
+                            if (sysMessage.isNotEmpty() && _adminUserId.value == null) {
+                                _adminUserId.value = sysMessage
+                                appContext?.getSharedPreferences("lavender_prefs", Context.MODE_PRIVATE)
+                                    ?.edit { putString("admin_user_id", sysMessage) }
+                            }
+                        }
+                        "AUTH_FAILED", "USER_NOT_FOUND", "REGISTRATION_SUCCESS" -> {
+                            _authStatus.value = sysType
+                            if (sysType == "AUTH_FAILED") disconnect()
+                        }
+                        "SYSTEM_NOTIFICATION" -> {
+                            _systemNotification.value = sysMessage
+                        }
+                        "SERVER_INFO" -> {
+                            _serverVersion.value = sysMessage
+                        }
+                        "FORCE_DISCONNECT" -> {
+                            if (sysMessage == currentUsername) disconnect()
+                        }
+                        "FORCE_LOGOUT" -> {
+                            _authStatus.value = "FORCE_LOGOUT"
+                            disconnect()
+                        }
+                        "FORCE_DISCONNECT_DEVICE" -> {
+                            // Device-specific disconnect not supported in v2
+                        }
+                        "FORCE_LOGOUT_EXCEPT" -> {
+                            _authStatus.value = "FORCE_LOGOUT"
+                            disconnect()
+                        }
+                        "CLEAR_CACHE" -> {
+                            scope.launch(Dispatchers.IO) {
+                                db()?.messageDao()?.clearRoom(sysMessage)
+                                db()?.chatDao()?.deleteChat(sysMessage)
+                            }
+                            if (sysMessage == currentRoomId) {
+                                _messages.update { emptyList() }
+                            }
+                        }
+                        "CHAT_DELETED" -> {
+                            _chatDeletedEvent.value = sysMessage
+                        }
+                        "ONLINE_USERS_UPDATE" -> {
+                            try {
+                                if (sysMessage.isNotEmpty() && sysMessage != "null") {
+                                    val jsonArray = org.json.JSONArray(sysMessage)
+                                    val userList = mutableListOf<String>()
+                                    for (i in 0 until jsonArray.length()) userList.add(jsonArray.getString(i))
+                                    _users.value = userList
+                                }
+                            } catch (e: Exception) { Log.e(TAG, "Error parsing online users update", e) }
                         }
                     }
                     return
@@ -879,6 +528,41 @@ object RealGrpcClient {
             override fun onError(t: Throwable) {
                 ErrorHandler.handle("RealGrpcClient.chatV2Stream", t)
                 chatV2RequestObserver = null
+                if (!isRetrying) {
+                    _connectionStatus.value = ConnectionStatus.RECONNECTING
+                    isRetrying = true
+                    scope.launch {
+                        try {
+                            var retryDelay = 3000L
+                            val maxRetryDelay = 30000L
+                            var retryCount = 0
+                            val maxRetries = 50
+                            while (retryCount < maxRetries && chatV2RequestObserver == null) {
+                                delay(retryDelay)
+                                val serverUp = checkServerHealth()
+                                if (!serverUp) {
+                                    _serverShuttingDown.value = true
+                                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
+                                    retryCount++
+                                    continue
+                                }
+                                _serverShuttingDown.value = false
+                                lastChatRequest?.let { req ->
+                                    startChatV2(req.roomId, req.cb)
+                                    if (chatV2RequestObserver != null) {
+                                        return@launch
+                                    }
+                                }
+                                retryCount++
+                                retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
+                            }
+                            if (retryCount >= maxRetries) {
+                                Log.e(TAG, "Failed to reconnect ChatV2 stream after $maxRetries attempts")
+                                _connectionStatus.value = ConnectionStatus.FAILED
+                            }
+                        } finally { isRetrying = false }
+                    }
+                }
             }
 
             override fun onCompleted() {
@@ -889,9 +573,13 @@ object RealGrpcClient {
         this.start(object : ClientCall.Listener<ChatV2MessageProto>() {
             override fun onMessage(message: ChatV2MessageProto) { responseObserver.onNext(message) }
             override fun onClose(status: Status, trailers: Metadata) {
-                if (!status.isOk) {
-                    chatV2RequestObserver = null
+                if (status.isOk) {
+                    _connectionStatus.value = ConnectionStatus.DISCONNECTED
+                    return
                 }
+                Log.w(TAG, "ChatV2 stream error: ${status.code}")
+                chatV2RequestObserver = null
+                responseObserver.onError(StatusRuntimeException(status))
             }
         }, Metadata())
         this.request(Int.MAX_VALUE)
@@ -929,14 +617,33 @@ object RealGrpcClient {
     fun startCallSession() { callClient.startCallSession() }
     fun sendCallSignal(signal: CallMessageProto) { callClient.sendCallSignal(signal) }
 
-    // ====== Messages (delegated) ======
-    fun sendMessage(message: Message) { messageClient.sendMessage(message, requestObserver) }
-    fun addLocalMessage(message: Message) { messageClient.addLocalMessage(message) }
-    fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) { messageClient.loadHistory(roomId, onCompletion) }
-    fun editMessage(id: String, text: String, cb: (Boolean, String) -> Unit) { messageClient.editMessage(id, text, cb) }
-    fun deleteMessage(m: Message) { messageClient.deleteMessage(m, currentUsername) }
-    fun setReaction(messageId: String, username: String, emoji: String) { messageClient.setReaction(messageId, username, emoji) }
-    fun markRead(rid: String, u: String, onComp: (() -> Unit)?) { messageClient.markRead(rid, u, _connectionStatus.value, onComp) }
+    // ====== Messages V2 (delegated) ======
+    fun addLocalMessage(message: Message) {
+        scope.launch(Dispatchers.IO) { db()?.messageDao()?.insertMessages(listOf(message.toEntity())) }
+        _messages.update { current ->
+            val list = current.toMutableList()
+            val existingIndex = list.indexOfFirst { it.id == message.id }
+            if (existingIndex != -1) list[existingIndex] = message
+            else {
+                val insertIndex = list.indexOfFirst { it.timestamp > message.timestamp }
+                if (insertIndex == -1) list.add(message) else list.add(insertIndex, message)
+            }
+            list
+        }
+    }
+    fun updateMessage(message: Message) {
+        _messages.update { current ->
+            val list = current.toMutableList()
+            val index = list.indexOfFirst { it.id == message.id }
+            if (index != -1) list[index] = message
+            list
+        }
+    }
+    fun clearMessages() { _messages.value = emptyList() }
+    fun markRead(rid: String, u: String, onComp: (() -> Unit)?) {
+        appContext?.let { lavender.client.android.data.fcm.LavenderMessagingService.dismissNotificationsForRoom(it, rid) }
+        onComp?.invoke()
+    }
 
     // ====== Chat List (delegated) ======
     fun getChats(username: String, skipCache: Boolean = false, limit: Int = 100, cursor: String = "", callback: (ChatListPage) -> Unit) { chatClient.getChats(username, skipCache, limit, cursor, callback) }
@@ -1008,7 +715,6 @@ object RealGrpcClient {
         currentRoomId = roomId
         _messages.value = emptyList()
     }
-    fun clearMessages() { _messages.value = emptyList() }
     fun clearSystemNotification() { _systemNotification.value = null }
     fun setUserId(userId: String) { currentUserId = userId }
     fun getUserId(): String? = currentUserId
@@ -1072,5 +778,4 @@ object RealGrpcClient {
             }
         }
     }
-    fun updateMessage(@Suppress("UNUSED_PARAMETER") m: Message) {} // Local update mostly
 }

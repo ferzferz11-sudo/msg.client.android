@@ -127,24 +127,6 @@ class TypingSignalMarshaller : io.grpc.MethodDescriptor.Marshaller<TypingSignalP
     }
 }
 
-class GetHistoryRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHistoryRequestProto> {
-    override fun stream(v: GetHistoryRequestProto): java.io.InputStream {
-        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.limit != 0) cos.writeInt32(1, v.limit); if (v.room.isNotEmpty()) cos.writeString(2, v.room)
-        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
-    }
-    override fun parse(s: java.io.InputStream): GetHistoryRequestProto = GetHistoryRequestProto()
-}
-
-class GetHistoryResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetHistoryResponseProto> {
-    override fun stream(v: GetHistoryResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): GetHistoryResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageProto>(); val mm = MessageProtoMarshaller()
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(mm.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
-        return GetHistoryResponseProto(msgs)
-    }
-}
-
 class GetChatsRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetChatsRequestProto> {
     override fun stream(v: GetChatsRequestProto): java.io.InputStream {
         val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
@@ -360,27 +342,9 @@ class GetFavoritesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFav
 class GetFavoritesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFavoritesResponseProto> {
     override fun stream(v: GetFavoritesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
     override fun parse(s: java.io.InputStream): GetFavoritesResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageProto>(); val mm = MessageProtoMarshaller()
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(mm.parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s); val msgs = mutableListOf<MessageV2Proto>()
+        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) { val len = cis.readUInt32(); msgs.add(lavender.client.android.data.grpc.MessageV2ProtoMarshaller().parse(java.io.ByteArrayInputStream(cis.readRawBytes(len)))) } else cis.skipField(tag) }
         return GetFavoritesResponseProto(msgs)
-    }
-}
-
-class EditMessageRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<EditMessageRequestProto> {
-    override fun stream(v: EditMessageRequestProto): java.io.InputStream {
-        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.messageId.isNotEmpty()) cos.writeString(1, v.messageId); if (v.text.isNotEmpty()) cos.writeString(2, v.text)
-        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
-    }
-    override fun parse(s: java.io.InputStream): EditMessageRequestProto = EditMessageRequestProto()
-}
-
-class EditMessageResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<EditMessageResponseProto> {
-    override fun stream(v: EditMessageResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): EditMessageResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false; var msg = ""
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> ok = cis.readBool(); 2 -> msg = cis.readString(); else -> cis.skipField(tag) } }
-        return EditMessageResponseProto(ok, msg)
     }
 }
 
@@ -496,25 +460,6 @@ class GetUserProfileResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<Get
         val cis = com.google.protobuf.CodedInputStream.newInstance(s); var u = ""; var b = ""; var st = ""; var au = ""; var ls: Timestamp? = null; var fau = ""
         while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; when (com.google.protobuf.WireFormat.getTagFieldNumber(tag)) { 1 -> u = cis.readString(); 2 -> b = cis.readString(); 3 -> st = cis.readString(); 4 -> au = cis.readString(); 5 -> { val len = cis.readUInt32(); ls = ProtoUtils.parseTimestampFromProto(java.io.ByteArrayInputStream(cis.readRawBytes(len))) }; 6 -> fau = cis.readString(); else -> cis.skipField(tag) } }
         return GetUserProfileResponseProto(u, b, st, au, ls, fau)
-    }
-}
-
-class DeleteMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteMessagesRequestProto> {
-    override fun stream(v: DeleteMessagesRequestProto): java.io.InputStream {
-        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos); val mm = MessageProtoMarshaller()
-        for (m in v.messages) { val b = mm.stream(m).readBytes(); cos.writeTag(1, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); cos.writeUInt32NoTag(b.size); cos.writeRawBytes(b) }
-        if (v.requesterUsername.isNotEmpty()) cos.writeString(2, v.requesterUsername)
-        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
-    }
-    override fun parse(s: java.io.InputStream): DeleteMessagesRequestProto = DeleteMessagesRequestProto()
-}
-
-class DeleteMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<DeleteMessagesResponseProto> {
-    override fun stream(v: DeleteMessagesResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): DeleteMessagesResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
-        return DeleteMessagesResponseProto(ok)
     }
 }
 
@@ -888,27 +833,6 @@ class GetFCMLogsResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<GetFCML
                 logs.add(FCMLogEntryProto(ts, lvl, msg))
             } else cis.skipField(tag) }
         return GetFCMLogsResponseProto(logs)
-    }
-}
-
-class ReactionRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionRequestProto> {
-    override fun stream(v: ReactionRequestProto): java.io.InputStream {
-        val baos = java.io.ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
-        if (v.messageId.isNotEmpty()) cos.writeString(1, v.messageId)
-        cos.writeTag(2, com.google.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED); val rbaos = java.io.ByteArrayOutputStream(); val rcos = com.google.protobuf.CodedOutputStream.newInstance(rbaos)
-        if (v.reaction.user.isNotEmpty()) rcos.writeString(1, v.reaction.user); if (v.reaction.emoji.isNotEmpty()) rcos.writeString(2, v.reaction.emoji)
-        rcos.flush(); val rb = rbaos.toByteArray(); cos.writeUInt32NoTag(rb.size); cos.writeRawBytes(rb)
-        cos.flush(); return java.io.ByteArrayInputStream(baos.toByteArray())
-    }
-    override fun parse(s: java.io.InputStream): ReactionRequestProto = ReactionRequestProto()
-}
-
-class ReactionResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<ReactionResponseProto> {
-    override fun stream(v: ReactionResponseProto): java.io.InputStream = java.io.ByteArrayInputStream(byteArrayOf())
-    override fun parse(s: java.io.InputStream): ReactionResponseProto {
-        val cis = com.google.protobuf.CodedInputStream.newInstance(s); var ok = false
-        while (!cis.isAtEnd) { val tag = cis.readTag(); if (tag == 0) break; if (com.google.protobuf.WireFormat.getTagFieldNumber(tag) == 1) ok = cis.readBool() else cis.skipField(tag) }
-        return ReactionResponseProto(ok)
     }
 }
 

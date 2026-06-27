@@ -274,16 +274,7 @@ object SessionManager {
     private fun syncDeviceToServer(context: Context) {
         val currentSession = _session.value
         if (currentSession.isLoggedIn) {
-            GrpcClient.startChat(
-                currentSession.username,
-                currentSession.password,
-                "",
-                false,
-                "",
-                currentSession.deviceId,
-                currentSession.deviceName,
-                onMessageReceived = {}
-            )
+            GrpcClient.startChatV2("") { /* ignore */ }
         }
     }
 

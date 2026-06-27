@@ -144,7 +144,7 @@ class NewChatActivity : AppCompatActivity() {
 
         SessionManager.updateDeviceInfo(this)
         val session = SessionManager.session.value
-        viewModel.startChat(username, password, "", deviceId = session.deviceId, deviceName = session.deviceName) { _ ->
+        viewModel.startChatV2(roomId) { _ ->
             viewModel.markRead(username)
         }
         viewModel.markRead(username)
@@ -517,7 +517,7 @@ class NewChatActivity : AppCompatActivity() {
         loadDataFromIntent()
         grpcClient.setRoomId(roomId)
         grpcClient.clearMessages()
-        grpcClient.loadHistory(roomId)
+        grpcClient.loadHistoryV2(roomId) { _, _ -> }
         viewModel.switchRoom(roomId)
         loadDraft()
     }

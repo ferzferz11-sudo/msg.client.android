@@ -323,3 +323,40 @@ class SetReactionV2ResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SetR
         return SetReactionV2ResponseProto(ok, reactions)
     }
 }
+
+class SearchMessagesRequestMarshaller : io.grpc.MethodDescriptor.Marshaller<SearchMessagesRequestProto> {
+    override fun stream(v: SearchMessagesRequestProto): java.io.InputStream {
+        val baos = ByteArrayOutputStream(); val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
+        if (v.roomId.isNotEmpty()) cos.writeString(1, v.roomId)
+        if (v.query.isNotEmpty()) cos.writeString(2, v.query)
+        if (v.limit != 0) cos.writeInt32(3, v.limit)
+        cos.flush(); return ByteArrayInputStream(baos.toByteArray())
+    }
+    override fun parse(s: java.io.InputStream): SearchMessagesRequestProto = SearchMessagesRequestProto()
+}
+
+class SearchMessagesResponseMarshaller : io.grpc.MethodDescriptor.Marshaller<SearchMessagesResponseProto> {
+    override fun stream(v: SearchMessagesResponseProto): java.io.InputStream = ByteArrayInputStream(byteArrayOf())
+    override fun parse(s: java.io.InputStream): SearchMessagesResponseProto {
+        val cis = com.google.protobuf.CodedInputStream.newInstance(s)
+        val results = mutableListOf<SearchResultProto>()
+        while (!cis.isAtEnd) {
+            val tag = cis.readTag(); if (tag == 0) break
+            when (WireFormat.getTagFieldNumber(tag)) {
+                1 -> {
+                    val len = cis.readUInt32()
+                    val inner = com.google.protobuf.CodedInputStream.newInstance(cis.readRawBytes(len))
+                    var messageId = ""; var roomId = ""; var username = ""; var preview = ""; var createdAt = ""
+                    while (!inner.isAtEnd) { val t = inner.readTag(); if (t == 0) break; when (WireFormat.getTagFieldNumber(t)) {
+                        1 -> messageId = inner.readString(); 2 -> roomId = inner.readString()
+                        3 -> username = inner.readString(); 4 -> preview = inner.readString()
+                        5 -> createdAt = inner.readString(); else -> inner.skipField(t)
+                    } }
+                    results.add(SearchResultProto(messageId, roomId, username, preview, createdAt))
+                }
+                else -> cis.skipField(tag)
+            }
+        }
+        return SearchMessagesResponseProto(results)
+    }
+}

@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.0.20 | **Updated:** 2026-06-27
+**Version:** v1.3.1.01 | **Updated:** 2026-06-27
 
 ---
 
@@ -38,7 +38,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Kotlin files | ~175 |
+| Kotlin files | ~173 |
 | Activities | 29 |
 | Fragments | 1 (RemoteAgentSettingsFragment) |
 | Services | 3 (ChatKeepAliveService, RemoteAgentService, LavenderMessagingService) |
@@ -48,11 +48,11 @@
 | String entries | 796 (EN) + 796 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.0.x (v1.3.0.20) |
+| Branch | feat/1.3.1.x (v1.3.1.01) |
 
 ---
 
-## Architecture Overview (v1.3.0.18)
+## Architecture Overview (v1.3.1.01)
 
 ```
 GrpcClient (facade)
@@ -66,7 +66,8 @@ GrpcClient (facade)
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcProfileClient — contacts, themes, devices, passwords (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
-        ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
+        ├── GrpcDraftClient, GrpcFavoritesClient
+        ├── GrpcMessageV2Client — ChatV2 stream, GetHistoryV2, SendMessageV2, Edit/Delete/ReactionV2
         ├── GrpcServerDiscoveryClient — server discovery
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
@@ -130,4 +131,4 @@ Logging: clean logs, no hot-path noise, performance timing in loadChats
 | Branch | Purpose |
 |--------|---------|
 | `master` | Production |
-| `feat/1.3.0.x` | v1.3.0.x development (current) |
+| `feat/1.3.1.x` | v1.3.1.x development (current) |

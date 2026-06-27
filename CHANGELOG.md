@@ -1,5 +1,55 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.01] - 2026-06-27
+
+### Полный переход на Messages V2
+
+**Критическое изменение:** удалена поддержка v1 message RPCs. Клиент работает ТОЛЬКО с v2.
+
+**Удалено:**
+- `GrpcMessageClient.kt` — v1 клиент сообщений
+- v1 chat stream (`messenger.ChatService/Chat`) из RealGrpcClient
+- v1 методы: `sendMessage`, `loadHistory`, `editMessage`, `deleteMessage`, `setReaction`
+- v1 message marshallers (GetHistory, EditMessage, DeleteMessages, Reaction)
+- v1 proto классы (GetHistoryRequest/Response, EditMessageRequest/Response, DeleteMessagesRequest/Response, ReactionRequest/Response)
+- `saveFavoriteMessage()` из GrpcFavoritesClient (не вызывался)
+- Guards `isChatV2Supported()` — всегда true
+
+**Заменено:**
+- Chat stream → `messenger.ChatService/ChatV2` (bidirectional stream с JWT auth)
+- `GetHistory` → `GetHistoryV2` (cursor-based pagination вместо OFFSET)
+- `SendMessage` (через stream) → `SendMessageV2` (unary RPC)
+- `EditMessage` → `EditMessageV2`
+- `DeleteMessages` → `DeleteMessageV2` (soft delete)
+- `SetReaction` → `SetReactionV2` (inline JSONB)
+
+**Добавлено:**
+- `SearchMessages` — серверный поиск сообщений (в конкретном чате или кросс-чат)
+- Полная обработка системных сигналов в ChatV2 stream: AUTH_FAILED, FORCE_LOGOUT, ONLINE_USERS_UPDATE, CHAT_DELETED, CLEAR_CACHE, SERVER_INFO, SYSTEM_NOTIFICATION, SET_SUPER_ADMIN, FORCE_DISCONNECT_DEVICE, FORCE_LOGOUT_EXCEPT
+- Автоматическое переподключение v2 stream с exponential backoff
+- `lastChatRequest` упрощён до (roomId, callback) — больше не хранит username/password
+
+**Изменены файлы:**
+- `RealGrpcClient.kt` — удалён v1 stream, упрощён LastChatRequest
+- `GrpcClient.kt` — удалены v1 facade методы
+- `GrpcMessageV2Client.kt` — добавлен `searchMessages()`
+- `MessagesV2Proto.kt` — добавлены SearchMessages proto классы
+- `MessagesV2Marshallers.kt` — добавлены SearchMessages marshallers
+- `ChatViewModel.kt` — все методы используют v2
+- `NewChatActivity.kt` — использует `startChatV2`
+- `ChatSelectionDelegate.kt` — `deleteMessageV2`/`sendMessageV2`
+- `ChatMessageMenuDelegate.kt` — `editMessageV2`/`deleteMessageV2`/`setReactionV2`
+- `ChatInputDelegate.kt` — `sendMessageV2`
+- `ShareReceiverActivity.kt` — `startChatV2`/`sendMessageV2`
+- `SessionManager.kt` — `startChatV2`
+- `GrpcFavoritesClient.kt` — удалён `saveFavoriteMessage`
+
+**Удалены файлы:**
+- `GrpcMessageClient.kt`
+- `GrpcMessageClientTest.kt`
+
+---
+
 ## [1.3.0.21] - 2026-06-27
 
 ### Добавлено

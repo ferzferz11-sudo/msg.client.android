@@ -75,6 +75,13 @@ class GrpcMessageV2Client(
             .setRequestMarshaller(SetReactionV2RequestMarshaller())
             .setResponseMarshaller(SetReactionV2ResponseMarshaller())
             .build()
+
+        private val METHOD_SEARCH_MESSAGES = MethodDescriptor.newBuilder<SearchMessagesRequestProto, SearchMessagesResponseProto>()
+            .setType(MethodDescriptor.MethodType.UNARY)
+            .setFullMethodName("messenger.ChatService/SearchMessages")
+            .setRequestMarshaller(SearchMessagesRequestMarshaller())
+            .setResponseMarshaller(SearchMessagesResponseMarshaller())
+            .build()
     }
 
     private var database: AppDatabase? = null
@@ -359,6 +366,29 @@ class GrpcMessageV2Client(
         call.sendMessage(SetReactionV2RequestProto(messageId, emoji))
         call.halfClose()
         call.request(1)
+    }
+
+    // ====== Search Messages ======
+
+    suspend fun searchMessages(roomId: String = "", query: String, limit: Int = 20): List<SearchResultProto> {
+        val channel = getChannel() ?: return emptyList()
+        return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            val call = channel.newCall(METHOD_SEARCH_MESSAGES, CallOptions.DEFAULT)
+            call.start(object : ClientCall.Listener<SearchMessagesResponseProto>() {
+                override fun onMessage(message: SearchMessagesResponseProto) {
+                    if (cont.isActive) cont.resumeWith(Result.success(message.messages))
+                }
+                override fun onClose(status: Status, trailers: Metadata) {
+                    if (!status.isOk) {
+                        ErrorHandler.handle("$TAG.searchMessages", StatusRuntimeException(status))
+                        if (cont.isActive) cont.resumeWith(Result.success(emptyList()))
+                    }
+                }
+            }, Metadata())
+            call.sendMessage(SearchMessagesRequestProto(roomId = roomId, query = query, limit = limit))
+            call.halfClose()
+            call.request(1)
+        }
     }
 
     // ====== Helpers ======

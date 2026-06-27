@@ -41,7 +41,7 @@ class ChatMessageMenuDelegate(
                 activity.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v2, true)
                 setBackgroundResource(v2.resourceId)
                 setOnClickListener {
-                    grpcClient.setReaction(m.id, username, e)
+                    grpcClient.setReactionV2(m.id, username, e)
                     sheet.dismiss()
                 }
             }
@@ -73,7 +73,7 @@ class ChatMessageMenuDelegate(
 
         sheet.findViewById<View>(R.id.menuDelete)?.setOnClickListener {
             sheet.dismiss()
-            grpcClient.deleteMessage(m)
+            grpcClient.deleteMessageV2(listOf(m.id))
         }
 
         sheet.show()
@@ -94,7 +94,7 @@ class ChatMessageMenuDelegate(
         save?.setOnClickListener {
             val nt = edit?.text.toString().trim()
             if (nt.isNotEmpty() && nt != m.text) {
-                grpcClient.editMessage(m.id, nt) { s, msg ->
+                grpcClient.editMessageV2(m.id, nt) { s, msg ->
                     if (!s) activity.runOnUiThread {
                         Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
                     }

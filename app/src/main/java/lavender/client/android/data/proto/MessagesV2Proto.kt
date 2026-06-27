@@ -126,3 +126,21 @@ data class SetReactionV2ResponseProto(
     }
     override fun hashCode(): Int = success.hashCode()
 }
+
+data class SearchMessagesRequestProto(
+    val roomId: String = "",
+    val query: String = "",
+    val limit: Int = 20
+)
+
+data class SearchResultProto(
+    val messageId: String = "",
+    val roomId: String = "",
+    val username: String = "",
+    val preview: String = "",
+    val createdAt: String = ""
+)
+
+data class SearchMessagesResponseProto(
+    val messages: List<SearchResultProto> = emptyList()
+)

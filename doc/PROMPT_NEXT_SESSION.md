@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.21 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-27
+**Версия:** v1.3.1.01 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-27
 
 ---
 
@@ -29,7 +29,8 @@ GrpcClient (facade)
         ├── GrpcChatAuxClient (~130) — users, FCM, mute
         ├── GrpcProfileClient — contacts, themes, devices, passwords (ChatService)
         ├── ProfileClient — profile, avatar, settings, delete (ProfileService v2, JWT)
-        ├── GrpcDraftClient, GrpcFavoritesClient, GrpcMessageClient
+        ├── GrpcDraftClient, GrpcFavoritesClient
+        ├── GrpcMessageV2Client — messages v2 only (no v1 fallback)
         ├── GrpcServerDiscoveryClient — server discovery
         ├── GrpcAIv2Client — AI v2 (ChatWithAIV2, Agent CRUD, Tools, Marketplace, Chat History)
         ├── SecretChatGrpc, ProfileClient
@@ -40,16 +41,18 @@ GrpcClient (facade)
 network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
-NewChatActivity → 6 delegates + ChatViewModel
+NewChatActivity → 6 delegates + ChatViewModel (v2 only)
 AiV2ChatActivity → unified AI chat + commands + rate limit + image/file support + multi-agent + errors as chat messages
 AiV2AgentListActivity → unified agent management (5 tabs: Presets/My Agents/Discover/Remote Agent/Usage)
   └── Tab 3 Remote Agent → RemoteAgentSettingsFragment (inline Gateway + Token)
   └── Tab 4 Usage → UsageStatsFragment (summary cards + per-agent list, auto-refresh 30s)
 AiAgentSetupActivity → create/edit all agent types (API key, temperature, max tokens)
-AIBottomSheet → agent selection with ImageView toggles + fixed footer + scrollable content
+AIBottomSheet → agent selection with user agents only + loading/empty states + fixed footer
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
 Session: SessionManager (ensureFreshToken BEFORE loadChats + forceTokenRefresh on pull-to-refresh)
+Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth, system signals, typing
+Messages: v2 only — GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2
 AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image/file support
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Chat Settings: per-session API key + model override
@@ -68,6 +71,17 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 ## Итог сессии v1.3.0.22
 
 ### Выполнено
+
+**Полный переход на Messages V2:**
+1. Удалён v1 chat stream (`messenger.ChatService/Chat`) из `RealGrpcClient`
+2. Удалён `GrpcMessageClient` (v1 клиент) — все v1 методы (sendMessage, loadHistory, editMessage, deleteMessage, setReaction) заменены на v2
+3. Обновлён `ChatViewModel`: `startChat()` → `startChatV2()`, `loadHistory()` → `loadHistoryV2()`, `sendMessage()` → `sendMessageV2()`
+4. Обновлены все делегаты: `ChatSelectionDelegate`, `ChatMessageMenuDelegate`, `ChatInputDelegate`
+5. Обновлены `ShareReceiverActivity` и `SessionManager`
+6. ChatV2 stream теперь обрабатывает ВСЕ системные сигналы: FORCE_LOGOUT, ONLINE_USERS_UPDATE, CHAT_DELETED, CLEAR_CACHE, SERVER_INFO, SYSTEM_NOTIFICATION, AUTH_FAILED, SET_SUPER_ADMIN, FORCE_DISCONNECT_DEVICE, FORCE_LOGOUT_EXCEPT
+7. `LastChatRequest` упрощён до (roomId, callback) — v1 параметры (username, password, deviceId) больше не сохраняются
+8. Автоматическое переподключение v2 stream с exponential backoff
+9. `isChatV2Supported()` всегда `true` — guards удалены
 
 **Provider Config fix — API key отображается корректно:**
 1. Проблема: для пресетов (Reve и др.) `provider_config` = `{"api_key_source": "server", ...}` — нет `api_key` в JSON
@@ -88,6 +102,10 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 | `ui/ai/AiAgentSetupActivity.kt` | providerConfig: проверка `api_key_source`, placeholder "Server key", маскировка ключа |
 | `ui/ai/AiV2AgentCreateEditViewModel.kt` | loadAgent(): fallback на ai_chat_settings для всех агентов без user key |
 | `ui/widget/AIBottomSheet.kt` | Убраны пресеты, только пользовательские агенты, loading/empty состояния |
+
+### Известные проблемы
+
+- **API Key пуст для пользовательских агентов с server-side ключом** — ключ не отображается в настройках, хотя сервер его возвращает. Требуется отладка.
 
 ---
 
@@ -172,7 +190,23 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ## Бэклог — Следующая сессия (v1.3.0.23+)
 
-### Приоритет 1: Статусы агентов в чате
+### Приоритет 1: v1 dead code cleanup
+| Задача | Статус |
+|--------|--------|
+| Удалить `GrpcMessageClient.kt` и `GrpcMessageClientTest.kt` | 🔲 |
+| Удалить v1 marshallers из `GrpcMarshallers.kt` (GetHistory, EditMessage, DeleteMessages, Reaction) | 🔲 |
+| Удалить v1 proto classes из `MessengerProto.kt` | 🔲 |
+| Убрать `saveFavoriteMessage` из `GrpcFavoritesClient.kt` (dead code) | 🔲 |
+| Очистить `requestObserver` в `RealGrpcClient.kt` (всегда null) | 🔲 |
+
+### Приоритет 2: API Key для пользовательских агентов
+| Задача | Статус |
+|--------|--------|
+| Отладить: ключ не отображается в настройках尽管 сервер его возвращает | 🔲 |
+| Проверить wire dump gRPC response | 🔲 |
+| Добавить логирование в AiAgentSetupActivity | 🔲 |
+
+### Приоритет 2: Статусы агентов в чате
 | Задача | Статус |
 |--------|--------|
 | Добавить статусы агентов: доступен / требует настройки / нет ключа | 🔲 |
@@ -180,7 +214,7 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 | Показывать статус в AI шторке (AIBottomSheet) | 🔲 |
 | Цветовые индикаторы (зелёный/жёлтый/красный) | 🔲 |
 
-### Приоритет 2: Остальное
+### Приоритет 3: Остальное
 | Задача | Статус |
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |
@@ -211,6 +245,7 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 19. **CHANGELOG:** не включать документационные изменения (README, doc/, комментарии) — только код
 20. **AI ошибки:** показывать как chat bubble (⚠️ + текст), НЕ Toast
 21. **AgentInfoV2 proto field 22:** `provider_config` — JSON string. Для пресетов: `{"api_key_source": "server", "default_model": "..."}` — нет `api_key`. Для user-агентов: `{"api_key": "sk-...", ...}`
+22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` И актуальный код сервера `/Users/paveld/LavenderMessenger-server/`
 22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` И актуальный код сервера `/Users/paveld/LavenderMessenger-server/`
 
 ---

@@ -450,7 +450,7 @@ class ShareReceiverActivity : AppCompatActivity() {
 
             // Ensure we are connected and authenticated
             if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
-                GrpcClient.startChat(session.username, session.password, "") { /* ignore */ }
+                GrpcClient.startChatV2(chat.id) { /* ignore */ }
                 
                 // Wait for READY status
                 var retries = 0
@@ -468,7 +468,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 imageUrl = imageUrl
             )
             
-            GrpcClient.sendMessage(message)
+            GrpcClient.sendMessageV2(message)
             
             Toast.makeText(this@ShareReceiverActivity, getString(R.string.messages_forwarded), Toast.LENGTH_SHORT).show()
             finish()

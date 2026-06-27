@@ -53,13 +53,13 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
-        grpcClient.startChat(username, password, joinMessage, register, email, deviceId, deviceName, onMessageReceived)
+    fun startChatV2(roomId: String, onMessageReceived: (Message) -> Unit) {
+        grpcClient.startChatV2(roomId, onMessageReceived)
     }
 
     fun sendMessage(message: Message) {
         grpcClient.addLocalMessage(message)
-        grpcClient.sendMessage(message)
+        grpcClient.sendMessageV2(message)
         if (currentRoomId.startsWith("favorites_")) grpcClient.markRead(currentRoomId, message.user)
         grpcClient.deleteDraft(currentRoomId)
     }
@@ -82,7 +82,7 @@ class ChatViewModel : ViewModel() {
             val result = lavender.client.android.audio.AudioUploader(context).uploadAudio(file, duration)
             _isAudioUploading.value = false
             if (result.success && result.url.isNotEmpty() && !result.url.contains("404")) {
-                grpcClient.sendMessage(Message(
+                grpcClient.sendMessageV2(Message(
                     user = username, text = "Voice message", timestamp = System.currentTimeMillis(),
                     roomId = currentRoomId, voiceUrl = result.url, duration = result.duration,
                     userId = grpcClient.getUserId() ?: ""
@@ -96,10 +96,10 @@ class ChatViewModel : ViewModel() {
     fun retryMessage(message: Message) {
         viewModelScope.launch {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                grpcClient.loadHistory(currentRoomId) {
+                grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
                     val updated = grpcClient.messages.value.find { it.id == message.id }
                     if (updated == null || !updated.isSent) {
-                        grpcClient.sendMessage(message)
+                        grpcClient.sendMessageV2(message)
                     }
                 }
             }
@@ -171,11 +171,11 @@ class ChatViewModel : ViewModel() {
     }
 
     fun deleteMessage(message: Message) {
-        grpcClient.deleteMessage(message)
+        grpcClient.deleteMessageV2(listOf(message.id))
     }
 
     fun setReaction(messageId: String, username: String, emoji: String) {
-        grpcClient.setReaction(messageId, username, emoji)
+        grpcClient.setReactionV2(messageId, username, emoji)
     }
 
     fun registerToken(username: String, token: String) {
@@ -196,7 +196,7 @@ class ChatViewModel : ViewModel() {
     fun loadHistory() {
         _isLoading.value = true
         viewModelScope.launch {
-            grpcClient.loadHistory(currentRoomId) {
+            grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
                 _isLoading.value = false
             }
         }

@@ -139,7 +139,8 @@ class ChatSelectionDelegate(
             activity.getString(R.string.delete_messages_confirm, sm.size)
         sheet.findViewById<View>(R.id.btnCancel)?.setOnClickListener { sheet.dismiss() }
         sheet.findViewById<View>(R.id.btnDelete)?.setOnClickListener {
-            sm.forEach { grpcClient.deleteMessage(it) }
+            val ids = sm.map { it.id }
+            grpcClient.deleteMessageV2(ids)
             hideSelectionToolbar()
             sheet.dismiss()
         }
@@ -169,7 +170,7 @@ class ChatSelectionDelegate(
                     onChatSelected = { target ->
                         sheet.dismiss()
                         sm.forEach { m ->
-                            grpcClient.sendMessage(Message(
+                            grpcClient.sendMessageV2(Message(
                                 user = username, text = m.text, timestamp = System.currentTimeMillis(),
                                 roomId = target.id, imageUrl = m.imageUrl, voiceUrl = m.voiceUrl,
                                 duration = m.duration, userId = grpcClient.getUserId() ?: ""

@@ -61,15 +61,11 @@ object GrpcClient {
         get() = realGrpcClient.currentServerAddress
 
     // ====== V2 Service Detection ======
-    val isChatV2Supported: Boolean
-        get() = ProfileClient.isChatV2Supported()
-
+    val isChatV2Supported: Boolean = true
     val chatServiceVersion: String
         get() = ProfileClient.serviceChatVersion
-
     val isProfileV2Supported: Boolean
         get() = ProfileClient.isProfileV2Supported()
-
     val profileServiceVersion: String
         get() = ProfileClient.serviceProfileVersion
 
@@ -84,14 +80,10 @@ object GrpcClient {
 
     fun clearLastChatRequestPrefs() = realGrpcClient.clearLastChatRequestPrefs()
 
-    fun startChat(username: String, password: String, joinMessage: String, register: Boolean = false, email: String = "", deviceId: String = "", deviceName: String = "", onMessageReceived: (Message) -> Unit) {
-        realGrpcClient.startChat(username, password, joinMessage, register, deviceId, deviceName, onMessageReceived)
-    }
-
     fun clearSystemNotification() = realGrpcClient.clearSystemNotification()
 
-    fun loadHistory(roomId: String, onCompletion: () -> Unit = {}) {
-        realGrpcClient.loadHistory(roomId, onCompletion)
+    fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = 100, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
+        realGrpcClient.loadHistoryV2(roomId, cursor, limit, onCompletion)
     }
 
     fun setRoomId(roomId: String) = realGrpcClient.setRoomId(roomId)
@@ -186,68 +178,49 @@ object GrpcClient {
 
     // ======= ChatList V2 (suspend) =======
 
-    suspend fun pinChat(context: Context, chatId: String): Boolean {
-        if (!ProfileClient.isChatV2Supported()) return false
-        return realGrpcClient.pinChat(chatId)
-    }
+    suspend fun pinChat(context: Context, chatId: String): Boolean =
+        realGrpcClient.pinChat(chatId)
 
-    suspend fun unpinChat(context: Context, chatId: String): Boolean {
-        if (!ProfileClient.isChatV2Supported()) return false
-        return realGrpcClient.unpinChat(chatId)
-    }
+    suspend fun unpinChat(context: Context, chatId: String): Boolean =
+        realGrpcClient.unpinChat(chatId)
 
-    suspend fun searchChats(context: Context, query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> {
-        if (!ProfileClient.isChatV2Supported()) return emptyList()
-        return realGrpcClient.searchChats(query, limit, offset)
-    }
+    suspend fun searchChats(context: Context, query: String, limit: Int = 20, offset: Int = 0): List<ChatInfo> =
+        realGrpcClient.searchChats(query, limit, offset)
 
-    suspend fun archiveChat(context: Context, chatId: String): Boolean {
-        if (!ProfileClient.isChatV2Supported()) return false
-        return realGrpcClient.archiveChat(chatId)
-    }
+    suspend fun archiveChat(context: Context, chatId: String): Boolean =
+        realGrpcClient.archiveChat(chatId)
 
-    suspend fun unarchiveChat(context: Context, chatId: String): Boolean {
-        if (!ProfileClient.isChatV2Supported()) return false
-        return realGrpcClient.unarchiveChat(chatId)
-    }
+    suspend fun unarchiveChat(context: Context, chatId: String): Boolean =
+        realGrpcClient.unarchiveChat(chatId)
 
     // ======= Pin Message =======
 
-    suspend fun pinMessage(context: Context, chatId: String, messageId: String): Boolean {
-        if (!ProfileClient.isChatV2Supported()) return false
-        return realGrpcClient.pinMessage(chatId, messageId)
-    }
+    suspend fun pinMessage(context: Context, chatId: String, messageId: String): Boolean =
+        realGrpcClient.pinMessage(chatId, messageId)
 
-    suspend fun unpinMessage(context: Context, chatId: String, messageId: String): Boolean {
-        if (!ProfileClient.isChatV2Supported()) return false
-        return realGrpcClient.unpinMessage(chatId, messageId)
-    }
+    suspend fun unpinMessage(context: Context, chatId: String, messageId: String): Boolean =
+        realGrpcClient.unpinMessage(chatId, messageId)
 
-    suspend fun getPinnedMessages(context: Context, chatId: String): List<Message> {
-        if (!ProfileClient.isChatV2Supported()) return emptyList()
-        return realGrpcClient.getPinnedMessages(chatId)
-    }
+    suspend fun getPinnedMessages(context: Context, chatId: String): List<Message> =
+        realGrpcClient.getPinnedMessages(chatId)
 
-    // ======= Message Operations =======
-
-    fun sendMessage(message: Message) =
-        realGrpcClient.sendMessage(message)
+    // ======= Message Operations V2 =======
 
     fun addLocalMessage(message: Message) =
         realGrpcClient.addLocalMessage(message)
 
-    fun deleteMessage(message: Message) =
-        realGrpcClient.deleteMessage(message)
+    fun deleteMessageV2(messageIds: List<String>, callback: (Boolean) -> Unit = {}) =
+        realGrpcClient.deleteMessageV2(messageIds, callback)
 
-    fun editMessage(
+    fun editMessageV2(
         messageId: String, text: String, callback: (Boolean, String) -> Unit = { _, _ -> }
-    ) = realGrpcClient.editMessage(messageId, text, callback)
+    ) = realGrpcClient.editMessageV2(messageId, text, callback)
 
     fun updateMessage(message: Message) =
         realGrpcClient.updateMessage(message)
 
-    fun setReaction(messageId: String, username: String, emoji: String) =
-        realGrpcClient.setReaction(messageId, username, emoji)
+    fun setReactionV2(messageId: String, username: String, emoji: String) =
+        realGrpcClient.setReactionV2(messageId, username, emoji)
 
     fun markRead(
         roomId: String, username: String, onCompletion: (() -> Unit)? = null
@@ -266,20 +239,11 @@ object GrpcClient {
     fun startChatV2(roomId: String, onMessageReceived: (Message) -> Unit) =
         realGrpcClient.startChatV2(roomId, onMessageReceived)
 
-    fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = 100, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) =
-        realGrpcClient.loadHistoryV2(roomId, cursor, limit, onCompletion)
-
     fun sendMessageV2(message: Message, onResult: ((lavender.client.android.data.proto.MessageV2Proto?) -> Unit)? = null) =
         realGrpcClient.sendMessageV2(message, onResult)
 
-    fun editMessageV2(messageId: String, text: String, callback: (Boolean, String) -> Unit = { _, _ -> }) =
-        realGrpcClient.editMessageV2(messageId, text, callback)
-
-    fun deleteMessageV2(messageIds: List<String>, callback: (Boolean) -> Unit = {}) =
-        realGrpcClient.deleteMessageV2(messageIds, callback)
-
-    fun setReactionV2(messageId: String, username: String, emoji: String) =
-        realGrpcClient.setReactionV2(messageId, username, emoji)
+    suspend fun searchMessages(roomId: String = "", query: String, limit: Int = 20) =
+        realGrpcClient.messageV2Client.searchMessages(roomId, query, limit)
 
     // ======= Profile Operations =======
 
@@ -526,7 +490,7 @@ object GrpcClient {
             e2eePayload = encryptedPayload
         )
         addLocalMessage(msg)
-        sendMessage(msg)
+        sendMessageV2(msg)
     }
 
     // ======= Notifications =======

@@ -339,16 +339,6 @@ data class AdminUpdatePasswordResponseProto(
     val message: String = ""
 )
 
-// Reaction Request/Response
-data class ReactionRequestProto(
-    val messageId: String = "",
-    val reaction: ReactionProto = ReactionProto()
-)
-
-data class ReactionResponseProto(
-    val success: Boolean = false
-)
-
 // Other message types
 @Suppress("unused")
 data class ClientListRequestProto(
@@ -358,24 +348,6 @@ data class ClientListRequestProto(
 @Suppress("unused")
 data class ClientListResponseProto(
     val clients: List<String> = emptyList()
-)
-
-data class GetHistoryRequestProto(
-    val limit: Int = 50,
-    val room: String = ""
-)
-
-data class GetHistoryResponseProto(
-    val messages: List<MessageProto> = emptyList()
-)
-
-data class DeleteMessagesRequestProto(
-    val messages: List<MessageProto> = emptyList(),
-    val requesterUsername: String = ""
-)
-
-data class DeleteMessagesResponseProto(
-    val success: Boolean = false
 )
 
 data class TokenRequestProto(
@@ -458,16 +430,6 @@ data class GetAllChatsRequestProto(
 
 data class GetAllChatsResponseProto(
     val chats: List<ChatInfoProto> = emptyList()
-)
-
-data class EditMessageRequestProto(
-    val messageId: String = "",
-    val text: String = ""
-)
-
-data class EditMessageResponseProto(
-    val success: Boolean = false,
-    val message: String = ""
 )
 
 data class UpdateChatNameRequestProto(
@@ -812,7 +774,7 @@ data class GetFavoritesRequestProto(
 )
 
 data class GetFavoritesResponseProto(
-    val messages: List<MessageProto> = emptyList()
+    val messages: List<MessageV2Proto> = emptyList()
 )
 
 data class CallMessageProto(

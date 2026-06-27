@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.20 | **Updated:** 2026-06-27
+**Version:** v1.3.1.01 | **Updated:** 2026-06-27
 
 ---
 
@@ -11,8 +11,8 @@
 GrpcClient (facade) — StateFlow declarations + inline domain delegates
     ├── StateFlow/SharedFlow declarations (15+)
     ├── Mutable state properties (4)
-    ├── Core lifecycle: connect, disconnect, startChat, loadHistory
-    └── Domain methods: signInV2, getChats, sendMessage, etc. (inline delegates)
+    ├── Core lifecycle: connect, disconnect, startChatV2, loadHistoryV2
+    └── Domain methods: signInV2, getChats, sendMessageV2, etc. (inline delegates)
 
 RealGrpcClient (orchestrator) delegates to:
 ├── GrpcConnectionManager — connect/reconnect/health check
@@ -217,10 +217,15 @@ Domain mapping:
 Files:
   ├── MessagesV2Proto.kt — proto data classes (MessageV2Proto, ChatV2MessageProto, etc.)
   ├── MessagesV2Marshallers.kt — wire format marshallers
-  ├── GrpcMessageV2Client.kt — unary RPCs + domain conversion
+  ├── GrpcMessageV2Client.kt — unary RPCs + domain conversion + search
   ├── ProtoUtils.kt — createMessageV2Proto(), createMessageFromV2Proto()
   ├── RealGrpcClient.kt — startChatV2(), loadHistoryV2(), sendMessageV2(), etc.
   └── GrpcClient.kt — facade methods for v2 operations
+
+Search Messages:
+  ├── GrpcMessageV2Client.searchMessages(roomId, query, limit)
+  ├── SearchMessagesRequestProto(roomId, query, limit) → SearchMessagesResponseProto(messages)
+  └── SearchResultProto(messageId, roomId, username, preview, createdAt)
 ```
 
 ### Cursor Pagination Pattern (v1.3.0.9)
