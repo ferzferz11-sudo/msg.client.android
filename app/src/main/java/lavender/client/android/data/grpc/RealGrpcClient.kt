@@ -528,58 +528,25 @@ object RealGrpcClient {
             override fun onError(t: Throwable) {
                 ErrorHandler.handle("RealGrpcClient.chatV2Stream", t)
                 chatV2RequestObserver = null
-                if (!isRetrying) {
-                    _connectionStatus.value = ConnectionStatus.RECONNECTING
-                    isRetrying = true
-                    scope.launch {
-                        try {
-                            var retryDelay = 3000L
-                            val maxRetryDelay = 30000L
-                            var retryCount = 0
-                            val maxRetries = 50
-                            while (retryCount < maxRetries && chatV2RequestObserver == null) {
-                                delay(retryDelay)
-                                val serverUp = checkServerHealth()
-                                if (!serverUp) {
-                                    _serverShuttingDown.value = true
-                                    retryDelay = (retryDelay * 2).coerceAtMost(maxRetryDelay)
-                                    retryCount++
-                                    continue
-                                }
-                                _serverShuttingDown.value = false
-                                lastChatRequest?.let { req ->
-                                    startChatV2(req.roomId, req.cb)
-                                    if (chatV2RequestObserver != null) {
-                                        return@launch
-                                    }
-                                }
-                                retryCount++
-                                retryDelay = (retryDelay * 1.5).toLong().coerceAtMost(maxRetryDelay)
-                            }
-                            if (retryCount >= maxRetries) {
-                                Log.e(TAG, "Failed to reconnect ChatV2 stream after $maxRetries attempts")
-                                _connectionStatus.value = ConnectionStatus.FAILED
-                            }
-                        } finally { isRetrying = false }
-                    }
-                }
+                _connectionStatus.value = ConnectionStatus.FAILED
             }
 
             override fun onCompleted() {
                 chatV2RequestObserver = null
+                _connectionStatus.value = ConnectionStatus.DISCONNECTED
             }
         }
 
         this.start(object : ClientCall.Listener<ChatV2MessageProto>() {
             override fun onMessage(message: ChatV2MessageProto) { responseObserver.onNext(message) }
             override fun onClose(status: Status, trailers: Metadata) {
+                chatV2RequestObserver = null
                 if (status.isOk) {
                     _connectionStatus.value = ConnectionStatus.DISCONNECTED
-                    return
+                } else {
+                    Log.w(TAG, "ChatV2 stream closed: ${status.code} ${status.description ?: ""}")
+                    _connectionStatus.value = ConnectionStatus.FAILED
                 }
-                Log.w(TAG, "ChatV2 stream error: ${status.code}")
-                chatV2RequestObserver = null
-                responseObserver.onError(StatusRuntimeException(status))
             }
         }, Metadata())
         this.request(Int.MAX_VALUE)
