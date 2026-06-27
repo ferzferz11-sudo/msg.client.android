@@ -1,5 +1,80 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.0.20] - 2026-06-27
+
+### Добавлено
+
+**AI Agent Setup — переработана форма создания/редактирования агента:**
+- Поле "API Key" вместо JSON "Provider Config"
+- Слайдер "Temperature" (0–2, шаг 0.1, default 0.7)
+- Поле "Max Tokens" (default 4096)
+- Кнопка "Сохранить" появляется только при изменении полей
+- Кнопка позиционируется над клавиатурой через WindowInsets
+
+**AI Chat — команды агента:**
+- Кнопка `/` открывает меню команд: /new, /clear, /history, /settings, /model, /system, /tools
+- `/new` — очищает чат и начинает новую сессию
+- `/settings` — открывает настройки чата (API key, model)
+- Остальные команды вставляются в поле ввода
+
+**AI Chat — отправка и вложения:**
+- Кнопки send/attach теперь видны и работают
+- TextWatcher переключает send ↔ attach в зависимости от текста
+
+**AI Chat — ошибки как сообщения агента:**
+- Ошибки сервера отображаются как bubble агента в чате (⚠️ + текст)
+- Toast убран — ошибки видны в истории и не пропадают
+
+**Pull-to-refresh — hardened:**
+- `forceTokenRefresh()` перед загрузкой чатов
+- Авто-реконнект gRPC если статус не READY (ожидание до 5 сек)
+
+### Изменено
+
+**AI Bottom Sheet — переработана шторка:**
+- Чекбоксы заменены на ImageView-toggle (фиксированный размер 22dp)
+- Тап по строке агента переключает выбор (не только чекбокс)
+- Долгий тап — настройки агента
+- "Создать своего агента" перемещён ниже "Управление агентами"
+- Кнопка "Начать чат" в fixed footer (не скроллится)
+- Скролл через ScrollView с weight=1
+
+**AiV2AgentListActivity — toolbar:**
+- Заголовок "ИИ Агенты" отображается на toolbar
+
+### Исправлено
+
+**AiAgentSetupActivity — save button:**
+- Кнопка не перекрывается навигацией (WindowInsets listener)
+- Использует виджет `PrimaryButtonCompact`
+
+**AiV2ChatViewModel — error handling:**
+- Ошибки пробрасываются через `AiV2ChatMessage.error` в chat bubble
+- Rate limit обрабатывается через отдельный `rateLimitEvent` flow
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `ui/ai/AiAgentSetupActivity.kt` | Новая форма (API key, temperature, max tokens), floating save button |
+| `ui/ai/AiV2AgentCreateEditViewModel.kt` | temperature/maxTokens параметры в create/update |
+| `ui/ai/AiV2ChatActivity.kt` | Команды, send/attach visibility, ошибки в чат |
+| `ui/ai/AiV2ChatViewModel.kt` | Ошибки как сообщения, rateLimitEvent, clearMessages |
+| `ui/widget/AIBottomSheet.kt` | ImageView toggle, tap select, reordered sections, fixed footer |
+| `ui/chatlist/ChatListViewModel.kt` | refreshChats с forceTokenRefresh + reconnect |
+| `ui/chatlist/ChatListFABs.kt` | onOpenAgentSettings callback |
+| `data/ai/AiV2Models.kt` | error в AiV2ChatMessage, providerConfig в AiV2Agent |
+| `data/grpc/RealGrpcClient.kt` | Убран error message при реконнекте |
+| `theme/ui/ThemeApplier.kt` | Обновлены ID полей формы агента |
+| `res/layout/activity_ai_agent_setup.xml` | Новые поля, toolbar, floating save |
+| `res/layout/widget_ai_bottom_sheet.xml` | ScrollView + footerContainer |
+| `res/layout/widget_action_item.xml` | Уменьшен padding |
+| `res/drawable/ic_check_box_outline.xml` | NEW — outline для ImageView toggle |
+| `res/values/strings.xml` | 13 новых строк (команды, настройки агента) |
+| `res/values-ru/strings.xml` | 13 новых строк |
+
+---
+
 ## [1.3.0.19] - 2026-06-23
 
 ### Исправлено

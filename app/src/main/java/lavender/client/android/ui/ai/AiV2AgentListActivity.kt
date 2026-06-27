@@ -76,7 +76,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
     private fun setupToolbar() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
+        toolbar.title = getString(R.string.ai_v2_agents)
         toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -332,6 +332,7 @@ class AiV2AgentListActivity : AppCompatActivity() {
         toolbar.setNavigationOnClickListener { finish() }
     }
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         if (showingRemoteSettings) {
             hideRemoteAgentSettings()

@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.0.19 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-23
+**Версия:** v1.3.0.20 | **Ветка:** feat/1.3.0.x | **Дата:** 2026-06-27
 
 ---
 
@@ -41,18 +41,20 @@ network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeou
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
-AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
+AiV2ChatActivity → unified AI chat + commands + rate limit + image support + multi-agent + errors as chat messages
 AiV2AgentListActivity → unified agent management (4 tabs: Presets/My Agents/Discover/Remote Agent)
   └── Tab 3 Remote Agent → RemoteAgentSettingsFragment (inline Gateway + Token)
-AiAgentSetupActivity → create/edit all agent types
-AIBottomSheet → agent selection with checkboxes + AI Agents button
+AiAgentSetupActivity → create/edit all agent types (API key, temperature, max tokens)
+AIBottomSheet → agent selection with ImageView toggles + fixed footer + scrollable content
 
 Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
-Session: SessionManager (ensureFreshToken BEFORE loadChats)
+Session: SessionManager (ensureFreshToken BEFORE loadChats + forceTokenRefresh on pull-to-refresh)
 AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image support
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Chat Settings: per-session API key + model override
+AI Chat Commands: /new, /clear, /history, /settings, /model, /system, /tools
 AI Chats in Chat List: AI chats merged into main chat list via ListAIV2Chats
+AI Errors: shown as agent chat bubbles (⚠️ prefix), not Toast
 Biometric: BiometricPrompt after splash screen when enabled (error → continue, not crash)
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
@@ -61,63 +63,83 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
-## Итог сессии v1.3.0.19
+## Итог сессии v1.3.0.20
 
 ### Выполнено
 
-**Системные уведомления — вибрация и экран:**
-1. Создан новый канал `lavender_messages_v2` с `IMPORTANCE_HIGH` (старый канал нельзя изменить)
-2. Удалён старый канал `lavender_messages` с неправильными настройками
-3. Вибрация `[0, 300, 200, 300]` + включение экрана (`setFullScreenIntent`)
-4. `setDefaults(DEFAULT_VIBRATE or DEFAULT_SOUND)` для fallback
+**AI Agent Setup — переработана форма:**
+1. Поле "API Key" (textPassword) вместо JSON "Provider Config"
+2. Слайдер "Temperature" (0–2, шаг 0.1, default 0.7)
+3. Поле "Max Tokens" (number, default 4096)
+4. Кнопка "Сохранить" — floating overlay над клавиатурой, появляется только при изменениях
+5. Toolbar с заголовком "Создать агента" / "Редактировать агента"
 
-**AI Пресеты — добавление в мои агенты:**
-1. Тап по пресету клонирует его в "Мои агенты" через `cloneAgent`
-2. Долгий тап по пресету открывает настройки агента
-3. Шторка ИИ чатов показывает "Мои агенты" с чекбоксами для быстрого начала чата
-4. Мульти-агентный чат через чекбоксы в шторке
+**AI Chat — команды и ввод:**
+1. Кнопка `/` → CommandBottomSheet с 7 командами
+2. `/new` — очищает чат, `/settings` — открывает настройки
+3. Кнопки send/attach работают (TextWatcher переключает)
+4. Ошибки сервера отображаются как bubble агента (⚠️ + текст)
 
-**Список чатов — мгновенное обновление:**
-1. Чат с новым сообщением сразу перемещается наверх списка
-2. Если чата нет в списке — автоматическая `loadChats(silent=true)`
-3. Unread badge обновляется в реальном времени
+**AI Bottom Sheet — переработка:**
+1. CheckBox заменён на ImageView-toggle (фиксированный 22dp)
+2. Тап по строке переключает выбор
+3. Долгий тап — настройки агента
+4. "Создать своего агента" перемещён ниже "Управление агентами"
+5. Кнопка "Начать чат" в fixed footer, ScrollView для списка
+
+**Pull-to-refresh hardened:**
+1. `forceTokenRefresh()` перед загрузкой
+2. Авто-реконнект gRPC если не READY (wait до 5 сек)
+
+**Исправления:**
+1. AiV2AgentListActivity — toolbar показывает "ИИ Агенты"
+2. AiAgentSetupActivity — save button не перекрывается навигацией
+3. Чекбокс не залазит на текст (ImageView + marginEnd)
 
 ### Изменённые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `data/fcm/LavenderMessagingService.kt` | Новый канал `lavender_messages_v2`, удаление старого, вибрация, setFullScreenIntent |
-| `ui/ai/AiV2AgentListAdapter.kt` | `onItemLongClick` + `onAddClick`, динамический tint для кнопок |
-| `ui/ai/AiV2AgentListActivity.kt` | Tap → clone, long press → settings, `clonePresetAgent()` |
-| `ui/widget/AIBottomSheet.kt` | Секция "Мои агенты" с чекбоксами для quick chat |
-| `ui/chatlist/ChatListViewModel.kt` | Перемещение чата наверх при новом сообщении, auto-reload |
-| `res/values/strings.xml` | `ai_my_agents`, `ai_preset_added` |
-| `res/values-ru/strings.xml` | `ai_my_agents`, `ai_preset_added` |
-| `version.txt` | 1.3.0.18 → 1.3.0.19 |
+| `ui/ai/AiAgentSetupActivity.kt` | Новая форма, floating save button, change tracking |
+| `ui/ai/AiV2AgentCreateEditViewModel.kt` | temperature/maxTokens параметры |
+| `ui/ai/AiV2ChatActivity.kt` | Команды, send/attach, ошибки в чат |
+| `ui/ai/AiV2ChatViewModel.kt` | Ошибки как сообщения, rateLimitEvent |
+| `ui/widget/AIBottomSheet.kt` | ImageView toggle, tap select, reordered, fixed footer |
+| `ui/chatlist/ChatListViewModel.kt` | refreshChats с forceTokenRefresh + reconnect |
+| `ui/chatlist/ChatListFABs.kt` | onOpenAgentSettings callback |
+| `data/ai/AiV2Models.kt` | error в AiV2ChatMessage, providerConfig в AiV2Agent |
+| `data/grpc/RealGrpcClient.kt` | Убран error message при реконнекте |
+| `theme/ui/ThemeApplier.kt` | Обновлены ID полей формы |
+| `res/layout/activity_ai_agent_setup.xml` | Новые поля, toolbar, floating save |
+| `res/layout/widget_ai_bottom_sheet.xml` | ScrollView + footerContainer |
+| `res/layout/widget_action_item.xml` | Уменьшен padding |
+| `res/drawable/ic_check_box_outline.xml` | NEW — outline для toggle |
+| `res/values/strings.xml` | 13 новых строк |
+| `res/values-ru/strings.xml` | 13 новых строк |
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.20+)
+## Бэклог — Следующая сессия (v1.3.0.21+)
 
 ### Приоритет 1: Серверная интеграция
 | Задача | Статус |
 |--------|--------|
-| Серверный фикс ListAIAgents (empty UUID) | ✅ (промпт написан, ожидаем деплой) |
+| Серверный `AgentInfoV2.provider_config` (field 22) | 🔲 нужен серверный промпт |
 | Финальный прогон AI v2 тестов | 🔲 |
-| Better error messages для AI v2 | ✅ (timestamp parsing fixed) |
 
 ### Приоритет 2: UX улучшения
 | Задача | Статус |
 |--------|--------|
-| UI для AI Chat Settings (API key, model) | ✅ AiChatSettingsActivity + menu |
 | Кэширование Marketplace в Room DB | 🔲 |
 | Автообновление статистики Usage | 🔲 |
+| AI Chat Settings — показ текущего API key в toolbar | 🔲 |
 
 ### Приоритет 3: Новые фичи
 | Задача | Статус |
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |
 | Избранное в Marketplace | 🔲 |
+| File attachments для AI агентов | 🔲 |
 
 ---
 
@@ -142,6 +164,8 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 17. **Unread count:** считается по `user_chat_metadata.last_read_at`, НЕ по `messages.is_read`
 18. **ProfileService v2:** profile/avatar/delete/settings — через `messenger.ProfileService/*` (JWT context)
 19. **CHANGELOG:** не включать документационные изменения (README, doc/, комментарии) — только код
+20. **AI ошибки:** показывать как chat bubble (⚠️ + текст), НЕ Toast
+21. **AgentInfoV2 proto:** не содержит `provider_config` — ключ не возвращается при Get/List
 
 ---
 

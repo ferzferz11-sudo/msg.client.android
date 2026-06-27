@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.0.19 | **Updated:** 2026-06-23
+**Version:** v1.3.0.20 | **Updated:** 2026-06-27
 
 ---
 
@@ -423,6 +423,61 @@ RealGrpcClient — persist lastChatRequest to SharedPreferences
   ├── saveLastChatRequestPrefs() — called in startChat()
   ├── restoreLastChatRequest() — called in onAutoResumeChat when null
   └── clearLastChatRequestPrefs() — called in logout()
+```
+
+### AI Agent Setup Pattern (v1.3.0.20)
+```
+AiAgentSetupActivity — create/edit all agent types
+  ├── Form: name, description, provider type, model, system prompt
+  ├── API Key (TextInputEditText, textPassword)
+  ├── Temperature (Slider 0–2, step 0.1, default 0.7)
+  ├── Max Tokens (TextInputEditText, number, default 4096)
+  ├── Switches: tools, RAG, public
+  ├── Save button: floating overlay (Gravity.BOTTOM | CENTER_HORIZONTAL)
+  │   └── WindowInsetsListener adjusts bottomMargin for keyboard
+  └── Change tracking: TextWatcher + OnCheckedChangeListener + OnChangeListener
+      └── saveButton appears only when isLoaded && hasChanges
+
+Provider config: JSON {"apiKey": "..."} sent in CreateAIAgentRequestProto
+Server AgentInfoV2 proto does NOT return providerConfig (field 22 missing)
+```
+
+### AI Chat Commands Pattern (v1.3.0.20)
+```
+AiV2ChatActivity
+  ├── Command button (ic_hermes) → CommandBottomSheet
+  ├── Commands: /new, /clear, /history, /settings, /model, /system, /tools
+  ├── /new → clearMessages() + reset sessionId
+  ├── /settings → open AiChatSettingsActivity
+  └── Other → insert into messageInput for user to send
+
+Error handling:
+  ├── AiV2ChatMessage.error field → chat bubble (⚠️ prefix)
+  ├── AiV2ChatViewModel.updateStreamingMessage() checks error
+  ├── Rate limit → separate rateLimitEvent StateFlow → handleRateLimit()
+  └── No Toast — errors visible in chat history
+```
+
+### AIBottomSheet Redesign Pattern (v1.3.0.20)
+```
+AIBottomSheet — agent selection for AI chats
+  ├── ScrollView (layout_weight=1, fillViewport) — scrollable agent list
+  ├── FooterContainer (fixed, outside ScrollView)
+  │   ├── summaryText (selected agent count)
+  │   ├── longPressHint
+  │   └── startSelectedBtn (always visible, disabled until selection)
+  ├── Sections:
+  │   ├── Presets (header + rows with ImageView toggle)
+  │   ├── Divider
+  │   ├── Manage agents button → AiV2AgentListActivity
+  │   ├── Create custom agent button → AiAgentSetupActivity
+  │   ├── Divider
+  │   └── My Agents (header + rows with ImageView toggle)
+  └── Tap row → toggle checkView (ImageView), long press → settings
+
+ImageView toggle: 22dp fixed, ic_check_box_outline / ic_checked_small
+buildContent() does NOT clear selectedAgents — only buildAndShow() does
+Restore states at end of buildContent(): if (agent in selectedAgents) restoreCheckState()
 ```
 
 ---

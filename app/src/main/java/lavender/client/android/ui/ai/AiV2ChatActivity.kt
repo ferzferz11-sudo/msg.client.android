@@ -28,6 +28,7 @@ import lavender.client.android.theme.ui.ThemeUi
 import lavender.client.android.ui.chat.widget.ChatMessageAdapter
 import lavender.client.android.ui.chat.widget.ChatMessageItem
 import lavender.client.android.ui.chat.widget.ChatWidget
+import lavender.client.android.ui.widget.CommandBottomSheet
 
 class AiV2ChatActivity : AppCompatActivity() {
 
@@ -188,6 +189,53 @@ class AiV2ChatActivity : AppCompatActivity() {
                 sendMessage(message)
             }
         }
+
+        chatWidget.sendButton.visibility = View.GONE
+
+        chatWidget.messageInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val hasText = s?.toString()?.trim()?.isNotEmpty() == true
+                chatWidget.sendButton.visibility = if (hasText) View.VISIBLE else View.GONE
+                chatWidget.attachButton.visibility = if (hasText) View.GONE else View.VISIBLE
+            }
+        })
+
+        chatWidget.attachButton.visibility = View.VISIBLE
+
+        chatWidget.commandButton.setOnClickListener { showCommandMenu() }
+    }
+
+    private fun showCommandMenu() {
+        val commands = listOf(
+            CommandBottomSheet.CommandInfo("/new", getString(R.string.ai_cmd_new)),
+            CommandBottomSheet.CommandInfo("/clear", getString(R.string.ai_cmd_clear)),
+            CommandBottomSheet.CommandInfo("/history", getString(R.string.ai_cmd_history)),
+            CommandBottomSheet.CommandInfo("/settings", getString(R.string.ai_cmd_settings)),
+            CommandBottomSheet.CommandInfo("/model", getString(R.string.ai_cmd_model)),
+            CommandBottomSheet.CommandInfo("/system", getString(R.string.ai_cmd_system_prompt)),
+            CommandBottomSheet.CommandInfo("/tools", getString(R.string.ai_cmd_tools))
+        )
+        CommandBottomSheet(
+            context = this,
+            commands = commands,
+            onCommandSelected = { cmd ->
+                if (cmd.command == "/settings") {
+                    val intent = Intent(this, AiChatSettingsActivity::class.java)
+                    intent.putExtra("SESSION_ID", sessionId)
+                    startActivity(intent)
+                } else if (cmd.command == "/new") {
+                    sessionId = ""
+                    agentId = agentIds.firstOrNull() ?: ""
+                    viewModel.clearMessages()
+                    chatWidget.setToolbarTitle(agentNames.firstOrNull() ?: getString(R.string.ai_v2_chat_title))
+                } else {
+                    chatWidget.messageInput.setText(cmd.command + " ")
+                    chatWidget.messageInput.setSelection(cmd.command.length + 1)
+                }
+            }
+        ).buildAndShow()
     }
 
     private fun setupAttachButton() {
@@ -288,14 +336,10 @@ class AiV2ChatActivity : AppCompatActivity() {
                 }
 
                 launch {
-                    viewModel.error.collect { error ->
-                        error?.let {
-                            if (it.contains("rate limit", ignoreCase = true)) {
-                                handleRateLimit()
-                            } else {
-                                Toast.makeText(this@AiV2ChatActivity, it, Toast.LENGTH_SHORT).show()
-                            }
-                            viewModel.clearError()
+                    viewModel.rateLimitEvent.collect { triggered ->
+                        if (triggered) {
+                            handleRateLimit()
+                            viewModel.clearRateLimitEvent()
                         }
                     }
                 }

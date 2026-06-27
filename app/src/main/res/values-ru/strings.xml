@@ -450,6 +450,7 @@
     <string name="ai_create_chat">Создать чат</string>
     <string name="ai_start_chat">Начать чат</string>
     <string name="ai_select_agents_hint">Выберите агентов для начала чата</string>
+    <string name="ai_long_press_to_settings">Длительное нажатие для настройки</string>
     <string name="ai_selected_agent">Выбранный агент</string>
     <string name="ai_selected_agents">Выбранные агенты</string>
     <string name="ai_loading_agents">Загрузка агентов…</string>
@@ -687,6 +688,11 @@
     <string name="ai_v2_rag_enabled">RAG включён</string>
     <string name="ai_v2_public">Публичный (виден в Marketplace)</string>
     <string name="ai_v2_tools">Инструменты</string>
+    <string name="ai_agent_api_key">API ключ</string>
+    <string name="ai_agent_temperature">Температура</string>
+    <string name="ai_agent_max_tokens">Макс. токенов</string>
+    <string name="ai_agent_saved">Агент сохранён</string>
+    <string name="ai_v2_agent_name_required">Имя обязательно</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Маркетплейс</string>
@@ -848,6 +854,15 @@
     <string name="cmd_ps">Список процессов</string>
     <string name="cmd_df">Свободное место на диске</string>
     <string name="cmd_uptime">Время работы сервера</string>
+
+    <!-- AI Agent commands -->
+    <string name="ai_cmd_new">Новая сессия чата</string>
+    <string name="ai_cmd_clear">Очистить историю чата</string>
+    <string name="ai_cmd_history">Показать историю чата</string>
+    <string name="ai_cmd_settings">Настройки чата</string>
+    <string name="ai_cmd_model">Текущая модель</string>
+    <string name="ai_cmd_system_prompt">Системный промпт</string>
+    <string name="ai_cmd_tools">Список инструментов</string>
 
     <!-- i18n: AgentListActivity -->
     <string name="tell_more_about_model">Расскажи подробнее о модели %s</string>

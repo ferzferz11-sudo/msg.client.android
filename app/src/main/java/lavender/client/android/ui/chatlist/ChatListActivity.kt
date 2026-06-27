@@ -233,21 +233,6 @@ class ChatListActivity : AppCompatActivity() {
         // Note: GrpcClient.connect() is already called from SessionManager.initFromPrefs()
         // when serverAddress is set. No need to connect again here.
 
-        // Observe errors — show Snackbar
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.error.collect { errorMsg ->
-                    if (errorMsg != null) {
-                        com.google.android.material.snackbar.Snackbar
-                            .make(findViewById(android.R.id.content), errorMsg, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
-                            .setAction("OK") { viewModel.clearError() }
-                            .show()
-                        viewModel.clearError()
-                    }
-                }
-            }
-        }
-
         // Fetch user avatar for toolbar
         val avatarUsername = username
         GrpcClient.getUserAvatar(avatarUsername) { _ ->

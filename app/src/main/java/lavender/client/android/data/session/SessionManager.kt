@@ -177,6 +177,49 @@ object SessionManager {
         if (!refreshed) Log.w("SessionManager", "Sync token refresh timed out")
     }
 
+    /**
+     * Force token refresh — ignores expiration check.
+     * Used by pull-to-refresh to guarantee fresh JWT.
+     */
+    fun forceTokenRefresh(context: Context) {
+        val refreshToken = AuthManager.getRefreshToken(context) ?: return
+        Log.d("SessionManager", "Force refreshing token...")
+
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var refreshed = false
+
+        GrpcClient.refreshToken(refreshToken) { response, error ->
+            if (response != null && response.accessToken.isNotEmpty()) {
+                val currentUsername = AuthManager.getUsername(context)
+                val currentUserId = AuthManager.getUserId(context)
+                val currentDeviceId = AuthManager.getDeviceId(context)
+
+                AuthManager.storeTokens(
+                    context = context,
+                    accessToken = response.accessToken,
+                    refreshToken = response.refreshToken,
+                    accessExpiresAt = response.accessExpiresAt,
+                    refreshExpiresAt = response.refreshExpiresAt,
+                    userId = currentUserId,
+                    username = currentUsername,
+                    deviceId = currentDeviceId
+                )
+                _session.value = _session.value.copy(
+                    accessToken = response.accessToken,
+                    refreshToken = response.refreshToken
+                )
+                refreshed = true
+                Log.d("SessionManager", "Force token refresh succeeded")
+            } else {
+                Log.w("SessionManager", "Force token refresh failed: $error")
+            }
+            latch.countDown()
+        }
+
+        latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+        if (!refreshed) Log.w("SessionManager", "Force token refresh timed out")
+    }
+
     private suspend fun performTokenRefresh(context: Context) {
         val refreshToken = AuthManager.getRefreshToken(context) ?: return
 

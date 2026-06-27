@@ -433,6 +433,12 @@ internal fun showAIBottomSheet(activity: ChatListActivity) {
         },
         onOpenRemoteAgents = {
             activity.startActivity(Intent(activity, lavender.client.android.ui.remote.RemoteAgentActivity::class.java))
+        },
+        onOpenAgentSettings = { agentId ->
+            val intent = Intent(activity, lavender.client.android.ui.ai.AiAgentSetupActivity::class.java).apply {
+                putExtra("AGENT_ID", agentId)
+            }
+            activity.startActivity(intent)
         }
     )
     activity.aiBottomSheet?.buildAndShow()

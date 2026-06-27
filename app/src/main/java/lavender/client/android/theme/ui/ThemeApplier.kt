@@ -230,7 +230,7 @@ object ThemeApplier {
             R.id.etServerHost, R.id.etServerPort, R.id.etLocalPort,
             // AI v2 Agent form fields
             R.id.agentNameInput, R.id.agentDescriptionInput, R.id.providerTypeInput,
-            R.id.modelInput, R.id.systemPromptInput, R.id.providerConfigInput
+            R.id.modelInput, R.id.systemPromptInput, R.id.agentApiKeyInput, R.id.maxTokensInput
         )
         commonInputs.forEach { id ->
             activity.findViewById<android.widget.EditText>(id)?.apply {
@@ -263,7 +263,7 @@ object ThemeApplier {
 
         // AI v2 Agent form — TextInputLayout hints, strokes, and Switches
         listOf(R.id.agentNameInput, R.id.agentDescriptionInput, R.id.providerTypeInput,
-            R.id.modelInput, R.id.systemPromptInput, R.id.providerConfigInput).forEach { id ->
+            R.id.modelInput, R.id.systemPromptInput, R.id.agentApiKeyInput, R.id.maxTokensInput).forEach { id ->
             (activity.findViewById<View>(id)?.parent as? com.google.android.material.textfield.TextInputLayout)?.apply {
                 setHintTextColor(ColorStateList.valueOf(hintTextColor))
                 setBoxStrokeColorStateList(ColorStateList.valueOf(customPrimary))

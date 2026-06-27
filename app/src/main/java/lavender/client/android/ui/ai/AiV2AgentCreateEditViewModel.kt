@@ -45,7 +45,9 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
         providerConfig: String,
         toolsEnabled: Boolean,
         ragEnabled: Boolean,
-        isPublic: Boolean = false
+        isPublic: Boolean = false,
+        temperature: Float = 0.7f,
+        maxTokens: Int = 4096
     ) {
         viewModelScope.launch {
             try {
@@ -58,7 +60,9 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
                     model = model,
                     toolsEnabled = toolsEnabled,
                     ragEnabled = ragEnabled,
-                    isPublic = isPublic
+                    isPublic = isPublic,
+                    temperature = temperature,
+                    maxTokens = maxTokens
                 )
                 val result = AiV2ChatUseCase.createAgent(request)
                 result.fold(
@@ -80,7 +84,9 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
         providerConfig: String,
         toolsEnabled: Boolean,
         ragEnabled: Boolean,
-        isPublic: Boolean = false
+        isPublic: Boolean = false,
+        temperature: Float = 0f,
+        maxTokens: Int = 0
     ) {
         viewModelScope.launch {
             try {
@@ -93,7 +99,9 @@ class AiV2AgentCreateEditViewModel(application: Application) : AndroidViewModel(
                     model = model,
                     toolsEnabled = toolsEnabled,
                     ragEnabled = ragEnabled,
-                    isPublic = isPublic
+                    isPublic = isPublic,
+                    temperature = temperature,
+                    maxTokens = maxTokens
                 )
                 val result = AiV2ChatUseCase.updateAgent(request)
                 result.fold(

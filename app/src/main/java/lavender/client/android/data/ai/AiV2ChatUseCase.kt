@@ -121,6 +121,7 @@ object AiV2ChatUseCase {
                         sessionId = sessionId,
                         role = "assistant",
                         content = token,
+                        error = error ?: "",
                         imageUrl = imageUrl,
                         agentId = respAgentId,
                         agentName = respAgentName,

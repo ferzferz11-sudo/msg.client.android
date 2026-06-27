@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lavender.client.android.data.grpc.ConnectionStatus
 import lavender.client.android.data.grpc.GrpcClient
 import lavender.client.android.data.models.ChatInfo
 import lavender.client.android.data.session.SessionManager
+import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.db.toEntity
 import lavender.client.android.data.db.toDomain
 import lavender.client.android.data.ai.AiV2ChatUseCase
@@ -191,7 +193,7 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 // Ensure JWT is fresh before any gRPC call
-                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                withContext(Dispatchers.IO) {
                     lavender.client.android.data.session.SessionManager.ensureFreshToken(getApplication())
                 }
 
@@ -345,7 +347,39 @@ class ChatListViewModel(application: Application) : AndroidViewModel(application
 
     fun refreshChats() {
         _isLoading.value = false
-        loadChats()
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    SessionManager.forceTokenRefresh(getApplication())
+                }
+
+                if (GrpcClient.connectionStatus.value != ConnectionStatus.READY) {
+                    Log.d(TAG, "gRPC not READY, reconnecting...")
+                    val serverAddress = CredentialStore.getServerAddress(getApplication()) ?: ""
+                    if (serverAddress.isNotEmpty()) {
+                        val parts = serverAddress.split(":")
+                        val host = parts.firstOrNull() ?: serverAddress
+                        val port = parts.getOrNull(1)?.toIntOrNull() ?: 50051
+                        GrpcClient.connect(
+                            serverAddress = host,
+                            useTls = false,
+                            port = port,
+                            context = getApplication(),
+                            forceReconnect = true
+                        )
+                        val startWait = System.currentTimeMillis()
+                        while (GrpcClient.connectionStatus.value != ConnectionStatus.READY
+                            && System.currentTimeMillis() - startWait < 5000) {
+                            delay(200)
+                        }
+                        Log.d(TAG, "gRPC status after wait: ${GrpcClient.connectionStatus.value}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Refresh preparation failed: ${e.message}")
+            }
+            loadChats()
+        }
     }
 
     fun searchChats(query: String) {

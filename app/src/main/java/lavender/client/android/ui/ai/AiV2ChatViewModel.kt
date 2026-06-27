@@ -27,6 +27,9 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _rateLimitEvent = MutableStateFlow(false)
+    val rateLimitEvent: StateFlow<Boolean> = _rateLimitEvent.asStateFlow()
+
     private val _sessionId = MutableStateFlow("")
 
     init {
@@ -50,6 +53,22 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun updateStreamingMessage(message: AiV2ChatMessage) {
+        if (message.error.isNotEmpty()) {
+            _streamState.value = _streamState.value.copy(isTyping = false)
+            if (message.error.contains("rate limit", ignoreCase = true)) {
+                _rateLimitEvent.value = true
+            }
+            val errorMsg = AiV2ChatMessage(
+                role = "assistant",
+                content = "\u26A0\uFE0F ${message.error}",
+                agentId = message.agentId,
+                agentName = message.agentName,
+                timestamp = System.currentTimeMillis()
+            )
+            _messages.value = _messages.value + errorMsg
+            return
+        }
+
         val current = _messages.value.toMutableList()
         val lastIndex = current.indexOfLast {
             it.role == "assistant" && it.isStreaming
@@ -107,7 +126,12 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
                     scope = viewModelScope
                 )
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error"
+                val errorMsg = AiV2ChatMessage(
+                    role = "assistant",
+                    content = "\u26A0\uFE0F ${e.message ?: "Unknown error"}",
+                    timestamp = System.currentTimeMillis()
+                )
+                _messages.value = _messages.value + errorMsg
             }
         }
     }
@@ -121,12 +145,25 @@ class AiV2ChatViewModel(application: Application) : AndroidViewModel(application
                     _messages.value = history
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to load history"
+                val errorMsg = AiV2ChatMessage(
+                    role = "assistant",
+                    content = "\u26A0\uFE0F ${e.message ?: "Failed to load history"}",
+                    timestamp = System.currentTimeMillis()
+                )
+                _messages.value = _messages.value + errorMsg
             }
         }
     }
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun clearRateLimitEvent() {
+        _rateLimitEvent.value = false
+    }
+
+    fun clearMessages() {
+        _messages.value = emptyList()
     }
 }

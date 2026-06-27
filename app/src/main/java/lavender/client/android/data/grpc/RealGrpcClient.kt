@@ -755,7 +755,6 @@ object RealGrpcClient {
                         if (retryCount >= maxRetries) {
                             Log.e(TAG, "Failed to reconnect stream after $maxRetries attempts")
                             _connectionStatus.value = ConnectionStatus.FAILED
-                            _error.value = "Connection lost. Please check your internet connection."
                         }
                     } finally { isRetrying = false }
                 }

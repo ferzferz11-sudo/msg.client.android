@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.0.19 | **Updated:** 2026-06-23
+**Version:** v1.3.0.20 | **Updated:** 2026-06-27
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -179,3 +179,21 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **minSdk was raised to 33 in v1.3.0.17**, causing "версия пакета на 31 версию SDK" error on Android 12
 - **Reverted to 29 in v1.3.0.18** — all API usage verified compatible with Android 10+
 - **README.md and doc/INDEX.md** both reference minSdk 29
+
+## AI Agent Setup Form
+
+- **`providerConfig` not returned by server** — `AgentInfoV2` proto lacks `provider_config` field. API key is sent on Create/Update but not returned on Get/List. Server needs field 22 `string provider_config = 22;` to display key in edit form
+- **Temperature slider** uses `addOnChangeListener` — fires during programmatic `setValue()` in `observeState()`. Use `isLoaded` flag to suppress change tracking during initial load
+- **Save button as floating overlay** — added dynamically to `FrameLayout` (root content) with `Gravity.BOTTOM | CENTER_HORIZONTAL`. WindowInsetsListener adjusts `bottomMargin` for keyboard/nav bar
+
+## AI Chat Error Handling
+
+- **Errors shown as chat messages** — `AiV2ChatMessage.error` field propagates server errors to chat bubble (⚠️ prefix). No Toast
+- **Rate limit** uses separate `rateLimitEvent` StateFlow — not mixed with error flow
+- **`providerConfig` in AiV2Agent** — added to domain model but not in `AgentInfoV2Proto`. Used only for Create/Update requests
+
+## AIBottomSheet
+
+- **CheckBox replaced with ImageView toggle** — CheckBox's internal button drawable has intrinsic size that resists `minimumWidth/Height = 0`. ImageView gives exact 22dp control
+- **ScrollView needs `layout_weight=1`** — `wrap_content` + programmatic maxHeight broke touch events. Use weight-based layout in parent LinearLayout
+- **`selectedAgents` must NOT be cleared in `buildContent()`** — called from `loadPresetAgents()` callback. Clear only in `buildAndShow()`/`rebuildContent()`, restore checkbox states at end of `buildContent()`

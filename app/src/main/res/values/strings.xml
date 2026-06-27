@@ -383,6 +383,11 @@
     <string name="ai_v2_rag_enabled">RAG Enabled</string>
     <string name="ai_v2_public">Public (visible in Marketplace)</string>
     <string name="ai_v2_tools">Tools</string>
+    <string name="ai_agent_api_key">API Key</string>
+    <string name="ai_agent_temperature">Temperature</string>
+    <string name="ai_agent_max_tokens">Max Tokens</string>
+    <string name="ai_agent_saved">Agent saved</string>
+    <string name="ai_v2_agent_name_required">Name is required</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Marketplace</string>
@@ -513,6 +518,7 @@
     <string name="ai_create_chat">Create Chat</string>
     <string name="ai_start_chat">Start Chat</string>
     <string name="ai_select_agents_hint">Select agents to start a chat</string>
+    <string name="ai_long_press_to_settings">Long press to configure</string>
     <string name="ai_selected_agent">Selected agent</string>
     <string name="ai_selected_agents">Selected agents</string>
     <string name="ai_loading_agents">Loading agents…</string>
@@ -850,6 +856,15 @@
     <string name="cmd_ps">Process list</string>
     <string name="cmd_df">Disk free space</string>
     <string name="cmd_uptime">Server uptime</string>
+
+    <!-- AI Agent commands -->
+    <string name="ai_cmd_new">New chat session</string>
+    <string name="ai_cmd_clear">Clear chat history</string>
+    <string name="ai_cmd_history">Show chat history</string>
+    <string name="ai_cmd_settings">Open chat settings</string>
+    <string name="ai_cmd_model">Show current model</string>
+    <string name="ai_cmd_system_prompt">Show system prompt</string>
+    <string name="ai_cmd_tools">List available tools</string>
 
     <!-- i18n: AgentListActivity -->
     <string name="tell_more_about_model">Tell me more about %s model</string>

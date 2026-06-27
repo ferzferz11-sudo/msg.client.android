@@ -1,27 +1,26 @@
 package lavender.client.android.ui.ai
 
+import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.Gravity
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.button.MaterialButton
+import com.google.android.material.slider.Slider
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import lavender.client.android.R
 import lavender.client.android.data.ai.AiProviderType
 import lavender.client.android.data.session.SessionManager
 import lavender.client.android.theme.ui.ThemeUi
+import org.json.JSONObject
 
-/**
- * AiAgentSetupActivity — unified screen for creating and editing AI agents.
- *
- * Supports:
- * - Creating new custom agents (all provider types)
- * - Editing existing agents (from presets or custom)
- * - Configuring remote agents
- */
 class AiAgentSetupActivity : AppCompatActivity() {
 
     private lateinit var viewModel: AiV2AgentCreateEditViewModel
@@ -30,13 +29,18 @@ class AiAgentSetupActivity : AppCompatActivity() {
     private lateinit var providerTypeInput: AutoCompleteTextView
     private lateinit var modelInput: TextInputEditText
     private lateinit var systemPromptInput: TextInputEditText
-    private lateinit var providerConfigInput: TextInputEditText
+    private lateinit var agentApiKeyInput: TextInputEditText
+    private lateinit var temperatureSlider: Slider
+    private lateinit var temperatureValue: android.widget.TextView
+    private lateinit var maxTokensInput: TextInputEditText
     private lateinit var toolsEnabledSwitch: SwitchMaterial
     private lateinit var ragEnabledSwitch: SwitchMaterial
     private lateinit var publicSwitch: SwitchMaterial
-    private lateinit var saveButton: MaterialButton
+    private var saveButton: android.widget.Button? = null
 
     private var editAgentId: String = ""
+    private var isLoaded = false
+    private var hasChanges = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -51,12 +55,15 @@ class AiAgentSetupActivity : AppCompatActivity() {
         initViews()
         setupToolbar()
         setupProviderTypeDropdown()
-        setupSaveButton()
+        setupChangeTracking()
+        setupWindowInsets()
         observeState()
         ThemeUi.bind(this, SessionManager.session.value.username)
 
         if (editAgentId.isNotEmpty()) {
             loadAgent(editAgentId)
+        } else {
+            isLoaded = true
         }
     }
 
@@ -66,25 +73,27 @@ class AiAgentSetupActivity : AppCompatActivity() {
         providerTypeInput = findViewById(R.id.providerTypeInput)
         modelInput = findViewById(R.id.modelInput)
         systemPromptInput = findViewById(R.id.systemPromptInput)
-        providerConfigInput = findViewById(R.id.providerConfigInput)
+        agentApiKeyInput = findViewById(R.id.agentApiKeyInput)
+        temperatureSlider = findViewById(R.id.temperatureSlider)
+        temperatureValue = findViewById(R.id.temperatureValue)
+        maxTokensInput = findViewById(R.id.maxTokensInput)
         toolsEnabledSwitch = findViewById(R.id.toolsEnabledSwitch)
         ragEnabledSwitch = findViewById(R.id.ragEnabledSwitch)
         publicSwitch = findViewById(R.id.publicSwitch)
-        saveButton = findViewById(R.id.saveButton)
+
+        temperatureSlider.addOnChangeListener { _, value, _ ->
+            temperatureValue.text = String.format("%.1f", value)
+            if (isLoaded) markChanged()
+        }
+        temperatureValue.text = String.format("%.1f", temperatureSlider.value)
     }
 
     private fun setupToolbar() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
+        toolbar.title = if (editAgentId.isNotEmpty()) getString(R.string.ai_v2_edit_agent) else getString(R.string.ai_v2_create_agent)
         toolbar.setNavigationOnClickListener { finish() }
-
-        val titleText = findViewById<android.widget.TextView>(R.id.titleText)
-        if (editAgentId.isNotEmpty()) {
-            titleText.text = getString(R.string.ai_v2_edit_agent)
-        } else {
-            titleText.text = getString(R.string.ai_v2_create_agent)
-        }
     }
 
     private fun setupProviderTypeDropdown() {
@@ -94,48 +103,125 @@ class AiAgentSetupActivity : AppCompatActivity() {
         providerTypeInput.setText(AiProviderType.OPENROUTER.value, false)
     }
 
-    private fun setupSaveButton() {
-        saveButton.setOnClickListener {
-            val name = agentNameInput.text.toString().trim()
-            if (name.isEmpty()) {
-                agentNameInput.error = "Name is required"
-                return@setOnClickListener
+    private fun setupWindowInsets() {
+        val rootView = findViewById<View>(android.R.id.content)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
+            val imeHeight = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom
+            val navBar = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars()).bottom
+            val bottomOffset = maxOf(imeHeight, navBar)
+            saveButton?.let { btn ->
+                (btn.layoutParams as? FrameLayout.LayoutParams)?.bottomMargin = bottomOffset + dp(8)
             }
+            insets
+        }
+    }
 
-            val providerType = providerTypeInput.text.toString()
-            val description = agentDescriptionInput.text.toString().trim()
-            val model = modelInput.text.toString().trim()
-            val systemPrompt = systemPromptInput.text.toString().trim()
-            val providerConfig = providerConfigInput.text.toString().trim()
-            val toolsEnabled = toolsEnabledSwitch.isChecked
-            val ragEnabled = ragEnabledSwitch.isChecked
-            val isPublic = publicSwitch.isChecked
+    private fun showSaveButton() {
+        if (saveButton != null) {
+            saveButton?.visibility = View.VISIBLE
+            return
+        }
+        val btn = android.widget.Button(this).apply {
+            text = getString(R.string.save)
+            setTextColor(Color.WHITE)
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)
+            setBackgroundColor(typedValue.data)
+            setPadding(dp(24), dp(12), dp(24), dp(12))
+            textSize = 15f
+            visibility = View.VISIBLE
+            setOnClickListener { saveAgent() }
+        }
+        val params = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            bottomMargin = dp(8)
+        }
+        val rootView = findViewById<FrameLayout>(android.R.id.content)
+        rootView.addView(btn, params)
+        saveButton = btn
+    }
 
-            if (editAgentId.isEmpty()) {
-                viewModel.createAgent(
-                    name = name,
-                    description = description,
-                    providerType = providerType,
-                    model = model,
-                    systemPrompt = systemPrompt,
-                    providerConfig = providerConfig,
-                    toolsEnabled = toolsEnabled,
-                    ragEnabled = ragEnabled,
-                    isPublic = isPublic
-                )
-            } else {
-                viewModel.updateAgent(
-                    agentId = editAgentId,
-                    name = name,
-                    description = description,
-                    model = model,
-                    systemPrompt = systemPrompt,
-                    providerConfig = providerConfig,
-                    toolsEnabled = toolsEnabled,
-                    ragEnabled = ragEnabled,
-                    isPublic = isPublic
-                )
+    private fun setupChangeTracking() {
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (isLoaded) markChanged()
             }
+        }
+        agentNameInput.addTextChangedListener(watcher)
+        agentDescriptionInput.addTextChangedListener(watcher)
+        modelInput.addTextChangedListener(watcher)
+        systemPromptInput.addTextChangedListener(watcher)
+        agentApiKeyInput.addTextChangedListener(watcher)
+        maxTokensInput.addTextChangedListener(watcher)
+
+        providerTypeInput.setOnItemClickListener { _, _, _, _ -> if (isLoaded) markChanged() }
+        toolsEnabledSwitch.setOnCheckedChangeListener { _, _ -> if (isLoaded) markChanged() }
+        ragEnabledSwitch.setOnCheckedChangeListener { _, _ -> if (isLoaded) markChanged() }
+        publicSwitch.setOnCheckedChangeListener { _, _ -> if (isLoaded) markChanged() }
+    }
+
+    private fun markChanged() {
+        if (!hasChanges) {
+            hasChanges = true
+            showSaveButton()
+        }
+    }
+
+    private fun saveAgent() {
+        val name = agentNameInput.text.toString().trim()
+        if (name.isEmpty()) {
+            agentNameInput.error = getString(R.string.ai_v2_agent_name_required)
+            return
+        }
+
+        val providerType = providerTypeInput.text.toString()
+        val description = agentDescriptionInput.text.toString().trim()
+        val model = modelInput.text.toString().trim()
+        val systemPrompt = systemPromptInput.text.toString().trim()
+        val apiKey = agentApiKeyInput.text.toString().trim()
+        val temperature = temperatureSlider.value
+        val maxTokens = maxTokensInput.text.toString().trim().toIntOrNull() ?: 4096
+        val toolsEnabled = toolsEnabledSwitch.isChecked
+        val ragEnabled = ragEnabledSwitch.isChecked
+        val isPublic = publicSwitch.isChecked
+
+        val providerConfig = JSONObject().apply {
+            if (apiKey.isNotEmpty()) put("apiKey", apiKey)
+        }.toString()
+
+        if (editAgentId.isEmpty()) {
+            viewModel.createAgent(
+                name = name,
+                description = description,
+                providerType = providerType,
+                model = model,
+                systemPrompt = systemPrompt,
+                providerConfig = providerConfig,
+                toolsEnabled = toolsEnabled,
+                ragEnabled = ragEnabled,
+                isPublic = isPublic,
+                temperature = temperature,
+                maxTokens = maxTokens
+            )
+        } else {
+            viewModel.updateAgent(
+                agentId = editAgentId,
+                name = name,
+                description = description,
+                model = model,
+                systemPrompt = systemPrompt,
+                providerConfig = providerConfig,
+                toolsEnabled = toolsEnabled,
+                ragEnabled = ragEnabled,
+                isPublic = isPublic,
+                temperature = temperature,
+                maxTokens = maxTokens
+            )
         }
     }
 
@@ -154,12 +240,20 @@ class AiAgentSetupActivity : AppCompatActivity() {
                 toolsEnabledSwitch.isChecked = it.toolsEnabled
                 ragEnabledSwitch.isChecked = it.ragEnabled
                 publicSwitch.isChecked = it.isPublic
+                temperatureSlider.value = it.temperature.coerceIn(0f, 2f)
+                temperatureValue.text = String.format("%.1f", it.temperature)
+                maxTokensInput.setText(it.maxTokens.toString())
+                try {
+                    val config = JSONObject(it.providerConfig)
+                    agentApiKeyInput.setText(config.optString("apiKey", ""))
+                } catch (_: Exception) {}
+                isLoaded = true
             }
         }
 
         viewModel.saveResult.observe(this) { success ->
             if (success) {
-                Toast.makeText(this, "Agent saved", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.ai_agent_saved), Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
@@ -170,5 +264,9 @@ class AiAgentSetupActivity : AppCompatActivity() {
                 viewModel.clearError()
             }
         }
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
     }
 }
