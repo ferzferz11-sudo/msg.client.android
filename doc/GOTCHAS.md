@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.02 | **Updated:** 2026-06-27
+**Version:** v1.3.1.03 | **Updated:** 2026-06-27
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -230,3 +230,19 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **TextInputLayout `endIconMode="password_toggle"`** — eye icon for showing/hiding API key
 - **Long-press copies to clipboard** — ClipboardManager + Toast confirmation
 - **ProviderConfig parsing**: checks `api_key` (snake_case) first, then `apiKey` (camelCase), then `api_key_source` for server presets
+
+## AuthManager.getBearerToken() Returns "Bearer " Prefix (v1.3.1.03)
+
+- **`getBearerToken()` returns `"Bearer <token>"`** (with prefix) — NOT just the token
+- **Do NOT add another "Bearer " prefix** — results in `"Bearer Bearer <token>"` → 401 invalid token
+- **Correct usage**: `addHeader("Authorization", AuthManager.getBearerToken(context))`
+- **Wrong usage**: `addHeader("Authorization", "Bearer ${AuthManager.getBearerToken(context)}")`
+- **AuthInterceptor** handles this automatically — uses `getBearerToken()` directly
+
+## HTTP Upload Auth (v1.3.1.03)
+
+- **`HttpClient` needs AuthInterceptor** — plain OkHttpClient sends no JWT token → 401
+- **`HttpClient.init(context)` in SplashActivity** — initializes with AuthInterceptor
+- **`HttpClient.client` has default OkHttpClient** — works before init (no lateinit crash)
+- **Camera requires runtime permission** — `CAMERA` permission must be requested at runtime
+- **`sendMessageV2` sets `isSent = true`** — only after server confirms success

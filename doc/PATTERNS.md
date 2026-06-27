@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.02 | **Updated:** 2026-06-27
+**Version:** v1.3.1.03 | **Updated:** 2026-06-27
 
 ---
 
@@ -463,6 +463,33 @@ Client filters [deleted] in 3 places:
   ├── GrpcMessageV2Client.loadHistoryV2() — server response filter
   ├── GrpcMessageV2Client.loadHistoryV2() — Room DB cache filter
   └── RealGrpcClient.chatV2Stream — real-time stream filter
+```
+
+### Agent Status Pattern (v1.3.1.03)
+```
+AgentStatus enum: AVAILABLE / SERVER_KEY / NEEDS_KEY
+  ├── AVAILABLE: api_key present in providerConfig
+  ├── SERVER_KEY: api_key_source == "server" (no user key)
+  └── NEEDS_KEY: no key, no server source
+
+UI display:
+  ├── AiV2ChatActivity toolbar: toolbarInfo with colored text
+  ├── AIBottomSheet: emoji dots (🟢🟡🔴) next to agent names
+  └── Color: GREEN=#4CAF50, YELLOW=#FFC107, RED=#F44336
+```
+
+### HTTP Auth Interceptor Pattern (v1.3.1.03)
+```
+AuthInterceptor (okhttp3.Interceptor)
+  ├── Reads AuthManager.getBearerToken(context) per request
+  ├── Skips /info and /health endpoints
+  └── Adds Authorization header to all HTTP requests
+
+HttpClient.init(context) called in SplashActivity.onCreate()
+  └── Replaces default OkHttpClient with one that has AuthInterceptor
+
+CRITICAL: AuthManager.getBearerToken() returns "Bearer <token>" (with prefix)
+  └── Do NOT add another "Bearer " prefix — results in double "Bearer Bearer <token>"
 ```
 
 ### AI Chat Commands Pattern (v1.3.0.20)

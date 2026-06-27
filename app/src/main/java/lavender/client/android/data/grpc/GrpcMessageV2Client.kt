@@ -269,14 +269,23 @@ class GrpcMessageV2Client(
                 if (response.success && response.message != null) {
                     val serverMsg = response.message
                     val serverId = serverMsg.id
-                    if (serverId.isNotEmpty() && serverId != message.id) {
-                        messages.update { current ->
-                            current.map { if (it.id == message.id) it.copy(id = serverId) else it }
+                    messages.update { current ->
+                        current.map {
+                            if (it.id == message.id) {
+                                val newId = if (serverId.isNotEmpty() && serverId != message.id) serverId else it.id
+                                it.copy(id = newId, isSent = true)
+                            } else it
                         }
+                    }
+                    if (serverId.isNotEmpty() && serverId != message.id) {
                         scope.launch(Dispatchers.IO) {
                             db()?.messageDao()?.deleteMessage(message.id)
-                            val updated = message.copy(id = serverId)
+                            val updated = message.copy(id = serverId, isSent = true)
                             db()?.messageDao()?.insertMessages(listOf(updated.toEntity()))
+                        }
+                    } else {
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.insertMessages(listOf(message.copy(isSent = true).toEntity()))
                         }
                     }
                     onResult?.invoke(serverMsg)

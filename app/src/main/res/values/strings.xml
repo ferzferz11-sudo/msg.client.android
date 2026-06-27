@@ -394,6 +394,9 @@
     <string name="ai_agent_saved">Agent saved</string>
     <string name="ai_v2_agent_name_required">Name is required</string>
     <string name="ai_api_key_copied">API key copied to clipboard</string>
+    <string name="ai_status_available">Available</string>
+    <string name="ai_status_server_key">Server key</string>
+    <string name="ai_status_needs_key">Needs API key</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Marketplace</string>

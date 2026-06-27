@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.02 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-27
+**Версия:** v1.3.1.03 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-27
 
 ---
 
@@ -65,6 +65,49 @@ Chat List: Cursor-based pagination (infinite scroll), Unread highlight
 Graceful Shutdown: SERVER_SHUTTINGDOWN + health check + backoff
 Notifications in Remote Agent: server notifications shown as system messages in chat
 ```
+
+---
+
+## Итог сессии v1.3.1.03
+
+### Выполнено
+
+**Статусы агентов:**
+1. `AgentStatus` enum: AVAILABLE / SERVER_KEY / NEEDS_KEY — определяется по `providerConfig`
+2. Toolbar чата: `toolbarInfo` показывает статус с цветным индикатором (🟢🟡🔴)
+3. AIBottomSheet: цветные точки рядом с именами агентов
+
+**HTTP upload auth fix:**
+1. Корневая причина: `AuthManager.getBearerToken()` возвращает `"Bearer <token>"`, а код добавлял ещё один `"Bearer "` → двойной токен → 401
+2. Создан `AuthInterceptor` (OkHttp interceptor) — автоматически добавляет JWT токен
+3. `HttpClient.init(context)` вызывается в `SplashActivity.onCreate()`
+4. Убраны ручные `addHeader("Authorization"...)` из всех upload мест
+
+**Камера:**
+1. Добавлен `cameraPermissionLauncher` в `ChatInputDelegate`
+2. Runtime-запрос `CAMERA` permission перед открытием камеры
+
+**isSent fix:**
+1. `sendMessageV2` теперь ставит `isSent = true` при успешном ответе сервера
+2. Обновляет Room DB — "часики" сменяются на галочку
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `network/AuthInterceptor.kt` | NEW — OkHttp interceptor для JWT |
+| `network/HttpClient.kt` | `init(context)` + AuthInterceptor |
+| `SplashActivity.kt` | `HttpClient.init(this)` |
+| `data/ai/AiV2Models.kt` | `AgentStatus` enum |
+| `ui/ai/AiV2ChatActivity.kt` | Agent status в toolbar |
+| `ui/widget/AIBottomSheet.kt` | Status dots рядом с агентами |
+| `ui/chat/message/ChatInputDelegate.kt` | Camera permission + removed manual auth |
+| `data/grpc/GrpcMessageV2Client.kt` | `isSent = true` on success |
+| `ui/ai/AiAgentSetupActivity.kt` | Removed manual auth |
+| `ShareReceiverActivity.kt` | Removed manual auth |
+| `ThemePaletteActivity.kt` | Removed manual auth |
+| `res/values/strings.xml` | +ai_status_available/server_key/needs_key |
+| `res/values-ru/strings.xml` | +ai_status_available/server_key/needs_key |
 
 ---
 
@@ -153,7 +196,7 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ### Известные проблемы
 
-- Нет
+- Reve Image: бюджет API исчерпан (0 available_amount) — нужен пополнение на стороне Reve
 
 ---
 
@@ -244,20 +287,20 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 | Ключ отображается в настройках, можно показать/скопировать | ✅ |
 | Wire dump gRPC response — ключ подтверждён | ✅ |
 
-### Приоритет 2: Статусы агентов в чате
+### Приоритет 2: Статусы агентов в чате ✅
 | Задача | Статус |
 |--------|--------|
-| Добавить статусы агентов: доступен / требует настройки / нет ключа | 🔲 |
-| Показывать статус в toolbar чата | 🔲 |
-| Показывать статус в AI шторке (AIBottomSheet) | 🔲 |
-| Цветовые индикаторы (зелёный/жёлтый/красный) | 🔲 |
+| Добавить статусы агентов: доступен / требует настройки / нет ключа | ✅ |
+| Показывать статус в toolbar чата | ✅ |
+| Показывать статус в AI шторке (AIBottomSheet) | ✅ |
+| Цветовые индикаторы (зелёный/жёлтый/красный) | ✅ |
 
 ### Приоритет 3: Остальное
 | Задача | Статус |
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |
 | Финальный прогон AI v2 тестов | 🔲 |
-| Reve Image: пополнить бюджет API | 🔲 |
+| Reve Image: обработка 402 ошибки (красивый текст в чате) | в работе |
 
 ---
 

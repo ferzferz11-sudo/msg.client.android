@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import kotlinx.coroutines.*
 import lavender.client.android.R
+import lavender.client.android.data.ai.AgentStatus
 import lavender.client.android.data.ai.AiV2Agent
 import lavender.client.android.data.ai.AiV2ChatUseCase
 import lavender.client.android.theme.ThemeStore
@@ -143,7 +144,13 @@ class AIBottomSheet(
                 icon.setImageResource(R.drawable.ic_agents)
                 icon.imageTintList = ColorStateList.valueOf(primColor)
                 val displayName = agent.name.ifEmpty { agent.id }
-                text.text = "${getAgentEmoji(agent.id)} $displayName"
+                val status = AgentStatus.fromProviderConfig(agent.providerConfig)
+                val statusDot = when (status) {
+                    AgentStatus.AVAILABLE -> "\uD83D\uDFE2"
+                    AgentStatus.SERVER_KEY -> "\uD83D\uDFE1"
+                    AgentStatus.NEEDS_KEY -> "\uD83D\uDD34"
+                }
+                text.text = "${getAgentEmoji(agent.id)} $displayName $statusDot"
                 text.setTextColor(txtColor)
                 badge.visibility = View.GONE
 

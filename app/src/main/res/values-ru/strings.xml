@@ -703,6 +703,9 @@
     <string name="ai_agent_saved">Агент сохранён</string>
     <string name="ai_v2_agent_name_required">Имя обязательно</string>
     <string name="ai_api_key_copied">API ключ скопирован</string>
+    <string name="ai_status_available">Доступен</string>
+    <string name="ai_status_server_key">Серверный ключ</string>
+    <string name="ai_status_needs_key">Нужен API ключ</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Маркетплейс</string>

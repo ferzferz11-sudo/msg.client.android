@@ -1,6 +1,8 @@
 package lavender.client.android.ui.chat.message
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.text.Editable
@@ -124,6 +126,26 @@ class ChatInputDelegate(
         if (success) currentPhotoUri?.let {
             selectedImageUris.addAll(listOf(it))
             showImagePreview()
+        }
+    }
+
+    private val cameraPermissionLauncher = activity.registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            try {
+                currentPhotoUri = createImageUri()
+                if (currentPhotoUri != null) {
+                    takePhotoLauncher.launch(currentPhotoUri!!)
+                } else {
+                    showToast("Failed to create image file")
+                }
+            } catch (e: Exception) {
+                showToast("Could not open camera app")
+                android.util.Log.e("ChatInput", "Camera launch error", e)
+            }
+        } else {
+            showToast("Camera permission denied")
         }
     }
 
@@ -337,16 +359,20 @@ class ChatInputDelegate(
         WidgetManager.getOrCreate("attachment_sheet") { ActionBottomSheet(activity) }
             .setActions(listOf(
                 SheetAction(R.id.attachCamera, R.drawable.ic_mic, activity.getString(R.string.attach_camera)) {
-                    try {
-                        currentPhotoUri = createImageUri()
-                        if (currentPhotoUri != null) {
-                            takePhotoLauncher.launch(currentPhotoUri!!)
-                        } else {
-                            showToast("Failed to create image file")
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        try {
+                            currentPhotoUri = createImageUri()
+                            if (currentPhotoUri != null) {
+                                takePhotoLauncher.launch(currentPhotoUri!!)
+                            } else {
+                                showToast("Failed to create image file")
+                            }
+                        } catch (e: Exception) {
+                            showToast("Could not open camera app")
+                            android.util.Log.e("ChatInput", "Camera launch error", e)
                         }
-                    } catch (e: Exception) {
-                        showToast("Could not open camera app")
-                        android.util.Log.e("ChatInput", "Camera launch error", e)
+                    } else {
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 },
                 SheetAction(R.id.attachGallery, R.drawable.ic_gallery, activity.getString(R.string.attach_gallery)) {
@@ -414,15 +440,19 @@ class ChatInputDelegate(
             if (bytes != null) {
                 val body = MultipartBody.Part.createFormData("image", getFileName(uri) ?: "image.jpg",
                     bytes.toRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                val uploadUrl = "${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image"
+                android.util.Log.d("ChatInput", "Uploading image to: $uploadUrl (bytes=${bytes.size})")
                 val req = Request.Builder()
-                    .url("${lavender.client.android.data.session.CredentialStore.getHttpServerUrl(activity)}/upload-image")
+                    .url(uploadUrl)
                     .post(MultipartBody.Builder().setType(MultipartBody.FORM).addPart(body).build()).build()
                 HttpClient.client.newCall(req).enqueue(object : okhttp3.Callback {
                     override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                        activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Upload failed") }
+                        android.util.Log.e("ChatInput", "Upload failed: ${e.message}", e)
+                        activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Upload failed: ${e.message}") }
                     }
                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                         val rb = response.body.string()
+                        android.util.Log.d("ChatInput", "Upload response: code=${response.code} body=${rb.take(200)}")
                         if (!response.isSuccessful || rb.contains("404")) {
                             activity.runOnUiThread { uploadProgressContainer.isVisible = false; showToast("Server error: 404") }
                             return

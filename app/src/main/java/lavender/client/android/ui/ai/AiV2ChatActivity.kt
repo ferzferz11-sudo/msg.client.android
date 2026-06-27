@@ -23,7 +23,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import lavender.client.android.R
+import lavender.client.android.data.ai.AgentStatus
 import lavender.client.android.data.ai.AiV2ChatMessage
+import lavender.client.android.data.ai.AiV2ChatUseCase
 import lavender.client.android.data.ai.RateLimitCache
 import lavender.client.android.data.session.CredentialStore
 import lavender.client.android.data.session.SessionManager
@@ -109,6 +111,7 @@ class AiV2ChatActivity : AppCompatActivity() {
         setupAttachButton()
         observeState()
         ThemeUi.bind(this, SessionManager.session.value.username)
+        loadAgentStatus()
 
         val rootView = findViewById<View>(android.R.id.content)
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
@@ -171,6 +174,37 @@ class AiV2ChatActivity : AppCompatActivity() {
         )
         chatWidget.setToolbarAgentIcon(getAgentEmoji(primaryAgentId), true)
         chatWidget.setToolbarAvatar(false)
+    }
+
+    private fun loadAgentStatus() {
+        val primaryAgentId = agentIds.firstOrNull() ?: agentId
+        if (primaryAgentId.isEmpty()) return
+
+        lifecycleScope.launch {
+            val agent = withContext(Dispatchers.IO) {
+                try { AiV2ChatUseCase.getAgent(primaryAgentId) } catch (_: Exception) { null }
+            }
+            agent?.let {
+                val status = AgentStatus.fromProviderConfig(it.providerConfig)
+                val statusText = when (status) {
+                    AgentStatus.AVAILABLE -> getString(R.string.ai_status_available)
+                    AgentStatus.SERVER_KEY -> getString(R.string.ai_status_server_key)
+                    AgentStatus.NEEDS_KEY -> getString(R.string.ai_status_needs_key)
+                }
+                val dot = when (status) {
+                    AgentStatus.AVAILABLE -> "\u2022"
+                    AgentStatus.SERVER_KEY -> "\u2022"
+                    AgentStatus.NEEDS_KEY -> "\u2022"
+                }
+                val color = when (status) {
+                    AgentStatus.AVAILABLE -> 0xFF4CAF50.toInt()
+                    AgentStatus.SERVER_KEY -> 0xFFFFC107.toInt()
+                    AgentStatus.NEEDS_KEY -> 0xFFF44336.toInt()
+                }
+                chatWidget.setToolbarInfo("$dot $statusText")
+                chatWidget.toolbarInfo.setTextColor(color)
+            }
+        }
     }
 
     private fun getAgentEmoji(agentId: String): String {

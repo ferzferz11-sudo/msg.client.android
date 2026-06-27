@@ -31,6 +31,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         SessionManager.initFromPrefs(this)
+        lavender.client.android.network.HttpClient.init(this)
         lavender.client.android.theme.ThemeStore.init(this)
         lavender.client.android.data.calls.CallManager.init(this)
 

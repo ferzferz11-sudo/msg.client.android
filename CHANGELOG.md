@@ -1,5 +1,33 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.03] - 2026-06-27
+
+### Agent statuses + HTTP upload auth fix + Camera permission + isSent fix
+
+**Добавлено:**
+- Статусы агентов: доступен (🟢), серверный ключ (🟡), нет ключа (🔴) — в toolbar чата и AIBottomSheet
+- `AgentStatus` enum с определением по `providerConfig`
+- Runtime-разрешение камеры — запрос перед открытием камеры
+
+**Исправлено:**
+- HTTP загрузка файлов/изображений — двойной `Bearer ` токен вызывал 401
+- `AuthInterceptor` для OkHttpClient — автоматически добавляет JWT токен
+- `sendMessageV2` — `isSent = true` при успешном ответе сервера (исправлен статус "часики")
+- Камера — добавлен runtime-запрос `CAMERA` permission
+
+**Изменено:**
+- `HttpClient.kt` — `init(context)` с `AuthInterceptor`
+- `SplashActivity.kt` — инициализация `HttpClient.init(this)`
+- `AuthInterceptor.kt` — NEW, OkHttp interceptor для JWT
+- `AiV2Models.kt` — `AgentStatus` enum
+- `ChatInputDelegate.kt` — camera permission + removed manual auth headers
+- `GrpcMessageV2Client.kt` — `isSent` update on send success
+- `AiV2ChatActivity.kt` — agent status in toolbar
+- `AIBottomSheet.kt` — status dots next to agent names
+- `ShareReceiverActivity.kt`, `ThemePaletteActivity.kt` — removed manual auth headers
+
+---
+
 ## [1.3.1.02] - 2026-06-27
 
 ### API Key visibility + [deleted] messages filter
