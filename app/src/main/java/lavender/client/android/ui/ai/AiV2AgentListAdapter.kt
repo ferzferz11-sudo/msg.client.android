@@ -120,6 +120,7 @@ class AiV2AgentListAdapter(
                 "writer" -> "✍️"
                 "analyst" -> "📊"
                 "translator" -> "🌐"
+                "hermes" -> "🔬"
                 else -> "🤖"
             }
         }

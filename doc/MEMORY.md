@@ -19,10 +19,14 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 | `doc/PROMPT_NEXT_SESSION.md` | Current plan, backlog, session context |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios |
+| `doc/PROMPT_HERMES_ACP_CLIENT.md` | Hermes ACP client plan |
 | `CHANGELOG.md` | Version history |
 
 ## Architecture decisions
 
+- **Hermes Agent ACP integration (v1.3.1.04)**: New provider type `hermes_acp` on server. Spawns `hermes acp` as persistent child process per user. JSON-RPC 2.0 over stdin/stdout. Client needs only emoji mapping (🔬) in 3 files — no proto/gRPC changes. Preset agent "hermes" seeded with tools=true. Server: `ai_provider_hermes_acp.go`, `ai_provider_registry.go`, `db_ai_v2.go`. Client: `AIBottomSheet.kt`, `AiV2AgentListAdapter.kt`, `AiV2ChatActivity.kt`.
+- **ChatV2 clientVersion field (v1.3.1.04)**: `ChatV2MessageProto` now includes `clientVersion` (field 3). First auth message sends `BuildConfig.VERSION_NAME`. Server updates `users.last_client_version` and `users.last_seen_at`. Fixed stale admin panel versions.
+- **SendMessageV2 UpdateLastSeen (v1.3.1.04)**: Server `SendMessageV2` handler now calls `UpdateLastSeen` — previously `last_seen_at` was never updated on message send because client uses unary RPC, not ChatV2 stream.
 - **AI services redesign (completed)**: Bottom sheet: Add Agent (checkboxes) → Create Chat → Remote Agents. Notifications removed from bottom sheet. Multi-agent AI chats supported. Full chat parity (files, images, camera). Old Activities deleted. AiV2ChatActivity preserved and enhanced. New AiAgentSetupActivity for agent creation. AiV2AgentListActivity re-added with 5 tabs (Presets, My Agents, Discover, Remote Agent, Usage).
 - **ChatWidget is the shared chat UI component**: Used in NewChatActivity (regular chats) and AiV2ChatActivity (AI chats). Provides toolbar, RecyclerView, input panel with attach/audio/emoji buttons, reply preview, mention popup, search bar.
 - **Client-side routing for multi-agent chats (Вариант A)**: Client sends separate ChatWithAIV2 requests for each selected agent and aggregates responses.
@@ -38,20 +42,18 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **Marketplace cache in Room DB**: `marketplace_agents` table (version 11 migration). `MarketplaceDao.sync()` clears and reinserts. Cache fallback on network error.
 - **Usage Stats tab (5th tab)**: `UsageStatsFragment` with summary cards + per-agent RecyclerView. Auto-refresh 30s.
 - **AIBottomSheet navigation re-open pattern**: Set `activity.shouldReopenAIBottomSheet = true` before `startActivity()`. In `ChatListActivity.onResume()`, check flag and re-call `showAIBottomSheet()`.
-- **AIBottomSheet shows only user agents (v1.3.0.22)**: Presets removed from bottom sheet. Users access presets via AiV2AgentListActivity. Loading/empty states added.
-- **ProviderConfig display fix (v1.3.0.22)**: Preset agents have `{"api_key_source": "server", ...}` without `api_key`. AiAgentSetupActivity now checks `api_key_source` and shows "Server key" placeholder. Masked key shown for user agents with keys.
 
 ## Discovered durable knowledge
 
 - **Auth handled at channel level, not per-call**: `GrpcConnectionManager.kt:107` adds `BearerTokenInterceptor` to the managed channel builder.
-- **AI v2 architecture**: Client uses hand-rolled protobuf marshallers (no .proto files). All gRPC calls through messenger.ChatService/*. 8 LLM providers. AiV2ChatUseCase orchestrates tool calling loop (max 10 iterations).
+- **AI v2 architecture**: Client uses hand-rolled protobuf marshallers (no .proto files). All gRPC calls through messenger.ChatService/*. 9 LLM providers (openrouter, local, mimo, webhook, websocket, subprocess, mcp, reve, hermes_acp). AiV2ChatUseCase orchestrates tool calling loop (max 10 iterations).
 - **AI database tables**: agents_v2, ai_chats_v2, ai_messages_v2, ai_rate_limits, ai_usage_stats, agent_reviews.
 - **FileProvider configured**: `${applicationId}.provider` in AndroidManifest.xml.
 - **RemoteAgents vs AI Agents are separate systems**: `RemoteAgentGrpc` for machine/SSH agents. AI v2 preset agents use `GrpcAIv2Client.listAgents()`.
-- **Server AI preset agent seeding**: `seedPresetAgents()` uses `ON CONFLICT (id) DO UPDATE`. Seeds 10 agents.
+- **Server AI preset agent seeding**: `seedPresetAgents()` uses `ON CONFLICT (id) DO UPDATE`. Seeds 11 agents (was 10, +hermes).
 - **Don't call gRPC in ViewModel init**: gRPC channels may not be fully ready during init phase.
 - **Server silent empty on auth fail (AI v2)**: Handlers return empty proto responses when auth fails. Client cannot distinguish "no data" from "auth failure".
-- **All AI proto field numbers verified match**: Server proto and client marshallers in sync across all 15 AI messages.
+- **All AI proto field numbers verified match**: Server proto and client marshallers in sync across all AI messages.
 - **AI Chat Settings toolbar subtitle**: Shows masked key / "Server key" / "No key".
 - **Room DB version 11**: `marketplace_agents` table added.
 - **File attachments in AI chat via HTTP upload**: Non-image files uploaded via HTTP to `{server}/upload-file`, URL embedded in message text.
@@ -68,3 +70,8 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **Favorites is virtual room**: `favorites_<username>` — messages stored in messages_v2. GetHistoryV2 returns them. getFavorites() uses v2 marshallers with UUID→username resolution.
 - **Server soft-deletes messages**: Sets `content_type = 'deleted'`, returns `"[deleted]"` as text. Client filters these out in GetHistoryV2 response, Room DB cache, and ChatV2 stream (v1.3.1.02).
 - **API key visibility toggle**: TextInputLayout uses `endIconMode="password_toggle"` for eye icon. Long-press copies key to clipboard (v1.3.1.02).
+- **AuthManager.getBearerToken() returns "Bearer " prefix**: Do NOT add another "Bearer " — results in double prefix → 401.
+- **HttpClient AuthInterceptor**: `HttpClient.init(context)` in SplashActivity. Interceptor reads `getBearerToken()` per request. Replaces all manual auth headers.
+- **ChatV2MessageProto clientVersion (field 3)**: Server proto has `client_version` at field 3. Client was missing it entirely. Fixed in v1.3.1.04: added to proto, marshaller, and first auth message.
+- **SendMessageV2 missing UpdateLastSeen**: Client uses unary RPC, not ChatV2 stream. Server handler never called UpdateLastSeen. Fixed in v1.3.1.04: added to SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2.
+- **Hermes ACP provider**: Server-side `ai_provider_hermes_acp.go` with JSON-RPC 2.0, persistent sessions. Client needs only emoji mapping — no proto changes.

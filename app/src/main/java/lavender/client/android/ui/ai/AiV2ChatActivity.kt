@@ -219,6 +219,7 @@ class AiV2ChatActivity : AppCompatActivity() {
             "writer" -> "\u270D\uFE0F"
             "analyst" -> "\uD83D\uDCCA"
             "translator" -> "\uD83C\uDF10"
+            "hermes" -> "\uD83D\uDD2C"
             else -> "\uD83E\uDD16"
         }
     }

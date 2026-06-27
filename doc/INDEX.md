@@ -1,6 +1,6 @@
 # Lavender Messenger — Android Documentation
 
-**Version:** v1.3.1.03 | **Updated:** 2026-06-27
+**Version:** v1.3.1.04 | **Updated:** 2026-06-28
 
 ---
 
@@ -21,6 +21,7 @@
 | `doc/PROMPT_NEXT_SESSION.md` | Current plan + backlog | At session start |
 | `doc/REMOTE_AGENT.md` | Remote Agent reference | When working with Remote Agent |
 | `doc/AI_V2_TESTING.md` | AI v2 test scenarios | When testing AI features |
+| `doc/PROMPT_HERMES_ACP_CLIENT.md` | Hermes ACP client plan | When working with Hermes Agent |
 | `CHANGELOG.md` | Version history | Reference |
 
 ---
@@ -43,16 +44,16 @@
 | Fragments | 1 (RemoteAgentSettingsFragment) |
 | Services | 3 (ChatKeepAliveService, RemoteAgentService, LavenderMessagingService) |
 | gRPC files | 22 |
-| Unit tests | 332 (all passing) |
+| Unit tests | 320 (all passing) |
 | Layout XML | 115 |
 | String entries | 796 (EN) + 796 (RU) |
 | Min SDK | 29 (Android 10) |
 | Kotlin | 2.4.0 |
-| Branch | feat/1.3.1.x (v1.3.1.01) |
+| Branch | feat/1.3.1.x |
 
 ---
 
-## Architecture Overview (v1.3.1.01)
+## Architecture Overview (v1.3.1.04)
 
 ```
 GrpcClient (facade)
@@ -76,17 +77,18 @@ GrpcClient (facade)
         └── ChatKeepAliveService — foreground service, keep-alive connection
 
 network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
+network/AuthInterceptor.kt — JWT auth for HTTP requests
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel
 AiV2ChatActivity → unified AI chat (simple/agent/pipeline) + rate limit + image support + multi-agent
-AiV2AgentListActivity → unified agent management (4 tabs: Presets/My Agents/Discover/Remote Agent)
+AiV2AgentListActivity → unified agent management (5 tabs: Presets/My Agents/Discover/Remote Agent/Usage)
 AiAgentSetupActivity → create/edit all agent types
 AIBottomSheet → agent selection with checkboxes + AI Agents button
 
-Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
+Auth: JWT only (v2), AuthManager + BearerTokenInterceptor + AuthInterceptor (HTTP)
 Session: SessionManager (token refresh EVERY entry point)
-AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image support
+AI v2: ChatWithAIV2 streaming + tool calling loop + 9 provider types + image support
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Marketplace: Rate, Reviews, Stats, Share, Install, Usage + Search + Pagination + Sort + Filter
 Biometric: BiometricPrompt after splash screen when enabled
@@ -114,6 +116,11 @@ Logging: clean logs, no hot-path noise, performance timing in loadChats
 13. Run `./gradlew assembleDebug` before committing
 14. Do NOT bump version — only user bumps version
 15. Marshallers field order: server proto defines field numbers
+16. AI v2 RPC: all methods under `messenger.ChatService/*` (NOT `AIService`)
+17. Unread count: based on `user_chat_metadata.last_read_at`, NOT `messages.is_read`
+18. ProfileService v2: profile/avatar/delete/settings via `messenger.ProfileService/*` (JWT context)
+19. **ALWAYS verify against server code**: Before any gRPC/marshaller change, check server source code
+20. CHANGELOG: do NOT list documentation changes (README, doc/, comments) — only code changes
 
 ---
 

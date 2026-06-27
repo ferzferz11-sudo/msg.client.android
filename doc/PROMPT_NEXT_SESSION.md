@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.03 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-27
+**Версия:** v1.3.1.04 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-28
 
 ---
 
@@ -39,6 +39,7 @@ GrpcClient (facade)
         └── ChatKeepAliveService — foreground service, keep-alive connection
 
 network/HttpClient.kt — singleton OkHttpClient (connection pool 5/5min, timeouts 30s)
+network/AuthInterceptor.kt — JWT auth for HTTP requests
 
 ChatListActivity → 10 modules (toolbar, tabs, FABs, auth, etc.)
 NewChatActivity → 6 delegates + ChatViewModel (v2 only)
@@ -49,16 +50,16 @@ AiV2AgentListActivity → unified agent management (5 tabs: Presets/My Agents/Di
 AiAgentSetupActivity → create/edit all agent types (API key, temperature, max tokens)
 AIBottomSheet → agent selection with user agents only + loading/empty states + fixed footer
 
-Auth: JWT only (v2), AuthManager + BearerTokenInterceptor
+Auth: JWT only (v2), AuthManager + BearerTokenInterceptor + AuthInterceptor (HTTP)
 Session: SessionManager (ensureFreshToken BEFORE loadChats + forceTokenRefresh on pull-to-refresh)
-Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth, system signals, typing
+Chat Stream: ChatV2 bidirectional stream (messenger.ChatService/ChatV2) — JWT auth + clientVersion, system signals, typing
 Messages: v2 only — GetHistoryV2, SendMessageV2, EditMessageV2, DeleteMessageV2, SetReactionV2
-AI v2: ChatWithAIV2 streaming + tool calling loop + 8 provider types + image/file support
+AI v2: ChatWithAIV2 streaming + tool calling loop + 9 provider types (openrouter, local, mimo, webhook, websocket, subprocess, mcp, reve, hermes_acp) + image/file support
 AI Chat History: GetAIV2ChatHistory + ListAIV2Chats (server-side)
 AI Chat Settings: per-session API key + model override
 AI Chat Commands: /new, /clear, /history, /settings, /model, /system, /tools
 AI Chats in Chat List: AI chats merged into main chat list via ListAIV2Chats
-AI Errors: shown as agent chat bubbles (⚠️ prefix), not Toast
+AI Errors: shown as agent chat bubbles (⚠️ + текст), НЕ Toast
 AI Marketplace: cache in Room DB (marketplace_agents table), Favorites (SharedPreferences)
 Biometric: BiometricPrompt after splash screen when enabled (error → continue, not crash)
 Chat List: Cursor-based pagination (infinite scroll), Unread highlight
@@ -68,239 +69,67 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
-## Итог сессии v1.3.1.03
+## Итог сессии v1.3.1.04
 
 ### Выполнено
 
-**Статусы агентов:**
-1. `AgentStatus` enum: AVAILABLE / SERVER_KEY / NEEDS_KEY — определяется по `providerConfig`
-2. Toolbar чата: `toolbarInfo` показывает статус с цветным индикатором (🟢🟡🔴)
-3. AIBottomSheet: цветные точки рядом с именами агентов
+**ChatV2 clientVersion (для админ-панели):**
+1. `ChatV2MessageProto` добавлено поле `clientVersion` (field 3)
+2. Маршаллеры: сериализация/dесериализация field 3
+3. `RealGrpcClient`: первый ChatV2 сообщение отправляет `BuildConfig.VERSION_NAME`
+4. Сервер обновляет `users.last_client_version` и `users.last_seen_at`
 
-**HTTP upload auth fix:**
-1. Корневая причина: `AuthManager.getBearerToken()` возвращает `"Bearer <token>"`, а код добавлял ещё один `"Bearer "` → двойной токен → 401
-2. Создан `AuthInterceptor` (OkHttp interceptor) — автоматически добавляет JWT токен
-3. `HttpClient.init(context)` вызывается в `SplashActivity.onCreate()`
-4. Убраны ручные `addHeader("Authorization"...)` из всех upload мест
+**Hermes Agent ACP (клиент):**
+1. Emoji mapping "hermes" → "🔬" добавлен в 3 файла: AIBottomSheet, AiV2AgentListAdapter, AiV2ChatActivity
+2. Промпт для серверной реализации: `/Users/paveld/LavenderMessenger-server/doc/PROMPT_HERMES_ACP.md`
+3. Клиентский план: `doc/PROMPT_HERMES_ACP_CLIENT.md`
 
-**Камера:**
-1. Добавлен `cameraPermissionLauncher` в `ChatInputDelegate`
-2. Runtime-запрос `CAMERA` permission перед открытием камеры
-
-**isSent fix:**
-1. `sendMessageV2` теперь ставит `isSent = true` при успешном ответе сервера
-2. Обновляет Room DB — "часики" сменяются на галочку
-
-### Изменённые файлы
-
-| Файл | Изменение |
-|------|-----------|
-| `network/AuthInterceptor.kt` | NEW — OkHttp interceptor для JWT |
-| `network/HttpClient.kt` | `init(context)` + AuthInterceptor |
-| `SplashActivity.kt` | `HttpClient.init(this)` |
-| `data/ai/AiV2Models.kt` | `AgentStatus` enum |
-| `ui/ai/AiV2ChatActivity.kt` | Agent status в toolbar |
-| `ui/widget/AIBottomSheet.kt` | Status dots рядом с агентами |
-| `ui/chat/message/ChatInputDelegate.kt` | Camera permission + removed manual auth |
-| `data/grpc/GrpcMessageV2Client.kt` | `isSent = true` on success |
-| `ui/ai/AiAgentSetupActivity.kt` | Removed manual auth |
-| `ShareReceiverActivity.kt` | Removed manual auth |
-| `ThemePaletteActivity.kt` | Removed manual auth |
-| `res/values/strings.xml` | +ai_status_available/server_key/needs_key |
-| `res/values-ru/strings.xml` | +ai_status_available/server_key/needs_key |
-
----
-
-## Итог сессии v1.3.1.02
-
-### Выполнено
-
-**API Key visibility:**
-1. Добавлен `endIconMode="password_toggle"` на `TextInputLayout` для API ключа — иконка глаза для показа/скрытия
-2. Добавлен long-press на поле ключа — копирование в буфер обмена + Toast подтверждение
-3. Добавлена строка `ai_api_key_copied` (EN + RU)
-
-**[deleted] messages filter:**
-1. Сервер делает soft delete — ставит `content_type = 'deleted'` и возвращает `"[deleted]"` как текст
-2. Клиент фильтрует `[deleted]` в 3 местах: серверный ответ GetHistoryV2, кэш Room DB, ChatV2 стрим
-3. Удалённые сообщения теперь полностью скрыты из UI
+**Документация:**
+1. Полное обновление `doc/INDEX.md` — актуальная статистика и архитектура
+2. Обновление `doc/PATTERNS.md` — новые паттерны (clientVersion, AuthInterceptor)
+3. Обновление `doc/GOTCHAS.md` — новые 발견ения
+4. `doc/PROMPT_NEXT_SESSION.md` — обновлён для следующей сессии
+5. `doc/MEMORY.md` — обновлена память проекта
 
 ### Изменённые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `activity_ai_agent_setup.xml` | +apiKeyInputLayout id, +endIconMode password_toggle |
-| `AiAgentSetupActivity.kt` | +ClipboardManager import, +long-press копирование ключа |
-| `GrpcMessageV2Client.kt` | +фильтр `[deleted]` в loadHistoryV2 и кэше |
-| `RealGrpcClient.kt` | +фильтр `[deleted]` в ChatV2 стриме |
-| `values/strings.xml` | +ai_api_key_copied |
-| `values-ru/strings.xml` | +ai_api_key_copied |
-
-### Известные проблемы
-
-- Нет
-
----
-
-## Итог сессии v1.3.1.01
-
-### Выполнено
-
-**Полный переход на Messages V2:**
-1. Удалён v1 chat stream (`messenger.ChatService/Chat`) из `RealGrpcClient`
-2. Удалён `GrpcMessageClient` (v1 клиент) — все v1 методы заменены на v2
-3. Обновлён `ChatViewModel`: все методы используют v2
-4. Обновлены все делегаты: `ChatSelectionDelegate`, `ChatMessageMenuDelegate`, `ChatInputDelegate`
-5. Обновлены `ShareReceiverActivity` и `SessionManager`
-6. ChatV2 stream обрабатывает все системные сигналы
-7. `LastChatRequest` упрощён до (roomId, callback)
-8. Единый путь переподключения через `ChatKeepAliveService`
-9. `isChatV2Supported()` всегда `true` — guards удалены
-10. Добавлен `SearchMessages` RPC
-11. Исправлены дубликаты в избранном (sync client→server ID)
-22. Исправлен `tvMessageText` → `messageText` в диалоге удаления
-
-### Изменённые файлы
-
-| Файл | Изменение |
-|------|-----------|
-| `RealGrpcClient.kt` | Удалён v1 stream, упрощён LastChatRequest, единый reconnection |
-| `GrpcClient.kt` | Удалены v1 facade методы |
-| `GrpcMessageV2Client.kt` | +searchMessages, +ID sync после отправки |
-| `MessagesV2Proto.kt` | +SearchMessages proto классы |
-| `MessagesV2Marshallers.kt` | +SearchMessages marshallers |
-| `ChatViewModel.kt` | Все методы v2, guard от дублей loadHistory |
-| `NewChatActivity.kt` | startChatV2 |
-| `ChatSelectionDelegate.kt` | deleteMessageV2, messageText ID fix |
-| `ChatMessageMenuDelegate.kt` | editMessageV2, deleteMessageV2, setReactionV2 |
-| `ChatInputDelegate.kt` | sendMessageV2 |
-| `ShareReceiverActivity.kt` | startChatV2, sendMessageV2 |
-| `SessionManager.kt` | startChatV2 |
-| `GrpcFavoritesClient.kt` | v2 parсинг, removed saveFavoriteMessage |
-| `GrpcMarshallers.kt` | Удалены v1 message marshallers |
-| `MessengerProto.kt` | Удалены v1 proto классы |
-
-### Удалённые файлы
-- `GrpcMessageClient.kt`
-- `GrpcMessageClientTest.kt`
-- `doc/CODE_AUDIT.md`
-- `doc/PROMPT_MIGRATE_V2.md`
-
-### Изменённые файлы
-
-| Файл | Изменение |
-|------|-----------|
-| `ui/ai/AiAgentSetupActivity.kt` | providerConfig: проверка `api_key_source`, placeholder "Server key", маскировка ключа |
-| `ui/ai/AiV2AgentCreateEditViewModel.kt` | loadAgent(): fallback на ai_chat_settings для всех агентов без user key |
-| `ui/widget/AIBottomSheet.kt` | Убраны пресеты, только пользовательские агенты, loading/empty состояния |
-
-### Известные проблемы
-
-- Reve Image: бюджет API исчерпан (0 available_amount) — нужен пополнение на стороне Reve
-
----
-
-## Итог сессии v1.3.0.21
-
-### Выполнено
-
-**Provider Config (сервер + клиент):**
-1. Сервер: `string provider_config = 22` в `AgentInfoV2` proto
-2. Сервер: `agentToProto()` маршалит `ProviderConfig` в JSON
-3. Клиент: `providerConfig` добавлен в `AgentInfoV2Proto` (field 22)
-4. Клиент: `parseAgentInfoV2()` парсит field 22
-5. Клиент: `toDomain()` маппит `providerConfig` → `AiV2Agent.providerConfig`
-6. Клиент: `AiAgentSetupActivity` предзаполняет API key (из providerConfig + fallback из ai_chat_settings)
-
-**Usage Stats — автообновление:**
-1. `UsageStatsFragment` — новый фрагмент с summary cards + RecyclerView
-2. 5-й таб "Статистика" в `AiV2AgentListActivity`
-3. Автообновление каждые 30 секунд при активном экране
-4. Summary: Total Tokens, Total Requests, Avg/Request
-5. Полная локализация (EN + RU)
-
-**File Attachments для AI агентов:**
-1. Диалог "Прикрепить" теперь: Gallery / Camera / **File**
-2. HTTP upload файла через `upload-file` endpoint
-3. URL файла вставляется в сообщение: `"File: name\nhttps://..."`
-4. AI агент получает URL и может обработать файл
-
-**Marketplace Cache:**
-1. `marketplace_agents` table в Room DB (version 11 migration)
-2. Fallback на кэш при ошибке сети
-3. Автообновление при успешном запросе
-
-**AI Chat Settings Toolbar:**
-1. Subtitle показывает статус API key: masked key / "Server key" / "No key"
-
-**Favorites в Marketplace:**
-1. `FavoriteAgentsManager` — хранит избранные агенты в SharedPreferences
-2. ⭐ кнопка на каждой карточке агента в Marketplace
-3. Фильтр "Favorites" (chip) — показывает только избранных
-4. Иконки: `ic_star_outline.xml` / `ic_star_filled.xml`
-
-**Image sending fix:**
-1. Байты изображения теперь читаются в Activity через contentResolver (не через RealGrpcClient.appContext)
-2. Прогресс-бар показывается при отправке изображения
-
-**Navigation fix:**
-1. При выходе из управления агентами / настроек / удалённых агентов — AI шторка переоткрывается автоматически
-
-### Изменённые файлы
-
-| Файл | Изменение |
-|------|-----------|
-| `data/proto/AiV2Proto.kt` | `providerConfig` в `AgentInfoV2Proto` |
-| `data/grpc/GrpcAIv2Marshallers.kt` | field 22 парсинг в `parseAgentInfoV2()` |
-| `data/ai/AiV2DomainExtensions.kt` | `providerConfig` в `toDomain()` |
-| `data/ai/AiV2ChatUseCase.kt` | Marketplace cache fallback |
-| `data/ai/FavoriteAgentsManager.kt` | NEW — Favorites storage (SharedPreferences) |
-| `data/db/AppDatabase.kt` | version 11, `MarketplaceAgentEntity` |
-| `data/db/Entities.kt` | `MarketplaceAgentEntity` + конвертеры |
-| `data/db/Daos.kt` | `MarketplaceDao` |
-| `ui/ai/AiV2ChatActivity.kt` | File picker + upload + image fix |
-| `ui/ai/AiV2ChatViewModel.kt` | `images` parameter |
-| `ui/ai/AiV2AgentListActivity.kt` | 5-й таб Usage + Favorites filter |
-| `ui/ai/AiV2AgentListAdapter.kt` | Favorites star button |
-| `ui/ai/AiV2AgentCreateEditViewModel.kt` | API key fallback из ai_chat_settings |
-| `ui/ai/MarketplaceViewModel.kt` | Favorites filter |
-| `ui/ai/UsageStatsFragment.kt` | NEW — Usage stats UI (полная локализация) |
-| `ui/ai/UsageStatsAdapter.kt` | Локализованные строки |
-| `ui/ai/AiChatSettingsActivity.kt` | Toolbar subtitle |
-| `ui/chatlist/ChatListActivity.kt` | shouldReopenAIBottomSheet flag |
-| `ui/chatlist/ChatListFABs.kt` | shouldReopenAIBottomSheet при навигации |
-| `res/layout/activity_ai_v2_agent_list.xml` | Usage tab + Favorites chip |
-| `res/layout/item_ai_v2_agent_card.xml` | Favorite star button |
-| `res/layout/fragment_usage_stats.xml` | String resources вместо хардкода |
-| `res/drawable/ic_star_outline.xml` | NEW — outline star |
-| `res/drawable/ic_star_filled.xml` | NEW — filled star |
-| `res/values/strings.xml` | 14 новых строк |
-| `res/values-ru/strings.xml` | 14 новых строк |
+| `MessagesV2Proto.kt` | +`clientVersion` в `ChatV2MessageProto` |
+| `MessagesV2Marshallers.kt` | +сериализация/dесериализация field 3 |
+| `RealGrpcClient.kt` | +`BuildConfig.VERSION_NAME` в первом ChatV2 сообщении |
+| `AIBottomSheet.kt` | +"hermes" → "🔬" |
+| `AiV2AgentListAdapter.kt` | +"hermes" → "🔬" |
+| `AiV2ChatActivity.kt` | +"hermes" → "🔬" |
+| `doc/INDEX.md` | Полное обновление |
+| `doc/PATTERNS.md` | +новые паттерны |
+| `doc/GOTCHAS.md` | +новые discoveries |
+| `doc/PROMPT_NEXT_SESSION.md` | Обновлён |
+| `doc/PROMPT_HERMES_ACP_CLIENT.md` | NEW — клиентский план |
+| `doc/MEMORY.md` | Обновлена память проекта |
 
 ---
 
 ## Бэклог — Следующая сессия (v1.3.1.x)
 
-### Приоритет 1: API Key для пользовательских агентов ✅
+### Приоритет 1: Hermes Agent ACP (клиент готов, ждём сервер)
 | Задача | Статус |
 |--------|--------|
-| Ключ отображается в настройках, можно показать/скопировать | ✅ |
-| Wire dump gRPC response — ключ подтверждён | ✅ |
+| Emoji mapping для hermes | ✅ |
+| Серверная реализация ACP | ✅ (сделано серверным агентом) |
+| Тестирование Hermes в продакшене | 🔲 |
+| Добавить Hermes в AI v2 тесты | 🔲 |
 
-### Приоритет 2: Статусы агентов в чате ✅
+### Приоритет 2: Reve Image
 | Задача | Статус |
 |--------|--------|
-| Добавить статусы агентов: доступен / требует настройки / нет ключа | ✅ |
-| Показывать статус в toolbar чата | ✅ |
-| Показывать статус в AI шторке (AIBottomSheet) | ✅ |
-| Цветовые индикаторы (зелёный/жёлтый/красный) | ✅ |
+| Reve 402 обработка (красивый текст в чате) | ✅ |
 
-### Приоритет 3: Остальное
+### Приоритет 3: Тестирование
 | Задача | Статус |
 |--------|--------|
-| Уведомления о новых отзывах на агентов | 🔲 |
 | Финальный прогон AI v2 тестов | 🔲 |
-| Reve Image: обработка 402 ошибки (красивый текст в чате) | в работе |
+| Тестирование на prod сервере | 🔲 |
 
 ---
 
@@ -324,11 +153,10 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 16. **AI v2 RPC:** все методы в `messenger.ChatService/*` (НЕ `AIService`)
 17. **Unread count:** считается по `user_chat_metadata.last_read_at`, НЕ по `messages.is_read`
 18. **ProfileService v2:** profile/avatar/delete/settings — через `messenger.ProfileService/*` (JWT context)
-19. **CHANGELOG:** не включать документационные изменения (README, doc/, комментарии) — только код
+19. **CHANGELOG:** не включать документационные изменения — только код
 20. **AI ошибки:** показывать как chat bubble (⚠️ + текст), НЕ Toast
-21. **AgentInfoV2 proto field 22:** `provider_config` — JSON string. Для пресетов: `{"api_key_source": "server", "default_model": "..."}` — нет `api_key`. Для user-агентов: `{"api_key": "sk-...", ...}`
-22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` И актуальный код сервера `/Users/paveld/LavenderMessenger-server/`
-22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` И актуальный код сервера `/Users/paveld/LavenderMessenger-server/`
+21. **AuthManager.getBearerToken()** возвращает "Bearer <token>" — НЕ добавлять ещё один "Bearer "
+22. **ВСЕГДА сверять с сервером:** перед любым gRPC/marshaller изменением проверять серверный код
 
 ---
 
@@ -349,6 +177,6 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 - Документация клиента: `doc/INDEX.md`, `doc/PATTERNS.md`
 - Документация AI v2: `doc/AI_V2_TESTING.md`
-- Серверный промпт: `/Users/paveld/LavenderMessenger-server/doc/AI_MULTI_AGENT_PROMPT.md`
-- Серверный промпт (Provider Config): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_PROVIDER_CONFIG.md`
+- Серверный промпт (Hermes ACP): `/Users/paveld/LavenderMessenger-server/doc/PROMPT_HERMES_ACP.md`
+- Клиентский план Hermes: `doc/PROMPT_HERMES_ACP_CLIENT.md`
 - Changelog: `CHANGELOG.md`

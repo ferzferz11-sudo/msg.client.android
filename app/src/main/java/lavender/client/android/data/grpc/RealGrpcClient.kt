@@ -403,7 +403,7 @@ object RealGrpcClient {
         if (ctx != null) {
             lavender.client.android.data.auth.AuthManager.getAccessToken(ctx)?.let { accessToken ->
                 if (accessToken.isNotEmpty()) {
-                    val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId)
+                    val firstMsg = ChatV2MessageProto(jwtToken = accessToken, roomId = roomId, clientVersion = lavender.client.android.BuildConfig.VERSION_NAME)
                     observer.onNext(firstMsg)
                     _authStatus.value = null
                     startTypingStream()

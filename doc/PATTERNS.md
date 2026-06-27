@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.03 | **Updated:** 2026-06-27
+**Version:** v1.3.1.04 | **Updated:** 2026-06-28
 
 ---
 
@@ -77,8 +77,8 @@ UI:
 ```
 - Server executes all built-in tools (search_messages, web_search, etc.)
 - Client only sends tool_calls result back to server
-- Agent provider_type: openrouter, local, mimo, webhook, websocket, subprocess, mcp, reve-2.0
-- 10 preset agents: mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve
+- Agent provider_type: openrouter, local, mimo, webhook, websocket, subprocess, mcp, reve, hermes_acp
+- 11 preset agents: mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve, hermes
 - Marketplace: search with debounce, infinite scroll, pull-to-refresh, deep link install
 - Rate limit: RateLimitCache + countdown + disable input on limit
 - Reve Image: image generation via `reve` agent, `image_url` in ChatWithAIV2Response field 10
@@ -99,6 +99,7 @@ AiV2AgentListActivity — unified agent management screen
     └── Click on agent → AiAgentSetupActivity (edit) or RemoteAgentSettingsFragment (remote tab, inline)
 ```
 - Agent emoji mapping duplicated in AIBottomSheet, AiV2ChatActivity, AiV2AgentListAdapter
+- Emoji mapping: mimo=🤖, assistant=🧠, developer=💻, devops=⚙️, architect=🏗️, writer=✍️, analyst=📊, translator=🌐, vision=👁, reve=🎨, hermes=🔬
 - Presets loaded from server via ListAIAgents(includePublic=true), filtered by isPreset
 - Remote agents listed via GrpcClient.listRemoteAgents()
 - Tab 3 click shows RemoteAgentSettingsFragment inline — Gateway + Token UI embedded in container
@@ -197,7 +198,7 @@ AiV2ChatUseCase
 ```
 ChatV2 bidirectional stream (messenger.ChatService/ChatV2)
   ├── Request/Response: ChatV2Message (oneof payload: message/typing/system)
-  ├── Auth: first message with jwt_token + room_id
+  ├── Auth: first message with jwt_token + room_id + clientVersion (field 3)
   ├── MessageV2: sender_id (UUID), oneof content (text/media/reply), JSON reactions
   └── System: type + message (DELETE_MESSAGE, READ_ALL, SERVER_SHUTTINGDOWN)
 
@@ -227,6 +228,8 @@ Search Messages:
   ├── SearchMessagesRequestProto(roomId, query, limit) → SearchMessagesResponseProto(messages)
   └── SearchResultProto(messageId, roomId, username, preview, createdAt)
 ```
+- ChatV2MessageProto includes `clientVersion` (field 3) — sent in first auth message
+- Server uses clientVersion to update `users.last_client_version` and `users.last_seen_at`
 
 ### Cursor Pagination Pattern (v1.3.0.9)
 ```

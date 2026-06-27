@@ -134,6 +134,7 @@ class ChatV2MessageMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatV2Messag
         val cos = com.google.protobuf.CodedOutputStream.newInstance(baos)
         if (value.jwtToken.isNotEmpty()) cos.writeString(1, value.jwtToken)
         if (value.roomId.isNotEmpty()) cos.writeString(2, value.roomId)
+        if (value.clientVersion.isNotEmpty()) cos.writeString(3, value.clientVersion)
         if (value.message != null) {
             val msgBytes = MessageV2ProtoMarshaller().stream(value.message).readBytes()
             cos.writeTag(10, WireFormat.WIRETYPE_LENGTH_DELIMITED)
@@ -167,13 +168,14 @@ class ChatV2MessageMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatV2Messag
 
     override fun parse(stream: java.io.InputStream): ChatV2MessageProto {
         val cis = com.google.protobuf.CodedInputStream.newInstance(stream)
-        var jwtToken = ""; var roomId = ""
+        var jwtToken = ""; var roomId = ""; var clientVersion = ""
         var message: MessageV2Proto? = null; var typing: ChatV2TypingProto? = null; var system: ChatV2SystemProto? = null
         while (!cis.isAtEnd) {
             val tag = cis.readTag(); if (tag == 0) break
             when (WireFormat.getTagFieldNumber(tag)) {
                 1 -> jwtToken = cis.readString()
                 2 -> roomId = cis.readString()
+                3 -> clientVersion = cis.readString()
                 10 -> { val len = cis.readUInt32(); message = MessageV2ProtoMarshaller().parse(ByteArrayInputStream(cis.readRawBytes(len))) }
                 11 -> {
                     val len = cis.readUInt32()
@@ -192,7 +194,7 @@ class ChatV2MessageMarshaller : io.grpc.MethodDescriptor.Marshaller<ChatV2Messag
                 else -> cis.skipField(tag)
             }
         }
-        return ChatV2MessageProto(jwtToken, roomId, message, typing, system)
+        return ChatV2MessageProto(jwtToken, roomId, clientVersion, message, typing, system)
     }
 }
 

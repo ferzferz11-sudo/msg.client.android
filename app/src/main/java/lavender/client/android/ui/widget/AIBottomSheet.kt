@@ -320,6 +320,7 @@ class AIBottomSheet(
             "writer" -> "✍️"
             "analyst" -> "📊"
             "translator" -> "🌐"
+            "hermes" -> "🔬"
             else -> "🤖"
         }
     }

@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.03 | **Updated:** 2026-06-27
+**Version:** v1.3.1.04 | **Updated:** 2026-06-28
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -246,3 +246,24 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **`HttpClient.client` has default OkHttpClient** — works before init (no lateinit crash)
 - **Camera requires runtime permission** — `CAMERA` permission must be requested at runtime
 - **`sendMessageV2` sets `isSent = true`** — only after server confirms success
+
+## ChatV2 clientVersion (v1.3.1.04)
+
+- **ChatV2MessageProto field 3 = `clientVersion`** — server proto `ChatV2Message` has `client_version` at field 3. Client was missing it entirely before v1.3.1.04
+- **Client sends `BuildConfig.VERSION_NAME`** in first ChatV2 auth message — server uses this to update `users.last_client_version` and `users.last_seen_at`
+- **Admin panel shows stale versions** if clientVersion not sent — server cannot update `last_client_version` without it
+- **Marshallers must include field 3** — both serialization (stream) and deserialization (parse) for ChatV2MessageMarshaller
+
+## SendMessageV2 missing UpdateLastSeen (v1.3.1.04)
+
+- **Client sends messages via `SendMessageV2` unary RPC** — NOT through ChatV2 stream
+- **Server `SendMessageV2` handler was missing `UpdateLastSeen`** — `last_seen_at` never updated on message send
+- **Fix (server):** Added `UpdateLastSeen` to `SendMessageV2`, `EditMessageV2`, `DeleteMessageV2`, `SetReactionV2` handlers
+- **Root cause:** ChatV2 stream only updates `last_seen_at` on stream auth + received messages. Unary RPCs bypass the stream entirely
+
+## Hermes Agent ACP (v1.3.1.04)
+
+- **Hermes ACP provider** on server: persistent sessions via JSON-RPC 2.0 over stdin/stdout
+- **Client needs no proto changes** — Hermes works through existing `ChatWithAIV2` streaming RPC
+- **Emoji mapping "hermes" → "🔬"** in 3 files: AIBottomSheet, AiV2AgentListAdapter, AiV2ChatActivity
+- **11 preset agents** now (was 10): mimo, assistant, developer, devops, architect, writer, analyst, translator, vision, reve, hermes

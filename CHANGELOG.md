@@ -1,5 +1,27 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.04] - 2026-06-28
+
+### ChatV2 clientVersion + Hermes Agent ACP + last_seen_at fix
+
+**Добавлено:**
+- `ChatV2MessageProto.clientVersion` (field 3) — клиент отправляет версию при подключении к ChatV2 стриму
+- Hermes Agent ACP: emoji mapping "hermes" → "🔬" в AIBottomSheet, AiV2AgentListAdapter, AiV2ChatActivity
+
+**Исправлено:**
+- Админ панель показывала неверные версии клиентов — `clientVersion` не отправлялся в ChatV2 стриме
+- `last_seen_at` не обновлялся при отправке сообщений — `SendMessageV2` не вызывал `UpdateLastSeen` (серверный фикс)
+
+**Изменено:**
+- `MessagesV2Proto.kt` — +`clientVersion: String` в `ChatV2MessageProto`
+- `MessagesV2Marshallers.kt` — +сериализация/dесериализация field 3
+- `RealGrpcClient.kt` — +`BuildConfig.VERSION_NAME` в первом ChatV2 сообщении
+- `AIBottomSheet.kt` — +"hermes" → "🔬"
+- `AiV2AgentListAdapter.kt` — +"hermes" → "🔬"
+- `AiV2ChatActivity.kt` — +"hermes" → "🔬"
+
+---
+
 ## [1.3.1.03] - 2026-06-27
 
 ### Agent statuses + HTTP upload auth fix + Camera permission + isSent fix

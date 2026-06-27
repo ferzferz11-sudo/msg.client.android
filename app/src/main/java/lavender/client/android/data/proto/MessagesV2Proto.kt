@@ -59,6 +59,7 @@ data class ChatV2SystemProto(
 data class ChatV2MessageProto(
     val jwtToken: String = "",
     val roomId: String = "",
+    val clientVersion: String = "",
     val message: MessageV2Proto? = null,
     val typing: ChatV2TypingProto? = null,
     val system: ChatV2SystemProto? = null
