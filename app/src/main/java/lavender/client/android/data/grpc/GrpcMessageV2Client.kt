@@ -199,7 +199,8 @@ class GrpcMessageV2Client(
     fun loadHistoryV2(roomId: String, cursor: String = "", limit: Int = MAX_HISTORY_LIMIT, onCompletion: (String, Boolean) -> Unit = { _, _ -> }) {
         // Always load from cache first (offline-first)
         scope.launch(Dispatchers.IO) {
-            val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() } ?: emptyList()
+            val cached = db()?.messageDao()?.getMessagesForRoom(roomId)?.map { it.toDomain() }
+                ?.filter { it.text != "[deleted]" } ?: emptyList()
             if (cached.isNotEmpty() && messages.value.isEmpty()) {
                 messages.update { cached }
             }
@@ -216,6 +217,7 @@ class GrpcMessageV2Client(
             override fun onMessage(message: GetHistoryV2ResponseProto) {
                 val history = message.messages
                     .map { messageV2ToDomain(it) }
+                    .filterNot { it.text == "[deleted]" }
                     .filterNot { deletedMessageHashes.contains(getMessageHash(it)) }
 
                 messages.update { current ->

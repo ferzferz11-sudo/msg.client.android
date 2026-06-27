@@ -57,8 +57,7 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **File attachments in AI chat via HTTP upload**: Non-image files uploaded via HTTP to `{server}/upload-file`, URL embedded in message text.
 - **Image sending reads bytes in Activity, not UseCase**: UseCase tried reading via `RealGrpcClient.appContext?.contentResolver` which may be null. Activity reads bytes directly.
 - **API key stored in providerConfig JSON (snake_case)**: Server stores as `{"api_key": "..."}`. Server `resolveAPIKey()` reads `agent.ProviderConfig["api_key"]`. For preset agents: `{"api_key_source": "server", "default_model": "..."}` — no `api_key` field.
-- **ALWAYS verify against server code**: Before any gRPC/marshaller change, check `/Users/paveld/LavenderMessenger-server/doc/CLIENT_INTEGRATION.md` AND the actual server source code at `/Users/paveld/LavenderMessenger-server/`.
-- **API key is stored in TWO places**: `agents_v2.provider_config` (per-agent) AND `ai_chat_settings` (per-session).
+- **API key in TWO places**: `agents_v2.provider_config` (per-agent) AND `ai_chat_settings` (per-session).
 - **Agent edit save button UX**: Save button created dynamically as FrameLayout overlay. Only appears when changes detected.
 - **AI chat error propagation**: Errors shown as chat messages (⚠️ prefix). Rate limit gets dedicated StateFlow.
 - **ChatWidget button defaults are both GONE**: Activities must manually toggle via TextWatcher.
@@ -67,3 +66,5 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **Message ID sync critical**: Server returns its own ID in SendMessageV2Response. Client MUST update local message + Room DB with server ID to prevent duplicates on re-entry.
 - **Single reconnection path**: Only ChatKeepAliveService triggers reconnection. Stream handlers set FAILED status, ChatKeepAliveService detects and calls connect(). No retry loops in stream handlers.
 - **Favorites is virtual room**: `favorites_<username>` — messages stored in messages_v2. GetHistoryV2 returns them. getFavorites() uses v2 marshallers with UUID→username resolution.
+- **Server soft-deletes messages**: Sets `content_type = 'deleted'`, returns `"[deleted]"` as text. Client filters these out in GetHistoryV2 response, Room DB cache, and ChatV2 stream (v1.3.1.02).
+- **API key visibility toggle**: TextInputLayout uses `endIconMode="password_toggle"` for eye icon. Long-press copies key to clipboard (v1.3.1.02).

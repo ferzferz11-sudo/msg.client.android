@@ -702,6 +702,7 @@
     <string name="ai_agent_max_tokens">Макс. токенов</string>
     <string name="ai_agent_saved">Агент сохранён</string>
     <string name="ai_v2_agent_name_required">Имя обязательно</string>
+    <string name="ai_api_key_copied">API ключ скопирован</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Маркетплейс</string>

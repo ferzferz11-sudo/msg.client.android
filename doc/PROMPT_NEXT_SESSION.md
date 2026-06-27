@@ -1,6 +1,6 @@
 # Prompt: Android Client — Next Session
 
-**Версия:** v1.3.1.01 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-27
+**Версия:** v1.3.1.02 | **Ветка:** feat/1.3.1.x | **Дата:** 2026-06-27
 
 ---
 
@@ -68,6 +68,37 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
+## Итог сессии v1.3.1.02
+
+### Выполнено
+
+**API Key visibility:**
+1. Добавлен `endIconMode="password_toggle"` на `TextInputLayout` для API ключа — иконка глаза для показа/скрытия
+2. Добавлен long-press на поле ключа — копирование в буфер обмена + Toast подтверждение
+3. Добавлена строка `ai_api_key_copied` (EN + RU)
+
+**[deleted] messages filter:**
+1. Сервер делает soft delete — ставит `content_type = 'deleted'` и возвращает `"[deleted]"` как текст
+2. Клиент фильтрует `[deleted]` в 3 местах: серверный ответ GetHistoryV2, кэш Room DB, ChatV2 стрим
+3. Удалённые сообщения теперь полностью скрыты из UI
+
+### Изменённые файлы
+
+| Файл | Изменение |
+|------|-----------|
+| `activity_ai_agent_setup.xml` | +apiKeyInputLayout id, +endIconMode password_toggle |
+| `AiAgentSetupActivity.kt` | +ClipboardManager import, +long-press копирование ключа |
+| `GrpcMessageV2Client.kt` | +фильтр `[deleted]` в loadHistoryV2 и кэше |
+| `RealGrpcClient.kt` | +фильтр `[deleted]` в ChatV2 стриме |
+| `values/strings.xml` | +ai_api_key_copied |
+| `values-ru/strings.xml` | +ai_api_key_copied |
+
+### Известные проблемы
+
+- Нет
+
+---
+
 ## Итог сессии v1.3.1.01
 
 ### Выполнено
@@ -122,7 +153,7 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ### Известные проблемы
 
-- **API Key пуст для пользовательских агентов с server-side ключом** — ключ не отображается в настройках, хотя сервер его возвращает. Требуется отладка.
+- Нет
 
 ---
 
@@ -207,12 +238,11 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ## Бэклог — Следующая сессия (v1.3.1.x)
 
-### Приоритет 1: API Key для пользовательских агентов
+### Приоритет 1: API Key для пользовательских агентов ✅
 | Задача | Статус |
 |--------|--------|
-| Отладить: ключ не отображается в настройках尽管 сервер его возвращает | 🔲 |
-| Проверить wire dump gRPC response | 🔲 |
-| Добавить логирование в AiAgentSetupActivity | 🔲 |
+| Ключ отображается в настройках, можно показать/скопировать | ✅ |
+| Wire dump gRPC response — ключ подтверждён | ✅ |
 
 ### Приоритет 2: Статусы агентов в чате
 | Задача | Статус |

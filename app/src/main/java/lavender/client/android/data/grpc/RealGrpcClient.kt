@@ -521,7 +521,9 @@ object RealGrpcClient {
                 // Handle message
                 if (value.message != null) {
                     val msg = messageV2Client.messageV2ToDomain(value.message)
-                    onMessageReceived(msg)
+                    if (msg.text != "[deleted]") {
+                        onMessageReceived(msg)
+                    }
                 }
             }
 

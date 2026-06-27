@@ -1,6 +1,6 @@
 # Android — Code Patterns and Rules
 
-**Version:** v1.3.1.01 | **Updated:** 2026-06-27
+**Version:** v1.3.1.02 | **Updated:** 2026-06-27
 
 ---
 
@@ -445,6 +445,24 @@ AiAgentSetupActivity — create/edit all agent types
 
 Provider config: JSON {"apiKey": "..."} sent in CreateAIAgentRequestProto
 Server AgentInfoV2 proto does NOT return providerConfig (field 22 missing)
+```
+
+### API Key Visibility Pattern (v1.3.1.02)
+```
+AiAgentSetupActivity — API key field
+  ├── TextInputLayout: endIconMode="password_toggle" (eye icon)
+  ├── TextInputEditText: inputType="textPassword" (masked by default)
+  ├── Long-press → copy full key to clipboard + Toast confirmation
+  └── ProviderConfig parsing: api_key_source → "Server key" hint, real key → masked display
+```
+
+### Deleted Messages Filter Pattern (v1.3.1.02)
+```
+Server soft-delete: content_type = 'deleted', text = "[deleted]"
+Client filters [deleted] in 3 places:
+  ├── GrpcMessageV2Client.loadHistoryV2() — server response filter
+  ├── GrpcMessageV2Client.loadHistoryV2() — Room DB cache filter
+  └── RealGrpcClient.chatV2Stream — real-time stream filter
 ```
 
 ### AI Chat Commands Pattern (v1.3.0.20)

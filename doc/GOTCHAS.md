@@ -1,6 +1,6 @@
 # Gotchas & Discovered Knowledge
 
-**Version:** v1.3.1.01 | **Updated:** 2026-06-27
+**Version:** v1.3.1.02 | **Updated:** 2026-06-27
 
 Practical knowledge accumulated across sessions. Things that aren't obvious from reading code.
 
@@ -217,3 +217,16 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **Messages stored in messages_v2** — server returns them via `GetHistoryV2` and `GetFavorites`
 - **`getFavorites()`** — uses v2 marshallers, resolves `sender_id` UUID → username via `allUsers` cache
 - **`addLocalMessage` for favorites** — saves to Room DB with `roomId = "favorites_<username>"`
+
+## Server Soft-Delete (v1.3.1.02)
+
+- **Server does NOT delete messages physically** — sets `content_type = 'deleted'`, clears text/media, returns `"[deleted]"` as text content in proto
+- **Client must filter `[deleted]`** — otherwise deleted messages appear as regular messages with "[deleted]" text
+- **Three filter points**: GetHistoryV2 response, Room DB cache, ChatV2 stream
+- **Favorites also affected** — virtual room messages can be soft-deleted by server
+
+## API Key Visibility (v1.3.1.02)
+
+- **TextInputLayout `endIconMode="password_toggle"`** — eye icon for showing/hiding API key
+- **Long-press copies to clipboard** — ClipboardManager + Toast confirmation
+- **ProviderConfig parsing**: checks `api_key` (snake_case) first, then `apiKey` (camelCase), then `api_key_source` for server presets

@@ -393,6 +393,7 @@
     <string name="ai_agent_max_tokens">Max Tokens</string>
     <string name="ai_agent_saved">Agent saved</string>
     <string name="ai_v2_agent_name_required">Name is required</string>
+    <string name="ai_api_key_copied">API key copied to clipboard</string>
 
     <!-- Marketplace -->
     <string name="marketplace">Marketplace</string>

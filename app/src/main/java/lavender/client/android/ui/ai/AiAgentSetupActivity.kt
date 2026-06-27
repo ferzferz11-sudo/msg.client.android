@@ -4,6 +4,8 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.view.Gravity
 import android.view.View
 import android.widget.ArrayAdapter
@@ -74,6 +76,15 @@ class AiAgentSetupActivity : AppCompatActivity() {
         modelInput = findViewById(R.id.modelInput)
         systemPromptInput = findViewById(R.id.systemPromptInput)
         agentApiKeyInput = findViewById(R.id.agentApiKeyInput)
+        agentApiKeyInput.setOnLongClickListener {
+            val key = agentApiKeyInput.text?.toString()?.trim() ?: ""
+            if (key.isNotEmpty()) {
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("api_key", key))
+                Toast.makeText(this, getString(R.string.ai_api_key_copied), Toast.LENGTH_SHORT).show()
+            }
+            true
+        }
         temperatureSlider = findViewById(R.id.temperatureSlider)
         temperatureValue = findViewById(R.id.temperatureValue)
         maxTokensInput = findViewById(R.id.maxTokensInput)

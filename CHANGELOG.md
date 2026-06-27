@@ -1,5 +1,24 @@
 # Lava Messenger — Android Changelog
 
+## [1.3.1.02] - 2026-06-27
+
+### API Key visibility + [deleted] messages filter
+
+**Добавлено:**
+- API ключ в настройках агента теперь можно показать/скрыть (иконка глаза) и скопировать (long-press)
+- Фильтрация soft-deleted сообщений (`[deleted]`) — серверных ответов, стрима и кэша Room DB
+
+**Изменено:**
+- `activity_ai_agent_setup.xml` — `TextInputLayout` с `endIconMode="password_toggle"` для API ключа
+- `AiAgentSetupActivity.kt` — long-press копирование ключа в буфер обмена
+- `GrpcMessageV2Client.kt` — фильтр `[deleted]` при загрузке истории и из кэша
+- `RealGrpcClient.kt` — фильтр `[deleted]` в ChatV2 стриме
+
+**Исправлено:**
+- Soft-deleted сообщения (`content_type = 'deleted'`) больше не отображаются как `[deleted]` в чатах
+
+---
+
 ## [1.3.1.01] - 2026-06-27
 
 ### Полный переход на Messages V2
