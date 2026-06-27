@@ -199,3 +199,21 @@ Practical knowledge accumulated across sessions. Things that aren't obvious from
 - **ScrollView needs `layout_weight=1`** — `wrap_content` + programmatic maxHeight broke touch events. Use weight-based layout in parent LinearLayout
 - **`selectedAgents` must NOT be cleared in `buildContent()`** — called from `loadPresetAgents()` callback. Clear only in `buildAndShow()`/`rebuildContent()`, restore checkbox states at end of `buildContent()`
 - **Presets removed from bottom sheet (v1.3.0.22)** — only user agents shown. Presets accessible via AiV2AgentListActivity. Loading/empty states added.
+
+## Messages V2 Migration (v1.3.1.01)
+
+- **v1 completely removed** — no more `messenger.ChatService/Chat`, `GetHistory`, `SendMessage`, `EditMessage`, `DeleteMessages`, `SetReaction`. Only v2 RPCs work
+- **ChatV2 stream** — single source of real-time messages. Auth via `jwt_token` in first message. System signals via `ChatV2System` (type + message fields)
+- **Message ID sync** — server returns its own ID in `SendMessageV2Response`. Client MUST update local message + Room DB with server ID, otherwise `loadHistoryV2` creates duplicates (different IDs = different hashes)
+- **Favorites duplication** — virtual room `favorites_<username>`. `GetHistoryV2` returns messages from server, `loadHistoryV2` also loads from Room DB cache. Without ID sync, same message appears twice
+- **Single reconnection path** — only `ChatKeepAliveService` should trigger reconnection. v2 stream `onError`/`onClose` sets `FAILED` status, ChatKeepAliveService detects and calls `connect()`. Do NOT add retry loops in stream handlers
+- **GrpcMessageClient deleted** — all v1 message operations removed. Dead code: `GrpcMessageClient.kt`, v1 marshallers (GetHistory, EditMessage, DeleteMessages, Reaction), v1 proto classes
+- **GetFavoritesResponseProto** — uses `List<MessageV2Proto>` (not `List<MessageProto>`). Server returns v2 format after migration
+- **SearchMessages** — new RPC `messenger.ChatService/SearchMessages`. Returns `SearchResultProto` with messageId, roomId, username, preview, createdAt
+
+## Favorites
+
+- **Room ID pattern** — `favorites_<username>` (virtual room, not a real chat)
+- **Messages stored in messages_v2** — server returns them via `GetHistoryV2` and `GetFavorites`
+- **`getFavorites()`** — uses v2 marshallers, resolves `sender_id` UUID → username via `allUsers` cache
+- **`addLocalMessage` for favorites** — saves to Room DB with `roomId = "favorites_<username>"`

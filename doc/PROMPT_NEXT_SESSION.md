@@ -68,32 +68,49 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
-## Итог сессии v1.3.0.22
+## Итог сессии v1.3.1.01
 
 ### Выполнено
 
 **Полный переход на Messages V2:**
 1. Удалён v1 chat stream (`messenger.ChatService/Chat`) из `RealGrpcClient`
-2. Удалён `GrpcMessageClient` (v1 клиент) — все v1 методы (sendMessage, loadHistory, editMessage, deleteMessage, setReaction) заменены на v2
-3. Обновлён `ChatViewModel`: `startChat()` → `startChatV2()`, `loadHistory()` → `loadHistoryV2()`, `sendMessage()` → `sendMessageV2()`
+2. Удалён `GrpcMessageClient` (v1 клиент) — все v1 методы заменены на v2
+3. Обновлён `ChatViewModel`: все методы используют v2
 4. Обновлены все делегаты: `ChatSelectionDelegate`, `ChatMessageMenuDelegate`, `ChatInputDelegate`
 5. Обновлены `ShareReceiverActivity` и `SessionManager`
-6. ChatV2 stream теперь обрабатывает ВСЕ системные сигналы: FORCE_LOGOUT, ONLINE_USERS_UPDATE, CHAT_DELETED, CLEAR_CACHE, SERVER_INFO, SYSTEM_NOTIFICATION, AUTH_FAILED, SET_SUPER_ADMIN, FORCE_DISCONNECT_DEVICE, FORCE_LOGOUT_EXCEPT
-7. `LastChatRequest` упрощён до (roomId, callback) — v1 параметры (username, password, deviceId) больше не сохраняются
-8. Автоматическое переподключение v2 stream с exponential backoff
+6. ChatV2 stream обрабатывает все системные сигналы
+7. `LastChatRequest` упрощён до (roomId, callback)
+8. Единый путь переподключения через `ChatKeepAliveService`
 9. `isChatV2Supported()` всегда `true` — guards удалены
+10. Добавлен `SearchMessages` RPC
+11. Исправлены дубликаты в избранном (sync client→server ID)
+22. Исправлен `tvMessageText` → `messageText` в диалоге удаления
 
-**Provider Config fix — API key отображается корректно:**
-1. Проблема: для пресетов (Reve и др.) `provider_config` = `{"api_key_source": "server", ...}` — нет `api_key` в JSON
-2. `AiAgentSetupActivity` теперь проверяет `api_key_source: "server"` → показывает "Server key" как placeholder
-3. Для пользовательских агентов с ключом — показывает замаскированный ключ
-4. `AiV2AgentCreateEditViewModel.loadAgent()` — fallback на `ai_chat_settings` работает для всех агентов без пользовательского ключа
+### Изменённые файлы
 
-**AIBottomSheet — убраны пресеты:**
-1. Шторка ИИ показывает только собственные агенты пользователя
-2. Пресеты доступны в настройках агентов (AiV2AgentListActivity)
-3. Добавлены loading/empty состояния для шторки
-4. `listAgents(includePublic = false)` — загружает только пользовательских агентов
+| Файл | Изменение |
+|------|-----------|
+| `RealGrpcClient.kt` | Удалён v1 stream, упрощён LastChatRequest, единый reconnection |
+| `GrpcClient.kt` | Удалены v1 facade методы |
+| `GrpcMessageV2Client.kt` | +searchMessages, +ID sync после отправки |
+| `MessagesV2Proto.kt` | +SearchMessages proto классы |
+| `MessagesV2Marshallers.kt` | +SearchMessages marshallers |
+| `ChatViewModel.kt` | Все методы v2, guard от дублей loadHistory |
+| `NewChatActivity.kt` | startChatV2 |
+| `ChatSelectionDelegate.kt` | deleteMessageV2, messageText ID fix |
+| `ChatMessageMenuDelegate.kt` | editMessageV2, deleteMessageV2, setReactionV2 |
+| `ChatInputDelegate.kt` | sendMessageV2 |
+| `ShareReceiverActivity.kt` | startChatV2, sendMessageV2 |
+| `SessionManager.kt` | startChatV2 |
+| `GrpcFavoritesClient.kt` | v2 parсинг, removed saveFavoriteMessage |
+| `GrpcMarshallers.kt` | Удалены v1 message marshallers |
+| `MessengerProto.kt` | Удалены v1 proto классы |
+
+### Удалённые файлы
+- `GrpcMessageClient.kt`
+- `GrpcMessageClientTest.kt`
+- `doc/CODE_AUDIT.md`
+- `doc/PROMPT_MIGRATE_V2.md`
 
 ### Изменённые файлы
 
@@ -188,18 +205,9 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 
 ---
 
-## Бэклог — Следующая сессия (v1.3.0.23+)
+## Бэклог — Следующая сессия (v1.3.1.x)
 
-### Приоритет 1: v1 dead code cleanup
-| Задача | Статус |
-|--------|--------|
-| Удалить `GrpcMessageClient.kt` и `GrpcMessageClientTest.kt` | 🔲 |
-| Удалить v1 marshallers из `GrpcMarshallers.kt` (GetHistory, EditMessage, DeleteMessages, Reaction) | 🔲 |
-| Удалить v1 proto classes из `MessengerProto.kt` | 🔲 |
-| Убрать `saveFavoriteMessage` из `GrpcFavoritesClient.kt` (dead code) | 🔲 |
-| Очистить `requestObserver` в `RealGrpcClient.kt` (всегда null) | 🔲 |
-
-### Приоритет 2: API Key для пользовательских агентов
+### Приоритет 1: API Key для пользовательских агентов
 | Задача | Статус |
 |--------|--------|
 | Отладить: ключ не отображается в настройках尽管 сервер его возвращает | 🔲 |
@@ -219,6 +227,7 @@ Notifications in Remote Agent: server notifications shown as system messages in 
 |--------|--------|
 | Уведомления о новых отзывах на агентов | 🔲 |
 | Финальный прогон AI v2 тестов | 🔲 |
+| Reve Image: пополнить бюджет API | 🔲 |
 
 ---
 

@@ -31,7 +31,9 @@ Lavender Messenger — Android client. Kotlin, gRPC, AI v2 marketplace, secret c
 - **Notifications consolidated into remote agent chat**: Notifications appear as system messages in `RemoteAgentActivity` chat via real-time gRPC subscription.
 - **ChatKeepAliveService prevents process kill (v1.3.0.18)**: START_STICKY foreground service monitors `connectionStatus` and auto-reconnects.
 - **Consolidated agent settings screen (v1.3.0.20+)**: All agent configuration (API key, temperature, maxTokens, model, etc.) into AiAgentSetupActivity.
-- **AgentInfoV2 provider_config deployed (v1.3.0.21)**: `string provider_config = 22` in `AgentInfoV2` proto. Server `agentToProto()` marshals `ProviderConfig` as JSON. Server prompt: `/Users/paveld/LavenderMessenger-server/doc/PROMPT_PROVIDER_CONFIG.md`.
+- **AgentInfoV2 provider_config deployed (v1.3.0.22)**: `string provider_config = 22` in `AgentInfoV2` proto. Server `agentToProto()` marshals `ProviderConfig` as JSON. For preset agents: `{"api_key_source": "server", ...}` — no `api_key`. For user agents: `{"api_key": "sk-...", ...}`.
+- **AIBottomSheet shows only user agents (v1.3.0.22)**: Presets removed from bottom sheet. Users access presets via AiV2AgentListActivity. Loading/empty states added.
+- **ProviderConfig display fix (v1.3.0.22)**: AiAgentSetupActivity now checks `api_key_source` and shows "Server key" placeholder for presets. Masked key shown for user agents with keys.
 - **Favorites implemented client-side via SharedPreferences**: `FavoriteAgentsManager` singleton uses `favorite_agents` prefs with JSON array of agent IDs. No server support.
 - **Marketplace cache in Room DB**: `marketplace_agents` table (version 11 migration). `MarketplaceDao.sync()` clears and reinserts. Cache fallback on network error.
 - **Usage Stats tab (5th tab)**: `UsageStatsFragment` with summary cards + per-agent RecyclerView. Auto-refresh 30s.
