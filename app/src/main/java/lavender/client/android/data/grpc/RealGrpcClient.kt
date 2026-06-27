@@ -559,6 +559,9 @@ object RealGrpcClient {
                     }
                     return
                 }
+                if (value.text.startsWith("NEW_MESSAGE_V2:") || value.text.startsWith("EDIT_MESSAGE_V2:") || value.text.startsWith("DELETE_MESSAGE_V2:")) {
+                    return
+                }
                 if (value.text.startsWith("READ_ALL:")) {
                     val reader = value.text.removePrefix("READ_ALL:")
                     val targetRoomId = if (value.roomId.isNotEmpty()) value.roomId else currentRoomId
