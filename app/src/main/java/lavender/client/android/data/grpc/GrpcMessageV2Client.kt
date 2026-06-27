@@ -265,7 +265,19 @@ class GrpcMessageV2Client(
         call.start(object : ClientCall.Listener<SendMessageV2ResponseProto>() {
             override fun onMessage(response: SendMessageV2ResponseProto) {
                 if (response.success && response.message != null) {
-                    onResult?.invoke(response.message)
+                    val serverMsg = response.message
+                    val serverId = serverMsg.id
+                    if (serverId.isNotEmpty() && serverId != message.id) {
+                        messages.update { current ->
+                            current.map { if (it.id == message.id) it.copy(id = serverId) else it }
+                        }
+                        scope.launch(Dispatchers.IO) {
+                            db()?.messageDao()?.deleteMessage(message.id)
+                            val updated = message.copy(id = serverId)
+                            db()?.messageDao()?.insertMessages(listOf(updated.toEntity()))
+                        }
+                    }
+                    onResult?.invoke(serverMsg)
                 } else {
                     ErrorHandler.handle("$TAG.sendMessageV2", Exception(response.error.ifEmpty { "Server returned success=false" }))
                     onResult?.invoke(null)
