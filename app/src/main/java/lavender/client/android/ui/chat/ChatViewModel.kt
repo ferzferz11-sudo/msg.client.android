@@ -194,6 +194,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun loadHistory() {
+        if (_isLoading.value) return
         _isLoading.value = true
         viewModelScope.launch {
             grpcClient.loadHistoryV2(currentRoomId) { _, _ ->
